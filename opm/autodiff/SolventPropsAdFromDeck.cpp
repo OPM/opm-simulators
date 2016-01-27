@@ -23,6 +23,7 @@
 
 #include <opm/parser/eclipse/EclipseState/Tables/PvdsTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
 
 
 namespace Opm
@@ -138,8 +139,8 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
                     // Copy data
                     // Sn = So + Sg + Ss;
-                    const std::vector<double>& sn = sof2Table.getSoColumn();
-                    const std::vector<double>& krn = sof2Table.getKroColumn();
+                    const auto& sn = sof2Table.getSoColumn();
+                    const auto& krn = sof2Table.getKroColumn();
 
                     for (size_t i = 0; i < sn.size(); ++i) {
                         std::cout << sn[i] << " " << krn[i] <<std::endl;
@@ -168,8 +169,8 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
                     // Copy data
                     // solventFraction = Ss / (Ss + Sg);
-                    const std::vector<double>& solventFraction = miscTable.getSolventFractionColumn();
-                    const std::vector<double>& misc = miscTable.getMiscibilityColumn();
+                    const auto& solventFraction = miscTable.getSolventFractionColumn();
+                    const auto& misc = miscTable.getMiscibilityColumn();
 
                     misc_[regionIdx] = NonuniformTableLinear<double>(solventFraction, misc);
 
@@ -195,9 +196,9 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
                     // Copy data
                     // Ssg = Ss + Sg;
-                    const std::vector<double>& Ssg = msfnTable.getGasPhaseFractionColumn();
-                    const std::vector<double>& krsg = msfnTable.getGasSolventRelpermMultiplierColumn();
-                    const std::vector<double>& kro = msfnTable.getOilRelpermMultiplierColumn();
+                    const auto& Ssg = msfnTable.getGasPhaseFractionColumn();
+                    const auto& krsg = msfnTable.getGasSolventRelpermMultiplierColumn();
+                    const auto& kro = msfnTable.getOilRelpermMultiplierColumn();
 
                     mkrsg_[regionIdx] = NonuniformTableLinear<double>(Ssg, krsg);
                     mkro_[regionIdx] = NonuniformTableLinear<double>(Ssg, kro);
@@ -219,8 +220,8 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                     const Opm::SorwmisTable& sorwmisTable = sorwmisTables.getTable<SorwmisTable>(regionIdx);
 
                     // Copy data
-                    const std::vector<double>& sw = sorwmisTable.getWaterSaturationColumn();
-                    const std::vector<double>& sorwmis = sorwmisTable.getMiscibleResidualOilColumn();
+                    const auto& sw = sorwmisTable.getWaterSaturationColumn();
+                    const auto& sorwmis = sorwmisTable.getMiscibleResidualOilColumn();
 
                     sorwmis_[regionIdx] = NonuniformTableLinear<double>(sw, sorwmis);
                 }
@@ -240,8 +241,8 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                     const Opm::SgcwmisTable& sgcwmisTable = sgcwmisTables.getTable<SgcwmisTable>(regionIdx);
 
                     // Copy data
-                    const std::vector<double>& sw = sgcwmisTable.getWaterSaturationColumn();
-                    const std::vector<double>& sgcwmis = sgcwmisTable.getMiscibleResidualGasColumn();
+                    const auto& sw = sgcwmisTable.getWaterSaturationColumn();
+                    const auto& sgcwmis = sgcwmisTable.getMiscibleResidualGasColumn();
 
                     sgcwmis_[regionIdx] = NonuniformTableLinear<double>(sw, sgcwmis);
                 }
