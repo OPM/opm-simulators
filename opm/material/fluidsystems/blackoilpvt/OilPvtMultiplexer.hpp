@@ -28,6 +28,7 @@
 #include "ConstantCompressibilityOilPvt.hpp"
 #include "DeadOilPvt.hpp"
 #include "LiveOilPvt.hpp"
+#include "OilPvtThermal.hpp"
 
 namespace Opm {
 #define OPM_OIL_PVT_MULTIPLEXER_CALL(codeToCall)                        \
@@ -44,6 +45,11 @@ namespace Opm {
     }                                                                   \
     case LiveOilPvt: {                                                  \
         auto &pvtImpl = getRealPvt<LiveOilPvt>();                       \
+        codeToCall;                                                     \
+        break;                                                          \
+    }                                                                   \
+    case ThermalOilPvt: {                                               \
+        auto &pvtImpl = getRealPvt<ThermalOilPvt>();                    \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
@@ -64,15 +70,18 @@ namespace Opm {
  * Note that, since the application for this class is the black-oil fluid system, the API
  * exposed by this class is pretty specific to the black-oil model.
  */
-template <class Scalar>
+template <class Scalar, bool enableThermal = true>
 class OilPvtMultiplexer
 {
 public:
+    typedef Opm::OilPvtThermal<Scalar> OilPvtThermal;
+
     enum OilPvtApproach {
         NoOilPvt,
         LiveOilPvt,
         DeadOilPvt,
-        ConstantCompressibilityOilPvt
+        ConstantCompressibilityOilPvt,
+        ThermalOilPvt
     };
 
     OilPvtMultiplexer()
@@ -83,16 +92,20 @@ public:
     ~OilPvtMultiplexer()
     {
         switch (approach_) {
-        case ConstantCompressibilityOilPvt: {
-            delete &getRealPvt<ConstantCompressibilityOilPvt>();
+        case LiveOilPvt: {
+            delete &getRealPvt<LiveOilPvt>();
             break;
         }
         case DeadOilPvt: {
             delete &getRealPvt<DeadOilPvt>();
             break;
         }
-        case LiveOilPvt: {
-            delete &getRealPvt<LiveOilPvt>();
+        case ConstantCompressibilityOilPvt: {
+            delete &getRealPvt<ConstantCompressibilityOilPvt>();
+            break;
+        }
+        case ThermalOilPvt: {
+            delete &getRealPvt<ThermalOilPvt>();
             break;
         }
 
@@ -109,7 +122,11 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        if (deck->hasKeyword("PVCDO"))
+        if (enableThermal
+            && (deck->hasKeyword("THERMEX1")
+                || deck->hasKeyword("VISCREF")))
+            setApproach(ThermalOilPvt);
+        else if (deck->hasKeyword("PVCDO"))
             setApproach(ConstantCompressibilityOilPvt);
         else if (deck->hasKeyword("PVDO"))
             setApproach(DeadOilPvt);
@@ -193,16 +210,20 @@ public:
     void setApproach(OilPvtApproach appr)
     {
         switch (appr) {
-        case ConstantCompressibilityOilPvt:
-            realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>;
+        case LiveOilPvt:
+            realOilPvt_ = new Opm::LiveOilPvt<Scalar>;
             break;
 
         case DeadOilPvt:
             realOilPvt_ = new Opm::DeadOilPvt<Scalar>;
             break;
 
-        case LiveOilPvt:
-            realOilPvt_ = new Opm::LiveOilPvt<Scalar>;
+        case ConstantCompressibilityOilPvt:
+            realOilPvt_ = new Opm::ConstantCompressibilityOilPvt<Scalar>;
+            break;
+
+        case ThermalOilPvt:
+            realOilPvt_ = new Opm::OilPvtThermal<Scalar>;
             break;
 
         case NoOilPvt:
@@ -263,9 +284,23 @@ public:
         return *static_cast<Opm::ConstantCompressibilityOilPvt<Scalar>* >(realOilPvt_);
     }
 
+    template <OilPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalOilPvt, Opm::OilPvtThermal<Scalar> >::type& getRealPvt()
+    {
+        assert(approach() == approachV);
+        return *static_cast<Opm::OilPvtThermal<Scalar>* >(realOilPvt_);
+    }
+
+    template <OilPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalOilPvt, const Opm::OilPvtThermal<Scalar> >::type& getRealPvt() const
+    {
+        assert(approach() == approachV);
+        return *static_cast<const Opm::OilPvtThermal<Scalar>* >(realOilPvt_);
+    }
+
 private:
     OilPvtApproach approach_;
-    void *realOilPvt_;
+    void* realOilPvt_;
 };
 
 #undef OPM_OIL_PVT_MULTIPLEXER_CALL

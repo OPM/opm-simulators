@@ -26,11 +26,17 @@
 #define OPM_WATER_PVT_MULTIPLEXER_HPP
 
 #include "ConstantCompressibilityWaterPvt.hpp"
+#include "WaterPvtThermal.hpp"
 
 #define OPM_WATER_PVT_MULTIPLEXER_CALL(codeToCall)                      \
     switch (approach_) {                                                \
     case ConstantCompressibilityWaterPvt: {                             \
         auto &pvtImpl = getRealPvt<ConstantCompressibilityWaterPvt>();  \
+        codeToCall;                                                     \
+        break;                                                          \
+    }                                                                   \
+    case ThermalWaterPvt: {                                             \
+        auto &pvtImpl = getRealPvt<ThermalWaterPvt>();                  \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
@@ -44,13 +50,16 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the water
  *        phase in the black-oil model.
  */
-template <class Scalar>
+template <class Scalar, bool enableThermal = true>
 class WaterPvtMultiplexer
 {
 public:
+    typedef Opm::WaterPvtThermal<Scalar> WaterPvtThermal;
+
     enum WaterPvtApproach {
         NoWaterPvt,
-        ConstantCompressibilityWaterPvt
+        ConstantCompressibilityWaterPvt,
+        ThermalWaterPvt
     };
 
     WaterPvtMultiplexer()
@@ -63,6 +72,10 @@ public:
         switch (approach_) {
         case ConstantCompressibilityWaterPvt: {
             delete &getRealPvt<ConstantCompressibilityWaterPvt>();
+            break;
+        }
+        case ThermalWaterPvt: {
+            delete &getRealPvt<ThermalWaterPvt>();
             break;
         }
         case NoWaterPvt:
@@ -78,7 +91,11 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        if (deck->hasKeyword("PVTW"))
+        if (enableThermal
+            && (deck->hasKeyword("WATDENT")
+                || deck->hasKeyword("VISCREF")))
+            setApproach(ThermalWaterPvt);
+        else if (deck->hasKeyword("PVTW"))
             setApproach(ConstantCompressibilityWaterPvt);
 
         OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
@@ -119,6 +136,10 @@ public:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>;
             break;
 
+        case ThermalWaterPvt:
+            realWaterPvt_ = new Opm::WaterPvtThermal<Scalar>;
+            break;
+
         case NoWaterPvt:
             OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!");
         }
@@ -147,6 +168,20 @@ public:
     {
         assert(approach() == approachV);
         return *static_cast<Opm::ConstantCompressibilityWaterPvt<Scalar>* >(realWaterPvt_);
+    }
+
+    template <WaterPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalWaterPvt, Opm::WaterPvtThermal<Scalar> >::type& getRealPvt()
+    {
+        assert(approach() == approachV);
+        return *static_cast<Opm::WaterPvtThermal<Scalar>* >(realWaterPvt_);
+    }
+
+    template <WaterPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalWaterPvt, const Opm::WaterPvtThermal<Scalar> >::type& getRealPvt() const
+    {
+        assert(approach() == approachV);
+        return *static_cast<Opm::WaterPvtThermal<Scalar>* >(realWaterPvt_);
     }
 
 private:

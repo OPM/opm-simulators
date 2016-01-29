@@ -27,6 +27,7 @@
 
 #include "DryGasPvt.hpp"
 #include "WetGasPvt.hpp"
+#include "GasPvtThermal.hpp"
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -48,6 +49,11 @@ namespace Opm {
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
+    case ThermalGasPvt: {                                               \
+        auto &pvtImpl = getRealPvt<ThermalGasPvt>();                    \
+        codeToCall;                                                     \
+        break;                                                          \
+    }                                                                   \
     case NoGasPvt:                                                      \
     default:                                                            \
         OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!"); \
@@ -64,14 +70,17 @@ namespace Opm {
  * the API exposed by this class is pretty specific to the assumptions made by the black
  * oil model.
  */
-template <class Scalar>
+template <class Scalar, bool enableThermal = true>
 class GasPvtMultiplexer
 {
 public:
+    typedef Opm::GasPvtThermal<Scalar> GasPvtThermal;
+
     enum GasPvtApproach {
         NoGasPvt,
         DryGasPvt,
-        WetGasPvt
+        WetGasPvt,
+        ThermalGasPvt
     };
 
     GasPvtMultiplexer()
@@ -90,6 +99,10 @@ public:
             delete &getRealPvt<WetGasPvt>();
             break;
         }
+        case ThermalGasPvt: {
+            delete &getRealPvt<ThermalGasPvt>();
+            break;
+        }
         case NoGasPvt:
             break;
         }
@@ -103,7 +116,11 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        if (deck->hasKeyword("PVTG"))
+        if (enableThermal
+            && (deck->hasKeyword("TREF")
+                || deck->hasKeyword("GASVISCT")))
+            setApproach(ThermalGasPvt);
+        else if (deck->hasKeyword("PVTG"))
             setApproach(WetGasPvt);
         else if (deck->hasKeyword("PVDG"))
             setApproach(DryGasPvt);
@@ -121,6 +138,10 @@ public:
 
         case WetGasPvt:
             realGasPvt_ = new Opm::WetGasPvt<Scalar>;
+            break;
+
+        case ThermalGasPvt:
+            realGasPvt_ = new Opm::GasPvtThermal<Scalar>;
             break;
 
         case NoGasPvt:
@@ -234,6 +255,21 @@ public:
     {
         assert(gasPvtApproach() == approachV);
         return *static_cast<const Opm::WetGasPvt<Scalar>* >(realGasPvt_);
+    }
+
+    // get the parameter object for the thermal gas case
+    template <GasPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalGasPvt, Opm::GasPvtThermal<Scalar> >::type& getRealPvt()
+    {
+        assert(gasPvtApproach() == approachV);
+        return *static_cast<Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
+    }
+
+    template <GasPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalGasPvt, const Opm::GasPvtThermal<Scalar> >::type& getRealPvt() const
+    {
+        assert(gasPvtApproach() == approachV);
+        return *static_cast<const Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
     }
 
 private:
