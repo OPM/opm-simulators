@@ -34,6 +34,7 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/HasMemberGeneratorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
@@ -42,7 +43,57 @@
 #include <array>
 
 namespace Opm {
+namespace BlackOil {
+OPM_GENERATE_HAS_MEMBER(Rs) // Creates 'HasMember_Rs<T>'.
+OPM_GENERATE_HAS_MEMBER(Rv) // Creates 'HasMember_Rv<T>'.
+
+template <class FluidSystem, class LhsEval, class FluidState>
+LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
+               unsigned regionIdx)
+{
+    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+    const auto& XoG =
+        FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(FluidSystem::oilPhaseIdx,
+                                                                   FluidSystem::gasCompIdx));
+    return FluidSystem::convertXoGToRs(XoG, regionIdx);
+}
+
+template <class FluidSystem, class LhsEval, class FluidState>
+auto getRs_(typename std::enable_if<HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
+            unsigned regionIdx)
+    -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
+                ::template toLhs<LhsEval>(fluidState.Rs()))
+{
+    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+    return FsToolbox::template toLhs<LhsEval>(fluidState.Rs());
+}
+
+template <class FluidSystem, class LhsEval, class FluidState>
+LhsEval getRv_(typename std::enable_if<!HasMember_Rv<FluidState>::value, const FluidState&>::type fluidState,
+               unsigned regionIdx)
+{
+    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+    const auto& XgO =
+        FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(FluidSystem::gasPhaseIdx,
+                                                                   FluidSystem::oilCompIdx));
+    return FluidSystem::convertXgOToRv(XgO, regionIdx);
+}
+
+template <class FluidSystem, class LhsEval, class FluidState>
+auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const FluidState&>::type fluidState,
+            unsigned regionIdx)
+    -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
+                ::template toLhs<LhsEval>(fluidState.Rv()))
+{
+    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+    return FsToolbox::template toLhs<LhsEval>(fluidState.Rv());
+}
+}
+
 namespace FluidSystems {
+
 /*!
  * \brief A fluid system which uses the black-oil model assumptions to calculate
  *        termodynamically meaningful quantities.
@@ -52,6 +103,8 @@ namespace FluidSystems {
 template <class Scalar>
 class BlackOil : public BaseFluidSystem<Scalar, BlackOil<Scalar> >
 {
+    typedef BlackOil ThisType;
+
 public:
     typedef Opm::GasPvtMultiplexer<Scalar> GasPvt;
     typedef Opm::OilPvtMultiplexer<Scalar> OilPvt;
@@ -386,7 +439,7 @@ public:
 
             // miscible oil
             const auto& bo = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-            const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+            const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
 
             return
                 bo*referenceDensity(oilPhaseIdx, regionIdx)
@@ -402,7 +455,7 @@ public:
 
             // miscible gas
             const auto& bg = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
-            const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+            const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
 
             return
                 bg*referenceDensity(gasPhaseIdx, regionIdx)
@@ -504,7 +557,7 @@ public:
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
                         const auto& bSat = oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                         const auto& bUndersat = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
@@ -514,7 +567,7 @@ public:
                     return oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                 }
 
-                const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+                const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
             }
 
@@ -528,7 +581,7 @@ public:
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
                         const auto& bSat = gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                         const auto& bUndersat = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
@@ -538,7 +591,7 @@ public:
                     return gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                 }
 
-                const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+                const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
             }
 
@@ -729,7 +782,7 @@ public:
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
                         const auto& muSat = oilPvt_->saturatedViscosity(regionIdx, T, p);
                         const auto& muUndersat = oilPvt_->viscosity(regionIdx, T, p, Rs);
@@ -739,7 +792,7 @@ public:
                     return oilPvt_->saturatedViscosity(regionIdx, T, p);
                 }
 
-                const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+                const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return oilPvt_->viscosity(regionIdx, T, p, Rs);
             }
 
@@ -754,7 +807,7 @@ public:
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
-                        const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                         const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
                         const auto& muSat = gasPvt_->saturatedViscosity(regionIdx, T, p);
                         const auto& muUndersat = gasPvt_->viscosity(regionIdx, T, p, Rv);
@@ -764,7 +817,7 @@ public:
                     return gasPvt_->saturatedViscosity(regionIdx, T, p);
                 }
 
-                const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+                const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
                 return gasPvt_->viscosity(regionIdx, T, p, Rv);
             }
 
@@ -831,8 +884,8 @@ public:
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
-        case oilPhaseIdx: return oilPvt_->saturationPressure(regionIdx, T, getRs_<LhsEval>(fluidState, regionIdx));
-        case gasPhaseIdx: return gasPvt_->saturationPressure(regionIdx, T, getRv_<LhsEval>(fluidState, regionIdx));
+        case oilPhaseIdx: return oilPvt_->saturationPressure(regionIdx, T, Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx));
+        case gasPhaseIdx: return gasPvt_->saturationPressure(regionIdx, T, Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx));
         case waterPhaseIdx: return 0.0;
         default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
         }
@@ -978,26 +1031,6 @@ private:
     {
         molarMass_.resize(numRegions);
         referenceDensity_.resize(numRegions);
-    }
-
-    template <class LhsEval, class FluidState>
-    static LhsEval getRs_(const FluidState& fluidState, unsigned regionIdx)
-    {
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& XoG =
-            FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(oilPhaseIdx, gasCompIdx));
-        return convertXoGToRs(XoG, regionIdx);
-    }
-
-    template <class LhsEval, class FluidState>
-    static LhsEval getRv_(const FluidState& fluidState, unsigned regionIdx)
-    {
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& XgO =
-            FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, oilCompIdx));
-        return convertXgOToRv(XgO, regionIdx);
     }
 
     static std::shared_ptr<GasPvt> gasPvt_;
