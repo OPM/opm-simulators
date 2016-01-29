@@ -48,6 +48,7 @@ namespace Opm {
         break;                                                          \
     }                                                                   \
     case NoOilPvt:                                                      \
+    default:                                                            \
         OPM_THROW(std::logic_error, "Not implemented: Oil PVT of this deck!"); \
     }
 
@@ -122,6 +123,12 @@ public:
 
     void initEnd()
     { OPM_OIL_PVT_MULTIPLEXER_CALL(pvtImpl.initEnd()); }
+
+    /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); };
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.

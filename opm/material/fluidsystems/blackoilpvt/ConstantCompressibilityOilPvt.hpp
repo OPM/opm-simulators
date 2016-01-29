@@ -155,6 +155,16 @@ public:
     void initEnd()
     { }
 
+    /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { return oilViscosity_.size(); }
+
+    /*!
+     * \brief Returns the dynamic viscosity [Pa s] of gas saturated oil given a pressure
+     *        and a phase composition.
+     */
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,

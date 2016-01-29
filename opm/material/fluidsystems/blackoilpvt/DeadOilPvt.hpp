@@ -158,6 +158,12 @@ public:
     }
 
     /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { return inverseOilBMu_.size(); }
+
+    /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
     template <class Evaluation>

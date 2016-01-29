@@ -20,7 +20,7 @@
 */
 /*!
  * \file
- * \copydoc Opm::OilPvtMultiplexer
+ * \copydoc Opm::GasPvtMultiplexer
  */
 #ifndef OPM_GAS_PVT_MULTIPLEXER_HPP
 #define OPM_GAS_PVT_MULTIPLEXER_HPP
@@ -49,6 +49,7 @@ namespace Opm {
         break;                                                          \
     }                                                                   \
     case NoGasPvt:                                                      \
+    default:                                                            \
         OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!"); \
     }
 
@@ -131,6 +132,12 @@ public:
 
     void initEnd()
     { OPM_GAS_PVT_MULTIPLEXER_CALL(pvtImpl.initEnd()); }
+
+    /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); };
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
