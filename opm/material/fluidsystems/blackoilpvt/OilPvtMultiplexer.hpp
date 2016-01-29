@@ -280,6 +280,8 @@ private:
     void *realOilPvt_;
 };
 
+#undef OPM_OIL_PVT_MULTIPLEXER_CALL
+
 } // namespace Opm
 
 #endif

@@ -253,7 +253,7 @@ private:
     void *realGasPvt_;
 };
 
-#undef OPM_GAS_MULTIPLEXER_CALL
+#undef OPM_GAS_PVT_MULTIPLEXER_CALL
 
 } // namespace Opm
 
