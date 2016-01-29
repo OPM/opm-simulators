@@ -908,6 +908,18 @@ public:
     }
 
     /*!
+     * \brief Convert a gas mole fraction in the oil phase the corresponding mass fraction.
+     */
+    template <class LhsEval>
+    static LhsEval convertxoGToXoG(const LhsEval& xoG, unsigned regionIdx)
+    {
+        Scalar MO = molarMass_[regionIdx][oilCompIdx];
+        Scalar MG = molarMass_[regionIdx][gasCompIdx];
+
+        return xoG*MG / (xoG*(MG - MO) + MO);
+    }
+
+    /*!
      * \brief Convert a oil mass fraction in the gas phase the corresponding mole fraction.
      */
     template <class LhsEval>
@@ -917,6 +929,18 @@ public:
         Scalar MG = molarMass_[regionIdx][gasCompIdx];
 
         return XgO*MG / (MO*(1 - XgO) + XgO*MG);
+    }
+
+    /*!
+     * \brief Convert a oil mole fraction in the gas phase the corresponding mass fraction.
+     */
+    template <class LhsEval>
+    static LhsEval convertxgOToXgO(const LhsEval& xgO, unsigned regionIdx)
+    {
+        Scalar MO = molarMass_[regionIdx][oilCompIdx];
+        Scalar MG = molarMass_[regionIdx][gasCompIdx];
+
+        return xgO*MO / (xgO*(MO - MG) + MG);
     }
 
     /*!
