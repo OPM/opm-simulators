@@ -26,10 +26,9 @@
  */
 #include "config.h"
 
+#include <opm/material/checkFluidSystem.hpp>
 #include <opm/material/localad/Evaluation.hpp>
 #include <opm/material/localad/Math.hpp>
-
-#include "checkFluidSystem.hpp"
 
 // include all fluid systems in opm-material
 #include <opm/material/fluidsystems/SinglePhaseFluidSystem.hpp>
