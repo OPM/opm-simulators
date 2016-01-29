@@ -178,18 +178,6 @@ public:
     }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure) const
-    {
-        const Evaluation& Bw = formationVolumeFactor(regionIdx, temperature, pressure);
-        return waterReferenceDensity_[regionIdx]/Bw;
-    }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>

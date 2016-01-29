@@ -430,60 +430,6 @@ public:
     }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure,
-                       const Evaluation& Rs) const
-    {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
-        Valgrind::CheckDefined(rhooRef);
-        Valgrind::CheckDefined(rhogRef);
-
-        const Evaluation& Bo = formationVolumeFactor(regionIdx, temperature, pressure, Rs);
-        Valgrind::CheckDefined(Bo);
-
-        Evaluation rhoo = rhooRef/Bo;
-
-        // the oil formation volume factor just represents the partial density of the oil
-        // component in the oil phase. to get the total density of the phase, we have to
-        // add the partial density of the gas component.
-        rhoo += rhogRef*Rs/Bo;
-
-        return rhoo;
-    }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of gas saturated oil for a given pressure.
-     */
-    template <class Evaluation>
-    Evaluation saturatedDensity(unsigned regionIdx,
-                                const Evaluation& temperature,
-                                const Evaluation& pressure) const
-    {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
-        Valgrind::CheckDefined(rhooRef);
-        Valgrind::CheckDefined(rhogRef);
-
-        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
-        Valgrind::CheckDefined(Bo);
-
-        Evaluation rhoo = rhooRef/Bo;
-
-        // the oil formation volume factor just represents the partial density of the oil
-        // component in the oil phase. to get the total density of the phase, we have to
-        // add the partial density of the gas component.
-        const Evaluation& RsSat = saturatedGasDissolutionFactor(regionIdx, temperature, pressure);
-        rhoo += rhogRef*RsSat/Bo;
-
-        return rhoo;
-    }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>

@@ -194,30 +194,6 @@ public:
     }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure,
-                       const Evaluation& /*Rs*/) const
-    { return saturatedDensity(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of gas saturated oil given a pressure.
-     */
-    template <class Evaluation>
-    Evaluation saturatedDensity(unsigned regionIdx,
-                                const Evaluation& temperature,
-                                const Evaluation& pressure) const
-    {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-
-        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
-        return rhooRef/Bo;
-    }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>

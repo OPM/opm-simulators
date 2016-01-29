@@ -145,9 +145,6 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = waterPvt.viscosity(/*regionIdx=*/0,
                                  temperature,
                                  pressure);
-        tmp = waterPvt.density(/*regionIdx=*/0,
-                               temperature,
-                               pressure);
         tmp = waterPvt.formationVolumeFactor(/*regionIdx=*/0,
                                              temperature,
                                              pressure);
@@ -159,10 +156,6 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
                                temperature,
                                pressure,
                                Rs);
-        tmp = oilPvt.density(/*regionIdx=*/0,
-                             temperature,
-                             pressure,
-                             Rs);
         tmp = oilPvt.formationVolumeFactor(/*regionIdx=*/0,
                                            temperature,
                                            pressure,
@@ -170,9 +163,6 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = oilPvt.saturatedViscosity(/*regionIdx=*/0,
                                         temperature,
                                         pressure);
-        tmp = oilPvt.saturatedDensity(/*regionIdx=*/0,
-                                      temperature,
-                                      pressure);
         tmp = oilPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
                                                     temperature,
                                                     pressure);
@@ -190,10 +180,6 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
                                temperature,
                                pressure,
                                Rv);
-        tmp = gasPvt.density(/*regionIdx=*/0,
-                             temperature,
-                             pressure,
-                             Rv);
         tmp = gasPvt.formationVolumeFactor(/*regionIdx=*/0,
                                            temperature,
                                            pressure,
@@ -201,9 +187,6 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = gasPvt.saturatedViscosity(/*regionIdx=*/0,
                                         temperature,
                                         pressure);
-        tmp = gasPvt.saturatedDensity(/*regionIdx=*/0,
-                                      temperature,
-                                      pressure);
         tmp = gasPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
                                                     temperature,
                                                     pressure);
@@ -265,25 +248,6 @@ inline void testAll()
     if (std::abs(tmp - refTmp)  > tolerance)
         OPM_THROW(std::logic_error,
                   "The reference water viscosity at region 1 is supposed to be " << refTmp
-                  << ". (is " << tmp << ")");
-
-    refTmp = 500/1.1;
-    tmp = constCompWaterPvt.density(/*regionIdx=*/0,
-                                    /*temperature=*/273.15 + 20.0,
-                                    /*pressure=*/1e5);
-    if (std::abs(tmp - refTmp)  > tolerance)
-        OPM_THROW(std::logic_error,
-                  "The reference water density at region 0 is supposed to be " << refTmp
-                  << ". (is " << tmp << ")");
-
-
-    refTmp = 600/1.2;
-    tmp = constCompWaterPvt.density(/*regionIdx=*/1,
-                                    /*temperature=*/273.15 + 20.0,
-                                    /*pressure=*/2e5);
-    if (std::abs(tmp - refTmp)  > tolerance)
-        OPM_THROW(std::logic_error,
-                  "The reference water density at region 1 is supposed to be " << refTmp
                   << ". (is " << tmp << ")");
 
     //////////

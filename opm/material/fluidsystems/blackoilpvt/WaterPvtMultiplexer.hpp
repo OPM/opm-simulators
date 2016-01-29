@@ -112,15 +112,6 @@ public:
                                      const Evaluation& pressure) const
     { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
 
-    /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure)); return 0; }
-
     void setApproach(WaterPvtApproach appr)
     {
         switch (appr) {
