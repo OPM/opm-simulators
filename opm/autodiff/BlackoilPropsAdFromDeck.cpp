@@ -133,9 +133,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     materialLawManager_ = materialLawManager;
 
     // Copy properties that do not depend on the postion within the grid.
+    oilPvt_           = props.oilPvt_;
+    gasPvt_           = props.gasPvt_;
+    waterPvt_         = props.waterPvt_;
     phase_usage_      = props.phase_usage_;
-    props_            = props.props_;
-    densities_        = props.densities_;
+    surfaceDensity_   = props.surfaceDensity_;
     vap1_             = props.vap1_;
     vap2_             = props.vap2_;
     vap_satmax_guard_ = props.vap_satmax_guard_;
@@ -166,116 +168,35 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         phase_usage_ = phaseUsageFromDeck(deck);
 
+        gasPvt_ = std::make_shared<GasPvt>();
+        oilPvt_ = std::make_shared<OilPvt>();
+        waterPvt_ = std::make_shared<WaterPvt>();
 
+        gasPvt_->initFromDeck(deck, eclState);
+        oilPvt_->initFromDeck(deck, eclState);
+        waterPvt_->initFromDeck(deck, eclState);
 
         // Surface densities. Accounting for different orders in eclipse and our code.
         Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
         int numRegions = densityKeyword->size();
         auto tables = eclState->getTableManager();
 
-        densities_.resize(numRegions);
+        surfaceDensity_.resize(numRegions);
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
             if (phase_usage_.phase_used[Liquid]) {
-                densities_[regionIdx][phase_usage_.phase_pos[Liquid]]
+                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Liquid]]
                     = densityKeyword->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
             }
             if (phase_usage_.phase_used[Aqua]) {
-                densities_[regionIdx][phase_usage_.phase_pos[Aqua]]
+                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Aqua]]
                     = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
             }
             if (phase_usage_.phase_used[Vapour]) {
-                densities_[regionIdx][phase_usage_.phase_pos[Vapour]]
+                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Vapour]]
                     = densityKeyword->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
             }
         }
 
-        const int numSamples = 0;
-
-        // Resize the property objects container
-        props_.resize(phase_usage_.num_phases);
-
-
-        // Water PVT
-        if (phase_usage_.phase_used[Aqua]) {
-            // if water is used, we require the presence of the "PVTW"
-            // keyword for now...
-            std::shared_ptr<PvtConstCompr> pvtw(new PvtConstCompr);
-            pvtw->initFromWater(deck->getKeyword("PVTW"));
-            props_[phase_usage_.phase_pos[Aqua]] = pvtw;
-
-            // handle temperature dependence of the oil phase
-            if (!tables->getWatvisctTables().empty() || deck->hasKeyword("WATDENT")) {
-                // deal with temperature dependent properties
-                std::shared_ptr<ThermalWaterPvtWrapper> waterNiPvt(new ThermalWaterPvtWrapper);
-                waterNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Aqua]], deck, eclState);
-
-                props_[phase_usage_.phase_pos[Aqua]] = waterNiPvt;
-            }
-        }
-        // Oil PVT
-        if (phase_usage_.phase_used[Liquid]) {
-            // for oil, we support the "PVDO", "PVTO" and "PVCDO"
-            // keywords...
-            const auto& pvdoTables = tables->getPvdoTables();
-            const auto& pvtoTables = tables->getPvtoTables();
-            if (!pvdoTables.empty()) {
-                if (numSamples > 0) {
-                    auto splinePvdo = std::shared_ptr<PvtDeadSpline>(new PvtDeadSpline);
-                    splinePvdo->initFromOil(pvdoTables, numSamples);
-                    props_[phase_usage_.phase_pos[Liquid]] = splinePvdo;
-                } else {
-                    auto pvdo = std::shared_ptr<PvtDead>(new PvtDead);
-                    pvdo->initFromOil(pvdoTables);
-                    props_[phase_usage_.phase_pos[Liquid]] = pvdo;
-                }
-            } else if (!pvtoTables.empty()) {
-                std::shared_ptr<PvtLiveOil> pvto(new PvtLiveOil(pvtoTables));
-                props_[phase_usage_.phase_pos[Liquid]] = pvto;
-            } else if (deck->hasKeyword("PVCDO")) {
-                std::shared_ptr<PvtConstCompr> pvcdo(new PvtConstCompr);
-                pvcdo->initFromOil(deck->getKeyword("PVCDO"));
-                props_[phase_usage_.phase_pos[Liquid]] = pvcdo;
-            } else {
-                OPM_THROW(std::runtime_error, "Input is missing PVDO, PVCDO or PVTO\n");
-            }
-
-            // handle temperature dependence of the oil phase
-            if (!tables->getOilvisctTables().empty() || deck->hasKeyword("THERMEX1")) {
-                std::shared_ptr<ThermalOilPvtWrapper> oilNiPvt(new ThermalOilPvtWrapper);
-                oilNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Liquid]], deck, eclState);
-
-                props_[phase_usage_.phase_pos[Liquid]] = oilNiPvt;
-            }
-        }
-        // Gas PVT
-        if (phase_usage_.phase_used[Vapour]) {
-            // gas can be specified using the "PVDG" or "PVTG" keywords...
-            const auto& pvdgTables = tables->getPvdgTables();
-            const auto& pvtgTables = tables->getPvtgTables();
-            if (!pvdgTables.empty()) {
-                if (numSamples > 0) {
-                    std::shared_ptr<PvtDeadSpline> splinePvt(new PvtDeadSpline);
-                    splinePvt->initFromGas(pvdgTables, numSamples);
-                    props_[phase_usage_.phase_pos[Vapour]] = splinePvt;
-                } else {
-                    std::shared_ptr<PvtDead> deadPvt(new PvtDead);
-                    deadPvt->initFromGas(pvdgTables);
-                    props_[phase_usage_.phase_pos[Vapour]] = deadPvt;
-                }
-            } else if (!pvtgTables.empty()) {
-                props_[phase_usage_.phase_pos[Vapour]].reset(new PvtLiveGas(pvtgTables));
-            } else {
-                OPM_THROW(std::runtime_error, "Input is missing PVDG or PVTG\n");
-            }
-
-            // handle temperature dependence of the gas phase
-            if (!tables->getGasvisctTables().empty() || deck->hasKeyword("TREF")) {
-                std::shared_ptr<ThermalGasPvtWrapper> gasNiPvt(new ThermalGasPvtWrapper);
-                gasNiPvt->initFromDeck(props_[phase_usage_.phase_pos[Vapour]], deck, eclState);
-
-                props_[phase_usage_.phase_pos[Vapour]] = gasNiPvt;
-            }
-        }
         // Oil vaporization controls (kw VAPPARS)
         vap1_ = vap2_ = 0.0;
         if (deck->hasKeyword("VAPPARS") && deck->hasKeyword("VAPOIL") && deck->hasKeyword("DISGAS")) {
@@ -359,7 +280,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rhos = V::Zero(n);
         for (int cellIdx = 0; cellIdx < n; ++cellIdx) {
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            const auto* rho = &densities_[pvtRegionIdx][0];
+            const auto* rho = &surfaceDensity_[pvtRegionIdx][0];
             rhos[cellIdx] = rho[phaseIdx];
         }
         return rhos;
@@ -379,18 +300,33 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Water]) {
-            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
         assert(pw.size() == n);
+
         V mu(n);
         V dmudp(n);
-        V dmudr(n);
-        const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->mu(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
-                                                  mu.data(), dmudp.data(), dmudr.data());
+        enum PressureEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 0.0;
+
+        pLad.derivatives[0] = 1.0;
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = pw.value()[i];
+            TLad.value = T.value()[i];
+
+            const LadEval& muLad = waterPvt_->viscosity(pvtRegionIdx, TLad, pLad);
+
+            mu[i] = muLad.value;
+            dmudp[i] = muLad.derivatives[0];
+        }
+
         if (pw.derivative().empty()) {
             return ADB::constant(std::move(mu));
         } else {
@@ -418,17 +354,42 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
-            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
         assert(po.size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->mu(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
-                                                &cond[0], mu.data(), dmudp.data(), dmudr.data());
+        enum PressureRsEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureRsEvalTag, /*size=*/2> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 0.0;
+        LadEval RsLad = 0.0;
+
+        pLad.derivatives[0] = 1.0;
+        RsLad.derivatives[1] = 1.0;
+
+        LadEval muLad;
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = po.value()[i];
+            TLad.value = T.value()[i];
+
+            if (cond[i].hasFreeGas()) {
+                muLad = oilPvt_->saturatedViscosity(pvtRegionIdx, TLad, pLad);
+            }
+            else {
+                RsLad.value = rs.value()[i];
+                muLad = oilPvt_->viscosity(pvtRegionIdx, TLad, pLad, RsLad);
+            }
+
+            mu[i] = muLad.value;
+            dmudp[i] = muLad.derivatives[0];
+            dmudr[i] = muLad.derivatives[1];
+        }
 
         ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
         ADB::M dmudr_diag(dmudr.matrix().asDiagonal());
@@ -457,17 +418,42 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
         assert(pg.value().size() == n);
         V mu(n);
         V dmudp(n);
         V dmudr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->mu(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(),&cond[0],
-                                                  mu.data(), dmudp.data(), dmudr.data());
+        enum PressureRvEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureRvEvalTag, /*size=*/2> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 0.0;
+        LadEval RsLad = 0.0;
+        LadEval muLad;
+
+        pLad.derivatives[0] = 1.0;
+        RsLad.derivatives[1] = 1.0;
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = pg.value()[i];
+            TLad.value = T.value()[i];
+
+            if (cond[i].hasFreeOil()) {
+                muLad = gasPvt_->saturatedViscosity(pvtRegionIdx, TLad, pLad);
+            }
+            else {
+                RsLad.value = rv.value()[i];
+                muLad = gasPvt_->viscosity(pvtRegionIdx, TLad, pLad, RsLad);
+            }
+
+            mu[i] = muLad.value;
+            dmudp[i] = muLad.derivatives[0];
+            dmudr[i] = muLad.derivatives[1];
+        }
 
         ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
         ADB::M dmudr_diag(dmudr.matrix().asDiagonal());
@@ -496,19 +482,32 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Water]) {
-            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
         assert(pw.size() == n);
 
         V b(n);
         V dbdp(n);
         V dbdr(n);
-        const double* rs = 0;
 
-        props_[phase_usage_.phase_pos[Water]]->b(n, pvt_region_.data(), pw.value().data(), T.value().data(), rs,
-                                                 b.data(), dbdp.data(), dbdr.data());
+        enum PressureEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 0.0;
+
+        pLad.derivatives[0] = 1.0;
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = pw.value()[i];
+            TLad.value = T.value()[i];
+
+            const LadEval& bLad = waterPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+
+            b[i] = bLad.value;
+            dbdp[i] = bLad.derivatives[0];
+        }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
         const int num_blocks = pw.numBlocks();
@@ -533,18 +532,43 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
-            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
         assert(po.size() == n);
 
         V b(n);
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Oil]]->b(n, pvt_region_.data(), po.value().data(), T.value().data(), rs.value().data(),
-                                               &cond[0], b.data(), dbdp.data(), dbdr.data());
+        enum PressureRsEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureRsEvalTag, /*size=*/2> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 0.0;
+        LadEval RsLad = 0.0;
+        LadEval bLad;
+
+        pLad.derivatives[0] = 1.0;
+        RsLad.derivatives[1] = 1.0;
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = po.value()[i];
+            TLad.value = T.value()[i];
+
+            if (cond[i].hasFreeGas()) {
+                bLad = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+            }
+            else {
+                RsLad.value = rs.value()[i];
+                bLad = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
+            }
+
+            b[i] = bLad.value;
+            dbdp[i] = bLad.derivatives[0];
+            dbdr[i] = bLad.derivatives[1];
+        }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
         ADB::M dbdr_diag(dbdr.matrix().asDiagonal());
@@ -573,18 +597,43 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
         assert(pg.size() == n);
 
         V b(n);
         V dbdp(n);
         V dbdr(n);
 
-        props_[phase_usage_.phase_pos[Gas]]->b(n, pvt_region_.data(), pg.value().data(), T.value().data(), rv.value().data(), &cond[0],
-                                               b.data(), dbdp.data(), dbdr.data());
+        enum PressureRvEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureRvEvalTag, /*size=*/2> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 0.0;
+        LadEval RvLad = 0.0;
+        LadEval bLad;
+
+        pLad.derivatives[0] = 1.0;
+        RvLad.derivatives[1] = 1.0;
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = pg.value()[i];
+            TLad.value = T.value()[i];
+
+            if (cond[i].hasFreeOil()) {
+                bLad = gasPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+            }
+            else {
+                RvLad.value = rv.value()[i];
+                bLad = gasPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RvLad);
+            }
+
+            b[i] = bLad.value;
+            dbdp[i] = bLad.derivatives[0];
+            dbdr[i] = bLad.derivatives[1];
+        }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
         ADB::M dbdr_diag(dbdr.matrix().asDiagonal());
@@ -611,14 +660,31 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
-            OPM_THROW(std::runtime_error, "Cannot call rsMax(): oil phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call rsSat(): oil phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
         assert(po.size() == n);
         V rbub(n);
         V drbubdp(n);
-        props_[phase_usage_.phase_pos[Oil]]->rsSat(n, pvt_region_.data(), po.value().data(), rbub.data(), drbubdp.data());
+
+        enum PressureEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 293.15; // temperature is not supported by this API!
+
+        pLad.derivatives[0] = 1.0;
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = po.value()[i];
+
+            const LadEval& RsLad = oilPvt_->saturatedGasDissolutionFactor(pvtRegionIdx, TLad, pLad);
+
+            rbub[i] = RsLad.value;
+            drbubdp[i] = RsLad.derivatives[0];
+        }
+
         ADB::M drbubdp_diag(drbubdp.matrix().asDiagonal());
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -645,26 +711,43 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     // ------ Rv condensation curve ------
 
     /// Condensation curve for Rv as function of oil pressure.
-    /// \param[in]  po     Array of n oil pressure values.
+    /// \param[in]  pg     Array of n gas pressure values.
     /// \param[in]  cells  Array of n cell indices to be associated with the pressure values.
     /// \return            Array of n condensation point values for Rv.
-    ADB BlackoilPropsAdFromDeck::rvSat(const ADB& po,
+    ADB BlackoilPropsAdFromDeck::rvSat(const ADB& pg,
                                        const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call rvMax(): gas phase not present.");
+            OPM_THROW(std::runtime_error, "Cannot call rvSat(): gas phase not active.");
         }
         const int n = cells.size();
-        mapPvtRegions(cells);
-        assert(po.size() == n);
+        assert(pg.size() == n);
         V rv(n);
         V drvdp(n);
-        props_[phase_usage_.phase_pos[Gas]]->rvSat(n, pvt_region_.data(), po.value().data(), rv.data(), drvdp.data());
+
+        enum PressureEvalTag {};
+        typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
+
+        LadEval pLad = 0.0;
+        LadEval TLad = 293.15; // temperature is not supported by this API!
+
+        pLad.derivatives[0] = 1.0;
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            pLad.value = pg.value()[i];
+
+            const LadEval& RvLad = gasPvt_->saturatedOilVaporizationFactor(pvtRegionIdx, TLad, pLad);
+
+            rv[i] = RvLad.value;
+            drvdp[i] = RvLad.derivatives[0];
+        }
+
         ADB::M drvdp_diag(drvdp.matrix().asDiagonal());
-        const int num_blocks = po.numBlocks();
+        const int num_blocks = pg.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
-            fastSparseProduct(drvdp_diag, po.derivative()[block], jacs[block]);
+            fastSparseProduct(drvdp_diag, pg.derivative()[block], jacs[block]);
         }
         return ADB::function(std::move(rv), std::move(jacs));
     }
@@ -912,21 +995,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             r = ADB::function(std::move(factor), std::move(jacs))*r;
         }
     }
-
-
-
-
-
-    // Fills pvt_region_ with cellPvtRegionIdx_[cells].
-    void BlackoilPropsAdFromDeck::mapPvtRegions(const std::vector<int>& cells) const
-    {
-        const int n = cells.size();
-        pvt_region_.resize(n);
-        for (int ii = 0; ii < n; ++ii) {
-            pvt_region_[ii] = cellPvtRegionIdx_[cells[ii]];
-        }
-    }
-
 
     /// Obtain the scaled critical oil in gas saturation values.
     /// \param[in]  cells  Array of cell indices.

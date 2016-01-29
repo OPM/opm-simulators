@@ -29,6 +29,12 @@
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
+#include <opm/material/fluidsystems/blackoilpvt/GasPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>
+#include <opm/material/localad/Math.hpp>
+#include <opm/material/localad/Evaluation.hpp>
+
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
@@ -59,6 +65,10 @@ namespace Opm
     {
         friend class BlackoilPropsDataHandle;
     public:
+        typedef Opm::GasPvtMultiplexer<double> GasPvt;
+        typedef Opm::OilPvtMultiplexer<double> OilPvt;
+        typedef Opm::WaterPvtMultiplexer<double> WaterPvt;
+
         typedef typename SaturationPropsFromDeck::MaterialLawManager MaterialLawManager;
 
         /// Constructor to create a blackoil properties from an ECL deck.
@@ -392,9 +402,6 @@ namespace Opm
                       const std::vector<int>& cells,
                       const double vap) const;
 
-        // Fills pvt_region_ with cellPvtRegionIdx_[cells].
-        void mapPvtRegions(const std::vector<int>& cells) const;
-
         RockFromDeck rock_;
 
         // This has to be a shared pointer as we must
@@ -409,15 +416,8 @@ namespace Opm
         // The PVT region which is to be used for each cell
         std::vector<int> cellPvtRegionIdx_;
 
-        // Used for storing the region-per-cell array computed in calls
-        // to pvt functions.
-        mutable std::vector<int> pvt_region_;
-
-        // The PVT properties. One object per active fluid phase.
-        std::vector<std::shared_ptr<Opm::PvtInterface> > props_;
-
         // Densities, one std::array per PVT region.
-        std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > densities_;
+        std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > surfaceDensity_;
 
         // VAPPARS
         double vap1_;
@@ -425,6 +425,9 @@ namespace Opm
         std::vector<double> satOilMax_;
         double vap_satmax_guard_;  //Threshold value to promote stability
 
+        std::shared_ptr<GasPvt> gasPvt_;
+        std::shared_ptr<OilPvt> oilPvt_;
+        std::shared_ptr<WaterPvt> waterPvt_;
     };
 } // namespace Opm
 
