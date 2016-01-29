@@ -377,8 +377,8 @@ public:
                            unsigned phaseIdx,
                            unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef typename FluidState::Scalar FsEval;
         typedef Opm::MathToolbox<FsEval> FsToolbox;
@@ -455,8 +455,8 @@ public:
                                     unsigned phaseIdx,
                                     unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef typename FluidState::Scalar FsEval;
         typedef Opm::MathToolbox<FsEval> FsToolbox;
@@ -486,8 +486,8 @@ public:
                                          unsigned phaseIdx,
                                          unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -517,8 +517,8 @@ public:
                                                   unsigned phaseIdx,
                                                   unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -540,9 +540,9 @@ public:
                                        unsigned compIdx,
                                        unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= compIdx  && compIdx <= numComponents);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= compIdx && compIdx <= numComponents);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -667,8 +667,8 @@ public:
                              unsigned phaseIdx,
                              unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -746,8 +746,8 @@ public:
                                               unsigned phaseIdx,
                                               unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -777,8 +777,8 @@ public:
                                       unsigned phaseIdx,
                                       unsigned regionIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= regionIdx  && regionIdx <= numRegions());
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
