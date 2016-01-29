@@ -191,11 +191,11 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& pressure,
-                                     const Evaluation& /*Rs*/) const
-    { return 1.0 / inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& /*temperature*/,
+                                            const Evaluation& pressure,
+                                            const Evaluation& /*Rs*/) const
+    { return inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the formation volume factor [-] of saturated oil.
@@ -203,10 +203,10 @@ public:
      * Note that by definition, dead oil is always gas saturated.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& pressure) const
-    { return 1.0 / inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    { return inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.

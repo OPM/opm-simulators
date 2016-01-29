@@ -214,46 +214,23 @@ public:
     }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure,
-                       const Evaluation& /*Rv*/) const
-    { return saturatedDensity(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of oil saturated gas at given pressure.
-     */
-    template <class Evaluation>
-    Evaluation saturatedDensity(unsigned regionIdx,
-                                const Evaluation& temperature,
-                                const Evaluation& pressure) const
-    {
-        // gas formation volume factor at reservoir pressure
-        const Evaluation& Bg = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
-        return gasReferenceDensity_[regionIdx]/Bg;
-    }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure,
-                                     const Evaluation& /*Rv*/) const
-    { return saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure,
+                                            const Evaluation& /*Rv*/) const
+    { return saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Returns the formation volume factor [-] of oil saturated gas at given pressure.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& /*temperature*/,
-                                              const Evaluation& pressure) const
-    { return 1.0/inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& /*temperature*/,
+                                                     const Evaluation& pressure) const
+    { return inverseGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the saturation pressure of the gas phase [Pa]

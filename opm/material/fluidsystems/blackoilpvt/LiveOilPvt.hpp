@@ -433,25 +433,25 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& pressure,
-                                     const Evaluation& Rs) const
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& /*temperature*/,
+                                            const Evaluation& pressure,
+                                            const Evaluation& Rs) const
     {
         // ATTENTION: Rs is represented by the _first_ axis!
-        return 1.0 / inverseOilBTable_[regionIdx].eval(Rs, pressure, /*extrapolate=*/true);
+        return inverseOilBTable_[regionIdx].eval(Rs, pressure, /*extrapolate=*/true);
     }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& /*temperature*/,
-                                              const Evaluation& pressure) const
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& /*temperature*/,
+                                                     const Evaluation& pressure) const
     {
         // ATTENTION: Rs is represented by the _first_ axis!
-        return 1.0 / inverseSaturatedOilBTable_[regionIdx].eval(pressure, /*extrapolate=*/true);
+        return inverseSaturatedOilBTable_[regionIdx].eval(pressure, /*extrapolate=*/true);
     }
 
     /*!

@@ -162,20 +162,20 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation = Scalar>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure,
-                                     const Evaluation& Rv) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure, Rv)); return 0; }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure,
+                                            const Evaluation& Rv) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure, Rv)); return 0; }
 
     /*!
      * \brief Returns the formation volume factor [-] of oil saturated gas given a set of parameters.
      */
     template <class Evaluation = Scalar>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& temperature,
-                                              const Evaluation& pressure) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& temperature,
+                                                     const Evaluation& pressure) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the oil vaporization factor \f$R_v\f$ [m^3/m^3] of oil saturated gas.

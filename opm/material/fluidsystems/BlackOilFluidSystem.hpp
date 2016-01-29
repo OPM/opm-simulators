@@ -380,39 +380,39 @@ public:
         case oilPhaseIdx: {
             if (!enableDissolvedGas()) {
                 // immiscible oil
-                const auto& Bo = formationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-                return referenceDensity(phaseIdx, regionIdx)/Bo;
+                const auto& bo = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
+                return referenceDensity(phaseIdx, regionIdx)*bo;
             }
 
             // miscible oil
-            const auto& Bo = formationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
+            const auto& bo = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
             const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
 
             return
-                referenceDensity(oilPhaseIdx, regionIdx)/Bo
-                + Rs*referenceDensity(gasPhaseIdx, regionIdx)/Bo;
+                bo*referenceDensity(oilPhaseIdx, regionIdx)
+                + Rs*bo*referenceDensity(gasPhaseIdx, regionIdx);
         }
 
         case gasPhaseIdx: {
             if (!enableVaporizedOil()) {
                 // immiscible gas
-                const auto& Bg = formationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
-                return Bg*referenceDensity(phaseIdx, regionIdx);
+                const auto& bg = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
+                return bg*referenceDensity(phaseIdx, regionIdx);
             }
 
             // miscible gas
-            const auto& Bg = formationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
+            const auto& bg = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
             const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
 
             return
-                referenceDensity(gasPhaseIdx, regionIdx)/Bg
-                + Rv*referenceDensity(oilPhaseIdx, regionIdx)/Bg;
+                bg*referenceDensity(gasPhaseIdx, regionIdx)
+                + Rv*bg*referenceDensity(oilPhaseIdx, regionIdx);
         }
 
         case waterPhaseIdx:
             return
                 referenceDensity(waterPhaseIdx, regionIdx)
-                /formationVolumeFactor<FluidState, LhsEval>(fluidState, waterPhaseIdx, regionIdx);
+                *inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, waterPhaseIdx, regionIdx);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
@@ -437,39 +437,39 @@ public:
         case oilPhaseIdx: {
             if (!enableDissolvedGas()) {
                 // immiscible oil
-                const auto& Bo = formationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
-                return referenceDensity(phaseIdx, regionIdx)/Bo;
+                const auto& bo = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
+                return referenceDensity(phaseIdx, regionIdx)*bo;
             }
 
             // miscible oil
-            const auto& Bo = saturatedFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
+            const auto& bo = saturatedInverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
             const auto& Rs = saturatedDissolutionFactor<FluidState, LhsEval>(fluidState, oilPhaseIdx, regionIdx);
 
             return
-                referenceDensity(oilPhaseIdx, regionIdx)/Bo
-                + Rs*referenceDensity(gasPhaseIdx, regionIdx)/Bo;
+                bo*referenceDensity(oilPhaseIdx, regionIdx)
+                + Rs*bo*referenceDensity(gasPhaseIdx, regionIdx);
         }
 
         case gasPhaseIdx: {
             if (!enableVaporizedOil()) {
                 // immiscible gas
-                const auto& Bg = formationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
-                return referenceDensity(phaseIdx, regionIdx)/Bg;
+                const auto& bg = inverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
+                return referenceDensity(phaseIdx, regionIdx)*bg;
             }
 
             // miscible gas
-            const auto& Bg = saturatedFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
+            const auto& bg = saturatedInverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
             const auto& Rv = saturatedDissolutionFactor<FluidState, LhsEval>(fluidState, gasPhaseIdx, regionIdx);
 
             return
-                referenceDensity(gasPhaseIdx, regionIdx)/Bg
-                + Rv*referenceDensity(oilPhaseIdx, regionIdx)/Bg;
+                bg*referenceDensity(gasPhaseIdx, regionIdx)
+                + Rv*bg*referenceDensity(oilPhaseIdx, regionIdx);
         }
 
         case waterPhaseIdx:
             return
                 referenceDensity(waterPhaseIdx, regionIdx)
-                /saturatedFormationVolumeFactor<FluidState, LhsEval>(fluidState, waterPhaseIdx, regionIdx);
+                *saturatedInverseFormationVolumeFactor<FluidState, LhsEval>(fluidState, waterPhaseIdx, regionIdx);
         }
 
         OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
@@ -484,9 +484,9 @@ public:
      * the given temperature and pressure.
      */
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval formationVolumeFactor(const FluidState& fluidState,
-                                         unsigned phaseIdx,
-                                         unsigned regionIdx)
+    static LhsEval inverseFormationVolumeFactor(const FluidState& fluidState,
+                                                unsigned phaseIdx,
+                                                unsigned regionIdx)
     {
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
@@ -497,12 +497,56 @@ public:
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
-        case oilPhaseIdx:
-            return oilPvt_->formationVolumeFactor(regionIdx, T, p, getRs_<LhsEval>(fluidState, regionIdx));
-        case gasPhaseIdx:
-            return gasPvt_->formationVolumeFactor(regionIdx, T, p, getRv_<LhsEval>(fluidState, regionIdx));
+        case oilPhaseIdx: {
+            if (enableDissolvedGas()) {
+                if (fluidState.saturation(gasPhaseIdx) > 0.0) {
+                    if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
+                        // here comes the relatively expensive case: first calculate and then
+                        // interpolate between the saturated and undersaturated quantities to
+                        // avoid a discontinuity
+                        const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
+                        const auto& bSat = oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
+                        const auto& bUndersat = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
+                        return alpha*bSat + (1.0 - alpha)*bUndersat;
+                    }
+
+                    return oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
+                }
+
+                const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+                return oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
+            }
+
+            const LhsEval Rs(0.0);
+            return oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
+        }
+        case gasPhaseIdx: {
+            if (enableVaporizedOil()) {
+                if (fluidState.saturation(oilPhaseIdx) > 0.0) {
+                    if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
+                        // here comes the relatively expensive case: first calculate and then
+                        // interpolate between the saturated and undersaturated quantities to
+                        // avoid a discontinuity
+                        const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
+                        const auto& bSat = gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
+                        const auto& bUndersat = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
+                        return alpha*bSat + (1.0 - alpha)*bUndersat;
+                    }
+
+                    return gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
+                }
+
+                const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+                return gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
+            }
+
+            const LhsEval Rv(0.0);
+            return gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
+        }
         case waterPhaseIdx:
-            return waterPvt_->formationVolumeFactor(regionIdx, T, p);
+            return waterPvt_->inverseFormationVolumeFactor(regionIdx, T, p);
         default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
         }
     }
@@ -515,9 +559,9 @@ public:
      * saturated and for the water phase, there is no difference to formationVolumeFactor()
      */
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval saturatedFormationVolumeFactor(const FluidState& fluidState,
-                                                  unsigned phaseIdx,
-                                                  unsigned regionIdx)
+    static LhsEval saturatedInverseFormationVolumeFactor(const FluidState& fluidState,
+                                                         unsigned phaseIdx,
+                                                         unsigned regionIdx)
     {
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
@@ -528,9 +572,9 @@ public:
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
-        case oilPhaseIdx: return oilPvt_->saturatedFormationVolumeFactor(regionIdx, T, p);
-        case gasPhaseIdx: return gasPvt_->saturatedFormationVolumeFactor(regionIdx, T, p);
-        case waterPhaseIdx: return waterPvt_->formationVolumeFactor(regionIdx, T, p);
+        case oilPhaseIdx: return oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
+        case gasPhaseIdx: return gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
+        case waterPhaseIdx: return waterPvt_->inverseFormationVolumeFactor(regionIdx, T, p);
         default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
         }
     }
@@ -678,55 +722,55 @@ public:
         const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
-        case oilPhaseIdx:
-            if (!enableDissolvedGas())
-                // if the oil phase is immiscible with the gas component, we can use the
-                // "saturated" properties from the outset...
-                return oilPvt_->saturatedViscosity(regionIdx, T, p);
-            else if (fluidState.saturation(gasPhaseIdx) > 0.0) {
-                if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
-                    // here comes the relatively expensive case: first calculate and then
-                    // interpolate between the saturated and undersaturated quantities to
-                    // avoid a discontinuity
-                    const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
-                    const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
-                    const auto& muSat = oilPvt_->saturatedViscosity(regionIdx, T, p);
-                    const auto& muUndersat = oilPvt_->viscosity(regionIdx, T, p, Rs);
-                    return alpha*muSat + (1.0 - alpha)*muUndersat;
+        case oilPhaseIdx: {
+            if (enableDissolvedGas()) {
+                if (fluidState.saturation(gasPhaseIdx) > 0.0) {
+                    if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
+                        // here comes the relatively expensive case: first calculate and then
+                        // interpolate between the saturated and undersaturated quantities to
+                        // avoid a discontinuity
+                        const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
+                        const auto& muSat = oilPvt_->saturatedViscosity(regionIdx, T, p);
+                        const auto& muUndersat = oilPvt_->viscosity(regionIdx, T, p, Rs);
+                        return alpha*muSat + (1.0 - alpha)*muUndersat;
+                    }
+
+                    return oilPvt_->saturatedViscosity(regionIdx, T, p);
                 }
 
-                return oilPvt_->saturatedViscosity(regionIdx, T, p);
-            }
-            else {
-                // undersaturated oil
-                const auto& Rs = getRs_<LhsEval>(fluidState, regionIdx);
+                const auto& Rs = getRs_<LhsEval, FluidState>(fluidState, regionIdx);
                 return oilPvt_->viscosity(regionIdx, T, p, Rs);
             }
 
-        case gasPhaseIdx:
-            if (!enableVaporizedOil())
-                // if the gas phase is immiscible with the oil component, we can use the
-                // saturated properties from the outset...
-                return gasPvt_->saturatedViscosity(regionIdx, T, p);
-            else if (fluidState.saturation(oilPhaseIdx) > 0.0) {
-                if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
-                    // here comes the relatively expensive case: first calculate and then
-                    // interpolate between the saturated and undersaturated quantities to
-                    // avoid a discontinuity
-                    const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
-                    const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
-                    const auto& muSat = gasPvt_->saturatedViscosity(regionIdx, T, p);
-                    const auto& muUndersat = gasPvt_->viscosity(regionIdx, T, p, Rv);
-                    return alpha*muSat + (1.0 - alpha)*muUndersat;
+            const LhsEval Rs(0.0);
+            return oilPvt_->viscosity(regionIdx, T, p, Rs);
+        }
+
+        case gasPhaseIdx: {
+            if (enableVaporizedOil()) {
+                if (fluidState.saturation(oilPhaseIdx) > 0.0) {
+                    if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
+                        // here comes the relatively expensive case: first calculate and then
+                        // interpolate between the saturated and undersaturated quantities to
+                        // avoid a discontinuity
+                        const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
+                        const auto& alpha = FsToolbox::template toLhs<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
+                        const auto& muSat = gasPvt_->saturatedViscosity(regionIdx, T, p);
+                        const auto& muUndersat = gasPvt_->viscosity(regionIdx, T, p, Rv);
+                        return alpha*muSat + (1.0 - alpha)*muUndersat;
+                    }
+
+                    return gasPvt_->saturatedViscosity(regionIdx, T, p);
                 }
 
-                return gasPvt_->saturatedViscosity(regionIdx, T, p);
-            }
-            else {
-                // undersaturated gas
-                const auto& Rv = getRv_<LhsEval>(fluidState, regionIdx);
+                const auto& Rv = getRv_<LhsEval, FluidState>(fluidState, regionIdx);
                 return gasPvt_->viscosity(regionIdx, T, p, Rv);
             }
+
+            const LhsEval Rv(0.0);
+            return gasPvt_->viscosity(regionIdx, T, p, Rv);
+        }
 
         case waterPhaseIdx:
             // since water is always assumed to be immiscible in the black-oil model,

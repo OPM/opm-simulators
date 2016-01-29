@@ -145,9 +145,9 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = waterPvt.viscosity(/*regionIdx=*/0,
                                  temperature,
                                  pressure);
-        tmp = waterPvt.formationVolumeFactor(/*regionIdx=*/0,
-                                             temperature,
-                                             pressure);
+        tmp = waterPvt.inverseFormationVolumeFactor(/*regionIdx=*/0,
+                                                    temperature,
+                                                    pressure);
 
         /////
         // oil PVT API
@@ -156,16 +156,16 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
                                temperature,
                                pressure,
                                Rs);
-        tmp = oilPvt.formationVolumeFactor(/*regionIdx=*/0,
-                                           temperature,
-                                           pressure,
-                                           Rs);
+        tmp = oilPvt.inverseFormationVolumeFactor(/*regionIdx=*/0,
+                                                  temperature,
+                                                  pressure,
+                                                  Rs);
         tmp = oilPvt.saturatedViscosity(/*regionIdx=*/0,
                                         temperature,
                                         pressure);
-        tmp = oilPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
-                                                    temperature,
-                                                    pressure);
+        tmp = oilPvt.saturatedInverseFormationVolumeFactor(/*regionIdx=*/0,
+                                                           temperature,
+                                                           pressure);
         tmp = oilPvt.saturationPressure(/*regionIdx=*/0,
                                         temperature,
                                         Rs);
@@ -180,16 +180,16 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
                                temperature,
                                pressure,
                                Rv);
-        tmp = gasPvt.formationVolumeFactor(/*regionIdx=*/0,
-                                           temperature,
-                                           pressure,
-                                           Rv);
+        tmp = gasPvt.inverseFormationVolumeFactor(/*regionIdx=*/0,
+                                                  temperature,
+                                                  pressure,
+                                                  Rv);
         tmp = gasPvt.saturatedViscosity(/*regionIdx=*/0,
                                         temperature,
                                         pressure);
-        tmp = gasPvt.saturatedFormationVolumeFactor(/*regionIdx=*/0,
-                                                    temperature,
-                                                    pressure);
+        tmp = gasPvt.saturatedInverseFormationVolumeFactor(/*regionIdx=*/0,
+                                                           temperature,
+                                                           pressure);
         tmp = gasPvt.saturationPressure(/*regionIdx=*/0,
                                         temperature,
                                         Rv);

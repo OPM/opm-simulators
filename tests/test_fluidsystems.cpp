@@ -146,8 +146,8 @@ void ensureBlackoilApi()
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
             dummy = FluidSystem::density(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::saturatedDensity(fluidState, phaseIdx, /*regionIdx=*/0);
-            dummy = FluidSystem::formationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
-            dummy = FluidSystem::saturatedFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::saturatedInverseFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::viscosity(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::saturatedDissolutionFactor(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::saturationPressure(fluidState, phaseIdx, /*regionIdx=*/0);

@@ -184,24 +184,24 @@ public:
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BoMuoRef = oilViscosity_[regionIdx]*oilReferenceFormationVolumeFactor_[regionIdx];
-        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
+        const Evaluation& bo = saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure);
 
         Scalar pRef = oilReferencePressure_[regionIdx];
         const Evaluation& Y =
             (oilCompressibility_[regionIdx] - oilViscosibility_[regionIdx])
             * (pressure - pRef);
-        return BoMuoRef/((1 + Y*(1 + Y/2))*Bo);
+        return BoMuoRef*bo/(1.0 + Y*(1.0 + Y/2.0));
     }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure,
-                                     const Evaluation& /*Rs*/) const
-    { return saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure,
+                                            const Evaluation& /*Rs*/) const
+    { return saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Returns the formation volume factor [-] of gas saturated oil.
@@ -210,16 +210,16 @@ public:
      * is always gas saturated by by definition.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& /*temperature*/,
-                                              const Evaluation& pressure) const
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& /*temperature*/,
+                                                     const Evaluation& pressure) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = oilReferencePressure_[regionIdx];
         const Evaluation& X = oilCompressibility_[regionIdx]*(pressure - pRef);
 
         Scalar BoRef = oilReferenceFormationVolumeFactor_[regionIdx];
-        return BoRef/(1 + X*(1 + X/2));
+        return (1 + X*(1 + X/2))/BoRef;
     }
 
     /*!

@@ -107,10 +107,10 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure) const
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
 
     void setApproach(WaterPvtApproach appr)
     {

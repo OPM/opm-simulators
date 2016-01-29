@@ -464,20 +464,20 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& pressure,
-                                     const Evaluation& Rv) const
-    { return 1.0 / inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true); }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& /*temperature*/,
+                                            const Evaluation& pressure,
+                                            const Evaluation& Rv) const
+    { return inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the formation volume factor [-] of oil saturated gas at a given pressure.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& /*temperature*/,
-                                              const Evaluation& pressure) const
-    { return 1.0 / inverseSaturatedGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& /*temperature*/,
+                                                     const Evaluation& pressure) const
+    { return inverseSaturatedGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.

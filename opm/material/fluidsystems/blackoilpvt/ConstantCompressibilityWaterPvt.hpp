@@ -181,9 +181,9 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& pressure) const
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& /*temperature*/,
+                                            const Evaluation& pressure) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = waterReferencePressure_[regionIdx];
@@ -192,7 +192,7 @@ public:
         Scalar BwRef = waterReferenceFormationVolumeFactor_[regionIdx];
 
         // TODO (?): consider the salt concentration of the brine
-        return BwRef/(1 + X*(1 + X/2));
+        return (1.0 + X*(1.0 + X/2.0))/BwRef;
     }
 
 private:

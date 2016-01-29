@@ -153,20 +153,20 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure,
-                                     const Evaluation& Rs) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure, Rs)); return 0; }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure,
+                                            const Evaluation& Rs) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure, Rs)); return 0; }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& temperature,
-                                              const Evaluation& pressure) const
-    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& temperature,
+                                                     const Evaluation& pressure) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of saturated oil.
