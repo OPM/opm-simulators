@@ -165,6 +165,8 @@ public:
                                  pvtgTable.getUnderSaturatedTable(masterTableIdx));
             }
         }
+
+        initEnd();
     }
 
 private:

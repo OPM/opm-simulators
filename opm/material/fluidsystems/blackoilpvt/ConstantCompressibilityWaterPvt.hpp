@@ -80,6 +80,8 @@ public:
             waterViscosibility_[regionIdx] =
                 pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
         }
+
+        initEnd();
     }
 #endif
 

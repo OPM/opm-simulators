@@ -122,10 +122,6 @@ public:
         waterPvt_ = std::make_shared<WaterPvt>();
         waterPvt_->initFromDeck(deck, eclState);
 
-        gasPvt_->initEnd();
-        oilPvt_->initEnd();
-        waterPvt_->initEnd();
-
         initEnd();
     }
 #endif // HAVE_OPM_PARSER

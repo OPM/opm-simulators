@@ -99,6 +99,8 @@ public:
             inverseGasB_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), invB);
             gasMu_[regionIdx].setXYArrays(numSamples, pvdgTable.getPressureColumn(), pvdgTable.getViscosityColumn());
         }
+
+        initEnd();
     }
 #endif
 

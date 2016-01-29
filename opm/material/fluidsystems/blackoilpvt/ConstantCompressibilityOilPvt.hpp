@@ -87,6 +87,8 @@ public:
             oilViscosibility_[regionIdx] =
                 pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0);
         }
+
+        initEnd();
     }
 #endif
 

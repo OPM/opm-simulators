@@ -82,6 +82,8 @@ public:
                                           pvdoTable.getPressureColumn(),
                                           pvdoTable.getViscosityColumn());
         }
+
+        initEnd();
     }
 #endif // HAVE_OPM_PARSER
 
