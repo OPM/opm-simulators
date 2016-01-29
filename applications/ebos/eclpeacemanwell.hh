@@ -50,6 +50,8 @@ NEW_PROP_TAG(NumPhases);
 NEW_PROP_TAG(NumComponents);
 }
 
+struct BhpEvalTag;
+
 template <class TypeTag>
 class EcfvDiscretization;
 
@@ -1121,13 +1123,15 @@ protected:
         dofVars.connectionTransmissibilityFactor = exposureFactor*Kh/(std::log(r0 / rWell) + S);
     }
 
-    template <class Eval>
-    void computeVolumetricDofRates_(std::array<Eval, numPhases> &volRates,
-                                    Scalar bottomHolePressure,
+    template <class ResultEval, class BhpEval>
+    void computeVolumetricDofRates_(std::array<ResultEval, numPhases>& volRates,
+                                    const BhpEval& bottomHolePressure,
                                     const DofVariables& dofVars) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
+        typedef Opm::MathToolbox<Evaluation> DofVarsToolbox;
+        typedef typename std::conditional<std::is_same<BhpEval, Scalar>::value,
+                                          ResultEval,
+                                          Scalar>::type DofEval;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             volRates[phaseIdx] = 0.0;
 
@@ -1135,7 +1139,7 @@ protected:
         Scalar Twj = dofVars.connectionTransmissibilityFactor;
 
         // bottom hole pressure and depth of the degree of freedom
-        Scalar pbh = bottomHolePressure;
+        ResultEval pbh = bottomHolePressure;
         Scalar depth = dofVars.depth;
 
         // gravity constant
@@ -1145,14 +1149,14 @@ protected:
             // well model due to Peaceman; see Chen et al., p. 449
 
             // phase pressure in grid cell
-            const Eval& p = Toolbox::template toLhs<Eval>(dofVars.pressure[phaseIdx]);
+            const DofEval& p = DofVarsToolbox::template toLhs<DofEval>(dofVars.pressure[phaseIdx]);
 
             // density and mobility of fluid phase
-            const Eval& rho = Toolbox::template toLhs<Eval>(dofVars.density[phaseIdx]);
-            Eval lambda;
+            const DofEval& rho = DofVarsToolbox::template toLhs<DofEval>(dofVars.density[phaseIdx]);
+            DofEval lambda;
             if (wellType_ == Producer) {
                 //assert(p < pbh);
-                lambda = Toolbox::template toLhs<Eval>(dofVars.mobility[phaseIdx]);
+                lambda = DofVarsToolbox::template toLhs<DofEval>(dofVars.mobility[phaseIdx]);
             }
             else if (wellType_ == Injector) {
                 //assert(p > pbh);
@@ -1165,7 +1169,7 @@ protected:
                 // 1/viscosity...
                 lambda = 0.0;
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                    lambda += Toolbox::template toLhs<Eval>(dofVars.mobility[phaseIdx]);
+                    lambda += DofVarsToolbox::template toLhs<DofEval>(dofVars.mobility[phaseIdx]);
             }
             else
                 OPM_THROW(std::logic_error,
@@ -1180,7 +1184,7 @@ protected:
             Valgrind::CheckDefined(refDepth_);
 
             // pressure in the borehole ("hole pressure") at the given location
-            Eval ph = pbh + rho*g*(depth - refDepth_);
+            ResultEval ph = pbh + rho*g*(depth - refDepth_);
 
             // volumetric reservoir rate for the phase
             volRates[phaseIdx] = Twj*lambda*(ph - p);
@@ -1198,9 +1202,10 @@ protected:
      * The weights are user-specified and can be set using
      * setVolumetricPhaseWeights()
      */
-    Scalar computeWeightedRate_(const std::array<Scalar, numPhases> &volRates) const
+    template <class Eval>
+    Eval computeWeightedRate_(const std::array<Eval, numPhases> &volRates) const
     {
-        Scalar result = 0;
+        Eval result = 0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             result += volRates[phaseIdx]*volumetricWeight_[phaseIdx];
         return result;
@@ -1212,8 +1217,9 @@ protected:
      * This requires the density and composition of the phases and
      * thus the applicable fluid state.
      */
-    void computeSurfaceRates_(std::array<Scalar, numPhases> &surfaceRates,
-                              const std::array<Scalar, numPhases> &reservoirRate,
+    template <class Eval>
+    void computeSurfaceRates_(std::array<Eval, numPhases> &surfaceRates,
+                              const std::array<Eval, numPhases> &reservoirRate,
                               const DofVariables& dofVars) const
     {
         // the array for the surface rates and the one for the reservoir rates must not
@@ -1291,7 +1297,7 @@ protected:
             else
                 tmp = &dofVarsIt->second;
 
-            computeVolumetricDofRates_(volumetricReservoirRates, bottomHolePressure, *tmp);
+            computeVolumetricDofRates_<Scalar, Scalar>(volumetricReservoirRates, bottomHolePressure, *tmp);
 
             std::array<Scalar, numPhases> volumetricSurfaceRates;
             computeSurfaceRates_(volumetricSurfaceRates, volumetricReservoirRates, *tmp);
@@ -1352,11 +1358,11 @@ protected:
             return 0.0;
 
         // initialize the bottom hole pressure which we would like to calculate
-        Scalar bhp = actualBottomHolePressure_;
-        if (bhp > 1e8)
-            bhp = 1e8;
-        if (bhp < 1e5)
-            bhp = 1e5;
+        Scalar bhpScalar = actualBottomHolePressure_;
+        if (bhpScalar > 1e8)
+            bhpScalar = 1e8;
+        if (bhpScalar < 1e5)
+            bhpScalar = 1e5;
 
         // if the BHP goes below 1 bar for the first time, we reset it to 10 bars and
         // are "on bail", i.e. if it goes below 1 bar again, we give up because the
@@ -1364,34 +1370,33 @@ protected:
         bool onBail = false;
 
         // Newton-Raphson method
+        typedef Opm::LocalAd::Evaluation<Scalar, BhpEvalTag, 1> BhpEval;
+
+        BhpEval bhpEval(bhpScalar);
+        bhpEval.derivatives[0] = 1.0;
+        const Scalar tolerance = 1e3*std::numeric_limits<Scalar>::epsilon();
         for (int iterNum = 0; iterNum < 20; ++iterNum) {
-            Scalar eps =
-                std::max<Scalar>(1e-8, std::numeric_limits<Scalar>::epsilon()*1e4)
-                *std::abs(bhp);
+            const auto& f = wellResidual_<BhpEval>(bhpEval);
 
-            Scalar f = wellResidual_(bhp);
-            Scalar fStar = wellResidual_(bhp + eps);
-            Scalar fPrime = (fStar - f)/eps;
-
-            if (std::abs(fPrime) < 1e-20)
+            if (std::abs(f.derivatives[0]) < 1e-20)
                 OPM_THROW(Opm::NumericalProblem,
                           "Cannot determine the bottom hole pressure for well " << name()
                           << ": Derivative of the well residual is too small");
-            Scalar delta = f/fPrime;
+            Scalar delta = f.value/f.derivatives[0];
 
-            bhp -= delta;
-            if (bhp < 1e5) {
-                bhp = 1e5;
+            bhpEval.value -= delta;
+            if (bhpEval < 1e5) {
+                bhpEval.value = 1e5;
                 if (onBail)
-                    return bhp;
+                    return bhpEval.value;
                 else
                     onBail = true;
             }
             else
                 onBail = false;
 
-            if (std::abs(delta) < 1e3*eps)
-                return bhp;
+            if (std::abs(delta/bhpEval.value) < tolerance)
+                return bhpEval.value;
         }
 
         OPM_THROW(Opm::NumericalProblem,
@@ -1399,26 +1404,27 @@ protected:
                   << "' within 20 iterations.");
     }
 
-    Scalar wellResidual_(Scalar bhp,
-                         const DofVariables *replacementDofVars = 0,
-                         int replacedGridIdx = -1) const
+    template <class BhpEval>
+    BhpEval wellResidual_(const BhpEval& bhp,
+                          const DofVariables *replacementDofVars = 0,
+                          int replacedGridIdx = -1) const
     {
         // compute the volumetric reservoir and surface rates for the complete well
-        Scalar resvRate = 0.0;
+        BhpEval resvRate = 0.0;
 
-        std::array<Scalar, numPhases> totalSurfaceRates;
+        std::array<BhpEval, numPhases> totalSurfaceRates;
         std::fill(totalSurfaceRates.begin(), totalSurfaceRates.end(), 0.0);
 
         auto dofVarsIt = dofVariables_.begin();
         const auto &dofVarsEndIt = dofVariables_.end();
         for (; dofVarsIt != dofVarsEndIt; ++ dofVarsIt) {
-            std::array<Scalar, numPhases> resvRates;
+            std::array<BhpEval, numPhases> resvRates;
             const DofVariables *dofVars = &dofVarsIt->second;
             if (replacedGridIdx == dofVarsIt->first)
                 dofVars = replacementDofVars;
             computeVolumetricDofRates_(resvRates, bhp, *dofVars);
 
-            std::array<Scalar, numPhases> surfaceRates;
+            std::array<BhpEval, numPhases> surfaceRates;
             computeSurfaceRates_(surfaceRates, resvRates, *dofVars);
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -1427,7 +1433,7 @@ protected:
             resvRate += computeWeightedRate_(resvRates);
         }
 
-        Scalar surfaceRate = computeWeightedRate_(totalSurfaceRates);
+        BhpEval surfaceRate = computeWeightedRate_(totalSurfaceRates);
 
         // compute the residual of well equation. we currently use max(rateMax - rate,
         // bhp - targetBhp) for producers and max(rateMax - rate, bhp - targetBhp) for
@@ -1439,37 +1445,36 @@ protected:
         Valgrind::CheckDefined(surfaceRate);
         Valgrind::CheckDefined(resvRate);
 
-        Scalar result = 1e100;
+        BhpEval result = 1e30;
 
-        Scalar maxSurfaceRate = maximumSurfaceRate_;
-        Scalar maxResvRate = maximumReservoirRate_;
+        BhpEval maxSurfaceRate = maximumSurfaceRate_;
+        BhpEval maxResvRate = maximumReservoirRate_;
         if (wellStatus() == Closed) {
             // make the weight of the fluids on the surface equal and require that no
             // fluids are produced on the surface...
             maxSurfaceRate = 0.0;
-            surfaceRate = 0;
+            surfaceRate = 0.0;
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 surfaceRate += totalSurfaceRates[phaseIdx];
 
             // don't care about the reservoir rate...
-            maxResvRate = 1e100;
+            maxResvRate = 1e30;
         }
-
 
         if (wellType_ == Injector) {
             // for injectors the computed rates are positive and the target BHP is the
             // maximum allowed pressure ...
-            result = std::min<Scalar>(maxSurfaceRate - surfaceRate, result);
-            result = std::min<Scalar>(maxResvRate - resvRate, result);
-            result = std::min<Scalar>(1e-7*(targetBottomHolePressure_ - bhp), result);
+            result = std::min<BhpEval>(maxSurfaceRate - surfaceRate, result);
+            result = std::min<BhpEval>(maxResvRate - resvRate, result);
+            result = std::min<BhpEval>(1e-7*(targetBottomHolePressure_ - bhp), result);
         }
         else {
             assert(wellType_ == Producer);
             // ... for producers the rates are negative and the bottom hole pressure is
             // is the minimum
-            result = std::min<Scalar>(maxSurfaceRate + surfaceRate, result);
-            result = std::min<Scalar>(maxResvRate + resvRate, result);
-            result = std::min<Scalar>(1e-7*(bhp - targetBottomHolePressure_), result);
+            result = std::min<BhpEval>(maxSurfaceRate + surfaceRate, result);
+            result = std::min<BhpEval>(maxResvRate + resvRate, result);
+            result = std::min<BhpEval>(1e-7*(bhp - targetBottomHolePressure_), result);
         }
 
         const Scalar scalingFactor = 1e-3;
