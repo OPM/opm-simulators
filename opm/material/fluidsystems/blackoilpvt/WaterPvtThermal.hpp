@@ -97,7 +97,6 @@ public:
         if (enableThermalViscosity_) {
             Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
 
-            auto tables = eclState->getTableManager();
             const auto& watvisctTables = tables->getWatvisctTables();
 
             assert(watvisctTables.size() == numRegions);
