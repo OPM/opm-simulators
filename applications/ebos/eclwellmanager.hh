@@ -93,73 +93,23 @@ public:
     {
         const auto &deckSchedule = eclState->getSchedule();
 
-        typedef std::array<int, Grid::dimension> CartesianCoordinate;
-
-        // vector containing wells used for numerics
-        // this list can differ from the overall number of wells
-        // due to partitioning issues
-        std::map< const std::string, std::pair< std::shared_ptr<Well>, CartesianCoordinate> > wells;
-
-        // create the wells
+        // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx)
         {
             Opm::WellConstPtr deckWell = deckSchedule->getWells()[deckWellIdx];
             const std::string &wellName = deckWell->name();
-            CartesianCoordinate cartesianCoord;
-            cartesianCoord.fill( 0 );
-            cartesianCoord[ 0 ] = deckWell->getHeadI();
-            cartesianCoord[ 1 ] = deckWell->getHeadJ();
-
-            std::shared_ptr<Well> well(new Well(simulator_));
-            // insert well into well map
-            wells[ wellName ] = std::make_pair( well, cartesianCoord );
 
             // set the name of the well but not much else. (i.e., if it is not completed,
             // the well primarily serves as a placeholder.) The big rest of the well is
             // specified by the updateWellCompletions_() method
+            auto well = std::make_shared<Well>(simulator_);
             well->beginSpec();
             well->setName(wellName);
             well->setWellStatus(Well::Shut);
             well->endSpec();
-        }
 
-        const auto gridView = simulator_.gridManager().gridView();
-        ElementContext elemCtx(simulator_);
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto elemEndIt = gridView.template end</*codim=*/0>();
-
-        // loop over elements and insert those wells that appear on the current process
-        for (; elemIt != elemEndIt; ++elemIt)
-        {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-                continue; // non-local entities need to be skipped
-
-            elemCtx.updateStencil(elem);
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++ dofIdx)
-            {
-                const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                CartesianCoordinate cartCoord;
-                simulator_.gridManager().cartesianCoordinate( globalDofIdx, cartCoord );
-
-                for( auto wellIt = wells.begin(); wellIt != wells.end(); ++wellIt )
-                {
-                    std::shared_ptr< Well > well = wellIt->second.first;
-                    const CartesianCoordinate& wellCoord = wellIt->second.second;
-                    if( wellCoord[ 0 ] == cartCoord[ 0 ] && wellCoord[ 1 ] == cartCoord[ 1 ] )
-                    {
-                        wellNameToIndex_[ well->name() ] = wells_.size();
-                        wells_.push_back( well );
-
-                        // only insert a well once and therefore erase it
-                        wells.erase( wellIt++ );
-                        // if all wells inserted, return
-                        if( wells.empty() )
-                            return ;
-                    }
-                }
-            }
-
+            wells_.push_back(well);
+            wellNameToIndex_[well->name()] = wells_.size() - 1;
         }
     }
 
@@ -444,19 +394,27 @@ public:
             wells_[wellIdx]->beginIterationPreProcess();
 
         // call the accumulation routines
-        ElementContext elemCtx(simulator_);
-        auto elemIt = simulator_.gridManager().gridView().template begin</*codim=*/0>();
-        const auto &elemEndIt = simulator_.gridManager().gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-                continue;
+        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(simulator_.gridManager().gridView());
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+        {
+            ElementContext elemCtx(simulator_);
+            auto elemIt = simulator_.gridManager().gridView().template begin</*codim=*/0>();
+            for (threadedElemIt.beginParallel(elemIt);
+                 !threadedElemIt.isFinished(elemIt);
+                 threadedElemIt.increment(elemIt))
+            {
+                const Element& elem = *elemIt;
+                if (elem.partitionType() != Dune::InteriorEntity)
+                    continue;
 
-            elemCtx.updateStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
-                wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
+                for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
+                    wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
+            }
         }
 
         // call the postprocessing routines
@@ -632,7 +590,7 @@ protected:
     {
         if (reportStepIdx == 0) {
             // the well topology has always been changed relative to before the
-            // simulation is started
+            // simulation is started...
             return true;
         }
 
@@ -795,8 +753,6 @@ protected:
                 cartesianCoordinate[ 1 ] = completion->getJ();
                 cartesianCoordinate[ 2 ] = completion->getK();
                 unsigned cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
-                assert( cartIdx == (completion->getI() + completion->getJ()*eclGrid->getNX()
-                                      + completion->getK()*eclGrid->getNX()*eclGrid->getNY() ) );
 
                 // in this code we only support each cell to be part of at most a single
                 // well. TODO (?) change this?

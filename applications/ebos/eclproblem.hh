@@ -291,10 +291,6 @@ public:
         transmissibilities_.finishInit();
         readInitialCondition_();
 
-        // initialize the wells. Note that this needs to be done after initializing the
-        // intrinsic permeabilities because the well model uses them...
-        wellManager_.init(simulator.gridManager().eclState());
-
         // Set the start time of the simulation
         Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
         tm curTime = boost::posix_time::to_tm(timeMap->getStartTime(/*timeStepIdx=*/0));
@@ -304,8 +300,11 @@ public:
 
         // We want the episode index to be the same as the report step index to make
         // things simpler, so we have to set the episode index to -1 because it is
-        // incremented inside beginEpisode()...
+        // incremented inside beginEpisode(). The size of the initial time step and
+        // length of the initial episode is set to zero for the same reason.
         simulator.setEpisodeIndex(-1);
+        simulator.setEpisodeLength(0.0);
+        simulator.setTimeStepSize(0.0);
     }
 
     /*!
@@ -663,8 +662,17 @@ public:
             values.assignNaive(initialFluidStates_[globalDofIdx]);
     }
 
+    /*!
+     * \copydoc FvBaseProblem::initialSolutionApplied()
+     */
     void initialSolutionApplied()
     {
+        // initialize the wells. Note that this needs to be done after initializing the
+        // intrinsic permeabilities and the after applying the initial solution because
+        // the well model uses these...
+        wellManager_.init(this->simulator().gridManager().eclState());
+
+        // update the data required for capillary pressure hysteresis
         updateHysteresis_();
     }
 
