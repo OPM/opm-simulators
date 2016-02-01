@@ -26,6 +26,7 @@
 #define OPM_WATER_PVT_MULTIPLEXER_HPP
 
 #include "ConstantCompressibilityWaterPvt.hpp"
+#include "WaterPvtThermal.hpp"
 
 #define OPM_WATER_PVT_MULTIPLEXER_CALL(codeToCall)                      \
     switch (approach_) {                                                \
@@ -34,7 +35,13 @@
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
+    case ThermalWaterPvt: {                                             \
+        auto &pvtImpl = getRealPvt<ThermalWaterPvt>();                  \
+        codeToCall;                                                     \
+        break;                                                          \
+    }                                                                   \
     case NoWaterPvt:                                                    \
+    default:                                                            \
         OPM_THROW(std::logic_error, "Not implemented: Water PVT of this deck!"); \
     }
 
@@ -43,13 +50,16 @@ namespace Opm {
  * \brief This class represents the Pressure-Volume-Temperature relations of the water
  *        phase in the black-oil model.
  */
-template <class Scalar>
+template <class Scalar, bool enableThermal = true>
 class WaterPvtMultiplexer
 {
 public:
+    typedef Opm::WaterPvtThermal<Scalar> WaterPvtThermal;
+
     enum WaterPvtApproach {
         NoWaterPvt,
-        ConstantCompressibilityWaterPvt
+        ConstantCompressibilityWaterPvt,
+        ThermalWaterPvt
     };
 
     WaterPvtMultiplexer()
@@ -62,6 +72,10 @@ public:
         switch (approach_) {
         case ConstantCompressibilityWaterPvt: {
             delete &getRealPvt<ConstantCompressibilityWaterPvt>();
+            break;
+        }
+        case ThermalWaterPvt: {
+            delete &getRealPvt<ThermalWaterPvt>();
             break;
         }
         case NoWaterPvt:
@@ -77,7 +91,11 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        if (deck->hasKeyword("PVTW"))
+        if (enableThermal
+            && (deck->hasKeyword("WATDENT")
+                || deck->hasKeyword("VISCREF")))
+            setApproach(ThermalWaterPvt);
+        else if (deck->hasKeyword("PVTW"))
             setApproach(ConstantCompressibilityWaterPvt);
 
         OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));
@@ -86,6 +104,12 @@ public:
 
     void initEnd()
     { OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initEnd()); }
+
+    /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); };
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
@@ -100,25 +124,20 @@ public:
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure) const
-    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure)); return 0; }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure) const
+    { OPM_WATER_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
 
     void setApproach(WaterPvtApproach appr)
     {
         switch (appr) {
         case ConstantCompressibilityWaterPvt:
             realWaterPvt_ = new Opm::ConstantCompressibilityWaterPvt<Scalar>;
+            break;
+
+        case ThermalWaterPvt:
+            realWaterPvt_ = new Opm::WaterPvtThermal<Scalar>;
             break;
 
         case NoWaterPvt:
@@ -149,6 +168,20 @@ public:
     {
         assert(approach() == approachV);
         return *static_cast<Opm::ConstantCompressibilityWaterPvt<Scalar>* >(realWaterPvt_);
+    }
+
+    template <WaterPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalWaterPvt, Opm::WaterPvtThermal<Scalar> >::type& getRealPvt()
+    {
+        assert(approach() == approachV);
+        return *static_cast<Opm::WaterPvtThermal<Scalar>* >(realWaterPvt_);
+    }
+
+    template <WaterPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalWaterPvt, const Opm::WaterPvtThermal<Scalar> >::type& getRealPvt() const
+    {
+        assert(approach() == approachV);
+        return *static_cast<Opm::WaterPvtThermal<Scalar>* >(realWaterPvt_);
     }
 
 private:

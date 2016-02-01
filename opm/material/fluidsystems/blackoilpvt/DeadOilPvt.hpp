@@ -82,6 +82,8 @@ public:
                                           pvdoTable.getPressureColumn(),
                                           pvdoTable.getViscosityColumn());
         }
+
+        initEnd();
     }
 #endif // HAVE_OPM_PARSER
 
@@ -156,6 +158,12 @@ public:
     }
 
     /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { return inverseOilBMu_.size(); }
+
+    /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
     template <class Evaluation>
@@ -180,38 +188,14 @@ public:
     }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure,
-                       const Evaluation& /*Rs*/) const
-    { return saturatedDensity(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of gas saturated oil given a pressure.
-     */
-    template <class Evaluation>
-    Evaluation saturatedDensity(unsigned regionIdx,
-                                const Evaluation& temperature,
-                                const Evaluation& pressure) const
-    {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-
-        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
-        return rhooRef/Bo;
-    }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& pressure,
-                                     const Evaluation& /*Rs*/) const
-    { return 1.0 / inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& /*temperature*/,
+                                            const Evaluation& pressure,
+                                            const Evaluation& /*Rs*/) const
+    { return inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the formation volume factor [-] of saturated oil.
@@ -219,10 +203,10 @@ public:
      * Note that by definition, dead oil is always gas saturated.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& pressure) const
-    { return 1.0 / inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    { return inverseOilB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.

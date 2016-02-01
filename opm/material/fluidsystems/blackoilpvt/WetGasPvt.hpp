@@ -165,6 +165,8 @@ public:
                                  pvtgTable.getUnderSaturatedTable(masterTableIdx));
             }
         }
+
+        initEnd();
     }
 
 private:
@@ -424,6 +426,12 @@ public:
     }
 
     /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { return gasReferenceDensity_.size(); };
+
+    /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
     template <class Evaluation>
@@ -453,68 +461,23 @@ public:
     }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure,
-                       const Evaluation& Rv) const
-    {
-        const Evaluation& Bg = formationVolumeFactor(regionIdx, temperature, pressure, Rv);
-
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
-        Evaluation rhog = rhogRef/Bg;
-
-        // the oil formation volume factor just represents the partial density of the gas
-        // component in the gas phase. to get the total density of the phase, we have to
-        // add the partial density of the oil component.
-        rhog += (rhooRef*Rv)/Bg;
-
-        return rhog;
-    }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of oil saturated gas at a given pressure.
-     */
-    template <class Evaluation>
-    Evaluation saturatedDensity(unsigned regionIdx,
-                                const Evaluation& temperature,
-                                const Evaluation& pressure) const
-    {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-        Scalar rhogRef = gasReferenceDensity_[regionIdx];
-        Valgrind::CheckDefined(rhooRef);
-        Valgrind::CheckDefined(rhogRef);
-
-        const Evaluation& Bg = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
-
-        Evaluation rhog = rhogRef/Bg;
-        const Evaluation& RvSat = saturatedOilVaporizationFactor(regionIdx, temperature, pressure);
-        rhog += (rhooRef*RvSat)/Bg;
-
-        return rhog;
-    }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& pressure,
-                                     const Evaluation& Rv) const
-    { return 1.0 / inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true); }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& /*temperature*/,
+                                            const Evaluation& pressure,
+                                            const Evaluation& Rv) const
+    { return inverseGasB_[regionIdx].eval(pressure, Rv, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the formation volume factor [-] of oil saturated gas at a given pressure.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& /*temperature*/,
-                                              const Evaluation& pressure) const
-    { return 1.0 / inverseSaturatedGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& /*temperature*/,
+                                                     const Evaluation& pressure) const
+    { return inverseSaturatedGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
      * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.

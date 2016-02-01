@@ -20,13 +20,14 @@
 */
 /*!
  * \file
- * \copydoc Opm::OilPvtMultiplexer
+ * \copydoc Opm::GasPvtMultiplexer
  */
 #ifndef OPM_GAS_PVT_MULTIPLEXER_HPP
 #define OPM_GAS_PVT_MULTIPLEXER_HPP
 
 #include "DryGasPvt.hpp"
 #include "WetGasPvt.hpp"
+#include "GasPvtThermal.hpp"
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -48,7 +49,13 @@ namespace Opm {
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
+    case ThermalGasPvt: {                                               \
+        auto &pvtImpl = getRealPvt<ThermalGasPvt>();                    \
+        codeToCall;                                                     \
+        break;                                                          \
+    }                                                                   \
     case NoGasPvt:                                                      \
+    default:                                                            \
         OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!"); \
     }
 
@@ -63,14 +70,17 @@ namespace Opm {
  * the API exposed by this class is pretty specific to the assumptions made by the black
  * oil model.
  */
-template <class Scalar>
+template <class Scalar, bool enableThermal = true>
 class GasPvtMultiplexer
 {
 public:
+    typedef Opm::GasPvtThermal<Scalar> GasPvtThermal;
+
     enum GasPvtApproach {
         NoGasPvt,
         DryGasPvt,
-        WetGasPvt
+        WetGasPvt,
+        ThermalGasPvt
     };
 
     GasPvtMultiplexer()
@@ -89,6 +99,10 @@ public:
             delete &getRealPvt<WetGasPvt>();
             break;
         }
+        case ThermalGasPvt: {
+            delete &getRealPvt<ThermalGasPvt>();
+            break;
+        }
         case NoGasPvt:
             break;
         }
@@ -102,7 +116,11 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        if (deck->hasKeyword("PVTG"))
+        if (enableThermal
+            && (deck->hasKeyword("TREF")
+                || deck->hasKeyword("GASVISCT")))
+            setApproach(ThermalGasPvt);
+        else if (deck->hasKeyword("PVTG"))
             setApproach(WetGasPvt);
         else if (deck->hasKeyword("PVDG"))
             setApproach(DryGasPvt);
@@ -122,6 +140,10 @@ public:
             realGasPvt_ = new Opm::WetGasPvt<Scalar>;
             break;
 
+        case ThermalGasPvt:
+            realGasPvt_ = new Opm::GasPvtThermal<Scalar>;
+            break;
+
         case NoGasPvt:
             OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!");
         }
@@ -131,6 +153,12 @@ public:
 
     void initEnd()
     { OPM_GAS_PVT_MULTIPLEXER_CALL(pvtImpl.initEnd()); }
+
+    /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); };
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
@@ -152,42 +180,23 @@ public:
     { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedViscosity(regionIdx, temperature, pressure)); return 0; }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation = Scalar>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure,
-                       const Evaluation& Rv) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.density(regionIdx, temperature, pressure, Rv)); return 0; }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of oil saturated gas given a set of parameters.
-     */
-    template <class Evaluation = Scalar>
-    Evaluation saturatedDensity(unsigned regionIdx,
-                                const Evaluation& temperature,
-                                const Evaluation& pressure) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedDensity(regionIdx, temperature, pressure)); return 0; }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation = Scalar>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure,
-                                     const Evaluation& Rv) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.formationVolumeFactor(regionIdx, temperature, pressure, Rv)); return 0; }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure,
+                                            const Evaluation& Rv) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.inverseFormationVolumeFactor(regionIdx, temperature, pressure, Rv)); return 0; }
 
     /*!
      * \brief Returns the formation volume factor [-] of oil saturated gas given a set of parameters.
      */
     template <class Evaluation = Scalar>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& temperature,
-                                              const Evaluation& pressure) const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& temperature,
+                                                     const Evaluation& pressure) const
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure)); return 0; }
 
     /*!
      * \brief Returns the oil vaporization factor \f$R_v\f$ [m^3/m^3] of oil saturated gas.
@@ -248,12 +257,27 @@ public:
         return *static_cast<const Opm::WetGasPvt<Scalar>* >(realGasPvt_);
     }
 
+    // get the parameter object for the thermal gas case
+    template <GasPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalGasPvt, Opm::GasPvtThermal<Scalar> >::type& getRealPvt()
+    {
+        assert(gasPvtApproach() == approachV);
+        return *static_cast<Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
+    }
+
+    template <GasPvtApproach approachV>
+    typename std::enable_if<approachV == ThermalGasPvt, const Opm::GasPvtThermal<Scalar> >::type& getRealPvt() const
+    {
+        assert(gasPvtApproach() == approachV);
+        return *static_cast<const Opm::GasPvtThermal<Scalar>* >(realGasPvt_);
+    }
+
 private:
     GasPvtApproach gasPvtApproach_;
     void *realGasPvt_;
 };
 
-#undef OPM_GAS_MULTIPLEXER_CALL
+#undef OPM_GAS_PVT_MULTIPLEXER_CALL
 
 } // namespace Opm
 

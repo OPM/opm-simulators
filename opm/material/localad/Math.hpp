@@ -402,7 +402,8 @@ public:
     { return Evaluation::createVariable(value, varIdx); }
 
     template <class LhsEval>
-    static LhsEval toLhs(const Evaluation& eval)
+    static auto toLhs(const Evaluation& eval)
+        -> decltype(ToLhsEvalHelper<LhsEval, Evaluation>::exec(eval))
     { return ToLhsEvalHelper<LhsEval, Evaluation>::exec(eval); }
 
     static const Evaluation passThroughOrCreateConstant(Scalar value)

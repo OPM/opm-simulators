@@ -87,6 +87,8 @@ public:
             oilViscosibility_[regionIdx] =
                 pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0);
         }
+
+        initEnd();
     }
 #endif
 
@@ -153,6 +155,16 @@ public:
     void initEnd()
     { }
 
+    /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { return oilViscosity_.size(); }
+
+    /*!
+     * \brief Returns the dynamic viscosity [Pa s] of gas saturated oil given a pressure
+     *        and a phase composition.
+     */
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
                          const Evaluation& temperature,
@@ -172,48 +184,24 @@ public:
         // calcultes the product of B_w and mu_w and then divides the
         // result by B_w...
         Scalar BoMuoRef = oilViscosity_[regionIdx]*oilReferenceFormationVolumeFactor_[regionIdx];
-        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
+        const Evaluation& bo = saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure);
 
         Scalar pRef = oilReferencePressure_[regionIdx];
         const Evaluation& Y =
             (oilCompressibility_[regionIdx] - oilViscosibility_[regionIdx])
             * (pressure - pRef);
-        return BoMuoRef/((1 + Y*(1 + Y/2))*Bo);
-    }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure,
-                       const Evaluation& /*Rs*/) const
-    { return saturatedDensity(regionIdx, temperature, pressure); }
-
-    /*!
-     * \brief Returns the density [kg/m^3] of gas saturated oil given a pressure.
-     */
-    template <class Evaluation>
-    Evaluation saturatedDensity(unsigned regionIdx,
-                                const Evaluation& temperature,
-                                const Evaluation& pressure) const
-    {
-        Scalar rhooRef = oilReferenceDensity_[regionIdx];
-
-        const Evaluation& Bo = saturatedFormationVolumeFactor(regionIdx, temperature, pressure);
-        return rhooRef/Bo;
+        return BoMuoRef*bo/(1.0 + Y*(1.0 + Y/2.0));
     }
 
     /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& pressure,
-                                     const Evaluation& /*Rs*/) const
-    { return saturatedFormationVolumeFactor(regionIdx, temperature, pressure); }
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& temperature,
+                                            const Evaluation& pressure,
+                                            const Evaluation& /*Rs*/) const
+    { return saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure); }
 
     /*!
      * \brief Returns the formation volume factor [-] of gas saturated oil.
@@ -222,16 +210,16 @@ public:
      * is always gas saturated by by definition.
      */
     template <class Evaluation>
-    Evaluation saturatedFormationVolumeFactor(unsigned regionIdx,
-                                              const Evaluation& /*temperature*/,
-                                              const Evaluation& pressure) const
+    Evaluation saturatedInverseFormationVolumeFactor(unsigned regionIdx,
+                                                     const Evaluation& /*temperature*/,
+                                                     const Evaluation& pressure) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = oilReferencePressure_[regionIdx];
         const Evaluation& X = oilCompressibility_[regionIdx]*(pressure - pRef);
 
         Scalar BoRef = oilReferenceFormationVolumeFactor_[regionIdx];
-        return BoRef/(1 + X*(1 + X/2));
+        return (1 + X*(1 + X/2))/BoRef;
     }
 
     /*!

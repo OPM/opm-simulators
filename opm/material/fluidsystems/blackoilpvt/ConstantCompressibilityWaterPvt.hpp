@@ -80,6 +80,8 @@ public:
             waterViscosibility_[regionIdx] =
                 pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
         }
+
+        initEnd();
     }
 #endif
 
@@ -148,6 +150,12 @@ public:
     { }
 
     /*!
+     * \brief Return the number of PVT regions which are considered by this PVT-object.
+     */
+    unsigned numRegions() const
+    { return waterReferenceDensity_.size(); };
+
+    /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.
      */
     template <class Evaluation>
@@ -170,24 +178,12 @@ public:
     }
 
     /*!
-     * \brief Returns the density [kg/m^3] of the fluid phase given a set of parameters.
-     */
-    template <class Evaluation>
-    Evaluation density(unsigned regionIdx,
-                       const Evaluation& temperature,
-                       const Evaluation& pressure) const
-    {
-        const Evaluation& Bw = formationVolumeFactor(regionIdx, temperature, pressure);
-        return waterReferenceDensity_[regionIdx]/Bw;
-    }
-
-    /*!
      * \brief Returns the formation volume factor [-] of the fluid phase.
      */
     template <class Evaluation>
-    Evaluation formationVolumeFactor(unsigned regionIdx,
-                                     const Evaluation& /*temperature*/,
-                                     const Evaluation& pressure) const
+    Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
+                                            const Evaluation& /*temperature*/,
+                                            const Evaluation& pressure) const
     {
         // cf. ECLiPSE 2011 technical description, p. 116
         Scalar pRef = waterReferencePressure_[regionIdx];
@@ -196,7 +192,7 @@ public:
         Scalar BwRef = waterReferenceFormationVolumeFactor_[regionIdx];
 
         // TODO (?): consider the salt concentration of the brine
-        return BwRef/(1 + X*(1 + X/2));
+        return (1.0 + X*(1.0 + X/2.0))/BwRef;
     }
 
 private:

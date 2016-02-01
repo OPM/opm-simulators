@@ -26,10 +26,9 @@
  */
 #include "config.h"
 
+#include <opm/material/checkFluidSystem.hpp>
 #include <opm/material/localad/Evaluation.hpp>
 #include <opm/material/localad/Math.hpp>
-
-#include "checkFluidSystem.hpp"
 
 // include all fluid systems in opm-material
 #include <opm/material/fluidsystems/SinglePhaseFluidSystem.hpp>
@@ -147,8 +146,8 @@ void ensureBlackoilApi()
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++ phaseIdx) {
             dummy = FluidSystem::density(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::saturatedDensity(fluidState, phaseIdx, /*regionIdx=*/0);
-            dummy = FluidSystem::formationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
-            dummy = FluidSystem::saturatedFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::saturatedInverseFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::viscosity(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::saturatedDissolutionFactor(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::saturationPressure(fluidState, phaseIdx, /*regionIdx=*/0);
