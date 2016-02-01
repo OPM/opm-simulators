@@ -44,8 +44,8 @@
 
 namespace Opm {
 namespace BlackOil {
-OPM_GENERATE_HAS_MEMBER(Rs) // Creates 'HasMember_Rs<T>'.
-OPM_GENERATE_HAS_MEMBER(Rv) // Creates 'HasMember_Rv<T>'.
+OPM_GENERATE_HAS_MEMBER(Rs, ) // Creates 'HasMember_Rs<T>'.
+OPM_GENERATE_HAS_MEMBER(Rv, ) // Creates 'HasMember_Rv<T>'.
 
 template <class FluidSystem, class LhsEval, class FluidState>
 LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,

@@ -144,8 +144,8 @@ public:
         Scalar newA = 0;
         Scalar newB = 0;
         for (unsigned compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
-            const Scalar moleFracJ = fs.moleFraction(phaseIdx, compIIdx);
-            Scalar xi = std::max(Scalar(0), std::min(Scalar(1), moleFracJ));
+            const Scalar moleFracI = fs.moleFraction(phaseIdx, compIIdx);
+            Scalar xi = std::max(Scalar(0), std::min(Scalar(1.0), moleFracI));
             Valgrind::CheckDefined(xi);
 
             for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
