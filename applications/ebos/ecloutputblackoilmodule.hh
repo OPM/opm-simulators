@@ -191,12 +191,12 @@ public:
             }
             if (gasFormationVolumeFactorOutput_()) {
                 gasFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::template formationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
+                    1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
                 Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
             }
             if (saturatedOilFormationVolumeFactorOutput_()) {
                 saturatedOilFormationVolumeFactor_[globalDofIdx] =
-                    FluidSystem::template saturatedFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
+                    1.0/FluidSystem::template saturatedInverseFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
                 Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
             }
             if (oilSaturationPressureOutput_()) {
