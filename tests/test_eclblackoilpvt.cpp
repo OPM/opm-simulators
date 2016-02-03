@@ -263,10 +263,6 @@ inline void testAll()
     oilPvt.initFromDeck(deck, eclState);
     waterPvt.initFromDeck(deck, eclState);
 
-    gasPvt.initEnd();
-    oilPvt.initEnd();
-    waterPvt.initEnd();
-
     struct Foo;
     typedef Opm::LocalAd::Evaluation<Scalar, Foo, 1> FooEval;
     ensurePvtApi<Scalar>(oilPvt, gasPvt, waterPvt);
