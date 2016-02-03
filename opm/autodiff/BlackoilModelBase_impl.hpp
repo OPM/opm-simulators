@@ -752,7 +752,7 @@ namespace detail {
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
+                rq_[pos].b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
                 rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
                 // OPM_AD_DUMP(rq_[pos].b);
                 // OPM_AD_DUMP(rq_[pos].accum[aix]);
@@ -925,7 +925,7 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            asImpl().computeWellConnectionPressures(state0, well_state);
+            asImpl().computeWellConnectionPressures(state0, well_state);        
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -989,7 +989,10 @@ namespace detail {
         const std::vector<ADB> kr = asImpl().computeRelPerm(state);
 #pragma omp parallel for schedule(static)
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            const std::vector<PhasePresence>& cond = phaseCondition();
+            const ADB mu = asImpl().fluidViscosity(canph_[phaseIdx], state.canonical_phase_pressures[canph_[phaseIdx]], state.temperature, state.rs, state.rv, cond);
+            const ADB rho = asImpl().fluidDensity(canph_[phaseIdx], rq_[phaseIdx].b, state.rs, state.rv);
+            asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], mu, rho, state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
             residual_.material_balance_eq[ phaseIdx ] =
                 pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
@@ -2404,25 +2407,21 @@ namespace detail {
 
 
 
-
-
     template <class Grid, class Implementation>
     void
     BlackoilModelBase<Grid, Implementation>::computeMassFlux(const int               actph ,
                                                              const V&                transi,
                                                              const ADB&              kr    ,
+                                                             const ADB&              mu    ,
+                                                             const ADB&              rho   ,
                                                              const ADB&              phasePressure,
                                                              const SolutionState&    state)
     {
         // Compute and store mobilities.
-        const int canonicalPhaseIdx = canph_[ actph ];
-        const std::vector<PhasePresence>& cond = phaseCondition();
         const ADB tr_mult = transMult(state.pressure);
-        const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond);
         rq_[ actph ].mob = tr_mult * kr / mu;
 
         // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
-        const ADB rho = fluidDensity(canonicalPhaseIdx, rq_[actph].b, state.rs, state.rv);
         const ADB rhoavg = ops_.caver * rho;
         rq_[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
         if (use_threshold_pressure_) {

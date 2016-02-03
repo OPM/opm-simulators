@@ -454,6 +454,8 @@ namespace Opm {
         computeMassFlux(const int               actph ,
                         const V&                transi,
                         const ADB&              kr    ,
+                        const ADB&              mu    ,
+                        const ADB&              rho    ,
                         const ADB&              p     ,
                         const SolutionState&    state );
 
