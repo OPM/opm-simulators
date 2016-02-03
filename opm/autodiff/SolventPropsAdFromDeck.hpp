@@ -127,16 +127,17 @@ public:
     /// \return                     Array of n solvent density values.
     V solventSurfaceDensity(const Cells& cells) const;
 
-    /// Todd-Longstaff mixing paramter for viscosity calculation
-    double mixingParamterViscosity() const;
+    /// Todd-Longstaff mixing parameter for viscosity calculation
+    double mixingParameterViscosity() const;
 
-    /// Todd-Longstaff mixing paramter for density calculation
-    double mixingParamterDensity() const;
+    /// Todd-Longstaff mixing parameter for density calculation
+    double mixingParameterDensity() const;
 
 
 private:
 
-    ADB makeAD(const ADB& X, const Cells& cells,     std::vector<NonuniformTableLinear<double> > table) const;
+    /// Makes ADB from table values
+    ADB makeADBfromTables(const ADB& X, const Cells& cells,     std::vector<NonuniformTableLinear<double> > table) const;
 
     // The PVT region which is to be used for each cell
     std::vector<int> cellPvtRegionIdx_;

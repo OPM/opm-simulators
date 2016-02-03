@@ -925,7 +925,7 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            asImpl().computeWellConnectionPressures(state0, well_state);        
+            asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);

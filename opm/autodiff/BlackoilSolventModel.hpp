@@ -147,9 +147,6 @@ namespace Opm {
         using Base::computePressures;
         using Base::computeGasPressure;
         using Base::applyThresholdPressures;
-        //using Base::fluidViscosity;
-        //using Base::fluidReciprocFVF;
-        //using Base::fluidDensity;
         using Base::fluidRsSat;
         using Base::fluidRvSat;
         using Base::poroMult;
@@ -167,9 +164,6 @@ namespace Opm {
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
-
-        void calculateEffectiveProperties(const SolutionState&  state);
-
 
         ADB
         fluidViscosity(const int               phase,
@@ -237,9 +231,11 @@ namespace Opm {
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
 
+        // compute effective viscosities (mu_eff_) and effective b factors (b_eff_)  using the ToddLongstaff model
+        void calculateEffectiveProperties(const SolutionState&  state);
+
+        // compute density and viscosity using the ToddLongstaff mixing model
         void ToddLongstaffModel(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu);
-
-
 
     };
 

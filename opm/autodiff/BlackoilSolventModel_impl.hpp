@@ -387,12 +387,16 @@ namespace Opm {
         }
 
         if (pu.phase_used[BlackoilPhases::Vapour]) {
+            // Unclear wether the effective or the pure values should be used for the wells
+            // the current usage of unmodified properties values gives best match.
             //V bg_eff = subset(rq_[pu.phase_pos[Gas]].b,well_cells).value();
             V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             V rhog = fluid_.surfaceDensity(pu.phase_pos[BlackoilPhases::Vapour], well_cells);
             if (has_solvent_) {
+
                 const V bs = solvent_props_.bSolvent(avg_press_ad,well_cells).value();
                 //const V bs_eff = subset(rq_[solvent_pos_].b,well_cells).value();
+
                 // A weighted sum of the b-factors of gas and solvent are used.
                 const int nc = Opm::AutoDiffGrid::numCells(grid_);
 
@@ -529,49 +533,38 @@ namespace Opm {
                                                 const SolutionState&    state)
     {
 
+        const int canonicalPhaseIdx = canph_[ actph ];
         // make a copy to make it possible to modify it
         ADB kr_mod = kr;
-        if (has_solvent_) {
-            const int  nc   = Opm::UgGridHelpers::numCells(grid_);
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const ADB zero = ADB::constant(V::Zero(nc));
-            const V ones = V::Constant(nc, 1.0);
-            const int canonicalPhaseIdx = canph_[ actph ];
+        if (canonicalPhaseIdx == Gas) {
+            if (has_solvent_) {
+                const int  nc   = Opm::UgGridHelpers::numCells(grid_);
+                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+                const ADB zero = ADB::constant(V::Zero(nc));
+                const V ones = V::Constant(nc, 1.0);
 
-            const ADB& ss = state.solvent_saturation;
-            const ADB& sg = (active_[ Gas ]
-                             ? state.saturation[ pu.phase_pos[ Gas ] ]
-                             : zero);
+                const ADB& ss = state.solvent_saturation;
+                const ADB& sg = (active_[ Gas ]
+                                 ? state.saturation[ pu.phase_pos[ Gas ] ]
+                                 : zero);
+                Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+                const ADB F_solvent = zero_selector.select(zero, ss / (ss + sg));
 
-            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-            const ADB F_solvent = zero_selector.select(zero, ss / (ss + sg));
+                // Compute solvent properties
+                const std::vector<PhasePresence>& cond = phaseCondition();
+                ADB mu_s = fluidViscosity(Solvent, phasePressure,state.temperature, state.rs, state.rv, cond);
+                ADB rho_s = fluidDensity(Solvent,rq_[solvent_pos_].b, state.rs, state.rv);
 
-            const std::vector<PhasePresence>& cond = phaseCondition();
-            ADB mu_s = fluidViscosity(Solvent, phasePressure,state.temperature, state.rs, state.rv, cond);
-            ADB rho_s = fluidDensity(Solvent,rq_[solvent_pos_].b, state.rs, state.rv);
-
-            if (canonicalPhaseIdx == Gas) {
-
-                // compute solvent mobility and flux
-                //const ADB tr_mult = transMult(state.pressure);
-
+                // Compute solvent relperm and mass flux
                 ADB krs = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * kr_mod;
                 Base::computeMassFlux(solvent_pos_, transi, krs, mu_s, rho_s, phasePressure, state);
 
-                //rq_[solvent_pos_].mob = krs * tr_mult / mu_s;
-
-                //const ADB rhoavg_solvent = ops_.caver * rho_s;
-                //rq_[ solvent_pos_ ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg_solvent * (ops_.ngrad * geo_.z().matrix()));
-
-                //UpwindSelector<double> upwind_solvent(grid_, ops_, rq_[solvent_pos_].dh.value());
-                //rq_[solvent_pos_].mflux = upwind_solvent.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
-
-                // modify gas relperm
+                // Modify gas relperm
                 kr_mod = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * kr_mod;
 
             }
         }
-        // compute mobility and flux
+        // Compute mobility and flux
         Base::computeMassFlux(actph, transi, kr_mod, mu, rho, phasePressure, state);
 
     }
@@ -832,7 +825,7 @@ namespace Opm {
         const ADB mu_m = zero_selectorSn.select(mu_s + mu_o + mu_g, mu_o * mu_s * mu_g / pow( ( (so_eff / sn_eff) * mu_s_pow *  mu_g_pow)
                                                        + ( (ss_eff / sn_eff) * mu_o_pow *  mu_g_pow) + ( (sg_eff / sn_eff) * mu_s_pow * mu_o_pow), 4.0));
         // Mixing parameter for viscosity
-        const double mix_param_mu = solvent_props_.mixingParamterViscosity();
+        const double mix_param_mu = solvent_props_.mixingParameterViscosity();
 
         // Update viscosities
         viscosity[pu.phase_pos[ Oil ]] = pow(mu_o,1.0 - mix_param_mu) * pow(mu_mos,mix_param_mu);
@@ -844,8 +837,8 @@ namespace Opm {
         ADB& rho_g = density[pu.phase_pos[ Gas ]];
         ADB& rho_s = density[solvent_pos_];
 
-        // mixing paramter for density
-        const double mix_param_rho = solvent_props_.mixingParamterDensity();
+        // mixing parameter for density
+        const double mix_param_rho = solvent_props_.mixingParameterDensity();
 
         // compute effective viscosities for density calculations. These have to
         // be recomputed as a different mixing parameter may be used.

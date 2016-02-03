@@ -427,7 +427,6 @@ namespace Opm {
         const int canonicalPhaseIdx = canph_[ actph ];
         if (canonicalPhaseIdx == Water) {
             if (has_polymer_) {
-                const std::vector<PhasePresence>& cond = phaseCondition();
                 const ADB tr_mult = transMult(state.pressure);
                 const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
                 const ADB mc = computeMc(state);

@@ -142,11 +142,6 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                     const auto& sn = sof2Table.getSoColumn();
                     const auto& krn = sof2Table.getKroColumn();
 
-                    for (size_t i = 0; i < sn.size(); ++i) {
-                        std::cout << sn[i] << " " << krn[i] <<std::endl;
-                    }
-
-
                     krn_[regionIdx] = NonuniformTableLinear<double>(sn, krn);
                 }
 
@@ -307,35 +302,35 @@ ADB SolventPropsAdFromDeck::muSolvent(const ADB& pg,
 ADB SolventPropsAdFromDeck::bSolvent(const ADB& pg,
                                 const Cells& cells) const
 {
-    return SolventPropsAdFromDeck::makeAD(pg, cells, b_);
+    return SolventPropsAdFromDeck::makeADBfromTables(pg, cells, b_);
 
 }
 
 ADB SolventPropsAdFromDeck::gasRelPermMultiplier(const ADB& solventFraction,
                                  const Cells& cells) const
 {
-    return SolventPropsAdFromDeck::makeAD(solventFraction, cells, krg_);
+    return SolventPropsAdFromDeck::makeADBfromTables(solventFraction, cells, krg_);
 
 }
 
 ADB SolventPropsAdFromDeck::solventRelPermMultiplier(const ADB& solventFraction,
                                  const Cells& cells) const
 {
-    return SolventPropsAdFromDeck::makeAD(solventFraction, cells, krs_);
+    return SolventPropsAdFromDeck::makeADBfromTables(solventFraction, cells, krs_);
 }
 
 
 ADB SolventPropsAdFromDeck::misicibleHydrocarbonWaterRelPerm(const ADB& Sn,
                                  const Cells& cells) const
 {
-    return SolventPropsAdFromDeck::makeAD(Sn, cells, krn_);
+    return SolventPropsAdFromDeck::makeADBfromTables(Sn, cells, krn_);
 }
 
 ADB SolventPropsAdFromDeck::miscibleSolventGasRelPermMultiplier(const ADB& Ssg,
                                  const Cells& cells) const
 {
     if (mkrsg_.size() > 0) {
-        return SolventPropsAdFromDeck::makeAD(Ssg, cells, mkrsg_);
+        return SolventPropsAdFromDeck::makeADBfromTables(Ssg, cells, mkrsg_);
     }
     // trivial function if not specified
     return Ssg;
@@ -345,7 +340,7 @@ ADB SolventPropsAdFromDeck::miscibleOilRelPermMultiplier(const ADB& So,
                                  const Cells& cells) const
 {
     if (mkro_.size() > 0) {
-        return SolventPropsAdFromDeck::makeAD(So, cells, mkro_);
+        return SolventPropsAdFromDeck::makeADBfromTables(So, cells, mkro_);
     }
     // trivial function if not specified
     return So;
@@ -355,14 +350,14 @@ ADB SolventPropsAdFromDeck::miscibilityFunction(const ADB& solventFraction,
                                  const Cells& cells) const
 {
 
-    return SolventPropsAdFromDeck::makeAD(solventFraction, cells, misc_);
+    return SolventPropsAdFromDeck::makeADBfromTables(solventFraction, cells, misc_);
 }
 
 
 ADB SolventPropsAdFromDeck::miscibleCriticalGasSaturationFunction (const ADB& Sw,
                                            const Cells& cells) const {
     if (sgcwmis_.size()>0) {
-        return SolventPropsAdFromDeck::makeAD(Sw, cells, sgcwmis_);
+        return SolventPropsAdFromDeck::makeADBfromTables(Sw, cells, sgcwmis_);
     }
     // return zeros if not specified
     return ADB::constant(V::Zero(Sw.size()));
@@ -372,15 +367,15 @@ ADB SolventPropsAdFromDeck::miscibleCriticalGasSaturationFunction (const ADB& Sw
 ADB SolventPropsAdFromDeck::miscibleResidualOilSaturationFunction (const ADB& Sw,
                                            const Cells& cells) const {
     if (sorwmis_.size()>0) {
-        return SolventPropsAdFromDeck::makeAD(Sw, cells, sorwmis_);
+        return SolventPropsAdFromDeck::makeADBfromTables(Sw, cells, sorwmis_);
     }
     // return zeros if not specified
     return ADB::constant(V::Zero(Sw.size()));
 }
 
-ADB SolventPropsAdFromDeck::makeAD(const ADB& X_AD, const Cells& cells, std::vector<NonuniformTableLinear<double>> table) const {
+ADB SolventPropsAdFromDeck::makeADBfromTables(const ADB& X_AD, const Cells& cells, std::vector<NonuniformTableLinear<double>> table) const {
     const int n = cells.size();
-    assert(Sn.value().size() == n);
+    assert(X_AD.value().size() == n);
     V x(n);
     V dx(n);
     for (int i = 0; i < n; ++i) {
@@ -411,11 +406,11 @@ V SolventPropsAdFromDeck::solventSurfaceDensity(const Cells& cells) const {
     return density;
 }
 
-double SolventPropsAdFromDeck::mixingParamterViscosity() const {
+double SolventPropsAdFromDeck::mixingParameterViscosity() const {
     return mix_param_viscosity_;
 }
 
-double SolventPropsAdFromDeck::mixingParamterDensity() const {
+double SolventPropsAdFromDeck::mixingParameterDensity() const {
     return mix_param_density_;
 }
 
