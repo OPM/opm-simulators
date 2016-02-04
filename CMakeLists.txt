@@ -124,5 +124,24 @@ endif (NOT EIGEN3_FOUND)
 
 
 if (HAVE_OPM_DATA)
-   add_test( NAME flow_SPE1 COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
+    add_test( NAME flow_SPE1 COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
+
+    add_test( NAME flow_SPE1CASE2 COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE2.DATA )
+    add_test( NAME flow_SPE1CASE2_restart COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE2_RESTART.DATA )
+
+    set_tests_properties(flow_SPE1CASE2_restart PROPERTIES DEPENDS flow_SPE1CASE2) # Dependes on the restart file from test flow_SPE1CASE2
+
+    add_executable( test_restart tests/test_restart.cpp )
+    target_link_libraries( test_restart opmautodiff ${Boost_LIBRARIES})
+
+    add_test( compare_restart_files
+            ${CMAKE_BINARY_DIR}/bin/test_restart
+             SPE1CASE2.UNRST
+             SPE1CASE2_RESTART.UNRST # Restart from step 60
+             120
+            )
+
+    set_tests_properties(compare_restart_files PROPERTIES DEPENDS flow_SPE1CASE2_restart) # Compares the restart files from tests flow_SPE1CASE2_restart and flow_SPE1CASE2
+
+
 endif()
