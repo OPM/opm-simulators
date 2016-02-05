@@ -38,25 +38,40 @@ namespace Opm {
 template <class Evaluation, bool isScalar = std::is_floating_point<Evaluation>::value >
 struct MathToolbox;
 
+// this converts one evaluation into a different evaluation. It handles scalars as
+// constants, so 'a = ToLhsEvalHelper::exec(b)' will always work if either 'a' or 'b' are
+// floating point values. Further, if 'a' and 'b' are the same type, 'a' is just passed
+// through as a reference, and finally if 'a' and 'b' are function evaluations with
+// respect to different derivatives, this will trigger a compiler error.
 template <class LhsEval, class RhsEval,
           bool lhsIsScalar = std::is_floating_point<LhsEval>::value,
           bool rhsIsScalar = std::is_floating_point<RhsEval>::value>
 struct ToLhsEvalHelper;
 
+// lhsScalar = rhsScalar
 template <class LhsEval, class RhsEval>
 struct ToLhsEvalHelper<LhsEval, RhsEval, true, true> {
     static LhsEval exec(const RhsEval& eval)
     { return eval; }
 };
 
+// lhsScalar = rhsEval
 template <class LhsEval, class RhsEval>
 struct ToLhsEvalHelper<LhsEval, RhsEval, true, false> {
     static LhsEval exec(const RhsEval& eval)
     { return eval.value; }
 };
 
+// lhsEval = lhsEval
+template <class LhsEval>
+struct ToLhsEvalHelper<LhsEval, LhsEval, false, false> {
+    static const LhsEval& exec(const LhsEval& eval)
+    { return eval; }
+};
+
+// lhsEval = rhsScalar
 template <class LhsEval, class RhsEval>
-struct ToLhsEvalHelper<LhsEval, RhsEval, false, false> {
+struct ToLhsEvalHelper<LhsEval, RhsEval, false, true> {
     static LhsEval exec(const RhsEval& eval)
     { return eval; }
 };
