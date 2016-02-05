@@ -1,5 +1,7 @@
 #include "BlackoilState.hpp"
+#include <opm/common/util/numeric/cmp.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
+
 
 using namespace Opm;
 
@@ -38,14 +40,19 @@ BlackoilState::equals(const SimulatorState& other,
     const BlackoilState* that = dynamic_cast <const BlackoilState*> (&other);
     bool equal = that != 0;
     equal = equal && SimulatorState::equals (other, epsilon);
-    equal = equal && SimulatorState::vectorApproxEqual(this->surfacevol(),
-                                                       that->surfacevol(),
-                                                       epsilon);
-    equal = equal && SimulatorState::vectorApproxEqual(this->gasoilratio(),
-                                                       that->gasoilratio(),
-                                                       epsilon);
-    equal = equal && SimulatorState::vectorApproxEqual(this->rv(),
-                                                       that->rv(),
-                                                       epsilon);
+    equal = equal && cmp::double_vector_equal(this->surfacevol(),
+                                              that->surfacevol(),
+                                              cmp::default_abs_epsilon,
+                                              epsilon);
+
+    equal = equal && cmp::double_vector_equal(this->gasoilratio(),
+                                              that->gasoilratio(),
+                                              cmp::default_abs_epsilon,
+                                              epsilon);
+
+    equal = equal && cmp::double_vector_equal(this->rv(),
+                                              that->rv(),
+                                              cmp::default_abs_epsilon,
+                                              epsilon);
     return equal;
 }
