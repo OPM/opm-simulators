@@ -49,6 +49,22 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 
+namespace Dune
+{
+    namespace FMatrixHelp {
+
+    //! invert Matrix without changing the original matrix
+    //! return inverse matrix (specialization for n <= 3 in dune/common/fmatrix.hh)
+    template <typename K, int n>
+    static inline K invertMatrix (const FieldMatrix<K,n,n> &matrix, FieldMatrix<K,n,n> &inverse)
+    {
+        inverse.invert();
+        return K(0);
+    }
+}
+
+}
+
 namespace Opm
 {
 
@@ -70,12 +86,28 @@ namespace Opm
     /// solving the reduced system (after eliminating well variables)
     /// as a block-structured matrix (one block for all cell variables) for a fixed
     /// number of cell variables np .
-    template <int np>
+    template <int np, class ScalarT = double >
     class NewtonIterationBlackoilInterleavedImpl : public NewtonIterationBlackoilInterface
     {
-        typedef double Scalar;
+        typedef ScalarT                                 Scalar;
         typedef Dune::FieldVector<Scalar, np    >       VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, np, np>       MatrixBlockType;
+
+        class MatrixBlock : public Dune::FieldMatrix<Scalar, np, np>
+        {
+            typedef Dune::FieldMatrix<Scalar, np, np>  BaseType;
+        public:
+            using BaseType :: operator= ;
+            using BaseType :: rows;
+            using BaseType :: cols;
+            MatrixBlock() : BaseType( Scalar( 0 ) ) {}
+            void invert()
+            {
+                MatrixBlock matrix( *this );
+                Dune::FMatrixHelp::invertMatrix(matrix, *this);
+            }
+        };
+
+        typedef MatrixBlock                             MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      Vector;
 
@@ -151,7 +183,7 @@ namespace Opm
             typedef std::unique_ptr<ParPreconditioner> Pointer;
             const double relax = 1.0;
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax));
-            
+
         }
 #endif
 
@@ -406,7 +438,7 @@ namespace Opm
 
     namespace detail {
 
-        template< int NP >
+        template< int NP, class Scalar >
         struct NewtonIncrement
         {
             template <class NewtonIncVector>
@@ -421,18 +453,18 @@ namespace Opm
                     assert( np < int(newtonIncrements.size()) );
                     // create NewtonIncrement with fixed np
                     if( ! newtonIncrements[ NP ] )
-                        newtonIncrements[ NP ].reset( new NewtonIterationBlackoilInterleavedImpl< NP >( param, parallelInformation ) );
+                        newtonIncrements[ NP ].reset( new NewtonIterationBlackoilInterleavedImpl< NP, Scalar >( param, parallelInformation ) );
                     return *(newtonIncrements[ NP ]);
                 }
                 else
                 {
-                    return NewtonIncrement< NP-1 >::get(newtonIncrements, param, parallelInformation, np );
+                    return NewtonIncrement< NP-1, Scalar >::get(newtonIncrements, param, parallelInformation, np );
                 }
             }
         };
 
-        template<>
-        struct NewtonIncrement< 0 >
+        template<class Scalar>
+        struct NewtonIncrement< 0, Scalar >
         {
             template <class NewtonIncVector>
             static const NewtonIterationBlackoilInterface&
@@ -455,9 +487,12 @@ namespace Opm
         const int np = residual.material_balance_eq.size();
         // maxNumberEquations_ denotes the currently maximal number of equations
         // covered, this is mostly to reduce compile time. Adjust accordingly to cover
+        const bool singlePrecision = false ; // residual.singlePrecision ;
+
         // more cases
-        const NewtonIterationBlackoilInterface& newtonIncrement =
-            detail::NewtonIncrement< maxNumberEquations_ > :: get( newtonIncrement_, parameters_, parallelInformation_, np );
+        const NewtonIterationBlackoilInterface& newtonIncrement = singlePrecision ?
+            detail::NewtonIncrement< maxNumberEquations_, float  > :: get( newtonIncrementSinglePrecision_, parameters_, parallelInformation_, np ) :
+            detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrement_, parameters_, parallelInformation_, np );
 
         // compute newton increment
         SolutionVector dx = newtonIncrement.computeNewtonIncrement( residual );

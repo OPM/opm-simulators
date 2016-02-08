@@ -101,6 +101,7 @@ namespace Opm
         static const int maxNumberEquations_ = 6 ;
 
         mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_+1 > newtonIncrement_;
+        mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_+1 > newtonIncrementSinglePrecision_;
         NewtonIterationBlackoilInterleavedParameters parameters_;
         boost::any parallelInformation_;
         mutable int iterations_;
