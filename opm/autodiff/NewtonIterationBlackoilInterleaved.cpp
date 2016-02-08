@@ -67,7 +67,7 @@ namespace Dune
 template <class Scalar, int n, int m>
 class MatrixBlock : public Dune::FieldMatrix<Scalar, n, m>
 {
-    public:
+public:
     typedef Dune::FieldMatrix<Scalar, n, m>  BaseType;
 
     using BaseType :: operator= ;
@@ -79,19 +79,27 @@ class MatrixBlock : public Dune::FieldMatrix<Scalar, n, m>
         MatrixBlock matrix( *this );
         Dune::FMatrixHelp::invertMatrix(matrix, *this);
     }
+    const BaseType& asBase() const { return static_cast< const BaseType& > (*this); }
+    BaseType& asBase() { return static_cast< BaseType& > (*this); }
 };
 
 template<class K, int n, int m>
-void print_row (std::ostream& s, const MatrixBlock<K,n,m>& Am,
-              typename FieldMatrix<K,n,m>::size_type I,
-              typename FieldMatrix<K,n,m>::size_type J,
-              typename FieldMatrix<K,n,m>::size_type therow, int width,
-              int precision)
+void
+print_row (std::ostream& s, const MatrixBlock<K,n,m>& A,
+           typename FieldMatrix<K,n,m>::size_type I,
+           typename FieldMatrix<K,n,m>::size_type J,
+           typename FieldMatrix<K,n,m>::size_type therow, int width,
+           int precision)
 {
-    typedef typename MatrixBlock<K,n,m>::BaseType Mat;
-    const Mat& A = static_cast< const Mat& > (Am);
-    print_row(s, A, I, J, therow, width, precision);
+    print_row(s, A.asBase(), I, J, therow, width, precision);
 }
+
+template<class K, int n, int m>
+K& firstmatrixelement (MatrixBlock<K,n,m>& A)
+{
+   return firstmatrixelement( A.asBase() );
+}
+
 
 
 template<typename Scalar, int n, int m>
@@ -294,6 +302,16 @@ namespace Opm
                 }
             }
 
+            /*
+            // not neeeded since MatrixBlock initially zeros all elements during construction
+            // Set all blocks to zero.
+            for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
+                for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
+                    *col = 0.0;
+                }
+            }
+            */
+
             /**
              * Go through all jacobians, and insert in correct spot
              *
@@ -466,7 +484,8 @@ namespace Opm
     /// Construct a system solver.
     NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
                                                                            const boost::any& parallelInformation_arg)
-      : newtonIncrement_(),
+      : newtonIncrementDoublePrecision_(),
+        newtonIncrementSinglePrecision_(),
         parameters_( param ),
         parallelInformation_(parallelInformation_arg),
         iterations_( 0 )
@@ -526,10 +545,10 @@ namespace Opm
         const bool singlePrecision = false ; // residual.singlePrecision ;
         const NewtonIterationBlackoilInterface& newtonIncrement = singlePrecision ?
             detail::NewtonIncrement< maxNumberEquations_, float  > :: get( newtonIncrementSinglePrecision_, parameters_, parallelInformation_, np ) :
-            detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrement_, parameters_, parallelInformation_, np );
+            detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrementDoublePrecision_, parameters_, parallelInformation_, np );
 #else
         const NewtonIterationBlackoilInterface& newtonIncrement =
-            detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrement_, parameters_, parallelInformation_, np );
+            detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrementDoublePrecision_, parameters_, parallelInformation_, np );
 #endif
 
         // compute newton increment
