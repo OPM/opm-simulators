@@ -25,6 +25,7 @@
 
 #include <opm/autodiff/DuneMatrix.hpp>
 #include <opm/autodiff/AdditionalObjectDeleter.hpp>
+#include <opm/autodiff/CPRPreconditioner.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp>
@@ -63,7 +64,43 @@ namespace Dune
     }
 }
 
+template <class Scalar, int n, int m>
+class MatrixBlock : public Dune::FieldMatrix<Scalar, n, m>
+{
+    public:
+    typedef Dune::FieldMatrix<Scalar, n, m>  BaseType;
+
+    using BaseType :: operator= ;
+    using BaseType :: rows;
+    using BaseType :: cols;
+    explicit MatrixBlock( const Scalar scalar = 0 ) : BaseType( scalar ) {}
+    void invert()
+    {
+        MatrixBlock matrix( *this );
+        Dune::FMatrixHelp::invertMatrix(matrix, *this);
+    }
+};
+
+template<class K, int n, int m>
+void print_row (std::ostream& s, const MatrixBlock<K,n,m>& Am,
+              typename FieldMatrix<K,n,m>::size_type I,
+              typename FieldMatrix<K,n,m>::size_type J,
+              typename FieldMatrix<K,n,m>::size_type therow, int width,
+              int precision)
+{
+    typedef typename MatrixBlock<K,n,m>::BaseType Mat;
+    const Mat& A = static_cast< const Mat& > (Am);
+    print_row(s, A, I, J, therow, width, precision);
 }
+
+
+template<typename Scalar, int n, int m>
+struct MatrixDimension< MatrixBlock< Scalar, n, m > >
+: public MatrixDimension< typename MatrixBlock< Scalar, n, m >::BaseType >
+{
+};
+
+} // end namespace Dune
 
 namespace Opm
 {
@@ -92,22 +129,7 @@ namespace Opm
         typedef ScalarT                                 Scalar;
         typedef Dune::FieldVector<Scalar, np    >       VectorBlockType;
 
-        class MatrixBlock : public Dune::FieldMatrix<Scalar, np, np>
-        {
-            typedef Dune::FieldMatrix<Scalar, np, np>  BaseType;
-        public:
-            using BaseType :: operator= ;
-            using BaseType :: rows;
-            using BaseType :: cols;
-            MatrixBlock() : BaseType( Scalar( 0 ) ) {}
-            void invert()
-            {
-                MatrixBlock matrix( *this );
-                Dune::FMatrixHelp::invertMatrix(matrix, *this);
-            }
-        };
-
-        typedef MatrixBlock                             MatrixBlockType;
+        typedef Dune::MatrixBlock<Scalar, np, np >      MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      Vector;
 
@@ -152,16 +174,32 @@ namespace Opm
             typedef std::unique_ptr<typename ScalarProductChooser::ScalarProduct> SPPointer;
             SPPointer sp(ScalarProductChooser::construct(parallelInformation_arg));
 
-            // Construct preconditioner.
-            auto precond = constructPrecond(opA, parallelInformation_arg);
-
             // Communicate if parallel.
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
-            // Solve.
-            solve(opA, x, istlb, *sp, *precond, result);
-        }
+#if ! HAVE_UMFPACK
+            const bool useAmg = false ;
+            if( useAmg )
+            {
+                typedef ISTLUtility::CPRSelector< Mat, Vector, Vector, POrComm>  CPRSelectorType;
+                typedef typename CPRSelectorType::AMG AMG;
+                std::unique_ptr< AMG > amg;
+                // Construct preconditioner.
+                constructAMGPrecond(opA, parallelInformation_arg, amg);
 
+                // Solve.
+                solve(opA, x, istlb, *sp, *amg, result);
+            }
+            else
+#endif
+            {
+                // Construct preconditioner.
+                auto precond = constructPrecond(opA, parallelInformation_arg);
+
+                // Solve.
+                solve(opA, x, istlb, *sp, *precond, result);
+            }
+        }
 
         typedef Dune::SeqILU0<Mat, Vector, Vector> SeqPreconditioner;
 
@@ -183,9 +221,16 @@ namespace Opm
             typedef std::unique_ptr<ParPreconditioner> Pointer;
             const double relax = 1.0;
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax));
-
         }
 #endif
+
+        template <class Operator, class POrComm, class AMG >
+        void
+        constructAMGPrecond(Operator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg ) const
+        {
+            const double relax = 1.0;
+            ISTLUtility::createAMGPreconditionerPointer( opA, relax, comm, amg );
+        }
 
         /// \brief Solve the system using the given preconditioner and scalar product.
         template <class Operator, class ScalarProd, class Precond>
@@ -248,14 +293,6 @@ namespace Opm
                     }
                 }
             }
-
-            // Set all blocks to zero.
-            for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
-                for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
-                    *col = 0.0;
-                }
-            }
-
 
             /**
              * Go through all jacobians, and insert in correct spot
@@ -485,14 +522,15 @@ namespace Opm
     {
         // get np and call appropriate template method
         const int np = residual.material_balance_eq.size();
-        // maxNumberEquations_ denotes the currently maximal number of equations
-        // covered, this is mostly to reduce compile time. Adjust accordingly to cover
+#if ! HAVE_UMFPACK
         const bool singlePrecision = false ; // residual.singlePrecision ;
-
-        // more cases
         const NewtonIterationBlackoilInterface& newtonIncrement = singlePrecision ?
             detail::NewtonIncrement< maxNumberEquations_, float  > :: get( newtonIncrementSinglePrecision_, parameters_, parallelInformation_, np ) :
             detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrement_, parameters_, parallelInformation_, np );
+#else
+        const NewtonIterationBlackoilInterface& newtonIncrement =
+            detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrement_, parameters_, parallelInformation_, np );
+#endif
 
         // compute newton increment
         SolutionVector dx = newtonIncrement.computeNewtonIncrement( residual );
