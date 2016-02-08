@@ -250,6 +250,8 @@ namespace detail {
         const bool converged = asImpl().getConvergence(dt, iteration);
         const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
         if (must_solve) {
+            residual_.singlePrecision = false ;
+
             // Compute the nonlinear update.
             V dx = asImpl().solveJacobianSystem();
 
@@ -2705,22 +2707,6 @@ namespace detail {
         // Residual in Pascal can have high values and still be ok.
         const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
 
-        for (int idx = 0; idx < nm; ++idx) {
-            if (std::isnan(mass_balance_residual[idx])
-                || std::isnan(CNV[idx])
-                || (idx < np && std::isnan(well_flux_residual[idx]))) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
-            }
-            if (mass_balance_residual[idx] > maxResidualAllowed()
-                || CNV[idx] > maxResidualAllowed()
-                || (idx < np && well_flux_residual[idx] > maxResidualAllowed())) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
-            }
-        }
-        if (std::isnan(residualWell) || residualWell > maxWellResidualAllowed) {
-            OPM_THROW(Opm::NumericalProblem, "NaN or too large residual for well control equation");
-        }
-
         if ( terminal_output_ )
         {
             // Only rank 0 does print to std::cout
@@ -2755,6 +2741,23 @@ namespace detail {
             std::cout.precision(oprec);
             std::cout.flags(oflags);
         }
+
+        for (int idx = 0; idx < nm; ++idx) {
+            if (std::isnan(mass_balance_residual[idx])
+                || std::isnan(CNV[idx])
+                || (idx < np && std::isnan(well_flux_residual[idx]))) {
+                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
+            }
+            if (mass_balance_residual[idx] > maxResidualAllowed()
+                || CNV[idx] > maxResidualAllowed()
+                || (idx < np && well_flux_residual[idx] > maxResidualAllowed())) {
+                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
+            }
+        }
+        if (std::isnan(residualWell) || residualWell > maxWellResidualAllowed) {
+            OPM_THROW(Opm::NumericalProblem, "NaN or too large residual for well control equation");
+        }
+
         return converged;
     }
 

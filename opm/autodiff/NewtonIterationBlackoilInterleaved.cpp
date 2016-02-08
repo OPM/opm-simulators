@@ -214,7 +214,7 @@ namespace Opm
         template <class Operator>
         std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
         {
-            const double relax = 1.0;
+            const double relax = 0.9;
             std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), relax));
             return precond;
         }
@@ -227,7 +227,7 @@ namespace Opm
         constructPrecond(Operator& opA, const Comm& comm) const
         {
             typedef std::unique_ptr<ParPreconditioner> Pointer;
-            const double relax = 1.0;
+            const double relax = 0.9;
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax));
         }
 #endif
@@ -542,7 +542,7 @@ namespace Opm
         // get np and call appropriate template method
         const int np = residual.material_balance_eq.size();
 #if ! HAVE_UMFPACK
-        const bool singlePrecision = false ; // residual.singlePrecision ;
+        const bool singlePrecision = residual.singlePrecision ;
         const NewtonIterationBlackoilInterface& newtonIncrement = singlePrecision ?
             detail::NewtonIncrement< maxNumberEquations_, float  > :: get( newtonIncrementSinglePrecision_, parameters_, parallelInformation_, np ) :
             detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrementDoublePrecision_, parameters_, parallelInformation_, np );
