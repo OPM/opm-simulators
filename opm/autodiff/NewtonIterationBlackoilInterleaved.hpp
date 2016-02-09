@@ -62,7 +62,7 @@ namespace Opm
         {
             newton_use_gmres_        = false;
             linear_solver_reduction_ = 1e-2;
-            linear_solver_maxiter_   = 50;
+            linear_solver_maxiter_   = 75;
             linear_solver_restart_   = 40;
             linear_solver_verbosity_ = 0;
         }
