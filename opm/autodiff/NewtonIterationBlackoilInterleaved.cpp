@@ -541,15 +541,9 @@ namespace Opm
     {
         // get np and call appropriate template method
         const int np = residual.material_balance_eq.size();
-#if ! HAVE_UMFPACK
-        const bool singlePrecision = residual.singlePrecision ;
-        const NewtonIterationBlackoilInterface& newtonIncrement = singlePrecision ?
+        const NewtonIterationBlackoilInterface& newtonIncrement = residual.singlePrecision ?
             detail::NewtonIncrement< maxNumberEquations_, float  > :: get( newtonIncrementSinglePrecision_, parameters_, parallelInformation_, np ) :
             detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrementDoublePrecision_, parameters_, parallelInformation_, np );
-#else
-        const NewtonIterationBlackoilInterface& newtonIncrement =
-            detail::NewtonIncrement< maxNumberEquations_, double > :: get( newtonIncrementDoublePrecision_, parameters_, parallelInformation_, np );
-#endif
 
         // compute newton increment
         SolutionVector dx = newtonIncrement.computeNewtonIncrement( residual );
