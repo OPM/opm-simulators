@@ -116,9 +116,9 @@ public:
         if (!deck->hasKeyword("SATOPTS"))
             return;
 
-        Opm::DeckItemConstPtr satoptsItem = deck->getKeyword("SATOPTS")->getRecord(0)->getItem(0);
-        for (unsigned i = 0; i < satoptsItem->size(); ++i) {
-            std::string satoptsValue = satoptsItem->getString(0);
+        const auto& satoptsItem = deck->getKeyword("SATOPTS").getRecord(0).getItem(0);
+        for (unsigned i = 0; i < satoptsItem.size(); ++i) {
+            std::string satoptsValue = satoptsItem.get< std::string >(0);
             std::transform(satoptsValue.begin(),
                            satoptsValue.end(),
                            satoptsValue.begin(),
@@ -140,11 +140,11 @@ public:
                       "Enabling hysteresis via the HYST parameter for SATOPTS requires the "
                       "presence of the EHYSTR keyword");
 
-        Opm::DeckKeywordConstPtr ehystrKeyword = deck->getKeyword("EHYSTR");
+        const auto& ehystrKeyword = deck->getKeyword("EHYSTR");
         if (deck->hasKeyword("NOHYKR"))
             krHysteresisModel_ = -1;
         else {
-            krHysteresisModel_ = ehystrKeyword->getRecord(0)->getItem("relative_perm_hyst")->getInt(0);
+            krHysteresisModel_ = ehystrKeyword.getRecord(0).getItem("relative_perm_hyst").get< int >(0);
             if (krHysteresisModel_ != 0)
                 OPM_THROW(std::runtime_error,
                           "Only the Carlson kr hystersis model (indicated by a 0 on the second item"

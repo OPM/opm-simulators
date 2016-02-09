@@ -60,32 +60,32 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr /*eclState*/)
     {
-        DeckKeywordConstPtr pvcdoKeyword = deck->getKeyword("PVCDO");
-        DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        const auto& pvcdoKeyword = deck->getKeyword("PVCDO");
+        const auto& densityKeyword = deck->getKeyword("DENSITY");
 
-        assert(pvcdoKeyword->size() == densityKeyword->size());
+        assert(pvcdoKeyword.size() == densityKeyword.size());
 
-        size_t numRegions = pvcdoKeyword->size();
+        size_t numRegions = pvcdoKeyword.size();
         setNumRegions(numRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-            Scalar rhoRefO = densityKeyword->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
-            Scalar rhoRefG = densityKeyword->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
-            Scalar rhoRefW = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
+            Scalar rhoRefO = densityKeyword.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
+            Scalar rhoRefG = densityKeyword.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
+            Scalar rhoRefW = densityKeyword.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
 
             setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
 
-            auto pvcdoRecord = pvcdoKeyword->getRecord(regionIdx);
+            auto pvcdoRecord = pvcdoKeyword.getRecord(regionIdx);
             oilReferencePressure_[regionIdx] =
-                pvcdoRecord->getItem("P_REF")->getSIDouble(0);
+                pvcdoRecord.getItem("P_REF").getSIDouble(0);
             oilReferenceFormationVolumeFactor_[regionIdx] =
-                pvcdoRecord->getItem("OIL_VOL_FACTOR")->getSIDouble(0);
+                pvcdoRecord.getItem("OIL_VOL_FACTOR").getSIDouble(0);
             oilCompressibility_[regionIdx] =
-                pvcdoRecord->getItem("OIL_COMPRESSIBILITY")->getSIDouble(0);
+                pvcdoRecord.getItem("OIL_COMPRESSIBILITY").getSIDouble(0);
             oilViscosity_[regionIdx] =
-                pvcdoRecord->getItem("OIL_VISCOSITY")->getSIDouble(0);
+                pvcdoRecord.getItem("OIL_VISCOSITY").getSIDouble(0);
             oilViscosibility_[regionIdx] =
-                pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0);
+                pvcdoRecord.getItem("OIL_VISCOSIBILITY").getSIDouble(0);
         }
 
         initEnd();

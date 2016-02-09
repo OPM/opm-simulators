@@ -116,7 +116,7 @@ public:
                       const std::vector<int>& compressedToCartesianElemIdx)
     {
         // get the number of saturation regions and the number of cells in the deck
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0));
         size_t numCompressedElems = compressedToCartesianElemIdx.size();
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
@@ -256,10 +256,10 @@ private:
 
         if (enableEndPointScaling()) {
             // sift through the options of the ENDSCALE keyword
-            Opm::DeckKeywordConstPtr endscaleKeyword = deck->getKeyword("ENDSCALE");
-            Opm::DeckRecordConstPtr endscaleRecord = endscaleKeyword->getRecord(0);
-            for (unsigned itemIdx = 0; itemIdx < endscaleRecord->size() && itemIdx < 2; ++ itemIdx) {
-                std::string optionValue = endscaleRecord->getItem(itemIdx)->getTrimmedString(0);
+            const auto& endscaleKeyword = deck->getKeyword("ENDSCALE");
+            const auto& endscaleRecord = endscaleKeyword.getRecord(0);
+            for (unsigned itemIdx = 0; itemIdx < endscaleRecord.size() && itemIdx < 2; ++ itemIdx) {
+                std::string optionValue = endscaleRecord.getItem(itemIdx).getTrimmedString(0);
 
                 // convert the value of the option to upper case, just to be sure
                 std::transform(optionValue.begin(),
@@ -326,7 +326,7 @@ private:
                                 const std::vector<int>& compressedToCartesianElemIdx,
                                 const std::vector<int>& satnumRegionArray)
     {
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0));
+        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0));
         unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
 
         // read the end point scaling configuration. this needs to be done only once per
@@ -823,7 +823,7 @@ private:
 
             if (deck->hasKeyword("STONE1EX")) {
                 Scalar eta =
-                    deck->getKeyword("STONE1EX")->getRecord(satnumIdx)->getItem(0)->getSIDouble(0);
+                    deck->getKeyword("STONE1EX").getRecord(satnumIdx).getItem(0).getSIDouble(0);
                 realParams.setEta(eta);
             }
             else

@@ -214,8 +214,8 @@ inline void testAll()
     const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseMode);
     const auto eclGrid = eclState->getEclipseGrid();
 
-    const auto pvtwKeyword = deck->getKeyword("PVTW");
-    size_t numPvtRegions = pvtwKeyword->size();
+    const auto& pvtwKeyword = deck->getKeyword("PVTW");
+    size_t numPvtRegions = pvtwKeyword.size();
 
     if (numPvtRegions != 2)
         OPM_THROW(std::logic_error,

@@ -158,9 +158,9 @@ public:
         // permeabilities
         if (deck->hasKeyword("SCALECRS")) {
             // if the deck features the SCALECRS keyword, it must be set to 'YES'
-            Opm::DeckKeywordConstPtr scalecrsKeyword = deck->getKeyword("SCALECRS");
+            const auto& scalecrsKeyword = deck->getKeyword("SCALECRS");
             std::string scalecrsValue =
-                scalecrsKeyword->getRecord(0)->getItem("VALUE")->getString(0);
+                scalecrsKeyword.getRecord(0).getItem("VALUE").get< std::string >(0);
             // convert the value of the SCALECRS keyword to upper case, just to be sure
             std::transform(scalecrsValue.begin(),
                            scalecrsValue.end(),

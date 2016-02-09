@@ -84,19 +84,19 @@ public:
         // viscosity
         if (deck->hasKeyword("VISCREF")) {
             const auto& oilvisctTables = tables->getOilvisctTables();
-            Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
+            const auto& viscrefKeyword = deck->getKeyword("VISCREF");
 
             assert(oilvisctTables.size() == numRegions);
-            assert(viscrefKeyword->size() == numRegions);
+            assert(viscrefKeyword.size() == numRegions);
 
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
                 const auto& TCol = oilvisctTables[regionIdx].getColumn("Temperature").vectorCopy();
                 const auto& muCol = oilvisctTables[regionIdx].getColumn("Viscosity").vectorCopy();
                 oilvisctCurves_[regionIdx].setXYContainers(TCol, muCol);
 
-                DeckRecordConstPtr viscrefRecord = viscrefKeyword->getRecord(regionIdx);
-                viscrefPress_[regionIdx] = viscrefRecord->getItem("REFERENCE_PRESSURE")->getSIDouble(0);
-                viscrefRs_[regionIdx] = viscrefRecord->getItem("REFERENCE_RS")->getSIDouble(0);
+                const auto& viscrefRecord = viscrefKeyword.getRecord(regionIdx);
+                viscrefPress_[regionIdx] = viscrefRecord.getItem("REFERENCE_PRESSURE").getSIDouble(0);
+                viscrefRs_[regionIdx] = viscrefRecord.getItem("REFERENCE_RS").getSIDouble(0);
 
                 // temperature used to calculate the reference viscosity [K]. the
                 // value does not really matter if the underlying PVT object really
@@ -116,13 +116,13 @@ public:
         // for the first EOS. (since EOS != PVT region.)
         refTemp_ = 0.0;
         if (deck->hasKeyword("THERMEX1")) {
-            int oilCompIdx = deck->getKeyword("OCOMPIDX")->getRecord(0)->getItem("OIL_COMPONENT_INDEX")->getInt(0) - 1;
+            int oilCompIdx = deck->getKeyword("OCOMPIDX").getRecord(0).getItem("OIL_COMPONENT_INDEX").get< int >(0) - 1;
 
             // always use the values of the first EOS
-            refTemp_ = deck->getKeyword("TREF")->getRecord(0)->getItem("TEMPERATURE")->getSIDouble(oilCompIdx);
-            refPress_ = deck->getKeyword("PREF")->getRecord(0)->getItem("PRESSURE")->getSIDouble(oilCompIdx);
-            refC_ = deck->getKeyword("CREF")->getRecord(0)->getItem("COMPRESSIBILITY")->getSIDouble(oilCompIdx);
-            thermex1_ = deck->getKeyword("THERMEX1")->getRecord(0)->getItem("EXPANSION_COEFF")->getSIDouble(oilCompIdx);
+            refTemp_ = deck->getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(oilCompIdx);
+            refPress_ = deck->getKeyword("PREF").getRecord(0).getItem("PRESSURE").getSIDouble(oilCompIdx);
+            refC_ = deck->getKeyword("CREF").getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(oilCompIdx);
+            thermex1_ = deck->getKeyword("THERMEX1").getRecord(0).getItem("EXPANSION_COEFF").getSIDouble(oilCompIdx);
         }
     }
 #endif // HAVE_OPM_PARSER
