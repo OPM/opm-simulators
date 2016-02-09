@@ -60,16 +60,16 @@ namespace Opm
                 transmult_ =  rocktabTable.getColumn("PV_MULT_TRANX").vectorCopy();
             }
         } else if (deck->hasKeyword("ROCK")) {
-            Opm::DeckKeywordConstPtr rockKeyword = deck->getKeyword("ROCK");
-            if (rockKeyword->size() != 1) {
+            const auto& rockKeyword = deck->getKeyword("ROCK");
+            if (rockKeyword.size() != 1) {
                 // here it would be better not to use std::cout directly but to add the
                 // warning to some "warning list"...
-                std::cout << "Can only handle a single region in ROCK ("<<rockKeyword->size()<<" regions specified)."
+                std::cout << "Can only handle a single region in ROCK ("<<rockKeyword.size()<<" regions specified)."
                           << " Ignoring all except for the first.\n";
             }
 
-            pref_ = rockKeyword->getRecord(0)->getItem("PREF")->getSIDouble(0);
-            rock_comp_ = rockKeyword->getRecord(0)->getItem("COMPRESSIBILITY")->getSIDouble(0);
+            pref_ = rockKeyword.getRecord(0).getItem("PREF").getSIDouble(0);
+            rock_comp_ = rockKeyword.getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(0);
         } else {
             std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
         }

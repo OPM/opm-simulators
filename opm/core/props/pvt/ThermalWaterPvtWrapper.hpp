@@ -48,19 +48,19 @@ namespace Opm
             watvisctTables_ = 0;
 
             // stuff which we need to get from the PVTW keyword
-            Opm::DeckKeywordConstPtr pvtwKeyword = deck->getKeyword("PVTW");
-            int numRegions = pvtwKeyword->size();
+            const auto& pvtwKeyword = deck->getKeyword("PVTW");
+            int numRegions = pvtwKeyword.size();
             pvtwRefPress_.resize(numRegions);
             pvtwRefB_.resize(numRegions);
             pvtwCompressibility_.resize(numRegions);
             pvtwViscosity_.resize(numRegions);
             pvtwViscosibility_.resize(numRegions);
             for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-                Opm::DeckRecordConstPtr pvtwRecord = pvtwKeyword->getRecord(regionIdx);
-                pvtwRefPress_[regionIdx] = pvtwRecord->getItem("P_REF")->getSIDouble(0);
-                pvtwRefB_[regionIdx] = pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
-                pvtwViscosity_[regionIdx] = pvtwRecord->getItem("WATER_VISCOSITY")->getSIDouble(0);
-                pvtwViscosibility_[regionIdx] = pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
+                const auto& pvtwRecord = pvtwKeyword.getRecord(regionIdx);
+                pvtwRefPress_[regionIdx] = pvtwRecord.getItem("P_REF").getSIDouble(0);
+                pvtwRefB_[regionIdx] = pvtwRecord.getItem("WATER_VOL_FACTOR").getSIDouble(0);
+                pvtwViscosity_[regionIdx] = pvtwRecord.getItem("WATER_VISCOSITY").getSIDouble(0);
+                pvtwViscosibility_[regionIdx] = pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0);
             }
 
             // quantities required for the temperature dependence of the viscosity
@@ -68,34 +68,34 @@ namespace Opm
             if (deck->hasKeyword("VISCREF")) {
                 auto tables = eclipseState->getTableManager();
                 watvisctTables_ = &tables->getWatvisctTables();
-                Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
+                const auto& viscrefKeyword = deck->getKeyword("VISCREF");
 
                 assert(int(watvisctTables_->size()) == numRegions);
-                assert(int(viscrefKeyword->size()) == numRegions);
+                assert(int(viscrefKeyword.size()) == numRegions);
 
                 viscrefPress_.resize(numRegions);
                 for (int regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-                    Opm::DeckRecordConstPtr viscrefRecord = viscrefKeyword->getRecord(regionIdx);
+                    const auto& viscrefRecord = viscrefKeyword.getRecord(regionIdx);
 
-                    viscrefPress_[regionIdx] = viscrefRecord->getItem("REFERENCE_PRESSURE")->getSIDouble(0);
+                    viscrefPress_[regionIdx] = viscrefRecord.getItem("REFERENCE_PRESSURE").getSIDouble(0);
                 }
             }
 
             // quantities required for the temperature dependence of the density
             if (deck->hasKeyword("WATDENT")) {
-                DeckKeywordConstPtr watdentKeyword = deck->getKeyword("WATDENT");
+                const auto& watdentKeyword = deck->getKeyword("WATDENT");
 
-                assert(int(watdentKeyword->size()) == numRegions);
+                assert(int(watdentKeyword.size()) == numRegions);
 
                 watdentRefTemp_.resize(numRegions);
                 watdentCT1_.resize(numRegions);
                 watdentCT2_.resize(numRegions);
                 for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                    Opm::DeckRecordConstPtr watdentRecord = watdentKeyword->getRecord(regionIdx);
+                    const auto& watdentRecord = watdentKeyword.getRecord(regionIdx);
 
-                    watdentRefTemp_[regionIdx] = watdentRecord->getItem("REFERENCE_TEMPERATURE")->getSIDouble(0);
-                    watdentCT1_[regionIdx] = watdentRecord->getItem("EXPANSION_COEFF_LINEAR")->getSIDouble(0);
-                    watdentCT2_[regionIdx] = watdentRecord->getItem("EXPANSION_COEFF_QUADRATIC")->getSIDouble(0);
+                    watdentRefTemp_[regionIdx] = watdentRecord.getItem("REFERENCE_TEMPERATURE").getSIDouble(0);
+                    watdentCT1_[regionIdx] = watdentRecord.getItem("EXPANSION_COEFF_LINEAR").getSIDouble(0);
+                    watdentCT2_[regionIdx] = watdentRecord.getItem("EXPANSION_COEFF_QUADRATIC").getSIDouble(0);
                 }
             }
         }

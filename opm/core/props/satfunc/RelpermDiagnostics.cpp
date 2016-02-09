@@ -190,9 +190,9 @@ namespace Opm{
  
 
     void RelpermDiagnostics::tableCheck_(EclipseStateConstPtr eclState, 
-                                         DeckConstPtr deck)
+                                         std::shared_ptr< const Deck > deck)
     {
-        const int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
+        const int numSatRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
         const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
         std::cout << msg << std::endl;
         streamLog_->addMessage(Log::MessageType::Info, msg);
@@ -583,7 +583,7 @@ namespace Opm{
                                                      EclipseStateConstPtr eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        const int numSatRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTSFUN")->getInt(0);
+        const int numSatRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
         unscaledEpsInfo_.resize(numSatRegions);
 
         const auto tables = eclState->getTableManager();

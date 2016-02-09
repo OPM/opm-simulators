@@ -50,9 +50,9 @@ namespace Opm
 
         // Surface densities. Accounting for different orders in eclipse and our code.
         if (deck->hasKeyword("DENSITY")) {
-            Opm::DeckRecordConstPtr densityRecord = deck->getKeyword("DENSITY")->getRecord(region_number);
-            surface_density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = densityRecord->getItem("OIL")->getSIDouble(0);
-            surface_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = densityRecord->getItem("WATER")->getSIDouble(0);
+            const auto& densityRecord = deck->getKeyword("DENSITY").getRecord(region_number);
+            surface_density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = densityRecord.getItem("OIL").getSIDouble(0);
+            surface_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = densityRecord.getItem("WATER").getSIDouble(0);
         } else {
             OPM_THROW(std::runtime_error, "Input is missing DENSITY\n");
         }
@@ -63,13 +63,13 @@ namespace Opm
 
         // Water viscosity.
         if (deck->hasKeyword("PVTW")) {
-            Opm::DeckRecordConstPtr pvtwRecord = deck->getKeyword("PVTW")->getRecord(region_number);
-            if (pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0) != 0.0 ||
-                pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0) != 0.0) {
+            const auto& pvtwRecord = deck->getKeyword("PVTW").getRecord(region_number);
+            if (pvtwRecord.getItem("WATER_COMPRESSIBILITY").getSIDouble(0) != 0.0 ||
+                pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0) != 0.0) {
                 OPM_MESSAGE("Compressibility effects in PVTW are ignored.");
             }
-            reservoir_density_[phase_usage.phase_pos[PhaseUsage::Aqua]] /= pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
-            viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = pvtwRecord->getItem("WATER_VISCOSITY")->getSIDouble(0);
+            reservoir_density_[phase_usage.phase_pos[PhaseUsage::Aqua]] /= pvtwRecord.getItem("WATER_VOL_FACTOR").getSIDouble(0);
+            viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = pvtwRecord.getItem("WATER_VISCOSITY").getSIDouble(0);
         } else {
             // Eclipse 100 default.
             // viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = 0.5*Opm::prefix::centi*Opm::unit::Poise;
@@ -78,14 +78,14 @@ namespace Opm
 
         // Oil viscosity.
         if (deck->hasKeyword("PVCDO")) {
-            Opm::DeckRecordConstPtr pvcdoRecord = deck->getKeyword("PVCDO")->getRecord(region_number);
+            const auto& pvcdoRecord = deck->getKeyword("PVCDO").getRecord(region_number);
 
-            if (pvcdoRecord->getItem("OIL_COMPRESSIBILITY")->getSIDouble(0) != 0.0 ||
-                pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0) != 0.0) {
+            if (pvcdoRecord.getItem("OIL_COMPRESSIBILITY").getSIDouble(0) != 0.0 ||
+                pvcdoRecord.getItem("OIL_VISCOSIBILITY").getSIDouble(0) != 0.0) {
                 OPM_MESSAGE("Compressibility effects in PVCDO are ignored.");
             }
-            reservoir_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] /= pvcdoRecord->getItem("OIL_VOL_FACTOR")->getSIDouble(0);
-            viscosity_[phase_usage.phase_pos[PhaseUsage::Liquid]] = pvcdoRecord->getItem("OIL_VISCOSITY")->getSIDouble(0);
+            reservoir_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] /= pvcdoRecord.getItem("OIL_VOL_FACTOR").getSIDouble(0);
+            viscosity_[phase_usage.phase_pos[PhaseUsage::Liquid]] = pvcdoRecord.getItem("OIL_VISCOSITY").getSIDouble(0);
         } else {
             OPM_THROW(std::runtime_error, "Input is missing PVCDO\n");
         }

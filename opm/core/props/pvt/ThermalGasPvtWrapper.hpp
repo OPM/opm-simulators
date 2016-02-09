@@ -60,13 +60,13 @@ namespace Opm
                 assert(int(gasvisctTables_->size()) == numRegions);
                 static_cast<void>(numRegions); //Silence compiler warning
 
-                gasCompIdx_ = deck->getKeyword("GCOMPIDX")->getRecord(0)->getItem("GAS_COMPONENT_INDEX")->getInt(0) - 1;
+                gasCompIdx_ = deck->getKeyword("GCOMPIDX").getRecord(0).getItem("GAS_COMPONENT_INDEX").get< int >(0) - 1;
                 gasvisctColumnName_ = "Viscosity"+std::to_string(static_cast<long long>(gasCompIdx_));
             }
 
             // density
             if (deck->hasKeyword("TREF")) {
-                tref_ = deck->getKeyword("TREF")->getRecord(0)->getItem("TEMPERATURE")->getSIDouble(0);
+                tref_ = deck->getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(0);
             }
         }
 

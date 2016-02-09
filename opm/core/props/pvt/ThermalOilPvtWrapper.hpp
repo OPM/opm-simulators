@@ -54,25 +54,25 @@ namespace Opm
             else if (deck->hasKeyword("PVDO"))
                 numRegions = tables->getPvdoTables().size();
             else if (deck->hasKeyword("PVCDO"))
-                numRegions = deck->getKeyword("PVCDO")->size();
+                numRegions = deck->getKeyword("PVCDO").size();
             else
                 OPM_THROW(std::runtime_error, "Oil phase was not initialized using a known way");
 
             // viscosity
             if (deck->hasKeyword("VISCREF")) {
                 oilvisctTables_ = &tables->getOilvisctTables();
-                Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
+                const auto& viscrefKeyword = deck->getKeyword("VISCREF");
 
                 assert(int(oilvisctTables_->size()) == numRegions);
-                assert(int(viscrefKeyword->size()) == numRegions);
+                assert(int(viscrefKeyword.size()) == numRegions);
 
                 viscrefPress_.resize(numRegions);
                 viscrefRs_.resize(numRegions);
                 muRef_.resize(numRegions);
                 for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                    DeckRecordConstPtr viscrefRecord = viscrefKeyword->getRecord(regionIdx);
-                    viscrefPress_[regionIdx] = viscrefRecord->getItem("REFERENCE_PRESSURE")->getSIDouble(0);
-                    viscrefRs_[regionIdx] = viscrefRecord->getItem("REFERENCE_RS")->getSIDouble(0);
+                    const auto& viscrefRecord = viscrefKeyword.getRecord(regionIdx);
+                    viscrefPress_[regionIdx] = viscrefRecord.getItem("REFERENCE_PRESSURE").getSIDouble(0);
+                    viscrefRs_[regionIdx] = viscrefRecord.getItem("REFERENCE_RS").getSIDouble(0);
 
                     // temperature used to calculate the reference viscosity [K]. the
                     // value does not really matter if the underlying PVT object really
@@ -96,13 +96,13 @@ namespace Opm
             // for the first EOS. (since EOS != PVT region.)
             tref_ = 0.0;
             if (deck->hasKeyword("THERMEX1")) {
-                oilCompIdx_ = deck->getKeyword("OCOMPIDX")->getRecord(0)->getItem("OIL_COMPONENT_INDEX")->getInt(0) - 1;
+                oilCompIdx_ = deck->getKeyword("OCOMPIDX").getRecord(0).getItem("OIL_COMPONENT_INDEX").get< int >(0) - 1;
 
                 // always use the values of the first EOS
-                tref_ = deck->getKeyword("TREF")->getRecord(0)->getItem("TEMPERATURE")->getSIDouble(oilCompIdx_);
-                pref_ = deck->getKeyword("PREF")->getRecord(0)->getItem("PRESSURE")->getSIDouble(oilCompIdx_);
-                cref_ = deck->getKeyword("CREF")->getRecord(0)->getItem("COMPRESSIBILITY")->getSIDouble(oilCompIdx_);
-                thermex1_ = deck->getKeyword("THERMEX1")->getRecord(0)->getItem("EXPANSION_COEFF")->getSIDouble(oilCompIdx_);
+                tref_ = deck->getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(oilCompIdx_);
+                pref_ = deck->getKeyword("PREF").getRecord(0).getItem("PRESSURE").getSIDouble(oilCompIdx_);
+                cref_ = deck->getKeyword("CREF").getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(oilCompIdx_);
+                thermex1_ = deck->getKeyword("THERMEX1").getRecord(0).getItem("EXPANSION_COEFF").getSIDouble(oilCompIdx_);
             }
         }
 

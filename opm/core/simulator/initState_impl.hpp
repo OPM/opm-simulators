@@ -612,7 +612,7 @@ namespace Opm
             // Set saturations from SWAT/SGAS, pressure from PRESSURE.
             std::vector<double>& s = state.saturation();
             std::vector<double>& p = state.pressure();
-            const std::vector<double>& p_deck = deck->getKeyword("PRESSURE")->getSIDoubleData();
+            const std::vector<double>& p_deck = deck->getKeyword("PRESSURE").getSIDoubleData();
             const int num_cells = number_of_cells;
             if (num_phases == 2) {
                 if (!pu.phase_used[BlackoilPhases::Aqua]) {
@@ -620,7 +620,7 @@ namespace Opm
                     if (!deck->hasKeyword("SGAS")) {
                         OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS keyword in 2-phase init");
                     }
-                    const std::vector<double>& sg_deck = deck->getKeyword("SGAS")->getSIDoubleData();
+                    const std::vector<double>& sg_deck = deck->getKeyword("SGAS").getSIDoubleData();
                     const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                     const int opos = pu.phase_pos[BlackoilPhases::Liquid];
                     for (int c = 0; c < num_cells; ++c) {
@@ -634,7 +634,7 @@ namespace Opm
                     if (!deck->hasKeyword("SWAT")) {
                         OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SWAT keyword in 2-phase init");
                     }
-                    const std::vector<double>& sw_deck = deck->getKeyword("SWAT")->getSIDoubleData();
+                    const std::vector<double>& sw_deck = deck->getKeyword("SWAT").getSIDoubleData();
                     const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                     const int nwpos = (wpos + 1) % 2;
                     for (int c = 0; c < num_cells; ++c) {
@@ -652,8 +652,8 @@ namespace Opm
                 const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                 const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                 const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                const std::vector<double>& sw_deck = deck->getKeyword("SWAT")->getSIDoubleData();
-                const std::vector<double>& sg_deck = deck->getKeyword("SGAS")->getSIDoubleData();
+                const std::vector<double>& sw_deck = deck->getKeyword("SWAT").getSIDoubleData();
+                const std::vector<double>& sg_deck = deck->getKeyword("SGAS").getSIDoubleData();
                 for (int c = 0; c < num_cells; ++c) {
                     int c_deck = (global_cell == NULL) ? c : global_cell[c];
                     s[3*c + wpos] = sw_deck[c_deck];
@@ -884,7 +884,7 @@ namespace Opm
                           face_cells, begin_face_centroids, begin_cell_centroids,
                           dimensions, props, deck, gravity, state);
         if (deck->hasKeyword("RS")) {
-            const std::vector<double>& rs_deck = deck->getKeyword("RS")->getSIDoubleData();
+            const std::vector<double>& rs_deck = deck->getKeyword("RS").getSIDoubleData();
             const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
                 int c_deck = (global_cell == NULL) ? c : global_cell[c];
@@ -893,7 +893,7 @@ namespace Opm
             initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
             computeSaturation(props,state);
         } else if (deck->hasKeyword("RV")){
-            const std::vector<double>& rv_deck = deck->getKeyword("RV")->getSIDoubleData();
+            const std::vector<double>& rv_deck = deck->getKeyword("RV").getSIDoubleData();
             const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
                 int c_deck = (global_cell == NULL) ? c : global_cell[c];

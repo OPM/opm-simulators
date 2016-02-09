@@ -38,8 +38,8 @@ namespace Opm
         rock_.init(eclState, grid.number_of_cells, grid.global_cell, grid.cartdims);
 
         if (deck->hasKeyword("DENSITY")) {
-            Opm::DeckRecordConstPtr densityRecord = deck->getKeyword("DENSITY")->getRecord(0);
-            surface_density_ = densityRecord->getItem("OIL")->getSIDouble(0);
+            const auto& densityRecord = deck->getKeyword("DENSITY").getRecord(0);
+            surface_density_ = densityRecord.getItem("OIL").getSIDouble(0);
         } else {
             surface_density_ = 1000.0;
             OPM_MESSAGE("Input is missing DENSITY -- using a standard density of "
@@ -50,13 +50,13 @@ namespace Opm
         reservoir_density_ = surface_density_;
 
         if (deck->hasKeyword("PVCDO")) {
-            Opm::DeckRecordConstPtr pvcdoRecord = deck->getKeyword("PVCDO")->getRecord(0);
-            if (pvcdoRecord->getItem("OIL_COMPRESSIBILITY")->getSIDouble(0) != 0.0 ||
-                pvcdoRecord->getItem("OIL_VISCOSIBILITY")->getSIDouble(0) != 0.0) {
+            const auto& pvcdoRecord = deck->getKeyword("PVCDO").getRecord(0);
+            if (pvcdoRecord.getItem("OIL_COMPRESSIBILITY").getSIDouble(0) != 0.0 ||
+                pvcdoRecord.getItem("OIL_VISCOSIBILITY").getSIDouble(0) != 0.0) {
                 OPM_MESSAGE("Compressibility effects in PVCDO are ignored.");
             }
-            reservoir_density_ /= pvcdoRecord->getItem("OIL_VOL_FACTOR")->getSIDouble(0);
-            viscosity_ = pvcdoRecord->getItem("OIL_VISCOSITY")->getSIDouble(0);
+            reservoir_density_ /= pvcdoRecord.getItem("OIL_VOL_FACTOR").getSIDouble(0);
+            viscosity_ = pvcdoRecord.getItem("OIL_VISCOSITY").getSIDouble(0);
         } else {
             viscosity_ = 1.0 * prefix::centi*unit::Poise;
             OPM_MESSAGE("Input is missing PVCDO -- using a standard viscosity of "
