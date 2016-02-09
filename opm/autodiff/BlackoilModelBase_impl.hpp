@@ -250,7 +250,8 @@ namespace detail {
         const bool converged = asImpl().getConvergence(dt, iteration);
         const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
         if (must_solve) {
-            residual_.singlePrecision = false ;
+            // enable single precision for solvers when dt is smaller then 20 days
+            residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
             // Compute the nonlinear update.
             V dx = asImpl().solveJacobianSystem();
