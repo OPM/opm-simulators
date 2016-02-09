@@ -60,7 +60,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
     const int numPhases = initialState.numPhases();
     const int numCells = UgGridHelpers::numCells(grid);
-    const int numPvtRegions = deck->getKeyword("TABDIMS")->getRecord(0)->getItem("NTPVT")->getInt(0);
+    const int numPvtRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTPVT").get< int >(0);
 
     // retrieve the minimum (residual!?) and the maximum saturations for all cells
     std::vector<double> minSat(numPhases*numCells);
@@ -73,26 +73,26 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
     // retrieve the surface densities
     std::vector<std::vector<double> > surfaceDensity(numPvtRegions);
-    Opm::DeckKeywordConstPtr densityKw = deck->getKeyword("DENSITY");
+    const auto& densityKw = deck->getKeyword("DENSITY");
     for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx) {
         surfaceDensity[regionIdx].resize(numPhases);
 
         if (pu.phase_used[BlackoilPhases::Aqua]) {
             const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
             surfaceDensity[regionIdx][wpos] =
-                densityKw->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
+                densityKw.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
         }
 
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const int opos = pu.phase_pos[BlackoilPhases::Liquid];
             surfaceDensity[regionIdx][opos] =
-                densityKw->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
+                densityKw.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
         }
 
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
             surfaceDensity[regionIdx][gpos] =
-                densityKw->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
+                densityKw.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
         }
     }
 
