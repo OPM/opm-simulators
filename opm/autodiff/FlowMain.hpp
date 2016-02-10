@@ -79,6 +79,7 @@
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -583,7 +584,8 @@ namespace Opm
             SimulatorTimer simtimer;
 
             // initialize variables
-            simtimer.init(timeMap);
+            const auto initConfig = eclipse_state_->getInitConfig();
+            simtimer.init(timeMap, initConfig->getRestartInitiated(), (size_t)initConfig->getRestartStep());
 
 
 

@@ -24,6 +24,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/core/io/eclipse/EclipseReader.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
@@ -34,6 +35,10 @@
 #include <opm/autodiff/ParallelDebugOutput.hpp>
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+
 
 #include <string>
 #include <sstream>
@@ -194,6 +199,7 @@ namespace Opm
     /** \brief Wrapper class for VTK, Matlab, and ECL output. */
     class BlackoilOutputWriter : public OutputWriter
     {
+
     public:
         // constructor creating different sub writers
         template <class Grid>
@@ -209,7 +215,7 @@ namespace Opm
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulatorState& reservoirState,
-                           const WellState& wellState,
+                           const Opm::WellState& wellState,
                            bool substep = false);
 
         /** \brief return output directory */
@@ -223,6 +229,16 @@ namespace Opm
                      WellStateFullyImplicitBlackoil& wellState,
                      const std::string& filename,
                      const int desiredReportStep);
+
+
+        template <class Grid>
+        void initFromRestartFile(const PhaseUsage& phaseusage,
+                                 const double* permeability,
+                                 const Grid& grid,
+                                 SimulatorState& simulatorstate,
+                                 WellStateFullyImplicitBlackoil& wellstate);
+
+        bool isRestart() const;
 
     protected:
         const bool output_;
@@ -238,6 +254,7 @@ namespace Opm
         std::unique_ptr< OutputWriter  > vtkWriter_;
         std::unique_ptr< OutputWriter  > matlabWriter_;
         std::unique_ptr< EclipseWriter > eclWriter_;
+        EclipseStateConstPtr eclipseState_;
     };
 
 
@@ -269,7 +286,8 @@ namespace Opm
                     new EclipseWriter(param, eclipseState, phaseUsage,
                                       parallelOutput_->numCells(),
                                       parallelOutput_->globalCell() )
-                   : 0 )
+                   : 0 ),
+        eclipseState_(eclipseState)
     {
         // For output.
         if (output_ && parallelOutput_->isIORank() ) {
@@ -289,5 +307,32 @@ namespace Opm
             }
         }
     }
+
+
+    template <class Grid>
+    inline void
+    BlackoilOutputWriter::
+    initFromRestartFile( const PhaseUsage& phaseusage,
+                         const double* permeability,
+                         const Grid& grid,
+                         SimulatorState& simulatorstate,
+                         WellStateFullyImplicitBlackoil& wellstate)
+    {
+        WellsManager wellsmanager(eclipseState_,
+                                  eclipseState_->getInitConfig()->getRestartStep(),
+                                  Opm::UgGridHelpers::numCells(grid),
+                                  Opm::UgGridHelpers::globalCell(grid),
+                                  Opm::UgGridHelpers::cartDims(grid),
+                                  Opm::UgGridHelpers::dimensions(grid),
+                                  Opm::UgGridHelpers::cell2Faces(grid),
+                                  Opm::UgGridHelpers::beginFaceCentroids(grid),
+                                  permeability);
+
+        const Wells* wells = wellsmanager.c_wells();
+        wellstate.resize(wells, simulatorstate); //Resize for restart step
+        Opm::init_from_restart_file(eclipseState_, Opm::UgGridHelpers::numCells(grid), phaseusage, simulatorstate, wellstate);
+    }
+
+
 }
 #endif
