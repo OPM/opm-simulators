@@ -171,7 +171,7 @@ namespace Opm
 
         template <class State>
         void resize(const Wells* wells, const State& state) {
-            const WellStateFullyImplicitBlackoil dummy_state; //Init with an empty previous state only resizes
+            const WellStateFullyImplicitBlackoil dummy_state{}; // Init with an empty previous state only resizes
             init(wells, state, dummy_state) ;
         }
 
