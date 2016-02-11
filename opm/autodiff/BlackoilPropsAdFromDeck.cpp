@@ -431,11 +431,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
-        LadEval RsLad = 0.0;
+        LadEval RvLad = 0.0;
         LadEval muLad;
 
         pLad.derivatives[0] = 1.0;
-        RsLad.derivatives[1] = 1.0;
+        RvLad.derivatives[1] = 1.0;
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
@@ -446,8 +446,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                 muLad = gasPvt_->saturatedViscosity(pvtRegionIdx, TLad, pLad);
             }
             else {
-                RsLad.value = rv.value()[i];
-                muLad = gasPvt_->viscosity(pvtRegionIdx, TLad, pLad, RsLad);
+                RvLad.value = rv.value()[i];
+                muLad = gasPvt_->viscosity(pvtRegionIdx, TLad, pLad, RvLad);
             }
 
             mu[i] = muLad.value;
@@ -482,7 +482,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Water]) {
-            OPM_THROW(std::runtime_error, "Cannot call muWat(): water phase not active.");
+            OPM_THROW(std::runtime_error, "Cannot call bWat(): water phase not active.");
         }
         const int n = cells.size();
         assert(pw.size() == n);
@@ -532,7 +532,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Oil]) {
-            OPM_THROW(std::runtime_error, "Cannot call muOil(): oil phase not active.");
+            OPM_THROW(std::runtime_error, "Cannot call bOil(): oil phase not active.");
         }
         const int n = cells.size();
         assert(po.size() == n);
@@ -597,7 +597,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                       const Cells& cells) const
     {
         if (!phase_usage_.phase_used[Gas]) {
-            OPM_THROW(std::runtime_error, "Cannot call muGas(): gas phase not active.");
+            OPM_THROW(std::runtime_error, "Cannot call bGas(): gas phase not active.");
         }
         const int n = cells.size();
         assert(pg.size() == n);
