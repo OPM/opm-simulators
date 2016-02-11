@@ -408,13 +408,6 @@ public:
      */
     void endTimeStep()
     {
-        wellManager_.endTimeStep();
-
-        // write the summary information after each time step
-        summaryWriter_.write(wellManager_);
-
-        updateHysteresis_();
-
 #ifndef NDEBUG
         // in debug mode, we don't care about performance, so we check if the model does
         // the right thing (i.e., the mass change inside the whole reservoir must be
@@ -422,6 +415,18 @@ public:
         // specified by the problem)
         this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
 #endif // NDEBUG
+
+        wellManager_.endTimeStep();
+
+        // write the summary information after each time step
+        summaryWriter_.write(wellManager_);
+
+        bool cachesInvalid = false;
+
+        cachesInvalid = cachesInvalid || updateHysteresis_();
+
+        if (cachesInvalid)
+            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
     }
 
     /*!
@@ -1069,10 +1074,10 @@ private:
     }
 
     // update the hysteresis parameters of the material laws for the whole grid
-    void updateHysteresis_()
+    bool updateHysteresis_()
     {
         if (!materialLawManager_->enableHysteresis())
-            return;
+            return false;
 
         ElementContext elemCtx(this->simulator());
         const auto& gridManager = this->simulator().gridManager();
@@ -1090,6 +1095,7 @@ private:
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }
+        return true;
     }
 
     std::vector<Scalar> porosity_;
