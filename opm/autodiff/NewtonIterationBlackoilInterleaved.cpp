@@ -52,17 +52,41 @@
 
 namespace Dune
 {
-    namespace FMatrixHelp {
 
-    //! invert Matrix without changing the original matrix
-    //! return inverse matrix (specialization for n <= 3 in dune/common/fmatrix.hh)
-    template <typename K, int n>
-    static inline K invertMatrix (const FieldMatrix<K,n,n> &matrix, FieldMatrix<K,n,n> &inverse)
-    {
-        inverse.invert();
-        return K(0);
-    }
+namespace ISTLUtility {
+
+//! invert matrix by calling FMatrixHelp::invert
+template <typename K>
+static inline void invertMatrix (FieldMatrix<K,1,1> &matrix)
+{
+    FieldMatrix<K,1,1> A ( matrix );
+    FMatrixHelp::invertMatrix(A, matrix );
 }
+
+//! invert matrix by calling FMatrixHelp::invert
+template <typename K>
+static inline void invertMatrix (FieldMatrix<K,2,2> &matrix)
+{
+    FieldMatrix<K,2,2> A ( matrix );
+    FMatrixHelp::invertMatrix(A, matrix );
+}
+
+//! invert matrix by calling FMatrixHelp::invert
+template <typename K>
+static inline void invertMatrix (FieldMatrix<K,3,3> &matrix)
+{
+    FieldMatrix<K,3,3> A ( matrix );
+    FMatrixHelp::invertMatrix(A, matrix );
+}
+
+//! invert matrix by calling matrix.invert
+template <typename K, int n>
+static inline void invertMatrix (FieldMatrix<K,n,n> &matrix)
+{
+    matrix.invert();
+}
+
+} // end ISTLUtility
 
 template <class Scalar, int n, int m>
 class MatrixBlock : public Dune::FieldMatrix<Scalar, n, m>
@@ -76,8 +100,7 @@ public:
     explicit MatrixBlock( const Scalar scalar = 0 ) : BaseType( scalar ) {}
     void invert()
     {
-        MatrixBlock matrix( *this );
-        Dune::FMatrixHelp::invertMatrix(matrix, *this);
+        ISTLUtility::invertMatrix( *this );
     }
     const BaseType& asBase() const { return static_cast< const BaseType& > (*this); }
     BaseType& asBase() { return static_cast< BaseType& > (*this); }
