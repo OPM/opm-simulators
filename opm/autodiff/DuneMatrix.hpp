@@ -78,24 +78,34 @@ namespace Opm
             this->ready = Super::built;
             this->n = rows;
             this->m = cols;
-            this->nnz = ia[rows];
+
+            typedef Super::size_type size_type ;
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 3, 0)
+            size_type& nnz = this->nnz_;
+            std::shared_ptr<size_type>& j = this->j_;
+#else
+            size_type& nnz = this->nnz;
+            std::shared_ptr<size_type>& j = this->j;
+#endif
+
+            nnz = ia[rows];
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
-            this->allocationSize = this->nnz;
+            this->allocationSize = nnz;
             this->avg = 0;
             this->overflowsize = -1.0;
 #endif
 
             // make sure to use the allocators of this matrix
             // because the same allocators are used to deallocate the data
-            this->a = this->allocator_.allocate(this->nnz);
+            this->a = this->allocator_.allocate(nnz);
             static_assert(sizeof(block_type) == sizeof(double), "This constructor requires a block type that is the same as a double.");
-            std::copy(sa, sa + this->nnz, reinterpret_cast<double*>(this->a));
-            this->j.reset(this->sizeAllocator_.allocate(this->nnz));
-            std::copy(ja, ja +this-> nnz, this->j.get());
+            std::copy(sa, sa + nnz, reinterpret_cast<double*>(this->a));
+            j.reset(this->sizeAllocator_.allocate(nnz));
+            std::copy(ja, ja +nnz, j.get());
             this->r = rowAllocator_.allocate(rows);
             for (int row = 0; row < rows; ++row) {
-                this->r[row].set(ia[row+1] - ia[row], this->a + ia[row], this->j.get() + ia[row]);
+                this->r[row].set(ia[row+1] - ia[row], this->a + ia[row], j.get() + ia[row]);
             }
         }
     };
