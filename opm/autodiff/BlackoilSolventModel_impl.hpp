@@ -712,7 +712,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilSolventModel<Grid>::calculateEffectiveProperties(const SolutionState&    state)
+    BlackoilSolventModel<Grid>::computeEffectiveProperties(const SolutionState&    state)
     {
         // Viscosity
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -767,7 +767,7 @@ namespace Opm {
         effective_saturations[solvent_pos_] = ss - sgcwmis;
 
         // Compute effective viscosities and densities
-        ToddLongstaffModel(viscosity, density, effective_saturations, pu);
+        computeToddLongstaffMixing(viscosity, density, effective_saturations, pu);
 
         // Store the computed volume factors and viscosities
         b_eff_[pu.phase_pos[ Water ]] = bw;
@@ -783,7 +783,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilSolventModel<Grid>::ToddLongstaffModel(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu)
+    BlackoilSolventModel<Grid>::computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu)
     {
         const int  nc = cells_.size();
         const V ones = V::Constant(nc, 1.0);
@@ -904,14 +904,14 @@ namespace Opm {
             // Compute initial accumulation contributions
             // and well connection pressures.
             if (is_miscible_) {
-                calculateEffectiveProperties(state0);
+                computeEffectiveProperties(state0);
             }
 
             computeAccum(state0, 0);
             computeWellConnectionPressures(state0, well_state);
         }
         if (is_miscible_) {
-            calculateEffectiveProperties(state);
+            computeEffectiveProperties(state);
         }
 
         // -------- Mass balance equations --------

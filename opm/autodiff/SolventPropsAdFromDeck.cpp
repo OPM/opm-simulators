@@ -300,34 +300,34 @@ ADB SolventPropsAdFromDeck::muSolvent(const ADB& pg,
 }
 
 ADB SolventPropsAdFromDeck::bSolvent(const ADB& pg,
-                                const Cells& cells) const
+                                     const Cells& cells) const
 {
     return SolventPropsAdFromDeck::makeADBfromTables(pg, cells, b_);
 
 }
 
 ADB SolventPropsAdFromDeck::gasRelPermMultiplier(const ADB& solventFraction,
-                                 const Cells& cells) const
+                                                 const Cells& cells) const
 {
     return SolventPropsAdFromDeck::makeADBfromTables(solventFraction, cells, krg_);
 
 }
 
 ADB SolventPropsAdFromDeck::solventRelPermMultiplier(const ADB& solventFraction,
-                                 const Cells& cells) const
+                                                     const Cells& cells) const
 {
     return SolventPropsAdFromDeck::makeADBfromTables(solventFraction, cells, krs_);
 }
 
 
 ADB SolventPropsAdFromDeck::misicibleHydrocarbonWaterRelPerm(const ADB& Sn,
-                                 const Cells& cells) const
+                                                             const Cells& cells) const
 {
     return SolventPropsAdFromDeck::makeADBfromTables(Sn, cells, krn_);
 }
 
 ADB SolventPropsAdFromDeck::miscibleSolventGasRelPermMultiplier(const ADB& Ssg,
-                                 const Cells& cells) const
+                                                                const Cells& cells) const
 {
     if (mkrsg_.size() > 0) {
         return SolventPropsAdFromDeck::makeADBfromTables(Ssg, cells, mkrsg_);
@@ -337,7 +337,7 @@ ADB SolventPropsAdFromDeck::miscibleSolventGasRelPermMultiplier(const ADB& Ssg,
 }
 
 ADB SolventPropsAdFromDeck::miscibleOilRelPermMultiplier(const ADB& So,
-                                 const Cells& cells) const
+                                                         const Cells& cells) const
 {
     if (mkro_.size() > 0) {
         return SolventPropsAdFromDeck::makeADBfromTables(So, cells, mkro_);
@@ -347,7 +347,7 @@ ADB SolventPropsAdFromDeck::miscibleOilRelPermMultiplier(const ADB& So,
 }
 
 ADB SolventPropsAdFromDeck::miscibilityFunction(const ADB& solventFraction,
-                                 const Cells& cells) const
+                                                const Cells& cells) const
 {
 
     return SolventPropsAdFromDeck::makeADBfromTables(solventFraction, cells, misc_);
@@ -355,7 +355,7 @@ ADB SolventPropsAdFromDeck::miscibilityFunction(const ADB& solventFraction,
 
 
 ADB SolventPropsAdFromDeck::miscibleCriticalGasSaturationFunction (const ADB& Sw,
-                                           const Cells& cells) const {
+                                                                   const Cells& cells) const {
     if (sgcwmis_.size()>0) {
         return SolventPropsAdFromDeck::makeADBfromTables(Sw, cells, sgcwmis_);
     }
@@ -365,7 +365,7 @@ ADB SolventPropsAdFromDeck::miscibleCriticalGasSaturationFunction (const ADB& Sw
 
 
 ADB SolventPropsAdFromDeck::miscibleResidualOilSaturationFunction (const ADB& Sw,
-                                           const Cells& cells) const {
+                                                                   const Cells& cells) const {
     if (sorwmis_.size()>0) {
         return SolventPropsAdFromDeck::makeADBfromTables(Sw, cells, sorwmis_);
     }
@@ -373,7 +373,9 @@ ADB SolventPropsAdFromDeck::miscibleResidualOilSaturationFunction (const ADB& Sw
     return ADB::constant(V::Zero(Sw.size()));
 }
 
-ADB SolventPropsAdFromDeck::makeADBfromTables(const ADB& X_AD, const Cells& cells, std::vector<NonuniformTableLinear<double>> table) const {
+ADB SolventPropsAdFromDeck::makeADBfromTables(const ADB& X_AD,
+                                              const Cells& cells,
+                                              const std::vector<NonuniformTableLinear<double>>& tables) const {
     const int n = cells.size();
     assert(X_AD.value().size() == n);
     V x(n);
@@ -381,8 +383,8 @@ ADB SolventPropsAdFromDeck::makeADBfromTables(const ADB& X_AD, const Cells& cell
     for (int i = 0; i < n; ++i) {
         const double& X_i = X_AD.value()[i];
         int regionIdx = 0; // TODO add mapping from cells to sat function table
-        x[i] = table[regionIdx](X_i);
-        dx[i] = table[regionIdx].derivative(X_i);
+        x[i] = tables[regionIdx](X_i);
+        dx[i] = tables[regionIdx].derivative(X_i);
     }
 
     ADB::M dx_diag(dx.matrix().asDiagonal());

@@ -232,10 +232,10 @@ namespace Opm {
         phaseCondition() const {return this->phaseCondition_;}
 
         // compute effective viscosities (mu_eff_) and effective b factors (b_eff_)  using the ToddLongstaff model
-        void calculateEffectiveProperties(const SolutionState&  state);
+        void computeEffectiveProperties(const SolutionState&  state);
 
         // compute density and viscosity using the ToddLongstaff mixing model
-        void ToddLongstaffModel(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu);
+        void computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu);
 
     };
 
