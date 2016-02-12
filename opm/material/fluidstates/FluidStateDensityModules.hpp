@@ -129,13 +129,13 @@ public:
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
-    Scalar molarDensity(int /* phaseIdx */) const
+    const Scalar& molarDensity(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Molar density is not provided by this fluid state"); }
 
     /*!
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
-    Scalar molarVolume(int /* phaseIdx */) const
+    const Scalar& molarVolume(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Molar volume is not provided by this fluid state"); }
 
     /*!

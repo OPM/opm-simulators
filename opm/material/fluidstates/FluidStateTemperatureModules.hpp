@@ -60,7 +60,7 @@ public:
     /*!
      * \brief Set the temperature of a phase [-]
      */
-    void setTemperature(unsigned phaseIdx, Scalar value)
+    void setTemperature(unsigned phaseIdx, const Scalar& value)
     { temperature_[phaseIdx] = value; }
 
     /*!
@@ -114,7 +114,7 @@ public:
     /*!
      * \brief Set the temperature of a phase [-]
      */
-    void setTemperature(Scalar value)
+    void setTemperature(const Scalar& value)
     { temperature_ = value; }
 
     /*!
