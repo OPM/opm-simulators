@@ -63,6 +63,7 @@ namespace Opm {
         /// \param[in] has_vapoil          turn on vaporized oil feature
         /// \param[in] terminal_output     request output to cout/cerr
         /// \param[in] has_solvent         turn on solvent feature
+        /// \param[in] is_miscible         turn on miscible feature
         BlackoilSolventModel(const typename Base::ModelParameters&   param,
                              const Grid&                             grid,
                              const BlackoilPropsAdInterface&         fluid,
@@ -75,7 +76,8 @@ namespace Opm {
                              const bool                              has_disgas,
                              const bool                              has_vapoil,
                              const bool                              terminal_output,
-                             const bool                              has_solvent);
+                             const bool                              has_solvent,
+                             const bool                              is_miscible);
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
@@ -106,6 +108,10 @@ namespace Opm {
         const bool has_solvent_;
         const int solvent_pos_;
         const SolventPropsAdFromDeck& solvent_props_;
+        const bool is_miscible_;
+        std::vector<ADB> mu_eff_;
+        std::vector<ADB> b_eff_;
+
 
         // Need to declare Base members we want to use here.
         using Base::grid_;
@@ -141,9 +147,6 @@ namespace Opm {
         using Base::computePressures;
         using Base::computeGasPressure;
         using Base::applyThresholdPressures;
-        using Base::fluidViscosity;
-        using Base::fluidReciprocFVF;
-        using Base::fluidDensity;
         using Base::fluidRsSat;
         using Base::fluidRvSat;
         using Base::poroMult;
@@ -161,6 +164,28 @@ namespace Opm {
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
+
+        ADB
+        fluidViscosity(const int               phase,
+                       const ADB&              p    ,
+                       const ADB&              temp ,
+                       const ADB&              rs   ,
+                       const ADB&              rv   ,
+                       const std::vector<PhasePresence>& cond) const;
+
+        ADB
+        fluidReciprocFVF(const int               phase,
+                         const ADB&              p    ,
+                         const ADB&              temp ,
+                         const ADB&              rs   ,
+                         const ADB&              rv   ,
+                         const std::vector<PhasePresence>& cond) const;
+
+        ADB
+        fluidDensity(const int  phase,
+                     const ADB& b,
+                     const ADB& rs,
+                     const ADB& rv) const;
 
         void
         makeConstantState(SolutionState& state) const;
@@ -198,12 +223,19 @@ namespace Opm {
         computeMassFlux(const int               actph ,
                         const V&                transi,
                         const ADB&              kr    ,
+                        const ADB&              mu    ,
+                        const ADB&              rho   ,
                         const ADB&              p     ,
                         const SolutionState&    state );
 
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
 
+        // compute effective viscosities (mu_eff_) and effective b factors (b_eff_)  using the ToddLongstaff model
+        void computeEffectiveProperties(const SolutionState&  state);
+
+        // compute density and viscosity using the ToddLongstaff mixing model
+        void computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu);
 
     };
 

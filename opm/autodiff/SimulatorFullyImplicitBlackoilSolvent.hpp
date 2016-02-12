@@ -131,6 +131,7 @@ namespace Opm
         bool has_solvent_;
         DeckConstPtr deck_;
         SolventPropsAdFromDeck solvent_props_;
+        bool is_miscible_;
 
     };
 

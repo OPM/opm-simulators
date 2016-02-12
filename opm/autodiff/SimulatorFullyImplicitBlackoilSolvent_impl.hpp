@@ -54,9 +54,10 @@ namespace Opm
     , has_solvent_(has_solvent)
     , deck_(deck)
     , solvent_props_(solvent_props)
+    , is_miscible_(false)
     {
         if(deck->hasKeyword("MISCIBLE")) {
-            std::cerr << "MISICIBLE keyword is present. Mixing is not currently supported" << std::endl;
+            is_miscible_ = true;
         }
     }
 
@@ -80,7 +81,8 @@ namespace Opm
                                                       BaseType::has_disgas_,
                                                       BaseType::has_vapoil_,
                                                       BaseType::terminal_output_,
-                                                      has_solvent_));
+                                                      has_solvent_,
+                                                      is_miscible_));
 
         if (!BaseType::threshold_pressures_by_face_.empty()) {
             model->setThresholdPressures(BaseType::threshold_pressures_by_face_);

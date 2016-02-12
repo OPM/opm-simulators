@@ -82,12 +82,15 @@ namespace Opm {
                                                      const bool                              has_disgas,
                                                      const bool                              has_vapoil,
                                                      const bool                              terminal_output,
-                                                     const bool                              has_solvent)
+                                                     const bool                              has_solvent,
+                                                     const bool                              is_miscible)
         : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output),
           has_solvent_(has_solvent),
           solvent_pos_(detail::solventPos(fluid.phaseUsage())),
-          solvent_props_(solvent_props)
+          solvent_props_(solvent_props),
+          is_miscible_(is_miscible)
+
     {
         if (has_solvent_) {
 
@@ -101,7 +104,10 @@ namespace Opm {
             }
 
             residual_.matbalscale.resize(fluid_.numPhases() + 1, 0.0031); // use the same as gas
-
+        }
+        if (is_miscible_) {
+            mu_eff_.resize(fluid_.numPhases() + 1, ADB::null());
+            b_eff_.resize(fluid_.numPhases() + 1, ADB::null());
         }
     }
 
@@ -203,7 +209,8 @@ namespace Opm {
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
             const ADB& pg = state.canonical_phase_pressures[pu.phase_pos[Gas]];
-            rq_[solvent_pos_].b = solvent_props_.bSolvent(pg,cells_);
+            const std::vector<PhasePresence>& cond = phaseCondition();
+            rq_[solvent_pos_].b = fluidReciprocFVF(Solvent, pg, state.temperature, state.rs, state.rv,cond);
             rq_[solvent_pos_].accum[aix] = pv_mult * rq_[solvent_pos_].b * ss;
         }
     }
@@ -354,33 +361,42 @@ namespace Opm {
         DataBlock b(nperf, pu.num_phases);
         std::vector<double> rsmax_perf(nperf, 0.0);
         std::vector<double> rvmax_perf(nperf, 0.0);
+        const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
         if (pu.phase_used[BlackoilPhases::Aqua]) {
-            const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
         }
+
         assert(active_[Oil]);
+        assert(active_[Gas]);
+        const ADB perf_rv = subset(state.rv, well_cells);
+        const ADB perf_rs = subset(state.rs, well_cells);
         const V perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
-            const ADB perf_rs = subset(state.rs, well_cells);
             const V bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
+            //const V bo_eff = subset(rq_[pu.phase_pos[Oil] ].b , well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
             const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
         }
         V surf_dens_copy = superset(fluid_.surfaceDensity(0, well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
         for (int phase = 1; phase < pu.num_phases; ++phase) {
-            if ( phase != pu.phase_pos[BlackoilPhases::Vapour]) {
+            if ( phase == pu.phase_pos[BlackoilPhases::Vapour]) {
                 continue; // the gas surface density is added after the solvent is accounted for.
             }
             surf_dens_copy += superset(fluid_.surfaceDensity(phase, well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
         }
 
         if (pu.phase_used[BlackoilPhases::Vapour]) {
-            const ADB perf_rv = subset(state.rv, well_cells);
+            // Unclear wether the effective or the pure values should be used for the wells
+            // the current usage of unmodified properties values gives best match.
+            //V bg_eff = subset(rq_[pu.phase_pos[Gas]].b,well_cells).value();
             V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             V rhog = fluid_.surfaceDensity(pu.phase_pos[BlackoilPhases::Vapour], well_cells);
             if (has_solvent_) {
+
                 const V bs = solvent_props_.bSolvent(avg_press_ad,well_cells).value();
+                //const V bs_eff = subset(rq_[solvent_pos_].b,well_cells).value();
+
                 // A weighted sum of the b-factors of gas and solvent are used.
                 const int nc = Opm::AutoDiffGrid::numCells(grid_);
 
@@ -404,6 +420,7 @@ namespace Opm {
                         }
                     }
                 }
+
                 F_solvent = isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction;
 
                 bg = bg * (ones - F_solvent);
@@ -510,51 +527,112 @@ namespace Opm {
     BlackoilSolventModel<Grid>::computeMassFlux(const int               actph ,
                                                 const V&                transi,
                                                 const ADB&              kr    ,
+                                                const ADB&              mu    ,
+                                                const ADB&              rho    ,
                                                 const ADB&              phasePressure,
                                                 const SolutionState&    state)
     {
-        Base::computeMassFlux(actph, transi, kr, phasePressure, state);
 
         const int canonicalPhaseIdx = canph_[ actph ];
+        // make a copy to make it possible to modify it
+        ADB kr_mod = kr;
         if (canonicalPhaseIdx == Gas) {
             if (has_solvent_) {
                 const int  nc   = Opm::UgGridHelpers::numCells(grid_);
-
                 const Opm::PhaseUsage& pu = fluid_.phaseUsage();
                 const ADB zero = ADB::constant(V::Zero(nc));
+                const V ones = V::Constant(nc, 1.0);
+
                 const ADB& ss = state.solvent_saturation;
                 const ADB& sg = (active_[ Gas ]
                                  ? state.saturation[ pu.phase_pos[ Gas ] ]
                                  : zero);
-
                 Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-                ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
-                V ones = V::Constant(nc, 1.0);
+                const ADB F_solvent = zero_selector.select(zero, ss / (ss + sg));
 
-                const ADB tr_mult = transMult(state.pressure);
-                const ADB mu = solvent_props_.muSolvent(phasePressure,cells_);               
+                // Compute solvent properties
+                const std::vector<PhasePresence>& cond = phaseCondition();
+                ADB mu_s = fluidViscosity(Solvent, phasePressure,state.temperature, state.rs, state.rv, cond);
+                ADB rho_s = fluidDensity(Solvent,rq_[solvent_pos_].b, state.rs, state.rv);
 
-                rq_[solvent_pos_].mob = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * tr_mult * kr / mu;
+                // Compute solvent relperm and mass flux
+                ADB krs = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * kr_mod;
+                Base::computeMassFlux(solvent_pos_, transi, krs, mu_s, rho_s, phasePressure, state);
 
-                const ADB rho_solvent = solvent_props_.solventSurfaceDensity(cells_) * rq_[solvent_pos_].b;
-                const ADB rhoavg_solvent = ops_.caver * rho_solvent;
-                rq_[ solvent_pos_ ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg_solvent * (ops_.ngrad * geo_.z().matrix()));
+                // Modify gas relperm
+                kr_mod = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * kr_mod;
 
-                UpwindSelector<double> upwind_solvent(grid_, ops_, rq_[solvent_pos_].dh.value());
-                // Compute solvent flux.
-                rq_[solvent_pos_].mflux = upwind_solvent.select(rq_[solvent_pos_].b * rq_[solvent_pos_].mob) * (transi * rq_[solvent_pos_].dh);
-
-                // Update gas mobility and flux
-                rq_[actph].mob = solvent_props_.gasRelPermMultiplier( (ones - F_solvent) , cells_) * rq_[actph].mob;
-
-                const ADB& b   = rq_[ actph ].b;
-                const ADB& mob = rq_[ actph ].mob;
-                const ADB& dh  = rq_[ actph ].dh;
-                UpwindSelector<double> upwind_gas(grid_, ops_, dh.value());
-                rq_[ actph ].mflux = upwind_gas.select(b * mob) * (transi * dh);
             }
         }
+        // Compute mobility and flux
+        Base::computeMassFlux(actph, transi, kr_mod, mu, rho, phasePressure, state);
 
+    }
+
+    template <class Grid>
+    ADB
+    BlackoilSolventModel<Grid>::fluidViscosity(const int               phase,
+                                                            const ADB&              p    ,
+                                                            const ADB&              temp ,
+                                                            const ADB&              rs   ,
+                                                            const ADB&              rv   ,
+                                                            const std::vector<PhasePresence>& cond) const
+    {
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        if (phase == Solvent) {
+            if (!is_miscible_) {
+                return solvent_props_.muSolvent(p, cells_);
+            } else {
+                return mu_eff_[solvent_pos_];
+            }
+
+        } else {
+            if (!is_miscible_) {
+                return Base::fluidViscosity(phase, p, temp, rs, rv, cond);
+            } else {
+                return mu_eff_[pu.phase_pos[ phase ]];
+            }
+        }
+     }
+
+    template <class Grid>
+    ADB
+    BlackoilSolventModel<Grid>::fluidReciprocFVF(const int               phase,
+                                                 const ADB&              p    ,
+                                                 const ADB&              temp ,
+                                                 const ADB&              rs   ,
+                                                 const ADB&              rv   ,
+                                                 const std::vector<PhasePresence>& cond) const
+    {
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        if (phase == Solvent) {
+            if (!is_miscible_) {
+                return solvent_props_.bSolvent(p, cells_);
+            } else {
+                return b_eff_[solvent_pos_];
+            }
+
+        } else {
+            if (!is_miscible_) {
+                return Base::fluidReciprocFVF(phase, p, temp, rs, rv, cond);
+            } else {
+                return b_eff_[pu.phase_pos[ phase ]];
+            }
+        }
+    }
+
+    template <class Grid>
+    ADB
+    BlackoilSolventModel<Grid>::fluidDensity(const int  phase,
+                                                          const ADB& b,
+                                                          const ADB& rs,
+                                                          const ADB& rv) const
+    {
+        if (phase == Solvent && has_solvent_) {
+            return solvent_props_.solventSurfaceDensity(cells_) * b;
+        } else {
+            return Base::fluidDensity(phase, b, rs, rv);
+        }
     }
 
     template <class Grid>
@@ -581,10 +659,224 @@ namespace Opm {
 
         if (has_solvent_) {
             const ADB& ss = state.solvent_saturation;
-            return fluid_.relperm(sw, so, sg+ss, cells_);
+            if (is_miscible_) {
+
+                std::vector<ADB> relperm = fluid_.relperm(sw, so, sg+ss, cells_);
+
+                Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+                ADB F_solvent = zero_selector.select(ss, ss / (ss + sg));
+                const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_);
+
+                assert(active_[ Oil ]);
+                assert(active_[ Gas ]);
+
+                const ADB sn = ss + so + sg;
+
+                // adjust endpoints
+                const V sgcr = fluid_.scaledCriticalGasSaturations(cells_);
+                const V sogcr = fluid_.scaledCriticalOilinGasSaturations(cells_);
+                const ADB sorwmis = solvent_props_.miscibleResidualOilSaturationFunction(sw, cells_);
+                const ADB sgcwmis = solvent_props_.miscibleCriticalGasSaturationFunction(sw, cells_);
+
+                const V ones = V::Constant(nc, 1.0);
+                ADB sor = misc * sorwmis + (ones - misc) * sogcr;
+                ADB sgc = misc * sgcwmis + (ones - misc) * sgcr;
+
+                // avoid negative values
+                Selector<double> negative_selector(sgc.value(), Selector<double>::LessEqualZero);
+                sgc = negative_selector.select(zero, sgc);
+
+                const ADB ssg = ss + sg - sgc;
+                const ADB sn_eff = sn - sor - sgc;
+
+                // avoid negative values
+                Selector<double> zeroSn_selector(sn_eff.value(), Selector<double>::Zero);
+                const ADB F_totalGas = zeroSn_selector.select( zero, ssg / sn_eff);
+
+                const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+                const ADB mkro = solvent_props_.miscibleOilRelPermMultiplier(ones - F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
+
+                const V eps = V::Constant(nc, 1e-7);
+                Selector<double> noOil_selector(so.value()-eps, Selector<double>::LessEqualZero);
+                relperm[Gas] = noOil_selector.select(relperm[Gas], (ones - misc) * relperm[Gas] + misc * mkrgt);
+                relperm[Oil] = noOil_selector.select(relperm[Oil], (ones - misc) * relperm[Oil] + misc * mkro);
+                return relperm;
+            } else {
+                return fluid_.relperm(sw, so, sg+ss, cells_);
+            }
         } else {
             return fluid_.relperm(sw, so, sg, cells_);
         }
+
+    }
+
+    template <class Grid>
+    void
+    BlackoilSolventModel<Grid>::computeEffectiveProperties(const SolutionState&    state)
+    {
+        // Viscosity
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        const int np = fluid_.numPhases();
+        const int nc   = Opm::UgGridHelpers::numCells(grid_);
+        const ADB zero = ADB::constant(V::Zero(nc));
+
+        const ADB& pw = state.canonical_phase_pressures[pu.phase_pos[Water]];
+        const ADB& po = state.canonical_phase_pressures[pu.phase_pos[Oil]];
+        const ADB& pg = state.canonical_phase_pressures[pu.phase_pos[Gas]];
+        const std::vector<PhasePresence>& cond = phaseCondition();
+
+        const ADB mu_w = fluid_.muWat(pw, state.temperature, cells_);
+        const ADB mu_o = fluid_.muOil(po, state.temperature, state.rs, cond, cells_);
+        const ADB mu_g = fluid_.muGas(pg, state.temperature, state.rv, cond, cells_);
+        const ADB mu_s = solvent_props_.muSolvent(pg,cells_);
+        std::vector<ADB> viscosity(np + 1, ADB::null());
+        viscosity[pu.phase_pos[Oil]] = mu_o;
+        viscosity[pu.phase_pos[Gas]] = mu_g;
+        viscosity[pu.phase_pos[Water]] = mu_w;
+        viscosity[solvent_pos_] = mu_s;
+
+        // Density
+        const ADB bw = fluid_.bWat(pw, state.temperature, cells_);
+        const ADB bo = fluid_.bOil(po, state.temperature, state.rs, cond, cells_);
+        const ADB bg = fluid_.bGas(pg, state.temperature, state.rv, cond, cells_);
+        const ADB bs = solvent_props_.bSolvent(pg, cells_);
+
+        std::vector<ADB> density(np + 1, ADB::null());
+        density[pu.phase_pos[Oil]] = fluidDensity(Oil, bo, state.rs, state.rv);
+        density[pu.phase_pos[Gas]] = fluidDensity(Gas, bg, state.rs, state.rv);
+        density[pu.phase_pos[Water]] = fluidDensity(Water, bw, state.rs, state.rv);
+        density[solvent_pos_] = fluidDensity(Solvent, bs, state.rs, state.rv);
+
+        // Effective saturations
+        const ADB& ss = state.solvent_saturation;
+        const ADB& so = state.saturation[ pu.phase_pos[ Oil ] ];
+        const ADB& sg = (active_[ Gas ]
+                         ? state.saturation[ pu.phase_pos[ Gas ] ]
+                         : zero);
+        const ADB& sw = (active_[ Water ]
+                         ? state.saturation[ pu.phase_pos[ Water ] ]
+                         : zero);
+
+        const ADB sorwmis = solvent_props_.miscibleResidualOilSaturationFunction(sw, cells_);
+        const ADB sgcwmis = solvent_props_.miscibleCriticalGasSaturationFunction(sw, cells_);
+
+        std::vector<ADB> effective_saturations (np + 1, ADB::null());
+        effective_saturations[pu.phase_pos[Oil]] = so - sorwmis;
+        effective_saturations[pu.phase_pos[Gas]] = sg - sgcwmis;
+        effective_saturations[pu.phase_pos[Water]] = sw;
+        effective_saturations[solvent_pos_] = ss - sgcwmis;
+
+        // Compute effective viscosities and densities
+        computeToddLongstaffMixing(viscosity, density, effective_saturations, pu);
+
+        // Store the computed volume factors and viscosities
+        b_eff_[pu.phase_pos[ Water ]] = bw;
+        b_eff_[pu.phase_pos[ Oil ]] = density[pu.phase_pos[ Oil ]] / (fluid_.surfaceDensity(pu.phase_pos[ Oil ],  cells_) + fluid_.surfaceDensity(pu.phase_pos[ Gas ], cells_) * state.rs);
+        b_eff_[pu.phase_pos[ Gas ]] = density[pu.phase_pos[ Gas ]] / (fluid_.surfaceDensity(pu.phase_pos[ Gas ],  cells_) + fluid_.surfaceDensity(pu.phase_pos[ Oil ], cells_) * state.rv);
+        b_eff_[solvent_pos_] = density[solvent_pos_] / solvent_props_.solventSurfaceDensity(cells_);
+
+        mu_eff_[pu.phase_pos[ Water ]] = mu_w;
+        mu_eff_[pu.phase_pos[ Oil ]] = viscosity[pu.phase_pos[ Oil ]];
+        mu_eff_[pu.phase_pos[ Gas ]] = viscosity[pu.phase_pos[ Gas ]];
+        mu_eff_[solvent_pos_] = viscosity[solvent_pos_];
+    }
+
+    template <class Grid>
+    void
+    BlackoilSolventModel<Grid>::computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu)
+    {
+        const int  nc = cells_.size();
+        const V ones = V::Constant(nc, 1.0);
+        const ADB zero = ADB::constant(V::Zero(nc));
+
+        // Calculation of effective saturations
+        ADB so_eff = saturations[pu.phase_pos[ Oil ]];
+        ADB sg_eff = saturations[pu.phase_pos[ Gas ]];
+        ADB ss_eff = saturations[solvent_pos_];
+
+        // Avoid negative values
+        Selector<double> negative_selectorSo(so_eff.value(), Selector<double>::LessZero);
+        Selector<double> negative_selectorSg(sg_eff.value(), Selector<double>::LessZero);
+        Selector<double> negative_selectorSs(ss_eff.value(), Selector<double>::LessZero);
+        so_eff = negative_selectorSo.select(zero, so_eff);
+        sg_eff = negative_selectorSg.select(zero, sg_eff);
+        ss_eff = negative_selectorSs.select(zero, ss_eff);
+
+        // Make copy of the pure viscosities
+        const ADB mu_o = viscosity[pu.phase_pos[ Oil ]];
+        const ADB mu_g = viscosity[pu.phase_pos[ Gas ]];
+        const ADB mu_s = viscosity[solvent_pos_];
+
+        const ADB sn_eff =  so_eff + sg_eff + ss_eff;
+        const ADB sos_eff = so_eff + ss_eff;
+        const ADB ssg_eff = ss_eff + sg_eff;
+
+        // Avoid division by zero
+        Selector<double> zero_selectorSos(sos_eff.value(), Selector<double>::Zero);
+        Selector<double> zero_selectorSsg(ssg_eff.value(), Selector<double>::Zero);
+        Selector<double> zero_selectorSn(sn_eff.value(), Selector<double>::Zero);
+
+        const ADB mu_s_pow = pow(mu_s,0.25);
+        const ADB mu_o_pow = pow(mu_o,0.25);
+        const ADB mu_g_pow = pow(mu_g,0.25);
+
+        const ADB mu_mos = zero_selectorSos.select(mu_o + mu_s, mu_o * mu_s / pow( ( (so_eff / sos_eff) * mu_s_pow) + ( (ss_eff / sos_eff) * mu_o_pow) , 4.0));
+        const ADB mu_msg = zero_selectorSsg.select(mu_g + mu_s , mu_g * mu_s / pow( ( (sg_eff / ssg_eff) * mu_s_pow) + ( (ss_eff / ssg_eff) * mu_g_pow) , 4.0));
+        const ADB mu_m = zero_selectorSn.select(mu_s + mu_o + mu_g, mu_o * mu_s * mu_g / pow( ( (so_eff / sn_eff) * mu_s_pow *  mu_g_pow)
+                                                       + ( (ss_eff / sn_eff) * mu_o_pow *  mu_g_pow) + ( (sg_eff / sn_eff) * mu_s_pow * mu_o_pow), 4.0));
+        // Mixing parameter for viscosity
+        const double mix_param_mu = solvent_props_.mixingParameterViscosity();
+
+        // Update viscosities
+        viscosity[pu.phase_pos[ Oil ]] = pow(mu_o,1.0 - mix_param_mu) * pow(mu_mos,mix_param_mu);
+        viscosity[pu.phase_pos[ Gas ]] = pow(mu_g,1.0 - mix_param_mu) * pow(mu_msg,mix_param_mu);
+        viscosity[solvent_pos_] = pow(mu_s,1.0 - mix_param_mu) * pow(mu_m,mix_param_mu);
+
+        // Density
+        ADB& rho_o = density[pu.phase_pos[ Oil ]];
+        ADB& rho_g = density[pu.phase_pos[ Gas ]];
+        ADB& rho_s = density[solvent_pos_];
+
+        // mixing parameter for density
+        const double mix_param_rho = solvent_props_.mixingParameterDensity();
+
+        // compute effective viscosities for density calculations. These have to
+        // be recomputed as a different mixing parameter may be used.
+        const ADB mu_o_eff = pow(mu_o,1.0 - mix_param_rho) * pow(mu_mos,mix_param_rho);
+        const ADB mu_g_eff = pow(mu_g,1.0 - mix_param_rho) * pow(mu_msg,mix_param_rho);
+        const ADB mu_s_eff = pow(mu_s,1.0 - mix_param_rho) * pow(mu_m,mix_param_rho);
+
+        const ADB sog_eff = so_eff + sg_eff;
+        const ADB sof = so_eff / sog_eff;
+        const ADB sgf = sg_eff / sog_eff;
+
+        // Effective densities
+        const ADB mu_sog_pow = mu_s_pow * ( (sgf * mu_o_pow) + (sof * mu_g_pow) );
+        const ADB mu_o_eff_pow = pow(mu_o_eff,0.25);
+        const ADB mu_g_eff_pow = pow(mu_g_eff,0.25);
+        const ADB mu_s_eff_pow = pow(mu_s_eff,0.25);
+        const ADB sfraction_oe = (mu_o_pow * (mu_o_eff_pow - mu_s_pow)) / (mu_o_eff_pow * (mu_o_pow - mu_s_pow));
+        const ADB sfraction_ge = (mu_g_pow * (mu_s_pow - mu_g_eff_pow)) / (mu_g_eff_pow * (mu_s_pow - mu_g_pow));
+        const ADB sfraction_se = (mu_sog_pow - ( mu_o_pow * mu_g_pow * mu_s_pow / mu_s_eff_pow) ) / ( mu_sog_pow - (mu_o_pow * mu_g_pow));
+        const ADB rho_o_eff = (rho_o * sfraction_oe) + (rho_s * (ones - sfraction_oe));
+        const ADB rho_g_eff = (rho_g * sfraction_ge) + (rho_s * (ones - sfraction_ge));
+        const ADB rho_s_eff = (rho_s * sfraction_se) + (rho_g * sgf * (ones - sfraction_se)) + (rho_o * sof * (ones - sfraction_se));
+
+        // Avoid division by zero for equal mobilities. For equal mobilities the effecitive density is calculated
+        // based on the saturation fraction directly.
+        Selector<double> unitGasSolventMobilityRatio_selector(mu_s.value() - mu_g.value(), Selector<double>::Zero);
+        Selector<double> unitOilSolventMobilityRatio_selector(mu_s.value() - mu_o.value(), Selector<double>::Zero);
+
+        // Effective densities when the mobilities are equal
+        const ADB rho_m = zero_selectorSn.select(zero, (rho_o * so_eff / sn_eff) + (rho_g * sg_eff / sn_eff) + (rho_s * ss_eff / sn_eff));
+        const ADB rho_o_eff_simple = ((ones - mix_param_rho) * rho_o) + (mix_param_rho * rho_m);
+        const ADB rho_g_eff_simple = ((ones - mix_param_rho) * rho_g) + (mix_param_rho * rho_m);
+        //const ADB rho_s_eff_simple = ((ones - mix_param_rho) * rho_s) + (mix_param_rho * rho_m);
+
+        // Update densities
+        rho_o = unitOilSolventMobilityRatio_selector.select(rho_o_eff_simple, rho_o_eff);
+        rho_g = unitGasSolventMobilityRatio_selector.select(rho_g_eff_simple, rho_g_eff);
+        rho_s = rho_s_eff;
 
     }
 
@@ -611,8 +903,15 @@ namespace Opm {
             makeConstantState(state0);
             // Compute initial accumulation contributions
             // and well connection pressures.
+            if (is_miscible_) {
+                computeEffectiveProperties(state0);
+            }
+
             computeAccum(state0, 0);
             computeWellConnectionPressures(state0, well_state);
+        }
+        if (is_miscible_) {
+            computeEffectiveProperties(state);
         }
 
         // -------- Mass balance equations --------
@@ -661,14 +960,15 @@ namespace Opm {
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
             V ones = V::Constant(nperf,1.0);
+
             b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
             b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
+
         }
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
-
         Base::computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         Base::updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         Base::addWellFluxEq(cq_s, state);

@@ -300,7 +300,10 @@ namespace Opm {
         }
 
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            const std::vector<PhasePresence>& cond = phaseCondition();
+            const ADB mu = fluidViscosity(canph_[phaseIdx], state.canonical_phase_pressures[canph_[phaseIdx]], state.temperature, state.rs, state.rv, cond);
+            const ADB rho = fluidDensity(canph_[phaseIdx], rq_[phaseIdx].b, state.rs, state.rv);
+            computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], mu, rho, state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
             residual_.material_balance_eq[ phaseIdx ] =
                 pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
@@ -413,18 +416,18 @@ namespace Opm {
     BlackoilPolymerModel<Grid>::computeMassFlux(const int               actph ,
                                                 const V&                transi,
                                                 const ADB&              kr    ,
+                                                const ADB&              mu    ,
+                                                const ADB&              rho   ,
                                                 const ADB&              phasePressure,
                                                 const SolutionState&    state)
     {
-        Base::computeMassFlux(actph, transi, kr, phasePressure, state);
+        Base::computeMassFlux(actph, transi, kr, mu, rho, phasePressure, state);
 
         // Polymer treatment.
         const int canonicalPhaseIdx = canph_[ actph ];
         if (canonicalPhaseIdx == Water) {
             if (has_polymer_) {
-                const std::vector<PhasePresence>& cond = phaseCondition();
                 const ADB tr_mult = transMult(state.pressure);
-                const ADB mu = fluidViscosity(canonicalPhaseIdx, phasePressure, state.temperature, state.rs, state.rv, cond);
                 const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
                 const ADB mc = computeMc(state);
                 const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr);
