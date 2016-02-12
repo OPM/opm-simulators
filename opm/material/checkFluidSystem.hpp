@@ -92,6 +92,12 @@ public:
     void restrictToPhase(int phaseIdx)
     { restrictPhaseIdx_ = phaseIdx; }
 
+    BaseFluidState& base()
+    { return *static_cast<BaseFluidState*>(this); }
+
+    const BaseFluidState& base() const
+    { return *static_cast<const BaseFluidState*>(this); }
+
     Scalar temperature(unsigned phaseIdx) const
     {
         assert(allowTemperature_);
@@ -273,6 +279,16 @@ void checkFluidSystem()
     fs.allowPressure(true);
     fs.allowComposition(true);
     fs.restrictToPhase(-1);
+
+    // initialize memory the fluid state
+    fs.base().setTemperature(273.15 + 20.0);
+    for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+        fs.base().setPressure(phaseIdx, 1e5);
+        fs.base().setSaturation(phaseIdx, 1.0/numPhases);
+        for (int compIdx = 0; compIdx < numComponents; ++ compIdx) {
+            fs.base().setMoleFraction(phaseIdx, compIdx, 1.0/numComponents);
+        }
+    }
 
     static_assert(std::is_same<typename FluidSystem::Scalar, Scalar>::value,
                   "The type used for floating point used by the fluid system must be the same"
