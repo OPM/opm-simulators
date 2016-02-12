@@ -232,7 +232,7 @@ void testAllFluidStates()
         checkFluidState<Scalar>(fs); }
 }
 
-template <class Scalar, class Evaluation, class LhsEval = Evaluation>
+template <class Scalar, class FluidStateEval, class LhsEval>
 void testAllFluidSystems()
 {
     typedef Opm::LiquidPhase<Scalar, Opm::H2O<Scalar>> Liquid;
@@ -241,7 +241,7 @@ void testAllFluidSystems()
     // black-oil
     {
         typedef Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
-        if (false) checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>();
+        if (false) checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>();
 
         struct BlackoilDummyEvalTag;
         typedef Opm::LocalAd::Evaluation<Scalar, BlackoilDummyEvalTag, 1> BlackoilDummyEval;
@@ -251,67 +251,67 @@ void testAllFluidSystems()
 
     // Brine -- CO2
     {   typedef Opm::FluidSystems::BrineCO2<Scalar, Opm::FluidSystemsTest::CO2Tables> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- N2
     {   typedef Opm::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {   typedef Opm::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/true> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- N2 -- liquid phase
     {   typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/false> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {   typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/true> FluidSystem;
-         checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air
     {   typedef Opm::SimpleH2O<Scalar> H2O;
         const bool enableComplexRelations=false;
         typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {   typedef Opm::SimpleH2O<Scalar> H2O;
         const bool enableComplexRelations=true;
         typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {   typedef Opm::H2O<Scalar> H2O;
         const bool enableComplexRelations=false;
         typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {   typedef Opm::H2O<Scalar> H2O;
         const bool enableComplexRelations=true;
         typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air -- Mesitylene
     {   typedef Opm::FluidSystems::H2OAirMesitylene<Scalar> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air -- Xylene
     {   typedef Opm::FluidSystems::H2OAirXylene<Scalar> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // 2p-immiscible
     {   typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Liquid> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {   typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Liquid, Gas> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {  typedef Opm::FluidSystems::TwoPhaseImmiscible<Scalar, Gas, Liquid> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // 1p
     {   typedef Opm::FluidSystems::SinglePhase<Scalar, Liquid> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     {   typedef Opm::FluidSystems::SinglePhase<Scalar, Gas> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, Evaluation, LhsEval>(); }
+        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 }
 
 class TestAdTag;
@@ -328,9 +328,9 @@ inline void testAll()
     // ensure that all fluid systems are API-compliant: Each fluid system must be usable
     // for both, scalars and function evaluations. The fluid systems for function
     // evaluations must also be usable for scalars.
-    testAllFluidSystems<Scalar, Scalar>();
-    testAllFluidSystems<Scalar, Evaluation>();
-    testAllFluidSystems<Scalar, Evaluation, Scalar>();
+    testAllFluidSystems<Scalar, /*FluidStateEval=*/Scalar, /*LhsEval=*/Scalar>();
+    testAllFluidSystems<Scalar, /*FluidStateEval=*/Evaluation, /*LhsEval=*/Evaluation>();
+    testAllFluidSystems<Scalar, /*FluidStateEval=*/Evaluation, /*LhsEval=*/Scalar>();
 }
 
 int main(int argc, char **argv)
