@@ -1,4 +1,4 @@
-The Open Porous Media Material Framework [![Build Status](https://travis-ci.org/statoil-travis/opm-material.svg?branch=master)](https://travis-ci.org/statoil-travis/opm-material)
+The Open Porous Media Material Framework [![Build Status](https://travis-ci.org/OPM/opm-material.svg?branch=master)](https://travis-ci.org/OPM/opm-material)
 ========================================
 
 CONTENT
