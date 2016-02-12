@@ -28,6 +28,7 @@
 #include <opm/material/common/Valgrind.hpp>
 
 #include <array>
+#include <utility>
 
 namespace Opm {
 
@@ -80,19 +81,22 @@ public:
     /*!
      * \brief Returns the saturation of a phase []
      */
-    Scalar saturation(unsigned phaseIdx) const
+    auto saturation(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().saturation(phaseIdx))
     { return saturation_[phaseIdx]; }
 
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    Scalar moleFraction(unsigned phaseIdx, unsigned compIdx) const
+    auto moleFraction(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(std::declval<FluidState>().moleFraction(phaseIdx, compIdx))
     { return fs_->moleFraction(phaseIdx, compIdx); }
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
-    Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
+    auto massFraction(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(std::declval<FluidState>().massFraction(phaseIdx, compIdx))
     { return fs_->massFraction(phaseIdx, compIdx); }
 
     /*!
@@ -103,7 +107,8 @@ public:
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
-    Scalar averageMolarMass(unsigned phaseIdx) const
+    auto averageMolarMass(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().averageMolarMass(phaseIdx))
     { return fs_->averageMolarMass(phaseIdx); }
 
     /*!
@@ -115,67 +120,78 @@ public:
      *
      * http://en.wikipedia.org/wiki/Concentration
      */
-    Scalar molarity(unsigned phaseIdx, unsigned compIdx) const
+    auto molarity(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(std::declval<FluidState>().molarity(phaseIdx, compIdx))
     { return fs_->molarity(phaseIdx, compIdx); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
-    Scalar fugacity(unsigned phaseIdx, unsigned compIdx) const
+    auto fugacity(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(std::declval<FluidState>().fugacity(phaseIdx, compIdx))
     { return fs_->fugacity(phaseIdx, compIdx); }
 
     /*!
      * \brief The fugacity coefficient of a component in a phase [-]
      */
-    Scalar fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
+    auto fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(std::declval<FluidState>().fugacityCoefficient(phaseIdx, compIdx))
     { return fs_->fugacityCoefficient(phaseIdx, compIdx); }
 
     /*!
      * \brief The molar volume of a fluid phase [m^3/mol]
      */
-    Scalar molarVolume(unsigned phaseIdx) const
+    auto molarVolume(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().molarVolume(phaseIdx))
     { return fs_->molarVolume(phaseIdx); }
 
     /*!
      * \brief The mass density of a fluid phase [kg/m^3]
      */
-    Scalar density(unsigned phaseIdx) const
+    auto density(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().density(phaseIdx))
     { return fs_->density(phaseIdx); }
 
     /*!
      * \brief The molar density of a fluid phase [mol/m^3]
      */
-    Scalar molarDensity(unsigned phaseIdx) const
+    auto molarDensity(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().molarDensity(phaseIdx))
     { return fs_->molarDensity(phaseIdx); }
 
     /*!
      * \brief The temperature of a fluid phase [K]
      */
-    Scalar temperature(unsigned phaseIdx) const
+    auto temperature(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().temperature(phaseIdx))
     { return fs_->temperature(phaseIdx); }
 
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
-    Scalar pressure(unsigned phaseIdx) const
+    auto pressure(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().pressure(phaseIdx))
     { return fs_->pressure(phaseIdx); }
 
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
-    Scalar enthalpy(unsigned phaseIdx) const
+    auto enthalpy(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().enthalpy(phaseIdx))
     { return fs_->enthalpy(phaseIdx); }
 
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
-    Scalar internalEnergy(unsigned phaseIdx) const
+    auto internalEnergy(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().internalEnergy(phaseIdx))
     { return fs_->internalEnergy(phaseIdx); }
 
     /*!
      * \brief The dynamic viscosity of a fluid phase [Pa s]
      */
-    Scalar viscosity(unsigned phaseIdx) const
+    auto viscosity(unsigned phaseIdx) const
+        -> decltype(std::declval<FluidState>().viscosity(phaseIdx))
     { return fs_->viscosity(phaseIdx); }
 
 
@@ -187,7 +203,7 @@ public:
     /*!
      * \brief Set the saturation [-] of a fluid phase
      */
-    void setSaturation(unsigned phaseIdx, Scalar value)
+    void setSaturation(unsigned phaseIdx, const Scalar& value)
     { saturation_[phaseIdx] = value; }
 
     /*!

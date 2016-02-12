@@ -54,7 +54,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(unsigned phaseIdx) const
+    const Scalar& temperature(unsigned phaseIdx) const
     { return temperature_[phaseIdx]; }
 
     /*!
@@ -108,7 +108,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(unsigned /*phaseIdx*/) const
+    const Scalar& temperature(unsigned /*phaseIdx*/) const
     { return temperature_; }
 
     /*!
@@ -168,7 +168,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [-]
      */
-    Scalar temperature(unsigned /* phaseIdx */) const
+    const Scalar& temperature(unsigned /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "Temperature is not provided by this fluid state"); }
 
     /*!

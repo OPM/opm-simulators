@@ -98,118 +98,118 @@ public:
     const BaseFluidState& base() const
     { return *static_cast<const BaseFluidState*>(this); }
 
-    Scalar temperature(unsigned phaseIdx) const
+    auto temperature(unsigned phaseIdx) const
+        -> decltype(this->base().temperature(phaseIdx))
     {
         assert(allowTemperature_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::temperature(phaseIdx);
-        return 1e100;
+        return this->base().temperature(phaseIdx);
     }
 
-    Scalar pressure(unsigned phaseIdx) const
+    auto pressure(unsigned phaseIdx) const
+        -> decltype(this->base().pressure(phaseIdx))
     {
         assert(allowPressure_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::pressure(phaseIdx);
-        return 1e100;
+        return this->base().pressure(phaseIdx);
     }
 
-    Scalar moleFraction(unsigned phaseIdx, unsigned compIdx) const
+    auto moleFraction(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(this->base().moleFraction(phaseIdx, compIdx))
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::moleFraction(phaseIdx, compIdx);
-        return 1e100;
+        return this->base().moleFraction(phaseIdx, compIdx);
     }
 
-    Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
+    auto massFraction(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(this->base().massFraction(phaseIdx, compIdx))
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::massFraction(phaseIdx, compIdx);
-        return 1e100;
+        return this->base().massFraction(phaseIdx, compIdx);
     }
 
-    Scalar averageMolarMass(unsigned phaseIdx) const
+    auto averageMolarMass(unsigned phaseIdx) const
+        -> decltype(this->base().averageMolarMass(phaseIdx))
     {
         assert(allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::averageMolarMass(phaseIdx);
-        return 1e100;
+        return this->base().averageMolarMass(phaseIdx);
     }
 
-    Scalar molarity(unsigned phaseIdx, unsigned compIdx) const
+    auto molarity(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(this->base().molarity(phaseIdx, compIdx))
     {
         assert(allowDensity_ && allowComposition_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::molarity(phaseIdx, compIdx);
-        return 1e100;
+        return this->base().molarity(phaseIdx, compIdx);
     }
 
-    Scalar molarDensity(unsigned phaseIdx) const
+    auto molarDensity(unsigned phaseIdx) const
+        -> decltype(this->base().molarDensity(phaseIdx))
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::molarDensity(phaseIdx);
-        return 1e100;
+        return this->base().molarDensity(phaseIdx);
     }
 
-    Scalar molarVolume(unsigned phaseIdx) const
+    auto molarVolume(unsigned phaseIdx) const
+        -> decltype(this->base().molarVolume(phaseIdx))
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::molarVolume(phaseIdx);
-        return 1e100;
+        return this->base().molarVolume(phaseIdx);
     }
 
-    Scalar density(unsigned phaseIdx) const
+    auto density(unsigned phaseIdx) const
+        -> decltype(this->base().density(phaseIdx))
     {
         assert(allowDensity_);
         assert(restrictPhaseIdx_ < 0 || restrictPhaseIdx_ == static_cast<int>(phaseIdx));
-        OPM_UNUSED Scalar tmp = BaseFluidState::density(phaseIdx);
-        return 1e100;
+        return this->base().density(phaseIdx);
     }
 
-    Scalar saturation(unsigned phaseIdx) const
+    auto saturation(unsigned phaseIdx) const
+        -> decltype(this->base().saturation(phaseIdx))
     {
         assert(false);
-        OPM_UNUSED Scalar tmp =  BaseFluidState::saturation(phaseIdx);
-        return 1e100;
+        return  this->base().saturation(phaseIdx);
     }
 
-    Scalar fugacity(unsigned phaseIdx, unsigned compIdx) const
+    auto fugacity(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(this->base().fugacity(phaseIdx, compIdx))
     {
         assert(false);
-        OPM_UNUSED Scalar tmp = BaseFluidState::fugacity(phaseIdx, compIdx);
-        return 1e100;
+        return this->base().fugacity(phaseIdx, compIdx);
     }
 
-    Scalar fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
+    auto fugacityCoefficient(unsigned phaseIdx, unsigned compIdx) const
+        -> decltype(this->base().fugacityCoefficient(phaseIdx, compIdx))
     {
         assert(false);
-        OPM_UNUSED Scalar tmp = BaseFluidState::fugacityCoefficient(phaseIdx, compIdx);
-        return 1e100;
+        return this->base().fugacityCoefficient(phaseIdx, compIdx);
     }
 
-    Scalar enthalpy(unsigned phaseIdx) const
+    auto enthalpy(unsigned phaseIdx) const
+        -> decltype(this->base().enthalpy(phaseIdx))
     {
         assert(false);
-        OPM_UNUSED Scalar tmp = BaseFluidState::enthalpy(phaseIdx);
-        return 1e100;
+        return this->base().enthalpy(phaseIdx);
     }
 
-    Scalar internalEnergy(unsigned phaseIdx) const
+    auto internalEnergy(unsigned phaseIdx) const
+        -> decltype(this->base().internalEnergy(phaseIdx))
     {
         assert(false);
-        OPM_UNUSED Scalar tmp = BaseFluidState::internalEnergy(phaseIdx);
-        return 1e100;
+        return this->base().internalEnergy(phaseIdx);
     }
 
-    Scalar viscosity(unsigned phaseIdx) const
+    auto viscosity(unsigned phaseIdx) const
+        -> decltype(this->base().viscosity(phaseIdx))
     {
         assert(false);
-        OPM_UNUSED Scalar tmp = BaseFluidState::viscosity(phaseIdx);
-        return 1e100;
+        return this->base().viscosity(phaseIdx);
     }
 
 private:
