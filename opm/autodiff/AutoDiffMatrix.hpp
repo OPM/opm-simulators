@@ -264,7 +264,12 @@ namespace Opm
 
         AutoDiffMatrix& operator+=(const AutoDiffMatrix& rhs)
         {
-            *this = *this + rhs;
+            if( type_ == Sparse && rhs.type_ == Sparse )
+            {
+                fastSparseAdd( sparse_, rhs.sparse_ );
+            }
+            else
+                *this = *this + rhs;
             return *this;
         }
 
@@ -275,7 +280,12 @@ namespace Opm
 
         AutoDiffMatrix& operator-=(const AutoDiffMatrix& rhs)
         {
-            *this = *this + (rhs * -1.0);
+            if( type_ == Sparse && rhs.type_ == Sparse )
+            {
+                fastSparseSubstract( sparse_, rhs.sparse_ );
+            }
+            else
+                *this = *this + (rhs * -1.0);
             return *this;
         }
 
