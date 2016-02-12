@@ -60,7 +60,7 @@ public:
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    const Scalar&  moleFraction(unsigned phaseIdx, unsigned compIdx) const
+    const Scalar& moleFraction(unsigned phaseIdx, unsigned compIdx) const
     { return moleFraction_[phaseIdx][compIdx]; }
 
     /*!
@@ -85,7 +85,7 @@ public:
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
-    const Scalar&  averageMolarMass(unsigned phaseIdx) const
+    const Scalar& averageMolarMass(unsigned phaseIdx) const
     { return averageMolarMass_[phaseIdx]; }
 
     /*!
@@ -105,7 +105,7 @@ public:
      *        and update the average molar mass [kg/mol] according
      *        to the current composition of the phase
      */
-    void setMoleFraction(unsigned phaseIdx, unsigned compIdx, const Scalar&  value)
+    void setMoleFraction(unsigned phaseIdx, unsigned compIdx, const Scalar& value)
     {
         Valgrind::CheckDefined(value);
         Valgrind::SetUndefined(sumMoleFractions_[phaseIdx]);

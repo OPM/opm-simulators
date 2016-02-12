@@ -385,7 +385,7 @@ Evaluation<Scalar, VarSetTag, numVars> log(const Evaluation<Scalar, VarSetTag, n
 // a kind of traits class for the automatic differentiation case. (The toolbox for the
 // scalar case is provided by the MathToolbox.hpp header file.)
 template <class ScalarT, class VariableSetTag, int numVars>
-struct MathToolbox<Opm::LocalAd::Evaluation<ScalarT, VariableSetTag, numVars>, false>
+struct MathToolbox<Opm::LocalAd::Evaluation<ScalarT, VariableSetTag, numVars>>
 {
 private:
 public:
@@ -402,9 +402,22 @@ public:
     { return Evaluation::createVariable(value, varIdx); }
 
     template <class LhsEval>
-    static auto toLhs(const Evaluation& eval)
-        -> decltype(ToLhsEvalHelper<LhsEval, Evaluation>::exec(eval))
-    { return ToLhsEvalHelper<LhsEval, Evaluation>::exec(eval); }
+    static typename std::enable_if<std::is_same<Evaluation, LhsEval>::value,
+                                   const LhsEval&>::type
+    toLhs(const Evaluation& eval)
+    { return eval; }
+
+    template <class LhsEval>
+    static typename std::enable_if<std::is_same<Evaluation, LhsEval>::value,
+                                   LhsEval>::type
+    toLhs(const Evaluation&& eval)
+    { return eval; }
+
+    template <class LhsEval>
+    static typename std::enable_if<std::is_floating_point<LhsEval>::value,
+                                   LhsEval>::type
+    toLhs(const Evaluation& eval)
+    { return eval.value; }
 
     static const Evaluation passThroughOrCreateConstant(Scalar value)
     { return createConstant(value); }

@@ -52,7 +52,7 @@ public:
     /*!
      * \brief The viscosity of a fluid phase [-]
      */
-    Scalar viscosity(unsigned phaseIdx) const
+    const Scalar& viscosity(unsigned phaseIdx) const
     { return viscosity_[phaseIdx]; }
 
     /*!
@@ -108,7 +108,7 @@ public:
     /*!
      * \brief The viscosity of a fluid phase [-]
      */
-    Scalar viscosity(int /* phaseIdx */) const
+    const Scalar& viscosity(int /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Viscosity is not provided by this fluid state"); }
 
     /*!
