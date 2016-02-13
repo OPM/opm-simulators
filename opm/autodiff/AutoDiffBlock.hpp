@@ -342,7 +342,9 @@ namespace Opm
                     jac[block] = D2*jac_[block];
                 }
                 else {
-                    jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
+                    //jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
+                    jac[block]  = D2*jac_[block];
+                    jac[block] += D1*rhs.jac_[block];
                 }
             }
             return function(val_ * rhs.val_, std::move(jac));
@@ -366,6 +368,8 @@ namespace Opm
             M D1(val_.matrix().asDiagonal());
             M D2(rhs.val_.matrix().asDiagonal());
             M D3((1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal());
+            M D4;
+            M D5;
 #pragma omp parallel for schedule(dynamic)
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
@@ -374,14 +378,31 @@ namespace Opm
                     jac[block] = M( D3.rows(), jac_[block].cols() );
                 }
                 else if( jac_[block].nonZeros() == 0 ) {
-                    jac[block] =  D3 * ( D1*rhs.jac_[block]) * (-1.0);
+#pragma omp critical
+                    if( D4.rows() == 0 ) {
+                        D4 = D3 * D1 * (-1.0);
+                    }
+                    jac[block] = D4*rhs.jac_[block];
                 }
                 else if ( rhs.jac_[block].nonZeros() == 0 )
                 {
-                    jac[block] = D3 * (D2*jac_[block]);
+#pragma omp critical
+                    if( D5.rows() == 0 ) {
+                        D5 = D3 * D2 ;
+                    }
+                    jac[block] = D5*jac_[block];
                 }
                 else {
-                    jac[block] = D3 * (D2*jac_[block] + (D1*rhs.jac_[block]*(-1.0)));
+#pragma omp critical
+                    if( D4.rows() == 0 ) {
+                        D4 = D3 * D1 * (-1.0);
+                    }
+#pragma omp critical
+                    if( D5.rows() == 0 ) {
+                        D5 = D3 * D2 ;
+                    }
+                    jac[block]  = D5*jac_[block];
+                    jac[block] += D4*rhs.jac_[block];
                 }
             }
             return function(val_ / rhs.val_, std::move(jac));
