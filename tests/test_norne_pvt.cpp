@@ -39,7 +39,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
-#include <opm/core/props/pvt/PvtLiveOil.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
 
 
 using namespace Opm;
@@ -57,19 +57,9 @@ using namespace Opm;
   further semantic meaning.
 */
 
-
-void check_vectors( const std::vector<double>& v1 , const std::vector<double>& v2) {
-    double tol = 1e-5;
-    for (decltype(v1.size()) i = 0;  i < v1.size(); i++) {
-        BOOST_CHECK_CLOSE( v1[i] , v2[i] , tol );
-    }
-}
-
-
-
-void verify_norne_oil_pvt_region2(const TableManager& tableManager) {
-    auto pvtoTables = tableManager.getPvtoTables();
-    PvtLiveOil oilPvt(pvtoTables);
+void verify_norne_oil_pvt_region1(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclState) {
+    Opm::LiveOilPvt<double> oilPvt;
+    oilPvt.initFromDeck(deck, eclState);
 
     std::vector<double> rs = {33, 33,
                               43, 43,
@@ -113,33 +103,37 @@ void verify_norne_oil_pvt_region2(const TableManager& tableManager) {
     {
         std::vector<int> tableIndex(P.size() , 0);
 
-        std::vector<double> mu(P.size());
-        std::vector<double> dmudp(P.size());
-        std::vector<double> dmudr(P.size());
-
-        std::vector<double> b(P.size());
-        std::vector<double> dbdp(P.size());
-        std::vector<double> dbdr(P.size());
-
-
+        // convert the pressures to SI units (bar to Pascal)
         for (auto& value : P)
             value *= Metric::Pressure;
 
+        // convert the gas dissolution factors to SI units
         for (auto& value : rs)
             value *=  Metric::GasDissolutionFactor;
 
-        oilPvt.mu( P.size() , tableIndex.data() , P.data() , NULL , rs.data() , mu.data() , dmudp.data() , dmudr.data());
-        oilPvt.b( P.size() , tableIndex.data() , P.data() , NULL , rs.data() , b.data() , dbdp.data() , dbdr.data());
+        for (unsigned i = 0; i < P.size(); ++i) {
+            double mu;
+            double b;
+            double RsSat = oilPvt.saturatedGasDissolutionFactor(/*tableIndex=*/0, /*T=*/273.15, P[i]);
+            if (rs[i] >= RsSat) {
+                mu = oilPvt.saturatedViscosity(/*tableIndex=*/0, /*T=*/273.15, P[i]);
+                b = oilPvt.saturatedInverseFormationVolumeFactor(/*tableIndex=*/0, /*T=*/273.15, P[i]);
+            }
+            else {
+                mu = oilPvt.viscosity(/*tableIndex=*/0, /*T=*/273.15, P[i], rs[i]);
+                b = oilPvt.inverseFormationVolumeFactor(/*tableIndex=*/0, /*T=*/273.15, P[i], rs[i]);
+            }
 
-        check_vectors( mu , mu_expected );
-        check_vectors( b , b_expected );
+            BOOST_CHECK_CLOSE( mu , mu_expected[i], 1e-5 );
+            BOOST_CHECK_CLOSE( b , b_expected[i], 1e-5 );
+        }
     }
 }
 
 
-void verify_norne_oil_pvt_region1(const TableManager& tableManager) {
-    auto pvtoTables = tableManager.getPvtoTables();
-    PvtLiveOil oilPvt(pvtoTables);
+void verify_norne_oil_pvt_region2(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclState) {
+    Opm::LiveOilPvt<double> oilPvt;
+    oilPvt.initFromDeck(deck, eclState);
 
     std::vector<double> rs = {21 , 21,
                               30 , 30,
@@ -254,50 +248,41 @@ void verify_norne_oil_pvt_region1(const TableManager& tableManager) {
                                       0.57289091037,   0.56019050084,
                                       0.55474601877,   0.55809201119,   0.54526832277};
 
-    {
-        std::vector<int> tableIndex(P.size() , 1);
+    // convert the pressures to SI units (bar to Pascal)
+    for (auto& value : P)
+        value *= Metric::Pressure;
 
-        std::vector<double> mu(P.size());
-        std::vector<double> dmudp(P.size());
-        std::vector<double> dmudr(P.size());
+    // convert the gas dissolution factors to SI units
+    for (auto& value : rs)
+        value *=  Metric::GasDissolutionFactor;
 
-        std::vector<double> b(P.size());
-        std::vector<double> dbdp(P.size());
-        std::vector<double> dbdr(P.size());
+    for (unsigned i = 0; i < P.size(); ++i) {
+        double mu;
+        double b;
+        double RsSat = oilPvt.saturatedGasDissolutionFactor(/*tableIndex=*/1, /*T=*/273.15, P[i]);
+        if (rs[i] >= RsSat) {
+            mu = oilPvt.saturatedViscosity(/*tableIndex=*/1, /*T=*/273.15, P[i]);
+            b = oilPvt.saturatedInverseFormationVolumeFactor(/*tableIndex=*/1, /*T=*/273.15, P[i]);
+        }
+        else {
+            mu = oilPvt.viscosity(/*tableIndex=*/1, /*T=*/273.15, P[i], rs[i]);
+            b = oilPvt.inverseFormationVolumeFactor(/*tableIndex=*/1, /*T=*/273.15, P[i], rs[i]);
+        }
 
-
-        for (auto& value : P)
-            value *= Metric::Pressure;
-
-        for (auto& value : rs)
-            value *=  Metric::GasDissolutionFactor;
-
-        oilPvt.mu( P.size() , tableIndex.data() , P.data() , NULL , rs.data() , mu.data() , dmudp.data() , dmudr.data());
-        oilPvt.b( P.size() , tableIndex.data() , P.data() , NULL , rs.data() , b.data() , dbdp.data() , dbdr.data());
-
-        check_vectors( mu , mu_expected );
-        check_vectors( b , b_expected );
+        BOOST_CHECK_CLOSE( mu , mu_expected[i], 1e-5 );
+        BOOST_CHECK_CLOSE( b , b_expected[i], 1e-5 );
     }
 }
 
-
-
-
-
-TableManager loadTables( const std::string& deck_file) {
+BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
     Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::ParserPtr parser(new Parser());
+
     std::shared_ptr<const Deck> deck;
+    deck = parser->parseFile("norne_pvt.data", parseMode);
 
-    deck = parser->parseFile(deck_file, parseMode);
-    return TableManager(*deck);
-}
+    Opm::EclipseStateConstPtr eclState(new EclipseState(deck, parseMode));
 
-
-
-BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
-    TableManager tableManager = loadTables( "norne_pvt.data" );
-
-    verify_norne_oil_pvt_region1( tableManager );
-    verify_norne_oil_pvt_region2( tableManager );
+    verify_norne_oil_pvt_region1( deck, eclState );
+    verify_norne_oil_pvt_region2( deck, eclState );
 }

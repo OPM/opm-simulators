@@ -5,11 +5,22 @@
 
 -- Copyright (C) 2015 Statoil
 
+RUNSPEC
 
 TABDIMS
 --ntsfun ntpvt nssfun nppvt ntfip nrpvt ntendp
    2     2     33     60   16    60 /
 
+DIMENS
+1 1 1 /
+
+GRID
+
+PROPS
+
+DENSITY
+      859.5  1033.0    0.854  /  Justert 22/7
+      860.04 1033.0    0.853  /  Justert 22/7
 
 PVTG                                                                                
                                                                                 
