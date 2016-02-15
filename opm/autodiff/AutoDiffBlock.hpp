@@ -24,7 +24,7 @@
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
-#include <opm/autodiff/fastSparseProduct.hpp>
+#include <opm/autodiff/fastSparseOperations.hpp>
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 

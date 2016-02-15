@@ -181,8 +181,8 @@ template<typename Lhs, typename Rhs>
 inline bool
 equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
 {
-  // if non zeros don't match, matrices don't have the same sparsity pattern
-  bool equal = (lhs.nonZeros() == rhs.nonZeros());
+  // if both matrices have equal storage and non zeros match, we can check sparsity pattern
+  bool equal = (Lhs::IsRowMajor == Rhs::IsRowMajor) && (lhs.nonZeros() == rhs.nonZeros());
 
   // check complete sparsity pattern
   if( equal )
@@ -195,7 +195,6 @@ equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
 
     for(Index i=0; i<nnz; ++i )
     {
-        //equal &= ( lhsJ[ i ] == rhsJ[ i ] );
         if( lhsJ[ i ] != rhsJ[ i ] )
             return false;
     }
@@ -228,6 +227,7 @@ fastSparseAdd(Lhs& lhs, const Rhs& rhs)
     }
     else
     {
+        // default Eigen operator+=
         lhs += rhs;
     }
 }
@@ -256,6 +256,7 @@ fastSparseSubstract(Lhs& lhs, const Rhs& rhs)
     }
     else
     {
+        // default Eigen operator-=
         lhs -= rhs;
     }
 }
