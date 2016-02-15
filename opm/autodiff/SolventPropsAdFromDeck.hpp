@@ -139,14 +139,30 @@ private:
     /// Makes ADB from table values
     /// \param[in]  X               Array of n table lookup values.
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
-    /// \param[in]  tables           Vector of tables, one for each PVT region.
+    /// \param[in]  tables          Vector of tables, one for each PVT region.
     /// \return                     Array of n solvent density values.
     ADB makeADBfromTables(const ADB& X,
                           const Cells& cells,
+                          const std::vector<int>& regionIdx,
                           const std::vector<NonuniformTableLinear<double>>& tables) const;
+
+    /// Helper function to create an array containing the
+    /// table index of for each compressed cell from an Eclipse deck.
+    /// \param[in] keyword      eclKeyword specifying region (SATNUM etc. )
+    /// \param[in/out] tableIdx table index for each compressed cell
+    /// \param[in] eclState     eclState from opm-parser
+    /// \param[in] numCompressed number of compressed cells
+    /// \param[in] compressedToCartesianCellIdx cartesianCellIdx for each cell in the grid
+    void extractTableIndex(const std::string& keyword,
+                           std::vector<int> &tableIdx,
+                           Opm::EclipseStateConstPtr eclState,
+                           size_t numCompressed,
+                           const int *compressedToCartesianCellIdx) const;
 
     // The PVT region which is to be used for each cell
     std::vector<int> cellPvtRegionIdx_;
+    std::vector<int> cellMiscRegionIdx_;
+    std::vector<int> cellSatNumRegionIdx_;
     std::vector<NonuniformTableLinear<double> > b_;
     std::vector<NonuniformTableLinear<double> > viscosity_;
     std::vector<NonuniformTableLinear<double> > inverseBmu_;
