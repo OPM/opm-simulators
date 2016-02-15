@@ -128,10 +128,14 @@ public:
     V solventSurfaceDensity(const Cells& cells) const;
 
     /// Todd-Longstaff mixing parameter for viscosity calculation
-    double mixingParameterViscosity() const;
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// return                      Array of n mixing paramters for viscosity calculation
+    V mixingParameterViscosity(const Cells& cells) const;
 
     /// Todd-Longstaff mixing parameter for density calculation
-    double mixingParameterDensity() const;
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// return                      Array of n mixing paramters for density calculation
+    V mixingParameterDensity(const Cells& cells) const;
 
 
 private:
@@ -175,8 +179,8 @@ private:
     std::vector<NonuniformTableLinear<double> > misc_;
     std::vector<NonuniformTableLinear<double> > sorwmis_;
     std::vector<NonuniformTableLinear<double> > sgcwmis_;
-    double mix_param_viscosity_;
-    double mix_param_density_;
+    std::vector<double> mix_param_viscosity_;
+    std::vector<double> mix_param_density_;
 };
 
 } // namespace OPM

@@ -233,29 +233,25 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
             if (deck->hasKeyword("TLMIXPAR")) {
                 const int numRegions = deck->getKeyword("TLMIXPAR")->size();
-                if (numRegions > 1) {
-                    OPM_THROW(std::runtime_error, "Only singel miscibility region is supported for TLMIXPAR.");
-                }
-                const auto tlmixparRecord = deck->getKeyword("TLMIXPAR")->getRecord(0);
-                std::vector<double> mix_params_viscosity = tlmixparRecord->getItem("TL_VISCOSITY_PARAMETER")->getSIDoubleData();
 
-                mix_param_viscosity_ = mix_params_viscosity[0];
-
-                std::vector<double> mix_params_density = tlmixparRecord->getItem("TL_DENSITY_PARAMETER")->getSIDoubleData();
-                const int numDensityItems = mix_params_density.size();
-                if (numDensityItems == 0) {
-                    mix_param_density_ = mix_param_viscosity_;
-                } else if (numDensityItems == 1) {
-                    mix_param_density_ = mix_params_density[0];
-                } else {
-                    OPM_THROW(std::runtime_error, "Only singel miscibility region is supported for TLMIXPAR.");
+                // resize the attributes of the object
+                mix_param_viscosity_.resize(numRegions);
+                mix_param_density_.resize(numRegions);
+                for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                    const auto& tlmixparRecord = deck->getKeyword("TLMIXPAR")->getRecord(regionIdx);
+                    const auto& mix_params_viscosity = tlmixparRecord->getItem("TL_VISCOSITY_PARAMETER")->getSIDoubleData();
+                    mix_param_viscosity_[regionIdx] = mix_params_viscosity[0];
+                    const auto& mix_params_density = tlmixparRecord->getItem("TL_DENSITY_PARAMETER")->getSIDoubleData();
+                    const int numDensityItems = mix_params_density.size();
+                    if (numDensityItems == 0) {
+                        mix_param_density_[regionIdx] = mix_param_viscosity_[regionIdx];
+                    } else if (numDensityItems == 1) {
+                        mix_param_density_[regionIdx] = mix_params_density[0];
+                    } else {
+                        OPM_THROW(std::runtime_error, "Only one value can be entered for the TL parameter pr MISC region.");
+                    }
                 }
-            } else {
-                mix_param_viscosity_ = 0.0;
-                mix_param_density_ = 0.0;
             }
-
-
 
         }
     }
@@ -397,12 +393,32 @@ V SolventPropsAdFromDeck::solventSurfaceDensity(const Cells& cells) const {
     return density;
 }
 
-double SolventPropsAdFromDeck::mixingParameterViscosity() const {
-    return mix_param_viscosity_;
+V SolventPropsAdFromDeck::mixingParameterViscosity(const Cells& cells) const {
+    const int n = cells.size();
+    if (mix_param_viscosity_.size() > 0) {
+        V mix_param(n);
+        for (int i = 0; i < n; ++i) {
+            int regionIdx = cellMiscRegionIdx_[cells[i]];
+            mix_param[i] = mix_param_viscosity_[regionIdx];
+        }
+        return mix_param;
+    }
+    // return zeros if not specified
+    return V::Zero(n);
 }
 
-double SolventPropsAdFromDeck::mixingParameterDensity() const {
-    return mix_param_density_;
+V SolventPropsAdFromDeck::mixingParameterDensity(const Cells& cells) const {
+    const int n = cells.size();
+    if (mix_param_viscosity_.size() > 0) {
+        V mix_param(n);
+        for (int i = 0; i < n; ++i) {
+            int regionIdx = cellMiscRegionIdx_[cells[i]];
+            mix_param[i] = mix_param_density_[regionIdx];
+        }
+        return mix_param;
+    }
+    // return zeros if not specified
+    return V::Zero(n);
 }
 
 void SolventPropsAdFromDeck::extractTableIndex(const std::string& keyword,

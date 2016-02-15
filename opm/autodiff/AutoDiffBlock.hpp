@@ -623,6 +623,36 @@ namespace Opm
     }
 
     /**
+     * @brief Computes the value of base raised to the power of exp elementwise
+     *
+     * @param base The AD forward block
+     * @param exp  array of exponent
+     * @return The value of base raised to the power of exp elementwise
+     */
+    template <typename Scalar>
+    AutoDiffBlock<Scalar> pow(const AutoDiffBlock<Scalar>& base,
+                              const typename AutoDiffBlock<Scalar>::V& exp)
+    {
+        const int num_elem = base.value().size();
+        typename AutoDiffBlock<Scalar>::V val (num_elem);
+        typename AutoDiffBlock<Scalar>::V derivative = exp;
+        assert(exp.size() == num_elem);
+        for (int i = 0; i < num_elem; ++i) {
+            val[i] = std::pow(base.value()[i], exp[i]);
+            derivative[i] *= std::pow(base.value()[i],exp[i]-1.0);
+        }
+        const typename AutoDiffBlock<Scalar>::M derivative_diag(derivative.matrix().asDiagonal());
+
+        std::vector< typename AutoDiffBlock<Scalar>::M > jac (base.numBlocks());
+        for (int block = 0; block < base.numBlocks(); block++) {
+             fastSparseProduct(derivative_diag, base.derivative()[block], jac[block]);
+        }
+
+        return AutoDiffBlock<Scalar>::function( std::move(val), std::move(jac) );
+    }
+
+
+    /**
      * @brief Computes the value of base raised to the power of exp
      *
      * @param base The AD forward block
