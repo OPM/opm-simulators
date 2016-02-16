@@ -1,5 +1,4 @@
-Open Porous Media Automatic Differentiation Library
-===================================================
+# Open Porous Media Automatic Differentiation Library [![Build Status](https://travis-ci.org/OPM/opm-autodiff.svg?branch=master)](https://travis-ci.org/OPM/opm-autodiff)
 
 
 CONTENT
