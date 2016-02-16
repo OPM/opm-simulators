@@ -189,7 +189,8 @@ namespace {
         , residual_ ( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()),
                         ADB::null(),
                         ADB::null(),
-                        { 1.1169, 1.0031, 0.0031, 1.0 }} ) // default scaling
+                        { 1.1169, 1.0031, 0.0031, 1.0 },
+                        false } ) // default scaling
     {
     }
 
@@ -369,7 +370,7 @@ namespace {
         assert(not x.concentration().empty());
         const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
         state.concentration = ADB::constant(c);
-        
+
         // Well rates.
         assert (not xw.wellRates().empty());
         // Need to reshuffle well rates, from ordered by wells, then phase,
@@ -400,7 +401,7 @@ namespace {
         const int np = x.numPhases();
 
         std::vector<V> vars0;
-   
+
         // Initial pressure.
         assert (not x.pressure().empty());
         const V p = Eigen::Map<const V>(& x.pressure()[0], nc, 1);
@@ -496,12 +497,12 @@ namespace {
         const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
         rq_[2].accum[aix] = pv_mult * rq_[0].b * sat[0] * c * (1. - dead_pore_vol) + pv_mult *  rho_rock * (1. - phi) / phi * ads;
     }
-	
 
 
 
 
-    void 
+
+    void
     FullyImplicitCompressiblePolymerSolver::
     computeCmax(PolymerBlackoilState& state)
     {
@@ -654,7 +655,7 @@ namespace {
 		const V poly_mc_cell = subset(mc, well_cells).value();
 		const V poly_in_c = poly_in_perf;// * poly_mc_cell;
         const V poly_mc = producer.select(poly_mc_cell, poly_in_c);
-        
+
 		residual_.material_balance_eq[2] += superset(well_perf_rates[0] * poly_mc, well_cells, nc);
         // Set the well flux equation
         residual_.well_flux_eq = state.qs + well_rates_all;
@@ -960,7 +961,7 @@ namespace {
 
 
 
-    // here mc means m(c) * c. 
+    // here mc means m(c) * c.
     ADB
     FullyImplicitCompressiblePolymerSolver::computeMc(const SolutionState& state) const
     {
@@ -1028,7 +1029,7 @@ namespace {
     {
         const int nc = grid_.number_of_cells;
         const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, 2);
-        
+
         const V so = s.col(1);
         for (V::Index c = 0, e = so.size(); c != e; ++c) {
             phaseCondition_[c].setFreeWater();

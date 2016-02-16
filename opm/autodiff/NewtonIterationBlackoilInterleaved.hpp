@@ -62,7 +62,7 @@ namespace Opm
         {
             newton_use_gmres_        = false;
             linear_solver_reduction_ = 1e-2;
-            linear_solver_maxiter_   = 50;
+            linear_solver_maxiter_   = 75;
             linear_solver_restart_   = 40;
             linear_solver_verbosity_ = 0;
         }
@@ -100,7 +100,8 @@ namespace Opm
         // max number of equations supported, increase if necessary
         static const int maxNumberEquations_ = 6 ;
 
-        mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_+1 > newtonIncrement_;
+        mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_+1 > newtonIncrementDoublePrecision_;
+        mutable std::array< std::unique_ptr< NewtonIterationBlackoilInterface >, maxNumberEquations_+1 > newtonIncrementSinglePrecision_;
         NewtonIterationBlackoilInterleavedParameters parameters_;
         boost::any parallelInformation_;
         mutable int iterations_;

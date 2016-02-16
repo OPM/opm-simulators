@@ -200,12 +200,14 @@ namespace Opm
             // Report timing.
             const double st = solver_timer.secsSinceStart();
 
+            // accumulate total time
+            stime += st;
+
             if ( terminal_output_ )
             {
-                std::cout << "Fully implicit solver took: " << st << " seconds." << std::endl;
+                std::cout << "Fully implicit solver took: " << st << " seconds. Total solver time taken: " << stime << " seconds." << std::endl;
             }
 
-            stime += st;
             if ( output_writer_.output() ) {
                 SimulatorReport step_report;
                 step_report.pressure_time = st;

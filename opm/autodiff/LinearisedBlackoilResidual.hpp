@@ -65,6 +65,8 @@ namespace Opm
 
         std::vector<double> matbalscale;
 
+        bool singlePrecision ;
+
         /// The size of the non-linear system.
         int sizeNonLinear() const;
     };
