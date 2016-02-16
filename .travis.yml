@@ -1,0 +1,46 @@
+language: cpp
+
+compiler:
+  - gcc
+
+addons:
+  apt:
+    sources:
+      - boost-latest
+      - ubuntu-toolchain-r-test
+      
+    packages:
+      - libboost1.55-all-dev
+      - gcc-4.8
+      - g++-4.8
+      - gfortran-4.8
+      - liblapack-dev
+      - libgmp3-dev
+      - libsuitesparse-dev
+      - libeigen3-dev
+
+install:
+    - export CXX="g++-4.8" CC="gcc-4.8" FC="gfortran-4.8"
+    - cd ..
+
+    - git clone https://github.com/OPM/opm-common.git
+    - git clone https://github.com/OPM/opm-parser.git
+    - git clone https://github.com/OPM/opm-material.git
+    - git clone https://github.com/OPM/opm-core.git
+    - git clone https://github.com/OPM/dune-cornerpoint.git
+    - git clone https://github.com/OPM/opm-data.git
+
+    - opm-parser/travis/clone-and-build-ert.sh
+    - opm-material/travis/clone-and-build-dune-common.sh
+    - opm-core/travis/clone-and-build-dune-istl.sh
+    - opm-core/travis/clone-and-build-superlu.sh
+    - dune-cornerpoint/travis/clone-and-build-dune-geometry.sh
+    - dune-cornerpoint/travis/clone-and-build-dune-grid.sh
+
+    - opm-common/travis/build-opm-common.sh
+    - opm-parser/travis/build-opm-parser.sh
+    - opm-material/travis/build-opm-material.sh
+    - opm-core/travis/build-opm-core.sh
+    - dune-cornerpoint/travis/build-dune-cornerpoint.sh
+
+script: opm-autodiff/travis/build-and-test-opm-autodiff.sh
