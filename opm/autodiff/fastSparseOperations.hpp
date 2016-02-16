@@ -188,60 +188,57 @@ equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
     if( equal )
     {
         typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
-        const Index nnz = lhs.nonZeros();
-
-        // outer indices
-        const Index* rhsO = rhs.outerIndexPtr();
-        const Index* lhsO = lhs.outerIndexPtr();
-
-        // inner indices
-        const Index* rhsJ = rhs.innerIndexPtr();
-        const Index* lhsJ = lhs.innerIndexPtr();
-
         const Index outerSize = lhs.outerSize();
         if( outerSize != rhs.outerSize() )
         {
             return false;
         }
 
+        const Index nnz = lhs.nonZeros();
+
+        // outer indices
+        const Index* rhsOuter = rhs.outerIndexPtr();
+        const Index* lhsOuter = lhs.outerIndexPtr();
+
+        // inner indices
+        const Index* rhsInner = rhs.innerIndexPtr();
+        const Index* lhsInner = lhs.innerIndexPtr();
+
         bool equalOuter = true;
         bool equalInner = true;
         const Index size = std::min( outerSize+1, nnz );
         for( Index i=0; i<size; ++i)
         {
-            equalOuter &= (lhsO[ i ] == rhsO[ i ]);
-            equalInner &= (lhsJ[ i ] == rhsJ[ i ]);
+            equalOuter &= (lhsOuter[ i ] == rhsOuter[ i ]);
+            equalInner &= (lhsInner[ i ] == rhsInner[ i ]);
         }
 
-        if( ! equalOuter || ! equalInner ) return false ;
+        if( ! equalOuter || ! equalInner ) {
+            return false ;
+        }
 
         if( outerSize+1 < nnz )
         {
             for(Index i=outerSize+1; i<nnz; ++i)
             {
-                if( lhsJ[ i ] != rhsJ[ i ] ) return false;
+                if( lhsInner[ i ] != rhsInner[ i ] ) {
+                    return false;
+                }
             }
         }
         else if( outerSize+1 > nnz )
         {
             for(Index o=nnz; o<=outerSize; ++o )
             {
-                if( lhsO[ o ] != rhsO[ o ] )
+                if( lhsOuter[ o ] != rhsOuter[ o ] ) {
                     return false;
+                }
             }
         }
         else
         {
             return equalOuter && equalInner;
         }
-
-        /*
-        for(Index o=0; o<=outerSize; ++o )
-        {
-            if( lhsO[ o ] != rhsO[ o ] )
-                return false;
-        }
-        */
     }
 
     return equal;
