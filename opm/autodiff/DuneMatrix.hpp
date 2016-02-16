@@ -80,7 +80,7 @@ namespace Opm
             this->m = cols;
 
             typedef Super::size_type size_type ;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 3, 0)
+#if DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2, 4, 1)
             size_type& nnz = this->nnz_;
             std::shared_ptr<size_type>& j = this->j_;
 #else
