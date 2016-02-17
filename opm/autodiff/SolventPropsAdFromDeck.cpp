@@ -44,7 +44,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
         // retrieve the cell specific PVT table index from the deck
         // and using the grid...
         extractPvtTableIndex(cellPvtRegionIdx_, eclState, number_of_cells, global_cell);
-        extractTableIndex("SATNUM", cellSatNumRegionIdx_, eclState, number_of_cells, global_cell);
+        extractTableIndex("SATNUM", eclState, number_of_cells, global_cell, cellSatNumRegionIdx_);
 
         // surface densities
         if (deck->hasKeyword("SDENSITY")) {
@@ -124,7 +124,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
             // retrieve the cell specific Misc table index from the deck
             // and using the grid...
-            extractTableIndex("MISCNUM", cellMiscRegionIdx_, eclState, number_of_cells, global_cell);
+            extractTableIndex("MISCNUM", eclState, number_of_cells, global_cell, cellMiscRegionIdx_);
 
             // misicible hydrocabon relative permeability wrt water
             const TableContainer& sof2Tables = tables->getSof2Tables();
@@ -422,11 +422,10 @@ V SolventPropsAdFromDeck::mixingParameterDensity(const Cells& cells) const {
 }
 
 void SolventPropsAdFromDeck::extractTableIndex(const std::string& keyword,
-                          std::vector<int> &tableIdx,
-                          Opm::EclipseStateConstPtr eclState,
-                          size_t numCompressed,
-                          const int *compressedToCartesianCellIdx) const
-{
+                                               Opm::EclipseStateConstPtr eclState,
+                                               size_t numCompressed,
+                                               const int* compressedToCartesianCellIdx,
+                                               std::vector<int>& tableIdx) const {
     //Get the Region data
     const std::vector<int>& regionData = eclState->getIntGridProperty(keyword)->getData();
     // Convert this into an array of compressed cells
