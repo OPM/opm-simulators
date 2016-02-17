@@ -268,8 +268,9 @@ namespace Opm
             {
                 fastSparseAdd( sparse_, rhs.sparse_ );
             }
-            else
+            else {
                 *this = *this + rhs;
+            }
             return *this;
         }
 
@@ -284,8 +285,9 @@ namespace Opm
             {
                 fastSparseSubstract( sparse_, rhs.sparse_ );
             }
-            else
+            else {
                 *this = *this + (rhs * -1.0);
+            }
             return *this;
         }
 
