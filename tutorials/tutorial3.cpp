@@ -267,7 +267,19 @@ try
     /// \internal [two-phase state]
     TwophaseState state;
     state.init(grid.number_of_cells , grid.number_of_faces, 2);
-    state.setFirstSat(allcells, props, TwophaseState::MinSat);
+    {
+        std::vector<double> min_sat(allcells.size());
+        std::vector<double> max_sat(allcells.size());
+        std::vector<double> second_sat(allcells.size());
+
+        props.satRange(allcells.size() ,allcells.data() , min_sat.data() , max_sat.data());
+
+        std::transform( min_sat.begin() , min_sat.end() , second_sat.begin() , [](double s) { return 1 - s; });
+        state.setCellDataComponent( "SATURATION" , 0 , allcells , min_sat );
+        state.setCellDataComponent( "SATURATION" , 1 , allcells , second_sat );
+
+    }
+
     /// \internal [two-phase state]
     /// \endinternal
 
