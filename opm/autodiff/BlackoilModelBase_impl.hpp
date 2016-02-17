@@ -1244,11 +1244,11 @@ namespace detail {
 
             if (phase == Oil && active_[Gas]) {
                 const int gaspos = pu.phase_pos[Gas];
-                tmp = tmp - rv_perfcells * cmix_s[gaspos] / d;
+                tmp -= rv_perfcells * cmix_s[gaspos] / d;
             }
             if (phase == Gas && active_[Oil]) {
                 const int oilpos = pu.phase_pos[Oil];
-                tmp = tmp - rs_perfcells * cmix_s[oilpos] / d;
+                tmp -= rs_perfcells * cmix_s[oilpos] / d;
             }
             volumeRatio += tmp / b_perfcells[phase];
         }

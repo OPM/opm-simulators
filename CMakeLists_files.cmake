@@ -138,7 +138,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/BlackoilSolventState.hpp
 	opm/autodiff/BlackoilMultiSegmentModel.hpp
 	opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
-	opm/autodiff/fastSparseProduct.hpp
+	opm/autodiff/fastSparseOperations.hpp
 	opm/autodiff/DuneMatrix.hpp
 	opm/autodiff/ExtractParallelGridInformationToISTL.hpp
 	opm/autodiff/FlowMain.hpp

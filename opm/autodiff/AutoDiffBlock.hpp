@@ -24,7 +24,7 @@
 
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
-#include <opm/autodiff/fastSparseProduct.hpp>
+#include <opm/autodiff/fastSparseOperations.hpp>
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
@@ -342,7 +342,8 @@ namespace Opm
                     jac[block] = D2*jac_[block];
                 }
                 else {
-                    jac[block] = D2*jac_[block] + D1*rhs.jac_[block];
+                    jac[block]  = D2*jac_[block];
+                    jac[block] += D1*rhs.jac_[block];
                 }
             }
             return function(val_ * rhs.val_, std::move(jac));

@@ -98,7 +98,7 @@ namespace Opm
             }
         }
         materialLawManager->initFromDeck(deck, eclState, compressedToCartesianIdx);
-        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, 
+        init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims,
              init_rock);
     }
 
@@ -399,7 +399,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dmudp_diag, po.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dmudr_diag, rs.derivative()[block], temp);
-            jacs[block] = jacs[block] + temp;
+            jacs[block] += temp;
         }
         return ADB::function(std::move(mu), std::move(jacs));
     }
@@ -463,7 +463,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dmudp_diag, pg.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dmudr_diag, rv.derivative()[block], temp);
-            jacs[block] = jacs[block] + temp;
+            jacs[block] += temp;
         }
         return ADB::function(std::move(mu), std::move(jacs));
     }
@@ -578,7 +578,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dbdp_diag, po.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dbdr_diag, rs.derivative()[block], temp);
-            jacs[block] = jacs[block] + temp;
+            jacs[block] += temp;
         }
         return ADB::function(std::move(b), std::move(jacs));
     }
@@ -643,7 +643,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             fastSparseProduct(dbdp_diag, pg.derivative()[block], jacs[block]);
             ADB::M temp;
             fastSparseProduct(dbdr_diag, rv.derivative()[block], temp);
-            jacs[block] = jacs[block] + temp;
+            jacs[block] += temp;
         }
         return ADB::function(std::move(b), std::move(jacs));
     }
@@ -824,7 +824,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                     for (int block = 0; block < num_blocks; ++block) {
                         ADB::M temp;
                         fastSparseProduct(dkr1_ds2_diag, s[phase2]->derivative()[block], temp);
-                        jacs[block] = jacs[block] + temp;
+                        jacs[block] += temp;
                     }
                 }
                 ADB::V val = kr.col(phase1_pos);
@@ -885,7 +885,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                     for (int block = 0; block < nBlocks; ++block) {
                         ADB::M temp;
                         fastSparseProduct(dpc1_ds2_diag, s[phase2]->derivative()[block], temp);
-                        jacs[block] = jacs[block] + temp;
+                        jacs[block] += temp;
                     }
                 }
                 ADB::V val = pc.col(phase1_pos);

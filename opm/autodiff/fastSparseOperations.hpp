@@ -177,7 +177,106 @@ inline void fastSparseDiagProduct(const Eigen::SparseMatrix<double>& lhs,
     }
 }
 
+template<typename Lhs, typename Rhs>
+inline bool
+equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
+{
+    // if both matrices have equal storage and non zeros match, we can check sparsity pattern
+    bool equal = (Lhs::IsRowMajor == Rhs::IsRowMajor) && (lhs.nonZeros() == rhs.nonZeros());
 
+    // check complete sparsity pattern
+    if( equal )
+    {
+        typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
+        const Index outerSize = lhs.outerSize();
+        if( outerSize != rhs.outerSize() )
+        {
+            return false;
+        }
+
+        // outer indices
+        const Index* rhsOuter = rhs.outerIndexPtr();
+        const Index* lhsOuter = lhs.outerIndexPtr();
+        for(Index i=0; i<=outerSize; ++i )
+        {
+            if( lhsOuter[ i ] != rhsOuter[ i ] ) {
+                return false ;
+            }
+        }
+
+        // inner indices
+        const Index* rhsInner = rhs.innerIndexPtr();
+        const Index* lhsInner = lhs.innerIndexPtr();
+
+        const Index nnz = lhs.nonZeros();
+        for( Index i=0; i<nnz; ++i)
+        {
+            if( lhsInner[ i ] != rhsInner[ i ] ) {
+                return false;
+            }
+        }
+    }
+
+    return equal;
+}
+
+// this function substracts two sparse matrices
+// if the sparsity pattern is the same a faster add/substract is performed
+template<typename Lhs, typename Rhs>
+inline void
+fastSparseAdd(Lhs& lhs, const Rhs& rhs)
+{
+    if( equalSparsityPattern( lhs, rhs ) )
+    {
+        typedef typename Eigen::internal::remove_all<Lhs>::type::Scalar Scalar;
+        typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
+
+        const Index nnz = lhs.nonZeros();
+
+        // fast add using only the data pointers
+        const Scalar* rhsV = rhs.valuePtr();
+        Scalar* lhsV = lhs.valuePtr();
+
+        for(Index i=0; i<nnz; ++i )
+        {
+            lhsV[ i ] += rhsV[ i ];
+        }
+    }
+    else
+    {
+        // default Eigen operator+=
+        lhs = lhs + rhs;
+    }
+}
+
+// this function substracts two sparse matrices
+// if the sparsity pattern is the same a faster add/substract is performed
+template<typename Lhs, typename Rhs>
+inline void
+fastSparseSubstract(Lhs& lhs, const Rhs& rhs)
+{
+    if( equalSparsityPattern( lhs, rhs ) )
+    {
+        typedef typename Eigen::internal::remove_all<Lhs>::type::Scalar Scalar;
+        typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
+
+        const Index nnz = lhs.nonZeros();
+
+        // fast add using only the data pointers
+        const Scalar* rhsV = rhs.valuePtr();
+        Scalar* lhsV = lhs.valuePtr();
+
+        for(Index i=0; i<nnz; ++i )
+        {
+            lhsV[ i ] -= rhsV[ i ];
+        }
+    }
+    else
+    {
+        // default Eigen operator-=
+        lhs = lhs - rhs;
+    }
+}
 
 } // end namespace Opm
 

@@ -99,7 +99,6 @@ namespace {
         }
 
         typedef AutoDiffBlock<double>::V V;
-        typedef AutoDiffBlock<double>::M M;
 
         const V& gpot  = geo.gravityPotential();
         const V& trans = geo.transmissibility();
