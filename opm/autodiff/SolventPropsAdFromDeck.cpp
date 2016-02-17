@@ -21,11 +21,12 @@
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
+#include <opm/core/utility/extractPvtTableIndex.hpp>
+
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvdsTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
-
 
 namespace Opm
 {
@@ -381,7 +382,6 @@ ADB SolventPropsAdFromDeck::makeADBfromTables(const ADB& X_AD,
     }
     return ADB::function(std::move(x), std::move(jacs));
 }
-
 
 
 V SolventPropsAdFromDeck::solventSurfaceDensity(const Cells& cells) const {

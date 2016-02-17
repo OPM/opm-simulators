@@ -23,8 +23,7 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
-#include <opm/core/props/pvt/PvtDead.hpp>
-#include <opm/core/props/pvt/PvtInterface.hpp>
+#include <opm/core/utility/NonuniformTableLinear.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -139,7 +138,6 @@ public:
 
 
 private:
-
     /// Makes ADB from table values
     /// \param[in]  X               Array of n table lookup values.
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
