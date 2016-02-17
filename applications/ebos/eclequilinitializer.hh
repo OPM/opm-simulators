@@ -82,7 +82,7 @@ class EclEquilInitializer
 public:
     template <class MaterialLawManager>
     EclEquilInitializer(const Simulator& simulator,
-                        std::shared_ptr<MaterialLawManager> /*materialLawManager*/)
+                        std::shared_ptr<MaterialLawManager> materialLawManager)
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
@@ -90,6 +90,9 @@ public:
         const auto eclState = gridManager.eclState();
         const auto& equilGrid   = gridManager.equilGrid();
 
+        unsigned numElems = gridManager.grid().size(0);
+        unsigned numEquilElems = gridManager.equilGrid().size(0);
+        unsigned numCartesianElems = gridManager.cartesianSize();
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
         typedef Opm::ThreePhaseMaterialTraits<double,
                                               /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
@@ -98,22 +101,20 @@ public:
 
         // create a separate instance of the material law manager just because opm-core
         // only supports double as the type for scalars (but ebos may use float or quad)
-        unsigned numEquilElems = gridManager.equilGrid().size(0);
-        unsigned numCartesianElems = gridManager.cartesianSize();
-        std::vector<int> compressedToCartesianElemIdx(numEquilElems);
+        std::vector<int> compressedToCartesianEquilElemIdx(numEquilElems);
         for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx)
-            compressedToCartesianElemIdx[equilElemIdx] = gridManager.equilCartesianIndex(equilElemIdx);
+            compressedToCartesianEquilElemIdx[equilElemIdx] = gridManager.equilCartesianIndex(equilElemIdx);
 
-        auto materialLawManager =
+        auto equilMaterialLawManager =
             std::make_shared<Opm::EclMaterialLawManager<EquilTraits> >();
-        materialLawManager->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
+        equilMaterialLawManager->initFromDeck(deck, eclState, compressedToCartesianEquilElemIdx);
 
         // create the data structures which are used by initStateEquil()
         Opm::parameter::ParameterGroup tmpParam;
         Opm::BlackoilPropertiesFromDeck opmBlackoilProps(
             gridManager.deck(),
             gridManager.eclState(),
-            materialLawManager,
+            equilMaterialLawManager,
             Opm::UgGridHelpers::numCells(equilGrid),
             Opm::UgGridHelpers::globalCell(equilGrid),
             Opm::UgGridHelpers::cartDims(equilGrid),
@@ -207,6 +208,32 @@ public:
                 fluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgO);
                 fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);
             }
+        }
+
+        // deal with the capillary pressure modification due to SWATINIT. this is
+        // only necessary because, the fine equilibration code from opm-core requires
+        // its own grid and its own material law manager...
+        std::vector<int> cartesianToCompressedElemIdx(numCartesianElems, -1);
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            int cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            cartesianToCompressedElemIdx[cartElemIdx] = elemIdx;
+        }
+
+        for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
+            int cartElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
+            assert(cartElemIdx >= 0);
+            int elemIdx = cartesianToCompressedElemIdx[cartElemIdx];
+            if (elemIdx < 0)
+                // the element is present in the grid for used for equilibration but
+                // it isn't present in the one used for the simulation. the most
+                // probable reason for this is that the simulation grid was load
+                // balanced.
+                continue;
+
+            auto& scalingPoints = materialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+            const auto& equilScalingPoints = equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+
+            scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
         }
     }
 
