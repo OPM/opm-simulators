@@ -28,9 +28,6 @@
 #include <opm/core/simulator/ExplicitArraysFluidState.hpp>
 #include <opm/core/simulator/ExplicitArraysSatDerivativesFluidState.hpp>
 
-#include <opm/parser/eclipse/Utility/EndscaleWrapper.hpp>
-#include <opm/parser/eclipse/Utility/ScalecrsWrapper.hpp>
-
 #include <iostream>
 #include <map>
 
