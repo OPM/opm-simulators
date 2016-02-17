@@ -39,14 +39,6 @@ namespace Opm
 
         virtual void init(int number_of_cells, int number_of_faces, int num_phases);
 
-        /// Set the first saturation to either its min or max value in
-        /// the indicated cells. The second saturation value s2 is set
-        /// to (1.0 - s1) for each cell. Any further saturation values
-        /// are unchanged.
-        void setFirstSat(const std::vector<int>& cells,
-                         const Opm::BlackoilPropertiesInterface& props,
-                         ExtremalSat es);
-
         virtual bool equals(const SimulatorState& other,
                             double epsilon = 1e-8) const;
 

@@ -4,13 +4,6 @@
 
 namespace Opm {
 
-inline void
-TwophaseState::setFirstSat(const std::vector<int>& cells,
-                           const Opm::IncompPropertiesInterface& props,
-                           ExtremalSat es) {
-    SimulatorState::setFirstSat(cells, props, es);
-}
-
 inline bool
 TwophaseState::equals (const SimulatorState& other,
                        double epsilon) const {

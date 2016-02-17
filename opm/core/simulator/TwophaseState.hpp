@@ -30,10 +30,6 @@ namespace Opm
     class TwophaseState : public SimulatorState
     {
     public:
-        void setFirstSat(const std::vector<int>& cells,
-                         const Opm::IncompPropertiesInterface& props,
-                         ExtremalSat es);
-
         virtual bool equals (const SimulatorState& other,
                              double epsilon = 1e-8) const;
     };
