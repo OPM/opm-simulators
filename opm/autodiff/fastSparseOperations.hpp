@@ -194,50 +194,26 @@ equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
             return false;
         }
 
-        const Index nnz = lhs.nonZeros();
-
         // outer indices
         const Index* rhsOuter = rhs.outerIndexPtr();
         const Index* lhsOuter = lhs.outerIndexPtr();
+        for(Index i=0; i<=outerSize; ++i )
+        {
+            if( lhsOuter[ i ] != rhsOuter[ i ] ) {
+                return false ;
+            }
+        }
 
         // inner indices
         const Index* rhsInner = rhs.innerIndexPtr();
         const Index* lhsInner = lhs.innerIndexPtr();
 
-        bool equalOuter = true;
-        bool equalInner = true;
-        const Index size = std::min( outerSize+1, nnz );
-        for( Index i=0; i<size; ++i)
+        const Index nnz = lhs.nonZeros();
+        for( Index i=0; i<nnz; ++i)
         {
-            equalOuter &= (lhsOuter[ i ] == rhsOuter[ i ]);
-            equalInner &= (lhsInner[ i ] == rhsInner[ i ]);
-        }
-
-        if( ! equalOuter || ! equalInner ) {
-            return false ;
-        }
-
-        if( outerSize+1 < nnz )
-        {
-            for(Index i=outerSize+1; i<nnz; ++i)
-            {
-                if( lhsInner[ i ] != rhsInner[ i ] ) {
-                    return false;
-                }
+            if( lhsInner[ i ] != rhsInner[ i ] ) {
+                return false;
             }
-        }
-        else if( outerSize+1 > nnz )
-        {
-            for(Index o=nnz; o<=outerSize; ++o )
-            {
-                if( lhsOuter[ o ] != rhsOuter[ o ] ) {
-                    return false;
-                }
-            }
-        }
-        else
-        {
-            return equalOuter && equalInner;
         }
     }
 
