@@ -186,7 +186,7 @@ public:
             Scalar pcowAtSw = pc[oilPhaseIdx] - pc[waterPhaseIdx];
             if (pcowAtSw > 0.0) {
                 elemScaledEpsInfo.maxPcow *= pcow/pcowAtSw;
-                auto& elemEclEpsScalingPoints = getOilWaterScaledEpsPointsDrainage_(elemIdx);
+                auto& elemEclEpsScalingPoints = oilWaterScaledEpsPointsDrainage(elemIdx);
                 elemEclEpsScalingPoints.init(elemScaledEpsInfo, *oilWaterEclEpsConfig_, Opm::EclOilWaterSystem);
             }
         }
@@ -216,7 +216,7 @@ public:
         return materialLawParams_[elemIdx];
     }
 
-    const std::shared_ptr<MaterialLawParams>& materialLawParamsPointer(unsigned elemIdx) const
+    std::shared_ptr<const MaterialLawParams>& materialLawParamsPointer(unsigned elemIdx) const
     {
         assert(0 <= elemIdx && elemIdx < materialLawParams_.size());
         return materialLawParams_[elemIdx];
@@ -230,6 +230,34 @@ public:
 
         auto threePhaseParams = materialLawParams_[elemIdx];
         MaterialLaw::updateHysteresis(*threePhaseParams, fluidState);
+    }
+
+    EclEpsScalingPoints<Scalar>& oilWaterScaledEpsPointsDrainage(unsigned elemIdx)
+    {
+        auto& materialParams = *materialLawParams_[elemIdx];
+        switch (materialParams.approach()) {
+        case EclStone1Approach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclStone1Approach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
+
+        case EclStone2Approach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclStone2Approach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
+
+        case EclDefaultApproach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclDefaultApproach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
+
+        case EclTwoPhaseApproach: {
+            auto& realParams = materialParams.template getRealParams<Opm::EclTwoPhaseApproach>();
+            return realParams.oilWaterParams().drainageParams().scaledPoints();
+        }
+        default:
+            OPM_THROW(std::logic_error, "Enum value for material approach unknown!");
+        }
     }
 
     const Opm::EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(size_t elemIdx) const
@@ -858,34 +886,6 @@ private:
             realParams.finalize();
             break;
         }
-        }
-    }
-
-    EclEpsScalingPoints<Scalar>& getOilWaterScaledEpsPointsDrainage_(unsigned elemIdx)
-    {
-        auto& materialParams = *materialLawParams_[elemIdx];
-        switch (materialParams.approach()) {
-        case EclStone1Approach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclStone1Approach>();
-            return realParams.oilWaterParams().drainageParams().scaledPoints();
-        }
-
-        case EclStone2Approach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclStone2Approach>();
-            return realParams.oilWaterParams().drainageParams().scaledPoints();
-        }
-
-        case EclDefaultApproach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclDefaultApproach>();
-            return realParams.oilWaterParams().drainageParams().scaledPoints();
-        }
-
-        case EclTwoPhaseApproach: {
-            auto& realParams = materialParams.template getRealParams<Opm::EclTwoPhaseApproach>();
-            return realParams.oilWaterParams().drainageParams().scaledPoints();
-        }
-        default:
-            OPM_THROW(std::logic_error, "Enum value for material approach unknown!");
         }
     }
 
