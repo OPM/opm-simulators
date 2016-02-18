@@ -469,7 +469,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
         {
             OPM_THROW(std::runtime_error, "NNCs not yet supported for parallel runs. "
                       << UgGridHelpers::numFaces(grid) << " faces but " <<
-                      threshold_pressures.size()<<" pressure values");
+                      threshold_pressures.size()<<" threshold pressure values");
         }
         distributed_pressures.resize(UgGridHelpers::numFaces(grid));
         ThresholdPressureDataHandle press_handle(global_grid, grid,
