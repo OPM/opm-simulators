@@ -40,12 +40,84 @@ inline void distributeGridAndData( Grid& ,
                                    BlackoilPropsAdFromDeck& ,
                                    DerivedGeology&,
                                    std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>&,
+                                   std::vector<double>&,
                                    boost::any& ,
                                    const bool )
 {
 }
 
 #if HAVE_DUNE_CORNERPOINT && HAVE_MPI
+/// \brief a data handle to distribute the threshold pressures
+class ThresholdPressureDataHandle
+{
+public:
+    /// \brief type of the data we send
+    typedef double DataType;
+    /// \brief Constructor
+    /// \param sendGrid    The grid that the data is attached to when sending.
+    /// \param recvGrid    The grid that the data is attached to when receiving.
+    /// \param sendPressures The container where we will retrieve the values to be sent.
+    /// \param numFaces Number of faces of the distributed grid.
+    ThresholdPressureDataHandle(const Dune::CpGrid& sendGrid,
+                                const Dune::CpGrid& recvGrid,
+                                const std::vector<double>& sendPressures,
+                                std::vector<double>& recvPressures)
+        : sendGrid_(sendGrid), recvGrid_(recvGrid), sendPressures_(sendPressures),
+          recvPressures_(recvPressures)
+    {}
+
+    bool fixedsize(int /*dim*/, int /*codim*/)
+    {
+        return false;
+    }
+    template<class T>
+    std::size_t size(const T& e)
+    {
+        if ( T::codimension == 0)
+        {
+            return sendGrid_.numCellFaces(e.index());
+        }
+        else
+        {
+            OPM_THROW(std::logic_error, "Data handle can only be used for elements");
+        }
+    }
+    template<class B, class T>
+    void gather(B& buffer, const T& e)
+    {
+        assert( T::codimension == 0);
+        for ( int i=0; i< sendGrid_.numCellFaces(e.index()); ++i )
+        {
+            buffer.write(sendPressures_[sendGrid_.cellFace(e.index(), i)]);
+        }
+    }
+    template<class B, class T>
+    void scatter(B& buffer, const T& e, std::size_t /* size */)
+    {
+        assert( T::codimension == 0);
+        for ( int i=0; i< recvGrid_.numCellFaces(e.index()); ++i )
+        {
+            double val;
+            buffer.read(val);
+            recvPressures_[recvGrid_.cellFace(e.index(), i)]=val;
+        }
+    }
+    bool contains(int dim, int codim)
+    {
+        return dim==3 && codim==0;
+    }
+
+private:
+    /// \brief The grid that the data we send is associated with.
+    const Dune::CpGrid& sendGrid_;
+    /// \brief The grid that the data we receive is associated with.
+    const Dune::CpGrid& recvGrid_;
+    /// \brief The data to send.
+    const std::vector<double>& sendPressures_;
+    /// \brief The data to receive.
+    std::vector<double>& recvPressures_;
+};
+
 /// \brief a data handle to distribute Derived Geology
 class GeologyDataHandle
 {
@@ -250,7 +322,7 @@ public:
         // satOilMax might be non empty. In this case we will need to send it, too.
         if ( sendProps.satOilMax_.size()>0 )
         {
-            
+
             // satOilMax has to have the same size as the cellPvtRegionIdx_
             recvProps_.satOilMax_.resize(recvProps_.cellPvtRegionIdx_.size(),
                                          -std::numeric_limits<double>::max());
@@ -335,6 +407,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
                             BlackoilPropsAdFromDeck& properties,
                             DerivedGeology& geology,
                             std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>& material_law_manager,
+                            std::vector<double>& threshold_pressures,
                             boost::any& parallelInformation,
                             const bool useLocalPerm)
 {
@@ -387,11 +460,30 @@ void distributeGridAndData( Dune::CpGrid& grid,
                                  geology, distributed_geology);
     grid.scatterData(geo_handle);
 
+    std::vector<double> distributed_pressures;
+
+    if( !threshold_pressures.empty() ) // Might be empty if not specified
+    {
+        if( threshold_pressures.size() !=
+            static_cast<std::size_t>(UgGridHelpers::numFaces(global_grid)) )
+        {
+            OPM_THROW(std::runtime_error, "NNCs not yet supported for parallel runs. "
+                      << UgGridHelpers::numFaces(grid) << " faces but " <<
+                      threshold_pressures.size()<<" pressure values");
+        }
+        distributed_pressures.resize(UgGridHelpers::numFaces(grid));
+        ThresholdPressureDataHandle press_handle(global_grid, grid,
+                                                 threshold_pressures,
+                                                 distributed_pressures);
+        grid.scatterData(press_handle);
+    }
+
     // copy states
     properties           = distributed_props;
     geology              = distributed_geology;
     state                = distributed_state;
     material_law_manager = distributed_material_law_manager;
+    threshold_pressures   = distributed_pressures;
     extractParallelGridInformationToISTL(grid, parallelInformation);
 }
 #endif
