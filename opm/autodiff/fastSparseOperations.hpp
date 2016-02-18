@@ -245,7 +245,7 @@ fastSparseAdd(Lhs& lhs, const Rhs& rhs)
     else
     {
         // default Eigen operator+=
-        lhs = lhs + rhs;
+        lhs += rhs;
     }
 }
 
@@ -274,7 +274,7 @@ fastSparseSubstract(Lhs& lhs, const Rhs& rhs)
     else
     {
         // default Eigen operator-=
-        lhs = lhs - rhs;
+        lhs -= rhs;
     }
 }
 
