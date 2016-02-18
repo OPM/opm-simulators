@@ -60,17 +60,17 @@ public:
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
         const auto& pvtoTables = eclState->getTableManager()->getPvtoTables();
-        DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        const auto& densityKeyword = deck->getKeyword("DENSITY");
 
-        assert(pvtoTables.size() == densityKeyword->size());
+        assert(pvtoTables.size() == densityKeyword.size());
 
         size_t numRegions = pvtoTables.size();
         setNumRegions(numRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-            Scalar rhoRefO = densityKeyword->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
-            Scalar rhoRefG = densityKeyword->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
-            Scalar rhoRefW = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
+            Scalar rhoRefO = densityKeyword.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
+            Scalar rhoRefG = densityKeyword.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
+            Scalar rhoRefW = densityKeyword.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
 
             setReferenceDensities(regionIdx, rhoRefO, rhoRefG, rhoRefW);
         }

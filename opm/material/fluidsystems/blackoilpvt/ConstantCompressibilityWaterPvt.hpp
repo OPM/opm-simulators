@@ -56,31 +56,31 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr /*eclState*/)
     {
-        DeckKeywordConstPtr pvtwKeyword = deck->getKeyword("PVTW");
-        DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
+        const auto& pvtwKeyword = deck->getKeyword("PVTW");
+        const auto& densityKeyword = deck->getKeyword("DENSITY");
 
-        assert(pvtwKeyword->size() == densityKeyword->size());
+        assert(pvtwKeyword.size() == densityKeyword.size());
 
-        size_t numRegions = pvtwKeyword->size();
+        size_t numRegions = pvtwKeyword.size();
         setNumRegions(numRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
-            auto pvtwRecord = pvtwKeyword->getRecord(regionIdx);
-            auto densityRecord = densityKeyword->getRecord(regionIdx);
+            auto pvtwRecord = pvtwKeyword.getRecord(regionIdx);
+            auto densityRecord = densityKeyword.getRecord(regionIdx);
 
             waterReferenceDensity_[regionIdx] =
-                densityRecord->getItem("WATER")->getSIDouble(0);
+                densityRecord.getItem("WATER").getSIDouble(0);
 
             waterReferencePressure_[regionIdx] =
-                pvtwRecord->getItem("P_REF")->getSIDouble(0);
+                pvtwRecord.getItem("P_REF").getSIDouble(0);
             waterReferenceFormationVolumeFactor_[regionIdx] =
-                pvtwRecord->getItem("WATER_VOL_FACTOR")->getSIDouble(0);
+                pvtwRecord.getItem("WATER_VOL_FACTOR").getSIDouble(0);
             waterCompressibility_[regionIdx] =
-                pvtwRecord->getItem("WATER_COMPRESSIBILITY")->getSIDouble(0);
+                pvtwRecord.getItem("WATER_COMPRESSIBILITY").getSIDouble(0);
             waterViscosity_[regionIdx] =
-                pvtwRecord->getItem("WATER_VISCOSITY")->getSIDouble(0);
+                pvtwRecord.getItem("WATER_VISCOSITY").getSIDouble(0);
             waterViscosibility_[regionIdx] =
-                pvtwRecord->getItem("WATER_VISCOSIBILITY")->getSIDouble(0);
+                pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0);
         }
 
         initEnd();

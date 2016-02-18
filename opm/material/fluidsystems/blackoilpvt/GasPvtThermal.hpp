@@ -84,8 +84,7 @@ public:
         // viscosity
         if (enableThermalViscosity_) {
             const auto& gasvisctTables = tables->getGasvisctTables();
-            Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
-            int gasCompIdx = deck->getKeyword("GCOMPIDX")->getRecord(0)->getItem("GAS_COMPONENT_INDEX")->getInt(0) - 1;
+            int gasCompIdx = deck->getKeyword("GCOMPIDX").getRecord(0).getItem("GAS_COMPONENT_INDEX").get< int >(0) - 1;
             std::string gasvisctColumnName = "Viscosity"+std::to_string(static_cast<long long>(gasCompIdx));
 
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
@@ -99,7 +98,7 @@ public:
         // for the first EOS. (since EOS != PVT region.)
         refTemp_ = 0.0;
         if (enableThermalDensity_) {
-            refTemp_ = deck->getKeyword("TREF")->getRecord(0)->getItem("TEMPERATURE")->getSIDouble(0);
+            refTemp_ = deck->getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(0);
         }
     }
 #endif // HAVE_OPM_PARSER

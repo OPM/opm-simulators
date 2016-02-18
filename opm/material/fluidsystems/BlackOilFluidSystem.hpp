@@ -151,7 +151,7 @@ public:
     static void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
         auto densityKeyword = deck->getKeyword("DENSITY");
-        size_t numRegions = densityKeyword->size();
+        size_t numRegions = densityKeyword.size();
         initBegin(numRegions);
 
         setEnableDissolvedGas(deck->hasKeyword("DISGAS"));
@@ -159,10 +159,10 @@ public:
 
         // set the reference densities of all PVT regions
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            Opm::DeckRecordConstPtr densityRecord = densityKeyword->getRecord(regionIdx);
-            setReferenceDensities(densityRecord->getItem("OIL")->getSIDouble(0),
-                                  densityRecord->getItem("WATER")->getSIDouble(0),
-                                  densityRecord->getItem("GAS")->getSIDouble(0),
+            const auto& densityRecord = densityKeyword.getRecord(regionIdx);
+            setReferenceDensities(densityRecord.getItem("OIL").getSIDouble(0),
+                                  densityRecord.getItem("WATER").getSIDouble(0),
+                                  densityRecord.getItem("GAS").getSIDouble(0),
                                   regionIdx);
         }
 

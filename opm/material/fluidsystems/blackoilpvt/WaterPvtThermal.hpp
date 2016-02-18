@@ -82,33 +82,33 @@ public:
         setNumRegions(numRegions);
 
         if (enableThermalDensity_) {
-            DeckKeywordConstPtr watdentKeyword = deck->getKeyword("WATDENT");
+            const auto& watdentKeyword = deck->getKeyword("WATDENT");
 
-            assert(watdentKeyword->size() == numRegions);
+            assert(watdentKeyword.size() == numRegions);
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                Opm::DeckRecordConstPtr watdentRecord = watdentKeyword->getRecord(regionIdx);
+                const auto& watdentRecord = watdentKeyword.getRecord(regionIdx);
 
-                watdentRefTemp_[regionIdx] = watdentRecord->getItem("REFERENCE_TEMPERATURE")->getSIDouble(0);
-                watdentCT1_[regionIdx] = watdentRecord->getItem("EXPANSION_COEFF_LINEAR")->getSIDouble(0);
-                watdentCT2_[regionIdx] = watdentRecord->getItem("EXPANSION_COEFF_QUADRATIC")->getSIDouble(0);
+                watdentRefTemp_[regionIdx] = watdentRecord.getItem("REFERENCE_TEMPERATURE").getSIDouble(0);
+                watdentCT1_[regionIdx] = watdentRecord.getItem("EXPANSION_COEFF_LINEAR").getSIDouble(0);
+                watdentCT2_[regionIdx] = watdentRecord.getItem("EXPANSION_COEFF_QUADRATIC").getSIDouble(0);
             }
         }
 
         if (enableThermalViscosity_) {
-            Opm::DeckKeywordConstPtr viscrefKeyword = deck->getKeyword("VISCREF");
+            const auto& viscrefKeyword = deck->getKeyword("VISCREF");
 
             const auto& watvisctTables = tables->getWatvisctTables();
 
             assert(watvisctTables.size() == numRegions);
-            assert(viscrefKeyword->size() == numRegions);
+            assert(viscrefKeyword.size() == numRegions);
 
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
                 const auto& T = watvisctTables[regionIdx].getColumn("Temperature").vectorCopy();
                 const auto& mu = watvisctTables[regionIdx].getColumn("Viscosity").vectorCopy();
                 watvisctCurves_[regionIdx].setXYContainers(T, mu);
 
-                Opm::DeckRecordConstPtr viscrefRecord = viscrefKeyword->getRecord(regionIdx);
-                viscrefPress_[regionIdx] = viscrefRecord->getItem("REFERENCE_PRESSURE")->getSIDouble(0);
+                const auto& viscrefRecord = viscrefKeyword.getRecord(regionIdx);
+                viscrefPress_[regionIdx] = viscrefRecord.getItem("REFERENCE_PRESSURE").getSIDouble(0);
             }
         }
     }
