@@ -816,21 +816,21 @@ namespace Opm {
         Selector<double> zero_selectorSsg(ssg_eff.value(), Selector<double>::Zero);
         Selector<double> zero_selectorSn(sn_eff.value(), Selector<double>::Zero);
 
-        const ADB mu_s_pow = pow(mu_s,0.25);
-        const ADB mu_o_pow = pow(mu_o,0.25);
-        const ADB mu_g_pow = pow(mu_g,0.25);
+        const ADB mu_s_pow = pow(mu_s, 0.25);
+        const ADB mu_o_pow = pow(mu_o, 0.25);
+        const ADB mu_g_pow = pow(mu_g, 0.25);
 
         const ADB mu_mos = zero_selectorSos.select(mu_o + mu_s, mu_o * mu_s / pow( ( (so_eff / sos_eff) * mu_s_pow) + ( (ss_eff / sos_eff) * mu_o_pow) , 4.0));
         const ADB mu_msg = zero_selectorSsg.select(mu_g + mu_s , mu_g * mu_s / pow( ( (sg_eff / ssg_eff) * mu_s_pow) + ( (ss_eff / ssg_eff) * mu_g_pow) , 4.0));
         const ADB mu_m = zero_selectorSn.select(mu_s + mu_o + mu_g, mu_o * mu_s * mu_g / pow( ( (so_eff / sn_eff) * mu_s_pow *  mu_g_pow)
                                                        + ( (ss_eff / sn_eff) * mu_o_pow *  mu_g_pow) + ( (sg_eff / sn_eff) * mu_s_pow * mu_o_pow), 4.0));
         // Mixing parameter for viscosity
-        const double mix_param_mu = solvent_props_.mixingParameterViscosity();
+        const V mix_param_mu = solvent_props_.mixingParameterViscosity(cells_);
 
         // Update viscosities
-        viscosity[pu.phase_pos[ Oil ]] = pow(mu_o,1.0 - mix_param_mu) * pow(mu_mos,mix_param_mu);
-        viscosity[pu.phase_pos[ Gas ]] = pow(mu_g,1.0 - mix_param_mu) * pow(mu_msg,mix_param_mu);
-        viscosity[solvent_pos_] = pow(mu_s,1.0 - mix_param_mu) * pow(mu_m,mix_param_mu);
+        viscosity[pu.phase_pos[ Oil ]] = pow(mu_o,ones - mix_param_mu) * pow(mu_mos, mix_param_mu);
+        viscosity[pu.phase_pos[ Gas ]] = pow(mu_g,ones - mix_param_mu) * pow(mu_msg, mix_param_mu);
+        viscosity[solvent_pos_] = pow(mu_s,ones - mix_param_mu) * pow(mu_m, mix_param_mu);
 
         // Density
         ADB& rho_o = density[pu.phase_pos[ Oil ]];
@@ -838,13 +838,13 @@ namespace Opm {
         ADB& rho_s = density[solvent_pos_];
 
         // mixing parameter for density
-        const double mix_param_rho = solvent_props_.mixingParameterDensity();
+        const V mix_param_rho = solvent_props_.mixingParameterDensity(cells_);
 
         // compute effective viscosities for density calculations. These have to
         // be recomputed as a different mixing parameter may be used.
-        const ADB mu_o_eff = pow(mu_o,1.0 - mix_param_rho) * pow(mu_mos,mix_param_rho);
-        const ADB mu_g_eff = pow(mu_g,1.0 - mix_param_rho) * pow(mu_msg,mix_param_rho);
-        const ADB mu_s_eff = pow(mu_s,1.0 - mix_param_rho) * pow(mu_m,mix_param_rho);
+        const ADB mu_o_eff = pow(mu_o,ones - mix_param_rho) * pow(mu_mos, mix_param_rho);
+        const ADB mu_g_eff = pow(mu_g,ones - mix_param_rho) * pow(mu_msg, mix_param_rho);
+        const ADB mu_s_eff = pow(mu_s,ones - mix_param_rho) * pow(mu_m, mix_param_rho);
 
         const ADB sog_eff = so_eff + sg_eff;
         const ADB sof = so_eff / sog_eff;
@@ -852,9 +852,9 @@ namespace Opm {
 
         // Effective densities
         const ADB mu_sog_pow = mu_s_pow * ( (sgf * mu_o_pow) + (sof * mu_g_pow) );
-        const ADB mu_o_eff_pow = pow(mu_o_eff,0.25);
-        const ADB mu_g_eff_pow = pow(mu_g_eff,0.25);
-        const ADB mu_s_eff_pow = pow(mu_s_eff,0.25);
+        const ADB mu_o_eff_pow = pow(mu_o_eff, 0.25);
+        const ADB mu_g_eff_pow = pow(mu_g_eff, 0.25);
+        const ADB mu_s_eff_pow = pow(mu_s_eff, 0.25);
         const ADB sfraction_oe = (mu_o_pow * (mu_o_eff_pow - mu_s_pow)) / (mu_o_eff_pow * (mu_o_pow - mu_s_pow));
         const ADB sfraction_ge = (mu_g_pow * (mu_s_pow - mu_g_eff_pow)) / (mu_g_eff_pow * (mu_s_pow - mu_g_pow));
         const ADB sfraction_se = (mu_sog_pow - ( mu_o_pow * mu_g_pow * mu_s_pow / mu_s_eff_pow) ) / ( mu_sog_pow - (mu_o_pow * mu_g_pow));

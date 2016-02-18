@@ -128,10 +128,14 @@ public:
     V solventSurfaceDensity(const Cells& cells) const;
 
     /// Todd-Longstaff mixing parameter for viscosity calculation
-    double mixingParameterViscosity() const;
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// return                      Array of n mixing paramters for viscosity calculation
+    V mixingParameterViscosity(const Cells& cells) const;
 
     /// Todd-Longstaff mixing parameter for density calculation
-    double mixingParameterDensity() const;
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// return                      Array of n mixing paramters for density calculation
+    V mixingParameterDensity(const Cells& cells) const;
 
 
 private:
@@ -139,14 +143,30 @@ private:
     /// Makes ADB from table values
     /// \param[in]  X               Array of n table lookup values.
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
-    /// \param[in]  tables           Vector of tables, one for each PVT region.
+    /// \param[in]  tables          Vector of tables, one for each PVT region.
     /// \return                     Array of n solvent density values.
     ADB makeADBfromTables(const ADB& X,
                           const Cells& cells,
+                          const std::vector<int>& regionIdx,
                           const std::vector<NonuniformTableLinear<double>>& tables) const;
+
+    /// Helper function to create an array containing the
+    /// table index of for each compressed cell from an Eclipse deck.
+    /// \param[in] keyword      eclKeyword specifying region (SATNUM etc. )
+    /// \param[in] eclState     eclState from opm-parser
+    /// \param[in] numCompressed number of compressed cells
+    /// \param[in] compressedToCartesianCellIdx cartesianCellIdx for each cell in the grid
+    /// \param[out] tableIdx table index for each compressed cell
+    void extractTableIndex(const std::string& keyword,
+                           Opm::EclipseStateConstPtr eclState,
+                           size_t numCompressed,
+                           const int* compressedToCartesianCellIdx,
+                           std::vector<int>& tableIdx) const;
 
     // The PVT region which is to be used for each cell
     std::vector<int> cellPvtRegionIdx_;
+    std::vector<int> cellMiscRegionIdx_;
+    std::vector<int> cellSatNumRegionIdx_;
     std::vector<NonuniformTableLinear<double> > b_;
     std::vector<NonuniformTableLinear<double> > viscosity_;
     std::vector<NonuniformTableLinear<double> > inverseBmu_;
@@ -159,8 +179,8 @@ private:
     std::vector<NonuniformTableLinear<double> > misc_;
     std::vector<NonuniformTableLinear<double> > sorwmis_;
     std::vector<NonuniformTableLinear<double> > sgcwmis_;
-    double mix_param_viscosity_;
-    double mix_param_density_;
+    std::vector<double> mix_param_viscosity_;
+    std::vector<double> mix_param_density_;
 };
 
 } // namespace OPM
