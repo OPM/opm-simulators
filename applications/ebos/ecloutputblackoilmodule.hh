@@ -219,7 +219,7 @@ public:
             return; // this module only consideres ecl writers...
 
         typedef EclDeckUnits<TypeTag> DeckUnits;
-        const auto& deckUnits = this->simulator_.problem().deckUnits();
+        const DeckUnits& deckUnits = this->simulator_.problem().deckUnits();
 
         typename ParentType::BufferType bufferType = ParentType::ElementBuffer;
         if (pressuresOutput_()) {

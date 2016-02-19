@@ -163,7 +163,7 @@ public:
 protected:
     void createGrids_()
     {
-        std::vector<double> porv = this->eclState()->getDoubleGridProperty("PORV")->getData();
+        const std::vector<double> &porv = this->eclState()->getDoubleGridProperty("PORV")->getData();
 
         grid_ = new Dune::CpGrid();
         grid_->processEclipseFormat(this->eclState()->getEclipseGrid(),

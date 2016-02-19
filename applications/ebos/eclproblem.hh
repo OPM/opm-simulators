@@ -137,7 +137,7 @@ SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
 //
 // By default, stop it after the universe will probably have stopped
 // to exist. (the ECL problem will finish the simulation explicitly
-// after it simulated the last episode specified in the deck.)
+// after it simulated the last episode specified in the deck->)
 SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 
 // The default for the initial time step size of the simulation [s].
@@ -281,7 +281,7 @@ public:
         this->gravity_ = 0.0;
 
         // the "NOGRAV" keyword from Frontsim disables gravity...
-        const auto& deck = simulator.gridManager().deck();
+        Opm::DeckConstPtr deck = simulator.gridManager().deck();
         if (!deck->hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_[dim - 1] = 9.80665;
 
@@ -341,7 +341,7 @@ public:
     void beginEpisode(bool isOnRestart = false)
     {
         // Proceed to the next report step
-        Simulator &simulator = this->simulator();
+        Simulator& simulator = this->simulator();
         Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
         Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
 
@@ -435,7 +435,7 @@ public:
     void endEpisode()
     {
         auto& simulator = this->simulator();
-        const auto& eclState = simulator.gridManager().eclState();
+        Opm::EclipseStateConstPtr eclState = simulator.gridManager().eclState();
         int episodeIdx = simulator.episodeIndex();
 
         Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
@@ -613,7 +613,7 @@ public:
         const auto& gridManager = this->simulator().gridManager();
 
         unsigned cartesianDofIdx = gridManager.cartesianIndex(elemIdx);
-        return deck->getKeyword("PVTNUM")->getIntData()[cartesianDofIdx] - 1;
+        return deck->getKeyword("PVTNUM").getIntData()[cartesianDofIdx] - 1;
     }
 
     /*!
@@ -717,8 +717,8 @@ private:
 
     void readRockParameters_()
     {
-        auto deck = this->simulator().gridManager().deck();
-        auto eclState = this->simulator().gridManager().eclState();
+        Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
+        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
         const auto& gridManager = this->simulator().gridManager();
 
         // the ROCK keyword has not been specified, so we don't need
@@ -726,14 +726,14 @@ private:
         if (!deck->hasKeyword("ROCK"))
             return;
 
-        const auto rockKeyword = deck->getKeyword("ROCK");
-        rockParams_.resize(rockKeyword->size());
-        for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword->size(); ++ rockRecordIdx) {
-            const auto rockRecord = rockKeyword->getRecord(rockRecordIdx);
+        const auto& rockKeyword = deck->getKeyword("ROCK");
+        rockParams_.resize(rockKeyword.size());
+        for (size_t rockRecordIdx = 0; rockRecordIdx < rockKeyword.size(); ++ rockRecordIdx) {
+            const auto& rockRecord = rockKeyword.getRecord(rockRecordIdx);
             rockParams_[rockRecordIdx].referencePressure =
-                rockRecord->getItem("PREF")->getSIDouble(0);
+                rockRecord.getItem("PREF").getSIDouble(0);
             rockParams_[rockRecordIdx].compressibility =
-                rockRecord->getItem("COMPRESSIBILITY")->getSIDouble(0);
+                rockRecord.getItem("COMPRESSIBILITY").getSIDouble(0);
         }
 
         // PVTNUM has not been specified, so everything is in the first region and we
@@ -755,9 +755,9 @@ private:
 
     void readMaterialParameters_()
     {
-        const auto &gridManager = this->simulator().gridManager();
-        auto deck = gridManager.deck();
-        auto eclState = gridManager.eclState();
+        const auto& gridManager = this->simulator().gridManager();
+        Opm::DeckConstPtr deck = gridManager.deck();
+        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
 
         size_t numDof = this->model().numGridDof();
 
@@ -767,7 +767,7 @@ private:
         ////////////////////////////////
         // permeability
 
-        // read the intrinsic permeabilities from the eclState. Note that all arrays
+        // read the intrinsic permeabilities from the eclState-> Note that all arrays
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // dune-cornerpoint grid object might remove a few elements...
         if (eclState->hasDoubleGridProperty("PERMX")) {
@@ -864,16 +864,16 @@ private:
 
     void initFluidSystem_()
     {
-        const auto deck = this->simulator().gridManager().deck();
-        const auto eclState = this->simulator().gridManager().eclState();
+        Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
+        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
 
         FluidSystem::initFromDeck(deck, eclState);
    }
 
     void readInitialCondition_()
     {
-        const auto &gridManager = this->simulator().gridManager();
-        const auto deck = gridManager.deck();
+        const auto& gridManager = this->simulator().gridManager();
+        Opm::DeckConstPtr deck = gridManager.deck();
 
         if (!deck->hasKeyword("EQUIL"))
             readExplicitInitialCondition_();
@@ -906,9 +906,9 @@ private:
 
     void readExplicitInitialCondition_()
     {
-        const auto &gridManager = this->simulator().gridManager();
-        const auto deck = gridManager.deck();
-        const auto eclState = gridManager.eclState();
+        const auto& gridManager = this->simulator().gridManager();
+        Opm::DeckConstPtr deck = gridManager.deck();
+        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
 
         // since the values specified in the deck do not need to be consistent, we use an
         // initial condition that conserves the total mass specified by these values.
@@ -941,24 +941,24 @@ private:
         initialFluidStates_.resize(numDof);
 
         const std::vector<double> &waterSaturationData =
-            deck->getKeyword("SWAT")->getSIDoubleData();
+            deck->getKeyword("SWAT").getSIDoubleData();
         const std::vector<double> &gasSaturationData =
-            deck->getKeyword("SGAS")->getSIDoubleData();
+            deck->getKeyword("SGAS").getSIDoubleData();
         const std::vector<double> &pressureData =
-            deck->getKeyword("PRESSURE")->getSIDoubleData();
+            deck->getKeyword("PRESSURE").getSIDoubleData();
         const std::vector<double> *rsData = 0;
         if (enableDisgas)
-            rsData = &deck->getKeyword("RS")->getSIDoubleData();
+            rsData = &deck->getKeyword("RS").getSIDoubleData();
         const std::vector<double> *rvData = 0;
         if (enableVapoil)
-            rvData = &deck->getKeyword("RV")->getSIDoubleData();
+            rvData = &deck->getKeyword("RV").getSIDoubleData();
         // initial reservoir temperature
         const std::vector<double> &tempiData =
             eclState->getDoubleGridProperty("TEMPI")->getData();
 
         // make sure that the size of the data arrays is correct
 #ifndef NDEBUG
-        const auto &cartSize = this->simulator().gridManager().cartesianDimensions();
+        const auto& cartSize = this->simulator().gridManager().cartesianDimensions();
         size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
         assert(waterSaturationData.size() == numCartesianCells);
         assert(gasSaturationData.size() == numCartesianCells);
@@ -1088,7 +1088,7 @@ private:
         ElementContext elemCtx(this->simulator());
         const auto& gridManager = this->simulator().gridManager();
         auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
-        const auto &elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+        const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
             if (elem.partitionType() != Dune::InteriorEntity)

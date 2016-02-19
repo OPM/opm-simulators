@@ -158,7 +158,7 @@ public:
 protected:
     void createGrids_()
     {
-        std::vector<double> porv = this->eclState()->getDoubleGridProperty("PORV")->getData();
+        const std::vector<double>& porv = this->eclState()->getDoubleGridProperty("PORV")->getData();
 
         // we use separate grid objects: one for the calculation of the initial condition
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code

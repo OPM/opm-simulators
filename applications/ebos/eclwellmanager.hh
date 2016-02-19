@@ -91,7 +91,7 @@ public:
      */
     void init(Opm::EclipseStateConstPtr eclState)
     {
-        const auto &deckSchedule = eclState->getSchedule();
+        Opm::ScheduleConstPtr deckSchedule = eclState->getSchedule();
 
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx)
@@ -121,7 +121,7 @@ public:
     {
         unsigned episodeIdx = simulator_.episodeIndex();
 
-        const auto &deckSchedule = eclState->getSchedule();
+        Opm::ScheduleConstPtr deckSchedule = eclState->getSchedule();
         WellCompletionsMap wellCompMap;
         computeWellCompletionsMap_(episodeIdx, wellCompMap);
 
@@ -537,7 +537,7 @@ public:
     template <class Restarter>
     void serialize(Restarter &res)
     {
-        /* do nothing: Everything which we need here is provided by the deck... */
+        /* do nothing: Everything which we need here is provided by the deck->.. */
     }
 
     /*!
@@ -822,7 +822,7 @@ protected:
                 {}
 
                 // overwrite the automatically computed effective
-                // permeability by the one specified in the deck. Note: this
+                // permeability by the one specified in the deck-> Note: this
                 // is not implemented by opm-parser yet...
                 /*
                   Scalar Kh = completion->getEffectivePermeability();
@@ -831,7 +831,7 @@ protected:
                 */
 
                 // overwrite the automatically computed connection
-                // transmissibilty factor by the one specified in the deck.
+                // transmissibilty factor by the one specified in the deck->
                 const auto& ctf = completion->getConnectionTransmissibilityFactorAsValueObject();
                 if (ctf.hasValue() && ctf.getValue() > 0.0)
                     eclWell->setConnectionTransmissibilityFactor(elemCtx, dofIdx, ctf.getValue());

@@ -157,7 +157,7 @@ public:
      * \brief Return a pointer to the internalized schedule of the ECL deck
      */
     Opm::ScheduleConstPtr schedule() const
-    { return eclState_->getSchedule(); }
+    { return eclState()->getSchedule(); }
 
     /*!
      * \brief Return a pointer to the EclipseGrid object
@@ -167,7 +167,7 @@ public:
      * to write EGRID files (which tends to be difficult with a plain Dune::CpGrid)
      */
     Opm::EclipseGridConstPtr eclGrid() const
-    { return eclState_->getEclipseGrid(); }
+    { return eclState()->getEclipseGrid(); }
 
     /*!
      * \brief Returns the name of the case.
