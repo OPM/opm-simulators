@@ -1051,10 +1051,10 @@ VFPPROD \n\
     deck = parser->parseString(table_str, parse_mode);
 
     BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
-    BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 1);
+    BOOST_CHECK_EQUAL(deck->count("VFPPROD"), 1);
 
     Opm::VFPProdTable table;
-    table.init(deck->getKeyword("VFPPROD", 0), units);
+    table.init(deck->getKeyword("VFPPROD", 0), *units);
 
     Opm::VFPProdProperties properties(&table);
 
@@ -1112,13 +1112,13 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     boost::filesystem::path file("VFPPROD2");
 
     deck = parser->parseFile(file.string(), parse_mode);
-    Opm::checkDeck(deck);
+    Opm::checkDeck(deck, parser);
 
     BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
-    BOOST_CHECK_EQUAL(deck->numKeywords("VFPPROD"), 1);
+    BOOST_CHECK_EQUAL(deck->count("VFPPROD"), 1);
 
     Opm::VFPProdTable table;
-    table.init(deck->getKeyword("VFPPROD", 0), units);
+    table.init(deck->getKeyword("VFPPROD", 0), *units);
 
     Opm::VFPProdProperties properties(&table);
 

@@ -155,7 +155,7 @@ try
     std::shared_ptr<EclipseState> eclipseState;
     try {
         deck = parser->parseFile(deck_filename , parseMode);
-        Opm::checkDeck(deck);
+        Opm::checkDeck(deck, parser);
         eclipseState.reset(new Opm::EclipseState(deck , parseMode));
     }
     catch (const std::invalid_argument& e) {

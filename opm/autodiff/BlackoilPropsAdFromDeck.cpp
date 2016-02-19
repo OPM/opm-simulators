@@ -177,31 +177,31 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         waterPvt_->initFromDeck(deck, eclState);
 
         // Surface densities. Accounting for different orders in eclipse and our code.
-        Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("DENSITY");
-        int numRegions = densityKeyword->size();
+        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        int numRegions = densityKeyword.size();
         auto tables = eclState->getTableManager();
 
         surfaceDensity_.resize(numRegions);
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
             if (phase_usage_.phase_used[Liquid]) {
                 surfaceDensity_[regionIdx][phase_usage_.phase_pos[Liquid]]
-                    = densityKeyword->getRecord(regionIdx)->getItem("OIL")->getSIDouble(0);
+                    = densityKeyword.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
             }
             if (phase_usage_.phase_used[Aqua]) {
                 surfaceDensity_[regionIdx][phase_usage_.phase_pos[Aqua]]
-                    = densityKeyword->getRecord(regionIdx)->getItem("WATER")->getSIDouble(0);
+                    = densityKeyword.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
             }
             if (phase_usage_.phase_used[Vapour]) {
                 surfaceDensity_[regionIdx][phase_usage_.phase_pos[Vapour]]
-                    = densityKeyword->getRecord(regionIdx)->getItem("GAS")->getSIDouble(0);
+                    = densityKeyword.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
             }
         }
 
         // Oil vaporization controls (kw VAPPARS)
         vap1_ = vap2_ = 0.0;
         if (deck->hasKeyword("VAPPARS") && deck->hasKeyword("VAPOIL") && deck->hasKeyword("DISGAS")) {
-            vap1_ = deck->getKeyword("VAPPARS")->getRecord(0)->getItem(0)->getRawDouble(0);
-            vap2_ = deck->getKeyword("VAPPARS")->getRecord(0)->getItem(1)->getRawDouble(0);
+            vap1_ = deck->getKeyword("VAPPARS").getRecord(0).getItem(0).get< double >(0);
+            vap2_ = deck->getKeyword("VAPPARS").getRecord(0).getItem(1).get< double >(0);
             satOilMax_.resize(number_of_cells, 0.0);
         } else if (deck->hasKeyword("VAPPARS")) {
             OPM_THROW(std::runtime_error, "Input has VAPPARS, but missing VAPOIL and/or DISGAS\n");

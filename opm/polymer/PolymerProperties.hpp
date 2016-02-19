@@ -132,13 +132,13 @@ namespace Opm
             // We assume NTMISC=1
             auto tables = eclipseState->getTableManager();
             const auto& plymaxTable = tables->getPlymaxTables().getTable<PlymaxTable>(0);
-            const auto plmixparRecord = deck->getKeyword("PLMIXPAR")->getRecord(0);
+            const auto& plmixparRecord = deck->getKeyword("PLMIXPAR").getRecord(0);
 
             // We also assume that each table has exactly one row...
             assert(plymaxTable.numRows() == 1);
 
             c_max_ = plymaxTable.getPolymerConcentrationColumn()[0];
-            mix_param_ = plmixparRecord->getItem("TODD_LONGSTAFF")->getSIDouble(0);
+            mix_param_ = plmixparRecord.getItem("TODD_LONGSTAFF").getSIDouble(0);
 
             // We assume NTSFUN=1
             const auto& plyrockTable = tables->getPlyrockTables().getTable<PlyrockTable>(0);
@@ -176,12 +176,12 @@ namespace Opm
                 shear_vrf_vals_ = plyshlogTable.getShearMultiplierColumn().vectorCopy( );
 
                 // do the unit version here for the water_vel_vals_
-                Opm::UnitSystem unitSystem = *deck->getActiveUnitSystem();
+                Opm::UnitSystem unitSystem = deck->getActiveUnitSystem();
                 double siFactor;
                 if (has_shrate_) {
                     siFactor = unitSystem.parse("1/Time")->getSIScaling();
-                    DeckKeywordConstPtr shrateKeyword = deck->getKeyword("SHRATE");
-                    std::vector<double> shrate_readin = shrateKeyword->getSIDoubleData();
+                    const auto& shrateKeyword = deck->getKeyword("SHRATE");
+                    std::vector<double> shrate_readin = shrateKeyword.getSIDoubleData();
                     if (shrate_readin.size() == 1) {
                         shrate_ = shrate_readin[0];
                     } else if (shrate_readin.size() == 0) {

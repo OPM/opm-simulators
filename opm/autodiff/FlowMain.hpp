@@ -353,7 +353,7 @@ namespace Opm
                 std::string deck_filename = param_.get<std::string>("deck_filename");
                 ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
                 deck_ = parser->parseFile(deck_filename, parseMode);
-                checkDeck(deck_);
+                checkDeck(deck_, parser);
                 eclipse_state_.reset(new EclipseState(deck_, parseMode));
             }
             catch (const std::invalid_argument& e) {

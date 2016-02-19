@@ -48,12 +48,12 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
         // surface densities
         if (deck->hasKeyword("SDENSITY")) {
-            Opm::DeckKeywordConstPtr densityKeyword = deck->getKeyword("SDENSITY");
-            int numRegions = densityKeyword->size();
+            const auto& densityKeyword = deck->getKeyword("SDENSITY");
+            int numRegions = densityKeyword.size();
             solvent_surface_densities_.resize(numRegions);
             for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
                 solvent_surface_densities_[regionIdx]
-                        = densityKeyword->getRecord(regionIdx)->getItem("SOLVENT_DENSITY")->getSIDouble(0);
+                        = densityKeyword.getRecord(regionIdx).getItem("SOLVENT_DENSITY").getSIDouble(0);
             }
         } else {
             OPM_THROW(std::runtime_error, "SDENSITY must be specified in SOLVENT runs\n");
@@ -232,16 +232,16 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             }
 
             if (deck->hasKeyword("TLMIXPAR")) {
-                const int numRegions = deck->getKeyword("TLMIXPAR")->size();
+                const int numRegions = deck->getKeyword("TLMIXPAR").size();
 
                 // resize the attributes of the object
                 mix_param_viscosity_.resize(numRegions);
                 mix_param_density_.resize(numRegions);
                 for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                    const auto& tlmixparRecord = deck->getKeyword("TLMIXPAR")->getRecord(regionIdx);
-                    const auto& mix_params_viscosity = tlmixparRecord->getItem("TL_VISCOSITY_PARAMETER")->getSIDoubleData();
+                    const auto& tlmixparRecord = deck->getKeyword("TLMIXPAR").getRecord(regionIdx);
+                    const auto& mix_params_viscosity = tlmixparRecord.getItem("TL_VISCOSITY_PARAMETER").getSIDoubleData();
                     mix_param_viscosity_[regionIdx] = mix_params_viscosity[0];
-                    const auto& mix_params_density = tlmixparRecord->getItem("TL_DENSITY_PARAMETER")->getSIDoubleData();
+                    const auto& mix_params_density = tlmixparRecord.getItem("TL_DENSITY_PARAMETER").getSIDoubleData();
                     const int numDensityItems = mix_params_density.size();
                     if (numDensityItems == 0) {
                         mix_param_density_[regionIdx] = mix_param_viscosity_[regionIdx];
