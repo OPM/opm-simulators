@@ -511,8 +511,10 @@ namespace Opm
             // If there are more than one processors involved, we now repartition the grid
             // and initilialize new properties and states for it.
             if (must_distribute_) {
-                distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_, state_, *fluidprops_, *geoprops_,
-                                      material_law_manager_, parallel_information_, use_local_perm_);
+                distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
+                                      state_, *fluidprops_, *geoprops_,
+                                      material_law_manager_, threshold_pressures_,
+                                      parallel_information_, use_local_perm_);
             }
         }
 
