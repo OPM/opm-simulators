@@ -113,7 +113,7 @@ private:
                                    const std::string& properyName)
     {
         (*data) = 0;
-        if (eclState->hasDoubleGridProperty(properyName))
+        if (eclState->hasDeckDoubleGridProperty(properyName))
             (*data) = &eclState->getDoubleGridProperty(properyName)->getData();
     }
 #endif
