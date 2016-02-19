@@ -738,7 +738,7 @@ private:
 
         // PVTNUM has not been specified, so everything is in the first region and we
         // don't need to care...
-        if (!eclState->hasIntGridProperty("PVTNUM"))
+        if (!eclState->hasDeckIntGridProperty("PVTNUM"))
             return;
 
         const std::vector<int>& pvtnumData =
@@ -770,14 +770,14 @@ private:
         // read the intrinsic permeabilities from the eclState-> Note that all arrays
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // dune-cornerpoint grid object might remove a few elements...
-        if (eclState->hasDoubleGridProperty("PERMX")) {
+        if (eclState->hasDeckDoubleGridProperty("PERMX")) {
             const std::vector<double> &permxData =
                 eclState->getDoubleGridProperty("PERMX")->getData();
             std::vector<double> permyData(permxData);
-            if (eclState->hasDoubleGridProperty("PERMY"))
+            if (eclState->hasDeckDoubleGridProperty("PERMY"))
                 permyData = eclState->getDoubleGridProperty("PERMY")->getData();
             std::vector<double> permzData(permxData);
-            if (eclState->hasDoubleGridProperty("PERMZ"))
+            if (eclState->hasDeckDoubleGridProperty("PERMZ"))
                 permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
@@ -799,12 +799,12 @@ private:
 
         ////////////////////////////////
         // compute the porosity
-        if (!eclState->hasDoubleGridProperty("PORO") && !eclState->hasDoubleGridProperty("PORV"))
+        if (!eclState->hasDeckDoubleGridProperty("PORO") && !eclState->hasDeckDoubleGridProperty("PORV"))
             OPM_THROW(std::runtime_error,
                       "Can't read the porosity from the ECL state object. "
                       "(The PORO and PORV keywords are missing)");
 
-        if (eclState->hasDoubleGridProperty("PORO")) {
+        if (eclState->hasDeckDoubleGridProperty("PORO")) {
             const std::vector<double> &poroData =
                 eclState->getDoubleGridProperty("PORO")->getData();
 
@@ -815,7 +815,7 @@ private:
         }
 
         // apply the NTG keyword to the porosity
-        if (eclState->hasDoubleGridProperty("NTG")) {
+        if (eclState->hasDeckDoubleGridProperty("NTG")) {
             const std::vector<double> &ntgData =
                 eclState->getDoubleGridProperty("NTG")->getData();
 
@@ -824,7 +824,7 @@ private:
         }
 
         // apply the MULTPV keyword to the porosity
-        if (eclState->hasDoubleGridProperty("MULTPV")) {
+        if (eclState->hasDeckDoubleGridProperty("MULTPV")) {
             const std::vector<double> &multpvData =
                 eclState->getDoubleGridProperty("MULTPV")->getData();
 
@@ -834,7 +834,7 @@ private:
 
         // overwrite the porosity using the PORV keyword for the elements for which PORV
         // is defined...
-        if (eclState->hasDoubleGridProperty("PORV")) {
+        if (eclState->hasDeckDoubleGridProperty("PORV")) {
             const std::vector<double> &porvData =
                 eclState->getDoubleGridProperty("PORV")->getData();
 
