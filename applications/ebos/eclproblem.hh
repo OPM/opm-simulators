@@ -834,13 +834,7 @@ private:
 
         // overwrite the porosity using the PORV keyword for the elements for which PORV
         // is defined...
-        //
-        // HACK: the PORV keyword is currently always present because the grid managers
-        // for ebos all need to "drive-by create" it to initialize the grid structures :(
-        // (WTF: why is eclState->getDoubleGridProperty() marked as 'const' even though
-        // it alters the external semantics of the object?) since the FLOW simulator from
-        // opm-autodiff ignored it so far, we do so as well.
-        if (false && eclState->hasDoubleGridProperty("PORV")) {
+        if (eclState->hasDoubleGridProperty("PORV")) {
             const std::vector<double> &porvData =
                 eclState->getDoubleGridProperty("PORV")->getData();
 
