@@ -127,9 +127,9 @@ namespace Opm
             asImpl().setupOutput();
             asImpl().readDeckInput();
             asImpl().setupGridAndProps();
+            asImpl().runDiagnostics();
             asImpl().setupState();
             asImpl().distributeData();
-            asImpl().runDiagnostics();
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
             asImpl().createSimulator();
