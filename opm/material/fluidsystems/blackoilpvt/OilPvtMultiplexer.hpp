@@ -122,6 +122,10 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
+        bool enableOil = deck->hasKeyword("OIL");
+        if (!enableOil)
+            return;
+
         if (enableThermal
             && (deck->hasKeyword("THERMEX1")
                 || deck->hasKeyword("VISCREF")))
