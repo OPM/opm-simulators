@@ -55,7 +55,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
     const PhaseUsage& pu = props.phaseUsage();
 
-    std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
+    std::shared_ptr<const GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
     const auto& eqlnumData = eqlnum->getData();
 
     const int numPhases = initialState.numPhases();
@@ -324,7 +324,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
         std::vector<double> thpres_vals;
         if (simulationConfig->hasThresholdPressure()) {
             std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
-            std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
+            std::shared_ptr<const GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
             const auto& eqlnumData = eqlnum->getData();
 
             // Set threshold pressure values for each cell face.
@@ -382,7 +382,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
         std::vector<double> thpres_vals;
         if (simulationConfig->hasThresholdPressure()) {
             std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
-            std::shared_ptr<GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
+            std::shared_ptr<const GridProperty<int>> eqlnum = eclipseState->getIntGridProperty("EQLNUM");
             auto eqlnumData = eqlnum->getData();
 
             // Set values for each NNC
