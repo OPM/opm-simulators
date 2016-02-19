@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(CompareRestartFileResults)
     const std::string& filename1 = boost::unit_test::framework::master_test_suite().argv[1];
     const std::string& filename2 = boost::unit_test::framework::master_test_suite().argv[2];
     int last_report_step = std::atoi(boost::unit_test::framework::master_test_suite().argv[3]);
-    const double abs_diff = 1e-3;
+    const double abs_diff = 1e-2;
     std::map<std::string, double> relative_diffs;
     relative_diffs["SWAT"]     = 0.0005;  //0.05 %
     relative_diffs["SGAS"]     = 0.0005;
