@@ -40,14 +40,14 @@ BOOST_AUTO_TEST_CASE(CompareRestartFileResults)
     const std::string& filename1 = boost::unit_test::framework::master_test_suite().argv[1];
     const std::string& filename2 = boost::unit_test::framework::master_test_suite().argv[2];
     int last_report_step = std::atoi(boost::unit_test::framework::master_test_suite().argv[3]);
-
+    const double abs_diff = 1e-5;
     std::map<std::string, double> relative_diffs;
-    relative_diffs["SWAT"]     = 0.000200;  //0.02 %
-    relative_diffs["SGAS"]     = 0.000200;
+    relative_diffs["SWAT"]     = 0.0005;  //0.05 %
+    relative_diffs["SGAS"]     = 0.0005;
 
-    relative_diffs["RS"]       = 0.000010;  //0.001 %
-    relative_diffs["RV"]       = 0.000010;
-    relative_diffs["PRESSURE"] = 0.000010;
+    relative_diffs["RS"]       = 0.0001;  //0.01 %
+    relative_diffs["RV"]       = 0.0001;
+    relative_diffs["PRESSURE"] = 0.0001;
 
     ecl_file_type*  file1 =  ecl_file_open_rstblock_report_step( filename1.c_str() , last_report_step, 1);
     ecl_file_type*  file2 =  ecl_file_open_rstblock_report_step( filename2.c_str() , last_report_step, 1);
@@ -56,11 +56,16 @@ BOOST_AUTO_TEST_CASE(CompareRestartFileResults)
         ecl_kw_type * kw_1 =  ecl_file_iget_named_kw( file1 , key, 0);
         ecl_kw_type * kw_2 =  ecl_file_iget_named_kw( file2 , key, 0);
 
-        bool numeric_equal = ecl_kw_numeric_equal(kw_1, kw_2, relative_diffs[key]);
+        bool numeric_equal = ecl_kw_numeric_equal(kw_1, kw_2, abs_diff , relative_diffs[key]);
         if (numeric_equal) {
             std::cout << " Restart results for " << key << " compared ok" << std::endl;
         } else {
-            std::cout << " Restart results for " << key << " not ok, failing test " << std::endl;
+            float max_value,min_value;
+            ecl_kw_inplace_sub(kw_1, kw_2);
+            ecl_kw_max_min(kw_1,&max_value, &min_value);
+            std::cout <<  " Restart results for " << key << " is not ok, failing test: " <<  std::endl
+                      <<  " Relative difference allowed is " << relative_diffs[key] << std::endl
+                      <<  " Actual absolute difference minimum value, maximum value is: " <<  min_value << ", " << max_value << std::endl;
         }
 
         BOOST_CHECK_EQUAL(numeric_equal, true);
