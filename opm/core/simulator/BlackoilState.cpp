@@ -40,19 +40,19 @@ BlackoilState::equals(const SimulatorState& other,
     const BlackoilState* that = dynamic_cast <const BlackoilState*> (&other);
     bool equal = that != 0;
     equal = equal && SimulatorState::equals (other, epsilon);
-    equal = equal && cmp::double_vector_equal(this->surfacevol(),
-                                              that->surfacevol(),
-                                              cmp::default_abs_epsilon,
-                                              epsilon);
+    equal = equal && cmp::vector_equal(this->surfacevol(),
+				       that->surfacevol(),
+				       cmp::default_abs_epsilon,
+				       epsilon);
 
-    equal = equal && cmp::double_vector_equal(this->gasoilratio(),
-                                              that->gasoilratio(),
-                                              cmp::default_abs_epsilon,
-                                              epsilon);
+    equal = equal && cmp::vector_equal(this->gasoilratio(),
+				       that->gasoilratio(),
+				       cmp::default_abs_epsilon,
+				       epsilon);
 
-    equal = equal && cmp::double_vector_equal(this->rv(),
-                                              that->rv(),
-                                              cmp::default_abs_epsilon,
-                                              epsilon);
+    equal = equal && cmp::vector_equal(this->rv(),
+				       that->rv(),
+				       cmp::default_abs_epsilon,
+				       epsilon);
     return equal;
 }
