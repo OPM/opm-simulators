@@ -106,7 +106,7 @@ namespace Opm {
         void readContainerImpl( std::istream& stream, Container& container, const bool adjustSize )
         {
             typedef typename Container :: value_type T;
-            size_t dataSize = 0;
+            unsigned int dataSize = 0;
             readValue( stream, dataSize );
             if( adjustSize && dataSize > 0 ) {
                 resizeContainer( container, dataSize/sizeof(T) );
@@ -115,7 +115,7 @@ namespace Opm {
             if( dataSize != container.size() * sizeof( T ) )
             {
                 OPM_THROW(std::logic_error,
-                        "Size of stored data and simulation data does not match"
+                        "Size of stored data and simulation data does not match "
                         << dataSize << " " << (container.size() * sizeof( T )) );
             }
             if( dataSize > 0 ) {
