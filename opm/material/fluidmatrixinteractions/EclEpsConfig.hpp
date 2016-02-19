@@ -178,28 +178,28 @@ public:
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem)
             enablePcScaling_ =
-                eclState->hasDoubleGridProperty("PCW")
-                || eclState->hasDoubleGridProperty("SWATINIT");
+                eclState->hasDeckDoubleGridProperty("PCW")
+                || eclState->hasDeckDoubleGridProperty("SWATINIT");
 
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enablePcScaling_ = eclState->hasDoubleGridProperty("PCG");
+            enablePcScaling_ = eclState->hasDeckDoubleGridProperty("PCG");
         }
 
         // check if we are supposed to scale the Y axis of the wetting phase relperm
         if (twoPhaseSystemType == EclOilWaterSystem)
-            enableKrwScaling_ = eclState->hasDoubleGridProperty("KRW");
+            enableKrwScaling_ = eclState->hasDeckDoubleGridProperty("KRW");
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrwScaling_ = eclState->hasDoubleGridProperty("KRO");
+            enableKrwScaling_ = eclState->hasDeckDoubleGridProperty("KRO");
         }
 
         // check if we are supposed to scale the Y axis of the non-wetting phase relperm
         if (twoPhaseSystemType == EclOilWaterSystem)
-            enableKrnScaling_ = eclState->hasDoubleGridProperty("KRO");
+            enableKrnScaling_ = eclState->hasDeckDoubleGridProperty("KRO");
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrnScaling_ = eclState->hasDoubleGridProperty("KRG");
+            enableKrnScaling_ = eclState->hasDeckDoubleGridProperty("KRG");
         }
     }
 #endif
