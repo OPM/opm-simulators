@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(CompareRestartFileResults)
     const std::string& filename1 = boost::unit_test::framework::master_test_suite().argv[1];
     const std::string& filename2 = boost::unit_test::framework::master_test_suite().argv[2];
     int last_report_step = std::atoi(boost::unit_test::framework::master_test_suite().argv[3]);
-
+    const double abs_diff = 1e-5;
     std::map<std::string, double> relative_diffs;
     relative_diffs["SWAT"]     = 0.0005;  //0.05 %
     relative_diffs["SGAS"]     = 0.0005;
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(CompareRestartFileResults)
         ecl_kw_type * kw_1 =  ecl_file_iget_named_kw( file1 , key, 0);
         ecl_kw_type * kw_2 =  ecl_file_iget_named_kw( file2 , key, 0);
 
-        bool numeric_equal = ecl_kw_numeric_equal(kw_1, kw_2, relative_diffs[key]);
+        bool numeric_equal = ecl_kw_numeric_equal(kw_1, kw_2, abs_diff , relative_diffs[key]);
         if (numeric_equal) {
             std::cout << " Restart results for " << key << " compared ok" << std::endl;
         } else {
