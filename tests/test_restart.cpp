@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(CompareRestartFileResults)
             ecl_kw_max_min(kw_1,&max_value, &min_value);
             std::cout <<  " Restart results for " << key << " is not ok, failing test: " <<  std::endl
                       <<  " Relative difference allowed is " << relative_diffs[key] << std::endl
-                      <<  " Actual relative difference minimum value, maximum value is: " <<  min_value << ", " << max_value << std::endl;
+                      <<  " Actual absolute difference minimum value, maximum value is: " <<  min_value << ", " << max_value << std::endl;
         }
 
         BOOST_CHECK_EQUAL(numeric_equal, true);
