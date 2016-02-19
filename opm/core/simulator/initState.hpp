@@ -22,6 +22,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
+#include <opm/core/simulator/SimulatorState.hpp>
 struct UnstructuredGrid;
 
 namespace Opm
@@ -34,6 +35,18 @@ namespace Opm
     /// \file
     ///
     /// Functions for initializing a reservoir state.
+
+    /// Will initialize the first and second component of the
+    /// SATURATION field in all the cells in the set @cells. The
+    /// @props object will be queried, and depending on the value
+    /// @satType either the minimum or the maximum saturation is
+    /// applied to thee first component in the SATURATION field.
+    /// For the second component (1 - first_sat) is used.
+
+    enum ExtremalSat { MinSat, MaxSat };
+    template <class Props>
+    static void initSaturation(const std::vector<int>& cells , const Props& props , SimulatorState& state , ExtremalSat satType);
+
 
     /// Initialize a two-phase state from parameters.
     /// The following parameters are accepted (defaults):
