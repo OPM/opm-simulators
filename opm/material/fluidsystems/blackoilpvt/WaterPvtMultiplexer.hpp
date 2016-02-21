@@ -91,6 +91,10 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
+        bool enableWater = deck->hasKeyword("WATER");
+        if (!enableWater)
+            return;
+
         if (enableThermal
             && (deck->hasKeyword("WATDENT")
                 || deck->hasKeyword("VISCREF")))

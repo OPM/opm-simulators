@@ -116,6 +116,10 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
+        bool enableGas = deck->hasKeyword("GAS");
+        if (!enableGas)
+            return;
+
         if (enableThermal
             && (deck->hasKeyword("TREF")
                 || deck->hasKeyword("GASVISCT")))
