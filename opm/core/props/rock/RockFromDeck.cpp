@@ -183,16 +183,16 @@ namespace Opm
         ///        Invalid        invalid set of components given.
         PermeabilityKind classifyPermeability(Opm::EclipseStateConstPtr eclState)
         {
-            const bool xx = eclState->hasDoubleGridProperty("PERMX" );
-            const bool xy = eclState->hasDoubleGridProperty("PERMXY");
+            const bool xx = eclState->hasDeckDoubleGridProperty("PERMX" );
+            const bool xy = eclState->hasDeckDoubleGridProperty("PERMXY");
             const bool yx = xy;
 
-            const bool yy = eclState->hasDoubleGridProperty("PERMY" );
-            const bool yz = eclState->hasDoubleGridProperty("PERMYZ");
+            const bool yy = eclState->hasDeckDoubleGridProperty("PERMY" );
+            const bool yz = eclState->hasDeckDoubleGridProperty("PERMYZ");
             const bool zy = yz;
 
-            const bool zz = eclState->hasDoubleGridProperty("PERMZ" );
-            const bool zx = eclState->hasDoubleGridProperty("PERMZX");
+            const bool zz = eclState->hasDeckDoubleGridProperty("PERMZ" );
+            const bool zx = eclState->hasDeckDoubleGridProperty("PERMZX");
             const bool xz = zx;
 
             int num_cross_comp = xy + xz + yx + yz + zx + zy;
@@ -309,7 +309,7 @@ namespace Opm
 
             // -----------------------------------------------------------
             // 1st row: [ kxx, kxy ], kxz handled in kzx
-            if (eclState->hasDoubleGridProperty("PERMX" )) {
+            if (eclState->hasDeckDoubleGridProperty("PERMX" )) {
                 kmap[xx] = tensor.size();
                 tensor.push_back(extractPermComponent(eclState, "PERMX", global_cell));
 
@@ -322,7 +322,7 @@ namespace Opm
 
             // -----------------------------------------------------------
             // 2nd row: [ kyy, kyz ], kyx handled in kxy
-            if (eclState->hasDoubleGridProperty("PERMY" )) {
+            if (eclState->hasDeckDoubleGridProperty("PERMY" )) {
                 kmap[yy] = tensor.size();
                 tensor.push_back(extractPermComponent(eclState, "PERMY", global_cell));
 
@@ -339,7 +339,7 @@ namespace Opm
                 kmap[zx] = kmap[xz] = tensor.size();  // Enforce symmetry.
                 tensor.push_back(extractPermComponent(eclState, "PERMZX", global_cell));
             }
-            if (eclState->hasDoubleGridProperty("PERMZ" )) {
+            if (eclState->hasDeckDoubleGridProperty("PERMZ" )) {
                 kmap[zz] = tensor.size();
                 tensor.push_back(extractPermComponent(eclState, "PERMZ", global_cell));
 
