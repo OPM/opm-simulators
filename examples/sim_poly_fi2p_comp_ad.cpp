@@ -166,7 +166,7 @@ try
 
     // Grid init
     std::vector<double> porv;
-    if (eclipseState->hasDoubleGridProperty("PORV")) {
+    if (eclipseState->hasDeckDoubleGridProperty("PORV")) {
         porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     }
     grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));

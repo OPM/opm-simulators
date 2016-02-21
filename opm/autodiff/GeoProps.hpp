@@ -95,13 +95,13 @@ namespace Opm
 
             // get the pore volume multipliers from the EclipseState
             std::vector<double> multpv(numCartesianCells, 1.0);
-            if (eclState->hasDoubleGridProperty("MULTPV")) {
+            if (eclState->hasDeckDoubleGridProperty("MULTPV")) {
                 multpv = eclState->getDoubleGridProperty("MULTPV")->getData();
             }
 
             // get the net-to-gross cell thickness from the EclipseState
             std::vector<double> ntg(numCartesianCells, 1.0);
-            if (eclState->hasDoubleGridProperty("NTG")) {
+            if (eclState->hasDeckDoubleGridProperty("NTG")) {
                 ntg = eclState->getDoubleGridProperty("NTG")->getData();
             }
 
