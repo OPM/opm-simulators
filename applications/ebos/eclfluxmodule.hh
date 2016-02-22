@@ -138,6 +138,15 @@ public:
     }
 
     /*!
+     * \brief Return the gravity corrected pressure difference between the interior and
+     *        the exterior of a face.
+     *
+     * \param phaseIdx The index of the fluid phase
+     */
+    const Evaluation& pressureDifferential(unsigned phaseIdx) const
+    { return pressureDifferential_[phaseIdx]; }
+
+    /*!
      * \brief Return the filter velocity of a fluid phase at the face's integration point
      *        [m/s]
      *
@@ -235,6 +244,19 @@ protected:
 
             pressureDifferential_[phaseIdx] = pressureExterior - pressureInterior;
 
+            // apply the threshold pressure for the intersection. note that the concept
+            // of threshold pressure is a quite big hack that only makes sense for ECL
+            // datasets. (and even there its physical justification is quite
+            // questionable IMO.)
+            if (std::abs(Toolbox::value(pressureDifferential_[phaseIdx])) > thpres_)
+                pressureDifferential_[phaseIdx] -=
+                    Ewoms::signum(pressureDifferential_[phaseIdx])*thpres_;
+            else {
+                pressureDifferential_[phaseIdx] = 0.0;
+                volumeFlux_[phaseIdx] = 0.0;
+                continue;
+            }
+
             // this is slightly hacky because in the automatic differentiation case, it
             // only works for the element centered finite volume method. for ebos this
             // does not matter, though.
@@ -265,6 +287,9 @@ protected:
 
     // the area of the face between the DOFs [m^2]
     Scalar faceArea_;
+
+    // threshold pressure [Pa]
+    Scalar thpres_;
 
     // the volumetric flux of all phases [m^3/s]
     Evaluation volumeFlux_[numPhases];

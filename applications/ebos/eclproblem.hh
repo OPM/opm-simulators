@@ -52,6 +52,7 @@
 #include "eclsummarywriter.hh"
 #include "ecloutputblackoilmodule.hh"
 #include "ecltransmissibility.hh"
+#include "eclthresholdpressure.hh"
 #include "ecldummygradientcalculator.hh"
 #include "eclfluxmodule.hh"
 #include "ecldeckunits.hh"
@@ -137,7 +138,7 @@ SET_BOOL_PROP(EclBaseProblem, EnableWriteAllSolutions, false);
 //
 // By default, stop it after the universe will probably have stopped
 // to exist. (the ECL problem will finish the simulation explicitly
-// after it simulated the last episode specified in the deck->)
+// after it simulated the last episode specified in the deck.)
 SET_SCALAR_PROP(EclBaseProblem, EndTime, 1e100);
 
 // The default for the initial time step size of the simulation [s].
@@ -259,6 +260,7 @@ public:
     EclProblem(Simulator &simulator)
         : ParentType(simulator)
         , transmissibilities_(simulator)
+        , thresholdPressures_(simulator)
         , wellManager_(simulator)
         , deckUnits_(simulator)
         , eclWriter_(simulator)
@@ -528,10 +530,16 @@ public:
     { return intrinsicPermeability_[globalElemIdx]; }
 
     /*!
-     * \copydoc FvBaseMultiPhaseProblem::transmissibility
+     * \copydoc BlackOilBaseProblem::transmissibility
      */
     Scalar transmissibility(unsigned elem1Idx, unsigned elem2Idx) const
     { return transmissibilities_.transmissibility(elem1Idx, elem2Idx); }
+
+    /*!
+     * \copydoc BlackOilBaseProblem::thresholdPressure
+     */
+    Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
+    { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
@@ -679,6 +687,11 @@ public:
 
         // update the data required for capillary pressure hysteresis
         updateHysteresis_();
+
+        // let the object for threshold pressures initialize itself. this is done only at
+        // this point, because determining the threshold pressures may require to access
+        // the initial solution.
+        thresholdPressures_.finishInit();
     }
 
     /*!
@@ -767,7 +780,7 @@ private:
         ////////////////////////////////
         // permeability
 
-        // read the intrinsic permeabilities from the eclState-> Note that all arrays
+        // read the intrinsic permeabilities from the eclState. Note that all arrays
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // dune-cornerpoint grid object might remove a few elements...
         if (eclState->hasDeckDoubleGridProperty("PERMX")) {
@@ -934,11 +947,11 @@ private:
 
         initialFluidStates_.resize(numDof);
 
-        const std::vector<double> &waterSaturationData =
+        const std::vector<double>& waterSaturationData =
             deck->getKeyword("SWAT").getSIDoubleData();
-        const std::vector<double> &gasSaturationData =
+        const std::vector<double>& gasSaturationData =
             deck->getKeyword("SGAS").getSIDoubleData();
-        const std::vector<double> &pressureData =
+        const std::vector<double>& pressureData =
             deck->getKeyword("PRESSURE").getSIDoubleData();
         const std::vector<double> *rsData = 0;
         if (enableDisgas)
@@ -1103,6 +1116,8 @@ private:
     EclTransmissibility<TypeTag> transmissibilities_;
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
+
+    EclThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
