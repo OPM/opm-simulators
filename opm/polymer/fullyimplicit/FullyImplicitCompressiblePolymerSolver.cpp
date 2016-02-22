@@ -440,6 +440,10 @@ namespace {
         int nextvar = 0;
         state.pressure = vars[ nextvar++ ];
 
+        // Temperature. (this is always a constant so far)
+        const V T = Eigen::Map<const V>(& x.temperature()[0], nc, 1);
+        state.temperature = ADB::constant(T);
+
         // Saturation.
         const std::vector<int>& bpat = vars[0].blockPattern();
         {
