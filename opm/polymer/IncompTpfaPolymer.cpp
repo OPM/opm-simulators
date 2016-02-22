@@ -102,9 +102,9 @@ namespace Opm
         c_ = &state.concentration();
         cmax_ = &state.maxconcentration();
         if (rock_comp_props_ != 0 && rock_comp_props_->isActive()) {
-            solveRockComp(dt, state.twophaseState(), well_state);
+            solveRockComp(dt, state, well_state);
         } else {
-            solveIncomp(dt, state.twophaseState(), well_state);
+            solveIncomp(dt, state, well_state);
         }
     }
 
@@ -116,7 +116,7 @@ namespace Opm
 
     /// Compute per-solve dynamic properties.
     void IncompTpfaPolymer::computePerSolveDynamicData(const double /*dt*/,
-                                                       const TwophaseState& state,
+                                                       const PolymerState& state,
                                                        const WellState& /*well_state*/)
     {
         // Computed here:
