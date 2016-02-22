@@ -21,10 +21,13 @@
 #ifndef EWOMS_ALU_CARTESIANINDEXMAPPER_HH
 #define EWOMS_ALU_CARTESIANINDEXMAPPER_HH
 
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
 #include <array>
+#include <vector>
 #include <cassert>
 #include <memory>
 

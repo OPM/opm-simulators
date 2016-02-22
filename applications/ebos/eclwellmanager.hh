@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
 
 #include <ewoms/common/propertysystem.hh>
+#include <ewoms/parallel/threadedentityiterator.hh>
 
 #include <dune/grid/common/gridenums.hh>
 

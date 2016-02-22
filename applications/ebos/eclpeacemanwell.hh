@@ -30,6 +30,8 @@
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <opm/material/localad/Evaluation.hpp>
+#include <opm/material/localad/Math.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>

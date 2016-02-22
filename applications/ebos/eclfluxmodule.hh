@@ -30,6 +30,7 @@
 #define EWOMS_ECL_FLUX_MODULE_HH
 
 #include <ewoms/disc/common/fvbaseproperties.hh>
+#include <ewoms/common/signum.hh>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
