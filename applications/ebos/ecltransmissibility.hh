@@ -195,8 +195,8 @@ public:
                 if (insideElemIdx > outsideElemIdx)
                     continue;
 
-                unsigned cartesianElemIdxInside = gridManager.cartesianIndex(insideElemIdx);
-                unsigned cartesianElemIdxOutside = gridManager.cartesianIndex(outsideElemIdx);
+                unsigned insideCartElemIdx = gridManager.cartesianIndex(insideElemIdx);
+                unsigned outsideCartElemIdx = gridManager.cartesianIndex(outsideElemIdx);
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
@@ -223,8 +223,8 @@ public:
                                                   axisCentroids),
                                   problem.intrinsicPermeability(outsideElemIdx));
 
-                applyNtg_(halfTrans1, insideFaceIdx, insideElemIdx, ntg);
-                applyNtg_(halfTrans2, outsideFaceIdx, outsideElemIdx, ntg);
+                applyNtg_(halfTrans1, insideFaceIdx, insideCartElemIdx, ntg);
+                applyNtg_(halfTrans2, outsideFaceIdx, outsideCartElemIdx, ntg);
 
                 // convert half transmissibilities to full face
                 // transmissibilities using the harmonic mean
@@ -232,12 +232,12 @@ public:
 
                 // apply the full face transmissibility multipliers
                 // for the inside ...
-                applyMultipliers_(trans, insideFaceIdx, insideElemIdx,
+                applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx,
                                   multx, multxMinus,
                                   multy, multyMinus,
                                   multz, multzMinus);
                 // ... and outside elements
-                applyMultipliers_(trans, outsideFaceIdx, outsideElemIdx,
+                applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx,
                                   multx, multxMinus,
                                   multy, multyMinus,
                                   multz, multzMinus);
@@ -264,8 +264,8 @@ public:
                     OPM_THROW(std::logic_error, "Could not determine a face direction");
                 }
 
-                trans *= multipliers->getRegionMultiplier(cartesianElemIdxInside,
-                                                          cartesianElemIdxOutside,
+                trans *= multipliers->getRegionMultiplier(insideCartElemIdx,
+                                                          outsideCartElemIdx,
                                                           faceDir);
 
                 trans_[isId_(insideElemIdx, outsideElemIdx)] = trans;
@@ -321,7 +321,7 @@ private:
     }
 
     template <class MultScalar>
-    void applyMultipliers_(Scalar &trans, unsigned faceIdx, unsigned elemIdx,
+    void applyMultipliers_(Scalar &trans, unsigned faceIdx, unsigned cartElemIdx,
                            const std::vector<MultScalar>& multx,
                            const std::vector<MultScalar>& multxMinus,
                            const std::vector<MultScalar>& multy,
@@ -334,30 +334,30 @@ private:
         // contains the intersection of interest.)
         switch (faceIdx) {
         case 0: // left
-            trans *= multxMinus[elemIdx];
+            trans *= multxMinus[cartElemIdx];
             break;
         case 1: // right
-            trans *= multx[elemIdx];
+            trans *= multx[cartElemIdx];
             break;
 
         case 2: // front
-            trans *= multyMinus[elemIdx];
+            trans *= multyMinus[cartElemIdx];
             break;
         case 3: // back
-            trans *= multy[elemIdx];
+            trans *= multy[cartElemIdx];
             break;
 
         case 4: // bottom
-            trans *= multzMinus[elemIdx];
+            trans *= multzMinus[cartElemIdx];
             break;
         case 5: // top
-            trans *= multz[elemIdx];
+            trans *= multz[cartElemIdx];
             break;
         }
     }
 
     template <class NtgScalar>
-    void applyNtg_(Scalar &trans, unsigned faceIdx, unsigned elemIdx,
+    void applyNtg_(Scalar &trans, unsigned faceIdx, unsigned cartElemIdx,
                    const std::vector<NtgScalar>& ntg) const
     {
         // apply multiplyer for the transmissibility of the face. (the
@@ -365,17 +365,17 @@ private:
         // contains the intersection of interest.)
         switch (faceIdx) {
         case 0: // left
-            trans *= ntg[elemIdx];
+            trans *= ntg[cartElemIdx];
             break;
         case 1: // right
-            trans *= ntg[elemIdx];
+            trans *= ntg[cartElemIdx];
             break;
 
         case 2: // front
-            trans *= ntg[elemIdx];
+            trans *= ntg[cartElemIdx];
             break;
         case 3: // back
-            trans *= ntg[elemIdx];
+            trans *= ntg[cartElemIdx];
             break;
 
             // NTG does not apply to top and bottom faces
