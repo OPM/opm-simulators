@@ -96,7 +96,8 @@ try
     warnIfUnusedParams(param);
 
     // Initialisation.
-    BlackoilState state;
+    //initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
+    BlackoilState state( UgGridHelpers::numCells(grid) , UgGridHelpers::numFaces(grid), 3);
     initStateEquil(grid, props, deck, eclipseState, grav, state);
 
     // Output.
