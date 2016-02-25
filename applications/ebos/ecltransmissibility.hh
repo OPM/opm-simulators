@@ -139,20 +139,7 @@ public:
 
         const auto& gridManager = simulator_.gridManager();
         Opm::EclipseStateConstPtr eclState = gridManager.eclState();
-        auto multipliers = eclState->getTransMult();
-        const std::vector<double>& multx =
-            eclState->getDoubleGridProperty("MULTX")->getData();
-        const std::vector<double>& multy =
-            eclState->getDoubleGridProperty("MULTY")->getData();
-        const std::vector<double>& multz =
-            eclState->getDoubleGridProperty("MULTZ")->getData();
-        const std::vector<double>& multxMinus =
-            eclState->getDoubleGridProperty("MULTX-")->getData();
-        const std::vector<double>& multyMinus =
-            eclState->getDoubleGridProperty("MULTY-")->getData();
-        const std::vector<double>& multzMinus =
-            eclState->getDoubleGridProperty("MULTZ-")->getData();
-
+        std::shared_ptr<const Opm::TransMult> transMult = eclState->getTransMult();
         const std::vector<double>& ntg =
             eclState->getDoubleGridProperty("NTG")->getData();
 
@@ -232,15 +219,9 @@ public:
 
                 // apply the full face transmissibility multipliers
                 // for the inside ...
-                applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx,
-                                  multx, multxMinus,
-                                  multy, multyMinus,
-                                  multz, multzMinus);
+                applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, *transMult);
                 // ... and outside elements
-                applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx,
-                                  multx, multxMinus,
-                                  multy, multyMinus,
-                                  multz, multzMinus);
+                applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, *transMult);
 
                 // apply the region multipliers (cf. the MULTREGT keyword)
                 Opm::FaceDir::DirEnum faceDir;
@@ -264,9 +245,9 @@ public:
                     OPM_THROW(std::logic_error, "Could not determine a face direction");
                 }
 
-                trans *= multipliers->getRegionMultiplier(insideCartElemIdx,
-                                                          outsideCartElemIdx,
-                                                          faceDir);
+                trans *= transMult->getRegionMultiplier(insideCartElemIdx,
+                                                        outsideCartElemIdx,
+                                                        faceDir);
 
                 trans_[isId_(insideElemIdx, outsideElemIdx)] = trans;
             }
@@ -320,45 +301,38 @@ private:
         return x;
     }
 
-    template <class MultScalar>
     void applyMultipliers_(Scalar &trans, unsigned faceIdx, unsigned cartElemIdx,
-                           const std::vector<MultScalar>& multx,
-                           const std::vector<MultScalar>& multxMinus,
-                           const std::vector<MultScalar>& multy,
-                           const std::vector<MultScalar>& multyMinus,
-                           const std::vector<MultScalar>& multz,
-                           const std::vector<MultScalar>& multzMinus) const
+                           const Opm::TransMult& transMult) const
     {
         // apply multiplyer for the transmissibility of the face. (the
         // face index is the index of the reference-element face which
         // contains the intersection of interest.)
         switch (faceIdx) {
         case 0: // left
-            trans *= multxMinus[cartElemIdx];
+            trans *= transMult.getMultiplier(cartElemIdx, Opm::FaceDir::XMinus);
             break;
         case 1: // right
-            trans *= multx[cartElemIdx];
+            trans *= transMult.getMultiplier(cartElemIdx, Opm::FaceDir::XPlus);
             break;
 
         case 2: // front
-            trans *= multyMinus[cartElemIdx];
+            trans *= transMult.getMultiplier(cartElemIdx, Opm::FaceDir::YMinus);
             break;
         case 3: // back
-            trans *= multy[cartElemIdx];
+            trans *= transMult.getMultiplier(cartElemIdx, Opm::FaceDir::YPlus);
             break;
 
         case 4: // bottom
-            trans *= multzMinus[cartElemIdx];
+            trans *= transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZMinus);
             break;
         case 5: // top
-            trans *= multz[cartElemIdx];
+            trans *= transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus);
             break;
         }
     }
 
-    template <class NtgScalar>
     void applyNtg_(Scalar &trans, unsigned faceIdx, unsigned cartElemIdx,
-                   const std::vector<NtgScalar>& ntg) const
+                   const std::vector<double>& ntg) const
     {
         // apply multiplyer for the transmissibility of the face. (the
         // face index is the index of the reference-element face which
