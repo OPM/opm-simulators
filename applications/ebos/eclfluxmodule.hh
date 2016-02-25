@@ -213,9 +213,11 @@ protected:
         exteriorDofIdx_ = scvf.exteriorIndex();
         assert(interiorDofIdx_ != exteriorDofIdx_);
 
-        trans_ = problem.transmissibility(stencil.globalSpaceIndex(interiorDofIdx_),
-                                          stencil.globalSpaceIndex(exteriorDofIdx_));
+        unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
+        unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
+        trans_ = problem.transmissibility(I, J);
         faceArea_ = scvf.area();
+        thpres_ = problem.thresholdPressure(I, J);
 
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
