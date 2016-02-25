@@ -177,7 +177,7 @@ private:
             elemCtx.updateAll(elem);
             const auto &stencil = elemCtx.stencil(/*timeIdx=*/0);
 
-            for (int scvfIdx = 0; scvfIdx < stencil.numInteriorFaces(); ++ scvfIdx) {
+            for (unsigned scvfIdx = 0; scvfIdx < stencil.numInteriorFaces(); ++ scvfIdx) {
                 const auto &face = stencil.interiorFace(scvfIdx);
 
                 unsigned i = face.interiorIndex();
@@ -208,7 +208,7 @@ private:
 
         // make sure that the threshold pressures is consistent for parallel
         // runs. (i.e. take the maximum of all processes)
-        for (int i = 0; i < thpres_.size(); ++i)
+        for (unsigned i = 0; i < thpres_.size(); ++i)
             thpres_[i] = gridView.comm().max(thpres_[i]);
     }
 
