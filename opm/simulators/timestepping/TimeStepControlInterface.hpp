@@ -19,7 +19,6 @@
 #ifndef OPM_TIMESTEPCONTROLINTERFACE_HEADER_INCLUDED
 #define OPM_TIMESTEPCONTROLINTERFACE_HEADER_INCLUDED
 
-#include <opm/core/simulator/SimulatorState.hpp>
 
 namespace Opm
 {
