@@ -266,8 +266,7 @@ try
     /// initialize water saturation to minimum everywhere.
     /// \snippet tutorial3.cpp two-phase state
     /// \internal [two-phase state]
-    TwophaseState state;
-    state.init(grid.number_of_cells , grid.number_of_faces, 2);
+    TwophaseState state( grid.number_of_cells , grid.number_of_faces );
     initSaturation( allcells , props , state , MinSat );
 
     /// \internal [two-phase state]
