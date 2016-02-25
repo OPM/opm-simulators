@@ -22,7 +22,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
-#include <opm/core/simulator/SimulatorState.hpp>
+
 struct UnstructuredGrid;
 
 namespace Opm
@@ -31,6 +31,7 @@ namespace Opm
     namespace parameter { class ParameterGroup; }
     class IncompPropertiesInterface;
     class BlackoilPropertiesInterface;
+    class SimulationDataContainer;
 
     /// \file
     ///
@@ -45,7 +46,7 @@ namespace Opm
 
     enum ExtremalSat { MinSat, MaxSat };
     template <class Props>
-    static void initSaturation(const std::vector<int>& cells , const Props& props , SimulatorState& state , ExtremalSat satType);
+    static void initSaturation(const std::vector<int>& cells , const Props& props , SimulationDataContainer& state , ExtremalSat satType);
 
 
     /// Initialize a two-phase state from parameters.

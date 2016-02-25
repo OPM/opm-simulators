@@ -18,8 +18,10 @@
 */
 
 #include "config.h"
-#include <opm/core/pressure/IncompTpfa.hpp>
 
+#include <opm/common/data/SimulationDataContainer.hpp>
+
+#include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
@@ -28,7 +30,6 @@
 #include <opm/core/pressure/flow_bc.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/sparse_sys.h>
-#include <opm/core/simulator/SimulatorState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -155,7 +156,7 @@ namespace Opm
     /// May throw an exception if the number of iterations
     /// exceed maxiter (set in constructor).
     void IncompTpfa::solve(const double dt,
-                           SimulatorState& state,
+                           SimulationDataContainer& state,
                            WellState& well_state)
     {
         if (rock_comp_props_ != 0 && rock_comp_props_->isActive()) {
@@ -169,7 +170,7 @@ namespace Opm
 
     // Solve with no rock compressibility (linear eqn).
     void IncompTpfa::solveIncomp(const double dt,
-                                 SimulatorState& state,
+                                 SimulationDataContainer& state,
                                  WellState& well_state)
     {
         // Set up properties.
@@ -207,7 +208,7 @@ namespace Opm
 
     // Solve with rock compressibility (nonlinear eqn).
     void IncompTpfa::solveRockComp(const double dt,
-                                   SimulatorState& state,
+                                   SimulationDataContainer& state,
                                    WellState& well_state)
     {
         // This function is identical to CompressibleTpfa::solve().
@@ -321,7 +322,7 @@ namespace Opm
 
     /// Compute per-solve dynamic properties.
     void IncompTpfa::computePerSolveDynamicData(const double /*dt*/,
-                                                const SimulatorState& state,
+                                                const SimulationDataContainer& state,
                                                 const WellState& /*well_state*/)
     {
         // Computed here:
@@ -369,7 +370,7 @@ namespace Opm
 
     /// Compute per-iteration dynamic properties.
     void IncompTpfa::computePerIterationDynamicData(const double /*dt*/,
-                                                    const SimulatorState& state,
+                                                    const SimulationDataContainer& state,
                                                     const WellState& well_state)
     {
         // These are the variables that get computed by this function:
@@ -396,7 +397,7 @@ namespace Opm
 
     /// Compute the residual in h_->b and Jacobian in h_->A.
     void IncompTpfa::assemble(const double dt,
-                              const SimulatorState& state,
+                              const SimulationDataContainer& state,
                               const WellState& /*well_state*/)
     {
         const double* pressures = wells_ ? &pressures_[0] : &state.pressure()[0];
@@ -462,7 +463,7 @@ namespace Opm
 
 
     /// Compute the output.
-    void IncompTpfa::computeResults(SimulatorState& state,
+    void IncompTpfa::computeResults(SimulationDataContainer& state,
                                     WellState& well_state) const
     {
         // Make sure h_ contains the direct-solution matrix

@@ -20,11 +20,12 @@
 #ifndef OPM_INITSTATE_IMPL_HEADER_INCLUDED
 #define OPM_INITSTATE_IMPL_HEADER_INCLUDED
 
+#include <opm/common/data/SimulationDataContainer.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
-#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/MonotCubicInterpolator.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
@@ -42,7 +43,7 @@ namespace Opm
 
 
     template <class Props>
-    static void initSaturation(const std::vector<int>& cells , const Props& props , SimulatorState& state , ExtremalSat satType) {
+    static void initSaturation(const std::vector<int>& cells , const Props& props , SimulationDataContainer& state , ExtremalSat satType) {
         const int num_phases = state.numPhases();
         std::vector<double> min_sat(num_phases * cells.size());
         std::vector<double> max_sat(num_phases * cells.size());
@@ -438,7 +439,6 @@ namespace Opm
         if (num_phases != 2) {
             OPM_THROW(std::runtime_error, "initStateTwophaseBasic(): currently handling only two-phase scenarios.");
         }
-        state.init(number_of_cells, number_of_faces, num_phases);
         const int num_cells = props.numCells();
         // By default: initialise water saturation to minimum everywhere.
         std::vector<int> all_cells(num_cells);
@@ -563,7 +563,6 @@ namespace Opm
         if (num_phases != 2) {
             OPM_THROW(std::runtime_error, "initStateTwophaseBasic(): currently handling only two-phase scenarios.");
         }
-        state.init(number_of_cells, number_of_faces, num_phases);
         const int num_cells = props.numCells();
         // By default: initialise water saturation to minimum everywhere.
         std::vector<int> all_cells(num_cells);
@@ -651,7 +650,6 @@ namespace Opm
             OPM_THROW(std::runtime_error, "initStateFromDeck():  user specified property object with " << num_phases << " phases, "
                   "found " << pu.num_phases << " phases in deck.");
         }
-        state.init(number_of_cells, number_of_faces, num_phases);
         if (deck->hasKeyword("EQUIL") && deck->hasKeyword("PRESSURE")) {
             OPM_THROW(std::runtime_error, "initStateFromDeck(): The deck must either specify the initial "
                       "condition using the PRESSURE _or_ the EQUIL keyword (currently it has both)");

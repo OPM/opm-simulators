@@ -21,43 +21,34 @@
 #ifndef OPM_BLACKOILSTATE_HEADER_INCLUDED
 #define OPM_BLACKOILSTATE_HEADER_INCLUDED
 
+#include <opm/common/data/SimulationDataContainer.hpp>
+
 #include <opm/core/grid.h>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
-#include <opm/core/simulator/SimulatorState.hpp>
 #include <vector>
 
 namespace Opm
 {
 
     /// Simulator state for a blackoil simulator.
-    class BlackoilState : public SimulatorState
+    class BlackoilState : public SimulationDataContainer
     {
     public:
-        using SimulatorState :: cellData ;
+        static const std::string GASOILRATIO;
+        static const std::string RV;
+        static const std::string SURFACEVOL;
 
-        virtual void init(const UnstructuredGrid& grid, int num_phases);
+        BlackoilState(size_t num_cells , size_t num_faces, size_t num_phases);
 
-        virtual void init(int number_of_cells, int number_of_faces, int num_phases);
 
-        virtual bool equals(const SimulatorState& other,
-                            double epsilon = 1e-8) const;
+        std::vector<double>& surfacevol  () { return getCellData("SURFACEVOL");  }
+        std::vector<double>& gasoilratio () { return getCellData(GASOILRATIO); }
+        std::vector<double>& rv ()          { return getCellData(RV);          }
 
-        std::vector<double>& surfacevol  () { return cellData()[ surfaceVolId_ ]; }
-        std::vector<double>& gasoilratio () { return cellData()[ gorId_ ] ; }
-        std::vector<double>& rv () {return cellData()[ rvId_ ] ; }
+        const std::vector<double>& surfacevol  () const { return getCellData("SURFACEVOL");  }
+        const std::vector<double>& gasoilratio () const { return getCellData("GASOILRATIO"); }
+        const std::vector<double>& rv ()          const { return getCellData(RV);          }
 
-        const std::vector<double>& surfacevol  () const { return cellData()[ surfaceVolId_ ]; }
-        const std::vector<double>& gasoilratio () const { return cellData()[ gorId_ ] ; }
-        const std::vector<double>& rv () const { return cellData()[ rvId_ ] ; }
-
-    private:
-        int gorId_ ;   // no entries = no cells (gas oil ratio id)
-        int rvId_ ;    // no entries = no cells ( rv id )
-        int surfaceVolId_ ; // no entries = no cells * no phases (surfaceVol id )
-
-        //std::vector<double> surfvol_; // no entries = no cells * no phases
-        //std::vector<double> gor_   ;  // no entries = no cells
-        //std::vector<double> rv_ ;     // no entries = no cells
     };
 } // namespace Opm
 

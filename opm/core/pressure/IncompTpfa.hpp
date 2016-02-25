@@ -20,8 +20,6 @@
 #ifndef OPM_INCOMPTPFA_HEADER_INCLUDED
 #define OPM_INCOMPTPFA_HEADER_INCLUDED
 
-#include <opm/core/simulator/SimulatorState.hpp>
-
 #include <opm/core/pressure/tpfa/ifs_tpfa.h>
 #include <vector>
 
@@ -36,7 +34,7 @@ namespace Opm
     class RockCompressibility;
     class LinearSolverInterface;
     class WellState;
-    class SimulatoreState;
+    class SimulationDataContainer;
 
 
     /// Encapsulating a tpfa pressure solver for the incompressible-fluid case.
@@ -114,7 +112,7 @@ namespace Opm
         /// May throw an exception if the number of iterations
         /// exceed maxiter (set in constructor).
         void solve(const double dt,
-                   SimulatorState& state,
+                   SimulationDataContainer& state,
                    WellState& well_state);
 
 
@@ -124,28 +122,28 @@ namespace Opm
     protected:
         // Solve with no rock compressibility (linear eqn).
         void solveIncomp(const double dt,
-                         SimulatorState& state,
+                         SimulationDataContainer& state,
                          WellState& well_state);
         // Solve with rock compressibility (nonlinear eqn).
         void solveRockComp(const double dt,
-                           SimulatorState& state,
+                           SimulationDataContainer& state,
                            WellState& well_state);
     private:
         // Helper functions.
         void computeStaticData();
         virtual void computePerSolveDynamicData(const double dt,
-                                                const SimulatorState& state,
+                                                const SimulationDataContainer& state,
                                                 const WellState& well_state);
         void computePerIterationDynamicData(const double dt,
-                                            const SimulatorState& state,
+                                            const SimulationDataContainer& state,
                                             const WellState& well_state);
         void assemble(const double dt,
-                      const SimulatorState& state,
+                      const SimulationDataContainer& state,
                       const WellState& well_state);
         void solveIncrement();
         double residualNorm() const;
         double incrementNorm() const;
-	void computeResults(SimulatorState& state,
+	void computeResults(SimulationDataContainer& state,
                             WellState& well_state) const;
 
     protected:

@@ -17,19 +17,17 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_TWOPHASESTATE_HEADER_INCLUDED
-#define OPM_TWOPHASESTATE_HEADER_INCLUDED
-
-#include <opm/common/data/SimulationDataContainer.hpp>
+#include <opm/core/simulator/TwophaseState.hpp>
 
 namespace Opm
 {
-    class TwophaseState : public SimulationDataContainer
+
+    TwophaseState::TwophaseState(size_t num_cells , size_t num_faces) :
+        SimulationDataContainer( num_cells , num_faces , 2 )
     {
-    public:
-        TwophaseState(size_t num_cells , size_t num_faces);
-    };
+    }
+
 
 }
 
-#endif
+
