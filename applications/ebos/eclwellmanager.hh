@@ -237,7 +237,7 @@ public:
                 well->setTargetBottomHolePressure(injectProperties.BHPLimit);
 
                 // TODO
-                well->setTargetTubingHeadPressure(1e100);
+                well->setTargetTubingHeadPressure(1e30);
                 //well->setTargetTubingHeadPressure(injectProperties.THPLimit);
             }
 
@@ -304,7 +304,7 @@ public:
                 well->setTargetBottomHolePressure(producerProperties.BHPLimit);
 
                 // TODO
-                well->setTargetTubingHeadPressure(-1e100);
+                well->setTargetTubingHeadPressure(-1e30);
                 //well->setTargetTubingHeadPressure(producerProperties.THPLimit);
             }
         }
@@ -612,10 +612,11 @@ protected:
         // first, remove all wells from the reservoir
         model.clearAuxiliaryModules();
         auto wellIt = wells_.begin();
-        const auto wellEndIt = wells_.end();
+        const auto& wellEndIt = wells_.end();
         for (; wellIt != wellEndIt; ++wellIt)
             (*wellIt)->clear();
 
+        //////
         // tell the active wells which DOFs they contain
         const auto gridView = simulator_.gridManager().gridView();
 
@@ -648,15 +649,14 @@ protected:
 
                 wells.insert(eclWell);
             }
+            //////
         }
 
         // register all wells at the model as auxiliary equations
         auto wellIt2 = wells.begin();
         const auto& wellEndIt2 = wells.end();
         for (; wellIt2 != wellEndIt2; ++wellIt2)
-        {
             model.addAuxiliaryModule(*wellIt2);
-        }
     }
 
     void computeWellCompletionsMap_(unsigned reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
