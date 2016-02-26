@@ -3,6 +3,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
