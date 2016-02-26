@@ -39,6 +39,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
 #include <array>
