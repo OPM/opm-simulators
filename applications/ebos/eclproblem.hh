@@ -152,6 +152,11 @@ SET_SCALAR_PROP(EclBaseProblem, InitialTimeStepSize, 1e100);
 // everone else seems to be doing...
 SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-4);
 
+// reduce the maximum allowed Newton error to 0.1 kg/(m^3 s). The rationale is that if
+// the error is above that limit, the time step is unlikely to succeed anyway and we can
+// thus abort the futile attempt early.
+SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 0.1);
+
 // Disable the VTK output by default for this problem ...
 SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 
