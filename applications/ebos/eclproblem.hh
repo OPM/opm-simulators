@@ -157,6 +157,15 @@ SET_SCALAR_PROP(EclBaseProblem, NewtonRawTolerance, 1e-4);
 // thus abort the futile attempt early.
 SET_SCALAR_PROP(EclBaseProblem, NewtonMaxError, 0.1);
 
+// set the maximum number of Newton iterations to 10 because the likelyhood that a time
+// step succeeds at more than 10 Newton iteration is rather small
+SET_INT_PROP(EclBaseProblem, NewtonMaxIterations, 10);
+
+// also, reduce the target for the "optimum" number of Newton iterations to 6. Note that
+// this is only relevant if the time step is reduced from the report step size for some
+// reason. (because ebos first tries to do a report step using a single time step.)
+SET_INT_PROP(EclBaseProblem, NewtonTargetIterations, 6);
+
 // Disable the VTK output by default for this problem ...
 SET_BOOL_PROP(EclBaseProblem, EnableVtkOutput, false);
 
