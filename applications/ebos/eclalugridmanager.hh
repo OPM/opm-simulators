@@ -62,10 +62,9 @@ class EclAluGridManager : public EclBaseGridManager<TypeTag>
 public:
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, EquilGrid) EquilGrid;
-
-private:
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
+private:
     typedef Ewoms::AluCartesianIndexMapper<Grid> CartesianIndexMapper;
     typedef Dune::CartesianIndexMapper<EquilGrid> EquilCartesianIndexMapper;
 
