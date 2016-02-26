@@ -46,6 +46,7 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <cassert>
 #include <cmath>
