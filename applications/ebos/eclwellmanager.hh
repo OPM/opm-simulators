@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
@@ -126,9 +127,8 @@ public:
         WellCompletionsMap wellCompMap;
         computeWellCompletionsMap_(episodeIdx, wellCompMap);
 
-        if (wasRestarted || wellTopologyChanged_(eclState, episodeIdx)) {
+        if (wasRestarted || wellTopologyChanged_(eclState, episodeIdx))
             updateWellTopology_(episodeIdx, wellCompMap, gridDofIsPenetrated_);
-        }
 
         // set those parameters of the wells which do not change the topology of the
         // linearized system of equations
@@ -566,24 +566,16 @@ public:
         if (wellTopologyChanged_(eclState, reportStepIdx))
             return true;
 
-        // this is slightly hacky because it assumes that the object which stores the set
-        // of wells which are relevant for a report step does not change if there are no
-        // changed well parameters. opm-parser does not guarantee this, but so far it
-        // seems to adhere to it...
-        auto deckSchedule = eclState->getSchedule();
-
-        if (deckSchedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
+        Opm::ScheduleConstPtr schedule = eclState->getSchedule();
+        if (schedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const auto& curDeckWells = deckSchedule->getWells(reportStepIdx);
-        const auto& prevDeckWells = deckSchedule->getWells(reportStepIdx - 1);
-
-        for (unsigned i = 0; i < curDeckWells.size(); ++i) {
-            if (curDeckWells[i] != prevDeckWells[i])
-                return true;
-        }
-        return false;
+        const Opm::Events& events = schedule->getEvents();
+        return events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE |
+                               Opm::ScheduleEvents::INJECTION_UPDATE |
+                               Opm::ScheduleEvents::WELL_STATUS_CHANGE,
+                               reportStepIdx);
     }
 
 protected:
@@ -595,68 +587,15 @@ protected:
             return true;
         }
 
-        auto deckSchedule = eclState->getSchedule();
-        if (deckSchedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
+        Opm::ScheduleConstPtr schedule = eclState->getSchedule();
+        if (schedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const auto& curDeckWells = deckSchedule->getWells(reportStepIdx);
-        const auto& prevDeckWells = deckSchedule->getWells(reportStepIdx - 1);
-
-        if (curDeckWells.size() != prevDeckWells.size())
-            // the number of wells changed
-            return true;
-
-        auto curWellIt = curDeckWells.begin();
-        const auto& curWellEndIt = curDeckWells.end();
-        for (; curWellIt != curWellEndIt; ++curWellIt) {
-            // find the well in the previous time step
-            auto prevWellIt = prevDeckWells.begin();
-            const auto& prevWellEndIt = prevDeckWells.end();
-            for (; ; ++prevWellIt) {
-                if (prevWellIt == prevWellEndIt)
-                    // current well has not been featured in previous report step, i.e.,
-                    // the well topology has changed...
-                    return true;
-
-                if ((*prevWellIt)->name() == (*curWellIt)->name())
-                    // the previous report step had a well with the same name as the
-                    // current one!
-                    break;
-            }
-
-            // make sure that the wells exhibit the same completions!
-            const auto curCompletionSet = (*curWellIt)->getCompletions(reportStepIdx);
-            const auto prevCompletionSet = (*prevWellIt)->getCompletions(reportStepIdx);
-
-            if (curCompletionSet->size() != prevCompletionSet->size())
-                // number of completions of the well has changed!
-                return true;
-
-            for (size_t curWellComplIdx = 0;
-                 curWellComplIdx < curCompletionSet->size();
-                 ++ curWellComplIdx)
-            {
-                Opm::CompletionConstPtr curCompletion = curCompletionSet->get(curWellComplIdx);
-
-                for (size_t prevWellComplIdx = 0;; ++ prevWellComplIdx)
-                {
-                    if (prevWellComplIdx == prevCompletionSet->size())
-                        // a new completion has appeared in the current report step
-                        return true;
-
-                    Opm::CompletionConstPtr prevCompletion = prevCompletionSet->get(curWellComplIdx);
-
-                    if (curCompletion->getI() == prevCompletion->getI()
-                        && curCompletion->getJ() == prevCompletion->getJ()
-                        && curCompletion->getK() == prevCompletion->getK())
-                        // completion is present in both wells, look at next completion!
-                        break;
-                }
-            }
-        }
-
-        return false;
+        const Opm::Events& events = schedule->getEvents();
+        return events.hasEvent(Opm::ScheduleEvents::NEW_WELL |
+                               Opm::ScheduleEvents::COMPLETION_CHANGE,
+                               reportStepIdx);
     }
 
     void updateWellTopology_(unsigned reportStepIdx,
