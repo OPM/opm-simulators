@@ -339,6 +339,20 @@ public:
         for (unsigned i = 0; i < numModelEq; ++ i)
             diagBlock[i][i] = 1.0;
 
+        if (wellStatus() == Shut) {
+            // if the well is shut, make the auxiliary DOFs a trivial equation in the
+            // matrix: the main diagonal is already set to the identity matrix, the
+            // off-diagonal matrix entries must be set to 0.
+            auto wellDofIt = dofVariables_.begin();
+            const auto &wellDofEndIt = dofVariables_.end();
+            for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
+                matrix[wellGlobalDofIdx][wellDofIt->first] = 0.0;
+                matrix[wellDofIt->first][wellGlobalDofIdx] = 0.0;
+                residual[wellGlobalDofIdx] = 0.0;
+            }
+            return;
+        }
+
         // account for the effect of the grid DOFs which are influenced by the well on
         // the well equation and the effect of the well on the grid DOFs
         auto wellDofIt = dofVariables_.begin();
