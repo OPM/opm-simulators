@@ -208,8 +208,10 @@ public:
                               "Not implemented: Well groups");
 
                 case Opm::WellInjector::CMODE_UNDEFINED:
-                    OPM_THROW(std::runtime_error,
-                              "Control mode of well " << well->name() << " is undefined.");
+                    std::cout << "Warning: Control mode of injection well " << well->name()
+                              << " is undefined. Assuming well to be shut.";
+                    well->setWellStatus(Well::WellStatus::Shut);
+                    continue;
                 }
 
                 switch (injectProperties.injectorType) {
@@ -293,8 +295,10 @@ public:
                               "Not implemented: Well groups");
 
                 case Opm::WellProducer::CMODE_UNDEFINED:
-                    OPM_THROW(std::runtime_error,
-                              "Control mode of well " << well->name() << " is undefined.");
+                    std::cout << "Warning: Control mode of production well " << well->name()
+                              << " is undefined. Assuming well to be shut.";
+                    well->setWellStatus(Well::WellStatus::Shut);
+                    continue;
                 }
 
                 well->setTargetBottomHolePressure(producerProperties.BHPLimit);
