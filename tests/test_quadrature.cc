@@ -270,13 +270,9 @@ void testQuadrature()
 {
     std::cout << "testing SCV quadrature...\n";
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
     std::bitset<dim> isPeriodic(false);
     std::array<int, dim> cellRes;
-#else
-    Dune::FieldVector<bool, dim> isPeriodic(false);
-    Dune::FieldVector<int, dim> cellRes;
-#endif
+
     std::fill(cellRes.begin(), cellRes.end(), 10);
 
     GlobalPosition upperRight(1.0);
@@ -296,11 +292,7 @@ void testQuadrature()
 #endif
 
     // compute approximate integral
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
     auto gridView = grid.leafGridView();
-#else
-    auto gridView = grid.leafView();
-#endif
     auto eIt = gridView.begin<0>();
     const auto eEndIt = gridView.end<0>();
     Scalar result = 0;
