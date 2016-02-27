@@ -609,11 +609,7 @@ public:
         assert(context.element().template count</*codim=*/dimWorld>() == 8);
 #endif
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
         const auto &refElem = Dune::ReferenceElements<Scalar, /*dim=*/3>::cube();
-#else
-        const auto &refElem = Dune::GenericReferenceElements<Scalar, /*dim=*/3>::cube();
-#endif
 
         // determine the current element's effective size
         const auto &elem = context.element();
