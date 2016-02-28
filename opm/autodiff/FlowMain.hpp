@@ -183,7 +183,8 @@ namespace Opm
         bool use_local_perm_ = true;
         std::unique_ptr<DerivedGeology> geoprops_;
         // setupState()
-        ReservoirState state_;
+        std::unique_ptr<ReservoirState> state_;
+
         std::vector<double> threshold_pressures_;
         // distributeData()
         boost::any parallel_information_;
@@ -441,8 +442,13 @@ namespace Opm
                                               Opm::UgGridHelpers::cartDims(grid),
                                               param_);
 
+
             // Init state variables (saturation and pressure).
             if (param_.has("init_saturation")) {
+                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
+                                                  Opm::UgGridHelpers::numFaces(grid),
+                                                  props.numPhases() ));
+
                 initStateBasic(Opm::UgGridHelpers::numCells(grid),
                                Opm::UgGridHelpers::globalCell(grid),
                                Opm::UgGridHelpers::cartDims(grid),
@@ -451,25 +457,31 @@ namespace Opm
                                Opm::UgGridHelpers::beginFaceCentroids(grid),
                                Opm::UgGridHelpers::beginCellCentroids(grid),
                                Opm::UgGridHelpers::dimensions(grid),
-                               props, param_, gravity_[2], state_);
+                               props, param_, gravity_[2], *state_);
 
-                initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, state_);
+                initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, *state_);
 
                 enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
                 if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
                     const int numPhases = props.numPhases();
                     const int numCells  = Opm::UgGridHelpers::numCells(grid);
+
+                    // Uglyness 1: The state is a templated type, here we however make explicit use BlackoilState.
+                    auto& gor = state_->getCellData( BlackoilState::GASOILRATIO );
+                    const auto& surface_vol = state_->getCellData( BlackoilState::SURFACEVOL );
                     for (int c = 0; c < numCells; ++c) {
-                        state_.gasoilratio()[c] = state_.surfacevol()[c*numPhases + pu.phase_pos[Gas]]
-                            / state_.surfacevol()[c*numPhases + pu.phase_pos[Oil]];
+                        // Uglyness 2: Here we explicitly use the layout of the saturation in the surface_vol field.
+                        gor[c] = surface_vol[ c * numPhases + pu.phase_pos[Gas]] / surface_vol[ c * numPhases + pu.phase_pos[Oil]];
                     }
                 }
             } else if (deck_->hasKeyword("EQUIL") && props.numPhases() == 3) {
-                state_.init(Opm::UgGridHelpers::numCells(grid),
-                           Opm::UgGridHelpers::numFaces(grid),
-                           props.numPhases());
-                initStateEquil(grid, props, deck_, eclipse_state_, gravity_[2], state_);
-                state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
+                // Which state class are we really using - what a f... mess?
+                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
+                                                  Opm::UgGridHelpers::numFaces(grid),
+                                                  props.numPhases()));
+
+                initStateEquil(grid, props, deck_, eclipse_state_, gravity_[2], *state_);
+                //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
                 initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
                                           Opm::UgGridHelpers::globalCell(grid),
@@ -478,12 +490,12 @@ namespace Opm
                                           Opm::UgGridHelpers::beginFaceCentroids(grid),
                                           Opm::UgGridHelpers::beginCellCentroids(grid),
                                           Opm::UgGridHelpers::dimensions(grid),
-                                          props, deck_, gravity_[2], state_);
+                                          props, deck_, gravity_[2], *state_);
             }
 
             // Threshold pressures.
             std::map<std::pair<int, int>, double> maxDp;
-            computeMaxDp(maxDp, deck_, eclipse_state_, grid_init_->grid(), state_, props, gravity_[2]);
+            computeMaxDp(maxDp, deck_, eclipse_state_, grid_init_->grid(), *state_, props, gravity_[2]);
             threshold_pressures_ = thresholdPressures(deck_, eclipse_state_, grid, maxDp);
             std::vector<double> threshold_pressures_nnc = thresholdPressuresNNC(eclipse_state_, geoprops_->nnc(), maxDp);
             threshold_pressures_.insert(threshold_pressures_.end(), threshold_pressures_nnc.begin(), threshold_pressures_nnc.end());
@@ -493,9 +505,9 @@ namespace Opm
                 const int numCells = Opm::UgGridHelpers::numCells(grid);
                 std::vector<int> cells(numCells);
                 for (int c = 0; c < numCells; ++c) { cells[c] = c; }
-                std::vector<double> pc = state_.saturation();
-                props.capPress(numCells, state_.saturation().data(), cells.data(), pc.data(), nullptr);
-                fluidprops_->setSwatInitScaling(state_.saturation(), pc);
+                std::vector<double> pc = state_->saturation();
+                props.capPress(numCells, state_->saturation().data(), cells.data(), pc.data(), nullptr);
+                fluidprops_->setSwatInitScaling(state_->saturation(), pc);
             }
         }
 
@@ -518,7 +530,7 @@ namespace Opm
             // and initilialize new properties and states for it.
             if (must_distribute_) {
                 distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
-                                      state_, *fluidprops_, *geoprops_,
+                                      *state_, *fluidprops_, *geoprops_,
                                       material_law_manager_, threshold_pressures_,
                                       parallel_information_, use_local_perm_);
             }
@@ -617,7 +629,7 @@ namespace Opm
                               << std::flush;
                 }
 
-                SimulatorReport fullReport = simulator_->run(simtimer, state_);
+                SimulatorReport fullReport = simulator_->run(simtimer, *state_);
 
                 if (output_cout_) {
                     std::cout << "\n\n================    End of simulation     ===============\n\n";

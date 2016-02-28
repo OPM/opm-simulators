@@ -20,6 +20,8 @@
 
 #include <config.h>
 
+#include <opm/common/data/SimulationDataContainer.hpp>
+
 #include <opm/polymer/IncompTpfaPolymer.hpp>
 
 #include <opm/core/props/IncompPropertiesInterface.hpp>
@@ -99,8 +101,8 @@ namespace Opm
                                   PolymerState& state,
                                   WellState& well_state)
     {
-        c_ = &state.concentration();
-        cmax_ = &state.maxconcentration();
+        c_ = &state.getCellData( state.CONCENTRATION );
+        cmax_ = &state.getCellData( state.CMAX) ;
         if (rock_comp_props_ != 0 && rock_comp_props_->isActive()) {
             solveRockComp(dt, state, well_state);
         } else {
@@ -116,7 +118,7 @@ namespace Opm
 
     /// Compute per-solve dynamic properties.
     void IncompTpfaPolymer::computePerSolveDynamicData(const double /*dt*/,
-                                                       const SimulatorState& state,
+                                                       const SimulationDataContainer& state,
                                                        const WellState& /*well_state*/)
     {
         // Computed here:

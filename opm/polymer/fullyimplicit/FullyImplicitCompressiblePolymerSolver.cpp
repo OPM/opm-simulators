@@ -206,7 +206,7 @@ namespace {
         const std::vector<double>& polymer_inflow = xw.polymerInflow();
 
         // Initial max concentration of this time step from PolymerBlackoilState.
-        cmax_ = Eigen::Map<V>(&x.maxconcentration()[0], Opm::AutoDiffGrid::numCells(grid_));
+        cmax_ = Eigen::Map<V>(&x.getCellData( x.CMAX )[0], Opm::AutoDiffGrid::numCells(grid_));
 
         const SolutionState state = constantState(x, xw);
         computeAccum(state, 0);
@@ -366,9 +366,18 @@ namespace {
         state.saturation[1] = ADB::constant(so, bpat);
 
         // Concentration
-        assert(not x.concentration().empty());
-        const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
-        state.concentration = ADB::constant(c);
+        {
+            auto& concentration = x.getCellData( x.CONCENTRATION );
+            assert(concentration.empty());
+            const V c = Eigen::Map<const V>(concentration.data(), nc);
+            // Do not understand:
+            //concentration = ADB::constant(c);
+            // Old code based on concentraton() method had the statement:
+            //
+            //   state.concentration = ADB::constant(c)
+            //
+            // This looks like it was a method assignment - how did it even compile?
+        }
 
         // Well rates.
         assert (not xw.wellRates().empty());
@@ -413,9 +422,12 @@ namespace {
         vars0.push_back(sw0);
 
         // Initial concentration.
-        assert (not x.concentration().empty());
-        const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
-        vars0.push_back(c);
+        {
+            auto& concentration = x.getCellData( x.CONCENTRATION );
+            assert (not concentration.empty());
+            const V c = Eigen::Map<const V>(concentration.data() , nc);
+            vars0.push_back(c);
+        }
 
         // Initial well rates.
         assert (not xw.wellRates().empty());
@@ -511,11 +523,14 @@ namespace {
     {
         const int nc = grid_.number_of_cells;
         V tmp = V::Zero(nc);
+        const auto& concentration = state.getCellData( state.CONCENTRATION );
+        auto& cmax = state.getCellData( state.CMAX );
+
         for (int i = 0; i < nc; ++i) {
-            tmp[i] = std::max(state.maxconcentration()[i], state.concentration()[i]);
+            tmp[i] = std::max(cmax[i], concentration[i]);
         }
 
-        std::copy(&tmp[0], &tmp[0] + nc, state.maxconcentration().begin());
+        std::copy(&tmp[0], &tmp[0] + nc, cmax.begin());
     }
 
 
@@ -764,11 +779,14 @@ namespace {
         // Concentration updates.
 //        const double dcmax = 0.3 * polymer_props_ad_.cMax();
 //		std::cout << "\n the max concentration: " << dcmax / 0.3 << std::endl;
-        const V c_old = Eigen::Map<const V>(&state.concentration()[0], nc, 1);
-//        const V dc_limited = sign(dc) * dc.abs().min(dcmax);
-//        const V c = (c_old - dc_limited).max(zero);//unaryExpr(Chop02());
-        const V c = (c_old - dc).max(zero);
-        std::copy(&c[0], &c[0] + nc, state.concentration().begin());
+        {
+            auto& concentration = state.getCellData( state.CONCENTRATION );
+            const V c_old = Eigen::Map<const V>(concentration.data() , nc, 1);
+            //        const V dc_limited = sign(dc) * dc.abs().min(dcmax);
+            //        const V c = (c_old - dc_limited).max(zero);//unaryExpr(Chop02());
+            const V c = (c_old - dc).max(zero);
+            std::copy(&c[0], &c[0] + nc, concentration.begin());
+        }
 
         // Qs update.
         // Since we need to update the wellrates, that are ordered by wells,

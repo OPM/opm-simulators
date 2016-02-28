@@ -20,8 +20,8 @@
 #ifndef OPM_POLYMERSTATE_HEADER_INCLUDED
 #define OPM_POLYMERSTATE_HEADER_INCLUDED
 
+#include <opm/common/data/SimulationDataContainer.hpp>
 
-#include <opm/core/simulator/SimulatorState.hpp>
 #include <opm/core/grid.h>
 #include <vector>
 
@@ -29,34 +29,13 @@ namespace Opm
 {
 
     /// Simulator state for a two-phase simulator with polymer.
-    class PolymerState : public SimulatorState
+    class PolymerState : public SimulationDataContainer
     {
     public:
+        static const std::string CONCENTRATION;
+        static const std::string CMAX;
 
-        void init(int number_of_cells, int number_of_faces, int num_phases)
-        {
-            SimulatorState::init( number_of_cells , number_of_faces , num_phases );
-            registerCellData("CONCENTRATION" , 1 , 0 );
-            registerCellData("CMAX" , 1 , 0 );
-        }
-
-        const std::vector<double>& concentration() const {
-            return getCellData("CONCENTRATION");
-        }
-
-        const std::vector<double>& maxconcentration() const {
-            return getCellData("CMAX");
-        }
-
-
-        std::vector<double>& concentration()  {
-            return getCellData("CONCENTRATION");
-        }
-
-        std::vector<double>& maxconcentration()  {
-            return getCellData("CMAX");
-        }
-
+        PolymerState(int number_of_cells, int number_of_faces, int num_phases);
     };
 
 } // namespace Opm

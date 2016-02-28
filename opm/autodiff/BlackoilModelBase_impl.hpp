@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
+#include <opm/common/data/SimulationDataContainer.hpp>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -2520,8 +2521,8 @@ namespace detail {
     template <class Grid, class Implementation>
     double
     BlackoilModelBase<Grid, Implementation>::
-    relativeChange(const SimulatorState& previous,
-                   const SimulatorState& current ) const
+    relativeChange(const SimulationDataContainer& previous,
+                   const SimulationDataContainer& current ) const
     {
         std::vector< double > p0  ( previous.pressure() );
         std::vector< double > sat0( previous.saturation() );
