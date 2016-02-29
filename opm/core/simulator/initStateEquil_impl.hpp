@@ -583,7 +583,7 @@ namespace Opm
     } // namespace Details
 
 
-    namespace Equil {
+    namespace EQUIL {
 
 
         template <class Grid,
@@ -885,7 +885,7 @@ namespace Opm
                         const double gravity,
                         BlackoilState& state)
     {
-        typedef Equil::DeckDependent::InitialStateComputer ISC;
+        typedef EQUIL::DeckDependent::InitialStateComputer ISC;
         ISC isc(props, deck, eclipseState, grid, gravity);
         const auto pu = props.phaseUsage();
         const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
