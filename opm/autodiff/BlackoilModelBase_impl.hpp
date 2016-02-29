@@ -178,7 +178,8 @@ namespace detail {
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                         ADB::null(),
                         ADB::null(),
-                        { 1.1169, 1.0031, 0.0031 }} ) // the default magic numbers
+                        { 1.1169, 1.0031, 0.0031 }, // the default magic numbers
+                        false } )
         , terminal_output_ (terminal_output)
         , material_name_{ "Water", "Oil", "Gas" }
         , current_relaxation_(1.0)
