@@ -49,7 +49,7 @@ namespace Opm
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-    void SimulatorTimer::init(Opm::TimeMapConstPtr timeMap, bool restart, size_t report_step)
+    void SimulatorTimer::init(Opm::TimeMapConstPtr timeMap, size_t report_step)
     {
         total_time_ = timeMap->getTotalTime();
         timesteps_.resize(timeMap->numTimesteps());
