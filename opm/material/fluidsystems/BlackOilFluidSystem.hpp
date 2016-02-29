@@ -61,7 +61,7 @@ LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const F
 
 template <class FluidSystem, class LhsEval, class FluidState>
 auto getRs_(typename std::enable_if<HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
-            unsigned regionIdx)
+            OPM_UNUSED unsigned regionIdx)
     -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
                 ::template toLhs<LhsEval>(fluidState.Rs()))
 {
@@ -83,7 +83,7 @@ LhsEval getRv_(typename std::enable_if<!HasMember_Rv<FluidState>::value, const F
 
 template <class FluidSystem, class LhsEval, class FluidState>
 auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const FluidState&>::type fluidState,
-            unsigned regionIdx)
+            OPM_UNUSED unsigned regionIdx)
     -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
                 ::template toLhs<LhsEval>(fluidState.Rv()))
 {
