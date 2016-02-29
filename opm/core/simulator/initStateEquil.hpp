@@ -29,9 +29,10 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/Units.hpp>
-#include <opm/parser/eclipse/Utility/EquilWrapper.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RsvdTable.hpp>
@@ -83,7 +84,7 @@ namespace Opm
      * This namespace is intentionally nested to avoid name clashes
      * with other parts of OPM.
      */
-    namespace Equil {
+    namespace EQUIL {
 
         /**
          * Compute initial phase pressures by means of equilibration.
@@ -196,48 +197,16 @@ namespace Opm
         namespace DeckDependent {
             inline
             std::vector<EquilRecord>
-            getEquil(const Opm::DeckConstPtr deck)
+            getEquil(const Opm::EclipseState& state)
             {
-                if (deck->hasKeyword("EQUIL")) {
-                
-                    Opm::EquilWrapper eql(deck->getKeyword("EQUIL"));
+                const auto& init = *state.getInitConfig();
 
-                    const int nrec = eql.numRegions();
-
-                    std::vector<EquilRecord> ret;
-                    ret.reserve(nrec);
-                    for (int r = 0; r < nrec; ++r) {
-
-                        EquilRecord record =
-                            {
-                                { eql.datumDepth(r)                        ,
-                                  eql.datumDepthPressure(r)                }
-                                ,
-                                { eql.waterOilContactDepth(r)              ,
-                                  eql.waterOilContactCapillaryPressure(r)  }
-                                ,
-                                { eql.gasOilContactDepth(r)                ,
-                                  eql.gasOilContactCapillaryPressure(r)    }
-                                ,
-                                eql.liveOilInitProceedure(r)
-                                ,
-                                eql.wetGasInitProceedure(r)
-                                ,
-                                eql.initializationTargetAccuracy(r)
-                            };
-                        if (record.N != 0) {
-                            OPM_THROW(std::domain_error,
-                              "kw EQUIL, item 9: Only N=0 supported.");
-                        }
-                        ret.push_back(record);
-                    }
-
-                    return ret;
+                if( !init.hasEquil() ) {
+                    OPM_THROW(std::domain_error, "Deck does not provide equilibration data.");
                 }
-                else {
-                    OPM_THROW(std::domain_error,
-                              "Deck does not provide equilibration data.");
-                }
+
+                const auto& equil = init.getEquil();
+                return { equil.begin(), equil.end() };
             }
 
             template<class Grid>
@@ -285,7 +254,7 @@ namespace Opm
                       rv_(UgGridHelpers::numCells(G))
                 {
                     // Get the equilibration records.
-                    const std::vector<EquilRecord> rec = getEquil(deck);
+                    const std::vector<EquilRecord> rec = getEquil(*eclipseState);
                     std::shared_ptr<const TableManager> tables = eclipseState->getTableManager();
                     // Create (inverse) region mapping.
                     const RegionMapping<> eqlmap(equilnum(deck, eclipseState, G)); 
@@ -296,25 +265,24 @@ namespace Opm
                         const TableContainer& rsvdTables = tables->getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
-                            if (rec[i].live_oil_table_index > 0) {
-                                if (rsvdTables.size() > 0 && size_t(rec[i].live_oil_table_index) <= rsvdTables.size()) { 
-                                    const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
-                                    std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
-                                    std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
-                                    rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props,
-                                                                                           cell,
-                                                                                           depthColumn , rsColumn));
-                                } else {
-                                    OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table " << (rec[i].live_oil_table_index) << " not available.");
+                            if (!rec[i].liveOilInitConstantRs()) {
+                                if (rsvdTables.size() <= 0 ) {
+                                    OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table not available.");
                                 }
+                                const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
+                                std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
+                                std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
+                                rs_func_.push_back(std::make_shared<Miscibility::RsVD>(props,
+                                                                                        cell,
+                                                                                        depthColumn , rsColumn));
                             } else {
-                                if (rec[i].goc.depth != rec[i].main.depth) {
+                                if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
                                     OPM_THROW(std::runtime_error,
                                               "Cannot initialise: when no explicit RSVD table is given, \n"
                                               "datum depth must be at the gas-oil-contact. "
                                               "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
                                 }
-                                const double p_contact = rec[i].main.press;
+                                const double p_contact = rec[i].datumDepthPressure();
                                 const double T_contact = 273.15 + 20; // standard temperature for now
                                 rs_func_.push_back(std::make_shared<Miscibility::RsSatAtContact>(props, cell, p_contact, T_contact));
                             }
@@ -330,27 +298,27 @@ namespace Opm
                         const TableContainer& rvvdTables = tables->getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
-                            if (rec[i].wet_gas_table_index > 0) {
-                                if (rvvdTables.size() > 0 && size_t(rec[i].wet_gas_table_index) <= rvvdTables.size()) { 
-                                    const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
-                                    std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
-                                    std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
-
-                                    rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props,
-                                                                                           cell,
-                                                                                           depthColumn , rvColumn));
-
-                                } else {
-                                    OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table " << (rec[i].wet_gas_table_index) << " not available.");
+                            if (!rec[i].wetGasInitConstantRv()) {
+                                if (rvvdTables.size() <= 0) { 
+                                    OPM_THROW(std::runtime_error, "Cannot initialise: RVVD table not available.");
                                 }
+
+                                const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
+                                std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
+                                std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
+
+                                rv_func_.push_back(std::make_shared<Miscibility::RvVD>(props,
+                                                                                        cell,
+                                                                                        depthColumn , rvColumn));
+
                             } else {
-                                if (rec[i].goc.depth != rec[i].main.depth) {
+                                if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
                                     OPM_THROW(std::runtime_error,
                                               "Cannot initialise: when no explicit RVVD table is given, \n"
                                               "datum depth must be at the gas-oil-contact. "
                                               "In EQUIL region " << (i + 1) << "  (counting from 1), this does not hold.");
                                 }
-                                const double p_contact = rec[i].main.press + rec[i].goc.press;
+                                const double p_contact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
                                 const double T_contact = 273.15 + 20; // standard temperature for now
                                 rv_func_.push_back(std::make_shared<Miscibility::RvSatAtContact>(props, cell, p_contact, T_contact));
                             }
@@ -456,7 +424,7 @@ namespace Opm
 
             };
         } // namespace DeckDependent
-    } // namespace Equil
+    } // namespace EQUIL
 } // namespace Opm
 
 #include <opm/core/simulator/initStateEquil_impl.hpp>
