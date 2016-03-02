@@ -279,18 +279,20 @@ private:
                            const DimVector& distance,
                            const DimMatrix& perm) const
     {
+        Scalar isArea = is.geometry().volume();
+        DimVector n = is.centerUnitOuterNormal();
+
         unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
         halfTrans = perm[dimIdx][dimIdx];
-        halfTrans *= is.geometry().volume();
+        halfTrans *= isArea;
 
-        const auto &normal = is.centerUnitOuterNormal();
         Scalar val = 0;
-        for (unsigned i = 0; i < normal.size(); ++i)
-            val += is.centerUnitOuterNormal()[i]*distance[i];
+        for (unsigned i = 0; i < n.size(); ++i)
+            val += n[i]*distance[i];
 
         halfTrans *= std::abs<Scalar>(val);
-        halfTrans /= distance*distance;
+        halfTrans /= distance.two_norm2();
     }
 
     DimVector distanceVector_(const Intersection& is,
