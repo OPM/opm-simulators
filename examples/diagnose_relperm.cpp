@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 #include <memory>
 #include <algorithm>
 #include <iostream>
@@ -76,20 +77,16 @@ try
 
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
-    bool output = true;
-    std::string output_dir;
-
-    if (output) {
-        output_dir = "output";
-        boost::filesystem::path fpath(output_dir);
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
+    using boost::filesystem::path; 
+    path fpath(eclipseFilename);
+    std::string baseName;
+    if (boost::to_upper_copy(path(fpath.extension()).string())== ".DATA") {
+        baseName = path(fpath.stem()).string();
+    } else {
+        baseName = path(fpath.filename()).string();
     }
-    std::string logFile = output_dir + "/LOGFILE.txt";
+
+    std::string logFile = baseName + ".SATFUNCLOG";
     Opm::time::StopWatch timer;
     timer.start();
     RelpermDiagnostics diagnostic(logFile);
