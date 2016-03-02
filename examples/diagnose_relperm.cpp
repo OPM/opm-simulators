@@ -86,7 +86,7 @@ try
         baseName = path(fpath.filename()).string();
     }
 
-    std::string logFile = baseName + ".LOG";
+    std::string logFile = baseName + ".SATFUNCLOG";
     Opm::time::StopWatch timer;
     timer.start();
     RelpermDiagnostics diagnostic(logFile);
