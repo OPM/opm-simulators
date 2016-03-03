@@ -791,7 +791,7 @@ public:
      * For injectors, this is the maximum, for producers it's the minimum.
      */
     Scalar targetBottomHolePressure() const
-    { return thpLimit_; }
+    { return bhpLimit_; }
 
     /*!
      * \brief Return the maximum/minimum bottom hole pressure [Pa] of the well.
