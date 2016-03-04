@@ -56,7 +56,7 @@
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
-
+#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilSimple.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
@@ -127,6 +127,7 @@ namespace Opm
             asImpl().setupOutput();
             asImpl().readDeckInput();
             asImpl().setupGridAndProps();
+            asImpl().runDiagnostics();
             asImpl().setupState();
             asImpl().distributeData();
             asImpl().setupOutputWriter();
@@ -193,8 +194,8 @@ namespace Opm
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
         // createSimulator()
         std::unique_ptr<Simulator> simulator_;
-
-
+        // create log file
+        std::string logFile_;
         // ------------   Methods   ------------
 
 
@@ -336,12 +337,22 @@ namespace Opm
         //   eclipse_state_
         // May throw if errors are encountered, here configured to be somewhat tolerant.
         void readDeckInput()
-        {
+        {   
+            std::string deck_filename = param_.get<std::string>("deck_filename");
+            // create logFile
+            using boost::filesystem::path; 
+            path fpath(deck_filename);
+            std::string baseName;
+            if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
+                baseName = path(fpath.stem()).string();
+            } else {
+                baseName = path(fpath.filename()).string();
+            }
+            logFile_ = output_dir_ + "/" + baseName + ".PRT";        
             // Create Parser
-            std::string logFile = output_dir_ + "/LOGFILE.txt";
             ParserPtr parser(new Parser());
             {
-                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(logFile , Log::DefaultMessageTypes);
+                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(logFile_ , Log::DefaultMessageTypes);
                 std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
 
                 OpmLog::addBackend( "STREAM" , streamLog );
@@ -350,14 +361,13 @@ namespace Opm
 
             // Create Deck and EclipseState.
             try {
-                std::string deck_filename = param_.get<std::string>("deck_filename");
                 ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
                 deck_ = parser->parseFile(deck_filename, parseMode);
                 checkDeck(deck_, parser);
                 eclipse_state_.reset(new EclipseState(deck_, parseMode));
             }
             catch (const std::invalid_argument& e) {
-                std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile << std::endl;
+                std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;
                 std::cerr << "Exception caught: " << e.what() << std::endl;
                 throw;
             }
@@ -516,6 +526,20 @@ namespace Opm
                                       material_law_manager_, threshold_pressures_,
                                       parallel_information_, use_local_perm_);
             }
+        }
+
+
+
+
+
+        // run diagnostics
+        // Writes to:
+        //   logFile_
+        void runDiagnostics()
+        {
+            // Run relperm diagnostics
+            RelpermDiagnostics diagnostic(logFile_);
+            diagnostic.diagnosis(eclipse_state_, deck_, grid_init_->grid());
         }
 
 
