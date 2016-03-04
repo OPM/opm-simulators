@@ -116,7 +116,7 @@ namespace Opm
 
     /// Compute per-solve dynamic properties.
     void IncompTpfaPolymer::computePerSolveDynamicData(const double /*dt*/,
-                                                       const PolymerState& state,
+                                                       const SimulatorState& state,
                                                        const WellState& /*well_state*/)
     {
         // Computed here:
