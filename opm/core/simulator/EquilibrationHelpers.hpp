@@ -26,6 +26,8 @@
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/RootFinders.hpp>
 
+#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
+
 #include <memory>
 
 
@@ -34,7 +36,7 @@
 
 namespace Opm
 {
-    namespace Equil {
+    namespace EQUIL {
 
         template <class Props>
         class DensityCalculator;
@@ -48,8 +50,6 @@ namespace Opm
             class RsVD;
             class RsSatAtContact;
         }
-
-        struct EquilRecord;
 
         template <class DensCalc>
         class EquilReg;
@@ -84,7 +84,7 @@ namespace Opm
      * This namespace is intentionally nested to avoid name clashes
      * with other parts of OPM.
      */
-    namespace Equil {
+    namespace EQUIL {
 
 
         template <class Props>
@@ -546,52 +546,6 @@ namespace Opm
 
         } // namespace Miscibility
 
-
-
-        /**
-         * Equilibration record.
-         *
-         * Layout and contents inspired by first six items of
-         * ECLIPSE's 'EQUIL' records.  This is the minimum amount of
-         * input data needed to define phase pressures in an
-         * equilibration region.
-         *
-         * Data consists of three pairs of depth and pressure values:
-         *   1. main
-         *     - @c depth Main datum depth.
-         *     - @c press Pressure at datum depth.
-         *
-         *   2. woc
-         *     - @c depth Depth of water-oil contact
-         *     - @c press water-oil capillary pressure at water-oil contact.
-         *       Capillary pressure defined as "P_oil - P_water".
-         *
-         *   3. goc
-         *     - @c depth Depth of gas-oil contact
-         *     - @c press Gas-oil capillary pressure at gas-oil contact.
-         *       Capillary pressure defined as "P_gas - P_oil".
-         *
-         * For the time being, items 7-9 of ECLIPSE's 'EQUIL' records are also 
-         * stored here, but might (should?) eventually be moved elsewhere.
-         * 
-         *   - @c live_oil_table_index Indicates type of initialisation for live oil.
-         *      Positive value points to corresponding Rs vs. depth table.
-         *   - @c wet_gas_table_index Indicates type of initialisation for wet gas.
-         *      Positive value points to corresponding Rv vs. depth table.
-         *   - @c N Defines accuracy of initialisation computations.  Currently
-         *      only @c N=0 is supported.
-         *      
-         */
-        struct EquilRecord {
-            struct {
-                double depth;
-                double press;
-            } main, woc, goc;
-            int live_oil_table_index;
-            int wet_gas_table_index;
-            int N;
-        };
-
         /**
          * Aggregate information base of an equilibration region.
          *
@@ -654,36 +608,36 @@ namespace Opm
             /**
              * Datum depth in current region
              */
-            double datum()    const { return this->rec_.main.depth; }
+            double datum()    const { return this->rec_.datumDepth(); }
 
             /**
              * Pressure at datum depth in current region.
              */
-            double pressure() const { return this->rec_.main.press; }
+            double pressure() const { return this->rec_.datumDepthPressure(); }
 
             /**
              * Depth of water-oil contact.
              */
-            double zwoc()     const { return this->rec_.woc .depth; }
+            double zwoc()     const { return this->rec_.waterOilContactDepth(); }
 
             /**
              * water-oil capillary pressure at water-oil contact.
              *
              * \return P_o - P_w at WOC.
              */
-            double pcow_woc() const { return this->rec_.woc .press; }
+            double pcow_woc() const { return this->rec_.waterOilContactCapillaryPressure(); }
 
             /**
              * Depth of gas-oil contact.
              */
-            double zgoc()     const { return this->rec_.goc .depth; }
+            double zgoc()     const { return this->rec_.gasOilContactDepth(); }
 
             /**
              * Gas-oil capillary pressure at gas-oil contact.
              *
              * \return P_g - P_o at GOC.
              */
-            double pcgo_goc() const { return this->rec_.goc .press; }
+            double pcgo_goc() const { return this->rec_.gasOilContactCapillaryPressure(); }
 
             /**
              * Retrieve phase density calculator of current region.

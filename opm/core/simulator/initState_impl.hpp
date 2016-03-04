@@ -32,7 +32,7 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
-#include <opm/parser/eclipse/Utility/EquilWrapper.hpp>
+#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 
 #include <iostream>
 #include <cmath>
@@ -665,16 +665,16 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only oil-water scenario (no gas).");
             }
             // Set saturations depending on oil-water contact.
-            EquilWrapper equil(deck->getKeyword("EQUIL"));
-            if (equil.numRegions() != 1) {
+            Equil equil( deck->getKeyword( "EQUIL" ) );
+            if (equil.size() != 1) {
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): No region support yet.");
             }
-            const double woc = equil.waterOilContactDepth(0);
+            const double woc = equil.getRecord( 0 ).waterOilContactDepth();
             initWaterOilContact(number_of_cells, begin_cell_centroids, dimensions,
                                 props, woc, WaterBelow, state);
             // Set pressure depending on densities and depths.
-            const double datum_z = equil.datumDepth(0);
-            const double datum_p = equil.datumDepthPressure(0);
+            const double datum_z = equil.getRecord( 0 ).datumDepth();
+            const double datum_p = equil.getRecord( 0 ).datumDepthPressure();
             initHydrostaticPressure(number_of_cells, begin_cell_centroids, dimensions,
                                     props, woc, gravity, datum_z, datum_p, state);
         } else if (deck->hasKeyword("PRESSURE")) {
