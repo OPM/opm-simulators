@@ -26,6 +26,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
+#include <opm/core/props/satfunc/RelpermDiagnostics_impl.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>

@@ -58,9 +58,10 @@ namespace Opm {
         ///\param[in] eclState  eclipse state.
         ///\param[in] deck      ecliplise data file.
         ///\param[in] grid      unstructured grid.
+        template <class GridT>
         void diagnosis(EclipseStateConstPtr eclState,
                        DeckConstPtr deck,
-                       const UnstructuredGrid& grid);
+                       const GridT& grid);
 
         ///return streamLog
         std::shared_ptr<Opm::StreamLog> getOpmLog() const;
@@ -118,9 +119,10 @@ namespace Opm {
         void unscaledEndPointsCheck_(DeckConstPtr deck,
                                      EclipseStateConstPtr eclState);
 
+        template <class GridT>
         void scaledEndPointsCheck_(DeckConstPtr deck,
                                    EclipseStateConstPtr eclState,
-                                   const UnstructuredGrid& grid);
+                                   const GridT& grid);
 
         ///For every table, need to deal with case by case.
         void swofTableCheck_(const Opm::SwofTable& swofTables,

@@ -39,6 +39,7 @@
 #include <opm/core/grid/GridManager.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
+#include <opm/core/props/satfunc/RelpermDiagnostics_impl.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseMode.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
