@@ -611,7 +611,7 @@ namespace Opm
 
             // initialize variables
             const auto initConfig = eclipse_state_->getInitConfig();
-            simtimer.init(timeMap, initConfig->getRestartInitiated(), (size_t)initConfig->getRestartStep());
+            simtimer.init(timeMap, (size_t)initConfig->getRestartStep());
 
 
 
