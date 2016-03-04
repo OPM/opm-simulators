@@ -145,4 +145,6 @@ namespace Opm {
 
 } //namespace Opm
 
+#include <opm/core/props/satfunc/RelpermDiagnostics_impl.hpp>
+
 #endif // OPM_RELPERMDIAGNOSTICS_HEADER_INCLUDED
