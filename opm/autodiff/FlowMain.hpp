@@ -348,7 +348,7 @@ namespace Opm
             } else {
                 baseName = path(fpath.filename()).string();
             }
-            logFile_ = output_dir_ + "/" + baseName + ".PRT";        
+            logFile_ = baseName + ".PRT";        
             // Create Parser
             ParserPtr parser(new Parser());
             {
