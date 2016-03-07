@@ -403,7 +403,7 @@ public:
 
     template <class LhsEval>
     static typename std::enable_if<std::is_same<Evaluation, LhsEval>::value,
-                                   const LhsEval&>::type
+                                   LhsEval>::type
     toLhs(const Evaluation& eval)
     { return eval; }
 
