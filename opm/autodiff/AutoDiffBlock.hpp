@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -674,6 +675,50 @@ namespace Opm
         }
 
         return AutoDiffBlock<Scalar>::function( std::move(val), std::move(jac) );
+    }
+
+    /**
+     * @brief Computes the value of base raised to the power of exp
+     *
+     * @param base The base AD forward block
+     * @param exp  The exponent AD forward block
+     * @return The value of base raised to the power of exp
+     */    template <typename Scalar>
+    AutoDiffBlock<Scalar> pow(const AutoDiffBlock<Scalar>& base,
+                                    const AutoDiffBlock<Scalar>& exp)
+    {
+        const int num_elem = base.value().size();
+        assert(exp.value().size() == num_elem);
+        typename AutoDiffBlock<Scalar>::V val (num_elem);
+        for (int i = 0; i < num_elem; ++i) {
+            val[i] = std::pow(base.value()[i], exp.value()[i]);
+        }
+
+        // (f^g)' = f^g * ln(f) * g' + g * f^(g-1) * f'
+        typename AutoDiffBlock<Scalar>::V der1 = val;
+        for (int i = 0; i < num_elem; ++i) {
+            der1[i] *= std::log(base.value()[i]);
+        }
+        std::vector< typename AutoDiffBlock<Scalar>::M > jac1 (base.numBlocks());
+        const typename AutoDiffBlock<Scalar>::M der1_diag(der1.matrix().asDiagonal());
+        for (int block = 0; block < base.numBlocks(); block++) {
+             fastSparseProduct(der1_diag, exp.derivative()[block], jac1[block]);
+        }
+        typename AutoDiffBlock<Scalar>::V der2 = exp.value();
+        for (int i = 0; i < num_elem; ++i) {
+            der2[i] *= std::pow(base.value()[i], exp.value()[i] - 1.0);
+        }
+        std::vector< typename AutoDiffBlock<Scalar>::M > jac2 (base.numBlocks());
+        const typename AutoDiffBlock<Scalar>::M der2_diag(der2.matrix().asDiagonal());
+        for (int block = 0; block < base.numBlocks(); block++) {
+             fastSparseProduct(der2_diag, base.derivative()[block], jac2[block]);
+        }
+        std::vector< typename AutoDiffBlock<Scalar>::M > jac (base.numBlocks());
+        for (int block = 0; block < base.numBlocks(); block++) {
+             jac[block] = jac1[block] + jac2[block];
+        }
+
+        return AutoDiffBlock<Scalar>::function(std::move(val), std::move(jac));
     }
 
 

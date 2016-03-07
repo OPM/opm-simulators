@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -293,7 +294,7 @@ BOOST_AUTO_TEST_CASE(Pow)
     vx << 0.2, 1.2, 13.4;
 
     ADB::V vy(3);
-    vy << 1.0, 2.2, 3.4;
+    vy << 2.0, 3.0, 0.5;
 
     std::vector<ADB::V> vals{ vx, vy };
     std::vector<ADB> vars = ADB::variables(vals);
@@ -303,6 +304,7 @@ BOOST_AUTO_TEST_CASE(Pow)
 
     const double tolerance = 1e-14;
 
+    // test exp = double
     const ADB xx = x * x;
     ADB xxpow2 = Opm::pow(x,2.0);
     checkClose(xxpow2, xx, tolerance);
@@ -322,6 +324,37 @@ BOOST_AUTO_TEST_CASE(Pow)
     for (int i = 0 ; i < 3; ++i){
         BOOST_CHECK_CLOSE(xpowhalf.value()[i], x_sqrt[i], 1e-4);
     }
+
+    // test exp = ADB::V
+    ADB xpowyval = Opm::pow(x,y.value());
+
+    // each of the component of y is tested in the test above
+    // we compare with the results from the above tests.
+    ADB::V pick1(3);
+    pick1 << 1,0,0;
+    ADB::V pick2(3);
+    pick2 << 0,1,0;
+    ADB::V pick3(3);
+    pick3 << 0,0,1;
+
+    ADB compare = pick1 * xx + pick2 * xxx + pick3 * xpowhalf;
+    checkClose(xpowyval, compare, tolerance);
+
+    // test exp = ADB
+    ADB xpowy = Opm::pow(x,y);
+
+    // the value and the first jacobian should be equal to the xpowyval
+    // the second jacobian is hand calculated
+    // log(0.2)*0.2^2.0, log(1.2) * 1.2^3.0, log(13.4) * 13.4^0.5
+    ADB::V jac2(3);
+    jac2 << -0.0643775165 , 0.315051650 , 9.50019208855;
+    for (int i = 0 ; i < 3; ++i){
+        BOOST_CHECK_CLOSE(xpowy.value()[i], xpowyval.value()[i], tolerance);
+        BOOST_CHECK_CLOSE(xpowy.derivative()[0].coeff(i,i), xpowyval.derivative()[0].coeff(i,i), tolerance);
+        BOOST_CHECK_CLOSE(xpowy.derivative()[1].coeff(i,i), jac2[i], 1e-4);
+    }
+
+
 }
 
 
