@@ -22,26 +22,19 @@
 #include <config.h>
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
+
+#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/utility/Units.hpp>
+#include <opm/core/utility/extractPvtTableIndex.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
-#include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/props/BlackoilPropertiesInterface.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/pvt/PvtInterface.hpp>
-#include <opm/core/props/pvt/PvtConstCompr.hpp>
-#include <opm/core/props/pvt/PvtDead.hpp>
-#include <opm/core/props/pvt/PvtDeadSpline.hpp>
-#include <opm/core/props/pvt/PvtLiveOil.hpp>
-#include <opm/core/props/pvt/PvtLiveGas.hpp>
-#include <opm/core/props/pvt/ThermalWaterPvtWrapper.hpp>
-#include <opm/core/props/pvt/ThermalOilPvtWrapper.hpp>
-#include <opm/core/props/pvt/ThermalGasPvtWrapper.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/core/utility/Units.hpp>
-
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm
 {
