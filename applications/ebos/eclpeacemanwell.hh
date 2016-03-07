@@ -331,9 +331,6 @@ public:
         unsigned wellGlobalDofIdx = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         residual[wellGlobalDofIdx] = 0.0;
 
-        Scalar wellResid = wellResidual_(actualBottomHolePressure_);
-        residual[wellGlobalDofIdx][0] = wellResid;
-
         auto &diagBlock = matrix[wellGlobalDofIdx][wellGlobalDofIdx];
         diagBlock = 0.0;
         for (unsigned i = 0; i < numModelEq; ++ i)
@@ -352,6 +349,9 @@ public:
             }
             return;
         }
+
+        Scalar wellResid = wellResidual_(actualBottomHolePressure_);
+        residual[wellGlobalDofIdx][0] = wellResid;
 
         // account for the effect of the grid DOFs which are influenced by the well on
         // the well equation and the effect of the well on the grid DOFs
