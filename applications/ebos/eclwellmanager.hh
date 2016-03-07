@@ -209,7 +209,7 @@ public:
 
                 case Opm::WellInjector::CMODE_UNDEFINED:
                     std::cout << "Warning: Control mode of injection well " << well->name()
-                              << " is undefined. Assuming well to be shut.";
+                              << " is undefined. Assuming well to be shut.\n";
                     well->setWellStatus(Well::WellStatus::Shut);
                     continue;
                 }
