@@ -242,6 +242,7 @@ namespace Opm
                                                double* dmudp) const
     {
         const auto& pu = phaseUsage();
+        const int np = numPhases();
 
         enum PressureEvalTag {};
         typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
@@ -253,6 +254,9 @@ namespace Opm
         LadEval muLad = 0.0;
 
         pLad.derivatives[0] = 1.0;
+
+        R_.resize(n*np);
+        this->compute_R_(n, p, T, z, cells, &R_[0]);
 
         for (int i = 0; i < n; ++ i) {
             int cellIdx = cells[i];
@@ -268,6 +272,7 @@ namespace Opm
             }
 
             if (pu.phase_used[BlackoilPhases::Liquid]) {
+                RsLad.value = R_[i*np + pu.phase_pos[BlackoilPhases::Liquid]];
                 muLad = oilPvt_.viscosity(pvtRegionIdx, TLad, pLad, RsLad);
                 int offset = pu.num_phases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid];
                 mu[offset] = muLad.value;
@@ -275,6 +280,7 @@ namespace Opm
             }
 
             if (pu.phase_used[BlackoilPhases::Vapour]) {
+                RvLad.value = R_[i*np + pu.phase_pos[BlackoilPhases::Vapour]];
                 muLad = gasPvt_.viscosity(pvtRegionIdx, TLad, pLad, RvLad);
                 int offset = pu.num_phases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour];
                 mu[offset] = muLad.value;
