@@ -340,20 +340,31 @@ BOOST_AUTO_TEST_CASE(Pow)
     ADB compare = pick1 * xx + pick2 * xxx + pick3 * xpowhalf;
     checkClose(xpowyval, compare, tolerance);
 
-    // test exp = ADB
-    ADB xpowy = Opm::pow(x,y);
+    // test exponent = ADB::V and base = ADB
+    ADB xvalpowy = Opm::pow(x.value(),y);
 
-    // the value and the first jacobian should be equal to the xpowyval
+    // the value should be equal to xpowyval
+    // the first jacobian should be trivial
     // the second jacobian is hand calculated
     // log(0.2)*0.2^2.0, log(1.2) * 1.2^3.0, log(13.4) * 13.4^0.5
     ADB::V jac2(3);
     jac2 << -0.0643775165 , 0.315051650 , 9.50019208855;
     for (int i = 0 ; i < 3; ++i){
-        BOOST_CHECK_CLOSE(xpowy.value()[i], xpowyval.value()[i], tolerance);
-        BOOST_CHECK_CLOSE(xpowy.derivative()[0].coeff(i,i), xpowyval.derivative()[0].coeff(i,i), tolerance);
-        BOOST_CHECK_CLOSE(xpowy.derivative()[1].coeff(i,i), jac2[i], 1e-4);
+        BOOST_CHECK_CLOSE(xvalpowy.value()[i], xpowyval.value()[i], tolerance);
+        BOOST_CHECK_CLOSE(xvalpowy.derivative()[0].coeff(i,i), 0.0, tolerance);
+        BOOST_CHECK_CLOSE(xvalpowy.derivative()[1].coeff(i,i), jac2[i], 1e-4);
     }
 
+    // test exp = ADB
+    ADB xpowy = Opm::pow(x,y);
+
+    // the first jacobian should be equal to the xpowyval
+    // the second jacobian should be equal to the xvalpowy
+    for (int i = 0 ; i < 3; ++i){
+        BOOST_CHECK_CLOSE(xpowy.value()[i], xpowyval.value()[i], tolerance);
+        BOOST_CHECK_CLOSE(xpowy.derivative()[0].coeff(i,i), xpowyval.derivative()[0].coeff(i,i), tolerance);
+        BOOST_CHECK_CLOSE(xpowy.derivative()[1].coeff(i,i), xvalpowy.derivative()[1].coeff(i,i), tolerance);
+    }
 
 }
 
