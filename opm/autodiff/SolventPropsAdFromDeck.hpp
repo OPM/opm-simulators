@@ -107,6 +107,13 @@ public:
     ADB miscibilityFunction(const ADB& solventFraction,
                             const Cells& cells) const;
 
+    /// Pressure dependent miscibility function
+    /// \param[in]  solventFraction Array of n oil phase pressure .
+    /// \param[in]  cells           Array of n cell indices to be associated with the pressure values.
+    /// \return                     Array of n miscibility values
+    ADB pressureMiscibilityFunction(const ADB& po,
+                                    const Cells& cells) const;
+
     /// Miscible critical gas saturation function
     /// \param[in]  Sw              Array of n water saturation values.
     /// \param[in]  cells           Array of n cell indices to be associated with the saturation values.
@@ -175,6 +182,7 @@ private:
     std::vector<NonuniformTableLinear<double> > mkro_;
     std::vector<NonuniformTableLinear<double> > mkrsg_;
     std::vector<NonuniformTableLinear<double> > misc_;
+    std::vector<NonuniformTableLinear<double> > pmisc_;
     std::vector<NonuniformTableLinear<double> > sorwmis_;
     std::vector<NonuniformTableLinear<double> > sgcwmis_;
     std::vector<double> mix_param_viscosity_;
