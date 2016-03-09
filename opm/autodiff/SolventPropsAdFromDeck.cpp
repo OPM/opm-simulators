@@ -27,6 +27,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/PvdsTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
+
 
 namespace Opm
 {
@@ -274,6 +276,35 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
             }
 
+            if (deck->hasKeyword("TLPMIXPA")) {
+                const TableContainer& tlpmixparTables = tables->getTlpmixpaTables();
+                if (!tlpmixparTables.empty()) {
+
+                    int numRegions = tlpmixparTables.size();
+                    // resize the attributes of the object
+                    tlpmix_param_.resize(numRegions);
+                    for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                        const Opm::TlpmixpaTable& tlpmixparTable = tlpmixparTables.getTable<TlpmixpaTable>(regionIdx);
+
+                        // Copy data
+                        const auto& po = tlpmixparTable.getOilPhasePressureColumn();
+                        const auto& tlpmixpa = tlpmixparTable.getMiscibilityColumn();
+
+                        tlpmix_param_[regionIdx] = NonuniformTableLinear<double>(po, tlpmixpa);
+
+                    }
+                } else {
+                    // if empty keyword. Try to use the pmisc table as default.
+                    if (pmisc_.size() > 0) {
+                        tlpmix_param_ = pmisc_;
+                    } else {
+                        OPM_THROW(std::invalid_argument, "If the pressure dependent TL values in TLPMIXPA is defaulted (no entries), then the PMISC tables must be specified.");
+                    }
+                }
+            }
+
+
+
         }
     }
 
@@ -449,6 +480,15 @@ V SolventPropsAdFromDeck::mixingParameterDensity(const Cells& cells) const {
     }
     // return zeros if not specified
     return V::Zero(n);
+}
+
+ADB SolventPropsAdFromDeck::pressureMixingParameter(const ADB& po,
+                                                    const Cells& cells) const {
+    if (tlpmix_param_.size() > 0) {
+        return SolventPropsAdFromDeck::makeADBfromTables(po, cells, cellMiscRegionIdx_, tlpmix_param_);
+    }
+    // return ones if not specified i.e. no pressure effects.
+    return ADB::constant(V::Constant(po.size(), 1.0));
 }
 
 void SolventPropsAdFromDeck::extractTableIndex(const std::string& keyword,

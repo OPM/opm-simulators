@@ -828,7 +828,7 @@ namespace Opm {
         effective_saturations[solvent_pos_] = ss - sgcwmis;
 
         // Compute effective viscosities and densities
-        computeToddLongstaffMixing(viscosity, density, effective_saturations, pu);
+        computeToddLongstaffMixing(viscosity, density, effective_saturations, po, pu);
 
         // compute the volume factors from the densities
         const ADB b_eff_o = density[pu.phase_pos[ Oil ]] / (fluid_.surfaceDensity(pu.phase_pos[ Oil ],  cells_) + fluid_.surfaceDensity(pu.phase_pos[ Gas ], cells_) * state.rs);
@@ -855,7 +855,7 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilSolventModel<Grid>::computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu)
+    BlackoilSolventModel<Grid>::computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const ADB po, const Opm::PhaseUsage pu)
     {
         const int  nc = cells_.size();
         const V ones = V::Constant(nc, 1.0);
@@ -897,7 +897,9 @@ namespace Opm {
         const ADB mu_m = zero_selectorSn.select(mu_s + mu_o + mu_g, mu_o * mu_s * mu_g / pow( ( (so_eff / sn_eff) * mu_s_pow *  mu_g_pow)
                                                        + ( (ss_eff / sn_eff) * mu_o_pow *  mu_g_pow) + ( (sg_eff / sn_eff) * mu_s_pow * mu_o_pow), 4.0));
         // Mixing parameter for viscosity
-        const V mix_param_mu = solvent_props_.mixingParameterViscosity(cells_);
+        // The pressureMixingParameter represent the miscibility of the solvent while the mixingParameterViscosity the effect of the porous media.
+        // The pressureMixingParameter is not implemented in ecl100.
+        const ADB mix_param_mu = solvent_props_.mixingParameterViscosity(cells_) * solvent_props_.pressureMixingParameter(po, cells_);
 
         // Update viscosities
         viscosity[pu.phase_pos[ Oil ]] = pow(mu_o,ones - mix_param_mu) * pow(mu_mos, mix_param_mu);
@@ -910,7 +912,7 @@ namespace Opm {
         ADB& rho_s = density[solvent_pos_];
 
         // mixing parameter for density
-        const V mix_param_rho = solvent_props_.mixingParameterDensity(cells_);
+        const ADB mix_param_rho = solvent_props_.mixingParameterDensity(cells_) * solvent_props_.pressureMixingParameter(po, cells_);
 
         // compute effective viscosities for density calculations. These have to
         // be recomputed as a different mixing parameter may be used.

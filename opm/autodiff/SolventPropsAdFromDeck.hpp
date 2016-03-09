@@ -143,6 +143,13 @@ public:
     /// return                      Array of n mixing paramters for density calculation
     V mixingParameterDensity(const Cells& cells) const;
 
+    /// Todd-Longstaff pressure dependent mixing parameter
+    /// \param[in]  So              Array of n oil fraction values. Soil / Sn values, where Sn = Sgas + Ssolvent + Soil.
+    /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
+    /// return                      Array of n pressure dependent mixing paramters
+    ADB pressureMixingParameter(const ADB& po,
+                              const Cells& cells) const;
+
 
 private:
     /// Makes ADB from table values
@@ -185,6 +192,7 @@ private:
     std::vector<NonuniformTableLinear<double> > pmisc_;
     std::vector<NonuniformTableLinear<double> > sorwmis_;
     std::vector<NonuniformTableLinear<double> > sgcwmis_;
+    std::vector<NonuniformTableLinear<double> > tlpmix_param_;
     std::vector<double> mix_param_viscosity_;
     std::vector<double> mix_param_density_;
 };
