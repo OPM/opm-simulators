@@ -798,7 +798,7 @@ private:
 
         // read the intrinsic permeabilities from the eclState. Note that all arrays
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
-        // dune-cornerpoint grid object might remove a few elements...
+        // opm-grid CpGrid object might remove a few elements...
         if (eclState->hasDeckDoubleGridProperty("PERMX")) {
             const std::vector<double> &permxData =
                 eclState->getDoubleGridProperty("PERMX")->getData();
