@@ -180,9 +180,6 @@ public:
                                   const Evaluation& temperature,
                                   const Evaluation& pressure) const
     {
-        // Eclipse calculates the viscosity in a weird way: it
-        // calcultes the product of B_w and mu_w and then divides the
-        // result by B_w...
         Scalar BoMuoRef = oilViscosity_[regionIdx]*oilReferenceFormationVolumeFactor_[regionIdx];
         const Evaluation& bo = saturatedInverseFormationVolumeFactor(regionIdx, temperature, pressure);
 
