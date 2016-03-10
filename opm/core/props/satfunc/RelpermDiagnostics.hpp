@@ -72,7 +72,8 @@ namespace Opm {
             OilWater,
             OilGas,
             WaterGas,
-            BlackOil
+            BlackOil,
+            Solvent
         };
         
         FluidSystem fluidSystem_;
