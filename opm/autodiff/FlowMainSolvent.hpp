@@ -107,18 +107,6 @@ namespace Opm
                                                  Base::deck_->hasKeyword("SOLVENT")));
         }
 
-        // run diagnostics
-        // Writes to:
-        //   logFile_
-        void runDiagnostics()
-        {
-            std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(Base::logFile_, Opm::Log::DefaultMessageTypes);
-            const std::string msg = "Relperm diagnostic not implemented for the solvent model ";
-            std::cout << "\n" << msg << "\n" << std::endl;
-            streamLog->addMessage(Log::MessageType::Info, msg);
-        }
-
-
     };
 
 
