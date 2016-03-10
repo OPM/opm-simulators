@@ -35,7 +35,11 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
 #include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
-
+#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/MiscTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/MsfnTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SorwmisTable.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 namespace Opm {
@@ -142,6 +146,17 @@ namespace Opm {
                              const int satnumIdx);
         void sgwfnTableCheck_(const Opm::SgwfnTable& sgwfnTables,
                               const int satnumIdx);
+        ///Tables for solvent model
+        void sgcwmisTableCheck_(const Opm::SgcwmisTable& sgcwmisTables,
+                                const int satnumIdx);
+        void sorwmisTableCheck_(const Opm::SorwmisTable& sorwmisTables,
+                                const int satnumIdx);
+        void ssfnTableCheck_(const Opm::SsfnTable& ssfnTables,
+                             const int satnumIdx);
+        void miscTableCheck_(const Opm::MiscTable& miscTables,
+                             const int satnumIdx);
+        void msfnTableCheck_(const Opm::MsfnTable& msfnTables,
+                             const int satnumIdx);
     };
 
 } //namespace Opm
