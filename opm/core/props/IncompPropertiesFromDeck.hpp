@@ -23,8 +23,8 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/core/props/IncompPropertiesInterface.hpp>
-#include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/props/pvt/PvtPropertiesIncompFromDeck.hpp>
+#include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 
 struct UnstructuredGrid;

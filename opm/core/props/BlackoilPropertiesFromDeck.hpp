@@ -23,9 +23,11 @@
 
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
-#include <opm/core/props/pvt/BlackoilPvtProperties.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/GasPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
@@ -233,10 +235,19 @@ namespace Opm
                                       const double pcow, 
                                       double & swat);
 
-        // return a reference to the "raw" PVT fluid object for a phase.
-        const PvtInterface& pvt(int phaseIdx) const
+        const OilPvtMultiplexer<double>& oilPvt() const
         {
-            return pvt_.pvt(phaseIdx);
+            return oilPvt_;
+        }
+
+        const GasPvtMultiplexer<double>& gasPvt() const
+        {
+            return gasPvt_;
+        }
+
+        const WaterPvtMultiplexer<double>& waterPvt() const
+        {
+            return waterPvt_;
         }
 
     private:
@@ -246,6 +257,38 @@ namespace Opm
                 return 0;
             return pvtTableIdx[cellIdx];
         }
+
+        void initSurfaceDensities_(Opm::DeckConstPtr deck);
+
+        void compute_B_(const int n,
+                        const double* p,
+                        const double* T,
+                        const double* z,
+                        const int* cells,
+                        double* B) const;
+
+        void compute_dBdp_(const int n,
+                           const double* p,
+                           const double* T,
+                           const double* z,
+                           const int* cells,
+                           double* B,
+                           double* dBdp) const;
+
+        void compute_R_(const int n,
+                        const double* p,
+                        const double* T,
+                        const double* z,
+                        const int* cells,
+                        double* R) const;
+
+        void compute_dRdp_(const int n,
+                           const double* p,
+                           const double* T,
+                           const double* z,
+                           const int* cells,
+                           double* R,
+                           double* dRdp) const;
 
         void init(Opm::DeckConstPtr deck,
                   Opm::EclipseStateConstPtr eclState,
@@ -265,10 +308,14 @@ namespace Opm
                   bool init_rock);
 
         RockFromDeck rock_;
+        PhaseUsage phaseUsage_;
         std::vector<int> cellPvtRegionIdx_;
-        BlackoilPvtProperties pvt_;
+        OilPvtMultiplexer<double> oilPvt_;
+        GasPvtMultiplexer<double> gasPvt_;
+        WaterPvtMultiplexer<double> waterPvt_;
         std::shared_ptr<MaterialLawManager> materialLawManager_;
         std::shared_ptr<SaturationPropsInterface> satprops_;
+        std::vector<double> surfaceDensities_;
         mutable std::vector<double> B_;
         mutable std::vector<double> dB_;
         mutable std::vector<double> R_;
