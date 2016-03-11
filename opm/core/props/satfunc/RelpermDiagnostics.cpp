@@ -118,7 +118,7 @@ namespace Opm{
 
         
         bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
-        bool family2 = !swfnTables.empty() && !sgfnTables.empty() && (!sof3Tables.empty() || !sof2Tables.empty()) && !sgwfnTables.empty();
+        bool family2 = ((!swfnTables.empty() && !sgfnTables.empty()) || !sgwfnTables.empty()) && (!sof3Tables.empty() || !sof2Tables.empty());
 
         if (family1 && family2) {
             const std::string msg = "-- Error:   Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
