@@ -66,27 +66,27 @@ namespace Opm{
         bool hasWater = deck->hasKeyword("WATER");
         bool hasGas = deck->hasKeyword("GAS");
         bool hasOil = deck->hasKeyword("OIL");
-        bool Solvent = deck->hasKeyword("SOLVENT");
+        bool hasSolvent = deck->hasKeyword("SOLVENT");
             
-        if (hasWater && hasGas && !hasOil) {
+        if (hasWater && hasGas && !hasOil && !hasSolvent) {
             const std::string msg = "System:  Water-Gas system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::WaterGas;
         }
-        if (hasWater && hasOil && !hasGas) { 
+        if (hasWater && hasOil && !hasGas && !hasSolvent) { 
             const std::string msg = "System:  Oil-Water system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::OilWater; 
         }
-        if (hasOil && hasGas && !hasWater) { 
+        if (hasOil && hasGas && !hasWater && !hasSolvent) { 
             const std::string msg = "System:  Oil-Gas system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::OilGas; 
         }
-        if (hasOil && hasWater && hasGas) {
+        if (hasOil && hasWater && hasGas && !hasSolvent) {
             const std::string msg = "System:  Black-oil system.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
@@ -563,7 +563,7 @@ namespace Opm{
 
 
     void RelpermDiagnostics::sgcwmisTableCheck_(const Opm::SgcwmisTable& sgcwmisTables,
-                                             const int satnumIdx)
+                                                const int satnumIdx)
     {
         const auto& sw = sgcwmisTables.getWaterSaturationColumn();
         const auto& sgc = sgcwmisTables.getMiscibleResidualGasColumn();
@@ -590,7 +590,7 @@ namespace Opm{
 
 
     void RelpermDiagnostics::sorwmisTableCheck_(const Opm::SorwmisTable& sorwmisTables,
-                                             const int satnumIdx)
+                                                const int satnumIdx)
     {
         const auto& sw = sorwmisTables.getWaterSaturationColumn();
         const auto& sor = sorwmisTables.getMiscibleResidualOilColumn();
