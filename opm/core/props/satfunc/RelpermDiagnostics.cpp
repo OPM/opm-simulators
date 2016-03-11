@@ -92,7 +92,7 @@ namespace Opm{
             streamLog_->addMessage(Log::MessageType::Info, msg);
             fluidSystem_ = FluidSystem::BlackOil;
         }
-        if (Solvent) {
+        if (hasSolvent) {
             const std::string msg = "System:  Solvent model.";
             std::cout << msg << std::endl;
             streamLog_->addMessage(Log::MessageType::Info, msg);
