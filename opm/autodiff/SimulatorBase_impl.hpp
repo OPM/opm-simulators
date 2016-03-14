@@ -151,10 +151,6 @@ namespace Opm
             // give the polymer and surfactant simulators the chance to do their stuff
             asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
-            // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
-
-
             // Max oil saturation (for VPPARS), hysteresis update.
             props_.updateSatOilMax(state.saturation());
             props_.updateSatHyst(state.saturation(), allcells_);
