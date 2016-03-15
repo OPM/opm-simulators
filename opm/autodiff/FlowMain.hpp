@@ -71,8 +71,7 @@
 #include <opm/core/utility/share_obj.hpp>
 
 #include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
-#include <opm/parser/eclipse/OpmLog/CounterLog.hpp>
+#include <opm/parser/eclipse/OpmLog/EclipsePRTLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseMode.hpp>
@@ -352,11 +351,8 @@ namespace Opm
             // Create Parser
             ParserPtr parser(new Parser());
             {
-                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(logFile_ , Log::DefaultMessageTypes);
-                std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
-
-                OpmLog::addBackend( "STREAM" , streamLog );
-                OpmLog::addBackend( "COUNTER" , counterLog );
+                std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::DefaultMessageTypes);
+                OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
             }
 
             // Create Deck and EclipseState.
