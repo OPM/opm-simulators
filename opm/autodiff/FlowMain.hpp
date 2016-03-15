@@ -483,6 +483,9 @@ namespace Opm
                 initStateEquil(grid, props, deck_, eclipse_state_, gravity_[2], *state_);
                 //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
+                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
+                                                  Opm::UgGridHelpers::numFaces(grid),
+                                                  props.numPhases()));
                 initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
                                           Opm::UgGridHelpers::globalCell(grid),
                                           Opm::UgGridHelpers::numFaces(grid),
