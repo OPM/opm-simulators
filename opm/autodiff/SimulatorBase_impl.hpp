@@ -172,6 +172,15 @@ namespace Opm
                 adaptiveTimeStepping->step( timer, *solver, state, well_state,  output_writer_ );
             }
             else {
+                // write initial solution
+                if (timer.currentStepNum() == 0) {
+                    // create adaptive step timer to make the EclipseWriter::writeTimeStep() method happy
+                    AdaptiveSimulatorTimer initialTimer(timer, 0.0, 1.0);
+                    initialTimer.provideTimeStepEstimate(0.0);
+                    ++initialTimer;
+                    output_writer_.writeTimeStep(initialTimer, state, well_state, 0);
+                }
+
                 // solve for complete report step
                 solver->step(timer.currentStepLength(), state, well_state);
             }
@@ -218,10 +227,16 @@ namespace Opm
             // Increment timer, remember well state.
             ++timer;
             prev_well_state = well_state;
+
             // Compute Well potentials (only used to determine default guide rates for group controlled wells)
             // TODO: add some logic to avoid unnecessary calulations of well potentials.
             asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
 
+            // write simulation output in the non-adaptive time stepping case (the code
+            // for adaptive timestepping deals with writing output itself)
+            if (!adaptiveTimeStepping) {
+                output_writer_.writeTimeStep( timer, state, well_state );
+            }
         }
 
         // Write final simulation state.
