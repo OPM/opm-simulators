@@ -716,6 +716,9 @@ namespace Opm {
             const ADB& ss = state.solvent_saturation;
             if (is_miscible_) {
 
+                assert(active_[ Oil ]);
+                assert(active_[ Gas ]);
+
                 std::vector<ADB> relperm = fluid_.relperm(sw, so, sg+ss, cells_);
 
                 Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
@@ -723,9 +726,6 @@ namespace Opm {
                 const ADB& po = state.canonical_phase_pressures[ Oil ];
                 const ADB misc = solvent_props_.miscibilityFunction(F_solvent, cells_)
                         * solvent_props_.pressureMiscibilityFunction(po, cells_);
-
-                assert(active_[ Oil ]);
-                assert(active_[ Gas ]);
 
                 const ADB sn = ss + so + sg;
 
@@ -739,15 +739,15 @@ namespace Opm {
                 ADB sor = misc * sorwmis + (ones - misc) * sogcr;
                 ADB sgc = misc * sgcwmis + (ones - misc) * sgcr;
 
-                // avoid negative values
-                Selector<double> negative_selector(sgc.value(), Selector<double>::LessEqualZero);
-                sgc = negative_selector.select(zero, sgc);
-
-                const ADB ssg = ss + sg - sgc;
+                ADB ssg = ss + sg - sgc;
                 const ADB sn_eff = sn - sor - sgc;
 
                 // avoid negative values
-                Selector<double> zeroSn_selector(sn_eff.value(), Selector<double>::Zero);
+                Selector<double> negSsg_selector(ssg.value(), Selector<double>::LessZero);
+                ssg = negSsg_selector.select(zero, ssg);
+
+                // avoid negative value and division on zero
+                Selector<double> zeroSn_selector(sn_eff.value(), Selector<double>::LessEqualZero);
                 const ADB F_totalGas = zeroSn_selector.select( zero, ssg / sn_eff);
 
                 const ADB mkrgt = solvent_props_.miscibleSolventGasRelPermMultiplier(F_totalGas, cells_) * solvent_props_.misicibleHydrocarbonWaterRelPerm(sn, cells_);
