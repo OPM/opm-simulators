@@ -94,12 +94,40 @@
 #include <vector>
 #include <numeric>
 #include <cstdlib>
+#include <stdexcept>
 
 
 
 
 namespace Opm
 {
+
+    boost::filesystem::path simulationCaseName( const std::string& casename ) {
+        namespace fs = boost::filesystem;
+
+        const auto exists = []( const fs::path& f ) -> bool {
+            if( !fs::exists( f ) ) return false;
+
+            if( fs::is_regular_file( f ) ) return true;
+
+            return fs::is_symlink( f )
+                && fs::is_regular_file( fs::read_symlink( f ) );
+        };
+
+        auto simcase = fs::path( casename );
+
+        if( exists( simcase ) ) {
+            return simcase;
+        }
+
+        for( const auto& ext : { std::string("data"), std::string("DATA") } ) {
+            if( exists( simcase.replace_extension( ext ) ) ) {
+                return simcase;
+            }
+        }
+
+        throw std::invalid_argument( "Cannot find input case " + casename );
+    }
 
     /// This class encapsulates the setup and running of
     /// a simulator based on an input deck.
@@ -258,10 +286,6 @@ namespace Opm
             }
         }
 
-
-
-
-
         // Read parameters, see if a deck was specified on the command line, and if
         // it was, insert it into parameters.
         // Writes to:
@@ -281,7 +305,8 @@ namespace Opm
                     std::cerr << "You can only specify a single input deck on the command line.\n";
                     return false;
                 } else {
-                    param_.insertParameter("deck_filename", param_.unhandledArguments()[0]);
+                    const auto casename = simulationCaseName( param_.unhandledArguments()[ 0 ] );
+                    param_.insertParameter("deck_filename", casename.string() );
                 }
             }
 
