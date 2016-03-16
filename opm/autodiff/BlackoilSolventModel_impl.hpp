@@ -135,7 +135,7 @@ namespace Opm {
         std::vector<V> vars0 = Base::variableStateInitials(x, xw);
         assert(int(vars0.size()) == fluid_.numPhases() + 2);
 
-        // Initial polymer concentration.
+        // Initial solvent concentration.
         if (has_solvent_) {
             const auto& solvent_saturation = x.getCellData( BlackoilSolventState::SSOL );
             const int nc = solvent_saturation.size();
@@ -257,6 +257,10 @@ namespace Opm {
     BlackoilSolventModel<Grid>::computeAccum(const SolutionState& state,
                                              const int            aix  )
     {
+
+        if (is_miscible_) {
+            computeEffectiveProperties(state);
+        }
         Base::computeAccum(state, aix);
 
         // Compute accumulation of the solvent
@@ -773,6 +777,44 @@ namespace Opm {
 
     template <class Grid>
     void
+    BlackoilSolventModel<Grid>::extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
+                                                          std::vector<ADB>& b_perfcells,
+                                                          const SolutionState& state)
+    {
+        Base::extractWellPerfProperties(mob_perfcells, b_perfcells, state);
+        if (has_solvent_) {
+            int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
+            const std::vector<int>& well_cells = wops_.well_cells;
+            const int nperf = well_cells.size();
+            // Gas and solvent is combinded and solved together
+            // The input in the well equation is then the
+            // total gas phase = hydro carbon gas + solvent gas
+
+            // The total mobility is the sum of the solvent and gas mobiliy
+            mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
+
+            // A weighted sum of the b-factors of gas and solvent are used.
+            const int nc = Opm::AutoDiffGrid::numCells(grid_);
+
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            const ADB zero = ADB::constant(V::Zero(nc));
+            const ADB& ss = state.solvent_saturation;
+            const ADB& sg = (active_[ Gas ]
+                             ? state.saturation[ pu.phase_pos[ Gas ] ]
+                             : zero);
+
+            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+            ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
+            V ones = V::Constant(nperf,1.0);
+
+            b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
+            b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
+
+        }
+    }
+
+    template <class Grid>
+    void
     BlackoilSolventModel<Grid>::computeEffectiveProperties(const SolutionState&    state)
     {
         // Viscosity
@@ -976,103 +1018,6 @@ namespace Opm {
         const V ones = V::Constant(nc, 1.0);
         pressures[Gas] = ( pmisc * pressures[Gas] + ((ones - pmisc) * pressures_imisc[Gas]));
         return pressures;
-    }
-
-
-    template <class Grid>
-    void
-    BlackoilSolventModel<Grid>::assemble(const ReservoirState& reservoir_state,
-                                         WellState& well_state,
-                                         const bool initial_assembly)
-    {
-
-        using namespace Opm::AutoDiffGrid;
-
-        // Possibly switch well controls and updating well state to
-        // get reasonable initial conditions for the wells
-        updateWellControls(well_state);
-
-        // Create the primary variables.
-        SolutionState state = variableState(reservoir_state, well_state);
-
-        if (initial_assembly) {
-            // Create the (constant, derivativeless) initial state.
-            SolutionState state0 = state;
-            makeConstantState(state0);
-            // Compute initial accumulation contributions
-            // and well connection pressures.
-            if (is_miscible_) {
-                computeEffectiveProperties(state0);
-            }
-
-            computeAccum(state0, 0);
-            computeWellConnectionPressures(state0, well_state);
-        }
-        if (is_miscible_) {
-            computeEffectiveProperties(state);
-        }
-
-        // -------- Mass balance equations --------
-        assembleMassBalanceEq(state);
-
-        // -------- Well equations ----------
-        if ( ! wellsActive() ) {
-            return;
-        }
-
-        V aliveWells;
-
-        const int np = wells().number_of_phases;
-        std::vector<ADB> cq_s(np, ADB::null());
-
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-
-        std::vector<ADB> mob_perfcells(np, ADB::null());
-        std::vector<ADB> b_perfcells(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-        }
-
-        if (has_solvent_) {
-            int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
-            // Gas and solvent is combinded and solved together
-            // The input in the well equation is then the
-            // total gas phase = hydro carbon gas + solvent gas
-
-            // The total mobility is the sum of the solvent and gas mobiliy
-            mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
-
-            // A weighted sum of the b-factors of gas and solvent are used.
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const ADB zero = ADB::constant(V::Zero(nc));
-            const ADB& ss = state.solvent_saturation;
-            const ADB& sg = (active_[ Gas ]
-                             ? state.saturation[ pu.phase_pos[ Gas ] ]
-                             : zero);
-
-            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-            ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
-            V ones = V::Constant(nperf,1.0);
-
-            b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
-            b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
-
-        }
-        if (param_.solve_welleq_initially_ && initial_assembly) {
-            // solve the well equations as a pre-processing step
-            Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
-        }
-        Base::computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        Base::updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        Base::addWellFluxEq(cq_s, state);
-        addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        Base::addWellControlEq(state, well_state, aliveWells);
-
     }
 
 

@@ -87,14 +87,6 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
-        /// Assemble the residual and Jacobian of the nonlinear system.
-        /// \param[in]      reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        void assemble(const ReservoirState& reservoir_state,
-                      WellState& well_state,
-                      const bool initial_assembly);
-
 
     protected:
 
@@ -228,6 +220,11 @@ namespace Opm {
 
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
+
+        void extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
+                                       std::vector<ADB>& b_perfcells,
+                                       const SolutionState& state);
+
 
         // compute effective viscosities (mu_eff_) and effective b factors (b_eff_)  using the ToddLongstaff model
         void computeEffectiveProperties(const SolutionState&  state);

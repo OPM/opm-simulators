@@ -392,7 +392,8 @@ namespace Opm {
 
         void
         extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
-                                  std::vector<ADB>& b_perfcells) const;
+                                  std::vector<ADB>& b_perfcells,
+                                  const SolutionState&) const;
 
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
