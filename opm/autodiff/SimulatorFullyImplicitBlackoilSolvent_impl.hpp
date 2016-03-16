@@ -106,9 +106,15 @@ namespace Opm
         ScheduleConstPtr schedule = BaseType::eclipse_state_->getSchedule();
 
         for (const auto&  well_solvent : schedule->getWells( currentStep )) {
+            if (well_solvent->getStatus( currentStep ) == WellCommon::SHUT) {
+                continue;
+            }
+
             WellInjectionProperties injection = well_solvent->getInjectionProperties(currentStep);
             if (injection.injectorType == WellInjector::GAS) {
+
                 double solventFraction = well_solvent->getSolventFraction(currentStep);
+
                 // Find the solvent well in the well list and add properties to it
                 int wix = 0;
                 for (; wix < nw; ++wix) {
