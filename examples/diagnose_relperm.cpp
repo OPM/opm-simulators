@@ -32,7 +32,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
@@ -65,16 +65,16 @@ try
     const char* eclipseFilename = argv[1];
     EclipseStateConstPtr eclState; 
     ParserPtr parser(new Opm::Parser);
-    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
-                              { ParseMode::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE},
-                              { ParseMode::PARSE_RANDOM_TEXT, InputError::IGNORE},
-                              { ParseMode::UNSUPPORTED_SCHEDULE_GEO_MODIFIER, InputError::IGNORE},
-                              { ParseMode::UNSUPPORTED_COMPORD_TYPE, InputError::IGNORE},
-                              { ParseMode::UNSUPPORTED_INITIAL_THPRES, InputError::IGNORE},
-                              { ParseMode::INTERNAL_ERROR_UNINITIALIZED_THPRES, InputError::IGNORE}
+    Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
+                              { ParseContext::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE},
+                              { ParseContext::PARSE_RANDOM_TEXT, InputError::IGNORE},
+                              { ParseContext::UNSUPPORTED_SCHEDULE_GEO_MODIFIER, InputError::IGNORE},
+                              { ParseContext::UNSUPPORTED_COMPORD_TYPE, InputError::IGNORE},
+                              { ParseContext::UNSUPPORTED_INITIAL_THPRES, InputError::IGNORE},
+                              { ParseContext::INTERNAL_ERROR_UNINITIALIZED_THPRES, InputError::IGNORE}
                              });
-    Opm::DeckConstPtr deck(parser->parseFile(eclipseFilename, parseMode));
-    eclState.reset(new EclipseState(deck, parseMode));
+    Opm::DeckConstPtr deck(parser->parseFile(eclipseFilename, parseContext));
+    eclState.reset(new EclipseState(deck, parseContext));
 
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
