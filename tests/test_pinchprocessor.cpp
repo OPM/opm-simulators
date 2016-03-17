@@ -35,7 +35,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -52,9 +52,9 @@ BOOST_AUTO_TEST_CASE(Processing)
 {
     const std::string filename="../tests/testPinch1.DATA";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-    Opm::DeckConstPtr deck = parser->parseFile(filename, parseMode);
-    std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(deck, parseMode));
+    Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+    Opm::DeckConstPtr deck = parser->parseFile(filename, parseContext);
+    std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(deck, parseContext));
     std::vector<double> porv = eclstate->getDoubleGridProperty("PORV")->getData();
     EclipseGridConstPtr eclgrid = eclstate->getEclipseGrid();
 

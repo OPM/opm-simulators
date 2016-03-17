@@ -34,7 +34,7 @@
 
 #include <opm/parser/eclipse/Units/ConversionFactors.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -275,13 +275,13 @@ void verify_norne_oil_pvt_region2(Opm::DeckConstPtr deck, Opm::EclipseStateConst
 }
 
 BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
-    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+    Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::ParserPtr parser(new Parser());
 
     std::shared_ptr<const Deck> deck;
-    deck = parser->parseFile("norne_pvt.data", parseMode);
+    deck = parser->parseFile("norne_pvt.data", parseContext);
 
-    Opm::EclipseStateConstPtr eclState(new EclipseState(deck, parseMode));
+    Opm::EclipseStateConstPtr eclState(new EclipseState(deck, parseContext));
 
     verify_norne_oil_pvt_region1( deck, eclState );
     verify_norne_oil_pvt_region2( deck, eclState );

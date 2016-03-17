@@ -4,7 +4,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #if HAVE_DYNAMIC_BOOST_TEST
@@ -30,12 +30,12 @@ using namespace std;
 
 BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
 
-    ParseMode parseMode;
+    ParseContext parseContext;
     const string filename1 = "testBlackoilState1.DATA";
     const string filename2 = "testBlackoilState2.DATA";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck1(parser->parseFile(filename1, parseMode));
-    Opm::DeckConstPtr deck2(parser->parseFile(filename2, parseMode));
+    Opm::DeckConstPtr deck1(parser->parseFile(filename1, parseContext));
+    Opm::DeckConstPtr deck2(parser->parseFile(filename2, parseContext));
 
     GridManager gridManager1(deck1);
     const UnstructuredGrid* grid1 = gridManager1.c_grid();
@@ -56,9 +56,9 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
 BOOST_AUTO_TEST_CASE(EqualsDifferentNumPhasesReturnFalse) {
 
     const string filename = "testBlackoilState1.DATA";
-    Opm::ParseMode parseMode;
+    Opm::ParseContext parseContext;
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename, parseMode));
+    Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
 
     GridManager gridManager(deck);
     const UnstructuredGrid* grid = gridManager.c_grid();
@@ -77,9 +77,9 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentNumPhasesReturnFalse) {
 BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
 
     const string filename = "testBlackoilState1.DATA";
-    Opm::ParseMode parseMode;
+    Opm::ParseContext parseContext;
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename , parseMode));
+    Opm::DeckConstPtr deck(parser->parseFile(filename , parseContext));
 
     GridManager gridManager(deck);
     const UnstructuredGrid* grid = gridManager.c_grid();
