@@ -34,7 +34,8 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+// #include <opm/core/io/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
@@ -138,70 +139,72 @@ namespace Opm
 
 
 
-    static void outputStateVtk(const UnstructuredGrid& grid,
-                               const Opm::BlackoilState& state,
-                               const int step,
-                               const std::string& output_dir)
-    {
-        // Write data in VTK format.
-        std::ostringstream vtkfilename;
-        vtkfilename << output_dir << "/vtk_files";
-        boost::filesystem::path fpath(vtkfilename.str());
-        try {
-          create_directories(fpath);
-        }
-        catch (...) {
-          OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
-        vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
-        std::ofstream vtkfile(vtkfilename.str().c_str());
-        if (!vtkfile) {
-            OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
-        }
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-        Opm::writeVtkData(grid, dm, vtkfile);
-    }
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+//    static void outputStateVtk(const UnstructuredGrid& grid,
+//                               const Opm::BlackoilState& state,
+//                               const int step,
+//                               const std::string& output_dir)
+//    {
+//        // Write data in VTK format.
+//        std::ostringstream vtkfilename;
+//        vtkfilename << output_dir << "/vtk_files";
+//        boost::filesystem::path fpath(vtkfilename.str());
+//        try {
+//          create_directories(fpath);
+//        }
+//        catch (...) {
+//          OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+//        }
+//        vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
+//        std::ofstream vtkfile(vtkfilename.str().c_str());
+//        if (!vtkfile) {
+//            OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
+//        }
+//        Opm::DataMap dm;
+//        dm["saturation"] = &state.saturation();
+//        dm["pressure"] = &state.pressure();
+//        std::vector<double> cell_velocity;
+//        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+//        dm["velocity"] = &cell_velocity;
+//        Opm::writeVtkData(grid, dm, vtkfile);
+//    }
 
 
-    static void outputStateMatlab(const UnstructuredGrid& grid,
-                                  const Opm::BlackoilState& state,
-                                  const int step,
-                                  const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        dm["surfvolume"] = &state.surfacevol();
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-              create_directories(fpath);
-            }
-            catch (...) {
-              OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+//    static void outputStateMatlab(const UnstructuredGrid& grid,
+//                                  const Opm::BlackoilState& state,
+//                                  const int step,
+//                                  const std::string& output_dir)
+//    {
+//        Opm::DataMap dm;
+//        dm["saturation"] = &state.saturation();
+//        dm["pressure"] = &state.pressure();
+//        dm["surfvolume"] = &state.surfacevol();
+//        std::vector<double> cell_velocity;
+//        Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
+//        dm["velocity"] = &cell_velocity;
+//
+//        // Write data (not grid) in Matlab format
+//        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
+//            std::ostringstream fname;
+//            fname << output_dir << "/" << it->first;
+//            boost::filesystem::path fpath = fname.str();
+//            try {
+//              create_directories(fpath);
+//            }
+//            catch (...) {
+//              OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+//            }
+//            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
+//            std::ofstream file(fname.str().c_str());
+//            if (!file) {
+//                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
+//            }
+//            file.precision(15);
+//            const std::vector<double>& d = *(it->second);
+//            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
+//        }
+//    }
 
 
     static void outputWaterCut(const Opm::Watercut& watercut,
@@ -348,9 +351,9 @@ namespace Opm
             timer.report(std::cout);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
-                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+//                    outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
                 }
-                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+//                outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             }
 
             SimulatorReport sreport;
@@ -515,9 +518,9 @@ namespace Opm
 
         if (output_) {
             if (output_vtk_) {
-                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
+//                outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
-            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
+//            outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
                 outputWellReport(wellreport, output_dir_);
