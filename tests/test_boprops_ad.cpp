@@ -37,7 +37,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
@@ -48,10 +48,10 @@
 struct SetupSimple {
     SetupSimple()
     {
-        Opm::ParseMode parseMode;
+        Opm::ParseContext parseContext;
         Opm::ParserPtr parser(new Opm::Parser());
-        deck = parser->parseFile("fluid.data", parseMode);
-        eclState.reset(new Opm::EclipseState(deck , parseMode));
+        deck = parser->parseFile("fluid.data", parseContext);
+        eclState.reset(new Opm::EclipseState(deck , parseContext));
 
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
