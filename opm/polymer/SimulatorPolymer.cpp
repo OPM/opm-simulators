@@ -36,7 +36,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
+#include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>
@@ -62,7 +62,7 @@
 #include <iostream>
 
 #ifdef HAVE_ERT
-#include <opm/core/io/eclipse/writeECLData.hpp>
+#include <opm/output/eclipse/writeECLData.hpp>
 #endif
 
 
