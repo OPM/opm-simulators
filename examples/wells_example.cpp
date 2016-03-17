@@ -18,7 +18,7 @@
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -35,10 +35,10 @@ try
     simtimer.init(parameters);
 
     // Read input file
-    ParseMode parseMode;
+    ParseContext parseContext;
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck = parser->parseFile(file_name , parseMode);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseMode));
+    Opm::DeckConstPtr deck = parser->parseFile(file_name , parseContext);
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
     std::cout << "Done!" << std::endl;
 
     // Setup grid
@@ -108,7 +108,7 @@ try
 
 
     TwophaseFluid fluid(incomp_properties);
-    TransportModel model(fluid, *grid->c_grid(), porevol, gravity[2], true);
+    TransportContextl model(fluid, *grid->c_grid(), porevol, gravity[2], true);
 
     TransportSolver tsolver(model);
 

@@ -31,7 +31,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/Units.hpp>
 
@@ -44,8 +44,8 @@ BOOST_AUTO_TEST_CASE(CreateTimer)
 {
     const std::string filename1 = "TESTTIMER.DATA";
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::ParseMode parseMode;
-    Opm::DeckConstPtr parserDeck = parser->parseFile( filename1 , parseMode);
+    Opm::ParseContext parseContext;
+    Opm::DeckConstPtr parserDeck = parser->parseFile( filename1 , parseContext);
 
     Opm::TimeMapPtr timeMap(new Opm::TimeMap(parserDeck));
     Opm::SimulatorTimer simtimer;
