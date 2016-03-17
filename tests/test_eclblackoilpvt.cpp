@@ -47,7 +47,7 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -208,10 +208,10 @@ inline void testAll()
     static const Scalar tolerance = std::numeric_limits<Scalar>::epsilon()*1e3;
 
     Opm::Parser parser;
-    Opm::ParseMode parseMode;
+    Opm::ParseContext parseContext;
 
-    const auto deck = parser.parseString(deckString1, parseMode);
-    const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseMode);
+    const auto deck = parser.parseString(deckString1, parseContext);
+    const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseContext);
     const auto eclGrid = eclState->getEclipseGrid();
 
     const auto& pvtwKeyword = deck->getKeyword("PVTW");

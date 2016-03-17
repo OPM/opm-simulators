@@ -35,7 +35,7 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -233,14 +233,14 @@ inline void testAll()
                                          /*storeEnthalpy=*/false> FluidState;
 
     Opm::Parser parser;
-    Opm::ParseMode parseMode;
+    Opm::ParseContext parseContext;
 
     {
         typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
         typedef typename MaterialLawManager::MaterialLaw MaterialLaw;
 
-        const auto deck = parser.parseString(fam1DeckString, parseMode);
-        const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseMode);
+        const auto deck = parser.parseString(fam1DeckString, parseContext);
+        const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseContext);
         const auto eclGrid = eclState->getEclipseGrid();
 
         size_t n = eclGrid->getCartesianSize();
@@ -260,8 +260,8 @@ inline void testAll()
             OPM_THROW(std::logic_error,
                       "Discrepancy between the deck and the EclMaterialLawManager");
 
-        const auto fam2Deck = parser.parseString(fam2DeckString, parseMode);
-        const auto fam2EclState = std::make_shared<Opm::EclipseState>(fam2Deck, parseMode);
+        const auto fam2Deck = parser.parseString(fam2DeckString, parseContext);
+        const auto fam2EclState = std::make_shared<Opm::EclipseState>(fam2Deck, parseContext);
 
         Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
         fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
