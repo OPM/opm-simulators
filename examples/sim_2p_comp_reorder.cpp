@@ -45,7 +45,7 @@
 #include <opm/core/simulator/SimulatorCompressibleTwophase.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 
@@ -98,10 +98,10 @@ try
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     if (use_deck) {
-        ParseMode parseMode;
+        ParseContext parseContext;
         std::string deck_filename = param.get<std::string>("deck_filename");
-        deck = parser->parseFile(deck_filename , parseMode);
-        eclipseState.reset(new EclipseState(deck, parseMode));
+        deck = parser->parseFile(deck_filename , parseContext);
+        eclipseState.reset(new EclipseState(deck, parseContext));
 
         // Grid init
         grid.reset(new GridManager(deck));
