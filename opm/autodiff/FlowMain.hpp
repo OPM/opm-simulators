@@ -74,7 +74,7 @@
 #include <opm/parser/eclipse/OpmLog/EclipsePRTLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
@@ -357,10 +357,10 @@ namespace Opm
 
             // Create Deck and EclipseState.
             try {
-                ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-                deck_ = parser->parseFile(deck_filename, parseMode);
+                ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+                deck_ = parser->parseFile(deck_filename, parseContext);
                 checkDeck(deck_, parser);
-                eclipse_state_.reset(new EclipseState(deck_, parseMode));
+                eclipse_state_.reset(new EclipseState(deck_, parseContext));
             }
             catch (const std::invalid_argument& e) {
                 std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;

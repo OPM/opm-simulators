@@ -48,7 +48,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -100,9 +100,9 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         ParserPtr parser(new Opm::Parser());
-        Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-        deck = parser->parseFile(deck_filename , parseMode);
-        eclipseState.reset(new Opm::EclipseState(deck , parseMode));
+        Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+        deck = parser->parseFile(deck_filename , parseContext);
+        eclipseState.reset(new Opm::EclipseState(deck , parseContext));
 
         // Grid init
         grid.reset(new GridManager(deck));

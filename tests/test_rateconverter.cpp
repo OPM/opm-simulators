@@ -39,7 +39,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
@@ -48,9 +48,9 @@ struct SetupSimple {
     SetupSimple()
     {
         Opm::ParserPtr parser(new Opm::Parser());
-        Opm::ParseMode parseMode;
-        deck = parser->parseFile("fluid.data" , parseMode);
-        eclState.reset(new Opm::EclipseState(deck , parseMode));
+        Opm::ParseContext parseContext;
+        deck = parser->parseFile("fluid.data" , parseContext);
+        eclState.reset(new Opm::EclipseState(deck , parseContext));
 
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
