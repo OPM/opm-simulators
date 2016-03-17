@@ -1,5 +1,5 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <opm/core/grid.h>
@@ -32,7 +32,7 @@ static DeckPtr createDeckSimConfig() {
 
 
     ParserPtr parser(new Parser());
-    return parser->parseString(inputStr, ParseMode()) ;
+    return parser->parseString(inputStr, ParseContext()) ;
 }
 
 /*
@@ -42,15 +42,15 @@ static DeckPtr createDeckSimConfig() {
 */
 
 BOOST_AUTO_TEST_CASE(CreateSimulationConfig) {
-    ParseMode parseMode;
+    ParseContext parseContext;
     typedef UnstructuredGrid  Grid;
     DeckPtr deck = createDeckSimConfig();
-    EclipseState state(deck, parseMode);
+    EclipseState state(deck, parseContext);
     EclipseGridConstPtr eclipseGrid = state.getEclipseGrid();
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     GridManager gridManager( eclipseState->getEclipseGrid(), porv );
     const Grid& grid = *(gridManager.c_grid());
 
-    std::vector<double> threshold_pressures = thresholdPressures(parseMode, eclipseState, grid);
+    std::vector<double> threshold_pressures = thresholdPressures(parseContext, eclipseState, grid);
     BOOST_CHECK( threshold_pressures.size() > 0 );
 }
