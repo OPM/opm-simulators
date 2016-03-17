@@ -28,7 +28,7 @@
 #include <ewoms/common/parametersystem.hh>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -130,11 +130,11 @@ public:
         typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
         typedef std::vector<ParseModePair> ParseModePairs;
         ParseModePairs tmp;
-        tmp.push_back(ParseModePair(Opm::ParseMode::PARSE_RANDOM_SLASH , Opm::InputError::IGNORE));
-        Opm::ParseMode parseMode(tmp);
+        tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_RANDOM_SLASH , Opm::InputError::IGNORE));
+        Opm::ParseContext parseContext(tmp);
 
-        deck_ = parser->parseFile(fileName , parseMode);
-        eclState_.reset(new Opm::EclipseState(deck_, parseMode));
+        deck_ = parser->parseFile(fileName , parseContext);
+        eclState_.reset(new Opm::EclipseState(deck_, parseContext));
 
         asImp_().createGrids_();
 
