@@ -34,7 +34,8 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+//#include <opm/core/io/vtk/writeVtkData.hpp>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -186,13 +187,14 @@ try
     /// (pressure) or a vector per cell (cell_velocity).
     /// \snippet tutorial2.cpp write output
     /// \internal [write output]
-    std::ofstream vtkfile("tutorial2.vtu");
-    Opm::DataMap dm;
-    dm["pressure"] = &state.pressure();
-    std::vector<double> cell_velocity;
-    Opm::estimateCellVelocity(*grid.c_grid(), state.faceflux(), cell_velocity);
-    dm["velocity"] = &cell_velocity;
-    Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+//    std::ofstream vtkfile("tutorial2.vtu");
+//    Opm::DataMap dm;
+//    dm["pressure"] = &state.pressure();
+//    std::vector<double> cell_velocity;
+//    Opm::estimateCellVelocity(*grid.c_grid(), state.faceflux(), cell_velocity);
+//    dm["velocity"] = &cell_velocity;
+//    Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
     /// \internal [write output]
     /// \endinternal
 }

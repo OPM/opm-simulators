@@ -37,7 +37,8 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+//#include <opm/core/io/vtk/writeVtkData.hpp>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -94,14 +95,16 @@ try
     /// Opm::writeVtkData() together with the grid
     /// \snippet tutorial1.cpp data map
     /// \internal [data map]
-    Opm::DataMap dm;
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+//    Opm::DataMap dm;
     /// \internal [data map]
     /// \endinternal
     /// \page tutorial1
     /// Call Opm::writeVtkData() to write the output file.
     /// \snippet tutorial1.cpp write vtk
     /// \internal [write vtk]
-    Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
+// 17.03.2016 Temporarily removed while moving functionality to opm-output
+//    Opm::writeVtkData(*grid.c_grid(), dm, vtkfile);
     /// \internal [write vtk]
     /// \endinternal
 }
