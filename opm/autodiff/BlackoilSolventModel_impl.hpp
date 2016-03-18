@@ -988,16 +988,19 @@ namespace Opm {
                      const ADB& ss) const
     {
         std::vector<ADB> pressures = Base::computePressures(po, sw, so, sg);
-        // The imiscible capillary pressure is evaluated using the total gas saturation (sg + ss)
-        std::vector<ADB> pressures_imisc = Base::computePressures(po, sw, so, sg + ss);
 
-        // Pressure effects on capillary pressure miscibility
-        const ADB pmisc = solvent_props_.pressureMiscibilityFunction(po, cells_);
-        // Only the pcog is effected by the miscibility. Since pg = po + pcog, changing pg is eqvivalent
-        // to changing the gas pressure directly.
-        const int  nc = cells_.size();
-        const V ones = V::Constant(nc, 1.0);
-        pressures[Gas] = ( pmisc * pressures[Gas] + ((ones - pmisc) * pressures_imisc[Gas]));
+        if (has_solvent_) {
+            // The imiscible capillary pressure is evaluated using the total gas saturation (sg + ss)
+            std::vector<ADB> pressures_imisc = Base::computePressures(po, sw, so, sg + ss);
+
+            // Pressure effects on capillary pressure miscibility
+            const ADB pmisc = solvent_props_.pressureMiscibilityFunction(po, cells_);
+            // Only the pcog is effected by the miscibility. Since pg = po + pcog, changing pg is eqvivalent
+            // to changing the gas pressure directly.
+            const int  nc = cells_.size();
+            const V ones = V::Constant(nc, 1.0);
+            pressures[Gas] = ( pmisc * pressures[Gas] + ((ones - pmisc) * pressures_imisc[Gas]));
+        }
         return pressures;
     }
 
