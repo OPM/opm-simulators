@@ -1621,14 +1621,18 @@ namespace detail {
                         }
                     }
                 } else if (well_type == PRODUCER) {
-                    // for single phase producers sum of distr should be 1.0
-                    double sumdistr = distr[0];
-                    for (int phase = 1; phase < np; ++phase) {
-                        sumdistr += distr[phase];
-                    }
-                    std::cout << sumdistr << std::endl;
+
+                    // only set target as initial rates for single phase
+                    // producers. (orat, grat and wrat, and not lrat)
+                    // lrat will result in numPhasesWithTargetsUnderThisControl == 2
+                    int numPhasesWithTargetsUnderThisControl = 0;
                     for (int phase = 0; phase < np; ++phase) {
-                        if (distr[phase] > 0.0 && sumdistr == 1.0 ) {
+                        if (distr[phase] > 0.0) {
+                            numPhasesWithTargetsUnderThisControl += 1;
+                        }
+                    }
+                    for (int phase = 0; phase < np; ++phase) {
+                        if (distr[phase] > 0.0 && numPhasesWithTargetsUnderThisControl < 2 ) {
                             xw.wellRates()[np*w + phase] = target * distr[phase];
                         }
                     }
