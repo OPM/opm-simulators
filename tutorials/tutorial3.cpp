@@ -30,7 +30,9 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridManager.hpp>
 // 17.03.2016 Temporarily removed while moving functionality to opm-output
-//#include <opm/core/io/vtk/writeVtkData.hpp>
+#ifdef DISABLE_OUTPUT
+#include <opm/core/io/vtk/writeVtkData.hpp>
+#endif
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
@@ -315,11 +317,13 @@ try
         vtkfilename.str("");
         vtkfilename << "tutorial3-" << std::setw(3) << std::setfill('0') << i << ".vtu";
 // 17.03.2016 Temporarily removed while moving functionality to opm-output
-//        std::ofstream vtkfile(vtkfilename.str().c_str());
-//        Opm::DataMap dm;
-//        dm["saturation"] = &state.saturation();
-//        dm["pressure"] = &state.pressure();
-//        Opm::writeVtkData(grid, dm, vtkfile);
+#ifdef DISABLE_OUTPUT
+        std::ofstream vtkfile(vtkfilename.str().c_str());
+        Opm::DataMap dm;
+        dm["saturation"] = &state.saturation();
+        dm["pressure"] = &state.pressure();
+        Opm::writeVtkData(grid, dm, vtkfile);
+#endif
     }
 }
 catch (const std::exception &e) {
