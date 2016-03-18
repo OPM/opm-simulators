@@ -151,6 +151,7 @@ namespace Opm {
         using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
+        using Base::computePropertiesForWellConnectionPressures;
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
@@ -204,8 +205,12 @@ namespace Opm {
                                            const SolutionState& state,
                                            WellState& xw);
 
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
+        void computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                         const WellState& xw,
+                                                         std::vector<double>& b_perf,
+                                                         std::vector<double>& rsmax_perf,
+                                                         std::vector<double>& rvmax_perf,
+                                                         std::vector<double>& surf_dens_perf);
 
         void updateEquationsScaling();
 
