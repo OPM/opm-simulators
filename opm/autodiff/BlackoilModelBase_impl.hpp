@@ -795,18 +795,14 @@ namespace detail {
         }
     }
 
-
-
     template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
-                                                                                 const WellState& xw)
+    void BlackoilModelBase<Grid, Implementation>::computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                                                              const WellState& xw,
+                                                                                              std::vector<double>& b_perf,
+                                                                                              std::vector<double>& rsmax_perf,
+                                                                                              std::vector<double>& rvmax_perf,
+                                                                                              std::vector<double>& surf_dens_perf)
     {
-        if( ! localWellsActive() ) return ;
-
-        using namespace Opm::AutoDiffGrid;
-        // 1. Compute properties required by computeConnectionPressureDelta().
-        //    Note that some of the complexity of this part is due to the function
-        //    taking std::vector<double> arguments, and not Eigen objects.
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const int nw = wells().number_of_wells;
 
@@ -837,8 +833,6 @@ namespace detail {
         }
         const PhaseUsage& pu = fluid_.phaseUsage();
         DataBlock b(nperf, pu.num_phases);
-        std::vector<double> rsmax_perf(nperf, 0.0);
-        std::vector<double> rvmax_perf(nperf, 0.0);
         if (pu.phase_used[BlackoilPhases::Aqua]) {
             const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
@@ -851,6 +845,8 @@ namespace detail {
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
             const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
+        } else {
+            rsmax_perf.assign(nperf, 0.0);
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = subset(state.rv, well_cells);
@@ -858,13 +854,12 @@ namespace detail {
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
             const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
             rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
+        } else {
+            rvmax_perf.assign(nperf, 0.0);
         }
         // b is row major, so can just copy data.
-        std::vector<double> b_perf(b.data(), b.data() + nperf * pu.num_phases);
-        // Extract well connection depths.
-        const V depth = cellCentroidsZToEigen(grid_);
-        const V pdepth = subset(depth, well_cells);
-        std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+        b_perf.assign(b.data(), b.data() + nperf * pu.num_phases);
+
 
         // Surface density.
         // The compute density segment wants the surface densities as
@@ -873,16 +868,45 @@ namespace detail {
         for (int phase = 1; phase < pu.num_phases; ++phase) {
             rho += superset(fluid_.surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
         }
-        std::vector<double> surf_dens_perf(rho.data(), rho.data() + nperf * pu.num_phases);
+        surf_dens_perf.assign(rho.data(), rho.data() + nperf * pu.num_phases);
+    }
 
         // Gravity
         double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
 
+
+    template <class Grid, class Implementation>
+    void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
+                                                                                 const WellState& xw)
+    {
+        if( ! localWellsActive() ) return ;
+
+        using namespace Opm::AutoDiffGrid;
+        // 1. Compute properties required by computeConnectionPressureDelta().
+        //    Note that some of the complexity of this part is due to the function
+        //    taking std::vector<double> arguments, and not Eigen objects.
+        std::vector<double> b_perf;
+        std::vector<double> rsmax_perf;
+        std::vector<double> rvmax_perf;
+        std::vector<double> surf_dens_perf;
+        asImpl().computePropertiesForWellConnectionPressures(state, xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+                
         // 2. Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
                         wells(), xw, fluid_.phaseUsage(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+
+        const int nperf = wells().well_connpos[wells().number_of_wells];
+        const std::vector<int>& well_cells = wops_.well_cells;
+
+        // Extract well connection depths.
+        const V depth = cellCentroidsZToEigen(grid_);
+        const V pdepth = subset(depth, well_cells);
+        std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+
+        // Gravity
+        double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
 
         // 3. Compute pressure deltas
         std::vector<double> cdp =
