@@ -218,6 +218,12 @@ namespace Opm
                            const Opm::WellState& wellState,
                            bool substep = false);
 
+        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        void writeTimeStepSerial(const SimulatorTimerInterface& timer,
+                                 const SimulatorState& reservoirState,
+                                 const Opm::WellState& wellState,
+                                 bool substep);
+
         /** \brief return output directory */
         const std::string& outputDirectory() const { return outputDir_; }
 

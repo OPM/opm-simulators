@@ -1,6 +1,6 @@
 /*
   Copyright (c) 2014 SINTEF ICT, Applied Mathematics.
-  Copyright (c) 2015 IRIS AS
+  Copyright (c) 2015-2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -18,6 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
+
+#include <future>
 
 #include "SimulatorFullyImplicitBlackoilOutput.hpp"
 
@@ -252,6 +254,34 @@ namespace Opm
         }
     }
 
+    struct WriterCall
+    {
+        BlackoilOutputWriter& writer_;
+        std::unique_ptr< SimulatorTimerInterface > timer_;
+        const SimulatorState state_;
+        const WellState wellState_;
+        const bool substep_;
+
+        explicit WriterCall( BlackoilOutputWriter& writer,
+                             const SimulatorTimerInterface& timer,
+                             const SimulatorState& state,
+                             const WellState& wellState,
+                             bool substep)
+            : writer_( writer ),
+              timer_( timer.clone() ),
+              state_( state ),
+              wellState_( wellState ),
+              substep_( substep )
+        {}
+
+        // callback to writer's serial writeTimeStep method
+        void operator () ()
+        {
+            writer_.writeTimeStepSerial( *timer_, state_, wellState_, substep_ );
+        }
+    };
+
+
     void
     BlackoilOutputWriter::
     writeTimeStep(const SimulatorTimerInterface& timer,
@@ -274,63 +304,77 @@ namespace Opm
         const SimulatorState& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
         const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
 
-        // output is only done on I/O rank
+        // serial output is only done on I/O rank
         if( isIORank )
         {
-            // Matlab output
-            if( matlabWriter_ ) {
-                matlabWriter_->writeTimeStep( timer, state, wellState, substep );
-            }
-            // ECL output
-            if ( eclWriter_ ) {
-                const auto initConfig = eclipseState_->getInitConfig();
-                if (initConfig->getRestartInitiated() && ((initConfig->getRestartStep()) == (timer.currentStepNum()))) {
-                    std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
-                } else {
-                    eclWriter_->writeTimeStep(timer, state, wellState, substep );
-                }
-            }
+            // spawn write thread that calls eclWriter.writeTimeStepSerial
+            WriterCall call( *this, timer, state, wellState, substep );
+            std::async( std::move( call ) );
+        }
+    }
 
-            // write backup file
-            if( backupfile_ )
+    void
+    BlackoilOutputWriter::
+    writeTimeStepSerial(const SimulatorTimerInterface& timer,
+                        const SimulatorState& state,
+                        const WellState& wellState,
+                        bool substep)
+    {
+        // Matlab output
+        if( matlabWriter_ ) {
+            matlabWriter_->writeTimeStep( timer, state, wellState, substep );
+        }
+
+        // ECL output
+        if ( eclWriter_ )
+        {
+            const auto initConfig = eclipseState_->getInitConfig();
+            if (initConfig->getRestartInitiated() && ((initConfig->getRestartStep()) == (timer.currentStepNum()))) {
+                std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
+            } else {
+                eclWriter_->writeTimeStep(timer, state, wellState, substep );
+            }
+        }
+
+        // write backup file
+        if( backupfile_ )
+        {
+            int reportStep      = timer.reportStepNum();
+            int currentTimeStep = timer.currentStepNum();
+            if( (reportStep == currentTimeStep || // true for SimulatorTimer
+                 currentTimeStep == 0 || // true for AdaptiveSimulatorTimer at reportStep
+                 timer.done() ) // true for AdaptiveSimulatorTimer at reportStep
+               && lastBackupReportStep_ != reportStep ) // only backup report step once
             {
-                int reportStep      = timer.reportStepNum();
-                int currentTimeStep = timer.currentStepNum();
-                if( (reportStep == currentTimeStep || // true for SimulatorTimer
-                     currentTimeStep == 0 || // true for AdaptiveSimulatorTimer at reportStep
-                     timer.done() ) // true for AdaptiveSimulatorTimer at reportStep
-                   && lastBackupReportStep_ != reportStep ) // only backup report step once
-                {
-                    // store report step
-                    lastBackupReportStep_ = reportStep;
-                    // write resport step number
-                    backupfile_.write( (const char *) &reportStep, sizeof(int) );
+                // store report step
+                lastBackupReportStep_ = reportStep;
+                // write resport step number
+                backupfile_.write( (const char *) &reportStep, sizeof(int) );
 
-                    try {
-                        const BlackoilState& boState = dynamic_cast< const BlackoilState& > (state);
-                        backupfile_ << boState;
+                try {
+                    const BlackoilState& boState = dynamic_cast< const BlackoilState& > (state);
+                    backupfile_ << boState;
 
-                        const WellStateFullyImplicitBlackoil& boWellState = static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
-                        backupfile_ << boWellState;
-                    }
-                    catch ( const std::bad_cast& e )
-                    {
-
-                    }
-
-                    /*
-                    const WellStateFullyImplicitBlackoil* boWellState =
-                        dynamic_cast< const WellStateFullyImplicitBlackoil* > (&wellState);
-                    if( boWellState ) {
-                        backupfile_ << (*boWellState);
-                    }
-                    else
-                        OPM_THROW(std::logic_error,"cast to WellStateFullyImplicitBlackoil failed");
-                    */
-                    backupfile_ << std::flush;
+                    const WellStateFullyImplicitBlackoil& boWellState = static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
+                    backupfile_ << boWellState;
                 }
-            } // end backup
-        } // end isIORank
+                catch ( const std::bad_cast& e )
+                {
+
+                }
+
+                /*
+                const WellStateFullyImplicitBlackoil* boWellState =
+                    dynamic_cast< const WellStateFullyImplicitBlackoil* > (&wellState);
+                if( boWellState ) {
+                    backupfile_ << (*boWellState);
+                }
+                else
+                    OPM_THROW(std::logic_error,"cast to WellStateFullyImplicitBlackoil failed");
+                */
+                backupfile_ << std::flush;
+            }
+        } // end backup
     }
 
     void
