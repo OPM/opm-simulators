@@ -153,4 +153,13 @@ namespace Opm
         return start_date_time_;
     }
 
+    /// return copy of object
+    std::unique_ptr< SimulatorTimerInterface >
+    AdaptiveSimulatorTimer::clone() const
+    {
+        return std::unique_ptr< SimulatorTimerInterface > (new AdaptiveSimulatorTimer( *this ));
+    }
+
+
+
 } // namespace Opm

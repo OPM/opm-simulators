@@ -98,6 +98,9 @@ namespace Opm
             tm t = boost::posix_time::to_tm(currentDateTime());
             return std::mktime(&t);
         }
+
+        /// return copy of current timer instance
+        virtual std::unique_ptr< SimulatorTimerInterface > clone () const = 0;
     };
 
 

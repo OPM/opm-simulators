@@ -148,5 +148,13 @@ namespace Opm
         return int(timesteps_.size()) == current_step_;
     }
 
+    /// return copy of object
+    std::unique_ptr< SimulatorTimerInterface >
+    SimulatorTimer::clone() const
+    {
+       return std::unique_ptr< SimulatorTimerInterface > (new SimulatorTimer( *this ));
+    }
+
+
 
 } // namespace Opm

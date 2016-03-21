@@ -104,6 +104,9 @@ namespace Opm
         /// Return true if op++() has been called numSteps() times.
         bool done() const;
 
+        /// return copy of object
+        virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
+
     private:
         std::vector<double> timesteps_;
         int current_step_;

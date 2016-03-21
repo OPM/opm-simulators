@@ -93,6 +93,9 @@ namespace Opm
         /// \brief start date time of simulation
         boost::posix_time::ptime startDateTime() const;
 
+        /// return copy of object
+        virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
+
     protected:
         const boost::posix_time::ptime start_date_time_;
         const double start_time_;
