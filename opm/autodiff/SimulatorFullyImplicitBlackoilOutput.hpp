@@ -44,6 +44,7 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
+#include <future>
 
 #include <boost/filesystem.hpp>
 
@@ -262,6 +263,7 @@ namespace Opm
         std::unique_ptr< EclipseWriter > eclWriter_;
         EclipseStateConstPtr eclipseState_;
         const bool asyncOutput_ ;
+        std::future< bool > asyncWait_;
     };
 
 

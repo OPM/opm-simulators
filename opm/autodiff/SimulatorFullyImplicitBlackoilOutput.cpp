@@ -262,22 +262,33 @@ namespace Opm
         const WellState wellState_;
         const bool substep_;
 
+        std::future< bool > asyncWait_;
+
         explicit WriterCall( BlackoilOutputWriter& writer,
                              const SimulatorTimerInterface& timer,
                              const SimulatorState& state,
                              const WellState& wellState,
-                             bool substep)
+                             bool substep,
+                             std::future< bool >&& asyncWait)
             : writer_( writer ),
               timer_( timer.clone() ),
               state_( state ),
               wellState_( wellState ),
-              substep_( substep )
+              substep_( substep ),
+              asyncWait_( std::move( asyncWait ) )
         {}
 
         // callback to writer's serial writeTimeStep method
-        void operator () ()
+        bool operator () ()
         {
+            // wait for previous time step thread to be finished
+            // to ensure that write history is correct.
+            if( asyncWait_.valid() ) {
+                asyncWait_.wait();
+            }
+
             writer_.writeTimeStepSerial( *timer_, state_, wellState_, substep_ );
+            return true;
         }
     };
 
@@ -294,7 +305,7 @@ namespace Opm
             vtkWriter_->writeTimeStep( timer, localState, localWellState, false );
         }
 
-        bool isIORank = true ;
+        bool isIORank = output_ ;
         if( parallelOutput_ && parallelOutput_->isParallel() )
         {
             // collect all solutions to I/O rank
@@ -308,9 +319,11 @@ namespace Opm
         if( isIORank )
         {
             if( asyncOutput_ ) {
+
                 // spawn write thread that calls eclWriter.writeTimeStepSerial
-                WriterCall call( *this, timer, state, wellState, substep );
-                std::async( std::move( call ) );
+                // timer, state, and wellState are copied, previous async future is moved
+                WriterCall call( *this, timer, state, wellState, substep, std::move( asyncWait_ ) );
+                asyncWait_ = std::move( std::async( std::move( call ) ) );
             }
             else {
                 // just write the data to disk
