@@ -17,4 +17,27 @@ BlackoilState::BlackoilState( size_t num_cells , size_t num_faces , size_t num_p
     registerCellData( GASOILRATIO , 1 );
     registerCellData( RV, 1 );
     registerCellData( SURFACEVOL, num_phases );
+    setBlackoilStateReferencePointers();
+}
+
+BlackoilState::BlackoilState( const BlackoilState& other )
+    : SimulationDataContainer(other)
+{
+    setBlackoilStateReferencePointers();
+}
+
+BlackoilState& BlackoilState::operator=( const BlackoilState& other )
+{
+    SimulationDataContainer::operator=(other);
+    setBlackoilStateReferencePointers();
+    return *this;
+}
+
+void BlackoilState::setBlackoilStateReferencePointers()
+{
+    // This sets the reference pointers for the fast
+    // accessors, the fields must have been created first.
+    gasoilratio_ref_ = &getCellData(GASOILRATIO);
+    rv_ref_          = &getCellData(RV);
+    surfacevol_ref_  = &getCellData(SURFACEVOL);
 }

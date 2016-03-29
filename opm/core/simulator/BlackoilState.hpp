@@ -38,16 +38,41 @@ namespace Opm
         static const std::string RV;
         static const std::string SURFACEVOL;
 
-        BlackoilState(size_t num_cells , size_t num_faces, size_t num_phases);
+        /// Main constructor setting the sizes for the contained data
+        /// types.
+        /// \param num_cells   number of elements in cell data vectors
+        /// \param num_faces   number of elements in face data vectors
+        /// \param num_phases  number of phases, the number of components
+        ///                    in any data vector must equal 1 or this
+        ///                    number (this behaviour and argument is deprecated).
+        BlackoilState(size_t num_cells, size_t num_faces, size_t num_phases);
 
+        /// Copy constructor.
+        /// Must be defined explicitly because class contains non-value objects
+        /// (the reference pointers rv_ref_ etc.) that should not simply
+        /// be copied.
+        BlackoilState(const BlackoilState& other);
 
-        std::vector<double>& surfacevol  () { return getCellData("SURFACEVOL");  }
-        std::vector<double>& gasoilratio () { return getCellData(GASOILRATIO); }
-        std::vector<double>& rv ()          { return getCellData(RV);          }
+        /// Copy assignment operator.
+        /// Must be defined explicitly because class contains non-value objects
+        /// (the reference pointers rv_ref_ etc.) that should not simply
+        /// be copied.
+        BlackoilState& operator=(const BlackoilState& other);
 
-        const std::vector<double>& surfacevol  () const { return getCellData("SURFACEVOL");  }
-        const std::vector<double>& gasoilratio () const { return getCellData("GASOILRATIO"); }
-        const std::vector<double>& rv ()          const { return getCellData(RV);          }
+        std::vector<double>& surfacevol  () { return *surfacevol_ref_;  }
+        std::vector<double>& gasoilratio () { return *gasoilratio_ref_; }
+        std::vector<double>& rv ()          { return *rv_ref_;          }
+
+        const std::vector<double>& surfacevol  () const { return *surfacevol_ref_;  }
+        const std::vector<double>& gasoilratio () const { return *gasoilratio_ref_; }
+        const std::vector<double>& rv ()          const { return *rv_ref_;          }
+
+    private:
+        void setBlackoilStateReferencePointers();
+        std::vector<double>* surfacevol_ref_;
+        std::vector<double>* gasoilratio_ref_;
+        std::vector<double>* rv_ref_;
+
 
     };
 } // namespace Opm
