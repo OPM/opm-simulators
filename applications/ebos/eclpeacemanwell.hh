@@ -684,6 +684,13 @@ public:
     {
         const auto& comm = simulator_.gridView().comm();
 
+        if (dofVariables_.size() == 0) {
+            std::cout << "Well " << name() << " does not penetrate any active cell."
+                      << " Assuming it to be shut!\n";
+            setWellStatus(WellStatus::Shut);
+            return;
+        }
+
         // determine the maximum depth of the well over all processes
         refDepth_ = comm.min(refDepth_);
 

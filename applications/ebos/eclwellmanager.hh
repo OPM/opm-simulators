@@ -107,10 +107,8 @@ public:
             // the well primarily serves as a placeholder.) The big rest of the well is
             // specified by the updateWellCompletions_() method
             auto well = std::make_shared<Well>(simulator_);
-            well->beginSpec();
             well->setName(wellName);
             well->setWellStatus(Well::Shut);
-            well->endSpec();
 
             wells_.push_back(well);
             wellNameToIndex_[well->name()] = wells_.size() - 1;
@@ -615,8 +613,10 @@ protected:
         model.clearAuxiliaryModules();
         auto wellIt = wells_.begin();
         const auto& wellEndIt = wells_.end();
-        for (; wellIt != wellEndIt; ++wellIt)
+        for (; wellIt != wellEndIt; ++wellIt) {
             (*wellIt)->clear();
+            (*wellIt)->beginSpec();
+        }
 
         //////
         // tell the active wells which DOFs they contain
@@ -655,10 +655,11 @@ protected:
         }
 
         // register all wells at the model as auxiliary equations
-        auto wellIt2 = wells.begin();
-        const auto& wellEndIt2 = wells.end();
-        for (; wellIt2 != wellEndIt2; ++wellIt2)
-            model.addAuxiliaryModule(*wellIt2);
+        wellIt = wells_.begin();
+        for (; wellIt != wellEndIt; ++wellIt) {
+            (*wellIt)->endSpec();
+            model.addAuxiliaryModule(*wellIt);
+        }
     }
 
     void computeWellCompletionsMap_(unsigned reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
