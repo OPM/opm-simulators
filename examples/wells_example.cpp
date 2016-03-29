@@ -76,7 +76,7 @@ try
         all_cells.push_back(i);
     }
 
-    Opm::TwophaseState state;
+    Opm::TwophaseState state( grid.c_grid()->number_of_cells , grid.c_grid()->number_of_faces );
 
     initStateFromDeck(*grid.c_grid(), incomp_properties, deck, gravity[2], state);
 
