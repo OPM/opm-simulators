@@ -1,5 +1,5 @@
 /*
-  Copyright 2015 IRIS AS, Applied Mathematics.
+  Copyright 2012 SINTEF ICT, Applied Mathematics.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,30 +17,26 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
-#define OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
 
-#include <string>
+#include <opm/common/data/SimulationDataContainer.hpp>
 
- #include <opm/core/simulator/BlackoilState.hpp>
-
+#include <opm/polymer/PolymerState.hpp>
 
 namespace Opm
 {
+    const std::string PolymerState::CONCENTRATION = "CONCENTRATION";
+    const std::string PolymerState::CMAX = "CMAX";
 
-    /// Simulator state for blackoil simulator with solvent.
-    /// We use the Blackoil state parameters.
-    class BlackoilSolventState : public BlackoilState
+    PolymerState::PolymerState(int number_of_cells, int number_of_faces, int num_phases) :
+        SimulationDataContainer( number_of_cells , number_of_faces , num_phases )
     {
-    public:
-        static const std::string SSOL;
+        registerCellData(CONCENTRATION , 1 , 0 );
+        registerCellData(CMAX , 1 , 0 );
+    }
 
-        BlackoilSolventState( int number_of_cells, int number_of_faces, int number_of_phases);
-    };
 
 } // namespace Opm
 
 
 
 
-#endif // OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED

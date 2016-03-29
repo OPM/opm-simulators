@@ -33,27 +33,10 @@ namespace Opm
     class PolymerBlackoilState : public BlackoilState
     {
     public:
-        void init(const UnstructuredGrid& g, int num_phases)
-        {
-            this->init(g.number_of_cells, g.number_of_faces, num_phases);
-        }
+        static const std::string CONCENTRATION;
+        static const std::string CMAX;
 
-        void init(int number_of_cells, int number_of_faces, int num_phases)
-        {
-            BlackoilState::init(number_of_cells, number_of_faces, num_phases);
-            concentration_.resize(number_of_cells, 0.0);
-            cmax_.resize(number_of_cells, 0.0);
-        }
-
-        std::vector<double>& concentration()    { return concentration_; }
-        std::vector<double>& maxconcentration() { return cmax_; }
-
-        const std::vector<double>& concentration() const    { return concentration_; }
-        const std::vector<double>& maxconcentration() const { return cmax_; }
-
-    private:
-        std::vector<double> concentration_;
-        std::vector<double> cmax_;
+        PolymerBlackoilState(int number_of_cells, int number_of_faces, int num_phases);
     };
 
 } // namespace Opm

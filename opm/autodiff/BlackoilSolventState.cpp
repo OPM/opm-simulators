@@ -17,30 +17,18 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
-#define OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED
 
-#include <string>
-
- #include <opm/core/simulator/BlackoilState.hpp>
-
+#include <opm/autodiff/BlackoilSolventState.hpp>
 
 namespace Opm
 {
+    const std::string BlackoilSolventState::SSOL = "SSOL";
 
-    /// Simulator state for blackoil simulator with solvent.
-    /// We use the Blackoil state parameters.
-    class BlackoilSolventState : public BlackoilState
+    BlackoilSolventState::BlackoilSolventState( int number_of_cells, int number_of_faces, int number_of_phases)
+        : BlackoilState( number_of_cells , number_of_faces , number_of_phases)
     {
-    public:
-        static const std::string SSOL;
-
-        BlackoilSolventState( int number_of_cells, int number_of_faces, int number_of_phases);
+        registerCellData( SSOL , 1 );
     };
 
 } // namespace Opm
 
-
-
-
-#endif // OPM_BLACKOILSOLVENTSTATE_HEADER_INCLUDED

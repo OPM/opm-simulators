@@ -71,7 +71,7 @@ try
 
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
-    PolymerState state;
+    std::unique_ptr<PolymerState> state;
     Opm::PolymerProperties poly_props;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
@@ -81,23 +81,35 @@ try
     // Grid init.
     grid.reset(new GridManager(2, 1, 1, 1.0, 1.0, 1.0));
     // Rock and fluid init.
-    props.reset(new IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-    // Init state variables (saturation and pressure).
-    initStateBasic(*grid->c_grid(), *props, param, 0.0, state);
-    // Init Polymer state
-    if (param.has("poly_init")) {
-        double poly_init = param.getDefault("poly_init", 0.0);
-        for (int cell = 0; cell < grid->c_grid()->number_of_cells; ++cell) {
-            double smin[2], smax[2];
-            props->satRange(1, &cell, smin, smax);
-            if (state.saturation()[2*cell] > 0.5*(smin[0] + smax[0])) {
-                state.concentration()[cell] = poly_init;
-                state.maxconcentration()[cell] = poly_init;
-            } else {
-                state.saturation()[2*cell + 0] = 0.;
-                state.saturation()[2*cell + 1] = 1.;
-                state.concentration()[cell] = 0.;
-                state.maxconcentration()[cell] = 0.;
+    {
+        const UnstructuredGrid& ug_grid = *(grid->c_grid());
+        state.reset( new PolymerState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid ), 2));
+
+        props.reset(new IncompPropertiesBasic(param, ug_grid.dimensions, UgGridHelpers::numCells( ug_grid )));
+        // Init state variables (saturation and pressure).
+        initStateBasic(*grid->c_grid(), *props, param, 0.0, *state);
+        // Init Polymer state
+        if (param.has("poly_init")) {
+            double poly_init = param.getDefault("poly_init", 0.0);
+            for (int cell = 0; cell < grid->c_grid()->number_of_cells; ++cell) {
+                double smin[2], smax[2];
+                props->satRange(1, &cell, smin, smax);
+
+                auto& saturation = state->saturation();
+                auto& concentration = state->getCellData( state->CONCENTRATION );
+                auto& max_concentration = state->getCellData( state->CMAX );
+
+                props->satRange(1, &cell, smin, smax);
+                if (saturation[2*cell] > 0.5*(smin[0] + smax[0])) {
+                    concentration[cell] = poly_init;
+                    max_concentration[cell] = poly_init;
+                } else {
+                    saturation[2*cell + 0] = 0.;
+                    saturation[2*cell + 1] = 1.;
+                    concentration[cell] = 0.;
+                    max_concentration[cell] = 0.;
+                }
+
             }
         }
     }
@@ -210,7 +222,7 @@ try
     if (face01 == -1) {
         OPM_THROW(std::runtime_error, "Could not find face adjacent to cells [0 1]");
     }
-    state.faceflux()[face01] = src[0];
+    state->faceflux()[face01] = src[0];
     for (int sats = 0; sats < num_sats; ++sats) {
         const double s = double(sats)/double(num_sats - 1);
         const double ff = s; // Simplified a lot...
@@ -220,20 +232,26 @@ try
             // std::cout << "(s, c) = (" << s << ", " << c << ")\n";
             transport_src[0] = src[0]*ff;
             // Resetting the state for next run.
-            state.saturation()[0] = 0.0;
-            state.saturation()[1] = 0.0;
-            state.concentration()[0] = 0.0;
-            state.concentration()[1] = 0.0;
-            state.maxconcentration()[0] = 0.0;
-            state.maxconcentration()[1] = 0.0;
-            reorder_model.solve(&state.faceflux()[0],
+            auto& saturation = state->saturation();
+            auto& concentration = state->getCellData( state->CONCENTRATION );
+            auto& max_concentration = state->getCellData( state->CMAX );
+
+
+            saturation[0] = 0.0;
+            saturation[1] = 0.0;
+            concentration[0] = 0.0;
+            concentration[1] = 0.0;
+            max_concentration[0] = 0.0;
+            max_concentration[1] = 0.0;
+
+            reorder_model.solve(&state->faceflux()[0],
                                 &porevol[0],
                                 &transport_src[0],
                                 &polymer_inflow_c[0],
                                 dt,
-                                state.saturation(),
-                                state.concentration(),
-                                state.maxconcentration());
+                                saturation,
+                                concentration,
+                                max_concentration);
 
 #ifdef PROFILING
             // Extract residual counts.

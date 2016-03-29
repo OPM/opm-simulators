@@ -21,8 +21,9 @@
 #define OPM_BACKUPRESTORE_HEADER_INCLUDED
 
 #include <iostream>
+#include <opm/common/data/SimulationDataContainer.hpp>
 
-#include <opm/core/simulator/SimulatorState.hpp>
+
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
@@ -159,7 +160,7 @@ namespace Opm {
                BlackoilStateId = 2,
                WellStateFullyImplicitBackoilId = 3 };
 
-        inline int objectId( const SimulatorState& /* state */) {
+        inline int objectId( const SimulationDataContainer& /* state */) {
             return SimulatorStateId;
         }
         inline int objectId( const WellState& /* state */) {
@@ -184,9 +185,9 @@ namespace Opm {
         }
     }
 
-    // SimulatorState
+    // SimulationDataContainer
     inline
-    std::ostream& operator << (std::ostream& out, const SimulatorState& state )
+    std::ostream& operator << (std::ostream& out, const SimulationDataContainer& state )
     {
         // write id of object to stream
         writeValue( out, objectId( state ) );
@@ -205,7 +206,7 @@ namespace Opm {
     }
 
     inline
-    std::istream& operator >> (std::istream& in, SimulatorState& state )
+    std::istream& operator >> (std::istream& in, SimulationDataContainer& state )
     {
         // check id of stored object
         checkObjectId( in, state );
@@ -213,7 +214,7 @@ namespace Opm {
         int numPhases = 0;
         readValue( in, numPhases );
 
-        if( numPhases != state.numPhases() )
+        if( numPhases != (int) state.numPhases() )
             OPM_THROW(std::logic_error,"num phases wrong");
 
         // read variables
@@ -234,7 +235,7 @@ namespace Opm {
         writeValue( out, objectId( state ) );
 
         // backup simulator state
-        const SimulatorState& simstate = static_cast< const SimulatorState& > (state);
+        const SimulationDataContainer& simstate = static_cast< const SimulationDataContainer& > (state);
         out << simstate;
 
         // backup additional blackoil state variables
@@ -252,7 +253,7 @@ namespace Opm {
         checkObjectId( in, state );
 
         // restore simulator state
-        SimulatorState& simstate = static_cast< SimulatorState& > (state);
+        SimulationDataContainer& simstate = static_cast< SimulationDataContainer& > (state);
         in >> simstate;
 
         // restore additional blackoil state variables
