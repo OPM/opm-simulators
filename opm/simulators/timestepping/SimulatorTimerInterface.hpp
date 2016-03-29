@@ -20,6 +20,8 @@
 #ifndef OPM_SIMULATORTIMERINTERFACE_HEADER_INCLUDED
 #define OPM_SIMULATORTIMERINTERFACE_HEADER_INCLUDED
 
+#include <memory>
+
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/date_time/posix_time/conversion.hpp>
