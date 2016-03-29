@@ -261,6 +261,7 @@ namespace Opm
         std::unique_ptr< OutputWriter  > matlabWriter_;
         std::unique_ptr< EclipseWriter > eclWriter_;
         EclipseStateConstPtr eclipseState_;
+        const bool asyncOutput_ ;
     };
 
 
@@ -293,7 +294,8 @@ namespace Opm
                                       parallelOutput_->numCells(),
                                       parallelOutput_->globalCell() )
                    : 0 ),
-        eclipseState_(eclipseState)
+        eclipseState_(eclipseState),
+        asyncOutput_( output_ ? param.getDefault("async_output", bool( false ) ) : false )
     {
         // For output.
         if (output_ && parallelOutput_->isIORank() ) {

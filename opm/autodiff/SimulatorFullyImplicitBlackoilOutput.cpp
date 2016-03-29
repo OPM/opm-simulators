@@ -307,9 +307,15 @@ namespace Opm
         // serial output is only done on I/O rank
         if( isIORank )
         {
-            // spawn write thread that calls eclWriter.writeTimeStepSerial
-            WriterCall call( *this, timer, state, wellState, substep );
-            std::async( std::move( call ) );
+            if( asyncOutput_ ) {
+                // spawn write thread that calls eclWriter.writeTimeStepSerial
+                WriterCall call( *this, timer, state, wellState, substep );
+                std::async( std::move( call ) );
+            }
+            else {
+                // just write the data to disk
+                writeTimeStepSerial( timer, state, wellState, substep );
+            }
         }
     }
 
