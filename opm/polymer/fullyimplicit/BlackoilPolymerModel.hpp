@@ -234,6 +234,8 @@ namespace Opm {
                                            const SolutionState& state,
                                            WellState& xw);
 
+        void updateEquationsScaling();
+
         void
         computeMassFlux(const int               actph ,
                         const V&                transi,
