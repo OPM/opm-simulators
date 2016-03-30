@@ -1430,6 +1430,8 @@ protected:
                           const DofVariables *replacementDofVars = 0,
                           int replacedGridIdx = -1) const
     {
+        typedef Opm::MathToolbox<BhpEval> BhpEvalToolbox;
+
         // compute the volumetric reservoir and surface rates for the complete well
         BhpEval resvRate = 0.0;
 
@@ -1485,17 +1487,17 @@ protected:
         if (wellType_ == Injector) {
             // for injectors the computed rates are positive and the target BHP is the
             // maximum allowed pressure ...
-            result = std::min<BhpEval>(maxSurfaceRate - surfaceRate, result);
-            result = std::min<BhpEval>(maxResvRate - resvRate, result);
-            result = std::min<BhpEval>(1e-7*(targetBottomHolePressure_ - bhp), result);
+            result = BhpEvalToolbox::min(maxSurfaceRate - surfaceRate, result);
+            result = BhpEvalToolbox::min(maxResvRate - resvRate, result);
+            result = BhpEvalToolbox::min(1e-7*(targetBottomHolePressure_ - bhp), result);
         }
         else {
             assert(wellType_ == Producer);
             // ... for producers the rates are negative and the bottom hole pressure is
             // is the minimum
-            result = std::min<BhpEval>(maxSurfaceRate + surfaceRate, result);
-            result = std::min<BhpEval>(maxResvRate + resvRate, result);
-            result = std::min<BhpEval>(1e-7*(bhp - targetBottomHolePressure_), result);
+            result = BhpEvalToolbox::min(maxSurfaceRate + surfaceRate, result);
+            result = BhpEvalToolbox::min(maxResvRate + resvRate, result);
+            result = BhpEvalToolbox::min(1e-7*(bhp - targetBottomHolePressure_), result);
         }
 
         const Scalar scalingFactor = 1e-3;
