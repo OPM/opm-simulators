@@ -259,7 +259,7 @@ namespace Opm
     {
         BlackoilOutputWriter& writer_;
         std::unique_ptr< SimulatorTimerInterface > timer_;
-        const SimulatorState state_;
+        const SimulationDataContainer state_;
         const WellState wellState_;
         const bool substep_;
 
@@ -267,7 +267,7 @@ namespace Opm
 
         explicit WriterCall( BlackoilOutputWriter& writer,
                              const SimulatorTimerInterface& timer,
-                             const SimulatorState& state,
+                             const SimulationDataContainer& state,
                              const WellState& wellState,
                              bool substep,
                              std::future< bool >&& asyncWait)
@@ -336,7 +336,7 @@ namespace Opm
     void
     BlackoilOutputWriter::
     writeTimeStepSerial(const SimulatorTimerInterface& timer,
-                        const SimulatorState& state,
+                        const SimulationDataContainer& state,
                         const WellState& wellState,
                         bool substep)
     {
@@ -372,54 +372,15 @@ namespace Opm
                 backupfile_.write( (const char *) &reportStep, sizeof(int) );
 
                 try {
-                    const BlackoilState& boState = dynamic_cast< const BlackoilState& > (state);
-                    backupfile_ << boState;
+                    backupfile_ << state;
 
                     const WellStateFullyImplicitBlackoil& boWellState = static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
                     backupfile_ << boWellState;
                 }
                 catch ( const std::bad_cast& e )
                 {
-                    // store report step
-                    lastBackupReportStep_ = reportStep;
-                    // write resport step number
-                    backupfile_.write( (const char *) &reportStep, sizeof(int) );
-
-                    /*
-                    try {
-                        const BlackoilState& boState = dynamic_cast< const BlackoilState& > (state);
-                        backupfile_ << boState;
-
-                        const WellStateFullyImplicitBlackoil& boWellState = static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
-                        backupfile_ << boWellState;
-                    }
-                    catch ( const std::bad_cast& e )
-                    {
-
-                    }
-                    */
-
-                    /*
-                    const WellStateFullyImplicitBlackoil* boWellState =
-                        dynamic_cast< const WellStateFullyImplicitBlackoil* > (&wellState);
-                    if( boWellState ) {
-                        backupfile_ << (*boWellState);
-                    }
-                    else
-                        OPM_THROW(std::logic_error,"cast to WellStateFullyImplicitBlackoil failed");
-                    */
-                    backupfile_ << std::flush;
                 }
 
-                /*
-                const WellStateFullyImplicitBlackoil* boWellState =
-                    dynamic_cast< const WellStateFullyImplicitBlackoil* > (&wellState);
-                if( boWellState ) {
-                    backupfile_ << (*boWellState);
-                }
-                else
-                    OPM_THROW(std::logic_error,"cast to WellStateFullyImplicitBlackoil failed");
-                */
                 backupfile_ << std::flush;
             }
         } // end backup

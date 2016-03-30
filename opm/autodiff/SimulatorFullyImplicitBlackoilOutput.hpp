@@ -86,7 +86,7 @@ namespace Opm
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
-        for (const auto& pair : state.cellData()) 
+        for (const auto& pair : state.cellData())
         {
             const std::string& name = pair.first;
             std::string key;
@@ -223,7 +223,7 @@ namespace Opm
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
-                                 const SimulatorState& reservoirState,
+                                 const SimulationDataContainer& reservoirState,
                                  const Opm::WellState& wellState,
                                  bool substep);
 
