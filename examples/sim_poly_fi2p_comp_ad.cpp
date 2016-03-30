@@ -115,7 +115,7 @@ try
     std::shared_ptr<BlackoilPropertiesInterface> props;
     std::shared_ptr<BlackoilPropsAdInterface> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
-    PolymerBlackoilState state;
+    std::unique_ptr<PolymerBlackoilState> state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
@@ -187,6 +187,8 @@ try
                                                 Opm::UgGridHelpers::globalCell(cGrid),
                                                 Opm::UgGridHelpers::cartDims(cGrid),
                                                 param));
+
+    state.reset( new PolymerBlackoilState( Opm::UgGridHelpers::numCells(cGrid), Opm::UgGridHelpers::numFaces(cGrid), 2));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, materialLawManager, cGrid));
     PolymerProperties polymer_props(deck, eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
@@ -199,10 +201,10 @@ try
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        initStateBasic(*grid->c_grid(), *props, param, gravity[2], *state);
+        initBlackoilSurfvol(*grid->c_grid(), *props, *state);
     } else {
-        initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], *state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -254,7 +256,7 @@ try
                   deck,
                   *fis_solver,
                   grav);
-    fullReport= simulator.run(simtimer, state);
+    fullReport= simulator.run(simtimer, *state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);

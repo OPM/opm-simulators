@@ -137,11 +137,14 @@ namespace Opm {
 
         // Initial polymer concentration.
         if (has_solvent_) {
-            assert (not x.solvent_saturation().empty());
-            const int nc = x.solvent_saturation().size();
-            const V ss = Eigen::Map<const V>(&x.solvent_saturation()[0], nc);
+            const auto& solvent_saturation = x.getCellData( BlackoilSolventState::SSOL );
+            const int nc = solvent_saturation.size();
+            const V ss = Eigen::Map<const V>(solvent_saturation.data() , nc);
+
+            // This is some insanely detailed flickety flackety code;
             // Solvent belongs after other reservoir vars but before well vars.
             auto solvent_pos = vars0.begin() + fluid_.numPhases();
+            assert (not solvent_saturation.empty());
             assert(solvent_pos == vars0.end() - 2);
             vars0.insert(solvent_pos, ss);
         }
@@ -548,9 +551,10 @@ namespace Opm {
             Base::updateState(modified_dx, reservoir_state, well_state);
 
             // Update solvent.
-            const V ss_old = Eigen::Map<const V>(&reservoir_state.solvent_saturation()[0], nc, 1);
+            auto& solvent_saturation = reservoir_state.getCellData( reservoir_state.SSOL );
+            const V ss_old = Eigen::Map<const V>(&solvent_saturation[0], nc, 1);
             const V ss = (ss_old - dss).max(zero);
-            std::copy(&ss[0], &ss[0] + nc, reservoir_state.solvent_saturation().begin());
+            std::copy(&ss[0], &ss[0] + nc, solvent_saturation.begin());
 
             // adjust oil saturation
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();

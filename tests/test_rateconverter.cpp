@@ -32,6 +32,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -107,8 +108,7 @@ BOOST_FIXTURE_TEST_CASE(ThreePhase, TestFixture<SetupSimple>)
     Region reg{ 0 };
     RCvrt  cvrt(ad_props, reg);
 
-    Opm::BlackoilState x;
-    x.init(*grid.c_grid(), 3);
+    Opm::BlackoilState x( Opm::UgGridHelpers::numCells( *grid.c_grid()) , Opm::UgGridHelpers::numFaces( *grid.c_grid()) , 3);
 
     cvrt.defineState(x);
 
