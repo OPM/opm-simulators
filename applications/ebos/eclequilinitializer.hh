@@ -126,10 +126,9 @@ public:
 
         assert( gridManager.grid().size(/*codim=*/0) == static_cast<int>(numEquilElems) );
         // initialize the boiler plate of opm-core the state structure.
-        Opm::BlackoilState opmBlackoilState;
-        opmBlackoilState.init(numEquilElems,
-                              /*numFaces=*/0, // we don't care here
-                              numPhases);
+        Opm::BlackoilState opmBlackoilState(numEquilElems,
+                                            /*numFaces=*/0, // we don't care here
+                                            numPhases);
 
         // do the actual computation.
         Opm::initStateEquil(equilGrid,
