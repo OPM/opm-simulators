@@ -276,13 +276,23 @@ namespace Opm {
             std::vector<int> well_cells;                  // the set of perforated cells
         };
 
+        struct StandardWells {
+            // keeping the underline, later they will be private members
+            StandardWells(const Wells* wells);
+            const Wells& wells() const;
+            bool wells_active_;
+            const Wells*                    wells_;
+            V well_perforation_densities_; //Density of each well perforation
+            V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
+        };
+
         // ---------  Data members  ---------
 
         const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        const Wells*                    wells_;
+        StandardWells                   std_wells_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -305,8 +315,6 @@ namespace Opm {
         V isRs_;
         V isRv_;
         V isSg_;
-        V well_perforation_densities_; //Density of each well perforation
-        V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         LinearisedBlackoilResidual residual_;
 
@@ -339,11 +347,15 @@ namespace Opm {
         }
 
         // return true if wells are available in the reservoir
-        bool wellsActive() const { return wells_active_; }
+        bool wellsActive() const { return std_wells_.wells_active_; }
         // return true if wells are available on this process
-        bool localWellsActive() const { return wells_ ? (wells_->number_of_wells > 0 ) : false; }
+        bool localWellsActive() const { return std_wells_.wells_ ? (std_wells_.wells_->number_of_wells > 0 ) : false; }
         // return wells object
-        const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
+        // const Wells& wells () const { assert( bool(std_wells_.wells_ != 0) ); return *(std_wells_.wells_); }
+
+        // return the StandardWells object
+        StandardWells& stdWells() { return std_wells_; }
+        const StandardWells& stdWells() const { return std_wells_; }
 
         int numWellVars() const;
 
