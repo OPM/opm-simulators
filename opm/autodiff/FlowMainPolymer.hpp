@@ -38,6 +38,10 @@ namespace Opm
     {
     protected:
         using Base = FlowMainBase<FlowMainPolymer<Grid, Simulator>, Grid, Simulator>;
+        using Base::eclipse_state_;
+        using Base::param_;
+        using Base::fis_solver_;
+        using Base::parallel_information_;
         friend Base;
 
         // Set in setupGridAndProps()
@@ -90,10 +94,34 @@ namespace Opm
         // Setup linear solver.
         // Writes to:
         //   fis_solver_
+        // Currently, the CPR solver is not ready for polymer solver yet
         void setupLinearSolver()
         {
-            OPM_MESSAGE("Caution: polymer solver currently only works with direct linear solver.");
-            Base::fis_solver_.reset(new NewtonIterationBlackoilSimple(Base::param_, Base::parallel_information_));
+            const std::string cprSolver = "cpr";
+            const std::string interleavedSolver = "interleaved";
+            const std::string directSolver = "direct";
+            const std::string flowDefaultSolver = interleavedSolver;
+
+            std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipse_state_->getSimulationConfig();
+            std::string solver_approach = flowDefaultSolver;
+
+            if (param_.has("solver_approach")) {
+                solver_approach = param_.template get<std::string>("solver_approach");
+            }  else {
+                if (simCfg->useCPR()) {
+                    solver_approach = cprSolver;
+                }
+            }
+
+            if (solver_approach == cprSolver) {
+                OPM_THROW( std::runtime_error , "CPR solver is not ready for use with polymer solver yet.");
+            } else if (solver_approach == interleavedSolver) {
+                fis_solver_.reset(new NewtonIterationBlackoilInterleaved(param_, parallel_information_));
+            } else if (solver_approach == directSolver) {
+                fis_solver_.reset(new NewtonIterationBlackoilSimple(param_, parallel_information_));
+            } else {
+                OPM_THROW( std::runtime_error , "Internal error - solver approach " << solver_approach << " not recognized.");
+            }
         }
 
 

@@ -107,6 +107,7 @@ namespace Opm {
             if (!active_[Water]) {
                 OPM_THROW(std::logic_error, "Polymer must solved in water!\n");
             }
+            residual_.matbalscale.resize(fluid_.numPhases() + 1, 1.1169); // use the same as the water phase
             // If deck has polymer, residual_ should contain polymer equation.
             rq_.resize(fluid_.numPhases() + 1);
             residual_.material_balance_eq.resize(fluid_.numPhases() + 1, ADB::null());
@@ -343,6 +344,26 @@ namespace Opm {
         if (has_polymer_) {
             residual_.material_balance_eq[poly_pos_] = pvdt_ * (rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
                                                + ops_.div*rq_[poly_pos_].mflux;
+        }
+
+
+        if (param_.update_equations_scaling_) {
+            updateEquationsScaling();
+        }
+
+    }
+
+
+
+
+
+    template <class Grid>
+    void BlackoilPolymerModel<Grid>::updateEquationsScaling()
+    {
+        Base::updateEquationsScaling();
+        if (has_polymer_) {
+            const int water_pos = fluid_.phaseUsage().phase_pos[Water];
+            residual_.matbalscale[poly_pos_] = residual_.matbalscale[water_pos];
         }
     }
 
