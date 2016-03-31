@@ -1611,11 +1611,37 @@ namespace detail {
                 break;
 
             case SURFACE_RATE:
-                for (int phase = 0; phase < np; ++phase) {
-                    if (distr[phase] > 0.0) {
-                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                // assign target value as initial guess for injectors and
+                // single phase producers (orat, grat, wrat)
+                const WellType& well_type = wells().type[w];
+                if (well_type == INJECTOR) {
+                    for (int phase = 0; phase < np; ++phase) {
+                        const double& compi = wells().comp_frac[np * w + phase];
+                        if (compi > 0.0) {
+                            xw.wellRates()[np*w + phase] = target * compi;
+                        }
                     }
+                } else if (well_type == PRODUCER) {
+
+                    // only set target as initial rates for single phase
+                    // producers. (orat, grat and wrat, and not lrat)
+                    // lrat will result in numPhasesWithTargetsUnderThisControl == 2
+                    int numPhasesWithTargetsUnderThisControl = 0;
+                    for (int phase = 0; phase < np; ++phase) {
+                        if (distr[phase] > 0.0) {
+                            numPhasesWithTargetsUnderThisControl += 1;
+                        }
+                    }
+                    for (int phase = 0; phase < np; ++phase) {
+                        if (distr[phase] > 0.0 && numPhasesWithTargetsUnderThisControl < 2 ) {
+                            xw.wellRates()[np*w + phase] = target * distr[phase];
+                        }
+                    }
+                } else {
+                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
                 }
+
+
                 break;
             }
 
