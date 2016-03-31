@@ -427,9 +427,10 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     }
 
     well_collection_.setWellsPointer(w_);
-    well_collection_.applyGroupControls();
 
     setupGuideRates(wells, timeStep, well_data, well_names_to_index);
+
+    well_collection_.applyGroupControls();
 
     // Debug output.
 #define EXTRA_OUTPUT
