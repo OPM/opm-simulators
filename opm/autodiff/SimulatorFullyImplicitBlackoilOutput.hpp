@@ -43,7 +43,6 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
-#include <future>
 
 #include <boost/filesystem.hpp>
 
@@ -86,7 +85,7 @@ namespace Opm
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
-        for (const auto& pair : state.cellData())
+        for (const auto& pair : state.cellData()) 
         {
             const std::string& name = pair.first;
             std::string key;
@@ -221,12 +220,6 @@ namespace Opm
                            const Opm::WellState& wellState,
                            bool substep = false);
 
-        /** \copydoc Opm::OutputWriter::writeTimeStep */
-        void writeTimeStepSerial(const SimulatorTimerInterface& timer,
-                                 const SimulationDataContainer& reservoirState,
-                                 const Opm::WellState& wellState,
-                                 bool substep);
-
         /** \brief return output directory */
         const std::string& outputDirectory() const { return outputDir_; }
 
@@ -264,8 +257,6 @@ namespace Opm
         std::unique_ptr< OutputWriter  > matlabWriter_;
         std::unique_ptr< EclipseWriter > eclWriter_;
         EclipseStateConstPtr eclipseState_;
-        const bool asyncOutput_ ;
-        std::future< bool > asyncWait_;
     };
 
 
@@ -298,8 +289,7 @@ namespace Opm
                                       parallelOutput_->numCells(),
                                       parallelOutput_->globalCell() )
                    : 0 ),
-        eclipseState_(eclipseState),
-        asyncOutput_( output_ ? param.getDefault("async_output", bool( false ) ) : false )
+        eclipseState_(eclipseState)
     {
         // For output.
         if (output_ && parallelOutput_->isIORank() ) {
