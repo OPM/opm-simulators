@@ -37,7 +37,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
+#include <opm/output/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>

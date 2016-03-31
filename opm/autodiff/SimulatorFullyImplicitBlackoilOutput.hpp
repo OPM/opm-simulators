@@ -23,12 +23,12 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/io/eclipse/EclipseReader.hpp>
+#include <opm/output/eclipse/EclipseReader.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/core/io/OutputWriter.hpp>
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
+#include <opm/output/OutputWriter.hpp>
+#include <opm/output/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/ParallelDebugOutput.hpp>
