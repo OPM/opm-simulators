@@ -458,9 +458,9 @@ namespace detail {
 
     template <class Grid, class Implementation>
     BlackoilModelBase<Grid, Implementation>::
-    StandardWells::StandardWells(const Wells* wells)
-      : wells_(wells)
-      , wops_(wells)
+    StandardWells::StandardWells(const Wells* wells_arg)
+      : wells_(wells_arg)
+      , wops_(wells_arg)
     {
     }
 
@@ -1659,10 +1659,10 @@ namespace detail {
             case SURFACE_RATE:
                 // assign target value as initial guess for injectors and
                 // single phase producers (orat, grat, wrat)
-                const WellType& well_type = wells().type[w];
+                const WellType& well_type = stdWells().wells().type[w];
                 if (well_type == INJECTOR) {
                     for (int phase = 0; phase < np; ++phase) {
-                        const double& compi = wells().comp_frac[np * w + phase];
+                        const double& compi = stdWells().wells().comp_frac[np * w + phase];
                         if (compi > 0.0) {
                             xw.wellRates()[np*w + phase] = target * compi;
                         }
