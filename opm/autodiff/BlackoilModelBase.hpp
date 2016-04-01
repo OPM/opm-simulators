@@ -398,9 +398,9 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
         void
-        extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
-                                  std::vector<ADB>& b_perfcells,
-                                  const SolutionState&) const;
+        extractWellPerfProperties(const SolutionState& state,
+                                  std::vector<ADB>& mob_perfcells,
+                                  std::vector<ADB>& b_perfcells) const;
 
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,

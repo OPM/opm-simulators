@@ -978,7 +978,7 @@ namespace detail {
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        asImpl().extractWellPerfProperties(mob_perfcells, b_perfcells, state);
+        asImpl().extractWellPerfProperties(state, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
@@ -1125,9 +1125,9 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void
-    BlackoilModelBase<Grid, Implementation>::extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
-                                                                       std::vector<ADB>& b_perfcells,
-                                                                       const SolutionState&) const
+    BlackoilModelBase<Grid, Implementation>::extractWellPerfProperties(const SolutionState&,
+                                                                       std::vector<ADB>& mob_perfcells,
+                                                                       std::vector<ADB>& b_perfcells) const
     {
         // If we have wells, extract the mobilities and b-factors for
         // the well-perforated cells.

@@ -226,9 +226,9 @@ namespace Opm {
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
 
-        void extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
-                                       std::vector<ADB>& b_perfcells,
-                                       const SolutionState& state);
+        void extractWellPerfProperties(const SolutionState& state,
+                                       std::vector<ADB>& mob_perfcells,
+                                       std::vector<ADB>& b_perfcells);
 
 
         // compute effective viscosities (mu_eff_) and effective b factors (b_eff_)  using the ToddLongstaff model

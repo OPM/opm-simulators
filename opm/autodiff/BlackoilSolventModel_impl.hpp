@@ -758,11 +758,11 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilSolventModel<Grid>::extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
-                                                          std::vector<ADB>& b_perfcells,
-                                                          const SolutionState& state)
+    BlackoilSolventModel<Grid>::extractWellPerfProperties(const SolutionState& state,
+                                                          std::vector<ADB>& mob_perfcells,
+                                                          std::vector<ADB>& b_perfcells)
     {
-        Base::extractWellPerfProperties(mob_perfcells, b_perfcells, state);
+        Base::extractWellPerfProperties(state, mob_perfcells, b_perfcells);
         if (has_solvent_) {
             int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
             const std::vector<int>& well_cells = wops_.well_cells;
