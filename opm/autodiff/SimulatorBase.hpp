@@ -157,6 +157,13 @@ namespace Opm
                     const BlackoilState&            x,
                     WellState& xw);
 
+        void computeWellPotentials(const std::size_t               step,
+                                   const Wells*                    wells,
+                                   const BlackoilState&            x,
+                                   const WellState& xw,
+                                   std::vector<double>& well_potentials);
+
+
         // Data.
         typedef RateConverter::
         SurfaceToReservoirVoidage< BlackoilPropsAdInterface,

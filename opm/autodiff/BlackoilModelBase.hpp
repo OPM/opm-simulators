@@ -385,7 +385,7 @@ namespace Opm {
                      const int            aix  );
 
         void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
+                                            WellState& xw);
 
         void
         assembleMassBalanceEq(const SolutionState& state);

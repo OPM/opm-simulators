@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -102,6 +103,8 @@ namespace Opm
                 current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
             }
 
+            well_perforation_pressure_diffs_.resize(nperf);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if( ! prevState.wellMap().empty() )
@@ -175,7 +178,6 @@ namespace Opm
             init(wells, state, dummy_state) ;
         }
 
-
         /// One rate per phase and well connection.
         std::vector<double>& perfPhaseRates() { return perfphaserates_; }
         const std::vector<double>& perfPhaseRates() const { return perfphaserates_; }
@@ -184,9 +186,14 @@ namespace Opm
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
 
+        /// Pressure differance to the bhp for each well perforation.
+        std::vector<double>& well_perforation_pressure_diffs() { return well_perforation_pressure_diffs_; }
+        const std::vector<double>& well_perforation_pressure_diffs() const { return well_perforation_pressure_diffs_; }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
+        std::vector<double> well_perforation_pressure_diffs_;
     };
 
 } // namespace Opm

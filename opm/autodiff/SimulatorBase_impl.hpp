@@ -1,6 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 IRIS AS
+  Copyright 2014-2015 IRIS AS
   Copyright 2015 Andreas Lauser
 
   This file is part of the Open Porous Media project (OPM).
@@ -22,6 +22,7 @@
 #include <algorithm>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/core/well_controls.h>
 
 namespace Opm
 {
@@ -120,6 +121,8 @@ namespace Opm
         unsigned int totalNonlinearIterations = 0;
         unsigned int totalLinearIterations = 0;
 
+        std::vector<double> well_potentials;
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -139,10 +142,11 @@ namespace Opm
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability(),
-                                       is_parallel_run_);
+                                       is_parallel_run_,
+                                       well_potentials);
             const Wells* wells = wells_manager.c_wells();
-            WellState well_state;
-            well_state.init(wells, state, prev_well_state);
+            WellState well_state;                       
+            well_state.init(wells, state, prev_well_state);          
 
             // give the polymer and surfactant simulators the chance to do their stuff
             asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
@@ -215,9 +219,10 @@ namespace Opm
                 step_report.reportParam(tstep_os);
             }
 
-            // Increment timer, remember well state.
+            // Increment timer, remember well state.           
             ++timer;
             prev_well_state = well_state;
+            asImpl().computeWellPotentials(timer.currentStepNum(), wells, state, well_state, well_potentials);
         }
 
         // Write final simulation state.
@@ -378,6 +383,47 @@ namespace Opm
         }
 
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));
+    }
+
+    template <class Implementation>
+    void SimulatorBase<Implementation>::computeWellPotentials(const std::size_t step,
+                                                              const Wells* wells,
+                                                              const BlackoilState& x,
+                                                              const WellState& xw,
+                                                              std::vector<double>& well_potentials)
+    {
+        const int nw = wells->number_of_wells;
+        const int np = wells->number_of_phases;
+        well_potentials.clear();
+        well_potentials.resize(nw*np,0.0);
+        std::map<std::string, int> well_names_to_index;
+        if( ! xw.wellMap().empty() )
+        {
+            for (int w = 0; w < nw; ++w) {
+                for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
+                    const double well_cell_pressure = x.pressure()[wells->well_cells[perf]];
+                    const double drawdown_used = well_cell_pressure - xw.perfPress()[perf];
+                    const WellControls* ctrl = wells->ctrls[w];
+                    const int nwc = well_controls_get_num(ctrl);
+                    //Loop over all controls until we find a BHP control
+                    //that specifies what we need...
+                    double bhp = 0.0;
+                    for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
+                        if (well_controls_iget_type(ctrl, ctrl_index) == BHP) {
+                            bhp = well_controls_iget_target(ctrl, ctrl_index);
+                        }
+                        // TODO: do something for thp;
+                    }
+                    const double drawdown_maximum = well_cell_pressure - (bhp + xw.well_perforation_pressure_diffs()[perf]);
+
+                    for (int phase = 0; phase < np; ++phase) {
+                        well_potentials[w*np + phase] += (drawdown_maximum / drawdown_used * xw.perfPhaseRates()[perf*np + phase]);
+                    }
+                }
+                //std::cout << wells->name[w] << " " << well_potentials[w*np + 1] << "  " <<xw.wellRates()[w*np + 1]<<std::endl;
+                well_names_to_index[wells->name[w]] = w;
+            }
+        }
     }
 
     template <class Implementation>
