@@ -82,7 +82,7 @@ public:
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             const auto& pvtgTable = pvtgTables[regionIdx];
 
-            const auto saturatedTable = pvtgTable.getSaturatedTable();
+            const auto& saturatedTable = pvtgTable.getSaturatedTable();
             assert(saturatedTable.numRows() > 1);
 
             auto& gasMu = gasMu_[regionIdx];
@@ -116,7 +116,7 @@ public:
                 assert(invGasB.numX() == outerIdx + 1);
                 assert(gasMu.numX() == outerIdx + 1);
 
-                const auto underSaturatedTable = pvtgTable.getUnderSaturatedTable(outerIdx);
+                const auto& underSaturatedTable = pvtgTable.getUnderSaturatedTable(outerIdx);
                 size_t numRows = underSaturatedTable.numRows();
                 for (size_t innerIdx = 0; innerIdx < numRows; ++ innerIdx) {
                     Scalar Rv = underSaturatedTable.get("RV" , innerIdx);

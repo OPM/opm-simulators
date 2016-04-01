@@ -81,7 +81,7 @@ public:
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++ regionIdx) {
             const auto& pvtoTable = pvtoTables[regionIdx];
 
-            const auto saturatedTable = pvtoTable.getSaturatedTable();
+            const auto& saturatedTable = pvtoTable.getSaturatedTable();
             assert(saturatedTable.numRows() > 1);
 
             auto& oilMu = oilMuTable_[regionIdx];
