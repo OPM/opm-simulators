@@ -370,7 +370,7 @@ namespace Opm {
 
         std::vector<int>& well_cells = wops_ms_.well_cells;
 
-        well_perforation_densities_ = V::Zero(nperf_total);
+        stdWells().well_perforation_densities_ = V::Zero(nperf_total);
 
         const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf_total);
 
@@ -462,17 +462,17 @@ namespace Opm {
         // 2. Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        wells(), xw, fluid_.phaseUsage(),
+                        stdWells().wells(), xw, fluid_.phaseUsage(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // 3. Compute pressure deltas
         std::vector<double> cdp =
                 WellDensitySegmented::computeConnectionPressureDelta(
-                        wells(), perf_cell_depth, cd, grav);
+                        stdWells().wells(), perf_cell_depth, cd, grav);
 
         // 4. Store the results
-        well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
-        well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf_total);
+        stdWells().well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
+        stdWells().well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf_total);
 
         if ( !wops_ms_.has_multisegment_wells ) {
             well_perforation_cell_densities_ = V::Zero(nperf_total);
@@ -698,7 +698,7 @@ namespace Opm {
 
             // Compute drawdown.
             ADB h_nc = msperf_selector.select(well_segment_perforation_pressure_diffs_,
-                                              ADB::constant(well_perforation_pressure_diffs_));
+                                              ADB::constant(stdWells().well_perforation_pressure_diffs_));
             const V h_cj = msperf_selector.select(well_perforation_cell_pressure_diffs_, V::Zero(nperf));
 
             // Special handling for when we are called from solveWellEq().
@@ -765,7 +765,7 @@ namespace Opm {
             // TODO: although we can begin from the brutal force way)
 
             // TODO: stop using wells() here.
-            const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
+            const DataBlock compi = Eigen::Map<const DataBlock>(stdWells().wells().comp_frac, nw, np);
             std::vector<ADB> wbq(np, ADB::null());
             ADB wbqt = ADB::constant(V::Zero(nseg));
 
@@ -862,7 +862,7 @@ namespace Opm {
         // we need th concept of preforation pressures
         xw.perfPress().resize(nperf_total, -1.e100);
 
-        const V& cdp = well_perforation_pressure_diffs_;
+        const V& cdp = stdWells().well_perforation_pressure_diffs_;
         int start_segment = 0;
         int start_perforation = 0;
         for (int i = 0; i < nw; ++i) {
