@@ -55,7 +55,7 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        const auto& pvdoTables = eclState->getTableManager()->getPvdoTables();
+        const auto& pvdoTables = eclState->getTableManager().getPvdoTables();
         const auto& densityKeyword = deck->getKeyword("DENSITY");
 
         assert(pvdoTables.size() == densityKeyword.size());

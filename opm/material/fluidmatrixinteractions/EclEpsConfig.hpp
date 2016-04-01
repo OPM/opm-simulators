@@ -177,31 +177,32 @@ public:
         else
             enableThreePointKrSatScaling_ = false;
 
+        auto& props = eclState->getEclipseProperties();
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem)
             enablePcScaling_ =
-                eclState->hasDeckDoubleGridProperty("PCW")
-                || eclState->hasDeckDoubleGridProperty("SWATINIT");
+                props.hasDeckDoubleGridProperty("PCW")
+                || props.hasDeckDoubleGridProperty("SWATINIT");
 
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enablePcScaling_ = eclState->hasDeckDoubleGridProperty("PCG");
+            enablePcScaling_ = props.hasDeckDoubleGridProperty("PCG");
         }
 
         // check if we are supposed to scale the Y axis of the wetting phase relperm
         if (twoPhaseSystemType == EclOilWaterSystem)
-            enableKrwScaling_ = eclState->hasDeckDoubleGridProperty("KRW");
+            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRW");
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrwScaling_ = eclState->hasDeckDoubleGridProperty("KRO");
+            enableKrwScaling_ = props.hasDeckDoubleGridProperty("KRO");
         }
 
         // check if we are supposed to scale the Y axis of the non-wetting phase relperm
         if (twoPhaseSystemType == EclOilWaterSystem)
-            enableKrnScaling_ = eclState->hasDeckDoubleGridProperty("KRO");
+            enableKrnScaling_ = props.hasDeckDoubleGridProperty("KRO");
         else {
             assert(twoPhaseSystemType == EclGasOilSystem);
-            enableKrnScaling_ = eclState->hasDeckDoubleGridProperty("KRG");
+            enableKrnScaling_ = props.hasDeckDoubleGridProperty("KRG");
         }
     }
 #endif

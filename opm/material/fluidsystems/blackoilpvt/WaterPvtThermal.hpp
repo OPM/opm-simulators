@@ -77,7 +77,7 @@ public:
         //////
         // initialize the thermal part
         //////
-        auto tables = eclState->getTableManager();
+        const auto& tables = eclState->getTableManager();
 
         enableThermalDensity_ = deck->hasKeyword("WATDENT");
         enableThermalViscosity_ = deck->hasKeyword("VISCREF");
@@ -101,7 +101,7 @@ public:
         if (enableThermalViscosity_) {
             const auto& viscrefKeyword = deck->getKeyword("VISCREF");
 
-            const auto& watvisctTables = tables->getWatvisctTables();
+            const auto& watvisctTables = tables.getWatvisctTables();
 
             assert(watvisctTables.size() == numRegions);
             assert(viscrefKeyword.size() == numRegions);

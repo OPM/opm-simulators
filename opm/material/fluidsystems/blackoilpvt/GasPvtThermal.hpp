@@ -77,7 +77,7 @@ public:
         //////
         // initialize the thermal part
         //////
-        auto tables = eclState->getTableManager();
+        const auto& tables = eclState->getTableManager();
 
         enableThermalDensity_ = deck->hasKeyword("TREF");
         enableThermalViscosity_ = deck->hasKeyword("GASVISCT");
@@ -87,7 +87,7 @@ public:
 
         // viscosity
         if (enableThermalViscosity_) {
-            const auto& gasvisctTables = tables->getGasvisctTables();
+            const auto& gasvisctTables = tables.getGasvisctTables();
             int gasCompIdx = deck->getKeyword("GCOMPIDX").getRecord(0).getItem("GAS_COMPONENT_INDEX").get< int >(0) - 1;
             std::string gasvisctColumnName = "Viscosity"+std::to_string(static_cast<long long>(gasCompIdx));
 
