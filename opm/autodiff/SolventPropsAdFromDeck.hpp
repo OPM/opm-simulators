@@ -144,7 +144,7 @@ public:
     V mixingParameterDensity(const Cells& cells) const;
 
     /// Todd-Longstaff pressure dependent mixing parameter
-    /// \param[in]  So              Array of n oil fraction values. Soil / Sn values, where Sn = Sgas + Ssolvent + Soil.
+    /// \param[in]  po              Array of n oil pressure values
     /// \param[in]  cells           Array of n cell indices to be associated with the fraction values.
     /// return                      Array of n pressure dependent mixing paramters
     ADB pressureMixingParameter(const ADB& po,
