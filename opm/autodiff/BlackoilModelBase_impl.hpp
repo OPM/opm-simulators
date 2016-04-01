@@ -166,7 +166,6 @@ namespace detail {
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
         , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
         , ops_   (grid, geo.nnc())
-        , wops_  (wells_arg)
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
         , param_( param )
@@ -461,6 +460,7 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::
     StandardWells::StandardWells(const Wells* wells)
       : wells_(wells)
+      , wops_(wells)
     {
     }
 
@@ -841,7 +841,7 @@ namespace detail {
             }
         }
 
-        const std::vector<int>& well_cells = wops_.well_cells;
+        const std::vector<int>& well_cells = stdWells().wops_.well_cells;
 
         // Use cell values for the temperature as the wells don't knows its temperature yet.
         const ADB perf_temp = subset(state.temperature, well_cells);
@@ -1135,7 +1135,7 @@ namespace detail {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
         for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase], wops_.well_cells, nc);
+            residual_.material_balance_eq[phase] -= superset(cq_s[phase], stdWells().wops_.well_cells, nc);
         }
     }
 
@@ -1158,7 +1158,7 @@ namespace detail {
             return;
         } else {
             const int np = asImpl().numPhases();
-            const std::vector<int>& well_cells = wops_.well_cells;
+            const std::vector<int>& well_cells = stdWells().wops_.well_cells;
             mob_perfcells.resize(np, ADB::null());
             b_perfcells.resize(np, ADB::null());
             for (int phase = 0; phase < np; ++phase) {
@@ -1188,7 +1188,7 @@ namespace detail {
         const int nperf = stdWells().wells().well_connpos[nw];
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         V Tw = Eigen::Map<const V>(stdWells().wells().WI, nperf);
-        const std::vector<int>& well_cells = wops_.well_cells;
+        const std::vector<int>& well_cells = stdWells().wops_.well_cells;
 
         // pressure diffs computed already (once per step, not changing per iteration)
         const V& cdp = std_wells_.well_perforation_pressure_diffs_;
@@ -1198,7 +1198,7 @@ namespace detail {
         const ADB& rs_perfcells = subset(state.rs, well_cells);
 
         // Perforation pressure
-        const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
+        const ADB perfpressure = (stdWells().wops_.w2p * state.bhp) + cdp;
 
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcells - perfpressure;
@@ -1218,8 +1218,8 @@ namespace detail {
         }
 
         // Handle cross flow
-        const V numInjectingPerforations = (wops_.p2w * ADB::constant(selectInjectingPerforations)).value();
-        const V numProducingPerforations = (wops_.p2w * ADB::constant(selectProducingPerforations)).value();
+        const V numInjectingPerforations = (stdWells().wops_.p2w * ADB::constant(selectInjectingPerforations)).value();
+        const V numProducingPerforations = (stdWells().wops_.p2w * ADB::constant(selectProducingPerforations)).value();
         for (int w = 0; w < nw; ++w) {
             if (!stdWells().wells().allow_cf[w]) {
                 for (int perf = stdWells().wells().well_connpos[w] ; perf < stdWells().wells().well_connpos[w+1]; ++perf) {
@@ -1270,7 +1270,7 @@ namespace detail {
         std::vector<ADB> wbq(np, ADB::null());
         ADB wbqt = ADB::constant(V::Zero(nw));
         for (int phase = 0; phase < np; ++phase) {
-            const ADB& q_ps = wops_.p2w * cq_ps[phase];
+            const ADB& q_ps = stdWells().wops_.p2w * cq_ps[phase];
             const ADB& q_s = subset(state.qs, Span(nw, 1, phase*nw));
             Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
             const int pos = pu.phase_pos[phase];
@@ -1282,7 +1282,7 @@ namespace detail {
         std::vector<ADB> cmix_s(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
             const int pos = pu.phase_pos[phase];
-            cmix_s[phase] = wops_.w2p * notDeadWells_selector.select(ADB::constant(compi.col(pos)), wbq[phase]/wbqt);
+            cmix_s[phase] = stdWells().wops_.w2p * notDeadWells_selector.select(ADB::constant(compi.col(pos)), wbq[phase]/wbqt);
         }
 
         // compute volume ratio between connection at standard conditions
@@ -1348,7 +1348,7 @@ namespace detail {
 
         // Update the perforation pressures.
         const V& cdp = std_wells_.well_perforation_pressure_diffs_;
-        const V perfpressure = (wops_.w2p * state.bhp.value().matrix()).array() + cdp;
+        const V perfpressure = (stdWells().wops_.w2p * state.bhp.value().matrix()).array() + cdp;
         xw.perfPress().assign(perfpressure.data(), perfpressure.data() + nperf);
     }
 
@@ -1371,7 +1371,7 @@ namespace detail {
         const int nw = stdWells().wells().number_of_wells;
         ADB qs = state.qs;
         for (int phase = 0; phase < np; ++phase) {
-            qs -= superset(wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
+            qs -= superset(stdWells().wops_.p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
 
         }
 

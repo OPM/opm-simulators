@@ -282,6 +282,7 @@ namespace Opm {
             const Wells& wells() const;
             bool wells_active_;
             const Wells*                    wells_;
+            const WellOps                   wops_;
             V well_perforation_densities_; //Density of each well perforation
             V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
         };
@@ -301,7 +302,6 @@ namespace Opm {
         const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
-        const WellOps                   wops_;
         const bool has_disgas_;
         const bool has_vapoil_;
 
@@ -350,8 +350,6 @@ namespace Opm {
         bool wellsActive() const { return std_wells_.wells_active_; }
         // return true if wells are available on this process
         bool localWellsActive() const { return std_wells_.wells_ ? (std_wells_.wells_->number_of_wells > 0 ) : false; }
-        // return wells object
-        // const Wells& wells () const { assert( bool(std_wells_.wells_ != 0) ); return *(std_wells_.wells_); }
 
         // return the StandardWells object
         StandardWells& stdWells() { return std_wells_; }
