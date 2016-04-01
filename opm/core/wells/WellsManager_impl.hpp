@@ -326,12 +326,13 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const C2F&                      cell_to_faces,
              FC                              begin_face_centroids,
              const double*                   permeability,
-             bool                            is_parallel_run)
+             bool                            is_parallel_run,
+             std::vector<double>             well_potentials)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
-         cell_to_faces, begin_face_centroids, permeability);
+         cell_to_faces, begin_face_centroids, permeability, well_potentials);
 }
 
 /// Construct wells from deck.
@@ -345,7 +346,8 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    int                             dimensions,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
-                   const double*                   permeability)
+                   const double*                   permeability,
+                   const std::vector<double>       well_potentials)
 {
     if (dimensions != 3) {
         OPM_THROW(std::runtime_error,
@@ -428,7 +430,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
 
     well_collection_.setWellsPointer(w_);
 
-    setupGuideRates(wells, timeStep, well_data, well_names_to_index);
+    setupGuideRates(wells, timeStep, well_data, well_names_to_index, pu, well_potentials);
 
     well_collection_.applyGroupControls();
 

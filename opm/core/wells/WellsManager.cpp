@@ -1,5 +1,6 @@
 /*
   Copyright 2012 SINTEF ICT, Applied Mathematics.
+  Copyright 2015 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -330,11 +331,12 @@ namespace Opm
                                const double* permeability)
         : w_(0), is_parallel_run_(false)
     {
+        std::vector<double> well_potensials;
         init(eclipseState, timeStep, UgGridHelpers::numCells(grid),
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
-             permeability);
+             permeability, well_potensials);
 
     }
 
@@ -725,10 +727,11 @@ namespace Opm
     }
 
 
-
-
-    void WellsManager::setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index)
+    void WellsManager::setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
+                                       const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials)
     {
+
+        const int np = phaseUsage.num_phases;
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
             WellConstPtr well = *wellIter;
             const int wix = well_names_to_index[well->name()];
@@ -754,8 +757,62 @@ namespace Opm
                 } else {
                     OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << well->name());
                 }
-            }
+            } else if (well_potentials.size() > 0) { // default: calculate guiderates from well potentials
+
+                // Note: Modification of the guide rate using GUIDERAT is not supported
+                switch (well->getPreferredPhase()) {
+                case Phase::WATER: {
+                    if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
+                        OPM_THROW(std::runtime_error, "Water phase not used, yet found water-preferring well.");
+                    }
+                    const int water_index = phaseUsage.phase_pos[BlackoilPhases::Aqua];
+                    if ( well->isProducer(timeStep) ) {
+                        wellnode.prodSpec().guide_rate_ = well_potentials[np*wix + water_index];
+                        wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::WATER;
+                    } else {
+                        wellnode.injSpec().guide_rate_ = well_potentials[np*wix + water_index];
+                        // Guide rates applies to the phase tht the well is injecting i.e water
+                        wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                    }
+                    break;
+                }
+                case Phase::OIL: {
+                    if (!phaseUsage.phase_used[BlackoilPhases::Liquid]) {
+                        OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil-preferring well.");
+                    }
+                    const int oil_index = phaseUsage.phase_pos[BlackoilPhases::Liquid];
+                    if ( well->isProducer(timeStep) ) {
+                        wellnode.prodSpec().guide_rate_ = well_potentials[np*wix + oil_index];
+                        wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
+                    } else {
+                        wellnode.injSpec().guide_rate_ = well_potentials[np*wix + oil_index];
+                        // Guide rates applies to the phase tht the well is injecting i.e. oil
+                        wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                    }
+                    break;
+                }
+                case Phase::GAS: {
+                    if (!phaseUsage.phase_used[BlackoilPhases::Vapour]) {
+                        OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas-preferring well.");
+                    }
+                    const int gas_index = phaseUsage.phase_pos[BlackoilPhases::Vapour];
+                    if ( well->isProducer(timeStep) ) {
+                        wellnode.prodSpec().guide_rate_ = well_potentials[np*wix + gas_index];
+                        wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::GAS;
+                    } else {
+                        wellnode.injSpec().guide_rate_ = well_potentials[np*wix + gas_index];
+                        // Guide rates applies to the phase tht the well is injecting i.e gas
+                        wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                    }
+                    break;
+                }
+                default:
+                    OPM_THROW(std::logic_error, "Unknown preferred phase: " << well->getPreferredPhase());
+                }
+
+            } // if neither WGRUPCON nor well_potentials is given, distribute the flow equaly
         }
+
     }
 
 } // namespace Opm

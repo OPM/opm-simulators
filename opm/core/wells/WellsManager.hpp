@@ -86,7 +86,8 @@ namespace Opm
                      const F2C& f2c,
                      FC begin_face_centroids,
                      const double* permeability,
-                     bool is_parallel_run=false);
+                     bool is_parallel_run=false,
+                     const std::vector<double> well_potentials={});
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
@@ -153,7 +154,8 @@ namespace Opm
                   int dimensions,
                   const C2F& cell_to_faces,
                   FC begin_face_centroids,
-                  const double* permeability);
+                  const double* permeability,
+                  const std::vector<double> well_potentials);
         // Disable copying and assignment.
         WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);
@@ -179,9 +181,8 @@ namespace Opm
                                    std::vector<int>& wells_on_proc);
 
         void addChildGroups(GroupTreeNodeConstPtr parentNode, std::shared_ptr< const Schedule > schedule, size_t timeStep, const PhaseUsage& phaseUsage);
-        void setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
-
-
+        void setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
+                             const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials);
         // Data
         Wells* w_;
         WellCollection well_collection_;
