@@ -373,7 +373,11 @@ namespace Opm
             } else {
                 baseName = path(fpath.filename()).string();
             }
-            logFile_ = baseName + ".PRT";        
+            if (param_.has("output_dir")) {
+                logFile_ = output_dir_ + "/" + baseName + ".PRT";
+            } else {
+                logFile_ = baseName + ".PRT";
+            }
             // Create Parser
             ParserPtr parser(new Parser());
             {
