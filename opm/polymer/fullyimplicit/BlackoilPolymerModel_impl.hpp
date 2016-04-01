@@ -107,6 +107,7 @@ namespace Opm {
             if (!active_[Water]) {
                 OPM_THROW(std::logic_error, "Polymer must solved in water!\n");
             }
+            residual_.matbalscale.resize(fluid_.numPhases() + 1, 1.1169); // use the same as the water phase
             // If deck has polymer, residual_ should contain polymer equation.
             rq_.resize(fluid_.numPhases() + 1);
             residual_.material_balance_eq.resize(fluid_.numPhases() + 1, ADB::null());
@@ -125,8 +126,10 @@ namespace Opm {
                 WellState& well_state)
     {
         Base::prepareStep(dt, reservoir_state, well_state);
+        auto& max_concentration = reservoir_state.getCellData( reservoir_state.CMAX );
         // Initial max concentration of this time step from PolymerBlackoilState.
-        cmax_ = Eigen::Map<const V>(reservoir_state.maxconcentration().data(), Opm::AutoDiffGrid::numCells(grid_));
+
+        cmax_ = Eigen::Map<const V>(max_concentration.data(), Opm::AutoDiffGrid::numCells(grid_));
     }
 
 
@@ -168,9 +171,10 @@ namespace Opm {
 
         // Initial polymer concentration.
         if (has_polymer_) {
-            assert (not x.concentration().empty());
-            const int nc = x.concentration().size();
-            const V c = Eigen::Map<const V>(&x.concentration()[0], nc);
+            const auto& concentration = x.getCellData( x.CONCENTRATION );
+            assert (not concentration.empty());
+            const int nc = concentration.size();
+            const V c = Eigen::Map<const V>(concentration.data() , nc);
             // Concentration belongs after other reservoir vars but before well vars.
             auto concentration_pos = vars0.begin() + fluid_.numPhases();
             assert(concentration_pos == vars0.end() - 2);
@@ -255,12 +259,14 @@ namespace Opm {
     template <class Grid>
     void BlackoilPolymerModel<Grid>::computeCmax(ReservoirState& state)
     {
-        const int nc = AutoDiffGrid::numCells(grid_);
-        V tmp = V::Zero(nc);
-        for (int i = 0; i < nc; ++i) {
-            tmp[i] = std::max(state.maxconcentration()[i], state.concentration()[i]);
-        }
-        std::copy(&tmp[0], &tmp[0] + nc, state.maxconcentration().begin());
+        auto& max_concentration = state.getCellData( state.CMAX );
+        const auto& concentration = state.getCellData( state.CONCENTRATION );
+        std::transform( max_concentration.begin() ,
+                        max_concentration.end() ,
+                        concentration.begin() ,
+                        max_concentration.begin() ,
+                        [](double c_max , double c) { return std::max( c_max , c ); });
+
     }
 
 
@@ -339,6 +345,26 @@ namespace Opm {
             residual_.material_balance_eq[poly_pos_] = pvdt_ * (rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
                                                + ops_.div*rq_[poly_pos_].mflux;
         }
+
+
+        if (param_.update_equations_scaling_) {
+            updateEquationsScaling();
+        }
+
+    }
+
+
+
+
+
+    template <class Grid>
+    void BlackoilPolymerModel<Grid>::updateEquationsScaling()
+    {
+        Base::updateEquationsScaling();
+        if (has_polymer_) {
+            const int water_pos = fluid_.phaseUsage().phase_pos[Water];
+            residual_.matbalscale[poly_pos_] = residual_.matbalscale[water_pos];
+        }
     }
 
 
@@ -397,10 +423,13 @@ namespace Opm {
             // Call base version.
             Base::updateState(modified_dx, reservoir_state, well_state);
 
-            // Update concentration.
-            const V c_old = Eigen::Map<const V>(&reservoir_state.concentration()[0], nc, 1);
-            const V c = (c_old - dc).max(zero);
-            std::copy(&c[0], &c[0] + nc, reservoir_state.concentration().begin());
+            {
+                auto& concentration = reservoir_state.getCellData( reservoir_state.CONCENTRATION );
+                // Update concentration.
+                const V c_old = Eigen::Map<const V>(concentration.data(), nc, 1);
+                const V c = (c_old - dc).max(zero);
+                std::copy(&c[0], &c[0] + nc, concentration.begin());
+            }
         } else {
             // Just forward call to base version.
             Base::updateState(dx, reservoir_state, well_state);

@@ -70,12 +70,11 @@
 
 #include <opm/core/utility/share_obj.hpp>
 
-#include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
-#include <opm/parser/eclipse/OpmLog/CounterLog.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
@@ -95,12 +94,40 @@
 #include <vector>
 #include <numeric>
 #include <cstdlib>
+#include <stdexcept>
 
 
 
 
 namespace Opm
 {
+
+    boost::filesystem::path simulationCaseName( const std::string& casename ) {
+        namespace fs = boost::filesystem;
+
+        const auto exists = []( const fs::path& f ) -> bool {
+            if( !fs::exists( f ) ) return false;
+
+            if( fs::is_regular_file( f ) ) return true;
+
+            return fs::is_symlink( f )
+                && fs::is_regular_file( fs::read_symlink( f ) );
+        };
+
+        auto simcase = fs::path( casename );
+
+        if( exists( simcase ) ) {
+            return simcase;
+        }
+
+        for( const auto& ext : { std::string("data"), std::string("DATA") } ) {
+            if( exists( simcase.replace_extension( ext ) ) ) {
+                return simcase;
+            }
+        }
+
+        throw std::invalid_argument( "Cannot find input case " + casename );
+    }
 
     /// This class encapsulates the setup and running of
     /// a simulator based on an input deck.
@@ -184,7 +211,8 @@ namespace Opm
         bool use_local_perm_ = true;
         std::unique_ptr<DerivedGeology> geoprops_;
         // setupState()
-        ReservoirState state_;
+        std::unique_ptr<ReservoirState> state_;
+
         std::vector<double> threshold_pressures_;
         // distributeData()
         boost::any parallel_information_;
@@ -259,10 +287,6 @@ namespace Opm
             }
         }
 
-
-
-
-
         // Read parameters, see if a deck was specified on the command line, and if
         // it was, insert it into parameters.
         // Writes to:
@@ -282,7 +306,8 @@ namespace Opm
                     std::cerr << "You can only specify a single input deck on the command line.\n";
                     return false;
                 } else {
-                    param_.insertParameter("deck_filename", param_.unhandledArguments()[0]);
+                    const auto casename = simulationCaseName( param_.unhandledArguments()[ 0 ] );
+                    param_.insertParameter("deck_filename", casename.string() );
                 }
             }
 
@@ -352,19 +377,16 @@ namespace Opm
             // Create Parser
             ParserPtr parser(new Parser());
             {
-                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(logFile_ , Log::DefaultMessageTypes);
-                std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
-
-                OpmLog::addBackend( "STREAM" , streamLog );
-                OpmLog::addBackend( "COUNTER" , counterLog );
+                std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::DefaultMessageTypes);
+                OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
             }
 
             // Create Deck and EclipseState.
             try {
-                ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-                deck_ = parser->parseFile(deck_filename, parseMode);
+                ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+                deck_ = parser->parseFile(deck_filename, parseContext);
                 checkDeck(deck_, parser);
-                eclipse_state_.reset(new EclipseState(deck_, parseMode));
+                eclipse_state_.reset(new EclipseState(deck_, parseContext));
             }
             catch (const std::invalid_argument& e) {
                 std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;
@@ -445,8 +467,13 @@ namespace Opm
                                               Opm::UgGridHelpers::cartDims(grid),
                                               param_);
 
+
             // Init state variables (saturation and pressure).
             if (param_.has("init_saturation")) {
+                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
+                                                  Opm::UgGridHelpers::numFaces(grid),
+                                                  props.numPhases() ));
+
                 initStateBasic(Opm::UgGridHelpers::numCells(grid),
                                Opm::UgGridHelpers::globalCell(grid),
                                Opm::UgGridHelpers::cartDims(grid),
@@ -455,26 +482,35 @@ namespace Opm
                                Opm::UgGridHelpers::beginFaceCentroids(grid),
                                Opm::UgGridHelpers::beginCellCentroids(grid),
                                Opm::UgGridHelpers::dimensions(grid),
-                               props, param_, gravity_[2], state_);
+                               props, param_, gravity_[2], *state_);
 
-                initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, state_);
+                initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, *state_);
 
                 enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
                 if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
                     const int numPhases = props.numPhases();
                     const int numCells  = Opm::UgGridHelpers::numCells(grid);
+
+                    // Uglyness 1: The state is a templated type, here we however make explicit use BlackoilState.
+                    auto& gor = state_->getCellData( BlackoilState::GASOILRATIO );
+                    const auto& surface_vol = state_->getCellData( BlackoilState::SURFACEVOL );
                     for (int c = 0; c < numCells; ++c) {
-                        state_.gasoilratio()[c] = state_.surfacevol()[c*numPhases + pu.phase_pos[Gas]]
-                            / state_.surfacevol()[c*numPhases + pu.phase_pos[Oil]];
+                        // Uglyness 2: Here we explicitly use the layout of the saturation in the surface_vol field.
+                        gor[c] = surface_vol[ c * numPhases + pu.phase_pos[Gas]] / surface_vol[ c * numPhases + pu.phase_pos[Oil]];
                     }
                 }
             } else if (deck_->hasKeyword("EQUIL") && props.numPhases() == 3) {
-                state_.init(Opm::UgGridHelpers::numCells(grid),
-                           Opm::UgGridHelpers::numFaces(grid),
-                           props.numPhases());
-                initStateEquil(grid, props, deck_, eclipse_state_, gravity_[2], state_);
-                state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
+                // Which state class are we really using - what a f... mess?
+                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
+                                                  Opm::UgGridHelpers::numFaces(grid),
+                                                  props.numPhases()));
+
+                initStateEquil(grid, props, deck_, eclipse_state_, gravity_[2], *state_);
+                //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
+                state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
+                                                  Opm::UgGridHelpers::numFaces(grid),
+                                                  props.numPhases()));
                 initBlackoilStateFromDeck(Opm::UgGridHelpers::numCells(grid),
                                           Opm::UgGridHelpers::globalCell(grid),
                                           Opm::UgGridHelpers::numFaces(grid),
@@ -482,12 +518,12 @@ namespace Opm
                                           Opm::UgGridHelpers::beginFaceCentroids(grid),
                                           Opm::UgGridHelpers::beginCellCentroids(grid),
                                           Opm::UgGridHelpers::dimensions(grid),
-                                          props, deck_, gravity_[2], state_);
+                                          props, deck_, gravity_[2], *state_);
             }
 
             // Threshold pressures.
             std::map<std::pair<int, int>, double> maxDp;
-            computeMaxDp(maxDp, deck_, eclipse_state_, grid_init_->grid(), state_, props, gravity_[2]);
+            computeMaxDp(maxDp, deck_, eclipse_state_, grid_init_->grid(), *state_, props, gravity_[2]);
             threshold_pressures_ = thresholdPressures(deck_, eclipse_state_, grid, maxDp);
             std::vector<double> threshold_pressures_nnc = thresholdPressuresNNC(eclipse_state_, geoprops_->nnc(), maxDp);
             threshold_pressures_.insert(threshold_pressures_.end(), threshold_pressures_nnc.begin(), threshold_pressures_nnc.end());
@@ -497,9 +533,9 @@ namespace Opm
                 const int numCells = Opm::UgGridHelpers::numCells(grid);
                 std::vector<int> cells(numCells);
                 for (int c = 0; c < numCells; ++c) { cells[c] = c; }
-                std::vector<double> pc = state_.saturation();
-                props.capPress(numCells, state_.saturation().data(), cells.data(), pc.data(), nullptr);
-                fluidprops_->setSwatInitScaling(state_.saturation(), pc);
+                std::vector<double> pc = state_->saturation();
+                props.capPress(numCells, state_->saturation().data(), cells.data(), pc.data(), nullptr);
+                fluidprops_->setSwatInitScaling(state_->saturation(), pc);
             }
         }
 
@@ -522,7 +558,7 @@ namespace Opm
             // and initilialize new properties and states for it.
             if (must_distribute_) {
                 distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
-                                      state_, *fluidprops_, *geoprops_,
+                                      *state_, *fluidprops_, *geoprops_,
                                       material_law_manager_, threshold_pressures_,
                                       parallel_information_, use_local_perm_);
             }
@@ -621,7 +657,7 @@ namespace Opm
                               << std::flush;
                 }
 
-                SimulatorReport fullReport = simulator_->run(simtimer, state_);
+                SimulatorReport fullReport = simulator_->run(simtimer, *state_);
 
                 if (output_cout_) {
                     std::cout << "\n\n================    End of simulation     ===============\n\n";

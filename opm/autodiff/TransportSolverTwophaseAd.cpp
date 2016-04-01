@@ -22,6 +22,7 @@
 #include <opm/autodiff/TransportSolverTwophaseAd.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
+#include <opm/core/props/IncompPropertiesInterface.hpp>
 #include <opm/core/pressure/tpfa/trans_tpfa.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>

@@ -109,6 +109,9 @@ namespace Opm {
     BlackoilMultiSegmentModel<Grid>::
     MultiSegmentWellOps::MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms)
     {
+        // no multi-segment wells are involved by default.
+        has_multisegment_wells = false;
+
         if (wells_ms.empty()) {
             return;
         }
@@ -120,6 +123,9 @@ namespace Opm {
         for (int w = 0; w < nw; ++w) {
             total_nperf += wells_ms[w]->numberOfPerforations();
             total_nseg += wells_ms[w]->numberOfSegments();
+            if (wells_ms[w]->isMultiSegmented()) {
+                has_multisegment_wells = true;
+            }
         }
 
         // Create well_cells and conn_trans_factors.
@@ -230,6 +236,12 @@ namespace Opm {
         top_well_segments_ = well_state.topSegmentLoc();
 
         const int nw = wellsMultiSegment().size();
+
+        if ( !wops_ms_.has_multisegment_wells ) {
+            segvdt_ = V::Zero(nw);
+            return;
+        }
+
         const int nseg_total = well_state.numSegments();
         std::vector<double> segment_volume;
         segment_volume.reserve(nseg_total);
@@ -462,6 +474,12 @@ namespace Opm {
         well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
         well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf_total);
 
+        if ( !wops_ms_.has_multisegment_wells ) {
+            well_perforation_cell_densities_ = V::Zero(nperf_total);
+            well_perforation_cell_pressure_diffs_ = V::Zero(nperf_total);
+            return;
+        }
+
         // compute the average of the fluid densites in the well blocks.
         // the average is weighted according to the fluid relative permeabilities.
         const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
@@ -680,7 +698,7 @@ namespace Opm {
 
             // Compute drawdown.
             ADB h_nc = msperf_selector.select(well_segment_perforation_pressure_diffs_,
-                                                    ADB::constant(well_perforation_pressure_diffs_));
+                                              ADB::constant(well_perforation_pressure_diffs_));
             const V h_cj = msperf_selector.select(well_perforation_cell_pressure_diffs_, V::Zero(nperf));
 
             // Special handling for when we are called from solveWellEq().
@@ -890,23 +908,27 @@ namespace Opm {
 
         std::vector<ADB> segment_volume_change_dt(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            // Gain of the surface volume of each component in the segment by dt
-            segment_volume_change_dt[phase] = segment_comp_surf_volume_current_[phase] -
-                                              segment_comp_surf_volume_initial_[phase];
+            if ( wops_ms_.has_multisegment_wells ) {
+                // Gain of the surface volume of each component in the segment by dt
+                segment_volume_change_dt[phase] = segment_comp_surf_volume_current_[phase] -
+                                                  segment_comp_surf_volume_initial_[phase];
 
-            // Special handling for when we are called from solveWellEq().
-            // TODO: restructure to eliminate need for special treatmemt.
-            if (segment_volume_change_dt[phase].numBlocks() != segqs.numBlocks()) {
-                assert(segment_volume_change_dt[phase].numBlocks() > 2);
-                assert(segqs.numBlocks() == 2);
-                segment_volume_change_dt[phase] = detail::onlyWellDerivs(segment_volume_change_dt[phase]);
-                assert(segment_volume_change_dt[phase].numBlocks() == 2);
+                // Special handling for when we are called from solveWellEq().
+                // TODO: restructure to eliminate need for special treatmemt.
+                if (segment_volume_change_dt[phase].numBlocks() != segqs.numBlocks()) {
+                    assert(segment_volume_change_dt[phase].numBlocks() > 2);
+                    assert(segqs.numBlocks() == 2);
+                    segment_volume_change_dt[phase] = detail::onlyWellDerivs(segment_volume_change_dt[phase]);
+                    assert(segment_volume_change_dt[phase].numBlocks() == 2);
+                }
+
+                const ADB cq_s_seg = wops_ms_.p2s * cq_s[phase];
+                const ADB segqs_phase = subset(segqs, Span(nseg_total, 1, phase * nseg_total));
+                segqs -= superset(cq_s_seg + wops_ms_.s2s_inlets * segqs_phase + segment_volume_change_dt[phase],
+                                  Span(nseg_total, 1, phase * nseg_total), np * nseg_total);
+            } else {
+                segqs -= superset(wops_ms_.p2s * cq_s[phase], Span(nseg_total, 1, phase * nseg_total), np * nseg_total);
             }
-
-            const ADB cq_s_seg = wops_ms_.p2s * cq_s[phase];
-            const ADB segqs_phase = subset(segqs, Span(nseg_total, 1, phase * nseg_total));
-            segqs -= superset(cq_s_seg + wops_ms_.s2s_inlets * segqs_phase + segment_volume_change_dt[phase],
-                              Span(nseg_total, 1, phase * nseg_total), np * nseg_total);
         }
 
         residual_.well_flux_eq = segqs;
@@ -1169,13 +1191,17 @@ namespace Opm {
 
         ADB others_residual = ADB::constant(V::Zero(nseg_total));
 
-        // Special handling for when we are called from solveWellEq().
-        // TODO: restructure to eliminate need for special treatmemt.
-        ADB wspd = (state.segp.numBlocks() == 2)
-            ? detail::onlyWellDerivs(well_segment_pressures_delta_)
-            : well_segment_pressures_delta_;
+        if ( wops_ms_.has_multisegment_wells ) {
+            // Special handling for when we are called from solveWellEq().
+            // TODO: restructure to eliminate need for special treatmemt.
+            ADB wspd = (state.segp.numBlocks() == 2)
+                ? detail::onlyWellDerivs(well_segment_pressures_delta_)
+                : well_segment_pressures_delta_;
 
-        others_residual = wops_ms_.eliminate_topseg * (state.segp - wops_ms_.s2s_outlet * state.segp + wspd);
+            others_residual = wops_ms_.eliminate_topseg * (state.segp - wops_ms_.s2s_outlet * state.segp + wspd);
+        } else {
+            others_residual = wops_ms_.eliminate_topseg * (state.segp - wops_ms_.s2s_outlet * state.segp);
+        }
 
         //       all the control equations
         // TODO: can be optimized better
@@ -1284,9 +1310,24 @@ namespace Opm {
     void
     BlackoilMultiSegmentModel<Grid>::computeSegmentFluidProperties(const SolutionState& state)
     {
+
         const int nw = wellsMultiSegment().size();
         const int nseg_total = state.segp.size();
         const int np = numPhases();
+
+        if ( !wops_ms_.has_multisegment_wells ){
+            // not sure if this is needed actually
+            // TODO: to check later if this is really necessary.
+            segment_mass_flow_rates_ = ADB::constant(V::Zero(nseg_total));
+            well_segment_densities_ = ADB::constant(V::Zero(nseg_total));
+            segment_mass_flow_rates_ = ADB::constant(V::Zero(nseg_total));
+            segment_viscosities_ = ADB::constant(V::Zero(nseg_total));
+            for (int phase = 0; phase < np; ++phase) {
+                segment_comp_surf_volume_current_[phase] = ADB::constant(V::Zero(nseg_total));
+                segment_comp_surf_volume_initial_[phase] = V::Zero(nseg_total);
+            }
+            return;
+        }
 
         // although we will calculate segment density for non-segmented wells at the same time,
         // while under most of the cases, they will not be used,
@@ -1474,6 +1515,12 @@ namespace Opm {
     {
         const int nw = wellsMultiSegment().size();
         const int nseg_total = state.segp.size();
+
+        if ( !wops_ms_.has_multisegment_wells ) {
+            well_segment_pressures_delta_ = ADB::constant(V::Zero(nseg_total));
+            well_segment_perforation_pressure_diffs_ = wops_ms_.s2p * well_segment_pressures_delta_;
+            return;
+        }
 
         // calculate the depth difference of the segments
         // TODO: we need to store the following values somewhere to avoid recomputation.

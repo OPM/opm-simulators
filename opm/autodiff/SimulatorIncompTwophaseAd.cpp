@@ -37,7 +37,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
+#include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>

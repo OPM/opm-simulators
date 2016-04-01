@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
+#include <opm/common/data/SimulationDataContainer.hpp>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -1610,11 +1611,37 @@ namespace detail {
                 break;
 
             case SURFACE_RATE:
-                for (int phase = 0; phase < np; ++phase) {
-                    if (distr[phase] > 0.0) {
-                        xw.wellRates()[np*w + phase] = target * distr[phase];
+                // assign target value as initial guess for injectors and
+                // single phase producers (orat, grat, wrat)
+                const WellType& well_type = wells().type[w];
+                if (well_type == INJECTOR) {
+                    for (int phase = 0; phase < np; ++phase) {
+                        const double& compi = wells().comp_frac[np * w + phase];
+                        if (compi > 0.0) {
+                            xw.wellRates()[np*w + phase] = target * compi;
+                        }
                     }
+                } else if (well_type == PRODUCER) {
+
+                    // only set target as initial rates for single phase
+                    // producers. (orat, grat and wrat, and not lrat)
+                    // lrat will result in numPhasesWithTargetsUnderThisControl == 2
+                    int numPhasesWithTargetsUnderThisControl = 0;
+                    for (int phase = 0; phase < np; ++phase) {
+                        if (distr[phase] > 0.0) {
+                            numPhasesWithTargetsUnderThisControl += 1;
+                        }
+                    }
+                    for (int phase = 0; phase < np; ++phase) {
+                        if (distr[phase] > 0.0 && numPhasesWithTargetsUnderThisControl < 2 ) {
+                            xw.wellRates()[np*w + phase] = target * distr[phase];
+                        }
+                    }
+                } else {
+                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
                 }
+
+
                 break;
             }
 
@@ -2520,8 +2547,8 @@ namespace detail {
     template <class Grid, class Implementation>
     double
     BlackoilModelBase<Grid, Implementation>::
-    relativeChange(const SimulatorState& previous,
-                   const SimulatorState& current ) const
+    relativeChange(const SimulationDataContainer& previous,
+                   const SimulationDataContainer& current ) const
     {
         std::vector< double > p0  ( previous.pressure() );
         std::vector< double > sat0( previous.saturation() );

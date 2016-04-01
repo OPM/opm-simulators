@@ -37,7 +37,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
+#include <opm/output/eclipse/EclipseWriter.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -61,12 +61,12 @@
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 
-#include <opm/parser/eclipse/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/OpmLog/StreamLog.hpp>
-#include <opm/parser/eclipse/OpmLog/CounterLog.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/StreamLog.hpp>
+#include <opm/common/OpmLog/CounterLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
@@ -115,7 +115,7 @@ try
     std::shared_ptr<BlackoilPropertiesInterface> props;
     std::shared_ptr<BlackoilPropsAdInterface> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
-    PolymerBlackoilState state;
+    std::unique_ptr<PolymerBlackoilState> state;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
@@ -141,7 +141,7 @@ try
     }
 
     std::string logFile = output_dir + "/LOGFILE.txt";
-    Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+    Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::ParserPtr parser(new Opm::Parser());
     {
         std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(logFile , Opm::Log::DefaultMessageTypes);
@@ -154,9 +154,9 @@ try
     Opm::DeckConstPtr deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
-        deck = parser->parseFile(deck_filename , parseMode);
+        deck = parser->parseFile(deck_filename , parseContext);
         Opm::checkDeck(deck, parser);
-        eclipseState.reset(new Opm::EclipseState(deck , parseMode));
+        eclipseState.reset(new Opm::EclipseState(deck , parseContext));
     }
     catch (const std::invalid_argument& e) {
         std::cerr << "Failed to create valid ECLIPSESTATE object. See logfile: " << logFile << std::endl;
@@ -187,6 +187,8 @@ try
                                                 Opm::UgGridHelpers::globalCell(cGrid),
                                                 Opm::UgGridHelpers::cartDims(cGrid),
                                                 param));
+
+    state.reset( new PolymerBlackoilState( Opm::UgGridHelpers::numCells(cGrid), Opm::UgGridHelpers::numFaces(cGrid), 2));
     new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, materialLawManager, cGrid));
     PolymerProperties polymer_props(deck, eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
@@ -199,10 +201,10 @@ try
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
+        initStateBasic(*grid->c_grid(), *props, param, gravity[2], *state);
+        initBlackoilSurfvol(*grid->c_grid(), *props, *state);
     } else {
-        initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], *state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -254,7 +256,7 @@ try
                   deck,
                   *fis_solver,
                   grav);
-    fullReport= simulator.run(simtimer, state);
+    fullReport= simulator.run(simtimer, *state);
 
     std::cout << "\n\n================    End of simulation     ===============\n\n";
     fullReport.report(std::cout);

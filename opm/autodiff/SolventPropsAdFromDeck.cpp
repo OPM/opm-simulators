@@ -21,11 +21,12 @@
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
+#include <opm/core/utility/extractPvtTableIndex.hpp>
+
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PvdsTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
-
 
 namespace Opm
 {
@@ -170,6 +171,25 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
             } else {
                 OPM_THROW(std::runtime_error, "MISC must be specified in MISCIBLE (SOLVENT) runs\n");
+            }
+
+            const TableContainer& pmiscTables = tables->getPmiscTables();
+            if (!pmiscTables.empty()) {
+
+                int numRegions = pmiscTables.size();
+
+                // resize the attributes of the object
+                pmisc_.resize(numRegions);
+                for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+                    const Opm::PmiscTable& pmiscTable = pmiscTables.getTable<PmiscTable>(regionIdx);
+
+                    // Copy data
+                    const auto& po = pmiscTable.getOilPhasePressureColumn();
+                    const auto& pmisc = pmiscTable.getMiscibilityColumn();
+
+                    pmisc_[regionIdx] = NonuniformTableLinear<double>(po, pmisc);
+
+                }
             }
 
             // miscible relative permeability multipleiers
@@ -339,6 +359,16 @@ ADB SolventPropsAdFromDeck::miscibilityFunction(const ADB& solventFraction,
     return SolventPropsAdFromDeck::makeADBfromTables(solventFraction, cells, cellMiscRegionIdx_, misc_);
 }
 
+ADB SolventPropsAdFromDeck::pressureMiscibilityFunction(const ADB& po,
+                                                        const Cells& cells) const
+{
+    if (pmisc_.size() > 0) {
+        return SolventPropsAdFromDeck::makeADBfromTables(po, cells, cellMiscRegionIdx_, pmisc_);
+    }
+    // return ones if not specified i.e. no effect.
+    return ADB::constant(V::Constant(po.size(), 1.0));
+}
+
 
 ADB SolventPropsAdFromDeck::miscibleCriticalGasSaturationFunction (const ADB& Sw,
                                                                    const Cells& cells) const {
@@ -381,7 +411,6 @@ ADB SolventPropsAdFromDeck::makeADBfromTables(const ADB& X_AD,
     }
     return ADB::function(std::move(x), std::move(jacs));
 }
-
 
 
 V SolventPropsAdFromDeck::solventSurfaceDensity(const Cells& cells) const {

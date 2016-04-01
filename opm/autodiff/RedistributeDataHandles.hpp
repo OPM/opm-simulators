@@ -232,7 +232,7 @@ public:
     {
         assert( T::codimension == 0);
 
-        for ( int i=0; i<sendState_.numPhases(); ++i )
+        for ( size_t i=0; i<sendState_.numPhases(); ++i )
         {
             buffer.write(sendState_.surfacevol()[e.index()*sendState_.numPhases()+i]);
         }
@@ -240,7 +240,7 @@ public:
         buffer.write(sendState_.rv()[e.index()]);
         buffer.write(sendState_.pressure()[e.index()]);
         buffer.write(sendState_.temperature()[e.index()]);
-        for ( int i=0; i<sendState_.numPhases(); ++i )
+        for ( size_t i=0; i<sendState_.numPhases(); ++i )
         {
             buffer.write(sendState_.saturation()[e.index()*sendState_.numPhases()+i]);
         }
@@ -257,11 +257,11 @@ public:
     void scatter(B& buffer, const T& e, std::size_t size_arg)
     {
         assert( T::codimension == 0);
-        assert( int(size_arg) == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
+        assert( size_arg == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
         static_cast<void>(size_arg);
 
         double val;
-        for ( int i=0; i<recvState_.numPhases(); ++i )
+        for ( size_t i=0; i<recvState_.numPhases(); ++i )
         {
             buffer.read(val);
             recvState_.surfacevol()[e.index()*sendState_.numPhases()+i]=val;
@@ -274,7 +274,7 @@ public:
         recvState_.pressure()[e.index()]=val;
         buffer.read(val);
         recvState_.temperature()[e.index()]=val;
-        for ( int i=0; i<recvState_.numPhases(); ++i )
+        for ( size_t i=0; i<recvState_.numPhases(); ++i )
         {
             buffer.read(val);
             recvState_.saturation()[e.index()*sendState_.numPhases()+i]=val;
@@ -411,8 +411,6 @@ void distributeGridAndData( Dune::CpGrid& grid,
                             boost::any& parallelInformation,
                             const bool useLocalPerm)
 {
-    BlackoilState distributed_state;
-
     Dune::CpGrid global_grid ( grid );
     global_grid.switchToGlobalView();
 
@@ -441,8 +439,8 @@ void distributeGridAndData( Dune::CpGrid& grid,
     BlackoilPropsAdFromDeck distributed_props(properties,
                                               distributed_material_law_manager,
                                               grid.numCells());
-    distributed_state.init(grid.numCells(), grid.numFaces(), state.numPhases());
-    // init does not resize surfacevol. Do it manually.
+    BlackoilState distributed_state(grid.numCells(), grid.numFaces(), state.numPhases());
+    // construction does not resize surfacevol. Do it manually.
     distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
                                           std::numeric_limits<double>::max());
     BlackoilStateDataHandle state_handle(global_grid, grid,

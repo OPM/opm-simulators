@@ -45,7 +45,7 @@ namespace Opm {
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
     class VFPProperties;
-
+    class SimulationDataContainer;
 
     /// Struct for containing iteration variables.
     struct DefaultBlackoilSolutionState
@@ -207,7 +207,7 @@ namespace Opm {
 
         /// \brief compute the relative change between to simulation states
         //  \return || u^n+1 - u^n || / || u^n+1 ||
-        double relativeChange( const SimulatorState& previous, const SimulatorState& current ) const;
+        double relativeChange( const SimulationDataContainer& previous, const SimulationDataContainer& current ) const;
 
         /// The size (number of unknowns) of the nonlinear system of equations.
         int sizeNonLinear() const;

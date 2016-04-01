@@ -107,7 +107,6 @@ namespace Opm
                                                  Base::deck_->hasKeyword("SOLVENT")));
         }
 
-
     };
 
 

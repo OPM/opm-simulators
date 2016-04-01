@@ -37,6 +37,7 @@ namespace Opm
     class LinearSolverInterface;
     class PolymerState;
     class WellState;
+    class SimulationDataContainer;
 
     /// Encapsulating a tpfa pressure solver for the incompressible-fluid case with polymer.
     /// Supports gravity, wells controlled by bhp or reservoir rates,
@@ -96,7 +97,7 @@ namespace Opm
 
     private:
         virtual void computePerSolveDynamicData(const double dt,
-                                                const SimulatorState& state,
+                                                const SimulationDataContainer& state,
                                                 const WellState& well_state);
     private:
         // ------ Data that will remain unmodified after construction. ------

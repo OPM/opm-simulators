@@ -20,16 +20,15 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #include <opm/core/grid.h>
-#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/io/eclipse/EclipseReader.hpp>
+#include <opm/output/eclipse/EclipseReader.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/core/io/OutputWriter.hpp>
-#include <opm/core/io/eclipse/EclipseWriter.hpp>
+#include <opm/output/OutputWriter.hpp>
+#include <opm/output/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/ParallelDebugOutput.hpp>
@@ -53,14 +52,17 @@
 namespace Opm
 {
 
+    class SimulationDataContainer;
+    class BlackoilState;
+
     void outputStateVtk(const UnstructuredGrid& grid,
-                        const Opm::SimulatorState& state,
+                        const Opm::SimulationDataContainer& state,
                         const int step,
                         const std::string& output_dir);
 
 
     void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::SimulatorState& state,
+                           const Opm::SimulationDataContainer& state,
                            const int step,
                            const std::string& output_dir);
 
@@ -69,23 +71,23 @@ namespace Opm
                                const std::string& output_dir);
 #ifdef HAVE_DUNE_CORNERPOINT
     void outputStateVtk(const Dune::CpGrid& grid,
-                        const Opm::SimulatorState& state,
+                        const Opm::SimulationDataContainer& state,
                         const int step,
                         const std::string& output_dir);
 #endif
 
     template<class Grid>
     void outputStateMatlab(const Grid& grid,
-                           const Opm::SimulatorState& state,
+                           const Opm::SimulationDataContainer& state,
                            const int step,
                            const std::string& output_dir)
     {
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
-        for( unsigned int i=0; i<state.cellDataNames().size(); ++ i )
+        for (const auto& pair : state.cellData()) 
         {
-            const std::string& name = state.cellDataNames()[ i ];
+            const std::string& name = pair.first;
             std::string key;
             if( name == "SURFACEVOL" ) {
                 key = "surfvolume";
@@ -100,7 +102,7 @@ namespace Opm
                 continue;
             }
             // set data to datmap
-            dm[ key ] = &state.cellData()[ i ];
+            dm[ key ] = &pair.second;
         }
 
         std::vector<double> cell_velocity;
@@ -154,7 +156,7 @@ namespace Opm
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
-                           const SimulatorState& state,
+                           const SimulationDataContainer& state,
                            const WellState&,
                            bool /*substep*/ = false)
         {
@@ -184,7 +186,7 @@ namespace Opm
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
-                           const SimulatorState& reservoirState,
+                           const SimulationDataContainer& reservoirState,
                            const WellState& wellState,
                            bool /*substep*/ = false)
         {
@@ -214,7 +216,7 @@ namespace Opm
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
-                           const SimulatorState& reservoirState,
+                           const SimulationDataContainer& reservoirState,
                            const Opm::WellState& wellState,
                            bool substep = false);
 
@@ -235,7 +237,7 @@ namespace Opm
         void initFromRestartFile(const PhaseUsage& phaseusage,
                                  const double* permeability,
                                  const Grid& grid,
-                                 SimulatorState& simulatorstate,
+                                 SimulationDataContainer& simulatorstate,
                                  WellStateFullyImplicitBlackoil& wellstate);
 
         bool isRestart() const;
@@ -315,7 +317,7 @@ namespace Opm
     initFromRestartFile( const PhaseUsage& phaseusage,
                          const double* permeability,
                          const Grid& grid,
-                         SimulatorState& simulatorstate,
+                         SimulationDataContainer& simulatorstate,
                          WellStateFullyImplicitBlackoil& wellstate)
     {
         WellsManager wellsmanager(eclipseState_,

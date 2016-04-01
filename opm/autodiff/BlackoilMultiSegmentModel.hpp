@@ -205,6 +205,7 @@ namespace Opm {
             AutoDiffMatrix eliminate_topseg;              // change the top segment related to be zero
             std::vector<int> well_cells;                  // the set of perforated cells
             V conn_trans_factors;                         // connection transmissibility factors
+            bool has_multisegment_wells;                  // flag indicating whether there is any muli-segment well
         };
 
         MultiSegmentWellOps wops_ms_;

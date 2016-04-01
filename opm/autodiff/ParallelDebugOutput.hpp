@@ -19,8 +19,10 @@
 #ifndef OPM_PARALLELDEBUGOUTPUT_HEADER_INCLUDED
 #define OPM_PARALLELDEBUGOUTPUT_HEADER_INCLUDED
 
+#include <opm/common/data/SimulationDataContainer.hpp>
+
+
 #include <opm/core/grid.h>
-#include <opm/core/simulator/SimulatorState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 
@@ -35,6 +37,7 @@ namespace Opm
 {
 
     class ParallelDebugOutputInterface
+
     {
     protected:
         ParallelDebugOutputInterface () {}
@@ -42,11 +45,11 @@ namespace Opm
         virtual ~ParallelDebugOutputInterface() {}
 
         // gather solution to rank 0 for EclipseWriter
-        virtual bool collectToIORank( const SimulatorState& localReservoirState,
+        virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
                                       const WellState& localWellState,
                                       const int reportStep ) = 0;
 
-        virtual const SimulatorState& globalReservoirState() const = 0 ;
+        virtual const SimulationDataContainer& globalReservoirState() const = 0 ;
         virtual const WellState& globalWellState() const = 0 ;
         virtual bool isIORank() const = 0;
         virtual bool isParallel() const = 0;
@@ -60,7 +63,7 @@ namespace Opm
     protected:
         const GridImpl& grid_;
 
-        const SimulatorState* globalState_;
+        const SimulationDataContainer* globalState_;
         const WellState*      wellState_;
 
     public:
@@ -71,7 +74,7 @@ namespace Opm
             : grid_( grid ) {}
 
         // gather solution to rank 0 for EclipseWriter
-        virtual bool collectToIORank( const SimulatorState& localReservoirState,
+        virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
                                       const WellState& localWellState,
                                       const int /* reportStep */)
         {
@@ -80,7 +83,7 @@ namespace Opm
             return true ;
         }
 
-        virtual const SimulatorState& globalReservoirState() const { return *globalState_; }
+        virtual const SimulationDataContainer& globalReservoirState() const { return *globalState_; }
         virtual const WellState& globalWellState() const { return *wellState_; }
         virtual bool isIORank () const { return true; }
         virtual bool isParallel () const { return false; }
@@ -243,7 +246,7 @@ namespace Opm
                     Dune::CpGrid& globalGrid = *grid_;
 
                     // initialize global state with correct sizes
-                    globalReservoirState_.init( globalGrid.numCells(), globalGrid.numFaces(), numPhases );
+                    globalReservoirState_.reset( new SimulationDataContainer( globalGrid.numCells(), globalGrid.numFaces(), numPhases ));
 
                     // copy global cartesian index
                     globalIndex_ = globalGrid.globalCell();
@@ -306,18 +309,18 @@ namespace Opm
             }
         }
 
-        class PackUnPackSimulatorState : public P2PCommunicatorType::DataHandleInterface
+        class PackUnPackSimulationDataContainer : public P2PCommunicatorType::DataHandleInterface
         {
-            const SimulatorState& localState_;
-            SimulatorState& globalState_;
+            const SimulationDataContainer& localState_;
+            SimulationDataContainer& globalState_;
             const WellState& localWellState_;
             WellState& globalWellState_;
             const IndexMapType& localIndexMap_;
             const IndexMapStorageType& indexMaps_;
 
         public:
-            PackUnPackSimulatorState( const SimulatorState& localState,
-                                      SimulatorState& globalState,
+            PackUnPackSimulationDataContainer( const SimulationDataContainer& localState,
+                                      SimulationDataContainer& globalState,
                                       const WellState& localWellState,
                                       WellState& globalWellState,
                                       const IndexMapType& localIndexMap,
@@ -333,12 +336,11 @@ namespace Opm
                 if( isIORank )
                 {
                     // add missing data to global state
-                    for( size_t i=globalState_.cellData().size();
-                         i<localState.cellData().size(); ++i )
-                    {
-                        const size_t components = localState.cellData()[ i ].size() / localState.numCells();
-                        assert( components * localState.numCells() == localState.cellData()[ i ].size() );
-                        globalState_.registerCellData( localState.cellDataNames()[ i ], components );
+   		    for (const auto& pair : localState.cellData()) {
+		        const std::string& key = pair.first;
+                        if (!globalState_.hasCellData( key )) {
+			    globalState_.registerCellData( key , localState.numCellDataComponents( key ));
+                        }
                     }
 
                     MessageBufferType buffer;
@@ -357,13 +359,10 @@ namespace Opm
                 }
 
                 // write all cell data registered in local state
-                const size_t numCells = localState_.numCells();
-                const size_t numCellData = localState_.cellData().size();
-                for( size_t d=0; d<numCellData; ++d )
-                {
-                    const std::vector< double >& data = localState_.cellData()[ d ];
-                    const size_t stride = data.size() / numCells ;
-                    assert( numCells * stride == data.size() );
+		for (const auto& pair : localState_.cellData()) {
+		    const std::string& key = pair.first;
+                    const auto& data = pair.second;
+                    const size_t stride = localState_.numCellDataComponents( key );
 
                     for( size_t i=0; i<stride; ++i )
                     {
@@ -378,21 +377,19 @@ namespace Opm
 
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
             {
-                // read all cell data registered in local state
-                const size_t numCells = globalState_.numCells();
-                const size_t numCellData = globalState_.cellData().size();
-                for( size_t d=0; d<numCellData; ++d )
-                {
-                    std::vector< double >& data = globalState_.cellData()[ d ];
-                    const size_t stride = data.size() / numCells ;
-                    assert( numCells * stride == data.size() );
+                // write all cell data registered in local state
+	        for (auto& pair : globalState_.cellData()) {
+                    const std::string& key = pair.first;
+		    auto& data = pair.second;
+                    const size_t stride = globalState_.numCellDataComponents( key );
 
                     for( size_t i=0; i<stride; ++i )
                     {
-                        // write all data from local state to buffer
-                        read( buffer, indexMap, data, i, stride );
+                        //write all data from local state to buffer
+		        read( buffer, indexMap, data, i, stride );
                     }
                 }
+
 
                 // read well data from buffer
                 readWells( buffer );
@@ -516,7 +513,7 @@ namespace Opm
         };
 
         // gather solution to rank 0 for EclipseWriter
-        bool collectToIORank( const SimulatorState& localReservoirState,
+        bool collectToIORank( const SimulationDataContainer& localReservoirState,
                               const WellState& localWellState,
                               const int reportStep )
         {
@@ -536,10 +533,10 @@ namespace Opm
                                            false);
 
                 const Wells* wells = wells_manager.c_wells();
-                globalWellState_.init(wells, globalReservoirState_, globalWellState_ );
+                globalWellState_.init(wells, *globalReservoirState_, globalWellState_ );
             }
 
-            PackUnPackSimulatorState packUnpack( localReservoirState, globalReservoirState_,
+            PackUnPackSimulationDataContainer packUnpack( localReservoirState, *globalReservoirState_,
                                                  localWellState, globalWellState_,
                                                  localIndexMap_, indexMaps_, isIORank() );
 
@@ -552,7 +549,7 @@ namespace Opm
             return isIORank();
         }
 
-        const SimulatorState& globalReservoirState() const { return globalReservoirState_; }
+        const SimulationDataContainer& globalReservoirState() const { return *globalReservoirState_; }
         const WellState& globalWellState() const { return globalWellState_; }
 
         bool isIORank() const
@@ -573,18 +570,18 @@ namespace Opm
         }
 
     protected:
-        std::unique_ptr< Dune::CpGrid > grid_;
-        Opm::EclipseStateConstPtr       eclipseState_;
-        const double*                   permeability_;
-        P2PCommunicatorType             toIORankComm_;
-        IndexMapType                    globalIndex_;
-        IndexMapType                    localIndexMap_;
-        IndexMapStorageType             indexMaps_;
-        SimulatorState                  globalReservoirState_;
+        std::unique_ptr< Dune::CpGrid >           grid_;
+        Opm::EclipseStateConstPtr                 eclipseState_;
+        const double*                             permeability_;
+        P2PCommunicatorType                       toIORankComm_;
+        IndexMapType                              globalIndex_;
+        IndexMapType                              localIndexMap_;
+        IndexMapStorageType                       indexMaps_;
+        std::unique_ptr<SimulationDataContainer>  globalReservoirState_;
         // this needs to be revised
-        WellStateFullyImplicitBlackoil  globalWellState_;
+        WellStateFullyImplicitBlackoil            globalWellState_;
         // true if we are on I/O rank
-        const bool                      isIORank_;
+        const bool                                isIORank_;
     };
 #endif // #if HAVE_DUNE_CORNERPOINT
 

@@ -47,6 +47,9 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/VFPProdProperties.cpp
 	opm/autodiff/VFPInjProperties.cpp
 	opm/autodiff/WellMultiSegment.cpp
+        opm/autodiff/BlackoilSolventState.cpp
+        opm/polymer/PolymerState.cpp
+        opm/polymer/PolymerBlackoilState.cpp
 	opm/polymer/CompressibleTpfaPolymer.cpp
 	opm/polymer/IncompTpfaPolymer.cpp
 	opm/polymer/PolymerInflow.cpp

@@ -144,7 +144,6 @@ namespace Opm {
         using Base::wellsActive;
         using Base::wells;
         using Base::variableState;
-        using Base::computePressures;
         using Base::computeGasPressure;
         using Base::applyThresholdPressures;
         using Base::fluidRsSat;
@@ -157,7 +156,6 @@ namespace Opm {
         using Base::dsMax;
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
-
         using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
@@ -236,6 +234,14 @@ namespace Opm {
 
         // compute density and viscosity using the ToddLongstaff mixing model
         void computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu);
+
+        // compute phase pressures.
+        std::vector<ADB>
+        computePressures(const ADB& po,
+                         const ADB& sw,
+                         const ADB& so,
+                         const ADB& sg,
+                         const ADB& ss) const;
 
     };
 

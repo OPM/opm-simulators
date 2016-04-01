@@ -211,8 +211,8 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Sizes of state vectors do not match number of cells.");
         }
         const std::vector<double>& s = state.saturation();
-        const std::vector<double>& c = state.concentration();
-        const std::vector<double>& cmax = state.maxconcentration();
+        const std::vector<double>& c = state.getCellData( state.CONCENTRATION );
+        const std::vector<double>& cmax = state.getCellData( state.CMAX );
         std::fill(injected, injected + np, 0.0);
         std::fill(produced, produced + np, 0.0);
         polyinj = 0.0;
@@ -282,8 +282,8 @@ namespace Opm
         const std::vector<double>& temp = state.temperature();
         const std::vector<double>& s = state.saturation();
         const std::vector<double>& z = state.surfacevol();
-        const std::vector<double>& c = state.concentration();
-        const std::vector<double>& cmax = state.maxconcentration();
+        const std::vector<double>& c = state.getCellData( state.CONCENTRATION );
+        const std::vector<double>& cmax = state.getCellData( state.CMAX );
         std::fill(injected, injected + np, 0.0);
         std::fill(produced, produced + np, 0.0);
         polyinj = 0.0;
@@ -406,7 +406,7 @@ namespace Opm
             porosity.assign(props.porosity(), props.porosity() + num_cells);
         }
         double abs_mass = 0.0;
-        const std::vector<double>& cmax = state.maxconcentration();
+        const std::vector<double>& cmax = state.getCellData( state.CMAX );
 	for (int cell = 0; cell < num_cells; ++cell) {
             double c_ads;
             polyprops.simpleAdsorption(cmax[cell], c_ads);

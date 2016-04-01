@@ -21,17 +21,19 @@
 
 #include "SimulatorFullyImplicitBlackoilOutput.hpp"
 
+#include <opm/common/data/SimulationDataContainer.hpp>
+
+#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+
+#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/DataMap.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
+#include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Units.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/BackupRestore.hpp>
-
-#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-
 
 #include <sstream>
 #include <iomanip>
@@ -50,7 +52,7 @@ namespace Opm
 
 
     void outputStateVtk(const UnstructuredGrid& grid,
-                        const SimulatorState& state,
+                        const SimulationDataContainer& state,
                         const int step,
                         const std::string& output_dir)
     {
@@ -87,16 +89,15 @@ namespace Opm
 
 
     void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::SimulatorState& state,
+                           const Opm::SimulationDataContainer& state,
                            const int step,
                            const std::string& output_dir)
     {
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
-        for( unsigned int i=0; i<state.cellDataNames().size(); ++ i )
-        {
-            const std::string& name = state.cellDataNames()[ i ];
+        for (const auto& pair : state.cellData()) {
+            const std::string& name = pair.first;
             std::string key;
             if( name == "SURFACEVOL" ) {
                 key = "surfvolume";
@@ -111,7 +112,7 @@ namespace Opm
                 continue;
             }
             // set data to datmap
-            dm[ key ] = &state.cellData()[ i ];
+            dm[ key ] = &pair.second;
         }
 
         std::vector<double> cell_velocity;
@@ -204,7 +205,7 @@ namespace Opm
 
 #ifdef HAVE_DUNE_CORNERPOINT
     void outputStateVtk(const Dune::CpGrid& grid,
-                        const Opm::SimulatorState& state,
+                        const Opm::SimulationDataContainer& state,
                         const int step,
                         const std::string& output_dir)
     {
@@ -255,7 +256,7 @@ namespace Opm
     void
     BlackoilOutputWriter::
     writeTimeStep(const SimulatorTimerInterface& timer,
-                  const SimulatorState& localState,
+                  const SimulationDataContainer& localState,
                   const WellState& localWellState,
                   bool substep)
     {
@@ -271,7 +272,7 @@ namespace Opm
             isIORank = parallelOutput_->collectToIORank( localState, localWellState, timer.reportStepNum() );
         }
 
-        const SimulatorState& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
+        const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
         const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
 
         // output is only done on I/O rank
@@ -306,6 +307,7 @@ namespace Opm
                     // write resport step number
                     backupfile_.write( (const char *) &reportStep, sizeof(int) );
 
+                    /*
                     try {
                         const BlackoilState& boState = dynamic_cast< const BlackoilState& > (state);
                         backupfile_ << boState;
@@ -317,6 +319,7 @@ namespace Opm
                     {
 
                     }
+                    */
 
                     /*
                     const WellStateFullyImplicitBlackoil* boWellState =

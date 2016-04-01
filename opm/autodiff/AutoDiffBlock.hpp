@@ -1,5 +1,6 @@
 /*
   Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -623,25 +624,20 @@ namespace Opm
         return rhs * lhs; // Commutative operation.
     }
 
+
     /**
-     * @brief Computes the value of base raised to the power of exp elementwise
+     * @brief Computes the value of base raised to the power of exponent
      *
      * @param base The AD forward block
-     * @param exp  array of exponents
-     * @return The value of base raised to the power of exp elementwise
+     * @param exponent  double
+     * @return The value of base raised to the power of exponent
      */
     template <typename Scalar>
     AutoDiffBlock<Scalar> pow(const AutoDiffBlock<Scalar>& base,
-                              const typename AutoDiffBlock<Scalar>::V& exp)
+                              const double exponent)
     {
-        const int num_elem = base.value().size();
-        typename AutoDiffBlock<Scalar>::V val (num_elem);
-        typename AutoDiffBlock<Scalar>::V derivative = exp;
-        assert(exp.size() == num_elem);
-        for (int i = 0; i < num_elem; ++i) {
-            val[i] = std::pow(base.value()[i], exp[i]);
-            derivative[i] *= std::pow(base.value()[i], exp[i] - 1.0);
-        }
+        const typename AutoDiffBlock<Scalar>::V val = base.value().pow(exponent);
+        const typename AutoDiffBlock<Scalar>::V derivative = exponent * base.value().pow(exponent - 1.0);
         const typename AutoDiffBlock<Scalar>::M derivative_diag(derivative.matrix().asDiagonal());
 
         std::vector< typename AutoDiffBlock<Scalar>::M > jac (base.numBlocks());
@@ -652,28 +648,95 @@ namespace Opm
         return AutoDiffBlock<Scalar>::function( std::move(val), std::move(jac) );
     }
 
-
     /**
-     * @brief Computes the value of base raised to the power of exp
+     * @brief Computes the value of base raised to the power of exponent
      *
      * @param base The AD forward block
-     * @param exp  exponent
+     * @param exponent  Array of exponents
+     * @return The value of base raised to the power of exponent elementwise
+     */
+    template <typename Scalar>
+    AutoDiffBlock<Scalar> pow(const AutoDiffBlock<Scalar>& base,
+                              const typename AutoDiffBlock<Scalar>::V& exponent)
+    {
+        // Add trivial derivatives and use the AD pow function
+        return  pow(base,AutoDiffBlock<Scalar>::constant(exponent));
+    }
+
+    /**
+     * @brief Computes the value of base raised to the power of exponent
+     *
+     * @param base      Array of base values
+     * @param exponent  The AD forward block
+     * @return The value of base raised to the power of exponent elementwise
+     */
+    template <typename Scalar>
+    AutoDiffBlock<Scalar> pow(const typename AutoDiffBlock<Scalar>::V& base,
+                              const AutoDiffBlock<Scalar>& exponent)
+    {
+        // Add trivial derivatives and use the AD pow function
+        return pow(AutoDiffBlock<Scalar>::constant(base),exponent);
+    }
+
+    /**
+     * @brief Computes the value of base raised to the power of exponent
+     *
+     * @param base The base AD forward block
+     * @param exponent  The exponent AD forward block
      * @return The value of base raised to the power of exp
      */
     template <typename Scalar>
     AutoDiffBlock<Scalar> pow(const AutoDiffBlock<Scalar>& base,
-                              const double exp)
-    {
-        const typename AutoDiffBlock<Scalar>::V val = base.value().pow(exp);
-        const typename AutoDiffBlock<Scalar>::V derivative = exp * base.value().pow(exp - 1.0);
-        const typename AutoDiffBlock<Scalar>::M derivative_diag(derivative.matrix().asDiagonal());
-
-        std::vector< typename AutoDiffBlock<Scalar>::M > jac (base.numBlocks());
-        for (int block = 0; block < base.numBlocks(); block++) {
-             fastSparseProduct(derivative_diag, base.derivative()[block], jac[block]);
+                              const AutoDiffBlock<Scalar>& exponent)
+    {                       
+        const int num_elem = base.value().size();
+        assert(exponent.size() == num_elem);
+        typename AutoDiffBlock<Scalar>::V val (num_elem);
+        for (int i = 0; i < num_elem; ++i) {
+            val[i] = std::pow(base.value()[i], exponent.value()[i]);
         }
 
-        return AutoDiffBlock<Scalar>::function( std::move(val), std::move(jac) );
+        // (f^g)' = f^g * ln(f) * g' + g * f^(g-1) * f' = der1 + der2
+        // if f' is empty only der1 is calculated
+        // if g' is empty only der2 is calculated
+        // if f' and g' are non empty they should have the same size
+        int num_blocks = std::max (base.numBlocks(), exponent.numBlocks());
+        if (!base.derivative().empty() && !exponent.derivative().empty()) {
+            assert(exponent.numBlocks() == base.numBlocks());
+        }
+        std::vector< typename AutoDiffBlock<Scalar>::M > jac (num_blocks);
+
+        if ( !exponent.derivative().empty() ) {
+            typename AutoDiffBlock<Scalar>::V der1 = val;
+            for (int i = 0; i < num_elem; ++i) {
+                der1[i] *= std::log(base.value()[i]);
+            }
+            std::vector< typename AutoDiffBlock<Scalar>::M > jac1 (exponent.numBlocks());
+            const typename AutoDiffBlock<Scalar>::M der1_diag(der1.matrix().asDiagonal());
+            for (int block = 0; block < exponent.numBlocks(); block++) {
+                fastSparseProduct(der1_diag, exponent.derivative()[block], jac1[block]);
+                jac[block] = jac1[block];
+            }
+        }
+
+        if ( !base.derivative().empty() ) {
+            typename AutoDiffBlock<Scalar>::V der2 = exponent.value();
+            for (int i = 0; i < num_elem; ++i) {
+                der2[i] *= std::pow(base.value()[i], exponent.value()[i] - 1.0);
+            }
+            std::vector< typename AutoDiffBlock<Scalar>::M > jac2 (base.numBlocks());
+            const typename AutoDiffBlock<Scalar>::M der2_diag(der2.matrix().asDiagonal());
+            for (int block = 0; block < base.numBlocks(); block++) {
+                fastSparseProduct(der2_diag, base.derivative()[block], jac2[block]);
+                if (!exponent.derivative().empty()) {
+                    jac[block] += jac2[block];
+                } else {
+                    jac[block] = jac2[block];
+                }
+            }
+        }
+
+        return AutoDiffBlock<Scalar>::function(std::move(val), std::move(jac));
     }
 
 

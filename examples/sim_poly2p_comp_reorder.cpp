@@ -48,7 +48,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <boost/scoped_ptr.hpp>
@@ -92,7 +92,7 @@ try
     boost::scoped_ptr<RockCompressibility> rock_comp;
     Opm::DeckConstPtr deck;
     EclipseStateConstPtr eclipseState;
-    PolymerBlackoilState state;
+    std::unique_ptr<PolymerBlackoilState> state;
     Opm::PolymerProperties poly_props;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
@@ -100,29 +100,35 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         ParserPtr parser(new Opm::Parser());
-        Opm::ParseMode parseMode({{ ParseMode::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-        deck = parser->parseFile(deck_filename , parseMode);
-        eclipseState.reset(new Opm::EclipseState(deck , parseMode));
+        Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+        deck = parser->parseFile(deck_filename , parseContext);
+        eclipseState.reset(new Opm::EclipseState(deck , parseContext));
 
         // Grid init
         grid.reset(new GridManager(deck));
-        // Rock and fluid init
-        props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, *grid->c_grid()));
-        // check_well_controls = param.getDefault("check_well_controls", false);
-        // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
-        // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(deck, eclipseState));
-        // Gravity.
-        gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
-        // Init state variables (saturation and pressure).
-        if (param.has("init_saturation")) {
-            initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        } else {
-            initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        {
+            const UnstructuredGrid& ug_grid = *(grid->c_grid());
+
+            // Rock and fluid init
+            props.reset(new BlackoilPropertiesFromDeck(deck, eclipseState, ug_grid));
+            // check_well_controls = param.getDefault("check_well_controls", false);
+            // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
+
+            state.reset( new PolymerBlackoilState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid ), 2));
+            // Rock compressibility.
+            rock_comp.reset(new RockCompressibility(deck, eclipseState));
+            // Gravity.
+            gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+            // Init state variables (saturation and pressure).
+            if (param.has("init_saturation")) {
+                initStateBasic(ug_grid, *props, param, gravity[2], *state);
+            } else {
+                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
+            }
+            initBlackoilSurfvol(ug_grid, *props, *state);
+            // Init polymer properties.
+            poly_props.readFromDeck(deck, eclipseState);
         }
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
-        // Init polymer properties.
-        poly_props.readFromDeck(deck, eclipseState);
     } else {
         // Grid init.
         const int nx = param.getDefault("nx", 100);
@@ -132,31 +138,43 @@ try
         const double dy = param.getDefault("dy", 1.0);
         const double dz = param.getDefault("dz", 1.0);
         grid.reset(new GridManager(nx, ny, nz, dx, dy, dz));
-        // Rock and fluid init.
-        props.reset(new BlackoilPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-        // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(param));
-        // Gravity.
-        gravity[2] = param.getDefault("gravity", 0.0);
-        // Init state variables (saturation and pressure).
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        initBlackoilSurfvol(*grid->c_grid(), *props, state);
-        // Init Polymer state
-        if (param.has("poly_init")) {
-            double poly_init = param.getDefault("poly_init", 0.0);
-            for (int cell = 0; cell < grid->c_grid()->number_of_cells; ++cell) {
-                double smin[2], smax[2];
-                props->satRange(1, &cell, smin, smax);
-                if (state.saturation()[2*cell] > 0.5*(smin[0] + smax[0])) {
-                    state.concentration()[cell] = poly_init;
-                    state.maxconcentration()[cell] = poly_init;
-                } else {
-                    state.saturation()[2*cell + 0] = 0.;
-                    state.saturation()[2*cell + 1] = 1.;
-                    state.concentration()[cell] = 0.;
-                    state.maxconcentration()[cell] = 0.;
+        {
+            const UnstructuredGrid& ug_grid = *(grid->c_grid());
+
+            // Rock and fluid init.
+            props.reset(new BlackoilPropertiesBasic(param, ug_grid.dimensions, UgGridHelpers::numCells( ug_grid )));
+            state.reset( new PolymerBlackoilState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid ) , 2));
+            // Rock compressibility.
+            rock_comp.reset(new RockCompressibility(param));
+            // Gravity.
+            gravity[2] = param.getDefault("gravity", 0.0);
+            // Init state variables (saturation and pressure).
+            initStateBasic(ug_grid, *props, param, gravity[2], *state);
+            initBlackoilSurfvol(ug_grid, *props, *state);
+            // Init Polymer state
+
+            if (param.has("poly_init")) {
+                double poly_init = param.getDefault("poly_init", 0.0);
+                for (int cell = 0; cell < UgGridHelpers::numCells( ug_grid ); ++cell) {
+                    double smin[2], smax[2];
+
+                    auto& saturation = state->saturation();
+                    auto& concentration = state->getCellData( state->CONCENTRATION );
+                    auto& max_concentration = state->getCellData( state->CMAX );
+
+                    props->satRange(1, &cell, smin, smax);
+                    if (saturation[2*cell] > 0.5*(smin[0] + smax[0])) {
+                        concentration[cell] = poly_init;
+                        max_concentration[cell] = poly_init;
+                    } else {
+                        saturation[2*cell + 0] = 0.;
+                        saturation[2*cell + 1] = 1.;
+                        concentration[cell] = 0.;
+                        max_concentration[cell] = 0.;
+                    }
                 }
             }
+
         }
         // Init polymer properties.
         // Setting defaults to provide a simple example case.
@@ -240,8 +258,8 @@ try
         simtimer.init(param);
         warnIfUnusedParams(param);
         WellState well_state;
-        well_state.init(0, state);
-        rep = simulator.run(simtimer, state, well_state);
+        well_state.init(0, *state);
+        rep = simulator.run(simtimer, *state, well_state);
     } else {
         // With a deck, we may have more epochs etc.
         WellState well_state;
@@ -284,7 +302,7 @@ try
             // properly transfer old well state to it every report step,
             // since number of wells may change etc.
             if (reportStepIdx == 0) {
-                well_state.init(wells.c_wells(), state);
+                well_state.init(wells.c_wells(), *state);
             }
 
             // Create and run simulator.
@@ -300,7 +318,7 @@ try
             if (reportStepIdx == 0) {
                 warnIfUnusedParams(param);
             }
-            SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
+            SimulatorReport epoch_rep = simulator.run(simtimer, *state, well_state);
 
             // Update total timing report and remember step number.
             rep += epoch_rep;

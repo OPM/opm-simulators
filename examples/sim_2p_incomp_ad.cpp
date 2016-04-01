@@ -47,7 +47,7 @@
 #include <opm/autodiff/SimulatorIncompTwophaseAd.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <boost/filesystem.hpp>
@@ -105,32 +105,39 @@ try
     std::unique_ptr<GridManager> grid;
     std::unique_ptr<IncompPropertiesInterface> props;
     std::unique_ptr<RockCompressibility> rock_comp;
+    std::unique_ptr<TwophaseState> state;
     EclipseStateConstPtr eclipseState;
-    TwophaseState state;
+
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
-        Opm::ParseMode parseMode;
-        deck = parser->parseFile(deck_filename, parseMode);
-        eclipseState.reset(new EclipseState(deck , parseMode));
+        Opm::ParseContext parseContext;
+        deck = parser->parseFile(deck_filename, parseContext);
+        eclipseState.reset(new EclipseState(deck , parseContext));
 
         // Grid init
         grid.reset(new GridManager(deck));
-        // Rock and fluid init
-        props.reset(new IncompPropertiesFromDeck(deck, eclipseState, *grid->c_grid()));
-        // check_well_controls = param.getDefault("check_well_controls", false);
-        // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
-        // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(deck, eclipseState));
-        // Gravity.
-        gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
-        // Init state variables (saturation and pressure).
-        if (param.has("init_saturation")) {
-            initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
-        } else {
-            initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], state);
+        {
+            const UnstructuredGrid& ug_grid = *(grid->c_grid());
+
+            // Rock and fluid init
+            props.reset(new IncompPropertiesFromDeck(deck, eclipseState, ug_grid));
+            // check_well_controls = param.getDefault("check_well_controls", false);
+            // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
+
+            state.reset( new TwophaseState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid )));
+            // Rock compressibility.
+            rock_comp.reset(new RockCompressibility(deck, eclipseState));
+            // Gravity.
+            gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+            // Init state variables (saturation and pressure).
+            if (param.has("init_saturation")) {
+                initStateBasic(ug_grid, *props, param, gravity[2], *state);
+            } else {
+                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
+            }
         }
     } else {
         // Grid init.
@@ -141,14 +148,20 @@ try
         const double dy = param.getDefault("dy", 1.0);
         const double dz = param.getDefault("dz", 1.0);
         grid.reset(new GridManager(nx, ny, nz, dx, dy, dz));
-        // Rock and fluid init.
-        props.reset(new IncompPropertiesBasic(param, grid->c_grid()->dimensions, grid->c_grid()->number_of_cells));
-        // Rock compressibility.
-        rock_comp.reset(new RockCompressibility(param));
-        // Gravity.
-        gravity[2] = param.getDefault("gravity", 0.0);
-        // Init state variables (saturation and pressure).
-        initStateBasic(*grid->c_grid(), *props, param, gravity[2], state);
+        {
+            const UnstructuredGrid& ug_grid = *(grid->c_grid());
+
+            // Rock and fluid init.
+            props.reset(new IncompPropertiesBasic(param, ug_grid.dimensions, UgGridHelpers::numCells( ug_grid )));
+
+            state.reset( new TwophaseState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid )));
+            // Rock compressibility.
+            rock_comp.reset(new RockCompressibility(param));
+            // Gravity.
+            gravity[2] = param.getDefault("gravity", 0.0);
+            // Init state variables (saturation and pressure).
+            initStateBasic(ug_grid, *props, param, gravity[2], *state);
+        }
     }
 
     // Warn if gravity but no density difference.
@@ -170,7 +183,7 @@ try
         // terms of total pore volume.
         std::vector<double> porevol;
         if (rock_comp->isActive()) {
-            computePorevolume(*grid->c_grid(), props->porosity(), *rock_comp, state.pressure(), porevol);
+            computePorevolume(*grid->c_grid(), props->porosity(), *rock_comp, state->pressure(), porevol);
         } else {
             computePorevolume(*grid->c_grid(), props->porosity(), porevol);
         }
@@ -236,8 +249,8 @@ try
         simtimer.init(param);
         warnIfUnusedParams(param);
         WellState well_state;
-        well_state.init(0, state);
-        rep = simulator.run(simtimer, state, well_state);
+        well_state.init(0, *state);
+        rep = simulator.run(simtimer, *state, well_state);
     } else {
         // With a deck, we may have more report steps etc.
         WellState well_state;
@@ -255,7 +268,7 @@ try
             // properly transfer old well state to it every report step,
             // since number of wells may change etc.
             if (reportStepIdx == 0) {
-                well_state.init(wells.c_wells(), state);
+                well_state.init(wells.c_wells(), *state);
             }
 
             simtimer.setCurrentStepNum(reportStepIdx);
@@ -273,7 +286,7 @@ try
             if (reportStepIdx == 0) {
                 warnIfUnusedParams(param);
             }
-            SimulatorReport epoch_rep = simulator.run(simtimer, state, well_state);
+            SimulatorReport epoch_rep = simulator.run(simtimer, *state, well_state);
             if (output) {
                 epoch_rep.reportParam(epoch_os);
             }

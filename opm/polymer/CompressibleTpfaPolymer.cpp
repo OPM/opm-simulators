@@ -88,8 +88,8 @@ namespace Opm
                                   PolymerBlackoilState& state,
                                   WellState& well_state)
     {
-        c_ = &state.concentration();
-        cmax_ = &state.maxconcentration();
+        c_ = &state.getCellData( state.CONCENTRATION );
+        cmax_ = &state.getCellData( state.CMAX );
         CompressibleTpfa::solve(dt, state, well_state);
     }
 

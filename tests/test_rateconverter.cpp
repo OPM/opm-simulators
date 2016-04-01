@@ -32,6 +32,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -39,7 +40,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseMode.hpp>
+#include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
@@ -48,9 +49,9 @@ struct SetupSimple {
     SetupSimple()
     {
         Opm::ParserPtr parser(new Opm::Parser());
-        Opm::ParseMode parseMode;
-        deck = parser->parseFile("fluid.data" , parseMode);
-        eclState.reset(new Opm::EclipseState(deck , parseMode));
+        Opm::ParseContext parseContext;
+        deck = parser->parseFile("fluid.data" , parseContext);
+        eclState.reset(new Opm::EclipseState(deck , parseContext));
 
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
@@ -107,8 +108,7 @@ BOOST_FIXTURE_TEST_CASE(ThreePhase, TestFixture<SetupSimple>)
     Region reg{ 0 };
     RCvrt  cvrt(ad_props, reg);
 
-    Opm::BlackoilState x;
-    x.init(*grid.c_grid(), 3);
+    Opm::BlackoilState x( Opm::UgGridHelpers::numCells( *grid.c_grid()) , Opm::UgGridHelpers::numFaces( *grid.c_grid()) , 3);
 
     cvrt.defineState(x);
 

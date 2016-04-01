@@ -34,7 +34,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
-#include <opm/core/io/vtk/writeVtkData.hpp>
+#include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
@@ -268,7 +268,7 @@ namespace Opm
         total_timer.start();
         double init_surfvol[2] = { 0.0 };
         double inplace_surfvol[2] = { 0.0 };
-        double polymass = computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
+        double polymass = computePolymerMass(porevol, state.saturation(), state.getCellData( state.CONCENTRATION ), poly_props_.deadPoreVol());
         double polymass_adsorbed = computePolymerAdsorbed(grid_, props_, poly_props_, state, rock_comp_props_);
         double init_polymass = polymass + polymass_adsorbed;
         double tot_injected[2] = { 0.0 };
@@ -301,7 +301,7 @@ namespace Opm
         if (check_well_controls_) {
             computeFractionalFlow(props_, poly_props_, allcells_,
                                   state.pressure(), state.temperature(), state.surfacevol(), state.saturation(),
-                                  state.concentration(), state.maxconcentration(),
+                                  state.getCellData( state.CONCENTRATION ), state.getCellData( state.CMAX ) ,
                                   fractional_flows);
             wells_manager_.applyExplicitReinjectionControls(well_resflows_phase, well_resflows_phase);
         }
@@ -397,7 +397,7 @@ namespace Opm
                            state.pressure(), state.temperature(), &initial_porevol[0], &porevol[0],
                            &transport_src[0], &polymer_inflow_c[0], stepsize,
                            state.saturation(), state.surfacevol(),
-                           state.concentration(), state.maxconcentration());
+                           state.getCellData( state.CONCENTRATION ), state.getCellData( state.CMAX ));
             double substep_injected[2] = { 0.0 };
             double substep_produced[2] = { 0.0 };
             double substep_polyinj = 0.0;
@@ -416,7 +416,7 @@ namespace Opm
             if (gravity_ != 0 && use_segregation_split_) {
                 tsolver_.solveGravity(columns_, stepsize,
                                       state.saturation(), state.surfacevol(),
-                                      state.concentration(), state.maxconcentration());
+                                      state.getCellData( state.CONCENTRATION ), state.getCellData( state.CMAX ));
             }
         }
         transport_timer.stop();
@@ -426,7 +426,7 @@ namespace Opm
 
         // Report volume balances.
         Opm::computeSaturatedVol(porevol, state.surfacevol(), inplace_surfvol);
-        polymass = Opm::computePolymerMass(porevol, state.saturation(), state.concentration(), poly_props_.deadPoreVol());
+        polymass = Opm::computePolymerMass(porevol, state.saturation(), state.getCellData( state.CONCENTRATION ), poly_props_.deadPoreVol());
         polymass_adsorbed = Opm::computePolymerAdsorbed(grid_, props_, poly_props_,
                                                         state, rock_comp_props_);
         tot_injected[0] += injected[0];
@@ -539,8 +539,8 @@ namespace Opm
             Opm::DataMap dm;
             dm["saturation"] = &state.saturation();
             dm["pressure"] = &state.pressure();
-            dm["concentration"] = &state.concentration();
-            dm["cmax"] = &state.maxconcentration();
+            dm["concentration"] = &state.getCellData( state.CONCENTRATION ) ;
+            dm["cmax"] = &state.getCellData( state.CMAX ) ;
             dm["surfvol"] = &state.surfacevol();
             std::vector<double> cell_velocity;
             Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
@@ -556,8 +556,8 @@ namespace Opm
             Opm::DataMap dm;
             dm["saturation"] = &state.saturation();
             dm["pressure"] = &state.pressure();
-            dm["concentration"] = &state.concentration();
-            dm["cmax"] = &state.maxconcentration();
+            dm["concentration"] = &state.getCellData( state.CONCENTRATION ) ;
+            dm["cmax"] = &state.getCellData( state.CMAX ) ;
             dm["surfvol"] = &state.surfacevol();
             std::vector<double> cell_velocity;
             Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
