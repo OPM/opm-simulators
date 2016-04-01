@@ -180,7 +180,7 @@ namespace Opm {
     BlackoilSolventModel<Grid>::variableStateExtractVars(const ReservoirState& x,
                                                          const std::vector<int>& indices,
                                                          std::vector<ADB>& vars) const
-    {         
+    {
         // This is more or less a copy of the base class. Refactoring is needed in the base class
         // to avoid unnecessary copying.
 
@@ -335,7 +335,7 @@ namespace Opm {
         Base::addWellContributionToMassBalanceEq(cq_s, state, xw);
 
         if (has_solvent_) {
-            const int nperf = wells().well_connpos[wells().number_of_wells];
+            const int nperf = stdWells().wells().well_connpos[stdWells().wells().number_of_wells];
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
 
             const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -345,18 +345,18 @@ namespace Opm {
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
 
-            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+            const std::vector<int> well_cells(stdWells().wells().well_cells, stdWells().wells().well_cells + nperf);
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
 
-            const int nw = wells().number_of_wells;
+            const int nw = stdWells().wells().number_of_wells;
             V injectedSolventFraction = Eigen::Map<const V>(&xw.solventFraction()[0], nperf);
 
             V isProducer = V::Zero(nperf);
             V ones = V::Constant(nperf,1.0);
             for (int w = 0; w < nw; ++w) {
-                if(wells().type[w] == PRODUCER) {
-                    for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                if(stdWells().wells().type[w] == PRODUCER) {
+                    for (int perf = stdWells().wells().well_connpos[w]; perf < stdWells().wells().well_connpos[w+1]; ++perf) {
                         isProducer[perf] = 1;
                     }
                 }
@@ -394,16 +394,16 @@ namespace Opm {
         // 1. Compute properties required by computeConnectionPressureDelta().
         //    Note that some of the complexity of this part is due to the function
         //    taking std::vector<double> arguments, and not Eigen objects.
-        const int nperf = wells().well_connpos[wells().number_of_wells];
-        const int nw = wells().number_of_wells;
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
+        const int nperf = stdWells().wells().well_connpos[stdWells().wells().number_of_wells];
+        const int nw = stdWells().wells().number_of_wells;
+        const std::vector<int> well_cells(stdWells().wells().well_cells, stdWells().wells().well_cells + nperf);
 
         // Compute the average pressure in each well block
         const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
         V avg_press = perf_press*0;
         for (int w = 0; w < nw; ++w) {
-            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-                const double p_above = perf == wells().well_connpos[w] ? state.bhp.value()[w] : perf_press[perf - 1];
+            for (int perf = stdWells().wells().well_connpos[w]; perf < stdWells().wells().well_connpos[w+1]; ++perf) {
+                const double p_above = perf == stdWells().wells().well_connpos[w] ? state.bhp.value()[w] : perf_press[perf - 1];
                 const double p_avg = (perf_press[perf] + p_above)/2;
                 avg_press[perf] = p_avg;
             }
@@ -480,8 +480,8 @@ namespace Opm {
                 V isProducer = V::Zero(nperf);
                 V ones = V::Constant(nperf,1.0);
                 for (int w = 0; w < nw; ++w) {
-                    if(wells().type[w] == PRODUCER) {
-                        for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                    if(stdWells().wells().type[w] == PRODUCER) {
+                        for (int perf = stdWells().wells().well_connpos[w]; perf < stdWells().wells().well_connpos[w+1]; ++perf) {
                             isProducer[perf] = 1;
                         }
                     }
