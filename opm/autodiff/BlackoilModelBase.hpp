@@ -280,6 +280,10 @@ namespace Opm {
             // keeping the underline, later they will be private members
             StandardWells(const Wells* wells);
             const Wells& wells() const;
+            // return true if wells are available in the reservoir
+            bool wellsActive() const;
+            // return true if wells are available on this process
+            bool localWellsActive() const;
             bool wells_active_;
             const Wells*                    wells_;
             const WellOps                   wops_;
@@ -345,10 +349,6 @@ namespace Opm {
             return static_cast<const Implementation&>(*this);
         }
 
-        // return true if wells are available in the reservoir
-        bool wellsActive() const { return std_wells_.wells_active_; }
-        // return true if wells are available on this process
-        bool localWellsActive() const { return std_wells_.wells_ ? (std_wells_.wells_->number_of_wells > 0 ) : false; }
 
         // return the StandardWells object
         StandardWells& stdWells() { return std_wells_; }

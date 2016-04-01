@@ -482,11 +482,35 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
+    bool
+    BlackoilModelBase<Grid, Implementation>::
+    StandardWells::wellsActive() const
+    {
+        return wells_active_;
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
+    bool
+    BlackoilModelBase<Grid, Implementation>::
+    StandardWells::localWellsActive() const
+    {
+        return wells_ ? (wells_->number_of_wells > 0 ) : false;
+    }
+
+
+
+
+
+    template <class Grid, class Implementation>
     int
     BlackoilModelBase<Grid, Implementation>::numWellVars() const
     {
         // For each well, we have a bhp variable, and one flux per phase.
-        const int nw = localWellsActive() ? stdWells().wells().number_of_wells : 0;
+        const int nw = stdWells().localWellsActive() ? stdWells().wells().number_of_wells : 0;
         return (numPhases() + 1) * nw;
     }
 
@@ -602,7 +626,7 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::variableWellStateInitials(const WellState&     xw, std::vector<V>& vars0) const
     {
         // Initial well rates.
-        if ( localWellsActive() )
+        if ( stdWells().localWellsActive() )
         {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
@@ -993,7 +1017,7 @@ namespace detail {
 
         // -------- Well equations ----------
 
-        if ( ! wellsActive() ) {
+        if ( ! stdWells().wellsActive() ) {
             return;
         }
 
@@ -1124,7 +1148,7 @@ namespace detail {
                                                                                 const SolutionState&,
                                                                                 const WellState&)
     {
-        if ( !asImpl().localWellsActive() )
+        if ( !asImpl().stdWells().localWellsActive() )
         {
             // If there are no wells in the subdomain of the proces then
             // cq_s has zero size and will cause a segmentation fault below.
@@ -1152,7 +1176,7 @@ namespace detail {
     {
         // If we have wells, extract the mobilities and b-factors for
         // the well-perforated cells.
-        if (!asImpl().localWellsActive()) {
+        if (!asImpl().stdWells().localWellsActive()) {
             mob_perfcells.clear();
             b_perfcells.clear();
             return;
@@ -1181,7 +1205,7 @@ namespace detail {
                                                              V& aliveWells,
                                                              std::vector<ADB>& cq_s) const
     {
-        if( ! localWellsActive() ) return ;
+        if( ! stdWells().localWellsActive() ) return ;
 
         const int np = stdWells().wells().number_of_phases;
         const int nw = stdWells().wells().number_of_wells;
@@ -1329,7 +1353,7 @@ namespace detail {
                                                                                    const SolutionState& state,
                                                                                    WellState& xw) const
     {
-        if ( !asImpl().localWellsActive() )
+        if ( !asImpl().stdWells().localWellsActive() )
         {
             // If there are no wells in the subdomain of the proces then
             // cq_s has zero size and will cause a segmentation fault below.
@@ -1360,7 +1384,7 @@ namespace detail {
     void BlackoilModelBase<Grid, Implementation>::addWellFluxEq(const std::vector<ADB>& cq_s,
                                                                 const SolutionState& state)
     {
-        if( !asImpl().localWellsActive() )
+        if( !asImpl().stdWells().localWellsActive() )
         {
             // If there are no wells in the subdomain of the proces then
             // cq_s has zero size and will cause a segmentation fault below.
@@ -1517,7 +1541,7 @@ namespace detail {
     template <class Grid, class Implementation>
     bool BlackoilModelBase<Grid, Implementation>::isVFPActive() const
     {
-        if( ! localWellsActive() ) {
+        if( ! stdWells().localWellsActive() ) {
             return false;
         }
 
@@ -1549,7 +1573,7 @@ namespace detail {
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellState& xw) const
     {
-        if( ! localWellsActive() ) return ;
+        if( ! stdWells().localWellsActive() ) return ;
 
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
@@ -1715,7 +1739,7 @@ namespace detail {
         std::vector<ADB> mob_perfcells_const(np, ADB::null());
         std::vector<ADB> b_perfcells_const(np, ADB::null());
 
-        if (asImpl().localWellsActive() ){
+        if (asImpl().stdWells().localWellsActive() ){
             // If there are non well in the sudomain of the process
             // thene mob_perfcells_const and b_perfcells_const would be empty
             for (int phase = 0; phase < np; ++phase) {
@@ -1746,7 +1770,7 @@ namespace detail {
             }
 
             ++it;
-            if( localWellsActive() )
+            if( stdWells().localWellsActive() )
             {
                 std::vector<ADB> eqs;
                 eqs.reserve(2);
@@ -1808,7 +1832,7 @@ namespace detail {
                                                           const WellState& xw,
                                                           const V& aliveWells)
     {
-        if( ! localWellsActive() ) return;
+        if( ! stdWells().localWellsActive() ) return;
 
         const int np = stdWells().wells().number_of_phases;
         const int nw = stdWells().wells().number_of_wells;
@@ -2308,7 +2332,7 @@ namespace detail {
                                                              WellState& well_state)
     {
 
-        if( localWellsActive() )
+        if( stdWells().localWellsActive() )
         {
             const int np = stdWells().wells().number_of_phases;
             const int nw = stdWells().wells().number_of_wells;

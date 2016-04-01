@@ -130,7 +130,6 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        using Base::wellsActive;
         using Base::stdWells;
         using Base::variableState;
         using Base::computeGasPressure;

@@ -179,7 +179,6 @@ namespace Opm {
 
         // Need to declare Base members we want to use here.
         using Base::stdWells;
-        using Base::wellsActive;
         using Base::variableState;
         using Base::computePressures;
         using Base::computeGasPressure;

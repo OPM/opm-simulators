@@ -208,7 +208,6 @@ namespace Opm {
 
         using Base::stdWells;
         using Base::updatePrimalVariableFromState;
-        using Base::wellsActive;
         using Base::phaseCondition;
         using Base::fluidRvSat;
         using Base::fluidRsSat;

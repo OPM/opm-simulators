@@ -359,7 +359,7 @@ namespace Opm {
     void BlackoilMultiSegmentModel<Grid>::computeWellConnectionPressures(const SolutionState& state,
                                                                          const WellState& xw)
     {
-        if( ! wellsActive() ) return ;
+        if( ! stdWells().wellsActive() ) return ;
 
         using namespace Opm::AutoDiffGrid;
         // 1. Compute properties required by computeConnectionPressureDelta().
@@ -621,7 +621,7 @@ namespace Opm {
 
         // -------- Well equations ----------
 
-        if ( ! wellsActive() ) {
+        if ( ! stdWells().wellsActive() ) {
             return;
         }
 
@@ -939,7 +939,7 @@ namespace Opm {
     template <class Grid>
     void BlackoilMultiSegmentModel<Grid>::updateWellControls(WellState& xw) const
     {
-        if( ! wellsActive() ) return ;
+        if( ! stdWells().wellsActive() ) return ;
 
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,

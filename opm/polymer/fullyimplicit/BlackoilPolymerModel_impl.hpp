@@ -525,7 +525,7 @@ namespace Opm {
         assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
-        if ( ! wellsActive() ) {
+        if ( ! stdWells().wellsActive() ) {
             return;
         }
 
@@ -710,7 +710,7 @@ namespace Opm {
     BlackoilPolymerModel<Grid>::computeWaterShearVelocityWells(const SolutionState& state, WellState& xw, const ADB& cq_sw,
                                                                std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells)
     {
-        if( ! wellsActive() ) return ;
+        if( ! stdWells().wellsActive() ) return ;
 
         const int nw = stdWells().wells().number_of_wells;
         const int nperf = stdWells().wells().well_connpos[nw];
