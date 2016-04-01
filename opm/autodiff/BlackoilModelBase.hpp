@@ -269,26 +269,42 @@ namespace Opm {
             ADB              mob;   // Phase mobility (per cell)
         };
 
-        struct WellOps {
-            WellOps(const Wells* wells);
-            Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
-            Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
-            std::vector<int> well_cells;                  // the set of perforated cells
-        };
+        class StandardWells {
+        protected:
+            struct WellOps {
+                WellOps(const Wells* wells);
+                Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
+                Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
+                std::vector<int> well_cells;                  // the set of perforated cells
+            };
 
-        struct StandardWells {
-            // keeping the underline, later they will be private members
+        public:
             StandardWells(const Wells* wells);
+
             const Wells& wells() const;
+
             // return true if wells are available in the reservoir
             bool wellsActive() const;
+            bool& wellsActive();
             // return true if wells are available on this process
             bool localWellsActive() const;
+
+            const WellOps& wellOps() const;
+
+            //Density of each well perforation
+            V& wellPerforationDensities();
+            const V& wellPerforationDensities() const;
+
+            // Diff to bhp for each well perforation.
+            V& wellPerforationPressureDiffs();
+            const V& wellPerforationPressureDiffs() const;
+
+        protected:
             bool wells_active_;
-            const Wells*                    wells_;
-            const WellOps                   wops_;
-            V well_perforation_densities_; //Density of each well perforation
-            V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
+            const Wells*   wells_;
+            const WellOps  wops_;
+            V well_perforation_densities_;
+            V well_perforation_pressure_diffs_;
         };
 
         // ---------  Data members  ---------
