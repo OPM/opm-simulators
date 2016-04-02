@@ -125,7 +125,7 @@ namespace Opm {
                     const std::string msg = "-- Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR + SGCR + SWL exceed 1.0";
                     scaled_messages_.push_back(msg);
                     OpmLog::warning(msg);
-                    counter_.error += 1;
+                    counter_.warning += 1;
                 }
             }
             ///Following rules come from NEXUS.
