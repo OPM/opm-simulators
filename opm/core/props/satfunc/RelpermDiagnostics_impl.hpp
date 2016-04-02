@@ -67,7 +67,6 @@ namespace Opm {
             std::string("\nProblems          " + std::to_string(counter_.problem)) +
             std::string("\nErrors            " + std::to_string(counter_.error)) + 
             std::string("\nBugs              " + std::to_string(counter_.bug))+ "\n";
-        OpmLog::info(summary_msg);
         std::cout << summary_msg << std::endl;
     }
 
