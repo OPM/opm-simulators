@@ -799,7 +799,7 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
-                                                                        WellState& xw)
+                                                                                 const WellState& xw)
     {
         if( ! localWellsActive() ) return ;
 
@@ -892,9 +892,6 @@ namespace detail {
         // 4. Store the results
         well_perforation_densities_ = Eigen::Map<const V>(cd.data(), nperf);
         well_perforation_pressure_diffs_ = Eigen::Map<const V>(cdp.data(), nperf);
-        for (int perf = 0; perf < nperf; ++perf){
-            xw.well_perforation_pressure_diffs()[perf] = well_perforation_pressure_diffs_[perf];
-        }
     }
 
 
