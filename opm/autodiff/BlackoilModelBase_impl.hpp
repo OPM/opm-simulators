@@ -799,7 +799,7 @@ namespace detail {
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
-                                                                        const WellState& xw)
+                                                                                 const WellState& xw)
     {
         if( ! localWellsActive() ) return ;
 
