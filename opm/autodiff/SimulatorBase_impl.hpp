@@ -223,9 +223,9 @@ namespace Opm
             ++timer;
             prev_well_state = well_state;
             // Compute Well potentials (only used to determine default guide rates for group controlled wells)
-            if (schedule->numGroups() > 0 ) {
-                asImpl().computeWellPotentials(timer.currentStepNum(), wells, state, well_state, well_potentials);
-            }
+            // TODO: add some logic to avoid unnecessary calulations of well potentials.
+            asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
+
         }
 
         // Write final simulation state.
@@ -389,14 +389,14 @@ namespace Opm
     }
 
     template <class Implementation>
-    void SimulatorBase<Implementation>::computeWellPotentials(const std::size_t step,
-                                                              const Wells* wells,
+    void SimulatorBase<Implementation>::computeWellPotentials(const Wells* wells,
                                                               const BlackoilState& x,
                                                               const WellState& xw,
                                                               std::vector<double>& well_potentials)
     {
         const int nw = wells->number_of_wells;
         const int np = wells->number_of_phases;
+
         well_potentials.clear();
         well_potentials.resize(nw*np,0.0);       
         for (int w = 0; w < nw; ++w) {
