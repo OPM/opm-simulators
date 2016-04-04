@@ -35,6 +35,8 @@
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/EclipsePRTLog.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
@@ -88,9 +90,11 @@ try
     }
 
     std::string logFile = baseName + ".SATFUNCLOG";
+    std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile, Log::DefaultMessageTypes);
+    OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
     Opm::time::StopWatch timer;
     timer.start();
-    RelpermDiagnostics diagnostic(logFile);
+    RelpermDiagnostics diagnostic;
     diagnostic.diagnosis(eclState, deck, grid);
     timer.stop();
     double tt = timer.secsSinceStart();

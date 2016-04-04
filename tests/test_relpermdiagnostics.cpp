@@ -33,6 +33,8 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/EclipsePRTLog.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/cart_grid.h>
@@ -60,7 +62,9 @@ BOOST_AUTO_TEST_CASE(diagnosis)
     GridManager gm(deck);
     const UnstructuredGrid& grid = *gm.c_grid();
     std::string logFile = "LOGFILE.txt";
-    RelpermDiagnostics diagnostics(logFile);
+    std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile, Log::DefaultMessageTypes);
+    OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
+    RelpermDiagnostics diagnostics;
     diagnostics.diagnosis(eclState, deck, grid);
     auto msg = diagnostics.getMessages();
     BOOST_CHECK(!msg.empty());

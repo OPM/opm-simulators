@@ -33,7 +33,6 @@
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/common/OpmLog/StreamLog.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/MiscTable.hpp>
@@ -52,10 +51,6 @@ namespace Opm {
     class RelpermDiagnostics 
     {
     public:
-
-        ///Constructor for OpmLog.
-        explicit RelpermDiagnostics(std::string& logFile);
-
         ///This function is used to diagnosis relperm in
         ///eclipse data file. Errors and warings will be 
         ///output if they're found.
@@ -67,8 +62,6 @@ namespace Opm {
                        DeckConstPtr deck,
                        const GridT& grid);
 
-        ///return streamLog
-        std::shared_ptr<Opm::StreamLog> getOpmLog() const;
         std::vector<std::string> getMessages() const;
 
     private:
@@ -106,9 +99,6 @@ namespace Opm {
         std::vector<std::string> messages_;
         ///Store scaled information.
         std::vector<std::string> scaled_messages_;
-
-        ///Use OpmLog
-        std::shared_ptr<Opm::StreamLog> streamLog_;
 
         ///Check the phase that used.
         void phaseCheck_(DeckConstPtr deck);
