@@ -79,6 +79,7 @@ list (APPEND TEST_SOURCE_FILES
 	tests/test_welldensitysegmented.cpp
 	tests/test_vfpproperties.cpp
 	tests/test_singlecellsolves.cpp
+	tests/test_solventprops_ad.cpp
 	)
 
 list (APPEND TEST_DATA_FILES

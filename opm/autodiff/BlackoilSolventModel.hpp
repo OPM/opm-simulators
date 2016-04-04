@@ -233,7 +233,7 @@ namespace Opm {
         void computeEffectiveProperties(const SolutionState&  state);
 
         // compute density and viscosity using the ToddLongstaff mixing model
-        void computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const Opm::PhaseUsage pu);
+        void computeToddLongstaffMixing(std::vector<ADB>& viscosity, std::vector<ADB>& density, const std::vector<ADB>& saturations, const ADB po, const Opm::PhaseUsage pu);
 
         // compute phase pressures.
         std::vector<ADB>
