@@ -87,7 +87,7 @@ namespace Opm
                      FC begin_face_centroids,
                      const double* permeability,
                      bool is_parallel_run=false,
-                     const std::vector<double> well_potentials={});
+                     const std::vector<double>& well_potentials={});
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
@@ -155,7 +155,7 @@ namespace Opm
                   const C2F& cell_to_faces,
                   FC begin_face_centroids,
                   const double* permeability,
-                  const std::vector<double> well_potentials);
+                  const std::vector<double>& well_potentials);
         // Disable copying and assignment.
         WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);

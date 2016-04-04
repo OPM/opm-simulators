@@ -327,7 +327,7 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              FC                              begin_face_centroids,
              const double*                   permeability,
              bool                            is_parallel_run,
-             std::vector<double>             well_potentials)
+             const std::vector<double>&      well_potentials)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
@@ -347,7 +347,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
                    const double*                   permeability,
-                   const std::vector<double>       well_potentials)
+                   const std::vector<double>&      well_potentials)
 {
     if (dimensions != 3) {
         OPM_THROW(std::runtime_error,

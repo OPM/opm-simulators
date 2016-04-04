@@ -1,6 +1,6 @@
 /*
   Copyright 2012 SINTEF ICT, Applied Mathematics.
-  Copyright 2015 IRIS AS
+  Copyright 2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -331,12 +331,12 @@ namespace Opm
                                const double* permeability)
         : w_(0), is_parallel_run_(false)
     {
-        std::vector<double> well_potensials;
+        std::vector<double> dummy_well_potentials;
         init(eclipseState, timeStep, UgGridHelpers::numCells(grid),
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
-             permeability, well_potensials);
+             permeability, dummy_well_potentials);
 
     }
 
@@ -730,7 +730,6 @@ namespace Opm
     void WellsManager::setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
                                        const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials)
     {
-
         const int np = phaseUsage.num_phases;
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
             WellConstPtr well = *wellIter;
@@ -757,7 +756,7 @@ namespace Opm
                 } else {
                     OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << well->name());
                 }
-            } else if (well_potentials.size() > 0) { // default: calculate guiderates from well potentials
+            } else if (well_potentials.size() > 0) { // default: calculate guide rates from well potentials
 
                 // Note: Modification of the guide rate using GUIDERAT is not supported
                 switch (well->getPreferredPhase()) {
@@ -771,7 +770,7 @@ namespace Opm
                         wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::WATER;
                     } else {
                         wellnode.injSpec().guide_rate_ = well_potentials[np*wix + water_index];
-                        // Guide rates applies to the phase tht the well is injecting i.e water
+                        // Guide rates applies to the phase that the well is injecting i.e water
                         wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
                     }
                     break;
@@ -786,7 +785,7 @@ namespace Opm
                         wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
                     } else {
                         wellnode.injSpec().guide_rate_ = well_potentials[np*wix + oil_index];
-                        // Guide rates applies to the phase tht the well is injecting i.e. oil
+                        // Guide rates applies to the phase that the well is injecting i.e. oil
                         wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
                     }
                     break;
@@ -801,7 +800,7 @@ namespace Opm
                         wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::GAS;
                     } else {
                         wellnode.injSpec().guide_rate_ = well_potentials[np*wix + gas_index];
-                        // Guide rates applies to the phase tht the well is injecting i.e gas
+                        // Guide rates applies to the phase that the well is injecting i.e gas
                         wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
                     }
                     break;
