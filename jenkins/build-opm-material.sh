@@ -38,7 +38,7 @@ function build_opm_material {
   popd
 
   # Build opm-parser
-  clone_and_build_module opm-parser "-DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install" $OPM_PARSER_REVISION $WORKSPACE/serial
+  clone_and_build_module opm-parser "-DCMAKE_PREFIX_PATH=$WORKSPACE/serial/install -DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install" $OPM_PARSER_REVISION $WORKSPACE/serial
 
   # Build opm-material
   pushd .
