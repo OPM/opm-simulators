@@ -34,3 +34,8 @@ of the two build scripts above.
 This script will execute the Norne case, and generate a document with
 plots of the results. It is meant to be executed after either
 of the two build scripts above.
+
+**run-polymer.sh**:
+This script will execute the simple2D polymer case, then compare against
+Eclipse reference results. It is meant to be executed after either
+of the two build scripts above.
