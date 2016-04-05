@@ -63,7 +63,7 @@ public:
      */
     void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
     {
-        const auto& pvtgTables = eclState->getTableManager()->getPvtgTables();
+        const auto& pvtgTables = eclState->getTableManager().getPvtgTables();
         const auto& densityKeyword = deck->getKeyword("DENSITY");
 
         assert(pvtgTables.size() == densityKeyword.size());

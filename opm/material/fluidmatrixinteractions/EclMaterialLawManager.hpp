@@ -541,12 +541,13 @@ private:
     SaturationFunctionFamily getSaturationFunctionFamily(Opm::EclipseStateConstPtr eclState) const
     {
         const auto& tableManager = eclState->getTableManager();
-        const TableContainer& swofTables = tableManager->getSwofTables();
-        const TableContainer& slgofTables= tableManager->getSlgofTables();
-        const TableContainer& sgofTables = tableManager->getSgofTables();
-        const TableContainer& swfnTables = tableManager->getSwfnTables();
-        const TableContainer& sgfnTables = tableManager->getSgfnTables();
-        const TableContainer& sof3Tables = tableManager->getSof3Tables();
+        const TableContainer& swofTables = tableManager.getSwofTables();
+        const TableContainer& slgofTables= tableManager.getSlgofTables();
+        const TableContainer& sgofTables = tableManager.getSgofTables();
+        const TableContainer& swfnTables = tableManager.getSwfnTables();
+        const TableContainer& sgfnTables = tableManager.getSgfnTables();
+        const TableContainer& sof3Tables = tableManager.getSof3Tables();
+
 
         bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
         bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
@@ -590,8 +591,8 @@ private:
         // handle the twophase case
         const auto& tableManager = eclState->getTableManager();
         if (!hasWater) {
-            const TableContainer& sgofTables  = tableManager->getSgofTables();
-            const TableContainer& slgofTables = tableManager->getSlgofTables();
+            const TableContainer& sgofTables  = tableManager.getSgofTables();
+            const TableContainer& slgofTables = tableManager.getSlgofTables();
             if (!sgofTables.empty())
                 readGasOilEffectiveParametersSgof_(effParams,
                                                    Swco,
@@ -618,8 +619,8 @@ private:
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI:
         {
-            const TableContainer& sgofTables = tableManager->getSgofTables();
-            const TableContainer& slgofTables = tableManager->getSlgofTables();
+            const TableContainer& sgofTables = tableManager.getSgofTables();
+            const TableContainer& slgofTables = tableManager.getSlgofTables();
             if (!sgofTables.empty())
                 readGasOilEffectiveParametersSgof_(effParams,
                                                    Swco,
@@ -633,8 +634,8 @@ private:
 
         case FamilyII:
         {
-            const Sof3Table& sof3Table = tableManager->getSof3Tables().getTable<Sof3Table>( satnumIdx );
-            const SgfnTable& sgfnTable = tableManager->getSgfnTables().getTable<SgfnTable>( satnumIdx );
+            const Sof3Table& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>( satnumIdx );
+            const SgfnTable& sgfnTable = tableManager.getSgfnTables().getTable<SgfnTable>( satnumIdx );
             readGasOilEffectiveParametersFamily2_(effParams,
                                                   Swco,
                                                   sof3Table,
@@ -715,7 +716,7 @@ private:
         bool hasGas = deck->hasKeyword("GAS");
         bool hasOil = deck->hasKeyword("OIL");
 
-        const auto tableManager = eclState->getTableManager();
+        const auto& tableManager = eclState->getTableManager();
         auto& effParams = *dest[satnumIdx];
 
         // handle the twophase case
@@ -723,7 +724,7 @@ private:
             return;
         }
         else if (!hasGas) {
-            const auto& swofTable = tableManager->getSwofTables().getTable<SwofTable>(satnumIdx);
+            const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satnumIdx);
             std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
 
             effParams.setKrwSamples(SwColumn, swofTable.getColumn("KRW").vectorCopy());
@@ -742,7 +743,7 @@ private:
 
         switch (getSaturationFunctionFamily(eclState)) {
         case FamilyI: {
-            const auto& swofTable = tableManager->getSwofTables().getTable<SwofTable>(satnumIdx);
+            const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satnumIdx);
             std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
 
             effParams.setKrwSamples(SwColumn, swofTable.getColumn("KRW").vectorCopy());
@@ -753,8 +754,8 @@ private:
         }
         case FamilyII:
         {
-            const auto& swfnTable = tableManager->getSwfnTables().getTable<SwfnTable>(satnumIdx);
-            const auto& sof3Table = tableManager->getSof3Tables().getTable<Sof3Table>(satnumIdx);
+            const auto& swfnTable = tableManager.getSwfnTables().getTable<SwfnTable>(satnumIdx);
+            const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satnumIdx);
             std::vector<double> SwColumn = swfnTable.getColumn("SW").vectorCopy();
 
             // convert the saturations of the SOF3 keyword from oil to water saturations

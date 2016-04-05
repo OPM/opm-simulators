@@ -193,13 +193,13 @@ struct EclEpsScalingPointsInfo
                          unsigned satRegionIdx)
     {
         // TODO: support for the SOF2/SOF3 keyword family
-        auto tables = eclState->getTableManager();
-        const TableContainer&  swofTables = tables->getSwofTables();
-        const TableContainer&  sgofTables = tables->getSgofTables();
-        const TableContainer& slgofTables = tables->getSlgofTables();
-        const TableContainer&  swfnTables = tables->getSwfnTables();
-        const TableContainer&  sgfnTables = tables->getSgfnTables();
-        const TableContainer&  sof3Tables = tables->getSof3Tables();
+        const auto& tables = eclState->getTableManager();
+        const TableContainer&  swofTables = tables.getSwofTables();
+        const TableContainer&  sgofTables = tables.getSgofTables();
+        const TableContainer& slgofTables = tables.getSlgofTables();
+        const TableContainer&  swfnTables = tables.getSwfnTables();
+        const TableContainer&  sgfnTables = tables.getSgfnTables();
+        const TableContainer&  sof3Tables = tables.getSof3Tables();
 
         bool hasWater = deck->hasKeyword("WATER");
         bool hasGas = deck->hasKeyword("GAS");
