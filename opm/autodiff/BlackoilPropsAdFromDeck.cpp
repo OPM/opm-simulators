@@ -54,7 +54,7 @@ namespace Opm
              init_rock);
     }
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                                      Opm::EclipseStateConstPtr eclState,
@@ -95,7 +95,7 @@ namespace Opm
              init_rock);
     }
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
     /// Constructor wrapping an opm-core black oil interface.
     BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
                                                      Opm::EclipseStateConstPtr eclState,
