@@ -871,9 +871,6 @@ namespace detail {
         surf_dens_perf.assign(rho.data(), rho.data() + nperf * pu.num_phases);
     }
 
-        // Gravity
-        double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
-
 
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::computeWellConnectionPressures(const SolutionState& state,
