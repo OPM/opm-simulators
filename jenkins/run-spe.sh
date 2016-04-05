@@ -30,6 +30,8 @@ test $? -eq 0 || exit 1
 cd ..
 
 # Compare OPM with eclipse reference
+PYTHONPATH=$WORKSPACE/serial/install/lib/python2.7/dist-packages/ python -c 'import sys; print(sys.path)'
+
 PYTHONPATH=$WORKSPACE/serial/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe1/eclipse-simulation/ spe1/ SPE1CASE2 0.01 0.01
 test $? -eq 0 || exit 1
 PYTHONPATH=$WORKSPACE/serial/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe3/eclipse-simulation/ spe3/ SPE3CASE1 0.02 0.02
