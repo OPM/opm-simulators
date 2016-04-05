@@ -194,10 +194,8 @@ namespace detail {
                 // Only rank 0 does print to std::cout if terminal_output is enabled
                 terminal_output_ = (info.communicator().rank()==0);
             }
-            // int local_number_of_wells = std_wells_.wells_ ? std_wells_.wells_->number_of_wells : 0;
             int local_number_of_wells = stdWells().localWellsActive() ? stdWells().wells().number_of_wells : 0;
             int global_number_of_wells = info.communicator().sum(local_number_of_wells);
-            // std_wells_.wells_active_ = ( std_wells_.wells_ && global_number_of_wells > 0 );
             stdWells().wellsActive() = ( stdWells().localWellsActive() && global_number_of_wells > 0 );
             // Compute the global number of cells
             std::vector<int> v( Opm::AutoDiffGrid::numCells(grid_), 1);

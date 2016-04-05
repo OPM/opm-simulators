@@ -389,8 +389,6 @@ namespace Opm {
                                                                                  std::vector<double>& rvmax_perf,
                                                                                  std::vector<double>& surf_dens_perf)
     {
-        if( ! stdWells().localWellsActive() ) return ;
-
         using namespace Opm::AutoDiffGrid;
         // 1. Compute properties required by computeConnectionPressureDelta().
         //    Note that some of the complexity of this part is due to the function
