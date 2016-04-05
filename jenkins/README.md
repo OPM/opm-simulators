@@ -29,3 +29,8 @@ and/or opm-output=&lt;pull request number&gt;.
 This script will execute the SPE1, SPE3 and SPE9 cases, then compare against
 OPM and Eclipse reference results. It is meant to be executed after either
 of the two build scripts above.
+
+**run-norne.sh**:
+This script will execute the Norne case, and generate a document with
+plots of the results. It is meant to be executed after either
+of the two build scripts above.

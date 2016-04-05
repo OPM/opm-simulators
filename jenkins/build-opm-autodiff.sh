@@ -15,7 +15,7 @@ function build_opm_autodiff {
   pushd .
   mkdir -p serial/build-ert
   cd serial/build-ert
-  cmake $WORKSPACE/deps/ert/devel -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install
+  cmake $WORKSPACE/deps/ert/devel -DBUILD_APPLICATIONS=1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install
   cmake --build . --target install
   popd
 
