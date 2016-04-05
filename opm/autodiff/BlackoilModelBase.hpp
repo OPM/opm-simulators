@@ -387,11 +387,19 @@ namespace Opm {
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw);
 
+        void computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                         const WellState& xw,
+                                                         std::vector<double>& b_perf,
+                                                         std::vector<double>& rsmax_perf,
+                                                         std::vector<double>& rvmax_perf,
+                                                         std::vector<double>& surf_dens_perf);
+
         void
         assembleMassBalanceEq(const SolutionState& state);
 
         void
-        extractWellPerfProperties(std::vector<ADB>& mob_perfcells,
+        extractWellPerfProperties(const SolutionState& state,
+                                  std::vector<ADB>& mob_perfcells,
                                   std::vector<ADB>& b_perfcells) const;
 
         bool

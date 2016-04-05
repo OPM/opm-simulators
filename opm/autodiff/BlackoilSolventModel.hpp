@@ -87,14 +87,6 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
-        /// Assemble the residual and Jacobian of the nonlinear system.
-        /// \param[in]      reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        void assemble(const ReservoirState& reservoir_state,
-                      WellState& well_state,
-                      const bool initial_assembly);
-
 
     protected:
 
@@ -159,6 +151,7 @@ namespace Opm {
         using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
+        using Base::computePropertiesForWellConnectionPressures;
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
@@ -212,8 +205,12 @@ namespace Opm {
                                            const SolutionState& state,
                                            WellState& xw);
 
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
+        void computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                         const WellState& xw,
+                                                         std::vector<double>& b_perf,
+                                                         std::vector<double>& rsmax_perf,
+                                                         std::vector<double>& rvmax_perf,
+                                                         std::vector<double>& surf_dens_perf);
 
         void updateEquationsScaling();
 
@@ -228,6 +225,11 @@ namespace Opm {
 
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
+
+        void extractWellPerfProperties(const SolutionState& state,
+                                       std::vector<ADB>& mob_perfcells,
+                                       std::vector<ADB>& b_perfcells);
+
 
         // compute effective viscosities (mu_eff_) and effective b factors (b_eff_)  using the ToddLongstaff model
         void computeEffectiveProperties(const SolutionState&  state);
