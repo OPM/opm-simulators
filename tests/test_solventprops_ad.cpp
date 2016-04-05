@@ -52,14 +52,14 @@ MISCIBLE\n\
 1  3 /\n\
 \n\
 DIMENS \n\
-1 1 1 \n\
+3 1 1 \n\
 /\n\
 TABDIMS\n\
 /\n\
 GRID \n\
 \n\
 DXV \n\
-1 \n\
+1 1 1\n\
 /\n\
 DYV \n\
 1 \n\
@@ -92,8 +92,8 @@ BOOST_AUTO_TEST_CASE(Construction)
         Opm::DeckPtr deck =  parser->parseString(deckData + solventData, parseContext);
         Opm::EclipseStateConstPtr eclState;
         eclState.reset(new Opm::EclipseState(deck , parseContext));
-        const int global_ind = 0;
-        Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 1, &global_ind);
+        std::vector<int> global_ind = {0 , 1 , 2};
+        Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind.data());
 }
 
 BOOST_AUTO_TEST_CASE(SolventData)
@@ -103,14 +103,15 @@ BOOST_AUTO_TEST_CASE(SolventData)
         Opm::DeckPtr deck =  parser->parseString(deckData + solventData, parseContext);
         Opm::EclipseStateConstPtr eclState;
         eclState.reset(new Opm::EclipseState(deck , parseContext));
-        const int global_ind = 0;
-        Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 1, &global_ind);
+        std::vector<int> global_ind = {0 , 1 , 2};
+        Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind.data());
 
-        const Opm::SolventPropsAdFromDeck::Cells cells(1, 0);
+        const Opm::SolventPropsAdFromDeck::Cells cells(3, 0);
         typedef Opm::SolventPropsAdFromDeck::V V;
         V rho = solventprops.solventSurfaceDensity(cells);
         BOOST_REQUIRE_EQUAL(rho.size(), cells.size());
         BOOST_CHECK_EQUAL(rho[0], 0.1);
+        BOOST_CHECK_EQUAL(rho[0], rho[1]);
 }
 
 const std::string pmiscData = "\n\
@@ -130,8 +131,8 @@ BOOST_AUTO_TEST_CASE(PMISC)
         eclState.reset(new Opm::EclipseState(deck , parseContext));
         const Opm::SolventPropsAdFromDeck::Cells cells(3, 0);
         typedef Opm::SolventPropsAdFromDeck::V V;
-        const int* global_ind = new int[3] {0 , 1 , 2};
-        Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind);
+        std::vector<int> global_ind = {0 , 1 , 2};
+        Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind.data());
         V po(3);
         po << 150,250,550;
         po = po * Opm::unit::barsa;
