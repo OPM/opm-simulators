@@ -28,6 +28,7 @@ install:
     - git clone https://github.com/OPM/opm-material.git
     - git clone https://github.com/OPM/opm-core.git
     - git clone https://github.com/OPM/dune-cornerpoint.git
+    - git clone https://github.com/OPM/opm-output.git
     - git clone https://github.com/OPM/opm-data.git
 
     - opm-parser/travis/clone-and-build-ert.sh
@@ -42,5 +43,6 @@ install:
     - opm-material/travis/build-opm-material.sh
     - opm-core/travis/build-opm-core.sh
     - dune-cornerpoint/travis/build-dune-cornerpoint.sh
+    - opm-output/travis/build-opm-output.sh
 
 script: opm-autodiff/travis/build-and-test-opm-autodiff.sh
