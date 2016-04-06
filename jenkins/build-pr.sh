@@ -7,7 +7,7 @@ OPM_COMMON_REVISION=master
 OPM_PARSER_REVISION=master
 OPM_MATERIAL_REVISION=master
 OPM_CORE_REVISION=master
-DUNE_CORNERPOINT_REVISION=master
+OPM_GRID_REVISION=master
 OPM_OUTPUT_REVISION=master
 OPM_AUTODIFF_REVISION=$sha1
 
@@ -36,9 +36,9 @@ then
   OPM_CORE_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-core=([0-9]+).*/\1/g'`/merge
 fi
 
-if grep -q "dune-cornerpoint=" <<< $ghprbCommentBody
+if grep -q "opm-grid=" <<< $ghprbCommentBody
 then
-  DUNE_CORNERPOINT_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*dune-cornerpoint=([0-9]+).*/\1/g'`/merge
+  OPM_GRID_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-grid=([0-9]+).*/\1/g'`/merge
 fi
 
 if grep -q "opm-output=" <<< $ghprbCommentBody
@@ -46,7 +46,7 @@ then
   OPM_OUTPUT_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-output=([0-9]+).*/\1/g'`/merge
 fi
 
-echo "Building with ert=$ERT_REVISION opm-common=$OPM_COMMON_REVISION opm-parser=$OPM_PARSER_REVISION opm-material=$OPM_MATERIAL_REVISION opm-core=$OPM_CORE_REVISION dune-cornerpoint=$DUNE_CORNERPOINT_REVISION opm-output=$OPM_OUTPUT_REVISION opm-autodiff=$OPM_AUTODIFF_REVISION"
+echo "Building with ert=$ERT_REVISION opm-common=$OPM_COMMON_REVISION opm-parser=$OPM_PARSER_REVISION opm-material=$OPM_MATERIAL_REVISION opm-core=$OPM_CORE_REVISION opm-grid=$OPM_GRID_REVISION opm-output=$OPM_OUTPUT_REVISION opm-autodiff=$OPM_AUTODIFF_REVISION"
 
 build_opm_autodiff
 test $? -eq 0 || exit 1

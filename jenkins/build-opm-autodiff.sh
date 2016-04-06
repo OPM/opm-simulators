@@ -50,8 +50,8 @@ function build_opm_autodiff {
   clone_and_build_module opm-core "-DCMAKE_PREFIX_PATH=$WORKSPACE/serial/install -DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install" $OPM_CORE_REVISION $WORKSPACE/serial
   test $? -eq 0 || exit 1
 
-  # Build dune-cornerpoint
-  clone_and_build_module dune-cornerpoint "-DCMAKE_PREFIX_PATH=$WORKSPACE/serial/install -DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install" $DUNE_CORNERPOINT_REVISION $WORKSPACE/serial
+  # Build opm-grid
+  clone_and_build_module opm-grid "-DCMAKE_PREFIX_PATH=$WORKSPACE/serial/install -DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install" $OPM_GRID_REVISION $WORKSPACE/serial
   test $? -eq 0 || exit 1
 
   # Build opm-output
