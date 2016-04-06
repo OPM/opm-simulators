@@ -1,19 +1,20 @@
 #!/bin/bash
 
-# Build flow_polymer binary
-pushd .
-cd serial/build-opm-autodiff
-cmake --build . --target flow_polymer
-popd
-
 # Clone opm-data if necessary
-pushd .
-cd deps
-if ! test -d opm-data
+if ! test -d deps/opm-data
 then
-  git clone --depth 1 --single-branch -b master https://github.com/OPM/opm-data
+  OPM_DATA_REVISION="master"
+  if grep -q "opm-data=" <<< $ghprbCommentBody
+  then
+    OPM_DATA_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-data=([0-9]+).*/\1/g'`/merge
+  fi
+  source $WORKSPACE/deps/opm-common/jenkins/build-opm-module.sh
+  echo "grabbing opm-data rev $OPM_DATA_REVISION"
+  clone_module opm-data $OPM_DATA_REVISION
 fi
-cd opm-data
+
+pushd .
+cd deps/opm-data
 
 # Run the simple2D polymer case
 cd polymer_test_suite/simple2D
