@@ -23,7 +23,7 @@ opm-common=&lt;pull request number&gt; and/or opm-parser=&lt;pull request number
 and/or opm-material=&lt;pull request number&gt;
 and/or opm-core=&lt;pull request number&gt;
 and/or dune-cornerpoint=&lt;pull request number&gt;
-and/or opm-output=&lt;pull request number&gt;.
+and/or opm-output=&lt;pull request number&gt;. asdfadsf
 
 **run-spe.sh**:
 This script will execute the SPE1, SPE3 and SPE9 cases, then compare against
