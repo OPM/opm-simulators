@@ -47,7 +47,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/VFPProdProperties.cpp
 	opm/autodiff/VFPInjProperties.cpp
 	opm/autodiff/WellMultiSegment.cpp
-	opm//autodiff/ThreadHandle.hpp
+	opm/autodiff/ThreadHandle.hpp
   opm/autodiff/BlackoilSolventState.cpp
   opm/polymer/PolymerState.cpp
   opm/polymer/PolymerBlackoilState.cpp
