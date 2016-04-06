@@ -269,11 +269,42 @@ namespace Opm {
             ADB              mob;   // Phase mobility (per cell)
         };
 
-        struct WellOps {
-            WellOps(const Wells* wells);
-            Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
-            Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
-            std::vector<int> well_cells;                  // the set of perforated cells
+        class StandardWells {
+        protected:
+            struct WellOps {
+                explicit WellOps(const Wells* wells);
+                Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
+                Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
+                std::vector<int> well_cells;                  // the set of perforated cells
+            };
+
+        public:
+            explicit StandardWells(const Wells* wells);
+
+            const Wells& wells() const;
+
+            // return true if wells are available in the reservoir
+            bool wellsActive() const;
+            void setWellsActive(const bool wells_active);
+            // return true if wells are available on this process
+            bool localWellsActive() const;
+
+            const WellOps& wellOps() const;
+
+            //Density of each well perforation
+            V& wellPerforationDensities();
+            const V& wellPerforationDensities() const;
+
+            // Diff to bhp for each well perforation.
+            V& wellPerforationPressureDiffs();
+            const V& wellPerforationPressureDiffs() const;
+
+        protected:
+            bool wells_active_;
+            const Wells*   wells_;
+            const WellOps  wops_;
+            V well_perforation_densities_;
+            V well_perforation_pressure_diffs_;
         };
 
         // ---------  Data members  ---------
@@ -282,7 +313,7 @@ namespace Opm {
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        const Wells*                    wells_;
+        StandardWells                   std_wells_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -291,13 +322,11 @@ namespace Opm {
         const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
         HelperOps                       ops_;
-        const WellOps                   wops_;
         const bool has_disgas_;
         const bool has_vapoil_;
 
         ModelParameters                 param_;
         bool use_threshold_pressure_;
-        bool wells_active_;
         V threshold_pressures_by_connection_;
 
         std::vector<ReservoirResidualQuant> rq_;
@@ -305,8 +334,6 @@ namespace Opm {
         V isRs_;
         V isRv_;
         V isSg_;
-        V well_perforation_densities_; //Density of each well perforation
-        V well_perforation_pressure_diffs_; // Diff to bhp for each well perforation.
 
         LinearisedBlackoilResidual residual_;
 
@@ -338,12 +365,18 @@ namespace Opm {
             return static_cast<const Implementation&>(*this);
         }
 
-        // return true if wells are available in the reservoir
-        bool wellsActive() const { return wells_active_; }
-        // return true if wells are available on this process
-        bool localWellsActive() const { return wells_ ? (wells_->number_of_wells > 0 ) : false; }
-        // return wells object
-        const Wells& wells () const { assert( bool(wells_ != 0) ); return *wells_; }
+        /// return the StandardWells object
+        StandardWells& stdWells() { return std_wells_; }
+        const StandardWells& stdWells() const { return std_wells_; }
+
+        /// return the Well struct in the StandardWells
+        const Wells& wells() const { return std_wells_.wells(); }
+
+        /// return true if wells are available in the reservoir
+        bool wellsActive() const { return std_wells_.wellsActive(); }
+
+        /// return true if wells are available on this process
+        bool localWellsActive() const { return std_wells_.localWellsActive(); }
 
         int numWellVars() const;
 

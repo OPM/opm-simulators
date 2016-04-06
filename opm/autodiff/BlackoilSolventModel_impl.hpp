@@ -180,7 +180,7 @@ namespace Opm {
     BlackoilSolventModel<Grid>::variableStateExtractVars(const ReservoirState& x,
                                                          const std::vector<int>& indices,
                                                          std::vector<ADB>& vars) const
-    {         
+    {
         // This is more or less a copy of the base class. Refactoring is needed in the base class
         // to avoid unnecessary copying.
 
@@ -389,7 +389,6 @@ namespace Opm {
                                                                                  std::vector<double>& rvmax_perf,
                                                                                  std::vector<double>& surf_dens_perf)
     {
-
         using namespace Opm::AutoDiffGrid;
         // 1. Compute properties required by computeConnectionPressureDelta().
         //    Note that some of the complexity of this part is due to the function
@@ -765,7 +764,7 @@ namespace Opm {
         Base::extractWellPerfProperties(state, mob_perfcells, b_perfcells);
         if (has_solvent_) {
             int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
-            const std::vector<int>& well_cells = wops_.well_cells;
+            const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
             const int nperf = well_cells.size();
             // Gas and solvent is combinded and solved together
             // The input in the well equation is then the
