@@ -14,18 +14,18 @@ namespace Opm
   class ThreadHandle
   {
   public:
-    class ObjectIF
+    class ObjectInterface
     {
     protected:
-      ObjectIF() {}
+      ObjectInterface() {}
     public:
-      virtual ~ObjectIF() {}
+      virtual ~ObjectInterface() {}
       virtual void run() = 0;
       virtual bool isEndMarker () const { return false; }
     };
 
   protected:
-    class EndObject : public ObjectIF
+    class EndObject : public ObjectInterface
     {
     public:
       void run () { }
@@ -37,21 +37,22 @@ namespace Opm
     ////////////////////////////////////////////
     class ThreadHandleObject
     {
-      std::queue< ObjectIF* > objPtr_;
+    protected:
+      std::queue< ObjectInterface* > objPtr_;
       std::mutex  mutex_;
 
       // no copying
-      ThreadHandleObject( const ThreadHandleObject& );
+      ThreadHandleObject( const ThreadHandleObject& ) = delete;
 
     public:
-      // constructor creating thread with given thread number
+      // constructor creating object that is executed by thread
       ThreadHandleObject()
         : objPtr_(), mutex_()
       {
       }
 
-      //! insert object into queue
-      void push_back( ObjectIF* obj )
+      //! insert object into threads queue
+      void push_back( ObjectInterface* obj )
       {
         // lock mutex to make sure objPtr is not used
         mutex_.lock();
@@ -59,18 +60,14 @@ namespace Opm
         mutex_.unlock();
       }
 
-      //! return 1 of thread is stoped, 0 otherwise
-      int stoped() const
-      {
-        return ( objPtr_.empty() ) ? 1 : 0;
-      }
-
       // do the work
       void run()
       {
+        // wait until objects have been pushed to the queue
         while( objPtr_.empty() )
         {
-          sleep( 1 );
+          // sleep one second
+          std::this_thread::sleep_for( std::chrono::seconds(1) );
         }
 
         {
@@ -78,7 +75,7 @@ namespace Opm
             mutex_.lock();
 
             // get next object from queue
-            std::unique_ptr< ObjectIF > obj( objPtr_.front() );
+            std::unique_ptr< ObjectInterface > obj( objPtr_.front() );
             objPtr_.pop();
 
             // unlock mutex for access to objPtr_
@@ -112,7 +109,7 @@ namespace Opm
 
   private:
     // prohibit copying
-    ThreadHandle( const ThreadHandle& );
+    ThreadHandle( const ThreadHandle& ) = delete;
 
   public:
     // default constructor
@@ -125,7 +122,7 @@ namespace Opm
     } // end constructor
 
     //! dispatch object to separate thread
-    void dispatch( ObjectIF* obj )
+    void dispatch( ObjectInterface* obj )
     {
       // add object to queue of objects
       threadObject_.push_back( obj ) ;

@@ -257,7 +257,7 @@ namespace Opm
 
     namespace detail {
 
-        struct WriterCall : public ThreadHandle :: ObjectIF
+        struct WriterCall : public ThreadHandle :: ObjectInterface
         {
             BlackoilOutputWriter& writer_;
             std::unique_ptr< SimulatorTimerInterface > timer_;
