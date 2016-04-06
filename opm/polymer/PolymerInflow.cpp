@@ -28,6 +28,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellPolymerProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/WellInjectionProperties.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <map>
 #include <unordered_map>
 #include <memory>
@@ -77,6 +78,7 @@ namespace Opm
                 WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
                 wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
             } else {
+                OpmLog::error("For polymer injector you must have a water injector");
                 OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
             }
         }
@@ -106,6 +108,8 @@ namespace Opm
                 }
             }
             if (wix == wells.number_of_wells) {
+                OpmLog::error("Could not find a match for well" + map_it->first + 
+                              "from WPOLYMER");
                 OPM_THROW(std::runtime_error, "Could not find a match for well "
                           << map_it->first
                           << " from WPOLYMER.");

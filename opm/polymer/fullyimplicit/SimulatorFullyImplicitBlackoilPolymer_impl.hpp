@@ -108,10 +108,12 @@ namespace Opm
         std::unique_ptr<PolymerInflowInterface> polymer_inflow_ptr;
         if (deck_->hasKeyword("WPOLYMER")) {
             if (wells_manager.c_wells() == 0) {
+                OpmLog::error("Cannot control polymer injection via WPOLYMER without wells.");
                 OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
             }
             polymer_inflow_ptr.reset(new PolymerInflowFromDeck(BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
         } else {
+            OpmLog::warning("simulating with no WPOLYMER in deck (no polymer will be injected)");
             OPM_MESSAGE("Warning: simulating with no WPOLYMER in deck (no polymer will be injected).");
             polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
                                                             1.0*Opm::unit::day,

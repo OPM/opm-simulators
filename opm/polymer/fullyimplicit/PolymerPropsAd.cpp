@@ -24,6 +24,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 namespace Opm {
 
@@ -107,6 +108,7 @@ namespace Opm {
         if (polymer_props_.hasShrate()) {
             return polymer_props_.shrate();
         } else {
+            OpmLog::error("SHRATE keyword is not specified while requested.")
             OPM_THROW(std::logic_error, "the SHRATE keyword is not specified while requested \n");
         }
     }

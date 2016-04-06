@@ -30,7 +30,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/Units/Dimension.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
-
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <cmath>
 #include <vector>
@@ -187,6 +187,7 @@ namespace Opm
                     } else if (shrate_readin.size() == 0) {
                         shrate_ = 4.8; // default value
                     } else {
+                        OpmLog::error("Only NTPVT == 1 is allowed for SHRATE keyword now");
                         OPM_THROW(std::logic_error, "Only NTPVT == 1 is allowed for SHRATE keyword now !\n");
                     }
                 } else {
