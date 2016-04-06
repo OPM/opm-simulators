@@ -39,6 +39,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -105,7 +106,8 @@ namespace Opm {
     {
         if (has_polymer_) {
             if (!active_[Water]) {
-                OPM_THROW(std::logic_error, "Polymer must solved in water!\n");
+                OpmLog::error("Polymer must be solved in water!");
+                OPM_THROW(std::logic_error, "Polymer must be solved in water!\n");
             }
             residual_.matbalscale.resize(fluid_.numPhases() + 1, 1.1169); // use the same as the water phase
             // If deck has polymer, residual_ should contain polymer equation.

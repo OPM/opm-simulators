@@ -29,6 +29,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 namespace Opm
 {
@@ -60,6 +61,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                         = densityKeyword.getRecord(regionIdx).getItem("SOLVENT_DENSITY").getSIDouble(0);
             }
         } else {
+            OpmLog::error("SDENSITY must be specified in SOLVENT run.");
             OPM_THROW(std::runtime_error, "SDENSITY must be specified in SOLVENT runs\n");
         }
 
@@ -94,6 +96,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 inverseBmu_[regionIdx] = NonuniformTableLinear<double>(press, inverseBmu);
             }
         } else {
+            OpmLog::error("PVDS must be specified in SOLVENT runs.");
             OPM_THROW(std::runtime_error, "PVDS must be specified in SOLVENT runs\n");
         }
 
@@ -119,6 +122,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             }
 
         } else {
+            OpmLog::error("SSFN must be specified in SOLVENT run.");
             OPM_THROW(std::runtime_error, "SSFN must be specified in SOLVENT runs\n");
         }
 
@@ -150,6 +154,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
 
             } else {
+                OpmLog::error("SOF2 must be specified in MISCIBLE (SOLVENT) run.");
                 OPM_THROW(std::runtime_error, "SOF2 must be specified in MISCIBLE (SOLVENT) runs\n");
             }
 
@@ -172,6 +177,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
 
                 }
             } else {
+                OpmLog::error("MISC must be specified in MISCIBLE (SOLVENT) run.");
                 OPM_THROW(std::runtime_error, "MISC must be specified in MISCIBLE (SOLVENT) runs\n");
             }
 
@@ -271,6 +277,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                     } else if (numDensityItems == 1) {
                         mix_param_density_[regionIdx] = mix_params_density[0];
                     } else {
+                        OpmLog::error("Only one value can be entered for the TL parameter pr MISC region");
                         OPM_THROW(std::runtime_error, "Only one value can be entered for the TL parameter pr MISC region.");
                     }
                 }
@@ -298,6 +305,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                     if (pmisc_.size() > 0) {
                         tlpmix_param_ = pmisc_;
                     } else {
+                        OpmLog::error("If the pressure dependent TL values in TLPMIXPA is defaulted (no entries), then the PMISC tables must be specified.");
                         OPM_THROW(std::invalid_argument, "If the pressure dependent TL values in TLPMIXPA is defaulted (no entries), then the PMISC tables must be specified.");
                     }
                 }

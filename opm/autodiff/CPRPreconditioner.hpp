@@ -43,7 +43,7 @@
 #include <dune/istl/paamg/pinfo.hh>
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
@@ -553,6 +553,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
             }
 
             if (!result.converged) {
+                OpmLog::error("CPRPreconditioner failed to solve elliptic subsystem.");
                 OPM_THROW(LinearSolverProblem, "CPRPreconditioner failed to solve elliptic subsystem.");
             }
         }

@@ -35,6 +35,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 namespace Opm
 {
@@ -117,10 +118,12 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 {
     const int original_size = props.cellPvtRegionIdx_.size();
     if (number_of_cells > original_size) {
+        OpmLog::error("For Blackoil properties, the number of cells is larger than the one of the original grid!");
         OPM_THROW(std::runtime_error, "The number of cells is larger than the one of the original grid!");
     }
     if (number_of_cells < 0) {
-        OPM_THROW(std::runtime_error, "The number of cells is has to be larger than 0.");
+        OpmLog::error("The number of cells has to be larger than 0.");
+        OPM_THROW(std::runtime_error, "The number of cells has to be larger than 0.");
     }
 
     materialLawManager_ = materialLawManager;
@@ -197,6 +200,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             vap2_ = deck->getKeyword("VAPPARS").getRecord(0).getItem(1).get< double >(0);
             satOilMax_.resize(number_of_cells, 0.0);
         } else if (deck->hasKeyword("VAPPARS")) {
+            OpmLog::error("Input has VAPPARS, but missing VAPOIL and/or DISGAS");
             OPM_THROW(std::runtime_error, "Input has VAPPARS, but missing VAPOIL and/or DISGAS\n");
         }
 

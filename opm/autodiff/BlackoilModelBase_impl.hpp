@@ -49,6 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/common/data/SimulationDataContainer.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -2663,6 +2664,7 @@ namespace detail {
             const double massBalanceResid = detail::infinityNorm( (*massBalanceIt),
                                                                   linsolver_.parallelInformation() );
             if (!std::isfinite(massBalanceResid)) {
+                OpmLog::error("Encountered a non-finite residual.");
                 OPM_THROW(Opm::NumericalProblem,
                           "Encountered a non-finite residual");
             }
@@ -2673,6 +2675,7 @@ namespace detail {
         const double wellFluxResid = detail::infinityNormWell( residual_.well_flux_eq,
                                                                linsolver_.parallelInformation() );
         if (!std::isfinite(wellFluxResid)) {
+            OpmLog::error("Encountered a non-finite residual.");
             OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
@@ -2681,7 +2684,8 @@ namespace detail {
         const double wellResid = detail::infinityNormWell( residual_.well_eq,
                                                            linsolver_.parallelInformation() );
         if (!std::isfinite(wellResid)) {
-           OPM_THROW(Opm::NumericalProblem,
+            OpmLog::error("Encountered a non-finite residual.");
+            OPM_THROW(Opm::NumericalProblem,
                "Encountered a non-finite residual");
         }
         residualNorms.push_back(wellResid);
