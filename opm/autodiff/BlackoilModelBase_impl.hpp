@@ -49,7 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/common/data/SimulationDataContainer.hpp>
-#include <opm/comon/OpmLog/OpmLog.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <cassert>
 #include <cmath>
 #include <iostream>
