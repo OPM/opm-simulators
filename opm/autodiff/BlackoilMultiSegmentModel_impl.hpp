@@ -359,7 +359,7 @@ namespace Opm {
     void BlackoilMultiSegmentModel<Grid>::computeWellConnectionPressures(const SolutionState& state,
                                                                          const WellState& xw)
     {
-        if( ! stdWells().wellsActive() ) return ;
+        if( ! wellsActive() ) return ;
 
         using namespace Opm::AutoDiffGrid;
         // 1. Compute properties required by computeConnectionPressureDelta().
@@ -462,13 +462,13 @@ namespace Opm {
         // 2. Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        stdWells().wells(), xw, fluid_.phaseUsage(),
+                        wells(), xw, fluid_.phaseUsage(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // 3. Compute pressure deltas
         std::vector<double> cdp =
                 WellDensitySegmented::computeConnectionPressureDelta(
-                        stdWells().wells(), perf_cell_depth, cd, grav);
+                        wells(), perf_cell_depth, cd, grav);
 
         // 4. Store the results
         stdWells().wellPerforationDensities() = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
@@ -621,7 +621,7 @@ namespace Opm {
 
         // -------- Well equations ----------
 
-        if ( ! stdWells().wellsActive() ) {
+        if ( ! wellsActive() ) {
             return;
         }
 
@@ -765,7 +765,7 @@ namespace Opm {
             // TODO: although we can begin from the brutal force way)
 
             // TODO: stop using wells() here.
-            const DataBlock compi = Eigen::Map<const DataBlock>(stdWells().wells().comp_frac, nw, np);
+            const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
             std::vector<ADB> wbq(np, ADB::null());
             ADB wbqt = ADB::constant(V::Zero(nseg));
 
@@ -939,7 +939,7 @@ namespace Opm {
     template <class Grid>
     void BlackoilMultiSegmentModel<Grid>::updateWellControls(WellState& xw) const
     {
-        if( ! stdWells().wellsActive() ) return ;
+        if( ! wellsActive() ) return ;
 
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,

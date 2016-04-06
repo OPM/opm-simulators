@@ -384,8 +384,8 @@ namespace Opm {
             const ADB mc = computeMc(state);
             const int nc = xw.polymerInflow().size();
             const V polyin = Eigen::Map<const V>(xw.polymerInflow().data(), nc);
-            const int nperf = stdWells().wells().well_connpos[stdWells().wells().number_of_wells];
-            const std::vector<int> well_cells(stdWells().wells().well_cells, stdWells().wells().well_cells + nperf);
+            const int nperf = wells().well_connpos[wells().number_of_wells];
+            const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
             const V poly_in_perf = subset(polyin, well_cells);
             const V poly_mc_perf = subset(mc.value(), well_cells);
             const ADB& cq_s_water = cq_s[fluid_.phaseUsage().phase_pos[Water]];
@@ -525,18 +525,18 @@ namespace Opm {
         assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
-        if ( ! stdWells().wellsActive() ) {
+        if ( ! wellsActive() ) {
             return;
         }
 
         V aliveWells;
 
-        const int np = stdWells().wells().number_of_phases;
+        const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
 
-        const int nw = stdWells().wells().number_of_wells;
-        const int nperf = stdWells().wells().well_connpos[nw];
-        const std::vector<int> well_cells(stdWells().wells().well_cells, stdWells().wells().well_cells + nperf);
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
         std::vector<ADB> mob_perfcells(np, ADB::null());
         std::vector<ADB> b_perfcells(np, ADB::null());
@@ -710,11 +710,11 @@ namespace Opm {
     BlackoilPolymerModel<Grid>::computeWaterShearVelocityWells(const SolutionState& state, WellState& xw, const ADB& cq_sw,
                                                                std::vector<double>& water_vel_wells, std::vector<double>& visc_mult_wells)
     {
-        if( ! stdWells().wellsActive() ) return ;
+        if( ! wellsActive() ) return ;
 
-        const int nw = stdWells().wells().number_of_wells;
-        const int nperf = stdWells().wells().well_connpos[nw];
-        const std::vector<int> well_cells(stdWells().wells().well_cells, stdWells().wells().well_cells + nperf);
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
 
         water_vel_wells.resize(cq_sw.size());
         std::copy(cq_sw.value().data(), cq_sw.value().data() + cq_sw.size(), water_vel_wells.begin());

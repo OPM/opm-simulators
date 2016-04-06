@@ -131,6 +131,7 @@ namespace Opm {
 
         // Need to declare Base members we want to use here.
         using Base::stdWells;
+        using Base::wells;
         using Base::variableState;
         using Base::computeGasPressure;
         using Base::applyThresholdPressures;

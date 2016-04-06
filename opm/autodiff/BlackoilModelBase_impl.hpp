@@ -194,9 +194,10 @@ namespace detail {
                 // Only rank 0 does print to std::cout if terminal_output is enabled
                 terminal_output_ = (info.communicator().rank()==0);
             }
-            int local_number_of_wells = stdWells().localWellsActive() ? stdWells().wells().number_of_wells : 0;
+            int local_number_of_wells = localWellsActive() ? wells().number_of_wells : 0;
             int global_number_of_wells = info.communicator().sum(local_number_of_wells);
-            stdWells().wellsActive() = ( stdWells().localWellsActive() && global_number_of_wells > 0 );
+            const bool wells_active = ( localWellsActive() && global_number_of_wells > 0 );
+            stdWells().setWellsActive(wells_active);
             // Compute the global number of cells
             std::vector<int> v( Opm::AutoDiffGrid::numCells(grid_), 1);
             global_nc_ = 0;
@@ -204,7 +205,8 @@ namespace detail {
         }else
 #endif
         {
-            stdWells().wellsActive() = ( stdWells().localWellsActive() && stdWells().wells().number_of_wells > 0 );
+            const bool wells_active = ( localWellsActive() && wells().number_of_wells > 0 );
+            stdWells().setWellsActive(wells_active);
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
     }
@@ -497,11 +499,11 @@ namespace detail {
 
 
     template <class Grid, class Implementation>
-    bool&
+    void
     BlackoilModelBase<Grid, Implementation>::
-    StandardWells::wellsActive()
+    StandardWells::setWellsActive(const bool wells_active)
     {
-        return wells_active_;
+        wells_active_ = wells_active;
     }
 
 
@@ -585,7 +587,7 @@ namespace detail {
     BlackoilModelBase<Grid, Implementation>::numWellVars() const
     {
         // For each well, we have a bhp variable, and one flux per phase.
-        const int nw = stdWells().localWellsActive() ? stdWells().wells().number_of_wells : 0;
+        const int nw = stdWells().localWellsActive() ? wells().number_of_wells : 0;
         return (numPhases() + 1) * nw;
     }
 
@@ -705,8 +707,8 @@ namespace detail {
         {
             // Need to reshuffle well rates, from phase running fastest
             // to wells running fastest.
-            const int nw = stdWells().wells().number_of_wells;
-            const int np = stdWells().wells().number_of_phases;
+            const int nw = wells().number_of_wells;
+            const int np = wells().number_of_phases;
 
             // The transpose() below switches the ordering.
             const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
@@ -926,15 +928,15 @@ namespace detail {
                                                                                               std::vector<double>& rvmax_perf,
                                                                                               std::vector<double>& surf_dens_perf)
     {
-        const int nperf = stdWells().wells().well_connpos[stdWells().wells().number_of_wells];
-        const int nw = stdWells().wells().number_of_wells;
+        const int nperf = wells().well_connpos[wells().number_of_wells];
+        const int nw = wells().number_of_wells;
 
         // Compute the average pressure in each well block
         const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
         V avg_press = perf_press*0;
         for (int w = 0; w < nw; ++w) {
-            for (int perf = stdWells().wells().well_connpos[w]; perf < stdWells().wells().well_connpos[w+1]; ++perf) {
-                const double p_above = perf == stdWells().wells().well_connpos[w] ? state.bhp.value()[w] : perf_press[perf - 1];
+            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                const double p_above = perf == wells().well_connpos[w] ? state.bhp.value()[w] : perf_press[perf - 1];
                 const double p_avg = (perf_press[perf] + p_above)/2;
                 avg_press[perf] = p_avg;
             }
@@ -1010,15 +1012,15 @@ namespace detail {
         std::vector<double> rvmax_perf;
         std::vector<double> surf_dens_perf;
         asImpl().computePropertiesForWellConnectionPressures(state, xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-                
+
         // 2. Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        stdWells().wells(), xw, fluid_.phaseUsage(),
+                        wells(), xw, fluid_.phaseUsage(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         const int nperf = wells().well_connpos[wells().number_of_wells];
-        const std::vector<int>& well_cells = wops_.well_cells;
+        const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
 
         // Extract well connection depths.
         const V depth = cellCentroidsZToEigen(grid_);
@@ -1031,7 +1033,7 @@ namespace detail {
         // 3. Compute pressure deltas
         std::vector<double> cdp =
                 WellDensitySegmented::computeConnectionPressureDelta(
-                        stdWells().wells(), perf_depth, cd, grav);
+                        wells(), perf_depth, cd, grav);
 
         // 4. Store the results
         stdWells().wellPerforationDensities() = Eigen::Map<const V>(cd.data(), nperf);
@@ -1092,7 +1094,7 @@ namespace detail {
 
         // -------- Well equations ----------
 
-        if ( ! stdWells().wellsActive() ) {
+        if ( ! wellsActive() ) {
             return;
         }
 
@@ -1223,7 +1225,7 @@ namespace detail {
                                                                                 const SolutionState&,
                                                                                 const WellState&)
     {
-        if ( !asImpl().stdWells().localWellsActive() )
+        if ( !asImpl().localWellsActive() )
         {
             // If there are no wells in the subdomain of the proces then
             // cq_s has zero size and will cause a segmentation fault below.
@@ -1251,7 +1253,7 @@ namespace detail {
     {
         // If we have wells, extract the mobilities and b-factors for
         // the well-perforated cells.
-        if (!asImpl().stdWells().localWellsActive()) {
+        if (!asImpl().localWellsActive()) {
             mob_perfcells.clear();
             b_perfcells.clear();
             return;
@@ -1280,13 +1282,13 @@ namespace detail {
                                                              V& aliveWells,
                                                              std::vector<ADB>& cq_s) const
     {
-        if( ! stdWells().localWellsActive() ) return ;
+        if( ! localWellsActive() ) return ;
 
-        const int np = stdWells().wells().number_of_phases;
-        const int nw = stdWells().wells().number_of_wells;
-        const int nperf = stdWells().wells().well_connpos[nw];
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        V Tw = Eigen::Map<const V>(stdWells().wells().WI, nperf);
+        V Tw = Eigen::Map<const V>(wells().WI, nperf);
         const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
 
         // pressure diffs computed already (once per step, not changing per iteration)
@@ -1320,15 +1322,15 @@ namespace detail {
         const V numInjectingPerforations = (stdWells().wellOps().p2w * ADB::constant(selectInjectingPerforations)).value();
         const V numProducingPerforations = (stdWells().wellOps().p2w * ADB::constant(selectProducingPerforations)).value();
         for (int w = 0; w < nw; ++w) {
-            if (!stdWells().wells().allow_cf[w]) {
-                for (int perf = stdWells().wells().well_connpos[w] ; perf < stdWells().wells().well_connpos[w+1]; ++perf) {
+            if (!wells().allow_cf[w]) {
+                for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
                     // Crossflow is not allowed; reverse flow is prevented.
                     // At least one of the perforation must be open in order to have a meeningful
                     // equation to solve. For the special case where all perforations have reverse flow,
                     // and the target rate is non-zero all of the perforations are keept open.
-                    if (stdWells().wells().type[w] == INJECTOR && numInjectingPerforations[w] > 0) {
+                    if (wells().type[w] == INJECTOR && numInjectingPerforations[w] > 0) {
                         selectProducingPerforations[perf] = 0.0;
-                    } else if (stdWells().wells().type[w] == PRODUCER && numProducingPerforations[w] > 0 ){
+                    } else if (wells().type[w] == PRODUCER && numProducingPerforations[w] > 0 ){
                         selectInjectingPerforations[perf] = 0.0;
                     }
                 }
@@ -1365,7 +1367,7 @@ namespace detail {
         // and the well injection rates.
 
         // compute avg. and total wellbore phase volumetric rates at standard conds
-        const DataBlock compi = Eigen::Map<const DataBlock>(stdWells().wells().comp_frac, nw, np);
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
         std::vector<ADB> wbq(np, ADB::null());
         ADB wbqt = ADB::constant(V::Zero(nw));
         for (int phase = 0; phase < np; ++phase) {
@@ -1428,7 +1430,7 @@ namespace detail {
                                                                                    const SolutionState& state,
                                                                                    WellState& xw) const
     {
-        if ( !asImpl().stdWells().localWellsActive() )
+        if ( !asImpl().localWellsActive() )
         {
             // If there are no wells in the subdomain of the proces then
             // cq_s has zero size and will cause a segmentation fault below.
@@ -1436,9 +1438,9 @@ namespace detail {
         }
 
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
-        const int np = stdWells().wells().number_of_phases;
-        const int nw = stdWells().wells().number_of_wells;
-        const int nperf = stdWells().wells().well_connpos[nw];
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
         V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
         for (int phase = 1; phase < np; ++phase) {
             cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
@@ -1459,15 +1461,15 @@ namespace detail {
     void BlackoilModelBase<Grid, Implementation>::addWellFluxEq(const std::vector<ADB>& cq_s,
                                                                 const SolutionState& state)
     {
-        if( !asImpl().stdWells().localWellsActive() )
+        if( !asImpl().localWellsActive() )
         {
             // If there are no wells in the subdomain of the proces then
             // cq_s has zero size and will cause a segmentation fault below.
             return;
         }
 
-        const int np = stdWells().wells().number_of_phases;
-        const int nw = stdWells().wells().number_of_wells;
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
         ADB qs = state.qs;
         for (int phase = 0; phase < np; ++phase) {
             qs -= superset(stdWells().wellOps().p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
@@ -1616,7 +1618,7 @@ namespace detail {
     template <class Grid, class Implementation>
     bool BlackoilModelBase<Grid, Implementation>::isVFPActive() const
     {
-        if( ! stdWells().localWellsActive() ) {
+        if( ! localWellsActive() ) {
             return false;
         }
 
@@ -1624,10 +1626,10 @@ namespace detail {
             return false;
         }
 
-        const int nw = stdWells().wells().number_of_wells;
+        const int nw = wells().number_of_wells;
         //Loop over all wells
         for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = stdWells().wells().ctrls[w];
+            const WellControls* wc = wells().ctrls[w];
 
             const int nwc = well_controls_get_num(wc);
 
@@ -1648,17 +1650,17 @@ namespace detail {
     template <class Grid, class Implementation>
     void BlackoilModelBase<Grid, Implementation>::updateWellControls(WellState& xw) const
     {
-        if( ! stdWells().localWellsActive() ) return ;
+        if( ! localWellsActive() ) return ;
 
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
-        const int np = stdWells().wells().number_of_phases;
-        const int nw = stdWells().wells().number_of_wells;
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 #pragma omp parallel for schedule(dynamic)
         for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = stdWells().wells().ctrls[w];
+            const WellControls* wc = wells().ctrls[w];
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
@@ -1677,7 +1679,7 @@ namespace detail {
                 }
                 if (detail::constraintBroken(
                         xw.bhp(), xw.thp(), xw.wellRates(),
-                        w, np, stdWells().wells().type[w], wc, ctrl_index)) {
+                        w, np, wells().type[w], wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -1686,7 +1688,7 @@ namespace detail {
                 // Constraint number ctrl_index was broken, switch to it.
                 if (terminal_output_)
                 {
-                    std::cout << "Switching control mode for well " << stdWells().wells().name[w]
+                    std::cout << "Switching control mode for well " << wells().name[w]
                               << " from " << modestring[well_controls_iget_type(wc, current)]
                               << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 }
@@ -1726,19 +1728,19 @@ namespace detail {
                 const double& alq    = well_controls_iget_alq(wc, current);
 
                 //Set *BHP* target by calculating bhp from THP
-                const WellType& well_type = stdWells().wells().type[w];
+                const WellType& well_type = wells().type[w];
 
                 if (well_type == INJECTOR) {
                     double dp = detail::computeHydrostaticCorrection(
-                            stdWells().wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
+                            wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
                             stdWells().wellPerforationDensities(), gravity);
 
                     xw.bhp()[w] = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
                 else if (well_type == PRODUCER) {
                     double dp = detail::computeHydrostaticCorrection(
-                            stdWells().wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
-                            std_wells_.wellPerforationDensities(), gravity);
+                            wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
+                            stdWells().wellPerforationDensities(), gravity);
 
                     xw.bhp()[w] = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                 }
@@ -1758,10 +1760,10 @@ namespace detail {
             case SURFACE_RATE:
                 // assign target value as initial guess for injectors and
                 // single phase producers (orat, grat, wrat)
-                const WellType& well_type = stdWells().wells().type[w];
+                const WellType& well_type = wells().type[w];
                 if (well_type == INJECTOR) {
                     for (int phase = 0; phase < np; ++phase) {
-                        const double& compi = stdWells().wells().comp_frac[np * w + phase];
+                        const double& compi = wells().comp_frac[np * w + phase];
                         if (compi > 0.0) {
                             xw.wellRates()[np*w + phase] = target * compi;
                         }
@@ -1804,7 +1806,7 @@ namespace detail {
                                                               WellState& well_state)
     {
         V aliveWells;
-        const int np = stdWells().wells().number_of_phases;
+        const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
         std::vector<int> indices = variableWellStateIndices();
         SolutionState state0 = state;
@@ -1814,7 +1816,7 @@ namespace detail {
         std::vector<ADB> mob_perfcells_const(np, ADB::null());
         std::vector<ADB> b_perfcells_const(np, ADB::null());
 
-        if (asImpl().stdWells().localWellsActive() ){
+        if (asImpl().localWellsActive() ){
             // If there are non well in the sudomain of the process
             // thene mob_perfcells_const and b_perfcells_const would be empty
             for (int phase = 0; phase < np; ++phase) {
@@ -1845,7 +1847,7 @@ namespace detail {
             }
 
             ++it;
-            if( stdWells().localWellsActive() )
+            if( localWellsActive() )
             {
                 std::vector<ADB> eqs;
                 eqs.reserve(2);
@@ -1869,7 +1871,7 @@ namespace detail {
             if ( terminal_output_ ) {
                 std::cout << "well converged iter: " << it << std::endl;
             }
-            const int nw = stdWells().wells().number_of_wells;
+            const int nw = wells().number_of_wells;
             {
                 // We will set the bhp primary variable to the new ones,
                 // but we do not change the derivatives here.
@@ -1907,10 +1909,10 @@ namespace detail {
                                                           const WellState& xw,
                                                           const V& aliveWells)
     {
-        if( ! stdWells().localWellsActive() ) return;
+        if( ! localWellsActive() ) return;
 
-        const int np = stdWells().wells().number_of_phases;
-        const int nw = stdWells().wells().number_of_wells;
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
 
         ADB aqua   = ADB::constant(ADB::V::Zero(nw));
         ADB liquid = ADB::constant(ADB::V::Zero(nw));
@@ -1951,7 +1953,7 @@ namespace detail {
         //Run through all wells to calculate BHP/RATE targets
         //and gather info about current control
         for (int w = 0; w < nw; ++w) {
-            auto wc = stdWells().wells().ctrls[w];
+            auto wc = wells().ctrls[w];
 
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
@@ -1969,13 +1971,13 @@ namespace detail {
 
             case THP:
             {
-                const int perf = stdWells().wells().well_connpos[w];
+                const int perf = wells().well_connpos[w];
                 rho_v[w] = stdWells().wellPerforationDensities()[perf];
 
                 const int table_id = well_controls_iget_vfp(wc, current);
                 const double target = well_controls_iget_target(wc, current);
 
-                const WellType& well_type = stdWells().wells().type[w];
+                const WellType& well_type = wells().type[w];
                 if (well_type == INJECTOR) {
                     inj_table_id[w]  = table_id;
                     thp_inj_target_v[w] = target;
@@ -2033,7 +2035,7 @@ namespace detail {
 
         //Perform hydrostatic correction to computed targets
         double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const ADB::V dp_v = detail::computeHydrostaticCorrection(stdWells().wells(), vfp_ref_depth_v, stdWells().wellPerforationDensities(), gravity);
+        const ADB::V dp_v = detail::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, stdWells().wellPerforationDensities(), gravity);
         const ADB dp = ADB::constant(dp_v);
         const ADB dp_inj = superset(subset(dp, thp_inj_elems), thp_inj_elems, nw);
         const ADB dp_prod = superset(subset(dp, thp_prod_elems), thp_prod_elems, nw);
@@ -2407,10 +2409,10 @@ namespace detail {
                                                              WellState& well_state)
     {
 
-        if( stdWells().localWellsActive() )
+        if( localWellsActive() )
         {
-            const int np = stdWells().wells().number_of_phases;
-            const int nw = stdWells().wells().number_of_wells;
+            const int np = wells().number_of_phases;
+            const int nw = wells().number_of_wells;
 
             // Extract parts of dwells corresponding to each part.
             int varstart = 0;
@@ -2446,7 +2448,7 @@ namespace detail {
             //Loop over all wells
 #pragma omp parallel for schedule(static)
             for (int w=0; w<nw; ++w) {
-                const WellControls* wc = stdWells().wells().ctrls[w];
+                const WellControls* wc = wells().ctrls[w];
                 const int nwc = well_controls_get_num(wc);
                 //Loop over all controls until we find a THP control
                 //that specifies what we need...
@@ -2470,17 +2472,17 @@ namespace detail {
                         double alq = well_controls_iget_alq(wc, ctrl_index);
                         int table_id = well_controls_iget_vfp(wc, ctrl_index);
 
-                        const WellType& well_type = stdWells().wells().type[w];
+                        const WellType& well_type = wells().type[w];
                         if (well_type == INJECTOR) {
                             double dp = detail::computeHydrostaticCorrection(
-                                    stdWells().wells(), w, vfp_properties_.getInj()->getTable(table_id)->getDatumDepth(),
+                                    wells(), w, vfp_properties_.getInj()->getTable(table_id)->getDatumDepth(),
                                     stdWells().wellPerforationDensities(), gravity);
 
                             well_state.thp()[w] = vfp_properties_.getInj()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp);
                         }
                         else if (well_type == PRODUCER) {
                             double dp = detail::computeHydrostaticCorrection(
-                                    stdWells().wells(), w, vfp_properties_.getProd()->getTable(table_id)->getDatumDepth(),
+                                    wells(), w, vfp_properties_.getProd()->getTable(table_id)->getDatumDepth(),
                                     stdWells().wellPerforationDensities(), gravity);
 
                             well_state.thp()[w] = vfp_properties_.getProd()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp, alq);

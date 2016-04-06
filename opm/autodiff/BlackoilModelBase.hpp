@@ -285,7 +285,7 @@ namespace Opm {
 
             // return true if wells are available in the reservoir
             bool wellsActive() const;
-            bool& wellsActive();
+            void setWellsActive(const bool wells_active);
             // return true if wells are available on this process
             bool localWellsActive() const;
 
@@ -365,10 +365,18 @@ namespace Opm {
             return static_cast<const Implementation&>(*this);
         }
 
-
-        // return the StandardWells object
+        /// return the StandardWells object
         StandardWells& stdWells() { return std_wells_; }
         const StandardWells& stdWells() const { return std_wells_; }
+
+        /// return the Well struct in the StandardWells
+        const Wells& wells() const { return std_wells_.wells(); }
+
+        /// return true if wells are available in the reservoir
+        bool wellsActive() const { return std_wells_.wellsActive(); }
+
+        /// return true if wells are available on this process
+        bool localWellsActive() const { return std_wells_.localWellsActive(); }
 
         int numWellVars() const;
 
