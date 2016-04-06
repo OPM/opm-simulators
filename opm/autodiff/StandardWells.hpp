@@ -1,5 +1,6 @@
 /*
   Copyright 2016 SINTEF ICT, Applied Mathematics.
+  Copyright 2016 Statoil ASA.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -37,7 +38,6 @@ namespace Opm {
         // ---------      Types      ---------
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V Vector;
-        // typedef ADB::M Matrix;
 
         /// Class for handling the standard well model.
         class StandardWells {

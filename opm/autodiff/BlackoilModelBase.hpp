@@ -32,6 +32,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/StandardWells.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 #include <array>
@@ -267,44 +268,6 @@ namespace Opm {
             ADB              b;     // Reciprocal FVF
             ADB              dh;    // Pressure drop across int. interfaces
             ADB              mob;   // Phase mobility (per cell)
-        };
-
-        class StandardWells {
-        protected:
-            struct WellOps {
-                explicit WellOps(const Wells* wells);
-                Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
-                Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
-                std::vector<int> well_cells;                  // the set of perforated cells
-            };
-
-        public:
-            explicit StandardWells(const Wells* wells);
-
-            const Wells& wells() const;
-
-            // return true if wells are available in the reservoir
-            bool wellsActive() const;
-            void setWellsActive(const bool wells_active);
-            // return true if wells are available on this process
-            bool localWellsActive() const;
-
-            const WellOps& wellOps() const;
-
-            //Density of each well perforation
-            V& wellPerforationDensities();
-            const V& wellPerforationDensities() const;
-
-            // Diff to bhp for each well perforation.
-            V& wellPerforationPressureDiffs();
-            const V& wellPerforationPressureDiffs() const;
-
-        protected:
-            bool wells_active_;
-            const Wells*   wells_;
-            const WellOps  wops_;
-            V well_perforation_densities_;
-            V well_perforation_pressure_diffs_;
         };
 
         // ---------  Data members  ---------
