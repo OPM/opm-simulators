@@ -272,14 +272,14 @@ namespace Opm {
         class StandardWells {
         protected:
             struct WellOps {
-                WellOps(const Wells* wells);
+                explicit WellOps(const Wells* wells);
                 Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
                 Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
                 std::vector<int> well_cells;                  // the set of perforated cells
             };
 
         public:
-            StandardWells(const Wells* wells);
+            explicit StandardWells(const Wells* wells);
 
             const Wells& wells() const;
 
