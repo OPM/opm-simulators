@@ -24,7 +24,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/core/grid/GridManager.hpp>
 
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_OPM_GRID
 #include <dune/grid/CpGrid.hpp>
 #endif
 
@@ -67,7 +67,7 @@ namespace Opm
     };
 
 
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_OPM_GRID
     /// Specialization for CpGrid.
     template <>
     class GridInit<Dune::CpGrid>
@@ -86,7 +86,7 @@ namespace Opm
     private:
         Dune::CpGrid grid_;
     };
-#endif // HAVE_DUNE_CORNERPOINT
+#endif // HAVE_OPM_GRID
 
 
 } // namespace Opm

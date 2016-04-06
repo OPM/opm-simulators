@@ -33,7 +33,7 @@
 
 #include <boost/range/iterator_range.hpp>
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 #include <dune/grid/CpGrid.hpp>
 #include <dune/grid/cpgrid/GridHelpers.hpp>
 #include <dune/grid/polyhedralgrid.hh>
@@ -78,7 +78,7 @@ void extractInternalFaces(const UnstructuredGrid& grid,
 } // end namespace AutoDiffGrid
 } // end namespace Opm
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 namespace Opm
 {
 
@@ -144,7 +144,7 @@ struct ADFaceCellTraits<UnstructuredGrid>
     typedef Eigen::Array<int, Eigen::Dynamic, 2, Eigen::RowMajor> Type;
 };
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 // specialization for PolyhedralGrid as a fallback to UnstructuredGrid
 template< int dim, int dimworld >
 struct ADFaceCellTraits< Dune::PolyhedralGrid< dim, dimworld > >

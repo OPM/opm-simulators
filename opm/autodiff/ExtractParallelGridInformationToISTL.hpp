@@ -19,7 +19,7 @@
 */
 #ifndef OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
 #define OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 
 #include<dune/grid/CpGrid.hpp>
 #include<boost/any.hpp>
@@ -40,5 +40,5 @@ namespace Opm
 void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, boost::any& anyComm);
 
 } // end namespace Opm
-#endif //defined(HAVE_DUNE_CORNERPOINT)
+#endif //defined(HAVE_OPM_GRID)
 #endif // OPM_EXTRACTPARALLELGRIDINFORMATIONTOISTL_HEADER_INCLUDED
