@@ -196,7 +196,7 @@ namespace detail {
             }
             int local_number_of_wells = localWellsActive() ? wells().number_of_wells : 0;
             int global_number_of_wells = info.communicator().sum(local_number_of_wells);
-            const bool wells_active = ( localWellsActive() && global_number_of_wells > 0 );
+            const bool wells_active = ( wells_arg && global_number_of_wells > 0 );
             stdWells().setWellsActive(wells_active);
             // Compute the global number of cells
             std::vector<int> v( Opm::AutoDiffGrid::numCells(grid_), 1);
@@ -205,8 +205,7 @@ namespace detail {
         }else
 #endif
         {
-            const bool wells_active = ( localWellsActive() && wells().number_of_wells > 0 );
-            stdWells().setWellsActive(wells_active);
+            stdWells().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
     }
