@@ -26,6 +26,7 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/wells.h>
 
@@ -450,6 +451,7 @@ namespace {
                                matr.outerIndexPtr(), matr.innerIndexPtr(), matr.valuePtr(),
                                total_residual_.value().data(), dx.data());
         if (!rep.converged) {
+            OpmLog::error("ImpesTPFAAD::solve(): Linear solver convergence failure.");
             OPM_THROW(LinearSolverProblem, "ImpesTPFAAD::solve(): Linear solver convergence failure.");
         }
         const V p0 = Eigen::Map<const V>(&state.pressure()[0], nc, 1);

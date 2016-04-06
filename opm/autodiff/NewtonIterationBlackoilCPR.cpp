@@ -32,6 +32,7 @@
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #if HAVE_UMFPACK
 #include <Eigen/UmfPackSupport>
 #else
@@ -168,6 +169,7 @@ namespace Opm
 
         // Check for failure of linear solver.
         if (!result.converged) {
+            OpmLog::error("Convergence failure for linear solver");
             OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver.");
         }
 

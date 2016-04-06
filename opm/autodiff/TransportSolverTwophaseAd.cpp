@@ -27,6 +27,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <iostream>
 
 
@@ -240,6 +241,7 @@ namespace Opm
                                    smatr.outerIndexPtr(), smatr.innerIndexPtr(), smatr.valuePtr(),
                                    transport_residual.value().data(), ds.data());
             if (!rep.converged) {
+                OpmLog::error("Linear solver convergence error in TransportSolverTwophaseAd::solve()");
                 OPM_THROW(LinearSolverProblem, "Linear solver convergence error in TransportSolverTwophaseAd::solve()");
             }
 

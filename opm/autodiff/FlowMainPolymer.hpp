@@ -26,7 +26,7 @@
 #include <opm/autodiff/FlowMain.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
-
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 
 namespace Opm
@@ -114,6 +114,7 @@ namespace Opm
             }
 
             if (solver_approach == cprSolver) {
+                OpmLog::error("CPR solver is not ready for use with polymer solver yet.");
                 OPM_THROW( std::runtime_error , "CPR solver is not ready for use with polymer solver yet.");
             } else if (solver_approach == interleavedSolver) {
                 fis_solver_.reset(new NewtonIterationBlackoilInterleaved(param_, parallel_information_));
