@@ -31,6 +31,8 @@
 
 #include <opm/core/wells.h>
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
 
 namespace Opm {
@@ -38,6 +40,13 @@ namespace Opm {
         // ---------      Types      ---------
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V Vector;
+
+        // copied from BlackoilModelBase
+        // should put to somewhere better
+        typedef Eigen::Array<double,
+                     Eigen::Dynamic,
+                     Eigen::Dynamic,
+                     Eigen::RowMajor> DataBlock;
 
         /// Class for handling the standard well model.
         template <class SolutionState, class WellState>
@@ -71,6 +80,17 @@ namespace Opm {
             /// Diff to bhp for each well perforation.
             Vector& wellPerforationPressureDiffs();
             const Vector& wellPerforationPressureDiffs() const;
+
+            void computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                             const WellState& xw,
+                                                             const BlackoilPropsAdInterface& fluid,
+                                                             const std::vector<bool>& active,
+                                                             const std::vector<PhasePresence>& pc,
+                                                             std::vector<double>& b_perf,
+                                                             std::vector<double>& rsmax_perf,
+                                                             std::vector<double>& rvmax_perf,
+                                                             std::vector<double>& surf_dens_perf);
+
 
         protected:
             bool wells_active_;

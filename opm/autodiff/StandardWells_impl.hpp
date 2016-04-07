@@ -23,6 +23,7 @@
 
 
 
+
 namespace Opm
 {
 
@@ -184,5 +185,92 @@ namespace Opm
     {
         return well_perforation_pressure_diffs_;
     }
+
+
+
+
+    template<class SolutionState, class WellState>
+    void
+    StandardWells<SolutionState, WellState>::
+    computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                const WellState& xw,
+                                                const BlackoilPropsAdInterface& fluid,
+                                                const std::vector<bool>& active,
+                                                const std::vector<PhasePresence>& pc,
+                                                std::vector<double>& b_perf,
+                                                std::vector<double>& rsmax_perf,
+                                                std::vector<double>& rvmax_perf,
+                                                std::vector<double>& surf_dens_perf)
+    {
+        const int nperf = wells().well_connpos[wells().number_of_wells];
+        const int nw = wells().number_of_wells;
+
+        // Compute the average pressure in each well block
+        const Vector perf_press = Eigen::Map<const Vector>(xw.perfPress().data(), nperf);
+        Vector avg_press = perf_press*0;
+        for (int w = 0; w < nw; ++w) {
+            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                const double p_above = perf == wells().well_connpos[w] ? state.bhp.value()[w] : perf_press[perf - 1];
+                const double p_avg = (perf_press[perf] + p_above)/2;
+                avg_press[perf] = p_avg;
+            }
+        }
+
+        const std::vector<int>& well_cells = wellOps().well_cells;
+
+        // Use cell values for the temperature as the wells don't knows its temperature yet.
+        const ADB perf_temp = subset(state.temperature, well_cells);
+
+        // Compute b, rsmax, rvmax values for perforations.
+        // Evaluate the properties using average well block pressures
+        // and cell values for rs, rv, phase condition and temperature.
+        const ADB avg_press_ad = ADB::constant(avg_press);
+        std::vector<PhasePresence> perf_cond(nperf);
+        // const std::vector<PhasePresence>& pc = phaseCondition();
+        for (int perf = 0; perf < nperf; ++perf) {
+            perf_cond[perf] = pc[well_cells[perf]];
+        }
+        const PhaseUsage& pu = fluid.phaseUsage();
+        DataBlock b(nperf, pu.num_phases);
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const Vector bw = fluid.bWat(avg_press_ad, perf_temp, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
+        }
+        assert(active[Oil]);
+        const Vector perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const ADB perf_rs = subset(state.rs, well_cells);
+            const Vector bo = fluid.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
+            // const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
+            const Vector rssat = fluid.rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
+            rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
+        } else {
+            rsmax_perf.assign(nperf, 0.0);
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const ADB perf_rv = subset(state.rv, well_cells);
+            const Vector bg = fluid.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
+            // const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
+            const Vector rvsat = fluid.rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
+            rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
+        } else {
+            rvmax_perf.assign(nperf, 0.0);
+        }
+        // b is row major, so can just copy data.
+        b_perf.assign(b.data(), b.data() + nperf * pu.num_phases);
+
+        // Surface density.
+        // The compute density segment wants the surface densities as
+        // an np * number of wells cells array
+        Vector rho = superset(fluid.surfaceDensity(0 , well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
+        for (int phase = 1; phase < pu.num_phases; ++phase) {
+            rho += superset(fluid.surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
+        }
+        surf_dens_perf.assign(rho.data(), rho.data() + nperf * pu.num_phases);
+
+    }
+
 
 }
