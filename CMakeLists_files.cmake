@@ -47,6 +47,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/VFPProdProperties.cpp
 	opm/autodiff/VFPInjProperties.cpp
 	opm/autodiff/WellMultiSegment.cpp
+	opm/autodiff/StandardWells.cpp
         opm/autodiff/BlackoilSolventState.cpp
         opm/polymer/PolymerState.cpp
         opm/polymer/PolymerBlackoilState.cpp
@@ -185,6 +186,7 @@ list (APPEND PUBLIC_HEADER_FILES
 	opm/autodiff/VFPInjProperties.hpp
 	opm/autodiff/WellStateMultiSegment.hpp
 	opm/autodiff/WellMultiSegment.hpp
+	opm/autodiff/StandardWells.hpp
 	opm/polymer/CompressibleTpfaPolymer.hpp
 	opm/polymer/GravityColumnSolverPolymer.hpp
 	opm/polymer/GravityColumnSolverPolymer_impl.hpp
