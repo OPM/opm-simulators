@@ -276,7 +276,7 @@ namespace Opm {
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        StandardWells                   std_wells_;
+        StandardWells<SolutionState, WellState> std_wells_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -329,8 +329,8 @@ namespace Opm {
         }
 
         /// return the StandardWells object
-        StandardWells& stdWells() { return std_wells_; }
-        const StandardWells& stdWells() const { return std_wells_; }
+        StandardWells<SolutionState, WellState>& stdWells() { return std_wells_; }
+        const StandardWells<SolutionState, WellState>& stdWells() const { return std_wells_; }
 
         /// return the Well struct in the StandardWells
         const Wells& wells() const { return std_wells_.wells(); }

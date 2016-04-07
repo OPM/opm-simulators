@@ -40,6 +40,7 @@ namespace Opm {
         typedef ADB::V Vector;
 
         /// Class for handling the standard well model.
+        template <class SolutionState, class WellState>
         class StandardWells {
         protected:
             struct WellOps {
@@ -81,4 +82,7 @@ namespace Opm {
 
 
 } // namespace Opm
+
+#include "StandardWells_impl.hpp"
+
 #endif
