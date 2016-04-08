@@ -1,5 +1,5 @@
 /*
-  Copyright 2013 SINTEF ICT, Applied Mathematics.
+  Copyright 2013, 2016 SINTEF ICT, Applied Mathematics.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,11 +17,21 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_OPM-AUTODIFF_DOXYGEN_MAIN_HEADER_INCLUDED
-#define OPM_OPM-AUTODIFF_DOXYGEN_MAIN_HEADER_INCLUDED
+#ifndef OPM_OPM-SIMULATORS_DOXYGEN_MAIN_HEADER_INCLUDED
+#define OPM_OPM-SIMULATORS_DOXYGEN_MAIN_HEADER_INCLUDED
 
 
-/** \mainpage Documentation for the opm-autodiff library.
+/** \mainpage Documentation for the opm-simulators library.
+
+
+<h3>Solvers and simulators</h3>
+
+The opm-simulators module contains a diverse set of simulator programs.
+Notable simulator programs include
+- examples/flow.cpp, a fully implicit black-oil simulator.
+- examples/flow_polymer.cpp, a version of Flow that supports polymer EOR simulation
+- examples/flow_solvent.cpp, a version of Flow that supports solvent EOR simulation
+- examples/sim_2p_incomp_ad.cpp, a sequential incompressible 2-phase simulator.
 
 <h3>Automatic differentiation</h3>
 
@@ -36,14 +46,6 @@ include Opm::HelperOps, Opm::UpwindSelector, Opm::subset,
 Opm::superset, Opm::Selector, Opm::collapseJacs, Opm::vertcat,
 Opm::Span and Opm::sign.
 
-<h3>Solvers and simulators</h3>
-
-There are some solvers and simulators in opm-autodiff. They should all
-be considered experimental prototypes at this point. Notable simulator
-prototypes include
-- examples/sim_fibo_ad.cpp, a fully implicit black-oil simulator.
-- examples/sim_2p_incomp_ad.cpp, a sequential incompressible 2-phase simulator.
-
 */
 
-#endif // OPM_OPM-AUTODIFF_DOXYGEN_MAIN_HEADER_INCLUDED
+#endif // OPM_OPM-SIMULATORS_DOXYGEN_MAIN_HEADER_INCLUDED

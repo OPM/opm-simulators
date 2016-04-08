@@ -1,17 +1,16 @@
-# Open Porous Media Automatic Differentiation Library [![Build Status](https://travis-ci.org/OPM/opm-autodiff.svg?branch=master)](https://travis-ci.org/OPM/opm-autodiff)
+# Open Porous Media Simulators and Automatic Differentiation Library [![Build Status](https://travis-ci.org/OPM/opm-simulators.svg?branch=master)](https://travis-ci.org/OPM/opm-simulators)
 
 
 CONTENT
 -------
 
-opm-autodiff contains a small library for automatic differentiation
-built on the Eigen linear algebra package. It also contains some
-experimental solver and simulator prototypes demonstrating how it can
-be used. The most important parts are:
+opm-simulators contains simulator programs for porous media flow. It
+also contains a small library for automatic differentiation
+built on the Eigen linear algebra package which is used by many of the
+simulators to handle the building of Jacobians. The most important parts are:
 
+* flow.cpp (a fully implicit black-oil simulator)
 * AutoDiffBlock.hpp (class for AD on vectorized data with sparse jacobians)
-* AutoDiffHelpers.hpp (various utilities to simplify writing solvers)
-* sim_fibo_ad.cpp (prototype fully implicit black-oil simulator)
 
 LICENSE
 -------
@@ -23,7 +22,7 @@ version 3 or later (GPLv3+).
 PLATFORMS
 ---------
 
-The opm-autodiff module is designed to run on Linux platforms. It is
+The opm-simulators module is designed to run on Linux platforms. It is
 also regularly run on Mac OS X. No efforts have been made to ensure
 that the code will compile and run on windows platforms.
 
@@ -31,25 +30,25 @@ that the code will compile and run on windows platforms.
 REQUIREMENTS
 ------------
 
-opm-autodiff requires opm-core, and all its requirements (see
-opm-core/README). In addition, opm-autodiff requires Eigen, version
-3.1 (has not been tested with later versions).
+opm-simulators requires opm-output, opm-core, and all their
+requirements (see opm-core/README). In addition, opm-simulators
+requires the Dune modue dune-istl and Eigen, version 3.1 (has not been
+tested with later versions).
 
 
 DOWNLOADING
 -----------
 
 For a read-only download:
-git clone git://github.com/OPM/opm-autodiff.git
+git clone git://github.com/OPM/opm-simulators.git
 
-If you want to contribute, fork OPM/opm-autodiff on github.
+If you want to contribute, fork OPM/opm-simulators on github.
 
 
 BUILDING
 --------
 
-See build instructions in opm-core/README, or at
-http://opm-project.org/download.php.
+See build instructions at http://opm-project.org/?page_id=36
 
 
 DOCUMENTATION
@@ -69,7 +68,7 @@ REPORTING ISSUES
 
 Issues can be reported in the Git issue tracker online at:
 
-    https://github.com/OPM/opm-autodiff/issues
+    https://github.com/OPM/opm-simulators/issues
 
 To help diagnose build errors, please provide a link to a build log together
 with the issue description.

@@ -45,4 +45,4 @@ install:
     - opm-grid/travis/build-opm-grid.sh
     - opm-output/travis/build-opm-output.sh
 
-script: opm-autodiff/travis/build-and-test-opm-autodiff.sh
+script: opm-simulators/travis/build-and-test-opm-simulators.sh

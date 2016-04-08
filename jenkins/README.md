@@ -1,18 +1,18 @@
-# opm-autodiff jenkins build scripts:
+# opm-simulators jenkins build scripts:
 
-**build-opm-autodiff.sh**:
+**build-opm-simulators.sh**:
 This is a helper script which contains functions for building,
-testing and cloning opm-autodiff and its dependencies.
+testing and cloning opm-simulators and its dependencies.
 
 **build.sh**:
-This script will build dependencies, then build opm-autodiff and execute its tests.
+This script will build dependencies, then build opm-simulators and execute its tests.
 It is intended for post-merge builds of the master branch.
 
 **build-pr.sh**:
-This script will build dependencies, then build opm-autodiff and execute its tests.
+This script will build dependencies, then build opm-simulators and execute its tests.
 It inspects the $ghbPrBuildComment environmental variable to obtain a pull request
 to use for ert, opm-common, opm-parser, opm-material, opm-core and
-opm-grid (defaults to master) and then builds $sha1 of opm-autodiff.
+opm-grid (defaults to master) and then builds $sha1 of opm-simulators.
 
 It is intended for pre-merge builds of pull requests.
 

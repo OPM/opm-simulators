@@ -18,7 +18,7 @@ cd deps/opm-data
 
 # Run the simple2D polymer case
 cd polymer_test_suite/simple2D
-$WORKSPACE/serial/build-opm-autodiff/bin/flow_polymer run.param
+$WORKSPACE/serial/build-opm-simulators/bin/flow_polymer run.param
 test $? -eq 0 || exit 1
 cd ../..
 
