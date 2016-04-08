@@ -45,8 +45,8 @@ namespace Opm
         : pref_(0.0),
           rock_comp_(0.0)
     {
-        const auto tables = eclipseState->getTableManager();
-        const auto& rocktabTables = tables->getRocktabTables();
+        const auto& tables = eclipseState->getTableManager();
+        const auto& rocktabTables = tables.getRocktabTables();
         if (rocktabTables.size() > 0) {
             const auto& rocktabTable = rocktabTables.getTable<RocktabTable>(0);
             if (rocktabTables.size() != 1)

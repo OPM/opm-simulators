@@ -107,14 +107,14 @@ namespace Opm{
     void RelpermDiagnostics::satFamilyCheck_(Opm::EclipseStateConstPtr eclState)
     {
         const auto& tableManager = eclState->getTableManager();
-        const TableContainer& swofTables = tableManager->getSwofTables();
-        const TableContainer& slgofTables= tableManager->getSlgofTables();
-        const TableContainer& sgofTables = tableManager->getSgofTables();
-        const TableContainer& swfnTables = tableManager->getSwfnTables();
-        const TableContainer& sgfnTables = tableManager->getSgfnTables();
-        const TableContainer& sof3Tables = tableManager->getSof3Tables();
-        const TableContainer& sof2Tables = tableManager->getSof2Tables();
-        const TableContainer& sgwfnTables= tableManager->getSgwfnTables();
+        const TableContainer& swofTables = tableManager.getSwofTables();
+        const TableContainer& slgofTables= tableManager.getSlgofTables();
+        const TableContainer& sgofTables = tableManager.getSgofTables();
+        const TableContainer& swfnTables = tableManager.getSwfnTables();
+        const TableContainer& sgfnTables = tableManager.getSgfnTables();
+        const TableContainer& sof3Tables = tableManager.getSof3Tables();
+        const TableContainer& sof2Tables = tableManager.getSof2Tables();
+        const TableContainer& sgwfnTables= tableManager.getSgwfnTables();
 
         
         bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
@@ -161,19 +161,19 @@ namespace Opm{
         std::cout << msg << std::endl;
         streamLog_->addMessage(Log::MessageType::Info, msg);
         const auto& tableManager = eclState->getTableManager();
-        const TableContainer& swofTables = tableManager->getSwofTables();
-        const TableContainer& slgofTables= tableManager->getSlgofTables();
-        const TableContainer& sgofTables = tableManager->getSgofTables();
-        const TableContainer& swfnTables = tableManager->getSwfnTables();
-        const TableContainer& sgfnTables = tableManager->getSgfnTables();
-        const TableContainer& sof3Tables = tableManager->getSof3Tables();
-        const TableContainer& sof2Tables = tableManager->getSof2Tables();
-        const TableContainer& sgwfnTables= tableManager->getSgwfnTables();
-        const TableContainer& sgcwmisTables = tableManager->getSgcwmisTables();
-        const TableContainer& sorwmisTables = tableManager->getSorwmisTables();
-        const TableContainer& ssfnTables = tableManager->getSsfnTables();
-        const TableContainer& miscTables = tableManager->getMiscTables();
-        const TableContainer& msfnTables = tableManager->getMsfnTables();
+        const TableContainer& swofTables    = tableManager.getSwofTables();
+        const TableContainer& slgofTables   = tableManager.getSlgofTables();
+        const TableContainer& sgofTables    = tableManager.getSgofTables();
+        const TableContainer& swfnTables    = tableManager.getSwfnTables();
+        const TableContainer& sgfnTables    = tableManager.getSgfnTables();
+        const TableContainer& sof3Tables    = tableManager.getSof3Tables();
+        const TableContainer& sof2Tables    = tableManager.getSof2Tables();
+        const TableContainer& sgwfnTables   = tableManager.getSgwfnTables();
+        const TableContainer& sgcwmisTables = tableManager.getSgcwmisTables();
+        const TableContainer& sorwmisTables = tableManager.getSorwmisTables();
+        const TableContainer& ssfnTables    = tableManager.getSsfnTables();
+        const TableContainer& miscTables    = tableManager.getMiscTables();
+        const TableContainer& msfnTables    = tableManager.getMsfnTables();
         
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             if (deck->hasKeyword("SWOF")) {
@@ -724,11 +724,11 @@ namespace Opm{
         const int numSatRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
         unscaledEpsInfo_.resize(numSatRegions);
 
-        const auto tables = eclState->getTableManager();
-        const TableContainer&  swofTables = tables->getSwofTables();
-        const TableContainer&  sgofTables = tables->getSgofTables();
-        const TableContainer& slgofTables = tables->getSlgofTables();
-        const TableContainer&  sof3Tables = tables->getSof3Tables();
+        const auto& tables = eclState->getTableManager();
+        const TableContainer&  swofTables = tables.getSwofTables();
+        const TableContainer&  sgofTables = tables.getSgofTables();
+        const TableContainer& slgofTables = tables.getSlgofTables();
+        const TableContainer&  sof3Tables = tables.getSof3Tables();
 
         // std::cout << "***************\nEnd-Points In all the Tables\n";
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {

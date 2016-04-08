@@ -25,6 +25,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 
 namespace Opm
@@ -37,14 +38,15 @@ namespace Opm
         PhaseUsage pu;
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
 
+        const auto& tm = eclipseState->getTableManager();
         // Discover phase usage.
-        if (eclipseState->hasPhase(Phase::PhaseEnum::WATER)) {
+        if (tm.hasPhase(Phase::PhaseEnum::WATER)) {
             pu.phase_used[BlackoilPhases::Aqua] = 1;
         }
-        if (eclipseState->hasPhase(Phase::PhaseEnum::OIL)) {
+        if (tm.hasPhase(Phase::PhaseEnum::OIL)) {
             pu.phase_used[BlackoilPhases::Liquid] = 1;
         }
-        if (eclipseState->hasPhase(Phase::PhaseEnum::GAS)) {
+        if (tm.hasPhase(Phase::PhaseEnum::GAS)) {
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;
