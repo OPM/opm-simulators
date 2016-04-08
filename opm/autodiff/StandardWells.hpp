@@ -101,6 +101,12 @@ namespace Opm {
                                                         const std::vector<double>& depth_perf,
                                                         const double grav);
 
+            template <class ReservoirResidualQuant>
+            void extractWellPerfProperties(const std::vector<ReservoirResidualQuant>& rq,
+                                           const int np,
+                                           std::vector<ADB>& mob_perfcells,
+                                           std::vector<ADB>& b_perfcells) const;
+
 
         protected:
             bool wells_active_;

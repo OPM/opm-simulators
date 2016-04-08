@@ -247,6 +247,10 @@ namespace Opm
 
     }
 
+
+
+
+
     template <class WellState>
     void
     StandardWells::
@@ -275,6 +279,35 @@ namespace Opm
         // Store the results
         well_perforation_densities_ = Eigen::Map<const Vector>(cd.data(), nperf);
         well_perforation_pressure_diffs_ = Eigen::Map<const Vector>(cdp.data(), nperf);
+    }
+
+
+
+
+
+    template <class ReservoirResidualQuant>
+    void
+    StandardWells::
+    extractWellPerfProperties(const std::vector<ReservoirResidualQuant>& rq,
+                              const int np,
+                              std::vector<ADB>& mob_perfcells,
+                              std::vector<ADB>& b_perfcells) const
+    {
+        // If we have wells, extract the mobilities and b-factors for
+        // the well-perforated cells.
+        if ( !localWellsActive() ) {
+            mob_perfcells.clear();
+            b_perfcells.clear();
+            return;
+        } else {
+            const std::vector<int>& well_cells = wellOps().well_cells;
+            mob_perfcells.resize(np, ADB::null());
+            b_perfcells.resize(np, ADB::null());
+            for (int phase = 0; phase < np; ++phase) {
+                mob_perfcells[phase] = subset(rq[phase].mob, well_cells);
+                b_perfcells[phase] = subset(rq[phase].b, well_cells);
+            }
+        }
     }
 
 }
