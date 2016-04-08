@@ -49,7 +49,6 @@ namespace Opm {
                      Eigen::RowMajor> DataBlock;
 
         /// Class for handling the standard well model.
-        template <class SolutionState, class WellState>
         class StandardWells {
         protected:
             struct WellOps {
@@ -81,6 +80,7 @@ namespace Opm {
             Vector& wellPerforationPressureDiffs();
             const Vector& wellPerforationPressureDiffs() const;
 
+            template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
                                                              const WellState& xw,
                                                              const BlackoilPropsAdInterface& fluid,

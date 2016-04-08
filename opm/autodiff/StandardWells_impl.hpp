@@ -28,8 +28,7 @@ namespace Opm
 {
 
 
-    template <class SolutionState, class WellState>
-    StandardWells<SolutionState, WellState>::
+    StandardWells::
     WellOps::WellOps(const Wells* wells)
       : w2p(),
         p2w(),
@@ -67,9 +66,7 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
-    StandardWells<SolutionState, WellState>::
-    StandardWells(const Wells* wells_arg)
+    StandardWells::StandardWells(const Wells* wells_arg)
       : wells_(wells_arg)
       , wops_(wells_arg)
       , well_perforation_densities_(Vector())
@@ -81,10 +78,7 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
-    const Wells&
-    StandardWells<SolutionState, WellState>::
-    wells() const
+    const Wells& StandardWells::wells() const
     {
         assert(wells_ != 0);
         return *(wells_);
@@ -94,10 +88,7 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
-    bool
-    StandardWells<SolutionState, WellState>::
-    wellsActive() const
+    bool StandardWells::wellsActive() const
     {
         return wells_active_;
     }
@@ -106,10 +97,7 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
-    void
-    StandardWells<SolutionState, WellState>::
-    setWellsActive(const bool wells_active)
+    void StandardWells::setWellsActive(const bool wells_active)
     {
         wells_active_ = wells_active;
     }
@@ -118,10 +106,7 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
-    bool
-    StandardWells<SolutionState, WellState>::
-    localWellsActive() const
+    bool StandardWells::localWellsActive() const
     {
         return wells_ ? (wells_->number_of_wells > 0 ) : false;
     }
@@ -130,10 +115,8 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
-    const typename StandardWells<SolutionState, WellState>::WellOps&
-    StandardWells<SolutionState, WellState>::
-    wellOps() const
+    const StandardWells::WellOps&
+    StandardWells::wellOps() const
     {
         return wops_;
     }
@@ -142,10 +125,7 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
-    Vector&
-    StandardWells<SolutionState, WellState>::
-    wellPerforationDensities()
+    Vector& StandardWells::wellPerforationDensities()
     {
         return well_perforation_densities_;
     }
@@ -154,10 +134,8 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
     const Vector&
-    StandardWells<SolutionState, WellState>::
-    wellPerforationDensities() const
+    StandardWells::wellPerforationDensities() const
     {
         return well_perforation_densities_;
     }
@@ -166,10 +144,8 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
     Vector&
-    StandardWells<SolutionState, WellState>::
-    wellPerforationPressureDiffs()
+    StandardWells::wellPerforationPressureDiffs()
     {
         return well_perforation_pressure_diffs_;
     }
@@ -178,10 +154,8 @@ namespace Opm
 
 
 
-    template <class SolutionState, class WellState>
     const Vector&
-    StandardWells<SolutionState, WellState>::
-    wellPerforationPressureDiffs() const
+    StandardWells::wellPerforationPressureDiffs() const
     {
         return well_perforation_pressure_diffs_;
     }
@@ -191,7 +165,7 @@ namespace Opm
 
     template<class SolutionState, class WellState>
     void
-    StandardWells<SolutionState, WellState>::
+    StandardWells::
     computePropertiesForWellConnectionPressures(const SolutionState& state,
                                                 const WellState& xw,
                                                 const BlackoilPropsAdInterface& fluid,
