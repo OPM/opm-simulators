@@ -118,7 +118,7 @@ if (NOT EIGEN3_FOUND)
 		)
 
 	include_directories (${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3)
-	add_dependencies (opmautodiff Eigen3)
+	add_dependencies (opmsimulators Eigen3)
 endif (NOT EIGEN3_FOUND)
 
 
@@ -132,7 +132,7 @@ if (HAVE_OPM_DATA)
     set_tests_properties(flow_SPE1CASE2_restart PROPERTIES DEPENDS flow_SPE1CASE2) # Dependes on the restart file from test flow_SPE1CASE2
 
     add_executable( test_restart tests/test_restart.cpp )
-    target_link_libraries( test_restart opmautodiff ${Boost_LIBRARIES})
+    target_link_libraries( test_restart opmsimulators ${Boost_LIBRARIES})
 
     add_test( compare_restart_files
             ${CMAKE_BINARY_DIR}/bin/test_restart
