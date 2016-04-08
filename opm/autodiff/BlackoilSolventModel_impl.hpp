@@ -89,7 +89,8 @@ namespace Opm {
           has_solvent_(has_solvent),
           solvent_pos_(detail::solventPos(fluid.phaseUsage())),
           solvent_props_(solvent_props),
-          is_miscible_(is_miscible)
+          is_miscible_(is_miscible),
+          std_wells_(wells_arg, solvent_props)
 
     {
         if (has_solvent_) {
@@ -381,132 +382,6 @@ namespace Opm {
         }
     }
 
-    template <class Grid>
-    void BlackoilSolventModel<Grid>::computePropertiesForWellConnectionPressures(const SolutionState& state,
-                                                                                 const WellState& xw,
-                                                                                 std::vector<double>& b_perf,
-                                                                                 std::vector<double>& rsmax_perf,
-                                                                                 std::vector<double>& rvmax_perf,
-                                                                                 std::vector<double>& surf_dens_perf)
-    {
-        using namespace Opm::AutoDiffGrid;
-        // 1. Compute properties required by computeConnectionPressureDelta().
-        //    Note that some of the complexity of this part is due to the function
-        //    taking std::vector<double> arguments, and not Eigen objects.
-        const int nperf = wells().well_connpos[wells().number_of_wells];
-        const int nw = wells().number_of_wells;
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-
-        // Compute the average pressure in each well block
-        const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
-        V avg_press = perf_press*0;
-        for (int w = 0; w < nw; ++w) {
-            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-                const double p_above = perf == wells().well_connpos[w] ? state.bhp.value()[w] : perf_press[perf - 1];
-                const double p_avg = (perf_press[perf] + p_above)/2;
-                avg_press[perf] = p_avg;
-            }
-        }
-
-        // Use cell values for the temperature as the wells don't knows its temperature yet.
-        const ADB perf_temp = subset(state.temperature, well_cells);
-
-        // Compute b, rsmax, rvmax values for perforations.
-        // Evaluate the properties using average well block pressures
-        // and cell values for rs, rv, phase condition and temperature.
-        const ADB avg_press_ad = ADB::constant(avg_press);
-        std::vector<PhasePresence> perf_cond(nperf);
-        const std::vector<PhasePresence>& pc = phaseCondition();
-        for (int perf = 0; perf < nperf; ++perf) {
-            perf_cond[perf] = pc[well_cells[perf]];
-        }
-
-        const PhaseUsage& pu = fluid_.phaseUsage();
-        DataBlock b(nperf, pu.num_phases);
-
-        const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
-        }
-
-        assert(active_[Oil]);
-        assert(active_[Gas]);
-        const ADB perf_rv = subset(state.rv, well_cells);
-        const ADB perf_rs = subset(state.rs, well_cells);
-        const V perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
-            const V bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
-            //const V bo_eff = subset(rq_[pu.phase_pos[Oil] ].b , well_cells).value();
-            b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
-            const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
-            rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
-        } else {
-            rsmax_perf.assign(0.0, nperf);
-        }
-        V surf_dens_copy = superset(fluid_.surfaceDensity(0, well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
-        for (int phase = 1; phase < pu.num_phases; ++phase) {
-            if ( phase == pu.phase_pos[BlackoilPhases::Vapour]) {
-                continue; // the gas surface density is added after the solvent is accounted for.
-            }
-            surf_dens_copy += superset(fluid_.surfaceDensity(phase, well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
-        }
-
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
-            // Unclear wether the effective or the pure values should be used for the wells
-            // the current usage of unmodified properties values gives best match.
-            //V bg_eff = subset(rq_[pu.phase_pos[Gas]].b,well_cells).value();
-            V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
-            V rhog = fluid_.surfaceDensity(pu.phase_pos[BlackoilPhases::Vapour], well_cells);
-            if (has_solvent_) {
-
-                const V bs = solvent_props_.bSolvent(avg_press_ad,well_cells).value();
-                //const V bs_eff = subset(rq_[solvent_pos_].b,well_cells).value();
-
-                // A weighted sum of the b-factors of gas and solvent are used.
-                const int nc = Opm::AutoDiffGrid::numCells(grid_);
-
-                const ADB zero = ADB::constant(V::Zero(nc));
-                const ADB& ss = state.solvent_saturation;
-                const ADB& sg = (active_[ Gas ]
-                                 ? state.saturation[ pu.phase_pos[ Gas ] ]
-                                 : zero);
-
-                Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-                V F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells).value();
-
-                V injectedSolventFraction = Eigen::Map<const V>(&xw.solventFraction()[0], nperf);
-
-                V isProducer = V::Zero(nperf);
-                V ones = V::Constant(nperf,1.0);
-                for (int w = 0; w < nw; ++w) {
-                    if(wells().type[w] == PRODUCER) {
-                        for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-                            isProducer[perf] = 1;
-                        }
-                    }
-                }
-
-                F_solvent = isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction;
-
-                bg = bg * (ones - F_solvent);
-                bg = bg + F_solvent * bs;
-
-                const V& rhos = solvent_props_.solventSurfaceDensity(well_cells);
-                rhog = ( (ones - F_solvent) * rhog ) + (F_solvent * rhos);
-            }
-            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
-            surf_dens_copy += superset(rhog, Span(nperf, pu.num_phases, pu.phase_pos[BlackoilPhases::Vapour]), nperf*pu.num_phases);
-
-            const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
-            rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
-        } else {
-            rvmax_perf.assign(0.0, nperf);
-        }
-
-        // b and surf_dens_perf is row major, so can just copy data.
-        b_perf.assign(b.data(), b.data() + nperf * pu.num_phases);
-        surf_dens_perf.assign(surf_dens_copy.data(), surf_dens_copy.data() + nperf * pu.num_phases);
-    }
 
 
 

@@ -131,7 +131,7 @@ list (APPEND PROGRAM_SOURCE_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
-<<<<<<< HEAD
+
   opm/autodiff/AdditionalObjectDeleter.hpp
   opm/autodiff/AutoDiffBlock.hpp
   opm/autodiff/AutoDiffHelpers.hpp
@@ -197,7 +197,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/WellStateMultiSegment.hpp
   opm/autodiff/WellMultiSegment.hpp
   opm/autodiff/StandardWells.hpp
-  opm/autodiff/StandardWells_impl.hpp
+  opm/autodiff/StandardWellsSolvent.hpp
   opm/polymer/CompressibleTpfaPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer_impl.hpp
@@ -226,4 +226,5 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/SimulatorCompressibleTwophase.hpp
   opm/simulators/SimulatorIncompTwophase.hpp
   )
+
 
