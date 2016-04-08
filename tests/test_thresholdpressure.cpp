@@ -6,7 +6,7 @@
 #include <opm/core/grid/cornerpoint_grid.h>
 #include <opm/core/grid/GridManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
-#include <opm/core/utility/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available)
+#include <opm/simulators/thresholdPressures.hpp> // Note: the GridHelpers must be included before this (to make overloads available)
 
 
 static DeckPtr createDeckSimConfig() {

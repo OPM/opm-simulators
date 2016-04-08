@@ -63,6 +63,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/polymer/TransportSolverTwophasePolymer.cpp
   opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.cpp
   opm/polymer/fullyimplicit/PolymerPropsAd.cpp
+  opm/simulators/SimulatorCompressibleTwophase.cpp
+  opm/simulators/SimulatorIncompTwophase.cpp
   )
 
 
@@ -82,6 +84,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_vfpproperties.cpp
   tests/test_singlecellsolves.cpp
   tests/test_solventprops_ad.cpp
+	# tests/test_thresholdpressure.cpp
   )
 
 list (APPEND TEST_DATA_FILES
@@ -99,6 +102,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow_multisegment.cpp
   examples/flow_solvent.cpp
   examples/sim_2p_incomp_ad.cpp
+  examples/sim_2p_comp_reorder.cpp
   examples/sim_simple.cpp
   examples/opm_init_check.cpp
   examples/sim_poly2p_comp_reorder.cpp
