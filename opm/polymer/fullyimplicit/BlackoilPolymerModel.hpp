@@ -158,13 +158,11 @@ namespace Opm {
         using Base::fluid_;
         using Base::geo_;
         using Base::rock_comp_props_;
-        using Base::wells_;
         using Base::linsolver_;
         using Base::active_;
         using Base::canph_;
         using Base::cells_;
         using Base::ops_;
-        using Base::wops_;
         using Base::has_disgas_;
         using Base::has_vapoil_;
         using Base::param_;
@@ -172,7 +170,6 @@ namespace Opm {
         using Base::threshold_pressures_by_connection_;
         using Base::rq_;
         using Base::phaseCondition_;
-        using Base::well_perforation_pressure_diffs_;
         using Base::residual_;
         using Base::terminal_output_;
         using Base::primalVariable_;
@@ -181,8 +178,9 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        using Base::wellsActive;
+        using Base::stdWells;
         using Base::wells;
+        using Base::wellsActive;
         using Base::variableState;
         using Base::computePressures;
         using Base::computeGasPressure;

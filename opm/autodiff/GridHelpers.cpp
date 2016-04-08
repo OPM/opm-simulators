@@ -77,7 +77,7 @@ void extractInternalFaces(const UnstructuredGrid& grid,
 }
 } // end namespace AutoDiffGrid
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 
 namespace AutoDiffGrid
 {
@@ -131,5 +131,5 @@ void extractInternalFaces(const Dune::CpGrid& grid,
 }
 
 }       // end namespace AutoDiffGrid
-#endif  // HAVE_DUNE_CORNERPOINT
+#endif  // HAVE_OPM_GRID
 }       // end namespace Opm

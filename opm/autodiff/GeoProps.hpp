@@ -36,7 +36,7 @@
 
 #include <Eigen/Eigen>
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 #include <dune/common/version.hh>
 #include <dune/grid/CpGrid.hpp>
 #include <dune/grid/common/mcmgmapper.hh>
@@ -432,7 +432,7 @@ namespace Opm
                 const int dim = Opm::UgGridHelpers::dimensions(grid);
 
                 const double* faceNormal = Opm::UgGridHelpers::faceNormal(grid, faceIdx);
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_OPM_GRID
                 assert( dim <= 3 );
                 Dune::FieldVector< double, 3 > scaledFaceNormal( 0 );
                 for (int indx = 0; indx < dim; ++indx) {

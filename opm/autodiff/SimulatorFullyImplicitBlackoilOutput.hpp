@@ -48,7 +48,7 @@
 
 #include <boost/filesystem.hpp>
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 #include <dune/grid/CpGrid.hpp>
 #endif
 namespace Opm
@@ -71,7 +71,7 @@ namespace Opm
     void outputWellStateMatlab(const Opm::WellState& well_state,
                                const int step,
                                const std::string& output_dir);
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
     void outputStateVtk(const Dune::CpGrid& grid,
                         const Opm::SimulationDataContainer& state,
                         const int step,

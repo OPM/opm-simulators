@@ -42,7 +42,7 @@
 #include <array>
 #include <vector>
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/grid/CpGrid.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
@@ -91,7 +91,7 @@ namespace Opm
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
         /// Constructor to create a blackoil properties from an ECL deck.
         ///
         /// The materialLawManager parameter represents the object from opm-material
@@ -125,7 +125,7 @@ namespace Opm
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
         /// Constructor to create a blackoil properties from an ECL deck.
         ///
         /// \param deck The unprocessed ECL deck from opm-parser

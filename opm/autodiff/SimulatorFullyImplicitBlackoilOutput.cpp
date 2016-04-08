@@ -41,7 +41,7 @@
 
 #include <boost/filesystem.hpp>
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/version.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
@@ -203,7 +203,7 @@ namespace Opm
     }
 #endif
 
-#ifdef HAVE_DUNE_CORNERPOINT
+#ifdef HAVE_OPM_GRID
     void outputStateVtk(const Dune::CpGrid& grid,
                         const Opm::SimulationDataContainer& state,
                         const int step,

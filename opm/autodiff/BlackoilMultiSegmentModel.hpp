@@ -116,7 +116,6 @@ namespace Opm {
 
         // For non-segmented wells, it should be the density calculated with AVG or SEG way.
         // while usually SEG way by default.
-        using Base::well_perforation_densities_; //Density of each well perforation
         using Base::pvdt_;
         using Base::geo_;
         using Base::active_;
@@ -135,10 +134,6 @@ namespace Opm {
         using Base::cells_;
         using Base::param_;
         using Base::linsolver_;
-
-        // Diff to bhp for each well perforation. only for usual wells.
-        // For segmented wells, they are zeros.
-        using Base::well_perforation_pressure_diffs_;
 
         // Pressure correction due to the different depth of the perforation
         // and the cell center of the grid block
@@ -211,11 +206,10 @@ namespace Opm {
         MultiSegmentWellOps wops_ms_;
 
 
-        // return wells object
-        // TODO: remove this wells structure
+        using Base::stdWells;
         using Base::wells;
-        using Base::updatePrimalVariableFromState;
         using Base::wellsActive;
+        using Base::updatePrimalVariableFromState;
         using Base::phaseCondition;
         using Base::fluidRvSat;
         using Base::fluidRsSat;

@@ -29,7 +29,7 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_OPM_GRID
 #include <dune/grid/common/p2pcommunicator.hh>
 #endif
 
@@ -91,7 +91,7 @@ namespace Opm
         virtual const int* globalCell() const { return grid_.global_cell; }
     };
 
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_OPM_GRID
     template <>
     class ParallelDebugOutput< Dune::CpGrid> : public ParallelDebugOutputInterface
     {
@@ -583,7 +583,7 @@ namespace Opm
         // true if we are on I/O rank
         const bool                                isIORank_;
     };
-#endif // #if HAVE_DUNE_CORNERPOINT
+#endif // #if HAVE_OPM_GRID
 
 } // end namespace Opm
 #endif

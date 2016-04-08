@@ -46,7 +46,7 @@ inline void distributeGridAndData( Grid& ,
 {
 }
 
-#if HAVE_DUNE_CORNERPOINT && HAVE_MPI
+#if HAVE_OPM_GRID && HAVE_MPI
 /// \brief a data handle to distribute the threshold pressures
 class ThresholdPressureDataHandle
 {

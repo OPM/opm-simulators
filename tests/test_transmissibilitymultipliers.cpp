@@ -35,7 +35,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_OPM_GRID
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2,3)
 #include <dune/common/parallel/mpihelper.hh>
@@ -261,7 +261,7 @@ void checkTransmissibilityValues(const G&                  grid,
     }
 }
 
-#if HAVE_DUNE_CORNERPOINT
+#if HAVE_OPM_GRID
 BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 {
     int argc = 1;

@@ -731,8 +731,8 @@ namespace Opm {
         ADB b_perfcells = subset(rq_[water_pos].b, well_cells);
 
         const ADB& p_perfcells = subset(state.pressure, well_cells);
-        const V& cdp = well_perforation_pressure_diffs_;
-        const ADB perfpressure = (wops_.w2p * state.bhp) + cdp;
+        const V& cdp = stdWells().wellPerforationPressureDiffs();
+        const ADB perfpressure = (stdWells().wellOps().w2p * state.bhp) + cdp;
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcells - perfpressure;
 
