@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(Processing)
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::DeckConstPtr deck = parser->parseFile(filename, parseContext);
     std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(deck, parseContext));
-    std::vector<double> porv = eclstate->getDoubleGridProperty("PORV")->getData();
+    const auto& porv = eclstate->getEclipseProperties().getDoubleGridProperty("PORV").getData();
     EclipseGridConstPtr eclgrid = eclstate->getEclipseGrid();
 
     BOOST_CHECK_EQUAL(eclgrid->getMinpvMode(), MinpvMode::EclSTD);
