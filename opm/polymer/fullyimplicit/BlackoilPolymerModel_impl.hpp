@@ -550,7 +550,7 @@ namespace Opm {
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
-        Base::computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
 
         if (has_plyshlog_) {
             std::vector<double> water_vel_wells;
@@ -569,7 +569,7 @@ namespace Opm {
             mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
         }
 
-        Base::computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
         Base::updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         Base::addWellFluxEq(cq_s, state);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);

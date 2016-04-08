@@ -107,6 +107,16 @@ namespace Opm {
                                            std::vector<ADB>& mob_perfcells,
                                            std::vector<ADB>& b_perfcells) const;
 
+            template <class SolutionState>
+            void computeWellFlux(const SolutionState& state,
+                                 const Opm::PhaseUsage& phase_usage,
+                                 const std::vector<bool>& active,
+                                 const std::vector<ADB>& mob_perfcells,
+                                 const std::vector<ADB>& b_perfcells,
+                                 Vector& aliveWells,
+                                 std::vector<ADB>& cq_s) const;
+
+
 
         protected:
             bool wells_active_;

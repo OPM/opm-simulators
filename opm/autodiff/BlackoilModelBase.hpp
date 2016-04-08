@@ -398,13 +398,6 @@ namespace Opm {
                     WellState& well_state);
 
         void
-        computeWellFlux(const SolutionState& state,
-                        const std::vector<ADB>& mob_perfcells,
-                        const std::vector<ADB>& b_perfcells,
-                        V& aliveWells,
-                        std::vector<ADB>& cq_s) const;
-
-        void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                          const SolutionState& state,
                                          WellState& xw) const;
