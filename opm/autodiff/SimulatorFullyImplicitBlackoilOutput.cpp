@@ -314,7 +314,7 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( new detail::WriterCall( *this, timer, state, wellState, substep ) );
+                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, substep ) );
             }
             else {
                 // just write the data to disk

@@ -24,6 +24,15 @@ namespace Opm
       virtual bool isEndMarker () const { return false; }
     };
 
+    template <class Object>
+    class ObjectWrapper : public ObjectInterface
+    {
+      Object obj_;
+    public:
+      ObjectWrapper( Object&& obj ) : obj_( std::move( obj ) ) {}
+      void run() { obj_.run(); }
+    };
+
   protected:
     class EndObject : public ObjectInterface
     {
@@ -33,56 +42,60 @@ namespace Opm
     };
 
     ////////////////////////////////////////////
-    // class ThreadHandleObject
+    // class ThreadHandleQueue
     ////////////////////////////////////////////
-    class ThreadHandleObject
+    class ThreadHandleQueue
     {
     protected:
-      std::queue< ObjectInterface* > objPtr_;
+      std::queue< std::unique_ptr< ObjectInterface > > objQueue_;
       std::mutex  mutex_;
 
       // no copying
-      ThreadHandleObject( const ThreadHandleObject& ) = delete;
+      ThreadHandleQueue( const ThreadHandleQueue& ) = delete;
 
     public:
-      // constructor creating object that is executed by thread
-      ThreadHandleObject()
-        : objPtr_(), mutex_()
+      //! constructor creating object that is executed by thread
+      ThreadHandleQueue()
+        : objQueue_(), mutex_()
       {
       }
 
       //! insert object into threads queue
-      void push_back( ObjectInterface* obj )
+      void push_back( std::unique_ptr< ObjectInterface >&& obj )
       {
         // lock mutex to make sure objPtr is not used
         mutex_.lock();
-        objPtr_.emplace( obj );
+        objQueue_.emplace( std::move(obj) );
         mutex_.unlock();
       }
 
-      // do the work
+      //! do the work until the queue received an end object
       void run()
       {
         // wait until objects have been pushed to the queue
-        while( objPtr_.empty() )
+        while( objQueue_.empty() )
         {
           // sleep one second
           std::this_thread::sleep_for( std::chrono::seconds(1) );
         }
 
         {
-            // lock mutex for access to objPtr_
+            // lock mutex for access to objQueue_
             mutex_.lock();
 
             // get next object from queue
-            std::unique_ptr< ObjectInterface > obj( objPtr_.front() );
-            objPtr_.pop();
+            std::unique_ptr< ObjectInterface > obj( objQueue_.front().release() );
+            // remove object from queue
+            objQueue_.pop();
 
-            // unlock mutex for access to objPtr_
+            // unlock mutex for access to objQueue_
             mutex_.unlock();
 
             // if object is end marker terminate thread
             if( obj->isEndMarker() ){
+                if( ! objQueue_.empty() ) {
+                    OPM_THROW(std::logic_error,"ThreadHandleQueue: not all queued objects were executed");
+                }
                 return;
             }
 
@@ -93,18 +106,19 @@ namespace Opm
         // keep thread running
         run();
       }
-    }; // end ThreadHandleObject
+    }; // end ThreadHandleQueue
 
     ////////////////////////////////////////////////////
-    //  end ThreadHandleObject
+    //  end ThreadHandleQueue
     ////////////////////////////////////////////////////
 
-    static void startThread( ThreadHandleObject* obj )
+    // start the thread by calling method run
+    static void startThread( ThreadHandleQueue* obj )
     {
        obj->run();
     }
 
-    ThreadHandleObject threadObject_;
+    ThreadHandleQueue threadObjectQueue_;
     std::thread thread_;
 
   private:
@@ -112,26 +126,31 @@ namespace Opm
     ThreadHandle( const ThreadHandle& ) = delete;
 
   public:
-    // default constructor
+    //! default constructor
     ThreadHandle()
-      : threadObject_(),
-        thread_( startThread, &threadObject_ )
+      : threadObjectQueue_(),
+        thread_( startThread, &threadObjectQueue_ )
     {
       // detach thread into nirvana
       thread_.detach();
     } // end constructor
 
-    //! dispatch object to separate thread
-    void dispatch( ObjectInterface* obj )
+    //! dispatch object to queue of separate thread
+    template <class Object>
+    void dispatch( Object&& obj )
     {
+      typedef ObjectWrapper< Object >  ObjectPointer;
+      ObjectInterface* objPtr = new ObjectPointer( std::move(obj) );
+
       // add object to queue of objects
-      threadObject_.push_back( obj ) ;
+      threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (objPtr) );
     }
 
+    //! destructor terminating the thread
     ~ThreadHandle()
     {
       // dispatch end object which will terminate the thread
-      threadObject_.push_back( new EndObject() ) ;
+      threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (new EndObject()) ) ;
     }
   };
 
