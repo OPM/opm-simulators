@@ -20,6 +20,7 @@
 
 
 #include <opm/autodiff/StandardWells.hpp>
+#include <opm/autodiff/WellDensitySegmented.hpp>
 
 
 
@@ -246,5 +247,34 @@ namespace Opm
 
     }
 
+    template <class WellState>
+    void
+    StandardWells::
+    computeWellConnectionDensitesPressures(const WellState& xw,
+                                           const BlackoilPropsAdInterface& fluid,
+                                           const std::vector<double>& b_perf,
+                                           const std::vector<double>& rsmax_perf,
+                                           const std::vector<double>& rvmax_perf,
+                                           const std::vector<double>& surf_dens_perf,
+                                           const std::vector<double>& depth_perf,
+                                           const double grav)
+    {
+        // Compute densities
+        std::vector<double> cd =
+                WellDensitySegmented::computeConnectionDensities(
+                        wells(), xw, fluid.phaseUsage(),
+                        b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+
+        const int nperf = wells().well_connpos[wells().number_of_wells];
+
+        // Compute pressure deltas
+        std::vector<double> cdp =
+                WellDensitySegmented::computeConnectionPressureDelta(
+                        wells(), depth_perf, cd, grav);
+
+        // Store the results
+        well_perforation_densities_ = Eigen::Map<const Vector>(cd.data(), nperf);
+        well_perforation_pressure_diffs_ = Eigen::Map<const Vector>(cdp.data(), nperf);
+    }
 
 }

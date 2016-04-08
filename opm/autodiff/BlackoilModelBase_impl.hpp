@@ -778,31 +778,17 @@ namespace detail {
         std::vector<double> surf_dens_perf;
         asImpl().stdWells().computePropertiesForWellConnectionPressures(state, xw, fluid_, active_, phaseCondition_, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
-        // 2. Compute densities
-        std::vector<double> cd =
-                WellDensitySegmented::computeConnectionDensities(
-                        wells(), xw, fluid_.phaseUsage(),
-                        b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-
-        const int nperf = wells().well_connpos[wells().number_of_wells];
-        const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
-
         // Extract well connection depths.
-        const V depth = cellCentroidsZToEigen(grid_);
-        const V pdepth = subset(depth, well_cells);
-        std::vector<double> perf_depth(pdepth.data(), pdepth.data() + nperf);
+        const Vector depth = cellCentroidsZToEigen(grid_);
+        const Vector pdepth = subset(depth, asImpl().stdWells().wellOps().well_cells);
+        const int nperf = wells().well_connpos[wells().number_of_wells];
+        const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
 
         // Gravity
-        double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
+        const double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
 
-        // 3. Compute pressure deltas
-        std::vector<double> cdp =
-                WellDensitySegmented::computeConnectionPressureDelta(
-                        wells(), perf_depth, cd, grav);
+        asImpl().stdWells().computeWellConnectionDensitesPressures(xw, fluid_, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, grav);
 
-        // 4. Store the results
-        stdWells().wellPerforationDensities() = Eigen::Map<const V>(cd.data(), nperf);
-        stdWells().wellPerforationPressureDiffs() = Eigen::Map<const V>(cdp.data(), nperf);
     }
 
 
@@ -1057,7 +1043,7 @@ namespace detail {
         const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
 
         // pressure diffs computed already (once per step, not changing per iteration)
-        const V& cdp = stdWells().wellPerforationPressureDiffs();
+        const V& cdp = asImpl().stdWells().wellPerforationPressureDiffs();
         // Extract needed quantities for the perforation cells
         const ADB& p_perfcells = subset(state.pressure, well_cells);
         const ADB& rv_perfcells = subset(state.rv, well_cells);
@@ -1213,7 +1199,7 @@ namespace detail {
         xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf*np);
 
         // Update the perforation pressures.
-        const V& cdp = stdWells().wellPerforationPressureDiffs();
+        const V& cdp = asImpl().stdWells().wellPerforationPressureDiffs();
         const V perfpressure = (stdWells().wellOps().w2p * state.bhp.value().matrix()).array() + cdp;
         xw.perfPress().assign(perfpressure.data(), perfpressure.data() + nperf);
     }
@@ -1498,14 +1484,14 @@ namespace detail {
                 if (well_type == INJECTOR) {
                     double dp = detail::computeHydrostaticCorrection(
                             wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
-                            stdWells().wellPerforationDensities(), gravity);
+                            asImpl().stdWells().wellPerforationDensities(), gravity);
 
                     xw.bhp()[w] = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
                 else if (well_type == PRODUCER) {
                     double dp = detail::computeHydrostaticCorrection(
                             wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
-                            stdWells().wellPerforationDensities(), gravity);
+                            asImpl().stdWells().wellPerforationDensities(), gravity);
 
                     xw.bhp()[w] = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                 }
@@ -1737,7 +1723,7 @@ namespace detail {
             case THP:
             {
                 const int perf = wells().well_connpos[w];
-                rho_v[w] = stdWells().wellPerforationDensities()[perf];
+                rho_v[w] = asImpl().stdWells().wellPerforationDensities()[perf];
 
                 const int table_id = well_controls_iget_vfp(wc, current);
                 const double target = well_controls_iget_target(wc, current);
@@ -1800,7 +1786,7 @@ namespace detail {
 
         //Perform hydrostatic correction to computed targets
         double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const ADB::V dp_v = detail::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, stdWells().wellPerforationDensities(), gravity);
+        const ADB::V dp_v = detail::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, asImpl().stdWells().wellPerforationDensities(), gravity);
         const ADB dp = ADB::constant(dp_v);
         const ADB dp_inj = superset(subset(dp, thp_inj_elems), thp_inj_elems, nw);
         const ADB dp_prod = superset(subset(dp, thp_prod_elems), thp_prod_elems, nw);
@@ -2241,14 +2227,14 @@ namespace detail {
                         if (well_type == INJECTOR) {
                             double dp = detail::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_.getInj()->getTable(table_id)->getDatumDepth(),
-                                    stdWells().wellPerforationDensities(), gravity);
+                                    asImpl().stdWells().wellPerforationDensities(), gravity);
 
                             well_state.thp()[w] = vfp_properties_.getInj()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp);
                         }
                         else if (well_type == PRODUCER) {
                             double dp = detail::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_.getProd()->getTable(table_id)->getDatumDepth(),
-                                    stdWells().wellPerforationDensities(), gravity);
+                                    asImpl().stdWells().wellPerforationDensities(), gravity);
 
                             well_state.thp()[w] = vfp_properties_.getProd()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp, alq);
                         }

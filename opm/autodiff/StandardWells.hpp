@@ -91,6 +91,16 @@ namespace Opm {
                                                              std::vector<double>& rvmax_perf,
                                                              std::vector<double>& surf_dens_perf);
 
+            template <class WellState>
+            void computeWellConnectionDensitesPressures(const WellState& xw,
+                                                        const BlackoilPropsAdInterface& fluid,
+                                                        const std::vector<double>& b_perf,
+                                                        const std::vector<double>& rsmax_perf,
+                                                        const std::vector<double>& rvmax_perf,
+                                                        const std::vector<double>& surf_dens_perf,
+                                                        const std::vector<double>& depth_perf,
+                                                        const double grav);
+
 
         protected:
             bool wells_active_;
