@@ -43,6 +43,9 @@ namespace Properties {
 NEW_TYPE_TAG(Co2InjectionFlashEcfvProblem, INHERITS_FROM(FlashModel, Co2InjectionBaseProblem));
 SET_TAG_PROP(Co2InjectionFlashEcfvProblem, SpatialDiscretizationSplice, EcfvDiscretization);
 
+// use automatic differentiation for this simulator
+SET_TAG_PROP(Co2InjectionFlashEcfvProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+
 // use the flash solver adapted to the CO2 injection problem
 SET_TYPE_PROP(
     Co2InjectionFlashEcfvProblem, FlashSolver,
