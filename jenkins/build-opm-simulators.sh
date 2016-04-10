@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function build_opm_autodiff {
+function build_opm_simulators {
   # Build ERT
   pushd .
   mkdir -p $WORKSPACE/deps/ert
@@ -58,10 +58,10 @@ function build_opm_autodiff {
   clone_and_build_module opm-output "-DCMAKE_PREFIX_PATH=$WORKSPACE/serial/install -DCMAKE_INSTALL_PREFIX=$WORKSPACE/serial/install" $OPM_OUTPUT_REVISION $WORKSPACE/serial
   test $? -eq 0 || exit 1
 
-  # Build opm-autodiff
+  # Build opm-simulators
   pushd .
-  mkdir serial/build-opm-autodiff
-  cd serial/build-opm-autodiff
+  mkdir serial/build-opm-simulators
+  cd serial/build-opm-simulators
   build_module "-DCMAKE_PREFIX_PATH=$WORKSPACE/serial/install" 1 $WORKSPACE
   test $? -eq 0 || exit 1
   popd

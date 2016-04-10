@@ -17,15 +17,15 @@ cd deps/opm-data
 
 # Run the SPE1/3/9 cases
 cd spe1
-$WORKSPACE/serial/build-opm-autodiff/bin/flow deck_filename=SPE1CASE2.DATA
+$WORKSPACE/serial/build-opm-simulators/bin/flow deck_filename=SPE1CASE2.DATA
 test $? -eq 0 || exit 1
 cd ..
 cd spe3
-$WORKSPACE/serial/build-opm-autodiff/bin/flow max_iter=50 deck_filename=SPE3CASE1.DATA
+$WORKSPACE/serial/build-opm-simulators/bin/flow max_iter=50 deck_filename=SPE3CASE1.DATA
 test $? -eq 0 || exit 1
 cd ..
 cd spe9
-$WORKSPACE/serial/build-opm-autodiff/bin/flow max_iter=50 deck_filename=SPE9_CP.DATA
+$WORKSPACE/serial/build-opm-simulators/bin/flow max_iter=50 deck_filename=SPE9_CP.DATA
 test $? -eq 0 || exit 1
 cd ..
 

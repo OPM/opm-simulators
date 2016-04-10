@@ -2,7 +2,7 @@
 set -ex
 
 pushd . > /dev/null
-opm-autodiff/travis/build-opm-autodiff.sh
-cd opm-autodiff/build
+opm-simulators/travis/build-opm-simulators.sh
+cd opm-simulators/build
 ctest --output-on-failure
 popd > /dev/null
