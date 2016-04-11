@@ -70,9 +70,9 @@ public:
         std::string kwPrefix = useImbibition?"I":"";
 
         if (useImbibition)
-            satnum = &eclState->getEclipseProperties().getIntGridProperty("IMBNUM").getData();
+            satnum = &eclState->get3DProperties().getIntGridProperty("IMBNUM").getData();
         else
-            satnum = &eclState->getEclipseProperties().getIntGridProperty("SATNUM").getData();
+            satnum = &eclState->get3DProperties().getIntGridProperty("SATNUM").getData();
 
         retrieveGridPropertyData_(&swl, eclState, kwPrefix+"SWL");
         retrieveGridPropertyData_(&sgl, eclState, kwPrefix+"SGL");
@@ -115,8 +115,8 @@ private:
                                    const std::string& properyName)
     {
         (*data) = 0;
-        if (eclState->getEclipseProperties().hasDeckDoubleGridProperty(properyName))
-            (*data) = &eclState->getEclipseProperties().getDoubleGridProperty(properyName).getData();
+        if (eclState->get3DProperties().hasDeckDoubleGridProperty(properyName))
+            (*data) = &eclState->get3DProperties().getDoubleGridProperty(properyName).getData();
     }
 #endif
 };

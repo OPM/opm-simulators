@@ -177,7 +177,7 @@ public:
         else
             enableThreePointKrSatScaling_ = false;
 
-        auto& props = eclState->getEclipseProperties();
+        auto& props = eclState->get3DProperties();
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem)
             enablePcScaling_ =

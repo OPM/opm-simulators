@@ -123,8 +123,8 @@ public:
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
         std::vector<int> satnumRegionArray(numCompressedElems);
-        if (eclState->getEclipseProperties().hasDeckIntGridProperty("SATNUM")) {
-            const auto& satnumRawData = eclState->getEclipseProperties().getIntGridProperty("SATNUM").getData();
+        if (eclState->get3DProperties().hasDeckIntGridProperty("SATNUM")) {
+            const auto& satnumRawData = eclState->get3DProperties().getIntGridProperty("SATNUM").getData();
             for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
                 unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
                 satnumRegionArray[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
@@ -449,7 +449,7 @@ private:
             oilWaterImbParams.resize(numCompressedElems);
         }
 
-        const auto& imbnumData = eclState->getEclipseProperties().getIntGridProperty("IMBNUM").getData();
+        const auto& imbnumData = eclState->get3DProperties().getIntGridProperty("IMBNUM").getData();
         assert(numCompressedElems == satnumRegionArray.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             unsigned satnumIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
