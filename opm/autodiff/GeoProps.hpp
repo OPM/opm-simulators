@@ -95,7 +95,7 @@ namespace Opm
 
             // get the pore volume multipliers from the EclipseState
             std::vector<double> multpv(numCartesianCells, 1.0);
-            const auto& eclProps = eclState->getEclipseProperties();
+            const auto& eclProps = eclState->get3DProperties();
             if (eclProps.hasDeckDoubleGridProperty("MULTPV")) {
                 multpv = eclProps.getDoubleGridProperty("MULTPV").getData();
             }
@@ -278,7 +278,7 @@ namespace Opm
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
         const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
         EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
-        const auto& porv = eclState->getEclipseProperties().getDoubleGridProperty("PORV").getData();
+        const auto& porv = eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             const int nx = cartdims[0];
             const int ny = cartdims[1];

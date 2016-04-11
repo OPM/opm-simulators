@@ -166,8 +166,8 @@ try
 
     // Grid init
 
-    if (eclipseState->getEclipseProperties().hasDeckDoubleGridProperty("PORV")) {
-        const auto& porv = eclipseState->getEclipseProperties().getDoubleGridProperty("PORV").getData();
+    if (eclipseState->get3DProperties().hasDeckDoubleGridProperty("PORV")) {
+        const auto& porv = eclipseState->get3DProperties().getDoubleGridProperty("PORV").getData();
         grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
     } else {
         grid.reset(new GridManager(eclipseState->getEclipseGrid()));

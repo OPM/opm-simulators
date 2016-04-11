@@ -277,7 +277,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             }
 
             if (deck->hasKeyword("TLPMIXPA")) {
-                const TableContainer& tlpmixparTables = tables->getTlpmixpaTables();
+                const TableContainer& tlpmixparTables = tables.getTlpmixpaTables();
                 if (!tlpmixparTables.empty()) {
 
                     int numRegions = tlpmixparTables.size();
@@ -497,7 +497,7 @@ void SolventPropsAdFromDeck::extractTableIndex(const std::string& keyword,
                                                const int* compressedToCartesianCellIdx,
                                                std::vector<int>& tableIdx) const {
     //Get the Region data
-    const auto& regionData = eclState->getEclipseProperties().getIntGridProperty(keyword).getData();
+    const auto& regionData = eclState->get3DProperties().getIntGridProperty(keyword).getData();
     // Convert this into an array of compressed cells
     // Eclipse uses Fortran-style indices which start at 1
     // instead of 0, we subtract 1.
