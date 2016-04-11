@@ -121,6 +121,22 @@ namespace Opm {
                                                   const SolutionState& state,
                                                   WellState& xw) const;
 
+            template <class WellState>
+            void updateWellState(const Vector& dwells,
+                                 const double gravity,
+                                 const double dpmaxrel,
+                                 const Opm::PhaseUsage& pu,
+                                 const std::vector<bool>& active,
+                                 const VFPProperties& vfp_properties,
+                                 WellState& well_state);
+
+           template <class WellState>
+           void updateWellControls(const Opm::PhaseUsage& pu,
+                                   const double gravity,
+                                   const VFPProperties& vfp_properties,
+                                   const bool terminal_output,
+                                   const std::vector<bool>& active,
+                                   WellState& xw) const;
 
 
         protected:

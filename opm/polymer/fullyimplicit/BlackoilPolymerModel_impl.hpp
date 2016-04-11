@@ -498,7 +498,9 @@ namespace Opm {
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        updateWellControls(well_state);
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        // updateWellControls(well_state);
+        stdWells().updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
 
         // Create the primary variables.
         SolutionState state = variableState(reservoir_state, well_state);

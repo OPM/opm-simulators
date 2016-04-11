@@ -149,7 +149,7 @@ namespace Opm {
         using Base::dsMax;
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
-        using Base::updateWellControls;
+        // using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
         // using Base::computePropertiesForWellConnectionPressures;

@@ -411,11 +411,6 @@ namespace Opm {
                          const WellState& xw,
                          const V& aliveWells);
 
-        void updateWellControls(WellState& xw) const;
-
-        void updateWellState(const V& dwells,
-                             WellState& well_state);
-
         bool getWellConvergence(const int iteration);
 
         bool isVFPActive() const;

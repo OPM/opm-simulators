@@ -964,7 +964,7 @@ namespace Opm {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (detail::constraintBroken(
+                if (wellhelpers::constraintBroken(
                         xw.bhp(), xw.thp(), xw.wellRates(),
                         w, np, wellsMultiSegment()[w]->wellType(), wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
