@@ -221,7 +221,7 @@ namespace Opm
                     const int nc = UgGridHelpers::numCells(G);
                     eqlnum.resize(nc);
                     const std::vector<int>& e = 
-                        eclipseState->getEclipseProperties().getIntGridProperty("EQLNUM").getData();
+                        eclipseState->get3DProperties().getIntGridProperty("EQLNUM").getData();
                     const int* gc = UgGridHelpers::globalCell(G);
                     for (int cell = 0; cell < nc; ++cell) {
                         const int deck_pos = (gc == NULL) ? cell : gc[cell];
@@ -333,7 +333,7 @@ namespace Opm
                     // Check for presence of kw SWATINIT
                     if (deck->hasKeyword("SWATINIT")) {
                         const std::vector<double>& swat_init = eclipseState->
-                                getEclipseProperties().getDoubleGridProperty("SWATINIT").getData();
+                                get3DProperties().getDoubleGridProperty("SWATINIT").getData();
                         const int nc = UgGridHelpers::numCells(G);
                         swat_init_.resize(nc);
                         const int* gc = UgGridHelpers::globalCell(G);
