@@ -21,7 +21,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/simulator/SimulatorCompressibleTwophase.hpp>
+#include <opm/simulators/SimulatorCompressibleTwophase.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 

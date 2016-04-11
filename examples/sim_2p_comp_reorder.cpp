@@ -43,7 +43,7 @@
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/simulator/SimulatorCompressibleTwophase.hpp>
+#include <opm/simulators/SimulatorCompressibleTwophase.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>

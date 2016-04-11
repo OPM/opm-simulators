@@ -21,7 +21,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/simulator/SimulatorIncompTwophase.hpp>
+#include <opm/simulators/SimulatorIncompTwophase.hpp>
 #include <opm/core/utility/NullStream.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
