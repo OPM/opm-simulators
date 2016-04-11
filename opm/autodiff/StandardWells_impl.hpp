@@ -464,4 +464,38 @@ namespace Opm
         }
     }
 
+
+
+
+
+    template <class SolutionState, class WellState>
+    void
+    StandardWells::
+    updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                     const SolutionState& state,
+                                     WellState& xw) const
+    {
+        if ( !localWellsActive() )
+        {
+            // If there are no wells in the subdomain of the proces then
+            // cq_s has zero size and will cause a segmentation fault below.
+            return;
+        }
+
+        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+        Vector cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
+        for (int phase = 1; phase < np; ++phase) {
+            cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
+        }
+        xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf*np);
+
+        // Update the perforation pressures.
+        const Vector& cdp = wellPerforationPressureDiffs();
+        const Vector perfpressure = (wellOps().w2p * state.bhp.value().matrix()).array() + cdp;
+        xw.perfPress().assign(perfpressure.data(), perfpressure.data() + nperf);
+    }
+
 }

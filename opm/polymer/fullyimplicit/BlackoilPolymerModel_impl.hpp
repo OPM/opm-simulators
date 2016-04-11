@@ -570,7 +570,7 @@ namespace Opm {
         }
 
         stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        Base::updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         Base::addWellFluxEq(cq_s, state);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
         addWellControlEq(state, well_state, aliveWells);

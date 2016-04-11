@@ -116,6 +116,11 @@ namespace Opm {
                                  Vector& aliveWells,
                                  std::vector<ADB>& cq_s) const;
 
+            template <class SolutionState, class WellState>
+            void updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                                  const SolutionState& state,
+                                                  WellState& xw) const;
+
 
 
         protected:

@@ -859,7 +859,7 @@ namespace detail {
         V aliveWells;
         std::vector<ADB> cq_s;
         asImpl().stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().addWellControlEq(state, well_state, aliveWells);
@@ -1018,38 +1018,6 @@ namespace detail {
                 b_perfcells[phase] = subset(rq_[phase].b, well_cells);
             }
         }
-    }
-
-
-
-
-
-    template <class Grid, class Implementation>
-    void BlackoilModelBase<Grid, Implementation>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                                                                   const SolutionState& state,
-                                                                                   WellState& xw) const
-    {
-        if ( !asImpl().localWellsActive() )
-        {
-            // If there are no wells in the subdomain of the proces then
-            // cq_s has zero size and will cause a segmentation fault below.
-            return;
-        }
-
-        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
-        const int np = wells().number_of_phases;
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
-        for (int phase = 1; phase < np; ++phase) {
-            cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
-        }
-        xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf*np);
-
-        // Update the perforation pressures.
-        const V& cdp = asImpl().stdWells().wellPerforationPressureDiffs();
-        const V perfpressure = (stdWells().wellOps().w2p * state.bhp.value().matrix()).array() + cdp;
-        xw.perfPress().assign(perfpressure.data(), perfpressure.data() + nperf);
     }
 
 
@@ -1436,7 +1404,7 @@ namespace detail {
             SolutionState wellSolutionState = state0;
             asImpl().variableStateExtractWellsVars(indices, vars, wellSolutionState);
             asImpl().stdWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
-            asImpl().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
+            asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             asImpl().addWellFluxEq(cq_s, wellSolutionState);
             asImpl().addWellControlEq(wellSolutionState, well_state, aliveWells);
             converged = getWellConvergence(it);

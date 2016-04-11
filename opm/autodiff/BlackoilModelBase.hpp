@@ -398,11 +398,6 @@ namespace Opm {
                     WellState& well_state);
 
         void
-        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                         const SolutionState& state,
-                                         WellState& xw) const;
-
-        void
         addWellFluxEq(const std::vector<ADB>& cq_s,
                       const SolutionState& state);
 
