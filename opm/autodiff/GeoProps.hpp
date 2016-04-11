@@ -95,14 +95,15 @@ namespace Opm
 
             // get the pore volume multipliers from the EclipseState
             std::vector<double> multpv(numCartesianCells, 1.0);
-            if (eclState->hasDeckDoubleGridProperty("MULTPV")) {
-                multpv = eclState->getDoubleGridProperty("MULTPV")->getData();
+            const auto& eclProps = eclState->getEclipseProperties();
+            if (eclProps.hasDeckDoubleGridProperty("MULTPV")) {
+                multpv = eclProps.getDoubleGridProperty("MULTPV").getData();
             }
 
             // get the net-to-gross cell thickness from the EclipseState
             std::vector<double> ntg(numCartesianCells, 1.0);
-            if (eclState->hasDeckDoubleGridProperty("NTG")) {
-                ntg = eclState->getDoubleGridProperty("NTG")->getData();
+            if (eclProps.hasDeckDoubleGridProperty("NTG")) {
+                ntg = eclProps.getDoubleGridProperty("NTG").getData();
             }
 
             // Get grid from parser.
@@ -177,7 +178,7 @@ namespace Opm
                 }
 
                 // Note the pore volume from eclState is used and not the pvol_ calculated above
-                std::vector<double> porv = eclState->getDoubleGridProperty("PORV")->getData();
+                const auto& porv = eclProps.getDoubleGridProperty("PORV").getData();
                 pinch.process(grid, htrans_copy, actnum, multz, porv, nnc_);
             }           
 
@@ -277,7 +278,7 @@ namespace Opm
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
         const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
         EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
-        std::vector<double> porv = eclState->getDoubleGridProperty("PORV")->getData();
+        const auto& porv = eclState->getEclipseProperties().getDoubleGridProperty("PORV").getData();
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             const int nx = cartdims[0];
             const int ny = cartdims[1];

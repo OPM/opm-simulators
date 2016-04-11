@@ -422,7 +422,8 @@ namespace Opm
         void setupGridAndProps()
         {
             // Create grid.
-            const std::vector<double>& porv = eclipse_state_->getDoubleGridProperty("PORV")->getData();
+            const std::vector<double>& porv =
+                    eclipse_state_->getEclipseProperties().getDoubleGridProperty("PORV").getData();
             grid_init_.reset(new GridInit<Grid>(deck_, eclipse_state_, porv));
             const Grid& grid = grid_init_->grid();
 

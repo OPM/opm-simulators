@@ -207,8 +207,9 @@ public:
 
 /*****************************************************************/
 
-void initOPMTrans(TransGraph& opmTrans , DeckConstPtr deck , std::shared_ptr<const EclipseState> eclipseState) {
-    std::shared_ptr<GridManager> grid = std::make_shared<GridManager>( eclipseState->getEclipseGrid(), eclipseState->getDoubleGridProperty("PORV")->getData());
+void initOPMTrans(TransGraph& opmTrans, DeckConstPtr deck, std::shared_ptr<const EclipseState> eclipseState) {
+    std::shared_ptr<GridManager> grid = std::make_shared<GridManager>( eclipseState->getEclipseGrid(),
+            eclipseState->getEclipseProperties().getDoubleGridProperty( "PORV" ).getData() );
     const struct UnstructuredGrid * cGrid = grid->c_grid();
     std::shared_ptr<BlackoilPropsAdInterface> props;
 
