@@ -83,7 +83,7 @@ namespace Opm {
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
-        const auto& satnum = eclState->getEclipseProperties().getIntGridProperty("SATNUM");
+        const auto& satnum = eclState->get3DProperties().getIntGridProperty("SATNUM");
 
         for (int c = 0; c < nc; ++c) {
             const int cartIdx = compressedToCartesianIdx[c];
