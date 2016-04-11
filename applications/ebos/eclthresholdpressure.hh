@@ -97,7 +97,7 @@ public:
         // ECFV spatial discretization with TPFA). if you try to use
         // it with something else, you're currently out of luck,
         // sorry!
-        assert((int) simulator_.model().numGridDof() == numElements);
+        assert(simulator_.model().numGridDof() == numElements);
 
         const auto& gridManager = simulator_.gridManager();
         Opm::EclipseStateConstPtr eclState = gridManager.eclState();
