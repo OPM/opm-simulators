@@ -33,9 +33,11 @@ namespace Opm
 
 
     StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg,
-                                               const SolventPropsAdFromDeck& solvent_props)
+                                               const SolventPropsAdFromDeck& solvent_props,
+                                               const int solvent_pos)
         : Base(wells_arg)
         , solvent_props_(solvent_props)
+        , solvent_pos_(solvent_pos)
     {
     }
 
@@ -175,6 +177,54 @@ namespace Opm
         // b and surf_dens_perf is row major, so can just copy data.
         b_perf.assign(b.data(), b.data() + nperf * pu.num_phases);
         surf_dens_perf.assign(surf_dens_copy.data(), surf_dens_copy.data() + nperf * pu.num_phases);
+    }
+
+
+
+
+
+
+    template <class ReservoirResidualQuant, class SolutionState>
+    void
+    StandardWellsSolvent::
+    extractWellPerfProperties(const SolutionState& state,
+                              const std::vector<ReservoirResidualQuant>& rq,
+                              const int np,
+                              const BlackoilPropsAdInterface& fluid,
+                              const std::vector<bool>& active,
+                              std::vector<ADB>& mob_perfcells,
+                              std::vector<ADB>& b_perfcells) const
+    {
+        Base::extractWellPerfProperties(state, rq, np, fluid, active, mob_perfcells, b_perfcells);
+        // handle the solvent related
+        {
+            int gas_pos = fluid.phaseUsage().phase_pos[Gas];
+            const std::vector<int>& well_cells = wellOps().well_cells;
+            const int nperf = well_cells.size();
+            // Gas and solvent is combinded and solved together
+            // The input in the well equation is then the
+            // total gas phase = hydro carbon gas + solvent gas
+
+            // The total mobility is the sum of the solvent and gas mobiliy
+            mob_perfcells[gas_pos] += subset(rq[solvent_pos_].mob, well_cells);
+
+            // A weighted sum of the b-factors of gas and solvent are used.
+            const int nc = rq[solvent_pos_].mob.size();
+
+            const Opm::PhaseUsage& pu = fluid.phaseUsage();
+            const ADB zero = ADB::constant(Vector::Zero(nc));
+            const ADB& ss = state.solvent_saturation;
+            const ADB& sg = (active[ Gas ]
+                             ? state.saturation[ pu.phase_pos[ Gas ] ]
+                             : zero);
+
+            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
+            ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
+            Vector ones = Vector::Constant(nperf,1.0);
+
+            b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
+            b_perfcells[gas_pos] += (F_solvent * subset(rq[solvent_pos_].b, well_cells));
+        }
     }
 
 

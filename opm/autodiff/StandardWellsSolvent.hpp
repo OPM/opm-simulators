@@ -36,7 +36,7 @@ namespace Opm {
             using Base = StandardWells;
 
             // ---------  Public methods  ---------
-            explicit StandardWellsSolvent(const Wells* wells, const SolventPropsAdFromDeck& solvent_props);
+            explicit StandardWellsSolvent(const Wells* wells, const SolventPropsAdFromDeck& solvent_props, const int solvent_pos);
 
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
@@ -48,8 +48,19 @@ namespace Opm {
                                                              std::vector<double>& rsmax_perf,
                                                              std::vector<double>& rvmax_perf,
                                                              std::vector<double>& surf_dens_perf);
+
+            // TODO: fluid and active may be can put in the member list
+            template <class ReservoirResidualQuant, class SolutionState>
+            void extractWellPerfProperties(const SolutionState& state,
+                                           const std::vector<ReservoirResidualQuant>& rq,
+                                           const int np,
+                                           const BlackoilPropsAdInterface& fluid,
+                                           const std::vector<bool>& active,
+                                           std::vector<ADB>& mob_perfcells,
+                                           std::vector<ADB>& b_perfcells) const;
         protected:
             const SolventPropsAdFromDeck& solvent_props_;
+            const int solvent_pos_;
 
         };
 

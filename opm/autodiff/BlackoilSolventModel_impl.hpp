@@ -90,7 +90,7 @@ namespace Opm {
           solvent_pos_(detail::solventPos(fluid.phaseUsage())),
           solvent_props_(solvent_props),
           is_miscible_(is_miscible),
-          std_wells_(wells_arg, solvent_props)
+          std_wells_(wells_arg, solvent_props, solvent_pos_)
 
     {
         if (has_solvent_) {

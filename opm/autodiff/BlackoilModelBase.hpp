@@ -386,6 +386,8 @@ namespace Opm {
         void
         assembleMassBalanceEq(const SolutionState& state);
 
+        // TODO: only kept for now due to flow_multisegment
+        // will be removed soon
         void
         extractWellPerfProperties(const SolutionState& state,
                                   std::vector<ADB>& mob_perfcells,

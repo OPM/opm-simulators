@@ -289,11 +289,14 @@ namespace Opm
 
 
 
-    template <class ReservoirResidualQuant>
+    template <class ReservoirResidualQuant, class SolutionState>
     void
     StandardWells::
-    extractWellPerfProperties(const std::vector<ReservoirResidualQuant>& rq,
+    extractWellPerfProperties(const SolutionState& /* state */,
+                              const std::vector<ReservoirResidualQuant>& rq,
                               const int np,
+                              const BlackoilPropsAdInterface& /* fluid */,
+                              const std::vector<bool>& /* active */,
                               std::vector<ADB>& mob_perfcells,
                               std::vector<ADB>& b_perfcells) const
     {
