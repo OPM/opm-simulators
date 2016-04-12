@@ -767,11 +767,11 @@ private:
 
         // PVTNUM has not been specified, so everything is in the first region and we
         // don't need to care...
-        if (!eclState->hasDeckIntGridProperty("PVTNUM"))
+        if (!eclState->get3DProperties().hasDeckIntGridProperty("PVTNUM"))
             return;
 
         const std::vector<int>& pvtnumData =
-            eclState->getIntGridProperty("PVTNUM")->getData();
+            eclState->get3DProperties().getIntGridProperty("PVTNUM").getData();
         unsigned numElem = gridManager.gridView().size(0);
         rockTableIdx_.resize(numElem);
         for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
@@ -787,6 +787,7 @@ private:
         const auto& gridManager = this->simulator().gridManager();
         Opm::DeckConstPtr deck = gridManager.deck();
         Opm::EclipseStateConstPtr eclState = gridManager.eclState();
+        const auto& props = eclState->get3DProperties();
 
         size_t numDof = this->model().numGridDof();
 
@@ -799,15 +800,15 @@ private:
         // read the intrinsic permeabilities from the eclState. Note that all arrays
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // opm-grid CpGrid object might remove a few elements...
-        if (eclState->hasDeckDoubleGridProperty("PERMX")) {
-            const std::vector<double> &permxData =
-                eclState->getDoubleGridProperty("PERMX")->getData();
+        if (props.hasDeckDoubleGridProperty("PERMX")) {
+                const std::vector<double> &permxData =
+                props.getDoubleGridProperty("PERMX").getData();
             std::vector<double> permyData(permxData);
-            if (eclState->hasDeckDoubleGridProperty("PERMY"))
-                permyData = eclState->getDoubleGridProperty("PERMY")->getData();
+            if (props.hasDeckDoubleGridProperty("PERMY"))
+                permyData = props.getDoubleGridProperty("PERMY").getData();
             std::vector<double> permzData(permxData);
-            if (eclState->hasDeckDoubleGridProperty("PERMZ"))
-                permzData = eclState->getDoubleGridProperty("PERMZ")->getData();
+            if (props.hasDeckDoubleGridProperty("PERMZ"))
+                permzData = props.getDoubleGridProperty("PERMZ").getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
@@ -828,14 +829,14 @@ private:
 
         ////////////////////////////////
         // compute the porosity
-        if (!eclState->hasDeckDoubleGridProperty("PORO") && !eclState->hasDeckDoubleGridProperty("PORV"))
+        if (!props.hasDeckDoubleGridProperty("PORO") && !props.hasDeckDoubleGridProperty("PORV"))
             OPM_THROW(std::runtime_error,
                       "Can't read the porosity from the ECL state object. "
                       "(The PORO and PORV keywords are missing)");
 
-        if (eclState->hasDeckDoubleGridProperty("PORO")) {
+        if (props.hasDeckDoubleGridProperty("PORO")) {
             const std::vector<double> &poroData =
-                eclState->getDoubleGridProperty("PORO")->getData();
+            props.getDoubleGridProperty("PORO").getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
@@ -844,18 +845,18 @@ private:
         }
 
         // apply the NTG keyword to the porosity
-        if (eclState->hasDeckDoubleGridProperty("NTG")) {
+        if (props.hasDeckDoubleGridProperty("NTG")) {
             const std::vector<double> &ntgData =
-                eclState->getDoubleGridProperty("NTG")->getData();
+                props.getDoubleGridProperty("NTG").getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
                 porosity_[dofIdx] *= ntgData[gridManager.cartesianIndex(dofIdx)];
         }
 
         // apply the MULTPV keyword to the porosity
-        if (eclState->hasDeckDoubleGridProperty("MULTPV")) {
+        if (props.hasDeckDoubleGridProperty("MULTPV")) {
             const std::vector<double> &multpvData =
-                eclState->getDoubleGridProperty("MULTPV")->getData();
+                props.getDoubleGridProperty("MULTPV").getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
                 porosity_[dofIdx] *= multpvData[gridManager.cartesianIndex(dofIdx)];
@@ -863,9 +864,9 @@ private:
 
         // overwrite the porosity using the PORV keyword for the elements for which PORV
         // is defined...
-        if (eclState->hasDeckDoubleGridProperty("PORV")) {
+        if (props.hasDeckDoubleGridProperty("PORV")) {
             const std::vector<double> &porvData =
-                eclState->getDoubleGridProperty("PORV")->getData();
+                props.getDoubleGridProperty("PORV").getData();
 
             for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
                 unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
@@ -977,7 +978,7 @@ private:
             rvData = &deck->getKeyword("RV").getSIDoubleData();
         // initial reservoir temperature
         const std::vector<double> &tempiData =
-            eclState->getDoubleGridProperty("TEMPI")->getData();
+            eclState->get3DProperties().getDoubleGridProperty("TEMPI").getData();
 
         // make sure that the size of the data arrays is correct
 #ifndef NDEBUG

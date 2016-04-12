@@ -122,7 +122,7 @@ public:
 
         // internalize the data specified using the EQLNUM keyword
         const std::vector<int>& equilRegionData =
-            eclState->getIntGridProperty("EQLNUM")->getData();
+            eclState->get3DProperties().getIntGridProperty("EQLNUM").getData();
         elemEquilRegion_.resize(numElements, 0);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
             int cartElemIdx = gridManager.cartesianIndex(elemIdx);

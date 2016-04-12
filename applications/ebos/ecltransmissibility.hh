@@ -143,7 +143,7 @@ public:
         Opm::EclipseStateConstPtr eclState = gridManager.eclState();
         std::shared_ptr<const Opm::TransMult> transMult = eclState->getTransMult();
         const std::vector<double>& ntg =
-            eclState->getDoubleGridProperty("NTG")->getData();
+            eclState->get3DProperties().getDoubleGridProperty("NTG").getData();
 
         // reserving some space in the hashmap upfront saves quite a bit of time because
         // resizes are costly for hashmaps and there would be quite a few of them if we
