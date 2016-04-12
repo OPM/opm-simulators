@@ -31,9 +31,6 @@
 namespace Opm {
 
 
-    // ---------      Types      ---------
-    typedef AutoDiffBlock<double> ADB;
-    typedef ADB::V Vector;
 
 
     namespace wellhelpers
@@ -119,6 +116,10 @@ namespace Opm {
 
             return broken;
         }
+
+
+        // ---------      Types      ---------
+        using Vector = AutoDiffBlock<double>::V;
 
         /**
          * Simple hydrostatic correction for VFP table

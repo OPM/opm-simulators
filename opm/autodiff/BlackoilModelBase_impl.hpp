@@ -780,8 +780,8 @@ namespace detail {
         asImpl().stdWells().computePropertiesForWellConnectionPressures(state, xw, fluid_, active_, phaseCondition_, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // Extract well connection depths.
-        const Vector depth = cellCentroidsZToEigen(grid_);
-        const Vector pdepth = subset(depth, asImpl().stdWells().wellOps().well_cells);
+        const StandardWells::Vector depth = cellCentroidsZToEigen(grid_);
+        const StandardWells::Vector pdepth = subset(depth, asImpl().stdWells().wellOps().well_cells);
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
 

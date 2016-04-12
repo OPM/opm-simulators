@@ -130,7 +130,7 @@ namespace Opm
 
 
 
-    Vector& StandardWells::wellPerforationDensities()
+    StandardWells::Vector& StandardWells::wellPerforationDensities()
     {
         return well_perforation_densities_;
     }
@@ -139,7 +139,7 @@ namespace Opm
 
 
 
-    const Vector&
+    const StandardWells::Vector&
     StandardWells::wellPerforationDensities() const
     {
         return well_perforation_densities_;
@@ -149,7 +149,7 @@ namespace Opm
 
 
 
-    Vector&
+    StandardWells::Vector&
     StandardWells::wellPerforationPressureDiffs()
     {
         return well_perforation_pressure_diffs_;
@@ -159,7 +159,7 @@ namespace Opm
 
 
 
-    const Vector&
+    const StandardWells::Vector&
     StandardWells::wellPerforationPressureDiffs() const
     {
         return well_perforation_pressure_diffs_;

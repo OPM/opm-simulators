@@ -37,16 +37,6 @@
 
 namespace Opm {
 
-        // ---------      Types      ---------
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V Vector;
-
-        // copied from BlackoilModelBase
-        // should put to somewhere better
-        typedef Eigen::Array<double,
-                     Eigen::Dynamic,
-                     Eigen::Dynamic,
-                     Eigen::RowMajor> DataBlock;
 
         /// Class for handling the standard well model.
         class StandardWells {
@@ -59,6 +49,16 @@ namespace Opm {
             };
 
         public:
+            // ---------      Types      ---------
+            using ADB = AutoDiffBlock<double>;
+            using Vector = ADB::V;
+
+            // copied from BlackoilModelBase
+            // should put to somewhere better
+            using DataBlock =  Eigen::Array<double,
+                                            Eigen::Dynamic,
+                                            Eigen::Dynamic,
+                                            Eigen::RowMajor>;
             // ---------  Public methods  ---------
             explicit StandardWells(const Wells* wells);
 
@@ -73,11 +73,11 @@ namespace Opm {
             const WellOps& wellOps() const;
 
             /// Density of each well perforation
-            Vector& wellPerforationDensities();
+            Vector& wellPerforationDensities(); // mutable version kept for BlackoilMultisegmentModel
             const Vector& wellPerforationDensities() const;
 
             /// Diff to bhp for each well perforation.
-            Vector& wellPerforationPressureDiffs();
+            Vector& wellPerforationPressureDiffs(); // mutable version kept for BlackoilMultisegmentModel
             const Vector& wellPerforationPressureDiffs() const;
 
             template <class SolutionState, class WellState>
