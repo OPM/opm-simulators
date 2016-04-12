@@ -26,7 +26,6 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-
   opm/autodiff/BlackoilPropsAdInterface.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/NewtonIterationBlackoilCPR.cpp
@@ -66,7 +65,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/SimulatorCompressibleTwophase.cpp
   opm/simulators/SimulatorIncompTwophase.cpp
   )
-
 
 
 # originally generated with the command:
@@ -131,7 +129,6 @@ list (APPEND PROGRAM_SOURCE_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
-
   opm/autodiff/AdditionalObjectDeleter.hpp
   opm/autodiff/AutoDiffBlock.hpp
   opm/autodiff/AutoDiffHelpers.hpp
@@ -227,5 +224,4 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/SimulatorCompressibleTwophase.hpp
   opm/simulators/SimulatorIncompTwophase.hpp
   )
-
 
