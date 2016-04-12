@@ -1685,9 +1685,9 @@ namespace detail {
 
 
         // TODO: gravity should be stored as a member
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        // asImpl().updateWellState(dwells,well_state);
-        asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
+        // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        // asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
+        asImpl().updateWellState(dwells,well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable();
@@ -2523,6 +2523,24 @@ namespace detail {
             }
         }
     }
+
+
+
+
+
+    // TODO: only kept for now due to flow_multisegment
+    // will be removed soon
+    template <class Grid, class Implementation>
+    void
+    BlackoilModelBase<Grid, Implementation>::updateWellState(const V& dwells,
+                                                             WellState& well_state)
+    {
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(),
+                                            active_, vfp_properties_, well_state);
+
+    }
+
 
 
 

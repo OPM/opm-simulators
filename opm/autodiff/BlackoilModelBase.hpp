@@ -393,6 +393,12 @@ namespace Opm {
                                   std::vector<ADB>& mob_perfcells,
                                   std::vector<ADB>& b_perfcells) const;
 
+        // TODO: only kept for now due to flow_multisegment
+        // will be removed soon
+        void updateWellState(const V& dwells,
+                             WellState& well_state);
+
+
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
