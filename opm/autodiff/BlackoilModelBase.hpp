@@ -406,6 +406,28 @@ namespace Opm {
                     WellState& well_state);
 
         void
+<<<<<<< HEAD
+=======
+        computeWellFlux(const SolutionState& state,
+                        const std::vector<ADB>& mob_perfcells,
+                        const std::vector<ADB>& b_perfcells,
+                        V& aliveWells,
+                        std::vector<ADB>& cq_s) const;
+
+        void
+        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                         const SolutionState& state,
+                                         WellState& xw) const;
+
+        void
+        computeWellPotentials(const SolutionState& state,
+                              const std::vector<ADB>& mob_perfcells,
+                              const std::vector<ADB>& b_perfcells,
+                              WellState& well_state);
+
+
+        void
+>>>>>>> Move computation of well potentials from simulator class ot model class
         addWellFluxEq(const std::vector<ADB>& cq_s,
                       const SolutionState& state);
 

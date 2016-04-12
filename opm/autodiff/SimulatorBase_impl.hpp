@@ -396,30 +396,12 @@ namespace Opm
     {
         const int nw = wells->number_of_wells;
         const int np = wells->number_of_phases;
-
         well_potentials.clear();
-        well_potentials.resize(nw*np,0.0);       
+        well_potentials.resize(nw*np,0.0);
         for (int w = 0; w < nw; ++w) {
             for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
-                const double well_cell_pressure = x.pressure()[wells->well_cells[perf]];
-                const double drawdown_used = well_cell_pressure - xw.perfPress()[perf];
-                const WellControls* ctrl = wells->ctrls[w];
-                const int nwc = well_controls_get_num(ctrl);
-                //Loop over all controls until we find a BHP control
-                //that specifies what we need...
-                double bhp = 0.0;
-                for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
-                    if (well_controls_iget_type(ctrl, ctrl_index) == BHP) {
-                        bhp = well_controls_iget_target(ctrl, ctrl_index);
-                    }
-                    // TODO: do something for thp;
-                }
-                // Calculate the pressure difference in the well perforation
-                const double dp = xw.perfPress()[perf] - xw.bhp()[w];
-                const double drawdown_maximum = well_cell_pressure - (bhp + dp);
-
                 for (int phase = 0; phase < np; ++phase) {
-                    well_potentials[w*np + phase] += (drawdown_maximum / drawdown_used * xw.perfPhaseRates()[perf*np + phase]);
+                    well_potentials[w*np + phase] += xw.wellPotentials()[perf*np + phase];
                 }
             }
         }
