@@ -867,7 +867,6 @@ namespace detail {
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().addWellControlEq(state, well_state, aliveWells);
-
         asImpl().computeWellPotentials(state, mob_perfcells, b_perfcells, well_state);
 
     }
@@ -1747,7 +1746,7 @@ namespace detail {
                     if (well_type == INJECTOR) {
                         double dp = detail::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
-                                    well_perforation_densities_, gravity);
+                                   stdWells().wellPerforationDensities(), gravity);
                         const double bhp = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                         // pick the bhp that gives the largest potentials i.e. largest bhp for injectors
                         if ( bhp > bhps[w]) {
@@ -1757,7 +1756,7 @@ namespace detail {
                     else if (well_type == PRODUCER) {
                         double dp = detail::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
-                                    well_perforation_densities_, gravity);
+                                    stdWells().wellPerforationDensities(), gravity);
 
                         const double bhp = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                         // pick the bhp that gives the largest potentials i.e. smalest bhp for producers
