@@ -77,7 +77,7 @@ public:
         //////
         // initialize the thermal part
         //////
-        auto tables = eclState->getTableManager();
+        const auto& tables = eclState->getTableManager();
 
         enableThermalDensity_ = deck->hasKeyword("THERMEX1");
         enableThermalViscosity_ = deck->hasKeyword("VISCREF");
@@ -87,7 +87,7 @@ public:
 
         // viscosity
         if (deck->hasKeyword("VISCREF")) {
-            const auto& oilvisctTables = tables->getOilvisctTables();
+            const auto& oilvisctTables = tables.getOilvisctTables();
             const auto& viscrefKeyword = deck->getKeyword("VISCREF");
 
             assert(oilvisctTables.size() == numRegions);
