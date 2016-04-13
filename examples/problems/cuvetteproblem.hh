@@ -516,9 +516,8 @@ private:
 
             // compute the phase compositions
             typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
-            typename FluidSystem::ParameterCache paramCache;
-            MMPC::solve(fs, paramCache, /*setViscosity=*/true,
-                        /*setEnthalpy=*/true);
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            MMPC::solve(fs, paramCache, /*setViscosity=*/true, /*setEnthalpy=*/true);
         }
         else {
             fs.setSaturation(waterPhaseIdx, 0.12);
@@ -534,12 +533,10 @@ private:
 
             // compute the phase compositions
             typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MMPC;
-            typename FluidSystem::ParameterCache paramCache;
-            MMPC::solve(fs, paramCache, /*setViscosity=*/true,
-                        /*setEnthalpy=*/true);
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
+            MMPC::solve(fs, paramCache, /*setViscosity=*/true, /*setEnthalpy=*/true);
 
-            // set the contaminant mole fractions to zero. this is a
-            // little bit hacky...
+            // set the contaminant mole fractions to zero. this is a little bit hacky...
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 fs.setMoleFraction(phaseIdx, NAPLIdx, 0.0);
 
@@ -568,7 +565,7 @@ private:
             fs.setPressure(phaseIdx, 1.0135e5);
         }
 
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         paramCache.updateAll(fs);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
@@ -605,7 +602,7 @@ private:
         injectFluidState_.setMoleFraction(gasPhaseIdx, NAPLIdx, 0.0);      // [-]
 
         // set the specific enthalpy of the gas phase
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         paramCache.updatePhase(injectFluidState_, gasPhaseIdx);
 
         Scalar h = FluidSystem::enthalpy(injectFluidState_, paramCache, gasPhaseIdx);

@@ -461,7 +461,6 @@ public:
                   unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto &pos = context.pos(spaceIdx, timeIdx);
-
         if (onLeftBoundary_(pos)) {
             Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
             initialFluidState_(fs, context, spaceIdx, timeIdx);
@@ -474,15 +473,17 @@ public:
             RateVector massRate(0.0);
             massRate[contiCO2EqIdx] = -1e-3; // [kg/(m^3 s)]
 
-            Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
+            typedef Opm::ImmiscibleFluidState<Scalar, FluidSystem> FluidState;
+            FluidState fs;
             fs.setSaturation(gasPhaseIdx, 1.0);
             const auto& pg =
                 context.intensiveQuantities(spaceIdx, timeIdx).fluidState().pressure(gasPhaseIdx);
             fs.setPressure(gasPhaseIdx, Toolbox::value(pg));
             fs.setTemperature(temperature(context, spaceIdx, timeIdx));
-            typename FluidSystem::ParameterCache paramCache;
+
+            typename FluidSystem::template ParameterCache<Scalar> paramCache;
             paramCache.updatePhase(fs, gasPhaseIdx);
-            Scalar h = FluidSystem::enthalpy(fs, paramCache, gasPhaseIdx);
+            Scalar h = FluidSystem::template enthalpy<FluidState, Scalar>(fs, paramCache, gasPhaseIdx);
 
             // impose an forced inflow boundary condition for pure CO2
             values.setMassRate(massRate);
@@ -568,7 +569,7 @@ private:
         fs.setMoleFraction(liquidPhaseIdx, BrineIdx,
                            1.0 - fs.moleFraction(liquidPhaseIdx, CO2Idx));
 
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         CFRP::solve(fs, paramCache,
                     /*refPhaseIdx=*/liquidPhaseIdx,

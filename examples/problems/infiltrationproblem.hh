@@ -457,7 +457,7 @@ private:
         fs.setMoleFraction(gasPhaseIdx, NAPLIdx, 0);
 
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         CFRP::solve(fs, paramCache, gasPhaseIdx,
                     /*setViscosity=*/false,
                     /*setEnthalpy=*/false);

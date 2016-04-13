@@ -491,7 +491,7 @@ public:
 
         fs.setTemperature(temperature_);
 
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         paramCache.updatePhase(fs, wettingPhaseIdx);
         Scalar densityW = FluidSystem::density(fs, paramCache, wettingPhaseIdx);
 
