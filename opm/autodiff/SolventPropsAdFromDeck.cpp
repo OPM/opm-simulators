@@ -63,9 +63,9 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             OPM_THROW(std::runtime_error, "SDENSITY must be specified in SOLVENT runs\n");
         }
 
-        auto tables = eclState->getTableManager();
+        const auto& tables = eclState->getTableManager();
         // pvt
-        const TableContainer& pvdsTables = tables->getPvdsTables();
+        const TableContainer& pvdsTables = tables.getPvdsTables();
         if (!pvdsTables.empty()) {
 
             int numRegions = pvdsTables.size();
@@ -97,7 +97,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             OPM_THROW(std::runtime_error, "PVDS must be specified in SOLVENT runs\n");
         }
 
-        const TableContainer& ssfnTables = tables->getSsfnTables();
+        const TableContainer& ssfnTables = tables.getSsfnTables();
         // relative permeabilty multiplier
         if (!ssfnTables.empty()) {
 
@@ -131,7 +131,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             extractTableIndex("MISCNUM", eclState, number_of_cells, global_cell, cellMiscRegionIdx_);
 
             // misicible hydrocabon relative permeability wrt water
-            const TableContainer& sof2Tables = tables->getSof2Tables();
+            const TableContainer& sof2Tables = tables.getSof2Tables();
             if (!sof2Tables.empty()) {
 
                 int numRegions = sof2Tables.size();
@@ -153,7 +153,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 OPM_THROW(std::runtime_error, "SOF2 must be specified in MISCIBLE (SOLVENT) runs\n");
             }
 
-            const TableContainer& miscTables = tables->getMiscTables();
+            const TableContainer& miscTables = tables.getMiscTables();
             if (!miscTables.empty()) {
 
                 int numRegions = miscTables.size();
@@ -175,7 +175,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 OPM_THROW(std::runtime_error, "MISC must be specified in MISCIBLE (SOLVENT) runs\n");
             }
 
-            const TableContainer& pmiscTables = tables->getPmiscTables();
+            const TableContainer& pmiscTables = tables.getPmiscTables();
             if (!pmiscTables.empty()) {
 
                 int numRegions = pmiscTables.size();
@@ -195,7 +195,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             }
 
             // miscible relative permeability multipleiers
-            const TableContainer& msfnTables = tables->getMsfnTables();
+            const TableContainer& msfnTables = tables.getMsfnTables();
             if (!msfnTables.empty()) {
 
                 int numRegions = msfnTables.size();
@@ -218,7 +218,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
             }
 
-            const TableContainer& sorwmisTables = tables->getSorwmisTables();
+            const TableContainer& sorwmisTables = tables.getSorwmisTables();
             if (!sorwmisTables.empty()) {
 
                 int numRegions = sorwmisTables.size();
@@ -236,7 +236,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
             }
 
-            const TableContainer& sgcwmisTables = tables->getSgcwmisTables();
+            const TableContainer& sgcwmisTables = tables.getSgcwmisTables();
             if (!sgcwmisTables.empty()) {
 
                 int numRegions = sgcwmisTables.size();
@@ -277,7 +277,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             }
 
             if (deck->hasKeyword("TLPMIXPA")) {
-                const TableContainer& tlpmixparTables = tables->getTlpmixpaTables();
+                const TableContainer& tlpmixparTables = tables.getTlpmixpaTables();
                 if (!tlpmixparTables.empty()) {
 
                     int numRegions = tlpmixparTables.size();
@@ -497,7 +497,7 @@ void SolventPropsAdFromDeck::extractTableIndex(const std::string& keyword,
                                                const int* compressedToCartesianCellIdx,
                                                std::vector<int>& tableIdx) const {
     //Get the Region data
-    const std::vector<int>& regionData = eclState->getIntGridProperty(keyword)->getData();
+    const auto& regionData = eclState->get3DProperties().getIntGridProperty(keyword).getData();
     // Convert this into an array of compressed cells
     // Eclipse uses Fortran-style indices which start at 1
     // instead of 0, we subtract 1.
