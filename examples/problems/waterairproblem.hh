@@ -499,7 +499,7 @@ private:
         MaterialLaw::capillaryPressures(pc, matParams, fs);
         fs.setPressure(gasPhaseIdx, fs.pressure(liquidPhaseIdx) + (pc[gasPhaseIdx] - pc[liquidPhaseIdx]));
 
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
         CFRP::solve(fs, paramCache, liquidPhaseIdx, /*setViscosity=*/false,  /*setEnthalpy=*/true);
     }
@@ -515,7 +515,7 @@ private:
             fs.setPressure(phaseIdx, 1.0135e5);
         }
 
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         paramCache.updateAll(fs);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);

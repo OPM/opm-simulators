@@ -453,8 +453,7 @@ private:
     }
 
     template <class FluidState>
-    void initFluidState_(FluidState &fs, const MaterialLawParams &matParams,
-                         bool isInlet)
+    void initFluidState_(FluidState &fs, const MaterialLawParams &matParams, bool isInlet)
     {
         unsigned refPhaseIdx;
         unsigned otherPhaseIdx;
@@ -507,7 +506,7 @@ private:
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem>
         ComputeFromReferencePhase;
 
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         ComputeFromReferencePhase::solve(fs, paramCache, refPhaseIdx,
                                          /*setViscosity=*/false,
                                          /*setEnthalpy=*/false);

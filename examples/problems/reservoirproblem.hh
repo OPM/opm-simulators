@@ -603,7 +603,7 @@ private:
         fs.setMoleFraction(oilPhaseIdx, oilCompIdx, xoO);
 
         typedef Opm::ComputeFromReferencePhase<Scalar, FluidSystem> CFRP;
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Scalar> paramCache;
         CFRP::solve(fs,
                     paramCache,
                     /*refPhaseIdx=*/oilPhaseIdx,
