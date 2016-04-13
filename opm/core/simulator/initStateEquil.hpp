@@ -221,7 +221,7 @@ namespace Opm
                     const int nc = UgGridHelpers::numCells(G);
                     eqlnum.resize(nc);
                     const std::vector<int>& e = 
-                        eclipseState->getIntGridProperty("EQLNUM")->getData();                    
+                        eclipseState->get3DProperties().getIntGridProperty("EQLNUM").getData();
                     const int* gc = UgGridHelpers::globalCell(G);
                     for (int cell = 0; cell < nc; ++cell) {
                         const int deck_pos = (gc == NULL) ? cell : gc[cell];
@@ -255,14 +255,14 @@ namespace Opm
                 {
                     // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(*eclipseState);
-                    std::shared_ptr<const TableManager> tables = eclipseState->getTableManager();
+                    const auto& tables = eclipseState->getTableManager();
                     // Create (inverse) region mapping.
                     const RegionMapping<> eqlmap(equilnum(deck, eclipseState, G)); 
 
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
                     if (deck->hasKeyword("DISGAS")) {                    
-                        const TableContainer& rsvdTables = tables->getRsvdTables();
+                        const TableContainer& rsvdTables = tables.getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (!rec[i].liveOilInitConstantRs()) {
@@ -295,7 +295,7 @@ namespace Opm
 
                     rv_func_.reserve(rec.size());
                     if (deck->hasKeyword("VAPOIL")) {                    
-                        const TableContainer& rvvdTables = tables->getRvvdTables();
+                        const TableContainer& rvvdTables = tables.getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (!rec[i].wetGasInitConstantRv()) {
@@ -332,7 +332,8 @@ namespace Opm
 
                     // Check for presence of kw SWATINIT
                     if (deck->hasKeyword("SWATINIT")) {
-                        const std::vector<double>& swat_init = eclipseState->getDoubleGridProperty("SWATINIT")->getData();
+                        const std::vector<double>& swat_init = eclipseState->
+                                get3DProperties().getDoubleGridProperty("SWATINIT").getData();
                         const int nc = UgGridHelpers::numCells(G);
                         swat_init_.resize(nc);
                         const int* gc = UgGridHelpers::globalCell(G);

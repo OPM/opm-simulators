@@ -82,11 +82,11 @@ namespace Opm {
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
-        const auto satnum = eclState->getIntGridProperty("SATNUM");
+        const auto& satnum = eclState->get3DProperties().getIntGridProperty("SATNUM");
 
         for (int c = 0; c < nc; ++c) {
             const int cartIdx = compressedToCartesianIdx[c];
-            const std::string satnumIdx = std::to_string(satnum->iget(cartIdx));
+            const std::string satnumIdx = std::to_string(satnum.iget(cartIdx));
             std::array<int, 3> ijk;
             ijk[0] = cartIdx % dims[0];
             ijk[1] = (cartIdx / dims[0]) % dims[1];
