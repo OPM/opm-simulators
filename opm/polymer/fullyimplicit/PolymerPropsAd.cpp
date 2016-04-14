@@ -54,11 +54,11 @@ namespace Opm {
 
 
 
-	double
-	PolymerPropsAd::cMax() const
-	{
-		return polymer_props_.cMax();
-	}
+    double
+    PolymerPropsAd::cMax() const
+    {
+        return polymer_props_.cMax();
+    }
 
     const std::vector<double>&
     PolymerPropsAd::shearWaterVelocity() const
@@ -130,7 +130,7 @@ namespace Opm {
     }
 
 
-	
+
 
     PolymerPropsAd::PolymerPropsAd(const PolymerProperties& polymer_props)
         : polymer_props_ (polymer_props)
@@ -172,15 +172,15 @@ namespace Opm {
                                               const V& visc) const
     {
         assert(c.size() == visc.size());
-	    const int nc = c.size();
-    	V inv_mu_w_eff(nc);
-    	V dinv_mu_w_eff(nc);
-    	for (int i = 0; i < nc; ++i) {
-    	    double im = 0, dim = 0;
+        const int nc = c.size();
+        V inv_mu_w_eff(nc);
+        V dinv_mu_w_eff(nc);
+        for (int i = 0; i < nc; ++i) {
+            double im = 0, dim = 0;
             polymer_props_.effectiveInvViscWithDer(c.value()(i), visc(i), im, dim);
-    	    inv_mu_w_eff(i) = im;
-    	    dinv_mu_w_eff(i) = dim;
-    	}
+            inv_mu_w_eff(i) = im;
+            dinv_mu_w_eff(i) = dim;
+        }
         ADB::M dim_diag(dinv_mu_w_eff.matrix().asDiagonal());
         const int num_blocks = c.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -233,7 +233,7 @@ namespace Opm {
             polymer_props_.computeMc(c(i), m);
             mc(i) = m;
         }
-       
+
        return mc;
     }
 
@@ -243,11 +243,11 @@ namespace Opm {
 
     ADB PolymerPropsAd::polymerWaterVelocityRatio(const ADB& c) const
     {
-    
+
         const int nc = c.size();
         V mc(nc);
         V dmc(nc);
-        
+
         for (int i = 0; i < nc; ++i) {
             double m = 0;
             double dm = 0;
@@ -320,7 +320,7 @@ namespace Opm {
 
 
     V
-    PolymerPropsAd::effectiveRelPerm(const V& c, 
+    PolymerPropsAd::effectiveRelPerm(const V& c,
                                      const V& cmax_cells,
                                      const V& krw) const
     {
@@ -353,8 +353,8 @@ namespace Opm {
         double max_ads = polymer_props_.cMaxAds();
         double res_factor = polymer_props_.resFactor();
         double factor = (res_factor - 1.) / max_ads;
-        ADB rk = one + ads * factor; 
-        
+        ADB rk = one + ads * factor;
+
         return krw / rk;
     }
 
