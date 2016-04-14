@@ -192,35 +192,34 @@ namespace Opm
     }
 
 
-    void PolymerProperties::effectiveVisc(const double c, const double visc, double& mu_w_eff) const {
-        effectiveInvVisc(c, visc, mu_w_eff);
+    void PolymerProperties::effectiveVisc(const double c, const double mu_w, double& mu_w_eff) const {
+        effectiveInvVisc(c, mu_w, mu_w_eff);
         mu_w_eff = 1./mu_w_eff;
     }
 
-    void PolymerProperties::effectiveViscWithDer(const double c, const double visc, double& mu_w_eff, double dmu_w_eff_dc) const {
-        effectiveInvViscWithDer(c, visc, mu_w_eff, dmu_w_eff_dc);
+    void PolymerProperties::effectiveViscWithDer(const double c, const double mu_w, double& mu_w_eff, double dmu_w_eff_dc) const {
+        effectiveInvViscWithDer(c, mu_w, mu_w_eff, dmu_w_eff_dc);
         mu_w_eff = 1./mu_w_eff;
         dmu_w_eff_dc = -dmu_w_eff_dc*mu_w_eff*mu_w_eff;
     }
 
-    void PolymerProperties::effectiveInvVisc(const double c, const double visc, double& inv_mu_w_eff) const
+    void PolymerProperties::effectiveInvVisc(const double c, const double mu_w, double& inv_mu_w_eff) const
     {
         double dummy;
-        effectiveInvViscBoth(c, visc, inv_mu_w_eff, dummy, false);
+        effectiveInvViscBoth(c, mu_w, inv_mu_w_eff, dummy, false);
     }
 
-    void PolymerProperties::effectiveInvViscWithDer(const double c, const double visc,
+    void PolymerProperties::effectiveInvViscWithDer(const double c, const double mu_w,
                                                  double& inv_mu_w_eff,
                                                  double& dinv_mu_w_eff_dc) const {
-        effectiveInvViscBoth(c, visc, inv_mu_w_eff, dinv_mu_w_eff_dc, true);
+        effectiveInvViscBoth(c, mu_w, inv_mu_w_eff, dinv_mu_w_eff_dc, true);
     }
 
-    void PolymerProperties::effectiveInvViscBoth(const double c, const double visc,
+    void PolymerProperties::effectiveInvViscBoth(const double c, const double mu_w,
                                                  double& inv_mu_w_eff,
                                                  double& dinv_mu_w_eff_dc,
                                                  bool if_with_der) const {
         const double cbar = c/c_max_;
-        const double mu_w = visc;
         double mu_m;
         const double omega = mix_param_;
         double dmu_m_dc;
@@ -244,31 +243,30 @@ namespace Opm
     }
 
     void PolymerProperties::effectiveInvPolyVisc(const double c,
-                                                 const double visc,
+                                                 const double mu_w,
                                                  double& inv_mu_p_eff) const
     {
         double dummy;
-        effectiveInvPolyViscBoth(c, visc, inv_mu_p_eff, dummy, false);
+        effectiveInvPolyViscBoth(c, mu_w, inv_mu_p_eff, dummy, false);
 
     }
 
     void PolymerProperties::effectiveInvPolyViscWithDer(const double c,
-                                                        const double visc,
+                                                        const double mu_w,
                                                         double& inv_mu_p_eff,
                                                         double& d_inv_mu_p_eff_dc) const
     {
-        effectiveInvPolyViscBoth(c, visc, inv_mu_p_eff, d_inv_mu_p_eff_dc, true);
+        effectiveInvPolyViscBoth(c, mu_w, inv_mu_p_eff, d_inv_mu_p_eff_dc, true);
 
     }
 
     void PolymerProperties::effectiveInvPolyViscBoth(const double c,
-                                                     const double visc,
+                                                     const double mu_w,
                                                      double& inv_mu_p_eff,
                                                      double& dinv_mu_p_eff_dc,
                                                      const bool if_with_der) const
     {
         const double omega = mix_param_;
-        const double mu_w = visc;
 
         double mu_m = 0.0;
         double dmu_m_dc = 0.0;

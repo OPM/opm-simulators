@@ -81,22 +81,22 @@ namespace Opm {
         ~PolymerPropsAd();
 
         /// \param[in] c        Array of n polymer concentraion values.
-        /// \param[in] visc     Array of n water viscosity values.
+        /// \param[in] mu_w     Array of n water viscosity values.
         /// \return             Array of inverse effective water viscosity.
         V
-        effectiveInvWaterVisc(const V& c, const V& visc) const;
+        effectiveInvWaterVisc(const V& c, const V& mu_w) const;
 
         /// \param[in] c        ADB of polymer concentraion.
-        /// \param[in] visc     Array of water viscosity value.
+        /// \param[in] mu_w     Array of water viscosity value.
         /// \return             ADB of inverse effective water viscosity.
         ADB
-        effectiveInvWaterVisc(const ADB& c,const V& visc) const;
+        effectiveInvWaterVisc(const ADB& c,const V& mu_w) const;
 
         /// \param[in] c        ADB of polymer concentraion values.
-        /// \param[in] visc     Array of water viscosity values
+        /// \param[in] mu_w     Array of water viscosity values
         /// \return             ADB of inverse effective polymer viscosity.
         ADB
-        effectiveInvPolymerVisc(const ADB& c, const V& visc) const;
+        effectiveInvPolymerVisc(const ADB& c, const V& mu_w) const;
 
         /// \param[in] c        Array of n polymer concentraion values.
         /// \return             Array of n mc values, here mc means m(c) * c.
