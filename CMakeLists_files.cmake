@@ -101,6 +101,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow.cpp
   examples/flow_multisegment.cpp
   examples/flow_solvent.cpp
+  examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
   examples/sim_simple.cpp
@@ -114,7 +115,9 @@ list (APPEND EXAMPLE_SOURCE_FILES
 # programs listed here will not only be compiled, but also marked for
 # installation
 list (APPEND PROGRAM_SOURCE_FILES
+  examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
+  examples/sim_2p_comp_reorder.cpp
   examples/flow.cpp
   examples/flow_solvent.cpp
   examples/opm_init_check.cpp
@@ -217,5 +220,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer_impl.hpp
   opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp
+  opm/simulators/SimulatorCompressibleTwophase.hpp
+  opm/simulators/SimulatorIncompTwophase.hpp
   )
 
