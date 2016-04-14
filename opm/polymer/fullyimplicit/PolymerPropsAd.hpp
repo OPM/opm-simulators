@@ -28,18 +28,18 @@
 #include <opm/polymer/PolymerProperties.hpp>
 
 namespace Opm {
-    
-    class PolymerPropsAd 
+
+    class PolymerPropsAd
     {
     public:
-		/// \return		Reference rock density.
+        /// \return     Reference rock density.
         double rockDensity() const;
-		
-		/// \return 	The value of dead pore volume.
+
+        /// \return     The value of dead pore volume.
         double deadPoreVol() const;
 
-		/// \return 	The max concentration injected.
-       	double cMax() const; 
+        /// \return     The max concentration injected.
+        double cMax() const;
 
         /// \ return    The water velcoity or shear rate in the PLYSHLOG table
         const std::vector<double>& shearWaterVelocity() const;
@@ -67,75 +67,75 @@ namespace Opm {
 
         double viscMult(double c) const; // multipler interpolated from PLYVISC table
 
-		typedef AutoDiffBlock<double> ADB;
+        typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
 
         V viscMult(const V& c) const;
-		/// \param[in] c		Array of n polymer concentraion values.
-		/// \return 			Array of n viscosity multiplier from PLVISC table.
+        /// \param[in] c        Array of n polymer concentraion values.
+        /// \return             Array of n viscosity multiplier from PLVISC table.
 
-		/// Constructor wrapping a polymer props.	
+        /// Constructor wrapping a polymer props.
         PolymerPropsAd(const PolymerProperties& polymer_props);
 
-		/// Destructor.
+        /// Destructor.
         ~PolymerPropsAd();
-		
-		/// \param[in] c		Array of n polymer concentraion values.
-		/// \param[in] visc		Array of 2 viscosity value.
-		/// \return 			value of inverse effective water viscosity.
-        V 
-        effectiveInvWaterVisc(const V& c,const double* visc) const;
 
-		/// \param[in] c		Array of n polymer concentraion values.
-		/// \param[in] visc		Array of 2 viscosity value 
-		/// \return 			value of inverse effective water viscosity.
-        ADB 
-        effectiveInvWaterVisc(const ADB& c,const double* visc) const;
+        /// \param[in] c        Array of n polymer concentraion values.
+        /// \param[in] mu_w     Array of n water viscosity values.
+        /// \return             Array of inverse effective water viscosity.
+        V
+        effectiveInvWaterVisc(const V& c, const V& mu_w) const;
 
-		/// \param[in] c		ADB of polymer concentraion values.
-		/// \param[in] visc		Array of water viscosity values
-		/// \return 			ADB of inverse effective polymer viscosity.
+        /// \param[in] c        ADB of polymer concentraion.
+        /// \param[in] mu_w     Array of water viscosity value.
+        /// \return             ADB of inverse effective water viscosity.
         ADB
-        effectiveInvPolymerVisc(const ADB& c, const double* visc) const;
-		
-		/// \param[in] c		Array of n polymer concentraion values.
-		/// \return 			Array of n mc values, here mc means m(c) * c.
-        V 
+        effectiveInvWaterVisc(const ADB& c,const V& mu_w) const;
+
+        /// \param[in] c        ADB of polymer concentraion values.
+        /// \param[in] mu_w     Array of water viscosity values
+        /// \return             ADB of inverse effective polymer viscosity.
+        ADB
+        effectiveInvPolymerVisc(const ADB& c, const V& mu_w) const;
+
+        /// \param[in] c        Array of n polymer concentraion values.
+        /// \return             Array of n mc values, here mc means m(c) * c.
+        V
         polymerWaterVelocityRatio(const V& c) const;
 
-		/// \param[in] c		Array of n polymer concentraion values.
-		/// \return 			Array of n mc values, here mc means m(c) * c.
+        /// \param[in] c        Array of n polymer concentraion values.
+        /// \return             Array of n mc values, here mc means m(c) * c.
         ADB
         polymerWaterVelocityRatio(const ADB& c) const;
 
-		/// \param[in] c				Array of n polymer concentraion values.
-		/// \param[in] cmax_cells		Array of n polymer concentraion values
-		///								that the cell experienced.
-		/// \return						Array of n adsorption values.
+        /// \param[in] c                Array of n polymer concentraion values.
+        /// \param[in] cmax_cells       Array of n polymer concentraion values
+        ///                             that the cell experienced.
+        /// \return                     Array of n adsorption values.
         V
         adsorption(const V& c, const V& cmax_cells) const;
 
-		/// \param[in] c				Array of n polymer concentraion values.
-		/// \param[in] cmax_cells		Array of n polymer concentraion values
-		///								that the cell experienced.
-		/// \return						Array of n adsorption values.
+        /// \param[in] c                Array of n polymer concentraion values.
+        /// \param[in] cmax_cells       Array of n polymer concentraion values
+        ///                             that the cell experienced.
+        /// \return                     Array of n adsorption values.
         ADB
         adsorption(const ADB& c, const ADB& cmax_cells) const;
 
-		/// \param[in] c				Array of n polymer concentraion values.
-		/// \param[in] cmax_cells		Array of n polymer concentraion values
-		///								that the cell experienced.
-		/// \param[in] relperm			Array of n relative water relperm values.
-		/// \return						Array of n adsorption values.
+        /// \param[in] c                Array of n polymer concentraion values.
+        /// \param[in] cmax_cells       Array of n polymer concentraion values
+        ///                             that the cell experienced.
+        /// \param[in] relperm          Array of n relative water relperm values.
+        /// \return                     Array of n adsorption values.
         V
         effectiveRelPerm(const V& c, const V& cmax_cells, const V& relperm) const;
 
 
-		/// \param[in] c				Array of n polymer concentraion values.
-		/// \param[in] cmax_cells		Array of n polymer concentraion values
-		///								that the cell experienced.
-		/// \param[in] relperm			Array of n relative water relperm values.
-		/// \return						Array of n adsorption values.
+        /// \param[in] c                Array of n polymer concentraion values.
+        /// \param[in] cmax_cells       Array of n polymer concentraion values
+        ///                             that the cell experienced.
+        /// \param[in] relperm          Array of n relative water relperm values.
+        /// \return                     Array of n adsorption values.
         ADB
         effectiveRelPerm(const ADB& c, const ADB& cmax_cells, const ADB& krw) const;
 
@@ -150,7 +150,7 @@ namespace Opm {
     private:
         const PolymerProperties& polymer_props_;
     };
-    
+
 } //namespace Opm
 
 #endif// OPM_POLYMERPROPSAD_HEADED_INLCUDED

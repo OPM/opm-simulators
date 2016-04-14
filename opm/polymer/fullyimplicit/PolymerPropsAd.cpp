@@ -54,11 +54,11 @@ namespace Opm {
 
 
 
-	double
-	PolymerPropsAd::cMax() const
-	{
-		return polymer_props_.cMax();
-	}
+    double
+    PolymerPropsAd::cMax() const
+    {
+        return polymer_props_.cMax();
+    }
 
     const std::vector<double>&
     PolymerPropsAd::shearWaterVelocity() const
@@ -130,7 +130,7 @@ namespace Opm {
     }
 
 
-	
+
 
     PolymerPropsAd::PolymerPropsAd(const PolymerProperties& polymer_props)
         : polymer_props_ (polymer_props)
@@ -150,13 +150,14 @@ namespace Opm {
 
 
     V PolymerPropsAd::effectiveInvWaterVisc(const V& c,
-                                            const double* visc) const
+                                            const V& mu_w) const
     {
+        assert(c.size() == mu_w.size());
         const int nc = c.size();
         V inv_mu_w_eff(nc);
         for (int i = 0; i < nc; ++i) {
             double im = 0;
-            polymer_props_.effectiveInvVisc(c(i), visc, im);
+            polymer_props_.effectiveInvVisc(c(i), mu_w(i), im);
             inv_mu_w_eff(i) = im;
         }
 
@@ -168,17 +169,18 @@ namespace Opm {
 
 
     ADB PolymerPropsAd::effectiveInvWaterVisc(const ADB& c,
-	                    				      const double* visc) const
+                                              const V& mu_w) const
     {
-	    const int nc = c.size();
-    	V inv_mu_w_eff(nc);
-    	V dinv_mu_w_eff(nc);
-    	for (int i = 0; i < nc; ++i) {
-    	    double im = 0, dim = 0;
-    	    polymer_props_.effectiveInvViscWithDer(c.value()(i), visc, im, dim);
-    	    inv_mu_w_eff(i) = im;
-    	    dinv_mu_w_eff(i) = dim;
-    	}
+        assert(c.size() == mu_w.size());
+        const int nc = c.size();
+        V inv_mu_w_eff(nc);
+        V dinv_mu_w_eff(nc);
+        for (int i = 0; i < nc; ++i) {
+            double im = 0, dim = 0;
+            polymer_props_.effectiveInvViscWithDer(c.value()(i), mu_w(i), im, dim);
+            inv_mu_w_eff(i) = im;
+            dinv_mu_w_eff(i) = dim;
+        }
         ADB::M dim_diag(dinv_mu_w_eff.matrix().asDiagonal());
         const int num_blocks = c.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
@@ -192,16 +194,16 @@ namespace Opm {
 
 
 
-    ADB PolymerPropsAd::effectiveInvPolymerVisc(const ADB& c, const double* visc) const
+    ADB PolymerPropsAd::effectiveInvPolymerVisc(const ADB& c, const V& mu_w) const
     {
+        assert(c.size() == mu_w.size());
         const int nc = c.size();
         V inv_mu_p_eff(nc);
         V dinv_mu_p_eff(nc);
         for (int i = 0; i < nc; ++i) {
             double im = 0;
             double dim = 0;
-            // TODO: the usage of visc can be likely wrong, while more investigation will be requried.
-            polymer_props_.effectiveInvPolyViscWithDer(c.value()(i), visc, im, dim);
+            polymer_props_.effectiveInvPolyViscWithDer(c.value()(i), mu_w(i), im, dim);
             inv_mu_p_eff(i) = im;
             dinv_mu_p_eff(i) = dim;
         }
@@ -230,7 +232,7 @@ namespace Opm {
             polymer_props_.computeMc(c(i), m);
             mc(i) = m;
         }
-       
+
        return mc;
     }
 
@@ -240,11 +242,11 @@ namespace Opm {
 
     ADB PolymerPropsAd::polymerWaterVelocityRatio(const ADB& c) const
     {
-    
+
         const int nc = c.size();
         V mc(nc);
         V dmc(nc);
-        
+
         for (int i = 0; i < nc; ++i) {
             double m = 0;
             double dm = 0;
@@ -317,7 +319,7 @@ namespace Opm {
 
 
     V
-    PolymerPropsAd::effectiveRelPerm(const V& c, 
+    PolymerPropsAd::effectiveRelPerm(const V& c,
                                      const V& cmax_cells,
                                      const V& krw) const
     {
@@ -350,8 +352,8 @@ namespace Opm {
         double max_ads = polymer_props_.cMaxAds();
         double res_factor = polymer_props_.resFactor();
         double factor = (res_factor - 1.) / max_ads;
-        ADB rk = one + ads * factor; 
-        
+        ADB rk = one + ads * factor;
+
         return krw / rk;
     }
 

@@ -871,7 +871,7 @@ namespace {
 		const ADB& temp = state.temperature;
 
         const ADB mu_w = fluidViscosity(0, press[0], temp, cond, cells_);
-        ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value().data());
+        ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value());
         rq_[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
         rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
         const ADB mu_o = fluidViscosity(1, press[1], temp, cond, cells_);
