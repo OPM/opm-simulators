@@ -243,6 +243,52 @@ namespace Opm
         }
     }
 
+    void PolymerProperties::effectiveInvPolyVisc(const double c,
+                                                 const double* visc,
+                                                 double& inv_mu_p_eff) const
+    {
+        double dummy;
+        effectiveInvPolyViscBoth(c, visc, inv_mu_p_eff, dummy, false);
+
+    }
+
+    void PolymerProperties::effectiveInvPolyViscWithDer(const double c,
+                                                        const double* visc,
+                                                        double& inv_mu_p_eff,
+                                                        double& d_inv_mu_p_eff_dc) const
+    {
+        effectiveInvPolyViscBoth(c, visc, inv_mu_p_eff, d_inv_mu_p_eff_dc, true);
+
+    }
+
+    void PolymerProperties::effectiveInvPolyViscBoth(const double c,
+                                                     const double* visc,
+                                                     double& inv_mu_p_eff,
+                                                     double& dinv_mu_p_eff_dc,
+                                                     const bool if_with_der) const
+    {
+        const double omega = mix_param_;
+        const double mu_w = visc[0];
+
+        double mu_m = 0.0;
+        double dmu_m_dc = 0.0;
+
+        if (if_with_der) {
+            mu_m = viscMultWithDer(c, &dmu_m_dc)*mu_w;
+            dmu_m_dc *= mu_w;
+        } else {
+            mu_m = viscMult(c)*mu_w;
+        }
+
+        const double inv_mu_m_omega = std::pow(mu_m, -omega);
+        const double mu_p = viscMult(c_max_) * mu_w;
+        inv_mu_p_eff = inv_mu_m_omega * std::pow(mu_p, omega - 1.);
+
+        if (if_with_der) {
+            dinv_mu_p_eff_dc = -omega * dmu_m_dc * std::pow(mu_m, -omega - 1) * std::pow(mu_p, omega - 1);
+        }
+    }
+
     void PolymerProperties::effectiveRelperm(const double c,
                                              const double cmax,
                                              const double* relperm,

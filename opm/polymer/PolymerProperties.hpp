@@ -292,6 +292,15 @@ namespace Opm
                                                         const double* visc,
                                                         double& inv_mu_w_eff,
                                                         double& dinv_mu_w_eff_dc) const;
+        void effectiveInvPolyVisc(const double c,
+                                  const double* visc,
+                                  double& inv_mu_p_eff) const;
+
+        void effectiveInvPolyViscWithDer(const double c,
+                                         const double* visc,
+                                         double& inv_mu_p_eff,
+                                         double& d_inv_mu_p_eff_dc) const;
+
         void effectiveRelperm(const double c,
                               const double cmax,
                               const double* relperm,
@@ -401,6 +410,13 @@ namespace Opm
         void effectiveInvViscBoth(const double c, const double* visc,
                                   double& inv_mu_w_eff,
                                   double& dinv_mu_w_eff_dc, bool if_with_der) const;
+
+        void effectiveInvPolyViscBoth(const double c,
+                                      const double* visc,
+                                      double& inv_mu_p_eff,
+                                      double& dinv_mu_p_eff_dc,
+                                      const bool if_with_der) const;
+
         void effectiveRelpermBoth(const double c,
                                   const double cmax,
                                   const double* relperm,

@@ -464,7 +464,8 @@ namespace Opm {
                 // Reduce mobility of water phase by relperm reduction and effective viscosity increase.
                 rq_[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
                 // Compute polymer mobility.
-                rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_wat_eff_visc;
+                const ADB inv_poly_eff_visc = polymer_props_ad_.effectiveInvPolymerVisc(state.concentration, mu.value().data());
+                rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_poly_eff_visc;
                 rq_[poly_pos_].b = rq_[actph].b;
                 rq_[poly_pos_].dh = rq_[actph].dh;
                 UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].dh.value());

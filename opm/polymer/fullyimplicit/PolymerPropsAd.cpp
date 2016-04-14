@@ -192,6 +192,34 @@ namespace Opm {
 
 
 
+    ADB PolymerPropsAd::effectiveInvPolymerVisc(const ADB& c, const double* visc) const
+    {
+        const int nc = c.size();
+        V inv_mu_p_eff(nc);
+        V dinv_mu_p_eff(nc);
+        for (int i = 0; i < nc; ++i) {
+            double im = 0;
+            double dim = 0;
+            // TODO: the usage of visc can be likely wrong, while more investigation will be requried.
+            polymer_props_.effectiveInvPolyViscWithDer(c.value()(i), visc, im, dim);
+            inv_mu_p_eff(i) = im;
+            dinv_mu_p_eff(i) = dim;
+        }
+
+        ADB::M dim_diag(dinv_mu_p_eff.matrix().asDiagonal());
+        const int num_blocks = c.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dim_diag * c.derivative()[block];
+        }
+        return ADB::function(std::move(inv_mu_p_eff), std::move(jacs));
+    }
+
+
+
+
+
     V PolymerPropsAd::polymerWaterVelocityRatio(const V& c) const
     {
         const int nc = c.size();
