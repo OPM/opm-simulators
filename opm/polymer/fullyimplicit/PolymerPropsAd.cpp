@@ -150,13 +150,14 @@ namespace Opm {
 
 
     V PolymerPropsAd::effectiveInvWaterVisc(const V& c,
-                                            const double* visc) const
+                                            const V& visc) const
     {
+        assert(c.size() == visc.size());
         const int nc = c.size();
         V inv_mu_w_eff(nc);
         for (int i = 0; i < nc; ++i) {
             double im = 0;
-            polymer_props_.effectiveInvVisc(c(i), visc, im);
+            polymer_props_.effectiveInvVisc(c(i), visc(i), im);
             inv_mu_w_eff(i) = im;
         }
 
@@ -168,14 +169,15 @@ namespace Opm {
 
 
     ADB PolymerPropsAd::effectiveInvWaterVisc(const ADB& c,
-	                    				      const double* visc) const
+                                              const V& visc) const
     {
+        assert(c.size() == visc.size());
 	    const int nc = c.size();
     	V inv_mu_w_eff(nc);
     	V dinv_mu_w_eff(nc);
     	for (int i = 0; i < nc; ++i) {
     	    double im = 0, dim = 0;
-    	    polymer_props_.effectiveInvViscWithDer(c.value()(i), visc, im, dim);
+            polymer_props_.effectiveInvViscWithDer(c.value()(i), visc(i), im, dim);
     	    inv_mu_w_eff(i) = im;
     	    dinv_mu_w_eff(i) = dim;
     	}
@@ -192,8 +194,9 @@ namespace Opm {
 
 
 
-    ADB PolymerPropsAd::effectiveInvPolymerVisc(const ADB& c, const double* visc) const
+    ADB PolymerPropsAd::effectiveInvPolymerVisc(const ADB& c, const V& visc) const
     {
+        assert(c.size() == visc.size());
         const int nc = c.size();
         V inv_mu_p_eff(nc);
         V dinv_mu_p_eff(nc);
@@ -201,7 +204,7 @@ namespace Opm {
             double im = 0;
             double dim = 0;
             // TODO: the usage of visc can be likely wrong, while more investigation will be requried.
-            polymer_props_.effectiveInvPolyViscWithDer(c.value()(i), visc, im, dim);
+            polymer_props_.effectiveInvPolyViscWithDer(c.value()(i), visc(i), im, dim);
             inv_mu_p_eff(i) = im;
             dinv_mu_p_eff(i) = dim;
         }

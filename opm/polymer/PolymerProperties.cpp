@@ -192,37 +192,37 @@ namespace Opm
     }
 
 
-    void PolymerProperties::effectiveVisc(const double c, const double* visc, double& mu_w_eff) const {
+    void PolymerProperties::effectiveVisc(const double c, const double visc, double& mu_w_eff) const {
         effectiveInvVisc(c, visc, mu_w_eff);
         mu_w_eff = 1./mu_w_eff;
     }
 
-    void PolymerProperties::effectiveViscWithDer(const double c, const double* visc, double& mu_w_eff, double dmu_w_eff_dc) const {
+    void PolymerProperties::effectiveViscWithDer(const double c, const double visc, double& mu_w_eff, double dmu_w_eff_dc) const {
         effectiveInvViscWithDer(c, visc, mu_w_eff, dmu_w_eff_dc);
         mu_w_eff = 1./mu_w_eff;
         dmu_w_eff_dc = -dmu_w_eff_dc*mu_w_eff*mu_w_eff;
     }
 
-    void PolymerProperties::effectiveInvVisc(const double c, const double* visc, double& inv_mu_w_eff) const
+    void PolymerProperties::effectiveInvVisc(const double c, const double visc, double& inv_mu_w_eff) const
     {
         double dummy;
         effectiveInvViscBoth(c, visc, inv_mu_w_eff, dummy, false);
     }
 
-    void PolymerProperties::effectiveInvViscWithDer(const double c, const double* visc,
+    void PolymerProperties::effectiveInvViscWithDer(const double c, const double visc,
                                                  double& inv_mu_w_eff,
                                                  double& dinv_mu_w_eff_dc) const {
         effectiveInvViscBoth(c, visc, inv_mu_w_eff, dinv_mu_w_eff_dc, true);
     }
 
-    void PolymerProperties::effectiveInvViscBoth(const double c, const double* visc,
+    void PolymerProperties::effectiveInvViscBoth(const double c, const double visc,
                                                  double& inv_mu_w_eff,
                                                  double& dinv_mu_w_eff_dc,
                                                  bool if_with_der) const {
-        double cbar = c/c_max_;
-        double mu_w = visc[0];
+        const double cbar = c/c_max_;
+        const double mu_w = visc;
         double mu_m;
-        double omega = mix_param_;
+        const double omega = mix_param_;
         double dmu_m_dc;
         if (if_with_der) {
             mu_m = viscMultWithDer(c, &dmu_m_dc)*mu_w;
@@ -244,7 +244,7 @@ namespace Opm
     }
 
     void PolymerProperties::effectiveInvPolyVisc(const double c,
-                                                 const double* visc,
+                                                 const double visc,
                                                  double& inv_mu_p_eff) const
     {
         double dummy;
@@ -253,7 +253,7 @@ namespace Opm
     }
 
     void PolymerProperties::effectiveInvPolyViscWithDer(const double c,
-                                                        const double* visc,
+                                                        const double visc,
                                                         double& inv_mu_p_eff,
                                                         double& d_inv_mu_p_eff_dc) const
     {
@@ -262,13 +262,13 @@ namespace Opm
     }
 
     void PolymerProperties::effectiveInvPolyViscBoth(const double c,
-                                                     const double* visc,
+                                                     const double visc,
                                                      double& inv_mu_p_eff,
                                                      double& dinv_mu_p_eff_dc,
                                                      const bool if_with_der) const
     {
         const double omega = mix_param_;
-        const double mu_w = visc[0];
+        const double mu_w = visc;
 
         double mu_m = 0.0;
         double dmu_m_dc = 0.0;
@@ -373,7 +373,7 @@ namespace Opm
     {
         double inv_mu_w_eff;
         double dinv_mu_w_eff_dc;
-        effectiveInvViscBoth(c, visc, inv_mu_w_eff, dinv_mu_w_eff_dc, if_with_der);
+        effectiveInvViscBoth(c, visc[0], inv_mu_w_eff, dinv_mu_w_eff_dc, if_with_der);
         double eff_relperm_wat;
         double deff_relperm_wat_ds;
         double deff_relperm_wat_dc;

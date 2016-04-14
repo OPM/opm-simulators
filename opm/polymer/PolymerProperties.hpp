@@ -278,26 +278,27 @@ namespace Opm
         void adsorptionWithDer(double c, double cmax,
                                double& c_ads, double& dc_ads_dc) const;
 
-        void effectiveVisc(const double c, const double* visc,
+        void effectiveVisc(const double c, const double visc,
                                               double& mu_w_eff) const;
 
-        void effectiveViscWithDer(const double c, const double* visc
+        void effectiveViscWithDer(const double c, const double visc
                                                      , double& mu_w_eff
                                                      , double dmu_w_eff_dc) const;
 
-        void effectiveInvVisc(const double c, const double* visc,
+        void effectiveInvVisc(const double c, const double visc,
                                                  double& inv_mu_w_eff) const;
 
         void effectiveInvViscWithDer(const double c,
-                                                        const double* visc,
-                                                        double& inv_mu_w_eff,
-                                                        double& dinv_mu_w_eff_dc) const;
+                                     const double visc,
+                                     double& inv_mu_w_eff,
+                                     double& dinv_mu_w_eff_dc) const;
+
         void effectiveInvPolyVisc(const double c,
-                                  const double* visc,
+                                  const double visc,
                                   double& inv_mu_p_eff) const;
 
         void effectiveInvPolyViscWithDer(const double c,
-                                         const double* visc,
+                                         const double visc,
                                          double& inv_mu_p_eff,
                                          double& d_inv_mu_p_eff_dc) const;
 
@@ -407,12 +408,13 @@ namespace Opm
         void adsorptionBoth(double c, double cmax,
                             double& c_ads, double& dc_ads_dc,
                             bool if_with_der) const;
-        void effectiveInvViscBoth(const double c, const double* visc,
+
+        void effectiveInvViscBoth(const double c, const double visc,
                                   double& inv_mu_w_eff,
                                   double& dinv_mu_w_eff_dc, bool if_with_der) const;
 
         void effectiveInvPolyViscBoth(const double c,
-                                      const double* visc,
+                                      const double visc,
                                       double& inv_mu_p_eff,
                                       double& dinv_mu_p_eff_dc,
                                       const bool if_with_der) const;
