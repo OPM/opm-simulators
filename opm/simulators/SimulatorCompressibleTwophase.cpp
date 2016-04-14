@@ -34,10 +34,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
-// 17.03.2016 Temporarily removed while moving functionality to opm-output
-#ifdef DISABLE_OUTPUT
-#include <opm/core/io/vtk/writeVtkData.hpp>
-#endif
+#include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
@@ -141,8 +138,6 @@ namespace Opm
 
 
 
-// 17.03.2016 Temporarily removed while moving functionality to opm-output
-#ifdef DISABLE_OUTPUT
     static void outputStateVtk(const UnstructuredGrid& grid,
                                const Opm::BlackoilState& state,
                                const int step,
@@ -171,11 +166,9 @@ namespace Opm
         dm["velocity"] = &cell_velocity;
         Opm::writeVtkData(grid, dm, vtkfile);
     }
-#endif
 
 
-// 17.03.2016 Temporarily removed while moving functionality to opm-output
-#ifdef DISABLE_OUTPUT
+
     static void outputStateMatlab(const UnstructuredGrid& grid,
                                   const Opm::BlackoilState& state,
                                   const int step,
@@ -210,7 +203,7 @@ namespace Opm
             std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
         }
     }
-#endif
+
 
 
     static void outputWaterCut(const Opm::Watercut& watercut,
@@ -357,13 +350,9 @@ namespace Opm
             timer.report(std::cout);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
-#ifdef DISABLE_OUTPUT
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
                 }
-#ifdef DISABLE_OUTPUT
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
             }
 
             SimulatorReport sreport;
@@ -528,13 +517,9 @@ namespace Opm
 
         if (output_) {
             if (output_vtk_) {
-#ifdef DISABLE_OUTPUT
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
             }
-#ifdef DISABLE_OUTPUT
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
                 outputWellReport(wellreport, output_dir_);

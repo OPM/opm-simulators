@@ -35,10 +35,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
-// 17.03.2016 Temporarily removed while moving functionality to opm-output
-#ifdef DISABLE_OUTPUT
-#include <opm/core/io/vtk/writeVtkData.hpp>
-#endif
+#include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/Event.hpp>
 
@@ -184,7 +181,6 @@ namespace Opm
 
 
 // 17.03.2016 Temporarily removed while moving functionality to opm-output
-#ifdef DISABLE_OUTPUT
     static void outputStateVtk(const UnstructuredGrid& grid,
                                const Opm::TwophaseState& state,
                                const int step,
@@ -213,7 +209,8 @@ namespace Opm
         dm["velocity"] = &cell_velocity;
         Opm::writeVtkData(grid, dm, vtkfile);
     }
-#endif
+
+
     static void outputVectorMatlab(const std::string& name,
                                    const std::vector<int>& vec,
                                    const int step,
@@ -236,8 +233,6 @@ namespace Opm
         std::copy(vec.begin(), vec.end(), std::ostream_iterator<double>(file, "\n"));
     }
 
-// 17.03.2016 Temporarily removed while moving functionality to opm-output
-#ifdef DISABLE_OUTPUT
     static void outputStateMatlab(const UnstructuredGrid& grid,
                                   const Opm::TwophaseState& state,
                                   const int step,
@@ -271,7 +266,6 @@ namespace Opm
             std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
         }
     }
-#endif
 
 
     static void outputWaterCut(const Opm::Watercut& watercut,
@@ -469,13 +463,9 @@ namespace Opm
             timer.report(*log_);
             if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
                 if (output_vtk_) {
-#ifdef DISABLE_OUTPUT
                     outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
                 }
-#ifdef DISABLE_OUTPUT
                 outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
                 if (use_reorder_) {
                     // This use of dynamic_cast is not ideal, but should be safe.
                     outputVectorMatlab(std::string("reorder_it"),
@@ -633,13 +623,9 @@ namespace Opm
 
         if (output_) {
             if (output_vtk_) {
-#ifdef DISABLE_OUTPUT
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
             }
-#ifdef DISABLE_OUTPUT
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
-#endif
             if (use_reorder_) {
                 // This use of dynamic_cast is not ideal, but should be safe.
                 outputVectorMatlab(std::string("reorder_it"),
