@@ -61,6 +61,11 @@ namespace Opm
     }
 
     void WellCollection::addWell(WellConstPtr wellChild, size_t timeStep, const PhaseUsage& phaseUsage) {
+        if (wellChild->getStatus(timeStep) == WellCommon::SHUT) {
+            //SHUT wells are not added to the well collection
+            return;
+        }
+
         WellsGroupInterface* parent = findNode(wellChild->getGroupName(timeStep));
         if (!parent) {
             OPM_THROW(std::runtime_error, "Trying to add well " << wellChild->name() << " Step: " << boost::lexical_cast<std::string>(timeStep) << " to group named " << wellChild->getGroupName(timeStep) << ", but this group does not exist in the WellCollection.");

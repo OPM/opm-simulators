@@ -34,6 +34,11 @@ WELSPECS
     'PROD1' 'G2'   10 10    8400 'OIL'  /
 /
 
+COMPDAT
+    'INJ1'   1  1 1  1 'OPEN' 1   10.6092   0.5  /
+    'PROD1'  10 1 1  1 'OPEN' 0   10.6092   0.5  /
+/
+
 TSTEP
   14.0 /
 
@@ -41,6 +46,11 @@ TSTEP
 WELSPECS
     'INJ2' 'G1'    1  1    8335 'GAS'  /
     'PROD2' 'G2'   10 10    8400 'OIL'  /
+/
+
+COMPDAT
+    'INJ2'   1  1 1  1 'OPEN' 1   10.6092   0.5  /
+    'PROD2'  10 1 1  1 'OPEN' 0   10.6092   0.5  /
 /
 
 GCONINJE
