@@ -157,18 +157,16 @@ namespace Opm {
 
         enum { SimulatorStateId = 0,
                WellStateId = 1,
-               BlackoilStateId = 2,
                WellStateFullyImplicitBackoilId = 3 };
 
         inline int objectId( const SimulationDataContainer& /* state */) {
             return SimulatorStateId;
         }
+
         inline int objectId( const WellState& /* state */) {
             return WellStateId;
         }
-        inline int objectId( const BlackoilState& /* state */) {
-            return BlackoilStateId;
-        }
+
         inline int objectId( const WellStateFullyImplicitBlackoil& /* state */) {
             return WellStateFullyImplicitBackoilId;
         }
@@ -223,43 +221,6 @@ namespace Opm {
         readContainer( in, state.facepressure() );
         readContainer( in, state.faceflux() );
         readContainer( in, state.saturation() );
-
-        return in;
-    }
-
-    // BlackoilState
-    inline
-    std::ostream& operator << (std::ostream& out, const BlackoilState& state )
-    {
-        // write id of object to stream
-        writeValue( out, objectId( state ) );
-
-        // backup simulator state
-        const SimulationDataContainer& simstate = static_cast< const SimulationDataContainer& > (state);
-        out << simstate;
-
-        // backup additional blackoil state variables
-        writeContainer( out, state.surfacevol() );
-        writeContainer( out, state.gasoilratio() );
-        writeContainer( out, state.rv() );
-
-        return out;
-    }
-
-    inline
-    std::istream& operator >> (std::istream& in, BlackoilState& state )
-    {
-        // check id of stored object
-        checkObjectId( in, state );
-
-        // restore simulator state
-        SimulationDataContainer& simstate = static_cast< SimulationDataContainer& > (state);
-        in >> simstate;
-
-        // restore additional blackoil state variables
-        readContainer( in, state.surfacevol() );
-        readContainer( in, state.gasoilratio() );
-        readContainer( in, state.rv() );
 
         return in;
     }
