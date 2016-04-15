@@ -30,12 +30,6 @@
 namespace Opm
 {
 
-// this class does not need to be implemented. its only purpose is to make compiler
-// messages for local-AD framework more explicit (because the class name of the
-// Evaluation will include a tag name so that it is clear which derivatives are handled).
-class SaturationDerivativesTag
-{};
-
 /*!
  * \brief This is a fluid state which translates global arrays and translates them to a
  *        subset of the fluid state API.
@@ -50,7 +44,7 @@ public:
     enum { numPhases = BlackoilPhases::MaxNumPhases };
     enum { numComponents = 3 };
 
-    typedef Opm::LocalAd::Evaluation<double, SaturationDerivativesTag, numPhases> Evaluation;
+    typedef Opm::LocalAd::Evaluation<double, numPhases> Evaluation;
     typedef Evaluation Scalar;
 
     ExplicitArraysSatDerivativesFluidState(const PhaseUsage& phaseUsage)

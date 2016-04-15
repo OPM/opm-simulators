@@ -244,8 +244,7 @@ namespace Opm
         const auto& pu = phaseUsage();
         const int np = numPhases();
 
-        enum PressureEvalTag {};
-        typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
+        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -470,8 +469,7 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        enum PressureEvalTag {};
-        typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
+        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -605,8 +603,7 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        enum PressureEvalTag {};
-        typedef Opm::LocalAd::Evaluation<double, PressureEvalTag, /*size=*/1> LadEval;
+        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
         typedef Opm::MathToolbox<LadEval> Toolbox;
 
         LadEval pLad = 0.0;
