@@ -54,8 +54,6 @@ NEW_PROP_TAG(NumPhases);
 NEW_PROP_TAG(NumComponents);
 }
 
-struct BhpEvalTag;
-
 template <class TypeTag>
 class EcfvDiscretization;
 
@@ -1394,7 +1392,7 @@ protected:
         bool onBail = false;
 
         // Newton-Raphson method
-        typedef Opm::LocalAd::Evaluation<Scalar, BhpEvalTag, 1> BhpEval;
+        typedef Opm::LocalAd::Evaluation<Scalar, 1> BhpEval;
 
         BhpEval bhpEval(bhpScalar);
         bhpEval.derivatives[0] = 1.0;
