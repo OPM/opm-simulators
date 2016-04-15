@@ -766,9 +766,10 @@ namespace Opm
             } else if (well_potentials.size() > 0) { // default: calculate guide rates from well potentials
 
                 // Note: Modification of the guide rate using GUIDERAT is not supported
-                const WellsGroupInterface& group = *wellnode.getParent();
+
                 // only set the guide rates if there is a parent group with valied control
-                if (&group != NULL) {
+                if (wellnode.getParent() != nullptr) {
+                    const WellsGroupInterface& group = *wellnode.getParent();
                     if ( well->isProducer(timeStep) ) {
                         // The guide rates is calculated based on the group control
                         // Currently only supporting WRAT, ORAT and GRAT.
