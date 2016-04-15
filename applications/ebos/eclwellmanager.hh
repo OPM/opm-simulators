@@ -531,7 +531,8 @@ public:
         for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx) {
             wellRate = 0.0;
             wells_[wellIdx]->computeTotalRatesForDof(wellRate, context, dofIdx, timeIdx);
-            q += wellRate;
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+                q[eqIdx] += wellRate[eqIdx];
         }
     }
 

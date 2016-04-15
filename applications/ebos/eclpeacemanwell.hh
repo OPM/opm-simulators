@@ -417,14 +417,16 @@ public:
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_ + eps, dofVariables_[gridDofIdx]);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
-                q += modelRate;
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+                    q[compIdx] += modelRate[compIdx];
             }
 
             // then, we subtract the source rates for a undisturbed well.
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_, dofVariables_[gridDofIdx]);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
-                q -= modelRate;
+                for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+                    q[compIdx] -= modelRate[compIdx];
             }
 
             // and finally, we divide by the epsilon to get the derivative
@@ -1107,7 +1109,8 @@ public:
         const auto &intQuants = context.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             modelRate.setVolumetricRate(intQuants.fluidState(), phaseIdx, volumetricRates[phaseIdx]);
-            q += modelRate;
+            for (unsigned eqIdx = 0; eqIdx < q.size(); ++eqIdx)
+                q[eqIdx] += modelRate[eqIdx];
         }
 
         Valgrind::CheckDefined(q);
