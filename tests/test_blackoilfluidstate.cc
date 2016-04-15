@@ -23,8 +23,8 @@
 /*!
  * \file
  *
- * \brief This test makes sure that the programming interface is
- *        observed by all fluid systems
+ * \brief This test ensures that the API of the black-oil fluid state conforms to the
+ *        fluid state specification
  */
 #include "config.h"
 
@@ -36,42 +36,19 @@
 #include <ewoms/models/blackoil/blackoilfluidstate.hh>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-
-// include dune's MPI helper header
-#include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
-
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-// check the API of the black-oil fluid states
-template <class Scalar>
-void testBlackOilFluidState()
+int main(int argc, char **argv)
 {
     typedef TTAG(BlackOilModel) TypeTag;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
     typedef Ewoms::BlackOilFluidState<TypeTag> FluidState;
 
+    Dune::MPIHelper::instance(argc, argv);
+
     FluidState fs;
     checkFluidState<Evaluation>(fs);
-}
 
-class TestAdTag;
-
-template <class Scalar>
-inline void testAll()
-{
-    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
-
-    // ensure that all fluid states are API-compliant
-    testBlackOilFluidState<Scalar>();
-    testBlackOilFluidState<Evaluation>();
-}
-
-int main(int argc, char **argv)
-{
-    Dune::MPIHelper::instance(argc, argv);
-    testAll<double>();
-    testAll<float>()
-;
     return 0;
 }
