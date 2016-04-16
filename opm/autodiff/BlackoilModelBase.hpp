@@ -383,38 +383,27 @@ namespace Opm {
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw);
 
-        void computePropertiesForWellConnectionPressures(const SolutionState& state,
-                                                         const WellState& xw,
-                                                         std::vector<double>& b_perf,
-                                                         std::vector<double>& rsmax_perf,
-                                                         std::vector<double>& rvmax_perf,
-                                                         std::vector<double>& surf_dens_perf);
-
         void
         assembleMassBalanceEq(const SolutionState& state);
 
+        // TODO: only kept for now due to flow_multisegment
+        // will be removed soon
         void
         extractWellPerfProperties(const SolutionState& state,
                                   std::vector<ADB>& mob_perfcells,
                                   std::vector<ADB>& b_perfcells) const;
+
+        // TODO: only kept for now due to flow_multisegment
+        // will be removed soon
+        void updateWellState(const V& dwells,
+                             WellState& well_state);
+
 
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     SolutionState& state,
                     WellState& well_state);
-
-        void
-        computeWellFlux(const SolutionState& state,
-                        const std::vector<ADB>& mob_perfcells,
-                        const std::vector<ADB>& b_perfcells,
-                        V& aliveWells,
-                        std::vector<ADB>& cq_s) const;
-
-        void
-        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                         const SolutionState& state,
-                                         WellState& xw) const;
 
         void
         addWellFluxEq(const std::vector<ADB>& cq_s,
@@ -429,11 +418,6 @@ namespace Opm {
         addWellControlEq(const SolutionState& state,
                          const WellState& xw,
                          const V& aliveWells);
-
-        void updateWellControls(WellState& xw) const;
-
-        void updateWellState(const V& dwells,
-                             WellState& well_state);
 
         bool getWellConvergence(const int iteration);
 

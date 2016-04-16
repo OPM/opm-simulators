@@ -174,6 +174,7 @@ namespace Opm {
         using Base::terminal_output_;
         using Base::primalVariable_;
         using Base::pvdt_;
+        using Base::vfp_properties_;
 
         // ---------  Protected methods  ---------
 
@@ -199,7 +200,7 @@ namespace Opm {
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
 
-        using Base::updateWellControls;
+        // using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
         using Base::computeRelPerm;

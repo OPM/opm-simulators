@@ -222,6 +222,7 @@ namespace Opm {
         using Base::convergenceReduction;
         using Base::maxResidualAllowed;
         using Base::variableState;
+        using Base::variableWellStateIndices;
         using Base::asImpl;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
@@ -238,6 +239,13 @@ namespace Opm {
 
         void computeWellConnectionPressures(const SolutionState& state,
                                             const WellState& xw);
+
+        /// added to fixing the flow_multisegment running
+        bool
+        baseSolveWellEq(const std::vector<ADB>& mob_perfcells,
+                        const std::vector<ADB>& b_perfcells,
+                        SolutionState& state,
+                        WellState& well_state);
 
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,

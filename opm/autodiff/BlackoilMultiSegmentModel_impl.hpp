@@ -964,7 +964,7 @@ namespace Opm {
                     // inequality constraint, and therefore skipped.
                     continue;
                 }
-                if (detail::constraintBroken(
+                if (wellhelpers::constraintBroken(
                         xw.bhp(), xw.thp(), xw.wellRates(),
                         w, np, wellsMultiSegment()[w]->wellType(), wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
@@ -1033,7 +1033,7 @@ namespace Opm {
                                                       SolutionState& state,
                                                       WellState& well_state)
     {
-        const bool converged = Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+        const bool converged = baseSolveWellEq(mob_perfcells, b_perfcells, state, well_state);
 
         if (converged) {
             // We must now update the state.segp and state.segqs members,
@@ -1546,6 +1546,112 @@ namespace Opm {
         well_segment_perforation_pressure_diffs_ = grav * well_segment_perforation_depth_diffs_ * well_segment_perforation_densities;
 
     }
+
+
+
+        /// added to fixing the flow_multisegment running
+    template <class Grid>
+    bool
+    BlackoilMultiSegmentModel<Grid>::baseSolveWellEq(const std::vector<ADB>& mob_perfcells,
+                                                     const std::vector<ADB>& b_perfcells,
+                                                     SolutionState& state,
+                                                     WellState& well_state) {
+        V aliveWells;
+        const int np = wells().number_of_phases;
+        std::vector<ADB> cq_s(np, ADB::null());
+        std::vector<int> indices = variableWellStateIndices();
+        SolutionState state0 = state;
+        WellState well_state0 = well_state;
+        makeConstantState(state0);
+
+        std::vector<ADB> mob_perfcells_const(np, ADB::null());
+        std::vector<ADB> b_perfcells_const(np, ADB::null());
+
+        if ( Base::localWellsActive() ){
+            // If there are non well in the sudomain of the process
+            // thene mob_perfcells_const and b_perfcells_const would be empty
+            for (int phase = 0; phase < np; ++phase) {
+                mob_perfcells_const[phase] = ADB::constant(mob_perfcells[phase].value());
+                b_perfcells_const[phase] = ADB::constant(b_perfcells[phase].value());
+            }
+        }
+
+        int it  = 0;
+        bool converged;
+        do {
+            // bhp and Q for the wells
+            std::vector<V> vars0;
+            vars0.reserve(2);
+            variableWellStateInitials(well_state, vars0);
+            std::vector<ADB> vars = ADB::variables(vars0);
+
+            SolutionState wellSolutionState = state0;
+            variableStateExtractWellsVars(indices, vars, wellSolutionState);
+            computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
+            addWellFluxEq(cq_s, wellSolutionState);
+            addWellControlEq(wellSolutionState, well_state, aliveWells);
+            converged = Base::getWellConvergence(it);
+
+            if (converged) {
+                break;
+            }
+
+            ++it;
+            if( Base::localWellsActive() )
+            {
+                std::vector<ADB> eqs;
+                eqs.reserve(2);
+                eqs.push_back(residual_.well_flux_eq);
+                eqs.push_back(residual_.well_eq);
+                ADB total_residual = vertcatCollapseJacs(eqs);
+                const std::vector<M>& Jn = total_residual.derivative();
+                typedef Eigen::SparseMatrix<double> Sp;
+                Sp Jn0;
+                Jn[0].toSparse(Jn0);
+                const Eigen::SparseLU< Sp > solver(Jn0);
+                ADB::V total_residual_v = total_residual.value();
+                const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
+                assert(dx.size() == total_residual_v.size());
+                // asImpl().updateWellState(dx.array(), well_state);
+                updateWellState(dx.array(), well_state);
+                updateWellControls(well_state);
+            }
+        } while (it < 15);
+
+        if (converged) {
+            if ( terminal_output_ ) {
+                std::cout << "well converged iter: " << it << std::endl;
+            }
+            const int nw = wells().number_of_wells;
+            {
+                // We will set the bhp primary variable to the new ones,
+                // but we do not change the derivatives here.
+                ADB::V new_bhp = Eigen::Map<ADB::V>(well_state.bhp().data(), nw);
+                // Avoiding the copy below would require a value setter method
+                // in AutoDiffBlock.
+                std::vector<ADB::M> old_derivs = state.bhp.derivative();
+                state.bhp = ADB::function(std::move(new_bhp), std::move(old_derivs));
+            }
+            {
+                // Need to reshuffle well rates, from phase running fastest
+                // to wells running fastest.
+                // The transpose() below switches the ordering.
+                const DataBlock wrates = Eigen::Map<const DataBlock>(well_state.wellRates().data(), nw, np).transpose();
+                ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
+                std::vector<ADB::M> old_derivs = state.qs.derivative();
+                state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
+            }
+            computeWellConnectionPressures(state, well_state);
+        }
+
+        if (!converged) {
+            well_state = well_state0;
+        }
+
+        return converged;
+    }
+
 
 } // namespace Opm
 

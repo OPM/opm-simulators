@@ -25,6 +25,7 @@
 #include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp>
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
+#include <opm/autodiff/StandardWellsSolvent.hpp>
 
 namespace Opm {
 
@@ -103,6 +104,9 @@ namespace Opm {
         const bool is_miscible_;
         std::vector<ADB> mu_eff_;
         std::vector<ADB> b_eff_;
+        StandardWellsSolvent std_wells_;
+        const StandardWellsSolvent& stdWells() const { return std_wells_; }
+        StandardWellsSolvent& stdWells() { return std_wells_; }
 
 
         // Need to declare Base members we want to use here.
@@ -130,7 +134,7 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        using Base::stdWells;
+        // using Base::stdWells;
         using Base::wells;
         using Base::variableState;
         using Base::computeGasPressure;
@@ -145,10 +149,10 @@ namespace Opm {
         using Base::dsMax;
         using Base::drMaxRel;
         using Base::maxResidualAllowed;
-        using Base::updateWellControls;
+        // using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
         using Base::addWellControlEq;
-        using Base::computePropertiesForWellConnectionPressures;
+        // using Base::computePropertiesForWellConnectionPressures;
 
         std::vector<ADB>
         computeRelPerm(const SolutionState& state) const;
@@ -201,13 +205,6 @@ namespace Opm {
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                            const SolutionState& state,
                                            WellState& xw);
-
-        void computePropertiesForWellConnectionPressures(const SolutionState& state,
-                                                         const WellState& xw,
-                                                         std::vector<double>& b_perf,
-                                                         std::vector<double>& rsmax_perf,
-                                                         std::vector<double>& rvmax_perf,
-                                                         std::vector<double>& surf_dens_perf);
 
         void updateEquationsScaling();
 
