@@ -221,10 +221,10 @@ public:
     {
         init(/*tempMin=*/273.15,
              /*tempMax=*/623.15,
-             /*numTemp=*/100,
+             /*numTemp=*/50,
              /*pMin=*/0.0,
              /*pMax=*/20e6,
-             /*numP=*/200);
+             /*numP=*/50);
     }
 
     /*!

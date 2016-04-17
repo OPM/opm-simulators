@@ -193,8 +193,8 @@ public:
      */
     static void init()
     {
-        init(/*startTemp=*/273.15, /*endTemp=*/623.15, /*tempSteps=*/100,
-             /*startPressure=*/1e4, /*endPressure=*/40e6, /*pressureSteps=*/200);
+        init(/*startTemp=*/273.15, /*endTemp=*/623.15, /*tempSteps=*/50,
+             /*startPressure=*/1e4, /*endPressure=*/40e6, /*pressureSteps=*/50);
     }
 
     /*!
