@@ -90,6 +90,7 @@ void checkNcpFlash(const FluidState &fsRef,
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
+    typedef typename FluidSystem::template ParameterCache<typename FluidState::Scalar> ParameterCache;
 
     // calculate the total amount of stuff in the reference fluid
     // phase
@@ -108,9 +109,10 @@ void checkNcpFlash(const FluidState &fsRef,
     fsFlash.setTemperature(fsRef.temperature(/*phaseIdx=*/0));
 
     // run the flash calculation
-    typename FluidSystem::ParameterCache paramCache;
-    NcpFlash::guessInitial(fsFlash, paramCache, globalMolarities);
-    NcpFlash::template solve<MaterialLaw>(fsFlash, paramCache, matParams, globalMolarities);
+    ParameterCache paramCache;
+    paramCache.updateAll(fsFlash);
+    NcpFlash::guessInitial(fsFlash, globalMolarities);
+    NcpFlash::template solve<MaterialLaw>(fsFlash, matParams, paramCache, globalMolarities);
 
     // compare the "flashed" fluid state with the reference one
     checkSame<Scalar>(fsRef, fsFlash);
@@ -141,7 +143,7 @@ void completeReferenceFluidState(FluidState &fs,
 
     // make the fluid state consistent with local thermodynamic
     // equilibrium
-    typename FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::template ParameterCache<typename FluidState::Scalar> paramCache;
     ComputeFromReferencePhase::solve(fs,
                                      paramCache,
                                      refPhaseIdx,
@@ -251,7 +253,7 @@ inline void testAll()
     fsRef.setPressure(liquidPhaseIdx, 1e6);
     fsRef.setPressure(gasPhaseIdx, 1e6);
 
-    typename FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::template ParameterCache<Scalar> paramCache;
     typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,
                                          /*setViscosity=*/false,

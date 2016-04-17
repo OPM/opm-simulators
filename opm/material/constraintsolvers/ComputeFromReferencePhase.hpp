@@ -105,9 +105,9 @@ public:
      *                    enthalpy/internal energy of each phase
      *                    should also be set.
      */
-    template <class FluidState, class ParameterCache>
+    template <class FluidState>
     static void solve(FluidState &fluidState,
-                      ParameterCache &paramCache,
+                      typename FluidSystem::template ParameterCache<typename FluidState::Scalar> &paramCache,
                       unsigned refPhaseIdx,
                       bool setViscosity,
                       bool setEnthalpy)

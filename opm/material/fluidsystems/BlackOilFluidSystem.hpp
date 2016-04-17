@@ -113,7 +113,8 @@ public:
     typedef Opm::WaterPvtMultiplexer<Scalar> WaterPvt;
 
     //! \copydoc BaseFluidSystem::ParameterCache
-    class ParameterCache : public Opm::NullParameterCache
+    template <class Evaluation>
+    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
     {
     public:
         ParameterCache(int /*regionIdx*/=0)
@@ -396,24 +397,24 @@ public:
      * thermodynamic quantities (generic version, only isothermal)
      ****************************************/
     //! \copydoc BaseFluidSystem::density
-    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval density(const FluidState &fluidState,
-                           ParameterCache &paramCache,
+                           const ParameterCache<ParamCacheEval> &paramCache,
                            unsigned phaseIdx)
     { return density<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
-    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
+                                       const ParameterCache<ParamCacheEval> &paramCache,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     { return fugacityCoefficient<FluidState, LhsEval>(fluidState, phaseIdx, compIdx, paramCache.regionIndex()); }
 
     //! \copydoc BaseFluidSystem::viscosity
-    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache &paramCache,
+                             const ParameterCache<ParamCacheEval> &paramCache,
                              unsigned phaseIdx)
     { return viscosity<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 

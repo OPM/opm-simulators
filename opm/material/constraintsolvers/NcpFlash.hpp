@@ -88,8 +88,6 @@ class NcpFlash
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
 
-    typedef typename FluidSystem::ParameterCache ParameterCache;
-
     static const int numEq = numPhases*(numComponents + 1);
 
 public:
@@ -98,7 +96,6 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static void guessInitial(FluidState &fluidState,
-                             ParameterCache &paramCache,
                              const Dune::FieldVector<Evaluation, numComponents>& globalMolarities)
     {
         // the sum of all molarities
@@ -121,6 +118,7 @@ public:
         }
 
         // set the fugacity coefficients of all components in all phases
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.updateAll(fluidState);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
@@ -139,8 +137,8 @@ public:
      */
     template <class MaterialLaw, class FluidState>
     static void solve(FluidState &fluidState,
-                      ParameterCache &paramCache,
                       const typename MaterialLaw::Params &matParams,
+                      typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                       const Dune::FieldVector<typename FluidState::Scalar, numComponents>& globalMolarities,
                       Scalar tolerance = -1.0)
     {
@@ -265,15 +263,12 @@ public:
                       const ComponentVector &globalMolarities,
                       Scalar tolerance = 0.0)
     {
-        ParameterCache paramCache;
-        paramCache.updateAll(fluidState);
-
         typedef NullMaterialTraits<Scalar, numPhases> MaterialTraits;
         typedef NullMaterial<MaterialTraits> MaterialLaw;
         typedef typename MaterialLaw::Params MaterialLawParams;
 
         MaterialLawParams matParams;
-        solve<MaterialLaw>(fluidState, paramCache, matParams, globalMolarities, tolerance);
+        solve<MaterialLaw>(fluidState, matParams, globalMolarities, tolerance);
     }
 
 
@@ -331,14 +326,14 @@ protected:
     static void linearize_(Matrix &J,
                            Vector &b,
                            FluidState &fluidState,
-                           ParameterCache &paramCache,
+                           typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                            const typename MaterialLaw::Params &matParams,
                            const ComponentVector &globalMolarities)
     {
         typedef typename FluidState::Scalar Evaluation;
 
         FluidState origFluidState(fluidState);
-        ParameterCache origParamCache(paramCache);
+        auto origParamCache(paramCache);
 
         Vector tmp;
 
@@ -444,7 +439,7 @@ protected:
 
     template <class MaterialLaw, class FluidState, class Vector>
     static Scalar update_(FluidState &fluidState,
-                          ParameterCache &paramCache,
+                          typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                           const typename MaterialLaw::Params &matParams,
                           const Vector &deltaX)
     {
@@ -522,10 +517,11 @@ protected:
 
     template <class MaterialLaw, class FluidState>
     static void completeFluidState_(FluidState &fluidState,
-                                    ParameterCache &paramCache,
+                                    typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                                     const typename MaterialLaw::Params &matParams)
     {
         typedef typename FluidState::Scalar Evaluation;
+        typedef typename FluidSystem::template ParameterCache<Evaluation> ParameterCache;
 
         // calculate the saturation of the last phase as a function of
         // the other saturations
@@ -596,7 +592,7 @@ protected:
     // set a quantity in the fluid state
     template <class MaterialLaw, class FluidState>
     static void setQuantity_(FluidState &fluidState,
-                             ParameterCache &paramCache,
+                             typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                              const typename MaterialLaw::Params &matParams,
                              unsigned pvIdx,
                              const typename FluidState::Scalar& value)

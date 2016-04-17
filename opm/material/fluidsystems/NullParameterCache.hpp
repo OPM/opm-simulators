@@ -35,7 +35,8 @@ namespace Opm {
  * \ingroup Fluidsystems
  * \brief A parameter cache which does nothing
  */
-class NullParameterCache : public ParameterCacheBase<NullParameterCache>
+template <class Evaluation>
+class NullParameterCache : public ParameterCacheBase<NullParameterCache<Evaluation> >
 {
 public:
     NullParameterCache()

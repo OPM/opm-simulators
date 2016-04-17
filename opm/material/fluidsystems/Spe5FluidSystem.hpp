@@ -64,7 +64,9 @@ class Spe5
 
 public:
     //! \copydoc BaseFluidSystem::ParameterCache
-    typedef Opm::Spe5ParameterCache<Scalar, ThisType> ParameterCache;
+    template <class Evaluation>
+    struct ParameterCache : public Opm::Spe5ParameterCache<Evaluation, ThisType>
+    {};
 
     /****************************************
      * Fluid phase parameters
@@ -356,27 +358,23 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::density
-    template <class FluidState, class Evaluation = Scalar>
-    static Scalar density(const FluidState &fluidState,
-                          const ParameterCache &paramCache,
-                          unsigned phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
+    static LhsEval density(const FluidState &fluidState,
+                           const ParameterCache<ParamCacheEval> &paramCache,
+                           unsigned phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        static_assert(std::is_same<Evaluation, Scalar>::value,
-                      "The SPE-5 fluid system is currently only implemented for the scalar case.");
 
         return fluidState.averageMolarMass(phaseIdx)/paramCache.molarVolume(phaseIdx);
     }
 
     //! \copydoc BaseFluidSystem::viscosity
-    template <class FluidState, class Evaluation = Scalar>
-    static Scalar viscosity(const FluidState &/*fluidState*/,
-                            const ParameterCache &/*paramCache*/,
-                            unsigned phaseIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
+    static LhsEval viscosity(const FluidState &/*fluidState*/,
+                             const ParameterCache<ParamCacheEval> &/*paramCache*/,
+                             unsigned phaseIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        static_assert(std::is_same<Evaluation, Scalar>::value,
-                      "The SPE-5 fluid system is currently only implemented for the scalar case.");
 
         if (phaseIdx == gasPhaseIdx) {
             // given by SPE-5 in table on page 64. we use a constant
@@ -395,16 +393,14 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
-    template <class FluidState, class Evaluation = Scalar>
-    static Scalar fugacityCoefficient(const FluidState &fluidState,
-                                      const ParameterCache &paramCache,
-                                      unsigned phaseIdx,
-                                      unsigned compIdx)
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
+    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+                                       const ParameterCache<ParamCacheEval> &paramCache,
+                                       unsigned phaseIdx,
+                                       unsigned compIdx)
     {
         assert(0 <= phaseIdx  && phaseIdx <= numPhases);
         assert(0 <= compIdx  && compIdx <= numComponents);
-        static_assert(std::is_same<Evaluation, Scalar>::value,
-                      "The SPE-5 fluid system is currently only implemented for the scalar case.");
 
         if (phaseIdx == oilPhaseIdx || phaseIdx == gasPhaseIdx)
             return PengRobinsonMixture::computeFugacityCoefficient(fluidState,
@@ -420,7 +416,8 @@ public:
     }
 
 protected:
-    static Scalar henryCoeffWater_(unsigned compIdx, Scalar temperature)
+    template <class LhsEval>
+    static LhsEval henryCoeffWater_(unsigned compIdx, const LhsEval& temperature)
     {
         // use henry's law for the solutes and the vapor pressure for
         // the solvent.

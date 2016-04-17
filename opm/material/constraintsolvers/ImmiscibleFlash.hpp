@@ -74,7 +74,6 @@ class ImmiscibleFlash
                   "Immiscibility assumes that the number of phases"
                   " is equal to the number of components");
 
-    typedef typename FluidSystem::ParameterCache ParameterCache;
 
     static const int numEq = numPhases;
 
@@ -87,16 +86,10 @@ public:
     /*!
      * \brief Guess initial values for all quantities.
      */
-    template <class FluidState>
+    template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static void guessInitial(FluidState &fluidState,
-                             ParameterCache &/*paramCache*/,
-                             const ComponentVector &globalMolarities)
+                             const Dune::FieldVector<Evaluation, numComponents>& /*globalMolarities*/)
     {
-        // the sum of all molarities
-        Scalar sumMoles = 0;
-        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-            sumMoles += globalMolarities[compIdx];
-
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             // pressure. use atmospheric pressure as initial guess
             fluidState.setPressure(phaseIdx, 2e5);
@@ -114,11 +107,13 @@ public:
      */
     template <class MaterialLaw, class FluidState>
     static void solve(FluidState &fluidState,
-                      ParameterCache &paramCache,
                       const typename MaterialLaw::Params &matParams,
-                      const ComponentVector &globalMolarities)
+                      typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
+                      const Dune::FieldVector<typename FluidState::Scalar, numComponents>& globalMolarities)
     {
         Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-25);
+
+        paramCache.updateAll(fluidState);
 
         /////////////////////////
         // Check if all fluid phases are incompressible
@@ -132,7 +127,6 @@ public:
         };
 
         if (allIncompressible) {
-            paramCache.updateAll(fluidState);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
                 fluidState.setDensity(phaseIdx, rho);
@@ -159,12 +153,12 @@ public:
         Valgrind::SetUndefined(deltaX);
         Valgrind::SetUndefined(b);
 
-        completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
+        completeFluidState_<MaterialLaw>(fluidState, matParams, paramCache);
 
         const int nMax = 50; // <- maximum number of newton iterations
         for (int nIdx = 0; nIdx < nMax; ++nIdx) {
             // calculate Jacobian matrix and right hand side
-            linearize_<MaterialLaw>(J, b, fluidState, paramCache, matParams, globalMolarities);
+            linearize_<MaterialLaw>(J, b, fluidState, matParams, paramCache, globalMolarities);
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
 
@@ -205,7 +199,7 @@ public:
             */
 
             // update the fluid quantities.
-            Scalar relError = update_<MaterialLaw>(fluidState, paramCache, matParams, deltaX);
+            Scalar relError = update_<MaterialLaw>(fluidState, matParams, paramCache, deltaX);
 
             if (relError < 1e-9)
                 return;
@@ -260,12 +254,13 @@ protected:
     static void linearize_(Matrix &J,
                            Vector &b,
                            FluidState &fluidState,
-                           ParameterCache &paramCache,
                            const typename MaterialLaw::Params &matParams,
+                           typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                            const ComponentVector &globalMolarities)
     {
+        // copy the undisturbed fluid state and parameter cache
         FluidState origFluidState(fluidState);
-        ParameterCache origParamCache(paramCache);
+        auto origParamCache(paramCache);
 
         Vector tmp;
 
@@ -287,7 +282,7 @@ protected:
             // deviate the mole fraction of the i-th component
             Scalar xI = getQuantity_(fluidState, pvIdx);
             const Scalar eps = 1e-10/quantityWeight_(fluidState, pvIdx);
-            setQuantity_<MaterialLaw>(fluidState, paramCache, matParams, pvIdx, xI + eps);
+            setQuantity_<MaterialLaw>(fluidState, matParams, paramCache, pvIdx, xI + eps);
             assert(std::abs(getQuantity_(fluidState, pvIdx) - (xI + eps))
                    <= std::max<Scalar>(1.0, std::abs(xI))*std::numeric_limits<Scalar>::epsilon()*100);
 
@@ -324,11 +319,11 @@ protected:
         }
     }
 
-    template <class MaterialLaw, class FluidState>
-    static Scalar update_(FluidState &fluidState,
-                          ParameterCache &paramCache,
-                          const typename MaterialLaw::Params &matParams,
-                          const Vector &deltaX)
+    template <class MaterialLaw, class FlashFluidState, class EvalVector>
+    static Scalar update_(FlashFluidState& fluidState,
+                          const typename MaterialLaw::Params& matParams,
+                          typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar>& paramCache,
+                          const EvalVector& deltaX)
     {
         Scalar relError = 0;
         for (unsigned pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
@@ -352,16 +347,18 @@ protected:
             setQuantityRaw_(fluidState, pvIdx, tmp - delta);
         }
 
-        completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
+        completeFluidState_<MaterialLaw>(fluidState, matParams, paramCache);
 
         return relError;
     }
 
     template <class MaterialLaw, class FluidState>
     static void completeFluidState_(FluidState &fluidState,
-                                    ParameterCache &paramCache,
-                                    const typename MaterialLaw::Params &matParams)
+                                    const typename MaterialLaw::Params &matParams,
+                                    typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache)
     {
+        typedef typename FluidSystem::template ParameterCache<typename FluidState::Scalar> ParamCache;
+
         // calculate the saturation of the last phase as a function of
         // the other saturations
         Scalar sumSat = 0.0;
@@ -393,7 +390,7 @@ protected:
                                    + (pC[phaseIdx] - pC[0]));
 
         // update the parameter cache
-        paramCache.updateAll(fluidState, /*except=*/ParameterCache::Temperature|ParameterCache::Composition);
+        paramCache.updateAll(fluidState, /*except=*/ParamCache::Temperature|ParamCache::Composition);
 
         // update all densities
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -430,8 +427,8 @@ protected:
     // set a quantity in the fluid state
     template <class MaterialLaw, class FluidState>
     static void setQuantity_(FluidState &fs,
-                             ParameterCache &paramCache,
                              const typename MaterialLaw::Params &matParams,
+                             typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                              unsigned pvIdx,
                              Scalar value)
     {
@@ -445,6 +442,8 @@ protected:
             // pressure does not depend on absolute pressure.
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 fs.setPressure(phaseIdx, fs.pressure(phaseIdx) + delta);
+
+            // update the parameter cache
             paramCache.updateAllPressures(fs);
 
             // update all densities
@@ -473,6 +472,8 @@ protected:
                 fs.setPressure(phaseIdx,
                                fs.pressure(0)
                                + (pC[phaseIdx] - pC[0]));
+
+            // update the parameter cache
             paramCache.updateAllPressures(fs);
 
             // update all densities
