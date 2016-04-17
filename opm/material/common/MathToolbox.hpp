@@ -109,19 +109,6 @@ public:
     { return eval; }
 
     /*!
-     * \brief Pass a value through if it is an evaluation, or create a constant
-     *        evaluation if it is a scalar.
-     *
-     * In some sense, this method is the opposite of "toLhs()": If the function argument
-     * is a Scalar, an Evaluation which represents a constant value is returned, if the
-     * argument is an Evaluation, it is returned as is. This method makes it possible to
-     * uniformly handle the cases where some condition is either given by a constant
-     * value or as a value which depends on other variables. (E.g. boundary conditions.)
-     */
-    static Scalar passThroughOrCreateConstant(Scalar value)
-    { return value; }
-
-    /*!
      * \brief Returns true if two values are identical up to a specified tolerance
      */
     static bool isSame(Scalar a, Scalar b, Scalar tolerance)

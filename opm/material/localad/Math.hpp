@@ -424,13 +424,6 @@ public:
     toLhs(const Evaluation& eval)
     { return eval.value; }
 
-    static const Evaluation passThroughOrCreateConstant(Scalar value)
-    { return createConstant(value); }
-
-    static const Evaluation& passThroughOrCreateConstant(const Evaluation& eval)
-    { return eval; }
-
-
     // comparison
     static bool isSame(const Evaluation& a, const Evaluation& b, Scalar tolerance)
     {
