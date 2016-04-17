@@ -55,34 +55,39 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
     enum { numPhases = FluidState::numPhases };
     enum { numComponents = FluidState::numComponents };
 
+    Scalar tol = std::max(std::numeric_limits<Scalar>::epsilon()*1e4, 1e-6);
+
     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         Scalar error;
 
         // check the pressures
         error = 1 - fsRef.pressure(phaseIdx)/fsFlash.pressure(phaseIdx);
-        if (std::abs(error) > 1e-6) {
-            std::cout << "pressure error phase " << phaseIdx << ": "
-                      << fsFlash.pressure(phaseIdx)  << " flash vs "
-                      << fsRef.pressure(phaseIdx) << " reference"
-                      << " error=" << error << "\n";
+        if (std::abs(error) > tol) {
+            OPM_THROW(std::runtime_error,
+                      "pressure error for phase " << phaseIdx << " exceeds tolerance"
+                      << " (" << fsFlash.pressure(phaseIdx)  << " flash vs "
+                      << fsRef.pressure(phaseIdx) << " reference,"
+                      << " error=" << error << ")");
         }
 
         // check the saturations
         error = fsRef.saturation(phaseIdx) - fsFlash.saturation(phaseIdx);
-        if (std::abs(error) > 1e-6)
-            std::cout << "saturation error phase " << phaseIdx << ": "
-                      << fsFlash.saturation(phaseIdx) << " flash vs "
-                      << fsRef.saturation(phaseIdx) << " reference"
-                      << " error=" << error << "\n";
+        if (std::abs(error) > tol)
+            OPM_THROW(std::runtime_error,
+                      "saturation error for phase " << phaseIdx << " exceeds tolerance"
+                      << " (" << fsFlash.saturation(phaseIdx) << " flash vs "
+                      << fsRef.saturation(phaseIdx) << " reference,"
+                      << " error=" << error << ")");
 
         // check the compositions
         for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
             error = fsRef.moleFraction(phaseIdx, compIdx) - fsFlash.moleFraction(phaseIdx, compIdx);
-            if (std::abs(error) > 1e-6)
-                std::cout << "composition error phase " << phaseIdx << ", component " << compIdx << ": "
-                          << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
-                          << fsRef.moleFraction(phaseIdx, compIdx) << " reference"
-                          << " error=" << error << "\n";
+            if (std::abs(error) > tol)
+                OPM_THROW(std::runtime_error,
+                          "composition error phase " << phaseIdx << ", component " << compIdx << " exceeds tolerance"
+                          << " (" << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
+                          << fsRef.moleFraction(phaseIdx, compIdx) << " reference,"
+                          << " error=" << error << ")");
         }
     }
 }
@@ -175,6 +180,7 @@ inline void testAll()
     typedef Opm::EffToAbsLaw<EffMaterialLaw> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
+    std::cout << "---- using " << Dune::className<Scalar>() << " as scalar ----\n";
     Scalar T = 273.15 + 25;
 
     // initialize the tables of the fluid system
