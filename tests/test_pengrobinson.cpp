@@ -488,7 +488,10 @@ int main(int argc, char **argv)
     // the Peng-Robinson test currently does not work with single-precision floating
     // point scalars because of precision issues. (these are caused by the fact that the
     // test uses finite differences to calculate derivatives.)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
     while (0) testAll<float>();
+#pragma GCC diagnostic pop
 
     return 0;
 }
