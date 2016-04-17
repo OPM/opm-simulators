@@ -414,7 +414,7 @@ inline void testAll()
     Scalar maxAlpha = surfaceAlpha;
 
     std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3] <M_o>[kg/mol] <M_g>[kg/mol] R_s[m^3/m^3] B_g[-] B_o[-]\n";
-    int n = 3000;
+    int n = 300;
     for (int i = 0; i < n; ++i) {
         // ratio between the original and the current volume
         Scalar alpha = minAlpha + (maxAlpha - minAlpha)*i/(n - 1);
