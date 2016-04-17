@@ -50,19 +50,12 @@
 #include <cassert>
 #include <stdexcept>
 
-struct TestVariables
-{
-    static const int size = 3;
+static const int numVars = 3;
 
-    static const int temperatureIdx = 0;
-    static const int pressureIdx = 1;
-    static const int saturationIdx = 2;
-};
-
-template <class Scalar, class VariablesDescriptor>
-void testOperators(const Scalar tolerance )
+template <class Scalar>
+void testOperators(const Scalar tolerance)
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
 
     // test the constructors of the Opm::LocalAd::Evaluation class
     const Scalar c = 1.234;
@@ -235,10 +228,10 @@ void testOperators(const Scalar tolerance )
     }
 }
 
-template <class Scalar, class VariablesDescriptor, class AdFn, class ClassicFn>
+template <class Scalar, class AdFn, class ClassicFn>
 void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar xMax = 1000)
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
 
     int n = 100*1000;
     for (int i = 0; i < n; ++ i) {
@@ -269,12 +262,11 @@ void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar
 }
 
 template <class Scalar,
-          class VariablesDescriptor,
           class AdFn,
           class ClassicFn>
 void test2DFunction1(AdFn* adFn, ClassicFn* classicFn, Scalar xMin, Scalar xMax, Scalar y)
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
 
     int n = 100*1000;
     for (int i = 0; i < n; ++ i) {
@@ -307,12 +299,11 @@ void test2DFunction1(AdFn* adFn, ClassicFn* classicFn, Scalar xMin, Scalar xMax,
 }
 
 template <class Scalar,
-          class VariablesDescriptor,
           class AdFn,
           class ClassicFn>
 void test2DFunction2(AdFn* adFn, ClassicFn* classicFn, Scalar x, Scalar yMin, Scalar yMax)
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
 
     int n = 100*1000;
     for (int i = 0; i < n; ++ i) {
@@ -344,10 +335,10 @@ void test2DFunction2(AdFn* adFn, ClassicFn* classicFn, Scalar x, Scalar yMin, Sc
     }
 }
 
-template <class Scalar, class VariablesDescriptor>
+template <class Scalar>
 void testPowBase(Scalar baseMin = 1e-2, Scalar baseMax = 100)
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
 
     Scalar exp = 1.234;
     const auto& expEval = Eval::createConstant(exp);
@@ -385,10 +376,10 @@ void testPowBase(Scalar baseMin = 1e-2, Scalar baseMax = 100)
     }
 }
 
-template <class Scalar, class VariablesDescriptor>
+template <class Scalar>
 void testPowExp(Scalar expMin = -100, Scalar expMax = 100)
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
 
     Scalar base = 1.234;
     const auto& baseEval = Eval::createConstant(base);
@@ -426,10 +417,10 @@ void testPowExp(Scalar expMin = -100, Scalar expMax = 100)
     }
 }
 
-template <class Scalar, class VariablesDescriptor>
+template <class Scalar>
 void testAtan2()
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, VariablesDescriptor, VariablesDescriptor::size> Eval;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
 
     int n = 1000;
     Scalar maxVal = 10.0;
@@ -488,8 +479,6 @@ double myScalarMax(double a, double b)
 template <class Scalar>
 inline void testAll()
 {
-    typedef TestVariables VarsDescriptor;
-
     // the following is commented out because it is supposed to produce a compiler
     // error. This is the case since the function does not calculate the derivatives
     // w.r.t. Pressure but they have been requested...
@@ -497,84 +486,84 @@ inline void testAll()
 
     std::cout << "testing operators and constructors\n";
     const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-    testOperators<Scalar, VarsDescriptor>(eps);
+    testOperators<Scalar>(eps);
 
     std::cout << "testing min()\n";
-    test2DFunction1<Scalar, VarsDescriptor>(Opm::LocalAd::min<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                            myScalarMin,
-                                            -1000, 1000,
-                                            /*p=*/1.234);
+    test2DFunction1<Scalar>(Opm::LocalAd::min<Scalar, numVars>,
+                            myScalarMin,
+                            -1000, 1000,
+                            /*p=*/1.234);
 
-    test2DFunction2<Scalar, VarsDescriptor>(Opm::LocalAd::min<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                            myScalarMin,
-                                            /*T=*/1.234,
-                                            -1000, 1000);
+    test2DFunction2<Scalar>(Opm::LocalAd::min<Scalar, numVars>,
+                            myScalarMin,
+                            /*T=*/1.234,
+                            -1000, 1000);
 
     std::cout << "testing max()\n";
-    test2DFunction1<Scalar, VarsDescriptor>(Opm::LocalAd::max<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                            myScalarMax,
-                                            -1000, 1000,
-                                            /*p=*/1.234);
+    test2DFunction1<Scalar>(Opm::LocalAd::max<Scalar, numVars>,
+                            myScalarMax,
+                            -1000, 1000,
+                            /*p=*/1.234);
 
-    test2DFunction2<Scalar, VarsDescriptor>(Opm::LocalAd::max<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                            myScalarMax,
-                                            /*T=*/1.234,
-                                            -1000, 1000);
+    test2DFunction2<Scalar>(Opm::LocalAd::max<Scalar, numVars>,
+                            myScalarMax,
+                            /*T=*/1.234,
+                            -1000, 1000);
 
     std::cout << "testing pow()\n";
-    testPowBase<Scalar, VarsDescriptor>();
-    testPowExp<Scalar, VarsDescriptor>();
+    testPowBase<Scalar>();
+    testPowExp<Scalar>();
 
     std::cout << "testing abs()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::abs<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::abs));
+    test1DFunction<Scalar>(Opm::LocalAd::abs<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::abs));
 
     std::cout << "testing sqrt()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::sqrt<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::sqrt));
+    test1DFunction<Scalar>(Opm::LocalAd::sqrt<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::sqrt));
 
     std::cout << "testing sin()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::sin<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::sin),
-                                           0, 2*M_PI);
+    test1DFunction<Scalar>(Opm::LocalAd::sin<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::sin),
+                           0, 2*M_PI);
 
     std::cout << "testing asin()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::asin<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::asin),
-                                           -1.0, 1.0);
+    test1DFunction<Scalar>(Opm::LocalAd::asin<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::asin),
+                           -1.0, 1.0);
 
     std::cout << "testing cos()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::cos<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::cos),
-                                           0, 2*M_PI);
+    test1DFunction<Scalar>(Opm::LocalAd::cos<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::cos),
+                           0, 2*M_PI);
 
     std::cout << "testing acos()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::acos<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::acos),
-                                           -1.0, 1.0);
+    test1DFunction<Scalar>(Opm::LocalAd::acos<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::acos),
+                           -1.0, 1.0);
 
     std::cout << "testing tan()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::tan<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::tan),
-                                           -M_PI / 2 * 0.95, M_PI / 2 * 0.95);
+    test1DFunction<Scalar>(Opm::LocalAd::tan<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::tan),
+                           -M_PI / 2 * 0.95, M_PI / 2 * 0.95);
 
     std::cout << "testing atan()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::atan<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::atan),
-                                           -10*1000.0, 10*1000.0);
+    test1DFunction<Scalar>(Opm::LocalAd::atan<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::atan),
+                           -10*1000.0, 10*1000.0);
 
     std::cout << "testing atan2()\n";
-    testAtan2<Scalar, VarsDescriptor>();
+    testAtan2<Scalar>();
 
     std::cout << "testing exp()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::exp<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::exp),
-                                           -100, 100);
+    test1DFunction<Scalar>(Opm::LocalAd::exp<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::exp),
+                           -100, 100);
 
     std::cout << "testing log()\n";
-    test1DFunction<Scalar, VarsDescriptor>(Opm::LocalAd::log<Scalar, VarsDescriptor, VarsDescriptor::size>,
-                                           static_cast<Scalar (*)(Scalar)>(std::log),
-                                           1e-6, 1e9);
+    test1DFunction<Scalar>(Opm::LocalAd::log<Scalar, numVars>,
+                           static_cast<Scalar (*)(Scalar)>(std::log),
+                           1e-6, 1e9);
 }
 
 int main(int argc, char **argv)

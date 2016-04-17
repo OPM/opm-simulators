@@ -39,10 +39,10 @@
 namespace Opm {
 namespace LocalAd {
 // provide some algebraic functions
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> abs(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> abs(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::abs(x.value);
 
@@ -59,11 +59,11 @@ Evaluation<Scalar, VarSetTag, numVars> abs(const Evaluation<Scalar, VarSetTag, n
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> min(const Evaluation<Scalar, VarSetTag, numVars>& x1,
-                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> min(const Evaluation<Scalar, numVars>& x1,
+                                const Evaluation<Scalar, numVars>& x2)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     if (x1.value < x2.value) {
         result.value = x1.value;
@@ -83,11 +83,11 @@ Evaluation<Scalar, VarSetTag, numVars> min(const Evaluation<Scalar, VarSetTag, n
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> min(ScalarA x1,
-                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+template <class ScalarA, class Scalar, int numVars>
+Evaluation<Scalar, numVars> min(ScalarA x1,
+                                const Evaluation<Scalar, numVars>& x2)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     if (x1 < x2.value) {
         result.value = x1;
@@ -107,16 +107,16 @@ Evaluation<Scalar, VarSetTag, numVars> min(ScalarA x1,
     return result;
 }
 
-template <class ScalarB, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> min(const Evaluation<Scalar, VarSetTag, numVars>& x2,
-                                           ScalarB x1)
-{ return min(x1, x2); }
+template <class Arg2Scalar, class Scalar, int numVars>
+Evaluation<Scalar, numVars> min(const Evaluation<Scalar, numVars>& x1,
+                                const Arg2Scalar& x2)
+{ return min(x2, x1); }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> max(const Evaluation<Scalar, VarSetTag, numVars>& x1,
-                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> max(const Evaluation<Scalar, numVars>& x1,
+                                const Evaluation<Scalar, numVars>& x2)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     if (x1.value > x2.value) {
         result.value = x1.value;
@@ -136,11 +136,11 @@ Evaluation<Scalar, VarSetTag, numVars> max(const Evaluation<Scalar, VarSetTag, n
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> max(ScalarA x1,
-                                           const Evaluation<Scalar, VarSetTag, numVars>& x2)
+template <class Arg1Scalar, class Scalar, int numVars>
+Evaluation<Scalar, numVars> max(const Arg1Scalar& x1,
+                                const Evaluation<Scalar, numVars>& x2)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     if (x1 > x2.value) {
         result.value = x1;
@@ -160,17 +160,17 @@ Evaluation<Scalar, VarSetTag, numVars> max(ScalarA x1,
     return result;
 }
 
-template <class ScalarB, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> max(const Evaluation<Scalar, VarSetTag, numVars>& x2,
-                                           ScalarB x1)
-{ return max(x1, x2); }
+template <class Arg2Scalar, class Scalar, int numVars>
+Evaluation<Scalar, numVars> max(const Evaluation<Scalar, numVars>& x1,
+                                const Arg2Scalar& x2)
+{ return max(x2, x1); }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> tan(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> tan(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
-    Scalar tmp = std::tan(x.value);
+    const Scalar& tmp = std::tan(x.value);
     result.value = tmp;
 
     // derivatives use the chain rule
@@ -181,10 +181,10 @@ Evaluation<Scalar, VarSetTag, numVars> tan(const Evaluation<Scalar, VarSetTag, n
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> atan(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> atan(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::atan(x.value);
 
@@ -196,11 +196,11 @@ Evaluation<Scalar, VarSetTag, numVars> atan(const Evaluation<Scalar, VarSetTag, 
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> atan2(const Evaluation<Scalar, VarSetTag, numVars>& x,
-                                             const Evaluation<Scalar, VarSetTag, numVars>& y)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> atan2(const Evaluation<Scalar, numVars>& x,
+                                  const Evaluation<Scalar, numVars>& y)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::atan2(x.value, y.value);
 
@@ -216,10 +216,10 @@ Evaluation<Scalar, VarSetTag, numVars> atan2(const Evaluation<Scalar, VarSetTag,
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> sin(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> sin(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::sin(x.value);
 
@@ -231,10 +231,10 @@ Evaluation<Scalar, VarSetTag, numVars> sin(const Evaluation<Scalar, VarSetTag, n
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> asin(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> asin(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::asin(x.value);
 
@@ -246,10 +246,10 @@ Evaluation<Scalar, VarSetTag, numVars> asin(const Evaluation<Scalar, VarSetTag, 
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> cos(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> cos(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::cos(x.value);
 
@@ -261,10 +261,10 @@ Evaluation<Scalar, VarSetTag, numVars> cos(const Evaluation<Scalar, VarSetTag, n
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> acos(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> acos(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::acos(x.value);
 
@@ -276,10 +276,10 @@ Evaluation<Scalar, VarSetTag, numVars> acos(const Evaluation<Scalar, VarSetTag, 
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> sqrt(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> sqrt(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     Scalar sqrt_x = std::sqrt(x.value);
     result.value = sqrt_x;
@@ -293,10 +293,10 @@ Evaluation<Scalar, VarSetTag, numVars> sqrt(const Evaluation<Scalar, VarSetTag, 
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> exp(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> exp(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     Scalar exp_x = std::exp(x.value);
     result.value = exp_x;
@@ -310,10 +310,11 @@ Evaluation<Scalar, VarSetTag, numVars> exp(const Evaluation<Scalar, VarSetTag, n
 }
 
 // exponentiation of arbitrary base with a fixed constant
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> pow(const Evaluation<Scalar, VarSetTag, numVars>& base, Scalar exp)
+template <class Scalar, int numVars, class ExpType>
+Evaluation<Scalar, numVars> pow(const Evaluation<Scalar, numVars>& base,
+                                const ExpType& exp)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     Scalar pow_x = std::pow(base.value, exp);
     result.value = pow_x;
@@ -327,10 +328,11 @@ Evaluation<Scalar, VarSetTag, numVars> pow(const Evaluation<Scalar, VarSetTag, n
 }
 
 // exponentiation of constant base with an arbitrary exponent
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> pow(Scalar base, const Evaluation<Scalar, VarSetTag, numVars>& exp)
+template <class BaseType, class Scalar, int numVars>
+Evaluation<Scalar, numVars> pow(const BaseType& base,
+                                const Evaluation<Scalar, numVars>& exp)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     Scalar lnBase = std::log(base);
     result.value = std::exp(lnBase*exp.value);
@@ -345,10 +347,11 @@ Evaluation<Scalar, VarSetTag, numVars> pow(Scalar base, const Evaluation<Scalar,
 
 // this is the most expensive power function. Computationally it is pretty expensive, so
 // one of the above two variants above should be preferred if possible.
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> pow(const Evaluation<Scalar, VarSetTag, numVars>& base, const Evaluation<Scalar, VarSetTag, numVars>& exp)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> pow(const Evaluation<Scalar, numVars>& base,
+                                const Evaluation<Scalar, numVars>& exp)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     Scalar valuePow = std::pow(base.value, exp.value);
     result.value = valuePow;
@@ -367,10 +370,10 @@ Evaluation<Scalar, VarSetTag, numVars> pow(const Evaluation<Scalar, VarSetTag, n
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> log(const Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> log(const Evaluation<Scalar, numVars>& x)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = std::log(x.value);
 
@@ -386,13 +389,13 @@ Evaluation<Scalar, VarSetTag, numVars> log(const Evaluation<Scalar, VarSetTag, n
 
 // a kind of traits class for the automatic differentiation case. (The toolbox for the
 // scalar case is provided by the MathToolbox.hpp header file.)
-template <class ScalarT, class VariableSetTag, int numVars>
-struct MathToolbox<Opm::LocalAd::Evaluation<ScalarT, VariableSetTag, numVars>>
+template <class ScalarT, int numVars>
+struct MathToolbox<Opm::LocalAd::Evaluation<ScalarT, numVars> >
 {
 private:
 public:
     typedef ScalarT Scalar;
-    typedef Opm::LocalAd::Evaluation<ScalarT, VariableSetTag, numVars> Evaluation;
+    typedef Opm::LocalAd::Evaluation<ScalarT, numVars> Evaluation;
 
     static Scalar value(const Evaluation& eval)
     { return eval.value; }

@@ -259,8 +259,6 @@ void testThreePhaseSatApi()
 {
 }
 
-class TestAdTag;
-
 template <class Scalar>
 inline void testAll()
 {
@@ -282,7 +280,7 @@ inline void testAll()
                                           ThreePFluidSystem::oilPhaseIdx,
                                           ThreePFluidSystem::gasPhaseIdx> ThreePhaseTraits;
 
-    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
+    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
     typedef Opm::ImmiscibleFluidState<Evaluation, TwoPFluidSystem> TwoPhaseFluidState;
     typedef Opm::ImmiscibleFluidState<Evaluation, ThreePFluidSystem> ThreePhaseFluidState;
 

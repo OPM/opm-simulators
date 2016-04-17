@@ -236,8 +236,7 @@ void testAllFluidSystems()
         typedef Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
         if (false) checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>();
 
-        struct BlackoilDummyEvalTag;
-        typedef Opm::LocalAd::Evaluation<Scalar, BlackoilDummyEvalTag, 1> BlackoilDummyEval;
+        typedef Opm::LocalAd::Evaluation<Scalar, 1> BlackoilDummyEval;
         ensureBlackoilApi<Scalar, FluidSystem>();
         ensureBlackoilApi<BlackoilDummyEval, FluidSystem>();
     }
@@ -307,12 +306,10 @@ void testAllFluidSystems()
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 }
 
-class TestAdTag;
-
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
+    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
 
     // ensure that all fluid states are API-compliant
     testAllFluidStates<Scalar>();

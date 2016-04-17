@@ -45,7 +45,7 @@ namespace LocalAd {
  * \brief Represents a function evaluation and its derivatives w.r.t. a fixed set of
  *        variables.
  */
-template <class ScalarT, class VarSetTag, int numVars>
+template <class ScalarT, int numVars>
 class Evaluation
 {
 public:
@@ -347,40 +347,40 @@ public:
     std::array<Scalar, size> derivatives;
 };
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator<(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+bool operator<(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 { return b > a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator>(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+bool operator>(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 { return b < a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator<=(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+bool operator<=(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 { return b >= a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator>=(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+bool operator>=(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 { return b <= a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator!=(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+bool operator!=(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 { return a != b.value; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator+(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+Evaluation<Scalar, numVars> operator+(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result(b);
+    Evaluation<Scalar, numVars> result(b);
 
     result += a;
 
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator-(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+Evaluation<Scalar, numVars> operator-(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = a - b.value;
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
@@ -389,25 +389,25 @@ Evaluation<Scalar, VarSetTag, numVars> operator-(const ScalarA& a, const Evaluat
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator/(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+Evaluation<Scalar, numVars> operator/(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = a/b.value;
 
     // outer derivative
-    Scalar df_dg = - a/(b.value*b.value);
+    const Scalar& df_dg = - a/(b.value*b.value);
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.derivatives[varIdx] = df_dg*b.derivatives[varIdx];
 
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator*(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class ScalarA, class Scalar, int numVars>
+Evaluation<Scalar, numVars> operator*(const ScalarA& a, const Evaluation<Scalar, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<Scalar, numVars> result;
 
     result.value = a*b.value;
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
@@ -416,8 +416,8 @@ Evaluation<Scalar, VarSetTag, numVars> operator*(const ScalarA& a, const Evaluat
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, VarSetTag, numVars>& eval)
+template <class Scalar, int numVars>
+std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, numVars>& eval)
 {
     os << eval.value;
     return os;
@@ -452,13 +452,13 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, VarSetTag, n
 
 namespace Opm {
 namespace LocalAd {
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> abs(const Evaluation<Scalar, VarSetTag, numVars>&);
+template <class Scalar, int numVars>
+Evaluation<Scalar, numVars> abs(const Evaluation<Scalar, numVars>&);
 }}
 
 namespace std {
-template <class Scalar, class VarSetTag, int numVars>
-const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> abs(const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class Scalar, int numVars>
+const Opm::LocalAd::Evaluation<Scalar, numVars> abs(const Opm::LocalAd::Evaluation<Scalar, numVars>& x)
 { return Opm::LocalAd::abs(x); }
 
 } // namespace std
@@ -476,11 +476,11 @@ const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> abs(const Opm::LocalA
 #include <dune/common/ftraits.hh>
 
 namespace Dune {
-template <class Scalar, class VarSetTag, int numVars>
-struct FieldTraits<Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> >
+template <class Scalar, int numVars>
+struct FieldTraits<Opm::LocalAd::Evaluation<Scalar, numVars> >
 {
 public:
-    typedef Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> field_type;
+    typedef Opm::LocalAd::Evaluation<Scalar, numVars> field_type;
     // setting real_type to field_type here potentially leads to slightly worse
     // performance, but at least it makes things compile.
     typedef field_type real_type;

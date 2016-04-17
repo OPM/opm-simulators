@@ -85,12 +85,10 @@ void testAllComponents()
     checkComponent<Opm::Xylene<Scalar>, Evaluation>();
 }
 
-class TestAdTag;
-
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
+    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
 
     // ensure that all components are API-compliant
     testAllComponents<Scalar, Scalar>();
