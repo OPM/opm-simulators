@@ -59,7 +59,7 @@ inline void testAll()
 
     Scalar pMin = 10.00;
     Scalar pMax = IapwsH2O::vaporPressure(tempMax*1.1);
-    unsigned nPress = 200;
+    unsigned nPress = 50;
 
     std::cout << "Creating tabulation with " << nTemp*nPress << " entries per quantity\n";
     TabulatedH2O::init(tempMin, tempMax, nTemp,
