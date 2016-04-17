@@ -98,20 +98,21 @@ public:
      * Ambrose-Walton method, then the Newton method is used to make
      * difference between the gas and liquid phase fugacity zero.
      */
-    template <class Params>
-    static Scalar computeVaporPressure(const Params &params, Scalar T)
+    template <class Evaluation, class Params>
+    static Evaluation computeVaporPressure(const Params &params, const Evaluation& T)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
         typedef typename Params::Component Component;
         if (T >= Component::criticalTemperature())
             return Component::criticalPressure();
 
         // initial guess of the vapor pressure
-        Scalar Vm[3];
+        Evaluation Vm[3];
         const Scalar eps = Component::criticalPressure()*1e-10;
 
         // use the Ambrose-Walton method to get an initial guess of
         // the vapor pressure
-        Scalar pVap = ambroseWalton_(params, T);
+        Evaluation pVap = ambroseWalton_(params, T);
 
         // Newton-Raphson method
         for (unsigned i = 0; i < 5; ++i) {
@@ -119,17 +120,17 @@ public:
             OPM_OPTIM_UNUSED int numSol = molarVolumes(Vm, params, T, pVap);
             assert(numSol == 3);
 
-            Scalar f = fugacityDifference_(params, T, pVap, Vm[0], Vm[2]);
-            Scalar df_dp =
+            const Evaluation& f = fugacityDifference_(params, T, pVap, Vm[0], Vm[2]);
+            Evaluation df_dp =
                 fugacityDifference_(params, T, pVap  + eps, Vm[0], Vm[2])
                 -
                 fugacityDifference_(params, T, pVap - eps, Vm[0], Vm[2]);
             df_dp /= 2*eps;
 
-            Scalar delta = f/df_dp;
+            const Evaluation& delta = f/df_dp;
             pVap = pVap - delta;
 
-            if (std::abs(delta/pVap) < 1e-10)
+            if (std::abs(Toolbox::scalarValue(delta/pVap)) < 1e-10)
                 break;
         }
 
@@ -141,42 +142,48 @@ public:
      *        true.
      */
     template <class FluidState, class Params>
-    static Scalar computeMolarVolume(const FluidState &fs,
-                                     Params &params,
-                                     unsigned phaseIdx,
-                                     bool isGasPhase)
+    static
+    typename FluidState::Scalar
+    computeMolarVolume(const FluidState &fs,
+                       Params &params,
+                       unsigned phaseIdx,
+                       bool isGasPhase)
     {
         Valgrind::CheckDefined(fs.temperature(phaseIdx));
         Valgrind::CheckDefined(fs.pressure(phaseIdx));
 
-        Scalar Vm = 0;
+        typedef typename FluidState::Scalar Evaluation;
+        typedef MathToolbox<Evaluation> Toolbox;
+
+        Evaluation Vm = 0;
         Valgrind::SetUndefined(Vm);
 
-        Scalar T = fs.temperature(phaseIdx);
-        Scalar p = fs.pressure(phaseIdx);
+        const Evaluation& T = fs.temperature(phaseIdx);
+        const Evaluation& p = fs.pressure(phaseIdx);
 
-        Scalar a = params.a(phaseIdx); // "attractive factor"
-        Scalar b = params.b(phaseIdx); // "co-volume"
+        const Evaluation& a = params.a(phaseIdx); // "attractive factor"
+        const Evaluation& b = params.b(phaseIdx); // "co-volume"
 
-        if (!std::isfinite(a) || std::abs(a) < 1e-30)
+        if (!std::isfinite(Toolbox::scalarValue(a))
+            || std::abs(Toolbox::scalarValue(a)) < 1e-30)
             return std::numeric_limits<Scalar>::quiet_NaN();
-        if (!std::isfinite(b) || b <= 0)
+        if (!std::isfinite(Toolbox::scalarValue(b)) || b <= 0)
             return std::numeric_limits<Scalar>::quiet_NaN();
 
-        Scalar RT= R*T;
-        Scalar Astar = a*p/(RT*RT);
-        Scalar Bstar = b*p/RT;
+        const Evaluation& RT= R*T;
+        const Evaluation& Astar = a*p/(RT*RT);
+        const Evaluation& Bstar = b*p/RT;
 
-        Scalar a1 = 1.0;
-        Scalar a2 = - (1 - Bstar);
-        Scalar a3 = Astar - Bstar*(3*Bstar + 2);
-        Scalar a4 = Bstar*(- Astar + Bstar*(1 + Bstar));
+        const Evaluation& a1 = 1.0;
+        const Evaluation& a2 = - (1 - Bstar);
+        const Evaluation& a3 = Astar - Bstar*(3*Bstar + 2);
+        const Evaluation& a4 = Bstar*(- Astar + Bstar*(1 + Bstar));
 
         // ignore the first two results if the smallest
         // compressibility factor is <= 0.0. (this means that if we
         // would get negative molar volumes for the liquid phase, we
         // consider the liquid phase non-existant.)
-        Scalar Z[3] = {0.0,0.0,0.0};
+        Evaluation Z[3] = {0.0,0.0,0.0};
         Valgrind::CheckDefined(a1);
         Valgrind::CheckDefined(a2);
         Valgrind::CheckDefined(a3);
@@ -195,11 +202,11 @@ public:
             // the EOS only has one intersection with the pressure,
             // for the other phase, we take the extremum of the EOS
             // with the largest distance from the intersection.
-            Scalar VmCubic = Z[0]*RT/p;
+            Evaluation VmCubic = Z[0]*RT/p;
             Vm = VmCubic;
 
             // find the extrema (if they are present)
-            Scalar Vmin, Vmax, pmin, pmax;
+            Evaluation Vmin, Vmax, pmin, pmax;
             if (findExtrema_(Vmin, Vmax,
                              pmin, pmax,
                              a, b, T))
@@ -222,7 +229,7 @@ public:
         }
 
         Valgrind::CheckDefined(Vm);
-        assert(std::isfinite(Vm));
+        assert(std::isfinite(Toolbox::scalarValue(Vm)));
         assert(Vm > 0);
         return Vm;
     }
@@ -237,24 +244,26 @@ public:
      *
      * \param params Parameters
      */
-    template <class Params>
-    static Scalar computeFugacityCoeffient(const Params &params)
+    template <class Evaluation, class Params>
+    static Evaluation computeFugacityCoeffient(const Params &params)
     {
-        Scalar T = params.temperature();
-        Scalar p = params.pressure();
-        Scalar Vm = params.molarVolume();
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        Scalar RT = R*T;
-        Scalar Z = p*Vm/RT;
-        Scalar Bstar = p*params.b() / RT;
+        const Evaluation& T = params.temperature();
+        const Evaluation& p = params.pressure();
+        const Evaluation& Vm = params.molarVolume();
 
-        Scalar tmp =
+        const Evaluation& RT = R*T;
+        const Evaluation& Z = p*Vm/RT;
+        const Evaluation& Bstar = p*params.b() / RT;
+
+        const Evaluation& tmp =
             (Vm + params.b()*(1 + std::sqrt(2))) /
             (Vm + params.b()*(1 - std::sqrt(2)));
-        Scalar expo = - params.a()/(RT * 2 * params.b() * std::sqrt(2));
-        Scalar fugCoeff =
-            std::exp(Z - 1) / (Z - Bstar) *
-            std::pow(tmp, expo);
+        const Evaluation& expo = - params.a()/(RT * 2 * params.b() * std::sqrt(2));
+        const Evaluation& fugCoeff =
+            Toolbox::exp(Z - 1) / (Z - Bstar) *
+            Toolbox::pow(tmp, expo);
 
         return fugCoeff;
     }
@@ -269,19 +278,20 @@ public:
      *
      * \param params Parameters
      */
-    template <class Params>
-    static Scalar computeFugacity(const Params &params)
+    template <class Evaluation, class Params>
+    static Evaluation computeFugacity(const Params &params)
     { return params.pressure()*computeFugacityCoeff(params); }
 
 protected:
-    template <class FluidState, class Params>
-    static void handleCriticalFluid_(Scalar &Vm,
+    template <class FluidState, class Params, class Evaluation = typename FluidState::Scalar>
+    static void handleCriticalFluid_(Evaluation &Vm,
                                      const FluidState &/*fs*/,
                                      const Params &params,
                                      unsigned phaseIdx,
                                      bool isGasPhase)
     {
-        Scalar Tcrit, pcrit, Vcrit;
+        typedef MathToolbox<Evaluation> Toolbox;
+        Evaluation Tcrit, pcrit, Vcrit;
         findCriticalPoint_(Tcrit,
                            pcrit,
                            Vcrit,
@@ -289,29 +299,32 @@ protected:
                            params.b(phaseIdx));
 
 
-        //Scalar Vcrit = criticalMolarVolume_.eval(params.a(phaseIdx), params.b(phaseIdx));
+        //Evaluation Vcrit = criticalMolarVolume_.eval(params.a(phaseIdx), params.b(phaseIdx));
 
         if (isGasPhase)
-            Vm = std::max(Vm, Vcrit);
+            Vm = Toolbox::max(Vm, Vcrit);
         else
-            Vm = std::min(Vm, Vcrit);
+            Vm = Toolbox::min(Vm, Vcrit);
     }
 
-    static void findCriticalPoint_(Scalar &Tcrit,
-                                   Scalar &pcrit,
-                                   Scalar &Vcrit,
-                                   Scalar a,
-                                   Scalar b)
+    template <class Evaluation>
+    static void findCriticalPoint_(Evaluation &Tcrit,
+                                   Evaluation &pcrit,
+                                   Evaluation &Vcrit,
+                                   const Evaluation& a,
+                                   const Evaluation& b)
     {
-        Scalar minVm(0);
-        Scalar maxVm(1e100);
+        typedef MathToolbox<Evaluation> Toolbox;
 
-        Scalar minP(0);
-        Scalar maxP(1e100);
+        Evaluation minVm(0);
+        Evaluation maxVm(1e100);
+
+        Evaluation minP(0);
+        Evaluation maxP(1e100);
 
         // first, we need to find an isotherm where the EOS exhibits
         // a maximum and a minimum
-        Scalar Tmin = 250; // [K]
+        Evaluation Tmin = 250; // [K]
         for (unsigned i = 0; i < 30; ++i) {
             bool hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, Tmin);
             if (hasExtrema)
@@ -319,14 +332,14 @@ protected:
             Tmin /= 2;
         };
 
-        Scalar T = Tmin;
+        Evaluation T = Tmin;
 
         // Newton's method: Start at minimum temperature and minimize
         // the "gap" between the extrema of the EOS
         unsigned iMax = 100;
         for (unsigned i = 0; i < iMax; ++i) {
             // calculate function we would like to minimize
-            Scalar f = maxVm - minVm;
+            Evaluation f = maxVm - minVm;
 
             // check if we're converged
             if (f < 1e-10 || (i == iMax - 1 && f < 1e-8)) {
@@ -343,14 +356,14 @@ protected:
             const Scalar eps = - 1e-11;
             bool OPM_OPTIM_UNUSED hasExtrema = findExtrema_(minVm, maxVm, minP, maxP, a, b, T + eps);
             assert(hasExtrema);
-            assert(std::isfinite(maxVm));
-            Scalar fStar = maxVm - minVm;
+            assert(std::isfinite(Toolbox::scalarValue(maxVm)));
+            Evaluation fStar = maxVm - minVm;
 
             // derivative of the difference between the maximum's
             // molar volume and the minimum's molar volume regarding
             // temperature
-            Scalar fPrime = (fStar - f)/eps;
-            if (std::abs(fPrime) < 1e-40) {
+            Evaluation fPrime = (fStar - f)/eps;
+            if (std::abs(Toolbox::scalarValue(fPrime)) < 1e-40) {
                 Tcrit = T;
                 pcrit = (minP + maxP)/2;
                 Vcrit = (maxVm + minVm)/2;
@@ -358,8 +371,8 @@ protected:
             }
 
             // update value for the current iteration
-            Scalar delta = f/fPrime;
-            assert(std::isfinite(delta));
+            Evaluation delta = f/fPrime;
+            assert(std::isfinite(Toolbox::scalarValue(delta)));
             if (delta > 0)
                 delta = -10;
 
@@ -393,45 +406,48 @@ protected:
 
     // find the two molar volumes where the EOS exhibits extrema and
     // which are larger than the covolume of the phase
-    static bool findExtrema_(Scalar &Vmin,
-                             Scalar &Vmax,
-                             Scalar &/*pMin*/,
-                             Scalar &/*pMax*/,
-                             Scalar a,
-                             Scalar b,
-                             Scalar T)
+    template <class Evaluation>
+    static bool findExtrema_(Evaluation &Vmin,
+                             Evaluation &Vmax,
+                             Evaluation &/*pMin*/,
+                             Evaluation &/*pMax*/,
+                             const Evaluation& a,
+                             const Evaluation& b,
+                             const Evaluation& T)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
+
         Scalar u = 2;
         Scalar w = -1;
 
-        Scalar RT = R*T;
+        const Evaluation& RT = R*T;
 
         // calculate coefficients of the 4th order polynominal in
         // monomial basis
-        Scalar a1 = RT;
-        Scalar a2 = 2*RT*u*b - 2*a;
-        Scalar a3 = 2*RT*w*b*b + RT*u*u*b*b  + 4*a*b - u*a*b;
-        Scalar a4 = 2*RT*u*w*b*b*b + 2*u*a*b*b - 2*a*b*b;
-        Scalar a5 = RT*w*w*b*b*b*b - u*a*b*b*b;
+        const Evaluation& a1 = RT;
+        const Evaluation& a2 = 2*RT*u*b - 2*a;
+        const Evaluation& a3 = 2*RT*w*b*b + RT*u*u*b*b  + 4*a*b - u*a*b;
+        const Evaluation& a4 = 2*RT*u*w*b*b*b + 2*u*a*b*b - 2*a*b*b;
+        const Evaluation& a5 = RT*w*w*b*b*b*b - u*a*b*b*b;
 
-        assert(std::isfinite(a1));
-        assert(std::isfinite(a2));
-        assert(std::isfinite(a3));
-        assert(std::isfinite(a4));
-        assert(std::isfinite(a5));
+        assert(std::isfinite(Toolbox::scalarValue(a1)));
+        assert(std::isfinite(Toolbox::scalarValue(a2)));
+        assert(std::isfinite(Toolbox::scalarValue(a3)));
+        assert(std::isfinite(Toolbox::scalarValue(a4)));
+        assert(std::isfinite(Toolbox::scalarValue(a5)));
 
         // Newton method to find first root
 
         // if the values which we got on Vmin and Vmax are usefull, we
         // will reuse them as initial value, else we will start 10%
         // above the covolume
-        Scalar V = b*1.1;
-        Scalar delta = 1.0;
-        for (unsigned i = 0; std::abs(delta) > 1e-12; ++i) {
-            Scalar f = a5 + V*(a4 + V*(a3 + V*(a2 + V*a1)));
-            Scalar fPrime = a4 + V*(2*a3 + V*(3*a2 + V*4*a1));
+        Evaluation V = b*1.1;
+        Evaluation delta = 1.0;
+        for (unsigned i = 0; std::abs(Toolbox::scalarValue(delta)) > 1e-12; ++i) {
+            const Evaluation& f = a5 + V*(a4 + V*(a3 + V*(a2 + V*a1)));
+            const Evaluation& fPrime = a4 + V*(2*a3 + V*(3*a2 + V*4*a1));
 
-            if (std::abs(fPrime) < 1e-20) {
+            if (std::abs(Toolbox::scalarValue(fPrime)) < 1e-20) {
                 // give up if the derivative is zero
                 return false;
             }
@@ -445,18 +461,18 @@ protected:
                 return false;
             }
         }
-        assert(std::isfinite(V));
+        assert(std::isfinite(Toolbox::scalarValue(V)));
 
         // polynomial division
-        Scalar b1 = a1;
-        Scalar b2 = a2 + V*b1;
-        Scalar b3 = a3 + V*b2;
-        Scalar b4 = a4 + V*b3;
+        Evaluation b1 = a1;
+        Evaluation b2 = a2 + V*b1;
+        Evaluation b3 = a3 + V*b2;
+        Evaluation b4 = a4 + V*b3;
 
         // invert resulting cubic polynomial analytically
-        Scalar allV[4];
+        Evaluation allV[4];
         allV[0] = V;
-        int numSol = 1 + Opm::invertCubicPolynomial<Scalar>(allV + 1, b1, b2, b3, b4);
+        int numSol = 1 + Opm::invertCubicPolynomial<Evaluation>(allV + 1, b1, b2, b3, b4);
 
         // sort all roots of the derivative
         std::sort(allV + 0, allV + numSol);
@@ -487,18 +503,19 @@ protected:
      * Temperatures of Normal Alkanes and 1-Alkanols", Pure
      * Appl. Chem., 61, 1395-1403, 1989
      */
-    template <class Params>
-    static Scalar ambroseWalton_(const Params &/*params*/, Scalar T)
+    template <class Evaluation, class Params>
+    static Evaluation ambroseWalton_(const Params &/*params*/, const Evaluation& T)
     {
+        typedef MathToolbox<Evaluation> Toolbox;
         typedef typename Params::Component Component;
 
-        Scalar Tr = T / Component::criticalTemperature();
-        Scalar tau = 1 - Tr;
-        Scalar omega = Component::acentricFactor();
+        const Evaluation& Tr = T / Component::criticalTemperature();
+        const Evaluation& tau = 1 - Tr;
+        const Evaluation& omega = Component::acentricFactor();
 
-        Scalar f0 = (tau*(-5.97616 + std::sqrt(tau)*(1.29874 - tau*0.60394)) - 1.06841*std::pow(tau, 5))/Tr;
-        Scalar f1 = (tau*(-5.03365 + std::sqrt(tau)*(1.11505 - tau*5.41217)) - 7.46628*std::pow(tau, 5))/Tr;
-        Scalar f2 = (tau*(-0.64771 + std::sqrt(tau)*(2.41539 - tau*4.26979)) + 3.25259*std::pow(tau, 5))/Tr;
+        const Evaluation& f0 = (tau*(-5.97616 + Toolbox::sqrt(tau)*(1.29874 - tau*0.60394)) - 1.06841*Toolbox::pow(tau, 5))/Tr;
+        const Evaluation& f1 = (tau*(-5.03365 + Toolbox::sqrt(tau)*(1.11505 - tau*5.41217)) - 7.46628*Toolbox::pow(tau, 5))/Tr;
+        const Evaluation& f2 = (tau*(-0.64771 + Toolbox::sqrt(tau)*(2.41539 - tau*4.26979)) + 3.25259*Toolbox::pow(tau, 5))/Tr;
 
         return Component::criticalPressure()*std::exp(f0 + omega * (f1 + omega*f2));
     }
@@ -513,12 +530,12 @@ protected:
      * \param VmLiquid Molar volume of the liquid phase [cm^3/mol]
      * \param VmGas Molar volume of the gas phase [cm^3/mol]
      */
-    template <class Params>
-    static Scalar fugacityDifference_(const Params &params,
-                                      Scalar T,
-                                      Scalar p,
-                                      Scalar VmLiquid,
-                                      Scalar VmGas)
+    template <class Evaluation, class Params>
+    static Evaluation fugacityDifference_(const Params &params,
+                                          const Evaluation& T,
+                                          const Evaluation& p,
+                                          const Evaluation& VmLiquid,
+                                          const Evaluation& VmGas)
     { return fugacity(params, T, p, VmLiquid) - fugacity(params, T, p, VmGas); }
 
 /*

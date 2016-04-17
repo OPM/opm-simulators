@@ -61,6 +61,8 @@ class PengRobinsonParamsMixture
     // Peng-Robinson parameters for pure substances
     typedef Opm::PengRobinsonParams<Scalar> PureParams;
 
+    typedef MathToolbox<Scalar> Toolbox;
+
     // the ideal gas constant
     static const Scalar R;
 
@@ -107,13 +109,13 @@ public:
 
             Valgrind::CheckDefined(f_omega);
 
-            Scalar tmp = 1 + f_omega*(1 - std::sqrt(Tr));
+            Scalar tmp = 1 + f_omega*(1 - Toolbox::sqrt(Tr));
             tmp = tmp*tmp;
 
             Scalar newA = 0.4572355*RTc*RTc/pc * tmp;
             Scalar newB = 0.0777961 * RTc / pc;
-            assert(std::isfinite(newA));
-            assert(std::isfinite(newB));
+            assert(std::isfinite(Toolbox::scalarValue(newA)));
+            assert(std::isfinite(Toolbox::scalarValue(newB)));
 
             this->pureParams_[i].setA(newA);
             this->pureParams_[i].setB(newB);
@@ -147,23 +149,23 @@ public:
         Scalar newB = 0;
         for (unsigned compIIdx = 0; compIIdx < numComponents; ++compIIdx) {
             const Scalar moleFracI = fs.moleFraction(phaseIdx, compIIdx);
-            Scalar xi = std::max(Scalar(0), std::min(Scalar(1.0), moleFracI));
+            Scalar xi = Toolbox::max(0.0, Toolbox::min(1.0, moleFracI));
             Valgrind::CheckDefined(xi);
 
             for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
                 const Scalar moleFracJ = fs.moleFraction(phaseIdx, compJIdx );
-                Scalar xj = std::max(Scalar(0), std::min(Scalar(1), moleFracJ));
+                Scalar xj = Toolbox::max(0.0, Toolbox::min(1.0, moleFracJ));
                 Valgrind::CheckDefined(xj);
 
                 // mixing rule from Reid, page 82
                 newA +=  xi * xj * aCache_[compIIdx][compJIdx];
 
-                assert(std::isfinite(newA));
+                assert(std::isfinite(Toolbox::scalarValue(newA)));
             }
 
             // mixing rule from Reid, page 82
-            newB += std::max(Scalar(0), xi) * this->pureParams_[compIIdx].b();
-            assert(std::isfinite(newB));
+            newB += Toolbox::max(0.0, xi) * this->pureParams_[compIIdx].b();
+            assert(std::isfinite(Toolbox::scalarValue(newB)));
         }
 
         // assert(newB > 0);
@@ -232,8 +234,8 @@ private:
                 Scalar Psi = FluidSystem::interactionCoefficient(compIIdx, compJIdx);
 
                 aCache_[compIIdx][compJIdx] =
-                    std::sqrt(this->pureParams_[compIIdx].a()
-                              * this->pureParams_[compJIdx].a())
+                    Toolbox::sqrt(this->pureParams_[compIIdx].a()
+                                  * this->pureParams_[compJIdx].a())
                     * (1 - Psi);
             }
         }
