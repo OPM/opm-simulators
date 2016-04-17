@@ -58,6 +58,14 @@ public:
     {}
 
     /*!
+     * \brief Copy the data which is not dependent on the type of the Scalars from
+     *        another parameter cache.
+     */
+    template <class OtherCache>
+    void assignPersistentData(const OtherCache& other)
+    {}
+
+    /*!
      * \brief Update the quantities of the parameter cache for all phases
      *
      * \param fluidState The representation of the thermodynamic system of interest.

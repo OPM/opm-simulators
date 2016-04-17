@@ -27,9 +27,14 @@
 #ifndef OPM_IMMISCIBLE_FLASH_HPP
 #define OPM_IMMISCIBLE_FLASH_HPP
 
+#include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
+#include <opm/material/localad/Evaluation.hpp>
+#include <opm/material/localad/Math.hpp>
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
-#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -74,15 +79,14 @@ class ImmiscibleFlash
                   "Immiscibility assumes that the number of phases"
                   " is equal to the number of components");
 
+    enum {
+        p0PvIdx = 0,
+        S0PvIdx = 1
+    };
 
     static const int numEq = numPhases;
 
-    typedef Dune::FieldMatrix<Scalar, numEq, numEq> Matrix;
-    typedef Dune::FieldVector<Scalar, numEq> Vector;
-
 public:
-    typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
-
     /*!
      * \brief Guess initial values for all quantities.
      */
@@ -91,8 +95,8 @@ public:
                              const Dune::FieldVector<Evaluation, numComponents>& /*globalMolarities*/)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            // pressure. use atmospheric pressure as initial guess
-            fluidState.setPressure(phaseIdx, 2e5);
+            // pressure. use 1 bar as initial guess
+            fluidState.setPressure(phaseIdx, 1e5);
 
             // saturation. assume all fluids to be equally distributed
             fluidState.setSaturation(phaseIdx, 1.0/numPhases);
@@ -109,11 +113,10 @@ public:
     static void solve(FluidState &fluidState,
                       const typename MaterialLaw::Params &matParams,
                       typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
-                      const Dune::FieldVector<typename FluidState::Scalar, numComponents>& globalMolarities)
+                      const Dune::FieldVector<typename FluidState::Scalar, numComponents>& globalMolarities,
+                      Scalar tolerance = -1)
     {
-        Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-25);
-
-        paramCache.updateAll(fluidState);
+        typedef typename FluidState::Scalar InputEval;
 
         /////////////////////////
         // Check if all fluid phases are incompressible
@@ -124,19 +127,32 @@ public:
                 allIncompressible = false;
                 break;
             }
-        };
+        }
 
         if (allIncompressible) {
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
-                fluidState.setDensity(phaseIdx, rho);
+            // yes, all fluid phases are incompressible. in this case the flash solver
+            // can only determine the saturations, not the pressures. (but this
+            // determination is much simpler than a full flash calculation.)
+            paramCache.updateAll(fluidState);
+            solveAllIncompressible_(fluidState, paramCache, globalMolarities);
+            return;
+        }
 
-                Scalar saturation =
-                    globalMolarities[/*compIdx=*/phaseIdx]
-                    / fluidState.molarDensity(phaseIdx);
-                fluidState.setSaturation(phaseIdx, saturation);
-            }
-        };
+        typedef Dune::FieldMatrix<InputEval, numEq, numEq> Matrix;
+        typedef Dune::FieldVector<InputEval, numEq> Vector;
+
+        typedef Opm::LocalAd::Evaluation<InputEval, numEq> FlashEval;
+        typedef Dune::FieldVector<FlashEval, numEq> FlashDefectVector;
+        typedef Opm::ImmiscibleFluidState<FlashEval, FluidSystem> FlashFluidState;
+
+        Dune::FMatrixPrecision<InputEval>::set_singular_limit(1e-35);
+
+        if (tolerance <= 0)
+            tolerance = std::min<Scalar>(1e-5,
+                                         1e8*std::numeric_limits<Scalar>::epsilon());
+
+        typename FluidSystem::template ParameterCache<FlashEval> flashParamCache;
+        flashParamCache.assignPersistentData(paramCache);
 
         /////////////////////////
         // Newton method
@@ -153,12 +169,31 @@ public:
         Valgrind::SetUndefined(deltaX);
         Valgrind::SetUndefined(b);
 
-        completeFluidState_<MaterialLaw>(fluidState, matParams, paramCache);
+        FlashFluidState flashFluidState;
+        assignFlashFluidState_<MaterialLaw>(fluidState, flashFluidState, matParams, flashParamCache);
 
-        const int nMax = 50; // <- maximum number of newton iterations
-        for (int nIdx = 0; nIdx < nMax; ++nIdx) {
+        // copy the global molarities to a vector of evaluations. Remember that the
+        // global molarities are constants. (but we need to copy them to a vector of
+        // FlashEvals anyway in order to avoid getting into hell's kitchen.)
+        Dune::FieldVector<FlashEval, numComponents> flashGlobalMolarities;
+        for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx)
+            flashGlobalMolarities[compIdx] = globalMolarities[compIdx];
+
+        FlashDefectVector defect;
+        const unsigned nMax = 50; // <- maximum number of newton iterations
+        for (unsigned nIdx = 0; nIdx < nMax; ++nIdx) {
             // calculate Jacobian matrix and right hand side
-            linearize_<MaterialLaw>(J, b, fluidState, matParams, paramCache, globalMolarities);
+            evalDefect_(defect, flashFluidState, flashGlobalMolarities);
+            Valgrind::CheckDefined(defect);
+
+            // create field matrices and vectors out of the evaluation vector to solve
+            // the linear system of equations.
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+                for (unsigned pvIdx = 0; pvIdx < numEq; ++ pvIdx)
+                    J[eqIdx][pvIdx] = defect[eqIdx].derivatives[pvIdx];
+
+                b[eqIdx] = defect[eqIdx].value;
+            }
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
 
@@ -166,57 +201,24 @@ public:
             deltaX = 0;
 
             try { J.solve(deltaX, b); }
-            catch (Dune::FMatrixError e)
-            {
-                /*
-                std::cout << "error: " << e << "\n";
-                std::cout << "b: " << b << "\n";
-                */
-
+            catch (Dune::FMatrixError e) {
                 throw Opm::NumericalProblem(e.what());
             }
             Valgrind::CheckDefined(deltaX);
 
-            /*
-            printFluidState_(fluidState);
-            std::cout << "J:\n";
-            for (int i = 0; i < numEq; ++i) {
-                for (int j = 0; j < numEq; ++j) {
-                    std::ostringstream os;
-                    os << J[i][j];
-
-                    std::string s(os.str());
-                    do {
-                        s += " ";
-                    } while (s.size() < 20);
-                    std::cout << s;
-                }
-                std::cout << "\n";
-            };
-            std::cout << "residual: " << b << "\n";
-            std::cout << "deltaX: " << deltaX << "\n";
-            std::cout << "---------------\n";
-            */
-
             // update the fluid quantities.
-            Scalar relError = update_<MaterialLaw>(fluidState, matParams, paramCache, deltaX);
+            Scalar relError = update_<MaterialLaw>(flashFluidState, flashParamCache, matParams, deltaX);
 
-            if (relError < 1e-9)
+            if (relError < tolerance) {
+                assignOutputFluidState_(flashFluidState, fluidState);
                 return;
+            }
         }
 
-        /*
-        printFluidState_(fluidState);
-        std::cout << "globalMolarities: ";
-        for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx)
-            std::cout << globalMolarities[compIdx] << " ";
-        std::cout << "\n";
-        */
-
         OPM_THROW(Opm::NumericalProblem,
-                  "Flash calculation failed."
-                  " {c_alpha^kappa} = {" << globalMolarities << "}, T = "
-                  << fluidState.temperature(/*phaseIdx=*/0));
+                  "ImmiscibleFlash solver failed: "
+                  "{c_alpha^kappa} = {" << globalMolarities << "}, "
+                  << "T = " << fluidState.temperature(/*phaseIdx=*/0));
     }
 
 
@@ -250,152 +252,188 @@ protected:
         std::cout << "\n";
     }
 
-    template <class MaterialLaw, class FluidState>
-    static void linearize_(Matrix &J,
-                           Vector &b,
-                           FluidState &fluidState,
-                           const typename MaterialLaw::Params &matParams,
-                           typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
-                           const ComponentVector &globalMolarities)
+    template <class MaterialLaw, class InputFluidState, class FlashFluidState>
+    static void assignFlashFluidState_(const InputFluidState& inputFluidState,
+                                       FlashFluidState& flashFluidState,
+                                       const typename MaterialLaw::Params& matParams,
+                                       typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar>& flashParamCache)
     {
-        // copy the undisturbed fluid state and parameter cache
-        FluidState origFluidState(fluidState);
-        auto origParamCache(paramCache);
+        typedef typename FlashFluidState::Scalar FlashEval;
+        typedef typename InputFluidState::Scalar Evaluation;
+        typedef MathToolbox<Evaluation> InputToolbox;
 
-        Vector tmp;
+        // copy the temperature: even though the model which uses the flash solver might
+        // be non-isothermal, the flash solver does not consider energy. (it could be
+        // modified to do so relatively easily, but it would come at increased
+        // computational cost and normally temperature instead of "total internal energy
+        // of the fluids" is specified.)
+        flashFluidState.setTemperature(inputFluidState.temperature(/*phaseIdx=*/0));
 
-        // reset jacobian
-        J = 0;
+        // copy the saturations: the first N-1 phases are primary variables, the last one
+        // is one minus the sum of the former.
+        FlashEval Slast = InputToolbox::createConstant(1.0);
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
+            FlashEval S = inputFluidState.saturation(phaseIdx);
+            S.derivatives[S0PvIdx + phaseIdx] = 1.0;
 
-        Valgrind::SetUndefined(b);
-        calculateDefect_(b, fluidState, fluidState, globalMolarities);
-        Valgrind::CheckDefined(b);
+            Slast -= S;
 
-        // assemble jacobian matrix
-        for (unsigned pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
-            ////////
-            // approximately calculate partial derivatives of the
-            // fugacity defect of all components in regard to the mole
-            // fraction of the i-th component. This is done via
-            // forward differences
+            flashFluidState.setSaturation(phaseIdx, S);
+        }
+        flashFluidState.setSaturation(numPhases - 1, Slast);
 
-            // deviate the mole fraction of the i-th component
-            Scalar xI = getQuantity_(fluidState, pvIdx);
-            const Scalar eps = 1e-10/quantityWeight_(fluidState, pvIdx);
-            setQuantity_<MaterialLaw>(fluidState, matParams, paramCache, pvIdx, xI + eps);
-            assert(std::abs(getQuantity_(fluidState, pvIdx) - (xI + eps))
-                   <= std::max<Scalar>(1.0, std::abs(xI))*std::numeric_limits<Scalar>::epsilon()*100);
+        // copy the pressures: the first pressure is the first primary variable, the
+        // remaining ones are given as p_beta = p_alpha + p_calpha,beta
+        FlashEval p0 = inputFluidState.pressure(0);
+        p0.derivatives[p0PvIdx] = 1.0;
 
-            // compute derivative of the defect
-            calculateDefect_(tmp, origFluidState, fluidState, globalMolarities);
-            tmp -= b;
-            tmp /= eps;
-            // store derivative in jacobian matrix
-            for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
-                J[eqIdx][pvIdx] = tmp[eqIdx];
+        std::array<FlashEval, numPhases> pc;
+        MaterialLaw::capillaryPressures(pc, matParams, flashFluidState);
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            flashFluidState.setPressure(phaseIdx, p0 + (pc[phaseIdx] - pc[0]));
 
-            // fluid state and parameter cache to their original values
-            fluidState = origFluidState;
-            paramCache = origParamCache;
+        flashParamCache.updateAll(flashFluidState);
 
-            // end forward differences
-            ////////
+        // compute the density of each phase.
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            const FlashEval& rho = FluidSystem::density(flashFluidState, flashParamCache, phaseIdx);
+            flashFluidState.setDensity(phaseIdx, rho);
+        }
+    }
+
+    template <class FlashFluidState, class OutputFluidState>
+    static void assignOutputFluidState_(const FlashFluidState& flashFluidState,
+                                        OutputFluidState& outputFluidState)
+    {
+        outputFluidState.setTemperature(flashFluidState.temperature(/*phaseIdx=*/0).value);
+
+        // copy the saturations, pressures and densities
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            const auto& S = flashFluidState.saturation(phaseIdx).value;
+            outputFluidState.setSaturation(phaseIdx, S);
+
+            const auto& p = flashFluidState.pressure(phaseIdx).value;
+            outputFluidState.setPressure(phaseIdx, p);
+
+            const auto& rho = flashFluidState.density(phaseIdx).value;
+            outputFluidState.setDensity(phaseIdx, rho);
         }
     }
 
     template <class FluidState>
-    static void calculateDefect_(Vector &b,
-                                 const FluidState &/*fluidStateEval*/,
-                                 const FluidState &fluidState,
-                                 const ComponentVector &globalMolarities)
+    static void solveAllIncompressible_(FluidState &fluidState,
+                                        typename FluidSystem::template ParameterCache<typename FluidState::Scalar> &paramCache,
+                                        const Dune::FieldVector<typename FluidState::Scalar, numComponents>& globalMolarities)
+    {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
+            fluidState.setDensity(phaseIdx, rho);
+
+            Scalar saturation =
+                globalMolarities[/*compIdx=*/phaseIdx]
+                / fluidState.molarDensity(phaseIdx);
+            fluidState.setSaturation(phaseIdx, saturation);
+        }
+    }
+
+    template <class FluidState, class FlashDefectVector, class FlashComponentVector>
+    static void evalDefect_(FlashDefectVector &b,
+                            const FluidState &fluidState,
+                            const FlashComponentVector &globalMolarities)
     {
         // global molarities are given
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             b[phaseIdx] =
                 fluidState.saturation(phaseIdx)
                 * fluidState.molarity(phaseIdx, /*compIdx=*/phaseIdx);
-
             b[phaseIdx] -= globalMolarities[/*compIdx=*/phaseIdx];
         }
     }
 
     template <class MaterialLaw, class FlashFluidState, class EvalVector>
     static Scalar update_(FlashFluidState& fluidState,
-                          const typename MaterialLaw::Params& matParams,
                           typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar>& paramCache,
+                          const typename MaterialLaw::Params& matParams,
                           const EvalVector& deltaX)
     {
+        // note that it is possible that FlashEval::Scalar is an Evaluation itself
+        typedef typename FlashFluidState::Scalar FlashEval;
+        typedef Opm::MathToolbox<FlashEval> FlashEvalToolbox;
+
+        typedef typename FlashEvalToolbox::ValueType InnerEval;
+        typedef Opm::MathToolbox<InnerEval> InnerEvalToolbox;
+
+#ifndef NDEBUG
+        // make sure we don't swallow non-finite update vectors
+        assert(deltaX.dimension == numEq);
+        for (unsigned i = 0; i < numEq; ++i)
+            assert(std::isfinite(InnerEvalToolbox::scalarValue(deltaX[i])));
+#endif
+
         Scalar relError = 0;
         for (unsigned pvIdx = 0; pvIdx < numEq; ++ pvIdx) {
-            Scalar tmp = getQuantity_(fluidState, pvIdx);
-            Scalar delta = deltaX[pvIdx];
+            FlashEval tmp = getQuantity_(fluidState, pvIdx);
+            InnerEval delta = deltaX[pvIdx];
 
-            relError = std::max(relError, std::abs(delta)*quantityWeight_(fluidState, pvIdx));
+            relError = std::max(relError,
+                                std::abs(InnerEvalToolbox::scalarValue(delta))
+                                * quantityWeight_(fluidState, pvIdx));
 
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 20% change in saturation per
                 // iteration
-                delta = std::min<Scalar>(0.2, std::max<Scalar>(-0.2, delta));
+                delta = InnerEvalToolbox::min(0.25, InnerEvalToolbox::max(-0.25, delta));
             }
             else if (isPressureIdx_(pvIdx)) {
                 // dampen to at most 30% change in pressure per
                 // iteration
-                delta = std::min<Scalar>(0.30*fluidState.pressure(0),
-                                         std::max<Scalar>(-0.30*fluidState.pressure(0), delta));
-            };
+                delta = InnerEvalToolbox::min(0.5*fluidState.pressure(0).value,
+                                              InnerEvalToolbox::max(-0.50*fluidState.pressure(0).value, delta));
+            }
 
-            setQuantityRaw_(fluidState, pvIdx, tmp - delta);
+            tmp -= delta;
+            setQuantity_(fluidState, pvIdx, tmp);
         }
 
-        completeFluidState_<MaterialLaw>(fluidState, matParams, paramCache);
+        completeFluidState_<MaterialLaw>(fluidState, paramCache, matParams);
 
         return relError;
     }
 
-    template <class MaterialLaw, class FluidState>
-    static void completeFluidState_(FluidState &fluidState,
-                                    const typename MaterialLaw::Params &matParams,
-                                    typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache)
+    template <class MaterialLaw, class FlashFluidState>
+    static void completeFluidState_(FlashFluidState &flashFluidState,
+                                    typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar> &paramCache,
+                                    const typename MaterialLaw::Params &matParams)
     {
-        typedef typename FluidSystem::template ParameterCache<typename FluidState::Scalar> ParamCache;
+        typedef typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar> ParamCache;
+
+        typedef typename FlashFluidState::Scalar FlashEval;
+        typedef Opm::MathToolbox<FlashEval> FlashToolbox;
 
         // calculate the saturation of the last phase as a function of
         // the other saturations
-        Scalar sumSat = 0.0;
+        FlashEval sumSat = FlashToolbox::createConstant(0.0);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
-            sumSat += fluidState.saturation(phaseIdx);
-
-        if (sumSat > 1.0) {
-            // make sure that the last saturation does not become
-            // negative
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
-            {
-                Scalar S = fluidState.saturation(phaseIdx);
-                fluidState.setSaturation(phaseIdx, S/sumSat);
-            }
-            sumSat = 1;
-        }
-
-        // set the last saturation
-        fluidState.setSaturation(/*phaseIdx=*/numPhases - 1, 1.0 - sumSat);
+            sumSat += flashFluidState.saturation(phaseIdx);
+        flashFluidState.setSaturation(/*phaseIdx=*/numPhases - 1, 1.0 - sumSat);
 
         // update the pressures using the material law (saturations
         // and first pressure are already set because it is implicitly
         // solved for.)
-        ComponentVector pC;
-        MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+        Dune::FieldVector<FlashEval, numPhases> pC;
+        MaterialLaw::capillaryPressures(pC, matParams, flashFluidState);
         for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
-            fluidState.setPressure(phaseIdx,
-                                   fluidState.pressure(0)
-                                   + (pC[phaseIdx] - pC[0]));
+            flashFluidState.setPressure(phaseIdx,
+                                        flashFluidState.pressure(0)
+                                        + (pC[phaseIdx] - pC[0]));
 
         // update the parameter cache
-        paramCache.updateAll(fluidState, /*except=*/ParamCache::Temperature|ParamCache::Composition);
+        paramCache.updateAll(flashFluidState, /*except=*/ParamCache::Temperature|ParamCache::Composition);
 
         // update all densities
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            Scalar rho = FluidSystem::density(fluidState, paramCache, phaseIdx);
-            fluidState.setDensity(phaseIdx, rho);
+            const FlashEval& rho = FluidSystem::density(flashFluidState, paramCache, phaseIdx);
+            flashFluidState.setDensity(phaseIdx, rho);
         }
     }
 
@@ -407,112 +445,50 @@ protected:
 
     // retrieves a quantity from the fluid state
     template <class FluidState>
-    static Scalar getQuantity_(const FluidState &fs, unsigned pvIdx)
+    static const typename FluidState::Scalar& getQuantity_(const FluidState &fluidState, unsigned pvIdx)
     {
         assert(pvIdx < numEq);
 
         // first pressure
         if (pvIdx < 1) {
             unsigned phaseIdx = 0;
-            return fs.pressure(phaseIdx);
+            return fluidState.pressure(phaseIdx);
         }
         // saturations
         else {
             assert(pvIdx < numPhases);
             unsigned phaseIdx = pvIdx - 1;
-            return fs.saturation(phaseIdx);
+            return fluidState.saturation(phaseIdx);
         }
     }
 
     // set a quantity in the fluid state
-    template <class MaterialLaw, class FluidState>
-    static void setQuantity_(FluidState &fs,
-                             const typename MaterialLaw::Params &matParams,
-                             typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
+    template <class FluidState>
+    static void setQuantity_(FluidState &fluidState,
                              unsigned pvIdx,
-                             Scalar value)
-    {
-        assert(0 <= pvIdx && pvIdx < numEq);
-
-        if (pvIdx < 1) {
-            // -> first pressure
-            Scalar delta = value - fs.pressure(0);
-
-            // set all pressures. here we assume that the capillary
-            // pressure does not depend on absolute pressure.
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx, fs.pressure(phaseIdx) + delta);
-
-            // update the parameter cache
-            paramCache.updateAllPressures(fs);
-
-            // update all densities
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
-                fs.setDensity(phaseIdx, rho);
-            }
-        }
-        else {
-            assert(pvIdx < numPhases);
-
-            // -> first M-1 saturations
-            Scalar delta = value - fs.saturation(/*phaseIdx=*/pvIdx - 1);
-            fs.setSaturation(/*phaseIdx=*/pvIdx - 1, value);
-
-            // set last saturation (-> minus the change of the
-            // saturation of the other phases)
-            fs.setSaturation(/*phaseIdx=*/numPhases - 1,
-                             fs.saturation(numPhases - 1) - delta);
-
-            // update all fluid pressures using the capillary pressure
-            // law
-            ComponentVector pC;
-            MaterialLaw::capillaryPressures(pC, matParams, fs);
-            for (unsigned phaseIdx = 1; phaseIdx < numPhases; ++phaseIdx)
-                fs.setPressure(phaseIdx,
-                               fs.pressure(0)
-                               + (pC[phaseIdx] - pC[0]));
-
-            // update the parameter cache
-            paramCache.updateAllPressures(fs);
-
-            // update all densities
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
-                fs.setDensity(phaseIdx, rho);
-            }
-        }
-    }
-
-    // set a quantity in the fluid state
-    template <class FluidState>
-    static void setQuantityRaw_(FluidState &fs, unsigned pvIdx, Scalar value)
+                             const typename FluidState::Scalar& value)
     {
         assert(pvIdx < numEq);
 
         // first pressure
         if (pvIdx < 1) {
             unsigned phaseIdx = 0;
-            fs.setPressure(phaseIdx, value);
+            fluidState.setPressure(phaseIdx, value);
         }
         // saturations
         else {
             assert(pvIdx < numPhases);
             unsigned phaseIdx = pvIdx - 1;
-
-            // make sure that the first M-1 saturations does not get
-            // negative
-            value = std::max<Scalar>(0.0, value);
-            fs.setSaturation(phaseIdx, value);
+            fluidState.setSaturation(phaseIdx, value);
         }
     }
 
     template <class FluidState>
-    static Scalar quantityWeight_(const FluidState &/*fs*/, unsigned pvIdx)
+    static Scalar quantityWeight_(const FluidState &/*fluidState*/, unsigned pvIdx)
     {
         // first pressure
         if (pvIdx < 1)
-            return 1.0/1e5;
+            return 1e-8;
         // first M - 1 saturations
         else {
             assert(pvIdx < numPhases);

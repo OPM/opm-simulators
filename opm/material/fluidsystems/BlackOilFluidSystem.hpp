@@ -121,6 +121,17 @@ public:
         { regionIdx_ = 0; }
 
         /*!
+         * \brief Copy the data which is not dependent on the type of the Scalars from
+         *        another parameter cache.
+         *
+         * For the black-oil parameter cache this means that the region index must be
+         * copied.
+         */
+        template <class OtherCache>
+        void assignPersistentData(const OtherCache& other)
+        { regionIdx_ = other.regionIndex(); }
+
+        /*!
          * \brief Return the index of the region which should be used to determine the
          *        thermodynamic properties
          *
