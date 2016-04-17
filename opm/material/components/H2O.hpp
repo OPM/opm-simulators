@@ -702,7 +702,7 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = Toolbox::value(pv)*1e-8;
+            Scalar eps = Toolbox::scalarValue(pv)*1e-8;
             Evaluation v0 = volumeRegion1_(temperature, pv);
             Evaluation v1 = volumeRegion1_(temperature, pv + eps);
             Evaluation dv_dp = (v1 - v0)/eps;
@@ -754,10 +754,10 @@ public:
         // assume the pressure to be 10% higher than the vapor
         // pressure
         Evaluation pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = Toolbox::value(pressure)*1e-7;
+        Scalar eps = Toolbox::scalarValue(pressure)*1e-7;
 
         Evaluation deltaP = pressure*2;
-        for (int i = 0; i < 5 && std::abs(Toolbox::value(pressure)*1e-9) < std::abs(Toolbox::value(deltaP)); ++i) {
+        for (int i = 0; i < 5 && std::abs(Toolbox::scalarValue(pressure)*1e-9) < std::abs(Toolbox::scalarValue(deltaP)); ++i) {
             Evaluation f = liquidDensity(temperature, pressure) - density;
 
             Evaluation df_dp;

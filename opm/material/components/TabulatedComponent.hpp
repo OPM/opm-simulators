@@ -260,7 +260,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& result = interpolateT_(vaporPressure_, temperature);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::vaporPressure(temperature);
         return result;
     }
@@ -279,7 +279,7 @@ public:
         const Evaluation& result = interpolateGasTP_(gasEnthalpy_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::gasEnthalpy(temperature, pressure);
         return result;
     }
@@ -298,7 +298,7 @@ public:
         const Evaluation& result = interpolateLiquidTP_(liquidEnthalpy_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::liquidEnthalpy(temperature, pressure);
         return result;
     }
@@ -317,7 +317,7 @@ public:
         const Evaluation& result = interpolateGasTP_(gasHeatCapacity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::gasHeatCapacity(temperature, pressure);
         return result;
     }
@@ -336,7 +336,7 @@ public:
         const Evaluation& result = interpolateLiquidTP_(liquidHeatCapacity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::liquidHeatCapacity(temperature, pressure);
         return result;
     }
@@ -375,7 +375,7 @@ public:
         const Evaluation& result = interpolateGasTRho_(gasPressure_,
                                                        temperature,
                                                        density);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::gasPressure(temperature,
                                              density);
         return result;
@@ -395,7 +395,7 @@ public:
         const Evaluation& result = interpolateLiquidTRho_(liquidPressure_,
                                                           temperature,
                                                           density);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::liquidPressure(temperature,
                                                 density);
         return result;
@@ -435,7 +435,7 @@ public:
         const Evaluation& result = interpolateGasTP_(gasDensity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::gasDensity(temperature, pressure);
         return result;
     }
@@ -455,7 +455,7 @@ public:
         const Evaluation& result = interpolateLiquidTP_(liquidDensity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::liquidDensity(temperature, pressure);
         return result;
     }
@@ -474,7 +474,7 @@ public:
         const Evaluation& result = interpolateGasTP_(gasViscosity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::gasViscosity(temperature, pressure);
         return result;
     }
@@ -493,7 +493,7 @@ public:
         const Evaluation& result = interpolateLiquidTP_(liquidViscosity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::liquidViscosity(temperature, pressure);
         return result;
     }
@@ -512,7 +512,7 @@ public:
         const Evaluation& result = interpolateGasTP_(gasThermalConductivity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::gasThermalConductivity(temperature, pressure);
         return result;
     }
@@ -531,7 +531,7 @@ public:
         const Evaluation& result = interpolateLiquidTP_(liquidThermalConductivity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::value(result)))
+        if (std::isnan(Toolbox::scalarValue(result)))
             return RawComponent::liquidThermalConductivity(temperature, pressure);
         return result;
     }
@@ -547,7 +547,7 @@ private:
         if (alphaT < 0 || alphaT >= nTemp_ - 1)
             return std::numeric_limits<Scalar>::quiet_NaN();
 
-        unsigned iT = (unsigned) Toolbox::value(alphaT);
+        unsigned iT = (unsigned) Toolbox::scalarValue(alphaT);
         alphaT -= iT;
 
         return
@@ -567,23 +567,23 @@ private:
             return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        size_t iT =
-            std::max<size_t>(0,
-                             std::min<size_t>(nTemp_ - 2,
-                                              static_cast<size_t>(Toolbox::value(alphaT))));
+        int iT =
+            std::max<int>(0,
+                          std::min<int>(nTemp_ - 2,
+                                        static_cast<int>(Toolbox::scalarValue(alphaT))));
         alphaT -= iT;
 
         Evaluation alphaP1 = pressLiquidIdx_(p, iT);
         Evaluation alphaP2 = pressLiquidIdx_(p, iT + 1);
 
-        size_t iP1 =
-            std::max<size_t>(0,
-                             std::min<size_t>(nPress_ - 2,
-                                              static_cast<size_t>(Toolbox::value(alphaP1))));
-        size_t iP2 =
-            std::max<size_t>(0,
-                             std::min<size_t>(nPress_ - 2,
-                                              static_cast<size_t>(Toolbox::value(alphaP2))));
+        int iP1 =
+            std::max<int>(0,
+                          std::min<int>(nPress_ - 2,
+                                        static_cast<int>(Toolbox::scalarValue(alphaP1))));
+        int iP2 =
+            std::max<int>(0,
+                          std::min<int>(nPress_ - 2,
+                                        static_cast<int>(Toolbox::scalarValue(alphaP2))));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
@@ -618,21 +618,21 @@ private:
             return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        size_t iT =
-            std::max<size_t>(0,
-                             std::min<size_t>(nTemp_ - 2,
-                                              static_cast<size_t>(Toolbox::value(alphaT))));
+        int iT =
+            std::max<int>(0,
+                          std::min<int>(nTemp_ - 2,
+                                        static_cast<int>(Toolbox::scalarValue(alphaT))));
         alphaT -= iT;
 
         Evaluation alphaP1 = pressGasIdx_(p, iT);
         Evaluation alphaP2 = pressGasIdx_(p, iT + 1);
-        size_t iP1 =
-            std::max<size_t>(0, std::min<size_t>(nPress_ - 2,
-                                           static_cast<size_t>(Toolbox::value(alphaP1))));
-        size_t iP2 =
-            std::max<size_t>(0,
-                             std::min<size_t>(nPress_ - 2,
-                                              static_cast<size_t>(Toolbox::value(alphaP2))));
+        int iP1 =
+            std::max<int>(0, std::min<int>(nPress_ - 2,
+                                           static_cast<int>(Toolbox::scalarValue(alphaP1))));
+        int iP2 =
+            std::max<int>(0,
+                          std::min<int>(nPress_ - 2,
+                                        static_cast<int>(Toolbox::scalarValue(alphaP2))));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
@@ -661,7 +661,7 @@ private:
     static Evaluation interpolateGasTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
     {
         Evaluation alphaT = tempIdx_(T);
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        int iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
         alphaT -= iT;
 
         Evaluation alphaP1 = densityGasIdx_(rho, iT);
@@ -684,7 +684,7 @@ private:
     static Evaluation interpolateLiquidTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
     {
         Evaluation alphaT = tempIdx_(T);
-        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        int iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
         alphaT -= iT;
 
         Evaluation alphaP1 = densityLiquidIdx_(rho, iT);

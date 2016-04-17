@@ -51,27 +51,45 @@ struct MathToolbox
                   "This class expects floating point scalars! (specialization missing?)");
 public:
     /*!
-     * \brief The type used to represent scalar values
+     * \brief The type used to represent "primitive" scalar values
      */
     typedef ScalarT Scalar;
 
     /*!
-     * \brief The type used to represent function evaluations
+     * \brief The type used to represent values
      *
-     * In general, that is the value of the function plus a number of derivatives at the
-     * evaluation point. In the case of the scalar toolbox, no derivatives will be
+     * In general, these objects represent the function value at a given point plus a
+     * number of derivatives. In the case of the scalars, no derivatives will be
      * evaluated.
      */
-    typedef ScalarT Evaluation;
+    typedef ScalarT ValueType;
+
+    /*!
+     * \brief The toolbox for the type of value objects.
+     *
+     * For this class this is trivial because primitive floating point objects are
+     * endpoints in the "nesting graph". This typedef makes sense if nested automatic
+     * differentiation is used, though...
+     */
+    typedef Opm::MathToolbox<Scalar> InnerToolbox;
 
     /*!
      * \brief Return the value of the function at a given evaluation point.
      *
-     * For this toolbox, an evaluation is the value, so this method is the identity
+     * For this toolbox, there are no derivatives so this method is the identity
      * function.
      */
-    static Scalar value(const Evaluation& eval)
-    { return eval; }
+    static Scalar value(Scalar value)
+    { return value; }
+
+    /*!
+     * \brief Return the primitive scalar value of a value object.
+     *
+     * Since this toolbox's value objects are primitive scalars, this method just passes
+     * through the argument it was given.
+     */
+    static Scalar scalarValue(Scalar value)
+    { return value; }
 
     /*!
      * \brief Given a scalar value, return an evaluation of a constant function.
@@ -87,10 +105,10 @@ public:
      * \brief Given a scalar value, return an evaluation of a linear function.
      *
      * i.e., Create an evaluation which represents f(x) = x and the derivatives with
-     * regard to x. For scalar evaluations (which do not consider derivatives), this
-     * method does nothing.
+     * regard to x. For scalars (which do not consider derivatives), this method does
+     * nothing.
      */
-    static Scalar createVariable(Scalar value, int /* varIdx */)
+    static Scalar createVariable(Scalar value, int /*varIdx*/)
     { return value; }
 
     /*!
@@ -105,8 +123,13 @@ public:
      * in scalar computations.
      */
     template <class LhsEval>
-    static LhsEval toLhs(const Evaluation& eval)
-    { return eval; }
+    static LhsEval toLhs(Scalar value)
+    {
+        static_assert(std::is_floating_point<LhsEval>::value,
+                      "The left-hand side must be a primitive floating point type!");
+
+        return value;
+    }
 
     /*!
      * \brief Returns true if two values are identical up to a specified tolerance

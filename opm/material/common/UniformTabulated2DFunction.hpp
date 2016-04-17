@@ -199,9 +199,9 @@ public:
         Evaluation beta = yToJ(y);
 
         unsigned i = std::max(0U, std::min(static_cast<unsigned>(numX()) - 2,
-                                           static_cast<unsigned>(Toolbox::value(alpha))));
+                                           static_cast<unsigned>(Toolbox::scalarValue(alpha))));
         unsigned j = std::max(0U, std::min(static_cast<unsigned>(numY()) - 2,
-                                           static_cast<unsigned>(Toolbox::value(beta))));
+                                           static_cast<unsigned>(Toolbox::scalarValue(beta))));
 
         alpha -= i;
         beta -= j;
