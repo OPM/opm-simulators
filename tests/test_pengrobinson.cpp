@@ -35,6 +35,10 @@
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 template <class FluidSystem, class FluidState>
 void createSurfaceGasFluidSystem(FluidState &gasFluidState)
 {
@@ -475,9 +479,16 @@ inline void testAll()
                 /*hiresThreshold=*/hiresThresholdPressure);
 }
 
-int main(int /*argc*/, char** /*argv*/)
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    while (0) testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+
+    // the Peng-Robinson test currently does not work with single-precision floating
+    // point scalars because of precision issues. (these are caused by the fact that the
+    // test uses finite differences to calculate derivatives.)
+    while (0) testAll<float>();
+
     return 0;
 }

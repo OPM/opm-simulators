@@ -32,6 +32,10 @@
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 #include <memory>
 #include <cmath>
 #include <iostream>
@@ -382,11 +386,14 @@ inline int testAll( const typename TestType::Scalar tolerance = 1e-6 )
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
-    if( testAll< Test<double> >( 1e-12 ) )
+    Dune::MPIHelper::instance(argc, argv);
+
+    if (testAll<Test<double> >(1e-12))
         return 1;
-    if( testAll< Test<float> >( 1e-6 ) )
+    if (testAll<Test<float> >(1e-6))
         return 1;
+
     return 0;
 }

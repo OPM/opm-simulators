@@ -43,6 +43,10 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 // values of strings taken from the SPE1 test case1 of opm-data
 static const char* fam1DeckString =
     "RUNSPEC\n"
@@ -322,10 +326,12 @@ inline void testAll()
     }
 }
 
-
-int main()
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

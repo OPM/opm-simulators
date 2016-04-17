@@ -34,17 +34,21 @@
 #pragma GCC diagnostic ignored "-Wfloat-equal"
 #endif
 
+#include <opm/material/localad/Evaluation.hpp>
+#include <opm/material/localad/Math.hpp>
+
+#include <opm/material/common/Unused.hpp>
+
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 #include <iostream>
 #include <array>
 #include <cmath>
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
-
-#include <opm/material/common/Unused.hpp>
-
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
 
 struct TestVariables
 {
@@ -573,9 +577,12 @@ inline void testAll()
                                            1e-6, 1e9);
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

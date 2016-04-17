@@ -32,9 +32,9 @@
  */
 #include "config.h"
 
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
@@ -44,6 +44,10 @@
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 template <class Scalar, class FluidState>
 void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
@@ -297,9 +301,12 @@ inline void testAll()
     checkNcpFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams2);
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    while (false) testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

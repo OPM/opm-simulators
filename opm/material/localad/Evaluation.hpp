@@ -29,12 +29,15 @@
 #ifndef OPM_LOCAL_AD_EVALUATION_HPP
 #define OPM_LOCAL_AD_EVALUATION_HPP
 
-#include <iostream>
-#include <array>
-#include <cassert>
 #include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/version.hh>
+
+#include <array>
+#include <cmath>
+#include <cassert>
+#include <iostream>
+#include <algorithm>
 
 namespace Opm {
 namespace LocalAd {
