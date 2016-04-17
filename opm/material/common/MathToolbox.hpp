@@ -121,6 +121,17 @@ public:
     static Scalar passThroughOrCreateConstant(Scalar value)
     { return value; }
 
+    /*!
+     * \brief Returns true if two values are identical up to a specified tolerance
+     */
+    static bool isSame(Scalar a, Scalar b, Scalar tolerance)
+    {
+        Scalar valueDiff = a - b;
+        Scalar denom = std::max<Scalar>(1.0, std::abs(a + b));
+
+        return std::abs(valueDiff) < tolerance || std::abs(valueDiff)/denom < tolerance;
+    }
+
     ////////////
     // arithmetic functions
     ////////////

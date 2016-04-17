@@ -339,6 +339,7 @@ template <class Scalar>
 void testPowBase(Scalar baseMin = 1e-2, Scalar baseMax = 100)
 {
     typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
+    typedef Opm::MathToolbox<Eval> EvalToolbox;
 
     Scalar exp = 1.234;
     const auto& expEval = Eval::createConstant(exp);
@@ -371,7 +372,7 @@ void testPowBase(Scalar baseMin = 1e-2, Scalar baseMax = 100)
                                    + std::to_string((long double) zEval1.derivatives[0])
                                    + " delta: " + std::to_string((long double) std::abs(zPrime - zEval1.derivatives[0])));
 
-        if (!zEval1.isSame(zEval2, /*tolerance=*/std::numeric_limits<Scalar>::epsilon()*1e3*zEval1.value))
+        if (!EvalToolbox::isSame(zEval1, zEval2, /*tolerance=*/std::numeric_limits<Scalar>::epsilon()*1e3*zEval1.value))
             throw std::logic_error("oops: pow(Eval, Scalar) != pow(Eval, Eval)");
     }
 }
@@ -380,6 +381,7 @@ template <class Scalar>
 void testPowExp(Scalar expMin = -100, Scalar expMax = 100)
 {
     typedef Opm::LocalAd::Evaluation<Scalar, numVars> Eval;
+    typedef Opm::MathToolbox<Eval> EvalToolbox;
 
     Scalar base = 1.234;
     const auto& baseEval = Eval::createConstant(base);
@@ -412,7 +414,7 @@ void testPowExp(Scalar expMin = -100, Scalar expMax = 100)
                                    + std::to_string((long double) zEval1.derivatives[1])
                                    + " delta: " + std::to_string((long double) std::abs(zPrime - zEval1.derivatives[1])));
 
-        if (!zEval1.isSame(zEval2, /*tolerance=*/std::numeric_limits<Scalar>::epsilon()*1e3*zEval1.value))
+        if (!EvalToolbox::isSame(zEval1, zEval2, /*tolerance=*/std::numeric_limits<Scalar>::epsilon()*1e3*zEval1.value))
             throw std::logic_error("oops: pow(Eval, Scalar) != pow(Eval, Eval)");
     }
 }

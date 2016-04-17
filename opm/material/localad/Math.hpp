@@ -431,6 +431,23 @@ public:
     { return eval; }
 
 
+    // comparison
+    static bool isSame(const Evaluation& a, const Evaluation& b, Scalar tolerance)
+    {
+        typedef MathToolbox<Scalar> ScalarToolbox;
+
+        // make sure that the value of the evaluation is identical
+        if (!ScalarToolbox::isSame(a.value, b.value, tolerance))
+            return false;
+
+        // make sure that the derivatives are identical
+        for (unsigned curVarIdx = 0; curVarIdx < numVars; ++curVarIdx)
+            if (!ScalarToolbox::isSame(a.derivatives[curVarIdx], b.derivatives[curVarIdx], tolerance))
+                return false;
+
+        return true;
+    }
+
     // arithmetic functions
     template <class Arg1Eval, class Arg2Eval>
     static Evaluation max(const Arg1Eval& arg1, const Arg2Eval& arg2)
