@@ -104,6 +104,7 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     /// \tparam  Grid            UnstructuredGrid or CpGrid.
+    /// \tparam  WellModel       WellModel employed.
     /// \tparam  Implementation  Provides concrete state types.
     template<class Grid, class WellModel, class Implementation>
     class BlackoilModelBase
