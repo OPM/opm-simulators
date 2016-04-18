@@ -34,6 +34,8 @@ namespace Opm
 
     StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg)
         : Base(wells_arg)
+        , solvent_props_(nullptr)
+        , solvent_pos_(-1)
     {
     }
 
@@ -41,7 +43,7 @@ namespace Opm
 
 
 
-    void StandardWellsSolvent::initilazeSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos)
+    void StandardWellsSolvent::initSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos)
     {
         solvent_props_ = solvent_props;
         solvent_pos_ = solvent_pos;

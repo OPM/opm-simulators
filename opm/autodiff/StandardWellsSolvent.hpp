@@ -39,8 +39,7 @@ namespace Opm {
             explicit StandardWellsSolvent(const Wells* wells);
 
             // added the Solvent related
-            // TODO: Should add interface in StandardWells, so this can be put in the constructor
-            void initilazeSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos);
+            void initSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos);
 
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,

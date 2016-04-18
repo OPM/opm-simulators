@@ -105,7 +105,7 @@ namespace Opm {
 
             residual_.matbalscale.resize(fluid_.numPhases() + 1, 0.0031); // use the same as gas
 
-            stdWells().initilazeSolvent(&solvent_props_, solvent_pos_);
+            stdWells().initSolvent(&solvent_props_, solvent_pos_);
         }
         if (is_miscible_) {
             mu_eff_.resize(fluid_.numPhases() + 1, ADB::null());
