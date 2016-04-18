@@ -901,7 +901,7 @@ namespace detail {
         std::vector<ADB> cq_s;
         asImpl().stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        asImpl().addWellFluxEq(cq_s, state);
+        asImpl().stdWells().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().addWellControlEq(state, well_state, aliveWells);
         asImpl().computeWellPotentials(state, mob_perfcells, b_perfcells, well_state);
@@ -1070,34 +1070,6 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    addWellFluxEq(const std::vector<ADB>& cq_s,
-                  const SolutionState& state)
-    {
-        if( !asImpl().localWellsActive() )
-        {
-            // If there are no wells in the subdomain of the proces then
-            // cq_s has zero size and will cause a segmentation fault below.
-            return;
-        }
-
-        const int np = wells().number_of_phases;
-        const int nw = wells().number_of_wells;
-        ADB qs = state.qs;
-        for (int phase = 0; phase < np; ++phase) {
-            qs -= superset(stdWells().wellOps().p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
-
-        }
-
-        residual_.well_flux_eq = qs;
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
     bool
     BlackoilModelBase<Grid, WellModel, Implementation>::
     isVFPActive() const
@@ -1174,7 +1146,7 @@ namespace detail {
             asImpl().variableStateExtractWellsVars(indices, vars, wellSolutionState);
             asImpl().stdWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
             asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
-            asImpl().addWellFluxEq(cq_s, wellSolutionState);
+            asImpl().stdWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
             asImpl().addWellControlEq(wellSolutionState, well_state, aliveWells);
             converged = getWellConvergence(it);
 

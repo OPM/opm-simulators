@@ -410,13 +410,6 @@ namespace Opm {
                               const std::vector<ADB>& mob_perfcells,
                               const std::vector<ADB>& b_perfcells,
                               WellState& well_state);
-
-
-        void
-        addWellFluxEq(const std::vector<ADB>& cq_s,
-                      const SolutionState& state);
-
-        void
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                            const SolutionState& state,
                                            const WellState& xw);

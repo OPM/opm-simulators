@@ -141,6 +141,13 @@ namespace Opm {
                                    const std::vector<bool>& active,
                                    WellState& xw) const;
 
+           // TODO: should LinearisedBlackoilResidual also be a template class?
+           template <class SolutionState>
+           void addWellFluxEq(const std::vector<ADB>& cq_s,
+                              const SolutionState& state,
+                              LinearisedBlackoilResidual& residual);
+
+
 
         protected:
             bool wells_active_;

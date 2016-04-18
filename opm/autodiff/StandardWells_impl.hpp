@@ -778,4 +778,33 @@ namespace Opm
 
     }
 
+
+
+
+
+    template <class SolutionState>
+    void
+    StandardWells::
+    addWellFluxEq(const std::vector<ADB>& cq_s,
+                  const SolutionState& state,
+                  LinearisedBlackoilResidual& residual)
+    {
+        if( !localWellsActive() )
+        {
+            // If there are no wells in the subdomain of the proces then
+            // cq_s has zero size and will cause a segmentation fault below.
+            return;
+        }
+
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        ADB qs = state.qs;
+        for (int phase = 0; phase < np; ++phase) {
+            qs -= superset(wellOps().p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
+
+        }
+
+        residual.well_flux_eq = qs;
+    }
+
 }
