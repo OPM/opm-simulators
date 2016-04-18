@@ -160,9 +160,6 @@ public:
             break;
         }
 
-        default:
-            OPM_THROW(std::logic_error,
-                      "Cannot calculate capillary pressure: Invalid two-phase system");
         }
     }
 

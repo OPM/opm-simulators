@@ -60,17 +60,8 @@ namespace FluidSystemsTest {
 #include <opm/material/components/co2tables.inc>
 } }
 
-
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-
-// include dune's MPI helper header
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
 #include <dune/common/parallel/mpihelper.hh>
-#else
-#include <dune/common/mpihelper.hh>
-#endif
-
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 // check that the blackoil fluid system implements all non-standard functions
@@ -245,8 +236,7 @@ void testAllFluidSystems()
         typedef Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
         if (false) checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>();
 
-        struct BlackoilDummyEvalTag;
-        typedef Opm::LocalAd::Evaluation<Scalar, BlackoilDummyEvalTag, 1> BlackoilDummyEval;
+        typedef Opm::LocalAd::Evaluation<Scalar, 1> BlackoilDummyEval;
         ensureBlackoilApi<Scalar, FluidSystem>();
         ensureBlackoilApi<BlackoilDummyEval, FluidSystem>();
     }
@@ -316,12 +306,10 @@ void testAllFluidSystems()
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 }
 
-class TestAdTag;
-
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
+    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
 
     // ensure that all fluid states are API-compliant
     testAllFluidStates<Scalar>();
@@ -338,7 +326,9 @@ inline void testAll()
 int main(int argc, char **argv)
 {
     Dune::MPIHelper::instance(argc, argv);
-    testAll< double > ();
-    testAll< float >  ();
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

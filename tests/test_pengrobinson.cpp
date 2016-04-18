@@ -35,6 +35,10 @@
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 template <class FluidSystem, class FluidState>
 void createSurfaceGasFluidSystem(FluidState &gasFluidState)
 {
@@ -59,7 +63,7 @@ void createSurfaceGasFluidSystem(FluidState &gasFluidState)
     gasFluidState.setMoleFraction(gasPhaseIdx, FluidSystem::C20Idx, 0.00);
 
     // gas density
-    typename FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::template ParameterCache<typename FluidState::Scalar> paramCache;
     paramCache.updatePhase(gasFluidState, gasPhaseIdx);
     gasFluidState.setDensity(gasPhaseIdx,
                              FluidSystem::density(gasFluidState, paramCache, gasPhaseIdx));
@@ -210,7 +214,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         surfaceFluidState.setSaturation(gasPhaseIdx, 1.0 - surfaceFluidState.saturation(oilPhaseIdx));
     }
 
-    typename FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::template ParameterCache<Scalar> paramCache;
     paramCache.updateAll(surfaceFluidState);
 
     // increase volume until we are at surface pressure. use the
@@ -224,7 +228,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         // calculate the deviation from the standard pressure
         tmpMolarities = molarities;
         tmpMolarities /= alpha;
-        Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
+        Flash::template solve<MaterialLaw>(surfaceFluidState, matParams, paramCache, tmpMolarities);
         Scalar f = surfaceFluidState.pressure(gasPhaseIdx) - refPressure;
 
         // calculate the derivative of the deviation from the standard
@@ -232,7 +236,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
         Scalar eps = alpha*1e-10;
         tmpMolarities = molarities;
         tmpMolarities /= alpha + eps;
-        Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
+        Flash::template solve<MaterialLaw>(surfaceFluidState, matParams, paramCache, tmpMolarities);
         Scalar fStar = surfaceFluidState.pressure(gasPhaseIdx) - refPressure;
         Scalar fPrime = (fStar - f)/eps;
 
@@ -247,7 +251,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
     // calculate the final result
     tmpMolarities = molarities;
     tmpMolarities /= alpha;
-    Flash::template solve<MaterialLaw>(surfaceFluidState, paramCache, matParams, tmpMolarities);
+    Flash::template solve<MaterialLaw>(surfaceFluidState, matParams, paramCache, tmpMolarities);
     return alpha;
 }
 
@@ -316,7 +320,7 @@ inline void testAll()
     typedef Opm::LinearMaterial<MaterialTraits> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
-    typedef typename FluidSystem::ParameterCache ParameterCache;
+    typedef typename FluidSystem::template ParameterCache<Scalar> ParameterCache;
 
     ////////////
     // Initialize the fluid system and create the capillary pressure
@@ -400,8 +404,8 @@ inline void testAll()
 
     FluidState flashFluidState, surfaceFluidState;
     flashFluidState.assign(fluidState);
-    //Flash::guessInitial(flashFluidState, paramCache, totalMolarities);
-    Flash::template solve<MaterialLaw>(flashFluidState, paramCache, matParams, totalMolarities);
+    //Flash::guessInitial(flashFluidState, totalMolarities);
+    Flash::template solve<MaterialLaw>(flashFluidState, matParams, paramCache, totalMolarities);
 
     Scalar surfaceAlpha = 1;
     surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState, surfaceAlpha, flashFluidState, /*guessInitial=*/true);
@@ -414,7 +418,7 @@ inline void testAll()
     Scalar maxAlpha = surfaceAlpha;
 
     std::cout << "alpha[-] p[Pa] S_g[-] rho_o[kg/m^3] rho_g[kg/m^3] <M_o>[kg/mol] <M_g>[kg/mol] R_s[m^3/m^3] B_g[-] B_o[-]\n";
-    int n = 3000;
+    int n = 300;
     for (int i = 0; i < n; ++i) {
         // ratio between the original and the current volume
         Scalar alpha = minAlpha + (maxAlpha - minAlpha)*i/(n - 1);
@@ -424,7 +428,7 @@ inline void testAll()
         curTotalMolarities /= alpha;
 
         // "flash" the modified reservoir oil
-        Flash::template solve<MaterialLaw>(flashFluidState, paramCache, matParams, curTotalMolarities);
+        Flash::template solve<MaterialLaw>(flashFluidState, matParams, paramCache, curTotalMolarities);
 
         surfaceAlpha = bringOilToSurface<Scalar, FluidSystem>(surfaceFluidState,
                                                               surfaceAlpha,
@@ -475,9 +479,19 @@ inline void testAll()
                 /*hiresThreshold=*/hiresThresholdPressure);
 }
 
-int main(int /*argc*/, char** /*argv*/)
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    while (0) testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+
+    // the Peng-Robinson test currently does not work with single-precision floating
+    // point scalars because of precision issues. (these are caused by the fact that the
+    // test uses finite differences to calculate derivatives.)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+    while (0) testAll<float>();
+#pragma GCC diagnostic pop
+
     return 0;
 }

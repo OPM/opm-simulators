@@ -113,11 +113,23 @@ public:
     typedef Opm::WaterPvtMultiplexer<Scalar> WaterPvt;
 
     //! \copydoc BaseFluidSystem::ParameterCache
-    class ParameterCache : public Opm::NullParameterCache
+    template <class Evaluation>
+    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
     {
     public:
         ParameterCache(int /*regionIdx*/=0)
         { regionIdx_ = 0; }
+
+        /*!
+         * \brief Copy the data which is not dependent on the type of the Scalars from
+         *        another parameter cache.
+         *
+         * For the black-oil parameter cache this means that the region index must be
+         * copied.
+         */
+        template <class OtherCache>
+        void assignPersistentData(const OtherCache& other)
+        { regionIdx_ = other.regionIndex(); }
 
         /*!
          * \brief Return the index of the region which should be used to determine the
@@ -396,24 +408,24 @@ public:
      * thermodynamic quantities (generic version, only isothermal)
      ****************************************/
     //! \copydoc BaseFluidSystem::density
-    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval density(const FluidState &fluidState,
-                           ParameterCache &paramCache,
+                           const ParameterCache<ParamCacheEval> &paramCache,
                            unsigned phaseIdx)
     { return density<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
-    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache &paramCache,
+                                       const ParameterCache<ParamCacheEval> &paramCache,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     { return fugacityCoefficient<FluidState, LhsEval>(fluidState, phaseIdx, compIdx, paramCache.regionIndex()); }
 
     //! \copydoc BaseFluidSystem::viscosity
-    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache &paramCache,
+                             const ParameterCache<ParamCacheEval> &paramCache,
                              unsigned phaseIdx)
     { return viscosity<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 

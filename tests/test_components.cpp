@@ -60,19 +60,9 @@ namespace ComponentsTest {
 #include <opm/material/components/co2tables.inc>
 }}
 
-
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-
-// include dune's MPI helper header
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
 #include <dune/common/parallel/mpihelper.hh>
-#else
-#include <dune/common/mpihelper.hh>
-#endif
-
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
 
 template <class Scalar, class Evaluation>
 void testAllComponents()
@@ -95,12 +85,10 @@ void testAllComponents()
     checkComponent<Opm::Xylene<Scalar>, Evaluation>();
 }
 
-class TestAdTag;
-
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
+    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
 
     // ensure that all components are API-compliant
     testAllComponents<Scalar, Scalar>();
@@ -112,7 +100,8 @@ int main(int argc, char **argv)
 {
     Dune::MPIHelper::instance(argc, argv);
 
-    testAll< double >();
-    testAll< float  >();
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

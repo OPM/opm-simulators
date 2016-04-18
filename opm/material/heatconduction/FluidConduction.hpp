@@ -57,7 +57,7 @@ public:
     static Evaluation heatConductivity(const Params &params,
                                        const FluidState &fluidState)
     {
-        typename FluidSystem::ParameterCache paramCache;
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.updatePhase(fluidState, phaseIdx);
         return FluidSystem::template thermalConductivity<FluidState, Evaluation>(fluidState,
                                                                                  paramCache,

@@ -32,9 +32,9 @@
  */
 #include "config.h"
 
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
@@ -45,40 +45,49 @@
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 template <class Scalar, class FluidState>
 void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
 {
     enum { numPhases = FluidState::numPhases };
     enum { numComponents = FluidState::numComponents };
 
+    Scalar tol = std::max(std::numeric_limits<Scalar>::epsilon()*1e4, 1e-6);
+
     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         Scalar error;
 
         // check the pressures
         error = 1 - fsRef.pressure(phaseIdx)/fsFlash.pressure(phaseIdx);
-        if (std::abs(error) > 1e-6) {
-            std::cout << "pressure error phase " << phaseIdx << ": "
-                      << fsFlash.pressure(phaseIdx)  << " flash vs "
-                      << fsRef.pressure(phaseIdx) << " reference"
-                      << " error=" << error << "\n";
+        if (std::abs(error) > tol) {
+            OPM_THROW(std::runtime_error,
+                      "pressure error for phase " << phaseIdx << " exceeds tolerance"
+                      << " (" << fsFlash.pressure(phaseIdx)  << " flash vs "
+                      << fsRef.pressure(phaseIdx) << " reference,"
+                      << " error=" << error << ")");
         }
 
         // check the saturations
         error = fsRef.saturation(phaseIdx) - fsFlash.saturation(phaseIdx);
-        if (std::abs(error) > 1e-6)
-            std::cout << "saturation error phase " << phaseIdx << ": "
-                      << fsFlash.saturation(phaseIdx) << " flash vs "
-                      << fsRef.saturation(phaseIdx) << " reference"
-                      << " error=" << error << "\n";
+        if (std::abs(error) > tol)
+            OPM_THROW(std::runtime_error,
+                      "saturation error for phase " << phaseIdx << " exceeds tolerance"
+                      << " (" << fsFlash.saturation(phaseIdx) << " flash vs "
+                      << fsRef.saturation(phaseIdx) << " reference,"
+                      << " error=" << error << ")");
 
         // check the compositions
         for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
             error = fsRef.moleFraction(phaseIdx, compIdx) - fsFlash.moleFraction(phaseIdx, compIdx);
-            if (std::abs(error) > 1e-6)
-                std::cout << "composition error phase " << phaseIdx << ", component " << compIdx << ": "
-                          << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
-                          << fsRef.moleFraction(phaseIdx, compIdx) << " reference"
-                          << " error=" << error << "\n";
+            if (std::abs(error) > tol)
+                OPM_THROW(std::runtime_error,
+                          "composition error phase " << phaseIdx << ", component " << compIdx << " exceeds tolerance"
+                          << " (" << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
+                          << fsRef.moleFraction(phaseIdx, compIdx) << " reference,"
+                          << " error=" << error << ")");
         }
     }
 }
@@ -90,6 +99,7 @@ void checkNcpFlash(const FluidState &fsRef,
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     typedef Dune::FieldVector<Scalar, numComponents> ComponentVector;
+    typedef typename FluidSystem::template ParameterCache<typename FluidState::Scalar> ParameterCache;
 
     // calculate the total amount of stuff in the reference fluid
     // phase
@@ -108,9 +118,10 @@ void checkNcpFlash(const FluidState &fsRef,
     fsFlash.setTemperature(fsRef.temperature(/*phaseIdx=*/0));
 
     // run the flash calculation
-    typename FluidSystem::ParameterCache paramCache;
-    NcpFlash::guessInitial(fsFlash, paramCache, globalMolarities);
-    NcpFlash::template solve<MaterialLaw>(fsFlash, paramCache, matParams, globalMolarities);
+    ParameterCache paramCache;
+    paramCache.updateAll(fsFlash);
+    NcpFlash::guessInitial(fsFlash, globalMolarities);
+    NcpFlash::template solve<MaterialLaw>(fsFlash, matParams, paramCache, globalMolarities);
 
     // compare the "flashed" fluid state with the reference one
     checkSame<Scalar>(fsRef, fsFlash);
@@ -141,7 +152,7 @@ void completeReferenceFluidState(FluidState &fs,
 
     // make the fluid state consistent with local thermodynamic
     // equilibrium
-    typename FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::template ParameterCache<typename FluidState::Scalar> paramCache;
     ComputeFromReferencePhase::solve(fs,
                                      paramCache,
                                      refPhaseIdx,
@@ -169,6 +180,7 @@ inline void testAll()
     typedef Opm::EffToAbsLaw<EffMaterialLaw> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
+    std::cout << "---- using " << Dune::className<Scalar>() << " as scalar ----\n";
     Scalar T = 273.15 + 25;
 
     // initialize the tables of the fluid system
@@ -251,7 +263,7 @@ inline void testAll()
     fsRef.setPressure(liquidPhaseIdx, 1e6);
     fsRef.setPressure(gasPhaseIdx, 1e6);
 
-    typename FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::template ParameterCache<Scalar> paramCache;
     typedef Opm::MiscibleMultiPhaseComposition<Scalar, FluidSystem> MiscibleMultiPhaseComposition;
     MiscibleMultiPhaseComposition::solve(fsRef, paramCache,
                                          /*setViscosity=*/false,
@@ -295,9 +307,12 @@ inline void testAll()
     checkNcpFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams2);
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    while (false) testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

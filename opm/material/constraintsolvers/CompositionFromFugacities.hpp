@@ -55,8 +55,6 @@ class CompositionFromFugacities
 {
     enum { numComponents = FluidSystem::numComponents };
 
-    typedef typename FluidSystem::ParameterCache ParameterCache;
-
 public:
     typedef Dune::FieldVector<Evaluation, numComponents> ComponentVector;
 
@@ -65,7 +63,6 @@ public:
      */
     template <class FluidState>
     static void guessInitial(FluidState &fluidState,
-                             ParameterCache &/*paramCache*/,
                              unsigned phaseIdx,
                              const ComponentVector &/*fugVec*/)
     {
@@ -89,7 +86,7 @@ public:
      */
     template <class FluidState>
     static void solve(FluidState &fluidState,
-                      ParameterCache &paramCache,
+                      typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                       unsigned phaseIdx,
                       const ComponentVector &targetFug)
     {
@@ -195,7 +192,7 @@ protected:
     // independent of the phase's composition.
     template <class FluidState>
     static void solveIdealMix_(FluidState &fluidState,
-                               ParameterCache &paramCache,
+                               typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                                unsigned phaseIdx,
                                const ComponentVector &fugacities)
     {
@@ -223,7 +220,7 @@ protected:
     static Scalar linearize_(Dune::FieldMatrix<Evaluation, numComponents, numComponents> &J,
                              Dune::FieldVector<Evaluation, numComponents> &defect,
                              FluidState &fluidState,
-                             ParameterCache &paramCache,
+                             typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                              unsigned phaseIdx,
                              const ComponentVector &targetFug)
     {
@@ -295,7 +292,7 @@ protected:
 
     template <class FluidState>
     static Scalar update_(FluidState &fluidState,
-                          ParameterCache &paramCache,
+                          typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                           Dune::FieldVector<Evaluation, numComponents> &x,
                           Dune::FieldVector<Evaluation, numComponents> &/*b*/,
                           unsigned phaseIdx,

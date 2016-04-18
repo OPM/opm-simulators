@@ -297,18 +297,19 @@ void checkFluidSystem()
                   " as the one passed to the checkFluidSystem() function");
 
     // check whether the parameter cache adheres to the API
-    typedef typename FluidSystem::ParameterCache PC;
-    PC paramCache;
+    typedef typename FluidSystem::template ParameterCache<LhsEval> ParameterCache;
+
+    ParameterCache paramCache;
     try { paramCache.updateAll(fs); } catch (...) {};
-    try { paramCache.updateAll(fs, /*except=*/PC::None); } catch (...) {};
-    try { paramCache.updateAll(fs, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
+    try { paramCache.updateAll(fs, /*except=*/ParameterCache::None); } catch (...) {};
+    try { paramCache.updateAll(fs, /*except=*/ParameterCache::Temperature | ParameterCache::Pressure | ParameterCache::Composition); } catch (...) {};
     try { paramCache.updateAllPressures(fs); } catch (...) {};
 
     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         fs.restrictToPhase(static_cast<int>(phaseIdx));
         try { paramCache.updatePhase(fs, phaseIdx); } catch (...) {};
-        try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::None); } catch (...) {};
-        try { paramCache.updatePhase(fs, phaseIdx, /*except=*/PC::Temperature | PC::Pressure | PC::Composition); } catch (...) {};
+        try { paramCache.updatePhase(fs, phaseIdx, /*except=*/ParameterCache::None); } catch (...) {};
+        try { paramCache.updatePhase(fs, phaseIdx, /*except=*/ParameterCache::Temperature | ParameterCache::Pressure | ParameterCache::Composition); } catch (...) {};
         try { paramCache.updateTemperature(fs, phaseIdx); } catch (...) {};
         try { paramCache.updatePressure(fs, phaseIdx); } catch (...) {};
         try { paramCache.updateComposition(fs, phaseIdx); } catch (...) {};

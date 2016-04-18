@@ -34,6 +34,10 @@
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 extern bool success;
 bool success;
 
@@ -59,7 +63,7 @@ inline void testAll()
 
     Scalar pMin = 10.00;
     Scalar pMax = IapwsH2O::vaporPressure(tempMax*1.1);
-    unsigned nPress = 200;
+    unsigned nPress = 50;
 
     std::cout << "Creating tabulation with " << nTemp*nPress << " entries per quantity\n";
     TabulatedH2O::init(tempMin, tempMax, nTemp,
@@ -117,10 +121,12 @@ inline void testAll()
         std::cout << "\nsuccess\n";
 }
 
-
-int main()
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

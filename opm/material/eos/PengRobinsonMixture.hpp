@@ -87,52 +87,54 @@ public:
       * R. Reid, et al.: The Properties of Gases and Liquids,
       * 4th edition, McGraw-Hill, 1987, pp. 42-44, 143-145
       */
-    template <class FluidState, class Params>
-    static Scalar computeFugacityCoefficient(const FluidState &fs,
-                                             const Params &params,
-                                             unsigned phaseIdx,
-                                             unsigned compIdx)
+    template <class FluidState, class Params, class LhsEval = typename FluidState::Scalar>
+    static LhsEval computeFugacityCoefficient(const FluidState &fs,
+                                              const Params &params,
+                                              unsigned phaseIdx,
+                                              unsigned compIdx)
     {
+        typedef MathToolbox<LhsEval> LhsToolbox;
+
         // note that we normalize the component mole fractions, so
         // that their sum is 100%. This increases numerical stability
         // considerably if the fluid state is not physical.
-        Scalar Vm = params.molarVolume(phaseIdx);
+        LhsEval Vm = params.molarVolume(phaseIdx);
 
         // Calculate b_i / b
-        Scalar bi_b = params.bPure(phaseIdx, compIdx) / params.b(phaseIdx);
+        LhsEval bi_b = params.bPure(phaseIdx, compIdx) / params.b(phaseIdx);
 
         // Calculate the compressibility factor
-        Scalar RT = R*fs.temperature(phaseIdx);
-        Scalar p = fs.pressure(phaseIdx); // molar volume in [bar]
-        Scalar Z = p*Vm/RT; // compressibility factor
+        LhsEval RT = R*fs.temperature(phaseIdx);
+        LhsEval p = fs.pressure(phaseIdx); // molar volume in [bar]
+        LhsEval Z = p*Vm/RT; // compressibility factor
 
         // Calculate A^* and B^* (see: Reid, p. 42)
-        Scalar Astar = params.a(phaseIdx)*p/(RT*RT);
-        Scalar Bstar = params.b(phaseIdx)*p/(RT);
+        LhsEval Astar = params.a(phaseIdx)*p/(RT*RT);
+        LhsEval Bstar = params.b(phaseIdx)*p/(RT);
 
         // calculate delta_i (see: Reid, p. 145)
-        Scalar sumMoleFractions = 0.0;
+        LhsEval sumMoleFractions = 0.0;
         for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx)
             sumMoleFractions += fs.moleFraction(phaseIdx, compJIdx);
-        Scalar deltai = 2*std::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
-        Scalar tmp = 0;
+        LhsEval deltai = 2*LhsToolbox::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
+        LhsEval tmp = 0;
         for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
             tmp +=
                 fs.moleFraction(phaseIdx, compJIdx)
                 / sumMoleFractions
-                * std::sqrt(params.aPure(phaseIdx, compJIdx))
+                * LhsToolbox::sqrt(params.aPure(phaseIdx, compJIdx))
                 * (1.0 - StaticParameters::interactionCoefficient(compIdx, compJIdx));
         };
         deltai *= tmp;
 
-        Scalar base =
+        LhsEval base =
             (2*Z + Bstar*(u + std::sqrt(u*u - 4*w))) /
             (2*Z + Bstar*(u - std::sqrt(u*u - 4*w)));
-        Scalar expo =  Astar/(Bstar*std::sqrt(u*u - 4*w))*(bi_b - deltai);
+        LhsEval expo =  Astar/(Bstar*std::sqrt(u*u - 4*w))*(bi_b - deltai);
 
-        Scalar fugCoeff =
-            std::exp(bi_b*(Z - 1))/std::max(Scalar(1e-9), Z - Bstar) *
-            std::pow(base, expo);
+        LhsEval fugCoeff =
+            LhsToolbox::exp(bi_b*(Z - 1))/LhsToolbox::max(1e-9, Z - Bstar) *
+            LhsToolbox::pow(base, expo);
 
         ////////
         // limit the fugacity coefficient to a reasonable range:
@@ -140,12 +142,12 @@ public:
         // on one side, we want the mole fraction to be at
         // least 10^-3 if the fugacity is at the current pressure
         //
-        fugCoeff = std::min(Scalar(1e10), fugCoeff);
+        fugCoeff = LhsToolbox::min(1e10, fugCoeff);
         //
         // on the other hand, if the mole fraction of the component is 100%, we want the
         // fugacity to be at least 10^-3 Pa
         //
-        fugCoeff = std::max(Scalar(1e-10), fugCoeff);
+        fugCoeff = LhsToolbox::max(1e-10, fugCoeff);
         ///////////
 
         return fugCoeff;

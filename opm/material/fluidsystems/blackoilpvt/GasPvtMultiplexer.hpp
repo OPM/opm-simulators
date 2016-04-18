@@ -57,7 +57,6 @@ namespace Opm {
         break;                                                          \
     }                                                                   \
     case NoGasPvt:                                                      \
-    default:                                                            \
         OPM_THROW(std::logic_error, "Not implemented: Gas PVT of this deck!"); \
     }
 
@@ -164,7 +163,7 @@ public:
      * \brief Return the number of PVT regions which are considered by this PVT-object.
      */
     unsigned numRegions() const
-    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); };
+    { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.numRegions()); return 1; }
 
     /*!
      * \brief Returns the dynamic viscosity [Pa s] of the fluid phase given a set of parameters.

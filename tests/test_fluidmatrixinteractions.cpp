@@ -69,19 +69,9 @@
 
 #include <opm/material/common/Unused.hpp>
 
-
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-
-// include dune's MPI helper header
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,3)
 #include <dune/common/parallel/mpihelper.hh>
-#else
-#include <dune/common/mpihelper.hh>
-#endif
-
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
 
 // this function makes sure that a capillary pressure law adheres to
 // the generic programming interface for such laws. This API _must_ be
@@ -269,8 +259,6 @@ void testThreePhaseSatApi()
 {
 }
 
-class TestAdTag;
-
 template <class Scalar>
 inline void testAll()
 {
@@ -292,7 +280,7 @@ inline void testAll()
                                           ThreePFluidSystem::oilPhaseIdx,
                                           ThreePFluidSystem::gasPhaseIdx> ThreePhaseTraits;
 
-    typedef Opm::LocalAd::Evaluation<Scalar, TestAdTag, 3> Evaluation;
+    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
     typedef Opm::ImmiscibleFluidState<Evaluation, TwoPFluidSystem> TwoPhaseFluidState;
     typedef Opm::ImmiscibleFluidState<Evaluation, ThreePFluidSystem> ThreePhaseFluidState;
 
@@ -443,7 +431,9 @@ inline void testAll()
 int main(int argc, char **argv)
 {
     Dune::MPIHelper::instance(argc, argv);
-    testAll< double >();
-    testAll< float  >();
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

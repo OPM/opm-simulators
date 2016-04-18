@@ -45,40 +45,50 @@
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
 template <class Scalar, class FluidState>
 void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
 {
     enum { numPhases = FluidState::numPhases };
     enum { numComponents = FluidState::numComponents };
 
+    Scalar tol = std::max(std::numeric_limits<Scalar>::epsilon()*1e4, 1e-6);
+
     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
         Scalar error;
 
         // check the pressures
         error = 1 - fsRef.pressure(phaseIdx)/fsFlash.pressure(phaseIdx);
-        if (std::abs(error) > 1e-6) {
-            std::cout << "pressure error phase " << phaseIdx << ": "
+        if (std::abs(error) > tol) {
+            OPM_THROW(std::runtime_error,
+                      "pressure error phase " << phaseIdx << " is incorrect: "
                       << fsFlash.pressure(phaseIdx)  << " flash vs "
                       << fsRef.pressure(phaseIdx) << " reference"
-                      << " error=" << error << "\n";
+                      << " error=" << error);
         }
 
         // check the saturations
         error = fsRef.saturation(phaseIdx) - fsFlash.saturation(phaseIdx);
-        if (std::abs(error) > 1e-6)
-            std::cout << "saturation error phase " << phaseIdx << ": "
+        if (std::abs(error) > tol)
+            OPM_THROW(std::runtime_error,
+                      "saturation error phase " << phaseIdx << " is incorrect: "
                       << fsFlash.saturation(phaseIdx) << " flash vs "
                       << fsRef.saturation(phaseIdx) << " reference"
-                      << " error=" << error << "\n";
+                      << " error=" << error);
 
         // check the compositions
         for (unsigned compIdx = 0; compIdx < numComponents; ++ compIdx) {
             error = fsRef.moleFraction(phaseIdx, compIdx) - fsFlash.moleFraction(phaseIdx, compIdx);
-            if (std::abs(error) > 1e-6)
-                std::cout << "composition error phase " << phaseIdx << ", component " << compIdx << ": "
+            if (std::abs(error) > tol)
+                OPM_THROW(std::runtime_error,
+                          "composition error phase " << phaseIdx << ", component " << compIdx
+                          << " is incorrect: "
                           << fsFlash.moleFraction(phaseIdx, compIdx) << " flash vs "
                           << fsRef.moleFraction(phaseIdx, compIdx) << " reference"
-                          << " error=" << error << "\n";
+                          << " error=" << error);
         }
     }
 }
@@ -108,9 +118,9 @@ void checkImmiscibleFlash(const FluidState &fsRef,
     fsFlash.setTemperature(fsRef.temperature(/*phaseIdx=*/0));
 
     // run the flash calculation
-    typename FluidSystem::ParameterCache paramCache;
-    ImmiscibleFlash::guessInitial(fsFlash, paramCache, globalMolarities);
-    ImmiscibleFlash::template solve<MaterialLaw>(fsFlash, paramCache, matParams, globalMolarities);
+    ImmiscibleFlash::guessInitial(fsFlash, globalMolarities);
+    typename FluidSystem::template ParameterCache<typename FluidState::Scalar> paramCache;
+    ImmiscibleFlash::template solve<MaterialLaw>(fsFlash, matParams, paramCache, globalMolarities);
 
     // compare the "flashed" fluid state with the reference one
     checkSame<Scalar>(fsRef, fsFlash);
@@ -138,7 +148,7 @@ void completeReferenceFluidState(FluidState &fs,
                    + (pC[otherPhaseIdx] - pC[refPhaseIdx]));
 
     // set all phase densities
-    typename FluidSystem::ParameterCache paramCache;
+    typename FluidSystem::template ParameterCache<typename FluidState::Scalar> paramCache;
     paramCache.updateAll(fs);
     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
         Scalar rho = FluidSystem::density(fs, paramCache, phaseIdx);
@@ -165,6 +175,7 @@ inline void testAll()
     typedef Opm::EffToAbsLaw<EffMaterialLaw> MaterialLaw;
     typedef typename MaterialLaw::Params MaterialLawParams;
 
+    std::cout << "---- using " << Dune::className<Scalar>() << " as scalar ----\n";
     Scalar T = 273.15 + 25;
 
     // initialize the tables of the fluid system
@@ -263,9 +274,12 @@ inline void testAll()
     checkImmiscibleFlash<Scalar, FluidSystem, MaterialLaw>(fsRef, matParams2);
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    testAll< double >();
-    testAll< float  >();
+    Dune::MPIHelper::instance(argc, argv);
+
+    testAll<double>();
+    testAll<float>();
+
     return 0;
 }

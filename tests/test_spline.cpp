@@ -37,11 +37,15 @@ gnuplot> plot "spline.csv" using 1:2 w l ti "Curve", \
 ----------- snap -----------
 */
 #include "config.h"
-#include <array>
+
 #include <opm/material/common/Spline.hpp>
-#define GCC_VERSION (__GNUC__ * 10000 \
-               + __GNUC_MINOR__ * 100 \
-               + __GNUC_PATCHLEVEL__)
+
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <dune/common/parallel/mpihelper.hh>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
+
+#include <array>
+
 template <class Spline>
 void testCommon(const Spline &sp,
                 const double *x,
@@ -105,6 +109,7 @@ void testCommon(const Spline &sp,
                       " (" << mFD << " - " << m << " = " << mFD - m << ")!");
     }
 }
+
 template <class Spline>
 void testFull(const Spline &sp,
               const double *x,
@@ -128,6 +133,7 @@ void testFull(const Spline &sp,
                    "Invalid derivative at end of interval: is "
                    << d1 << " ought to be " << m1);
 }
+
 template <class Spline>
 void testNatural(const Spline &sp,
                  const double *x,
@@ -151,6 +157,7 @@ void testNatural(const Spline &sp,
                    "Invalid second derivative at end of interval: is "
                    << (d3 - d2)/eps << " ought to be 0");
 }
+
 template <class Spline>
 void testMonotonic(const Spline &sp,
                    const double *x,
@@ -193,6 +200,7 @@ void testMonotonic(const Spline &sp,
                       << i << " where it should not be");
     }
 }
+
 // function prototype to prevent some compilers producing a warning
 void testAll();
 void testAll()
@@ -209,7 +217,7 @@ void testAll()
             {x[3], y[3]},
             {x[4], y[4]},
         };
-#if GCC_VERSION >= 40500
+
     std::initializer_list<const std::pair<double, double> > pointsInitList =
         {
             {x[0], y[0]},
@@ -218,7 +226,7 @@ void testAll()
             {x[3], y[3]},
             {x[4], y[4]},
         };
-#endif
+
     std::vector<double> xVec;
     std::vector<double> yVec;
     std::vector<double*> pointVec;
@@ -242,18 +250,15 @@ void testAll()
     { Opm::Spline<double> sp(xVec, yVec, m0, m1); sp.setXYContainers(xVec,yVec,m0, m1); testFull(sp, x, y, m0, m1);  };
     { Opm::Spline<double> sp; sp.setArrayOfPoints(5,points,m0, m1); testFull(sp, x, y, m0, m1); };
     { Opm::Spline<double> sp; sp.setContainerOfPoints(pointVec,m0, m1); testFull(sp, x, y, m0, m1);  };
-#if GCC_VERSION >= 40500
     { Opm::Spline<double> sp; sp.setContainerOfTuples(pointsInitList,m0, m1); testFull(sp, x, y, m0, m1); };
-#endif
     // natural spline
     { Opm::Spline<double> sp(5, x, y); sp.setXYArrays(5,x,y); testNatural(sp, x, y);  };
     { Opm::Spline<double> sp(xVec, yVec); sp.setXYContainers(xVec,yVec); testNatural(sp, x, y); };
     { Opm::Spline<double> sp; sp.setArrayOfPoints(5,points); testNatural(sp, x, y); };
     { Opm::Spline<double> sp; sp.setContainerOfPoints(pointVec); testNatural(sp, x, y); };
-#if GCC_VERSION >= 40500
     { Opm::Spline<double> sp; sp.setContainerOfTuples(pointsInitList); testNatural(sp, x, y); };
-#endif
 }
+
 // function prototype to prevent some compilers producing a warning
 void plot();
 void plot()
@@ -289,8 +294,11 @@ void plot()
                          1000);
     std::cout << "\n";
 }
-int main()
+
+int main(int argc, char **argv)
 {
+    Dune::MPIHelper::instance(argc, argv);
+
     try {
         testAll();
         plot();
@@ -298,5 +306,6 @@ int main()
     catch (const std::exception &e) {
         std::cout << "Caught OPM exception: " << e.what() << "\n";
     }
+
     return 0;
 }

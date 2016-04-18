@@ -29,12 +29,15 @@
 #ifndef OPM_LOCAL_AD_EVALUATION_HPP
 #define OPM_LOCAL_AD_EVALUATION_HPP
 
-#include <iostream>
-#include <array>
-#include <cassert>
 #include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/version.hh>
+
+#include <array>
+#include <cmath>
+#include <cassert>
+#include <iostream>
+#include <algorithm>
 
 namespace Opm {
 namespace LocalAd {
@@ -42,11 +45,11 @@ namespace LocalAd {
  * \brief Represents a function evaluation and its derivatives w.r.t. a fixed set of
  *        variables.
  */
-template <class ScalarT, class VarSetTag, int numVars>
+template <class ValueT, int numVars>
 class Evaluation
 {
 public:
-    typedef ScalarT Scalar;
+    typedef ValueT ValueType;
 
     enum { size = numVars };
 
@@ -65,14 +68,16 @@ public:
     //
     // i.e., f(x) = c. this implies an evaluation with the given value and all
     // derivatives being zero.
-    Evaluation(Scalar c)
+    template <class RhsValueType>
+    Evaluation(const RhsValueType& c)
     {
         value = c;
         std::fill(derivatives.begin(), derivatives.end(), 0.0);
     }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
-    static Evaluation createVariable(Scalar value, unsigned varPos)
+    template <class RhsValueType>
+    static Evaluation createVariable(const RhsValueType& value, unsigned varPos)
     {
         // The variable position must be in represented by the given variable descriptor
         assert(0 <= varPos && varPos < size);
@@ -90,7 +95,8 @@ public:
 
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
     // relevant variables, f(x) = c).
-    static Evaluation createConstant(Scalar value)
+    template <class RhsValueType>
+    static Evaluation createConstant(const RhsValueType& value)
     {
         Evaluation result;
         result.value = value;
@@ -119,7 +125,8 @@ public:
         return *this;
     }
 
-    Evaluation& operator+=(Scalar other)
+    template <class RhsValueType>
+    Evaluation& operator+=(const RhsValueType& other)
     {
         // value is added, derivatives stay the same
         this->value += other;
@@ -137,7 +144,8 @@ public:
         return *this;
     }
 
-    Evaluation& operator-=(Scalar other)
+    template <class RhsValueType>
+    Evaluation& operator-=(const RhsValueType& other)
     {
         // for constants, values are subtracted, derivatives stay the same
         this->value -= other;
@@ -149,20 +157,21 @@ public:
     {
         // while the values are multiplied, the derivatives follow the product rule,
         // i.e., (u*v)' = (v'u + u'v).
-        Scalar u = this->value;
-        Scalar v = other.value;
-        this->value *= v;
+        const ValueType& u = this->value;
+        const ValueType& v = other.value;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
-            Scalar uPrime = this->derivatives[varIdx];
-            Scalar vPrime = other.derivatives[varIdx];
+            const ValueType& uPrime = this->derivatives[varIdx];
+            const ValueType& vPrime = other.derivatives[varIdx];
 
             this->derivatives[varIdx] = (v*uPrime + u*vPrime);
         }
+        this->value *= v;
 
         return *this;
     }
 
-    Evaluation& operator*=(Scalar other)
+    template <class RhsValueType>
+    Evaluation& operator*=(const RhsValueType& other)
     {
         // values and derivatives are multiplied
         this->value *= other;
@@ -176,26 +185,26 @@ public:
     {
         // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u -
         // u'v)/v^2.
-        Scalar u = this->value;
-        Scalar v = other.value;
-        this->value /= v;
+        const ValueType& u = this->value;
+        const ValueType& v = other.value;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
-            Scalar uPrime = this->derivatives[varIdx];
-            Scalar vPrime = other.derivatives[varIdx];
+            const ValueType& uPrime = this->derivatives[varIdx];
+            const ValueType& vPrime = other.derivatives[varIdx];
 
             this->derivatives[varIdx] = (v*uPrime - u*vPrime)/(v*v);
         }
+        this->value /= v;
 
         return *this;
     }
 
-    Evaluation& operator/=(Scalar other)
+    template <class RhsValueType>
+    Evaluation& operator/=(const RhsValueType& other)
     {
         // values and derivatives are divided
-        other = 1.0/other;
-        this->value *= other;
+        this->value /= other;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            this->derivatives[varIdx] *= other;
+            this->derivatives[varIdx] /= other;
 
         return *this;
     }
@@ -207,7 +216,8 @@ public:
         return result;
     }
 
-    Evaluation operator+(Scalar other) const
+    template <class RhsValueType>
+    Evaluation operator+(const RhsValueType& other) const
     {
         Evaluation result(*this);
         result += other;
@@ -221,7 +231,8 @@ public:
         return result;
     }
 
-    Evaluation operator-(Scalar other) const
+    template <class RhsValueType>
+    Evaluation operator-(const RhsValueType& other) const
     {
         Evaluation result(*this);
         result -= other;
@@ -246,7 +257,8 @@ public:
         return result;
     }
 
-    Evaluation operator*(Scalar other) const
+    template <class RhsValueType>
+    Evaluation operator*(const RhsValueType& other) const
     {
         Evaluation result(*this);
         result *= other;
@@ -260,14 +272,16 @@ public:
         return result;
     }
 
-    Evaluation operator/(Scalar other) const
+    template <class RhsValueType>
+    Evaluation operator/(const RhsValueType& other) const
     {
         Evaluation result(*this);
         result /= other;
         return result;
     }
 
-    Evaluation& operator=(Scalar other)
+    template <class RhsValueType>
+    Evaluation& operator=(const RhsValueType& other)
     {
         this->value = other;
         std::fill(this->derivatives.begin(), this->derivatives.end(), 0.0);
@@ -282,7 +296,8 @@ public:
         return *this;
     }
 
-    bool operator==(Scalar other) const
+    template <class RhsValueType>
+    bool operator==(const RhsValueType& other) const
     { return this->value == other; }
 
     bool operator==(const Evaluation& other) const
@@ -297,87 +312,76 @@ public:
         return true;
     }
 
-    bool isSame(const Evaluation& other, Scalar tolerance) const
-    {
-        Scalar value_diff = other.value - other.value;
-        if (std::abs(value_diff) > tolerance && std::abs(value_diff)/tolerance > 1.0)
-            return false;
-
-        for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
-            Scalar deriv_diff = other.derivatives[varIdx] - this->derivatives[varIdx];
-            if (std::abs(deriv_diff) > tolerance && std::abs(deriv_diff)/tolerance > 1.0)
-                return false;
-        }
-
-        return true;
-    }
-
     bool operator!=(const Evaluation& other) const
     { return !operator==(other); }
 
-    bool operator>(Scalar other) const
+    template <class RhsValueType>
+    bool operator>(RhsValueType other) const
     { return this->value > other; }
 
     bool operator>(const Evaluation& other) const
     { return this->value > other.value; }
 
-    bool operator<(Scalar other) const
+    template <class RhsValueType>
+    bool operator<(RhsValueType other) const
     { return this->value < other; }
 
     bool operator<(const Evaluation& other) const
     { return this->value < other.value; }
 
-    bool operator>=(Scalar other) const
+    template <class RhsValueType>
+    bool operator>=(RhsValueType other) const
     { return this->value >= other; }
 
     bool operator>=(const Evaluation& other) const
     { return this->value >= other.value; }
 
-    bool operator<=(Scalar other) const
+    template <class RhsValueType>
+    bool operator<=(RhsValueType other) const
     { return this->value <= other; }
 
     bool operator<=(const Evaluation& other) const
     { return this->value <= other.value; }
 
     // maybe this should be made 'private'...
-    Scalar value;
-    std::array<Scalar, size> derivatives;
+    ValueType value;
+    std::array<ValueType, size> derivatives;
 };
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator<(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+bool operator<(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b > a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator>(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+bool operator>(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b < a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator<=(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+bool operator<=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b >= a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator>=(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+bool operator>=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b <= a; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-bool operator!=(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+bool operator!=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return a != b.value; }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator+(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result(b);
+    Evaluation<ValueType, numVars> result(b);
 
     result += a;
 
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator-(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<ValueType, numVars> result;
 
     result.value = a - b.value;
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
@@ -386,25 +390,25 @@ Evaluation<Scalar, VarSetTag, numVars> operator-(const ScalarA& a, const Evaluat
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator/(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<ValueType, numVars> result;
 
     result.value = a/b.value;
 
     // outer derivative
-    Scalar df_dg = - a/(b.value*b.value);
+    const ValueType& df_dg = - a/(b.value*b.value);
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.derivatives[varIdx] = df_dg*b.derivatives[varIdx];
 
     return result;
 }
 
-template <class ScalarA, class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> operator*(const ScalarA& a, const Evaluation<Scalar, VarSetTag, numVars> &b)
+template <class RhsValueType, class ValueType, int numVars>
+Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
-    Evaluation<Scalar, VarSetTag, numVars> result;
+    Evaluation<ValueType, numVars> result;
 
     result.value = a*b.value;
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
@@ -413,8 +417,8 @@ Evaluation<Scalar, VarSetTag, numVars> operator*(const ScalarA& a, const Evaluat
     return result;
 }
 
-template <class Scalar, class VarSetTag, int numVars>
-std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, VarSetTag, numVars>& eval)
+template <class ValueType, int numVars>
+std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>& eval)
 {
     os << eval.value;
     return os;
@@ -449,13 +453,13 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<Scalar, VarSetTag, n
 
 namespace Opm {
 namespace LocalAd {
-template <class Scalar, class VarSetTag, int numVars>
-Evaluation<Scalar, VarSetTag, numVars> abs(const Evaluation<Scalar, VarSetTag, numVars>&);
+template <class ValueType, int numVars>
+Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>&);
 }}
 
 namespace std {
-template <class Scalar, class VarSetTag, int numVars>
-const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> abs(const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars>& x)
+template <class ValueType, int numVars>
+const Opm::LocalAd::Evaluation<ValueType, numVars> abs(const Opm::LocalAd::Evaluation<ValueType, numVars>& x)
 { return Opm::LocalAd::abs(x); }
 
 } // namespace std
@@ -473,11 +477,11 @@ const Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> abs(const Opm::LocalA
 #include <dune/common/ftraits.hh>
 
 namespace Dune {
-template <class Scalar, class VarSetTag, int numVars>
-struct FieldTraits<Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> >
+template <class ValueType, int numVars>
+struct FieldTraits<Opm::LocalAd::Evaluation<ValueType, numVars> >
 {
 public:
-    typedef Opm::LocalAd::Evaluation<Scalar, VarSetTag, numVars> field_type;
+    typedef Opm::LocalAd::Evaluation<ValueType, numVars> field_type;
     // setting real_type to field_type here potentially leads to slightly worse
     // performance, but at least it makes things compile.
     typedef field_type real_type;
