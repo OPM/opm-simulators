@@ -36,18 +36,18 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     template<class Grid>
-    class BlackoilSolventModel : public BlackoilModelBase<Grid, BlackoilSolventModel<Grid> >
+    class BlackoilSolventModel : public BlackoilModelBase<Grid, BlackoilSolventModel<Grid>, StandardWellsSolvent>
     {
     public:
 
         // ---------  Types and enums  ---------
 
-        typedef BlackoilModelBase<Grid, BlackoilSolventModel<Grid> > Base;
+        typedef BlackoilModelBase<Grid, BlackoilSolventModel<Grid>, StandardWellsSolvent> Base;
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
         // The next line requires C++11 support available in g++ 4.7.
         // friend Base;
-        friend class BlackoilModelBase<Grid, BlackoilSolventModel<Grid> >;
+        friend class BlackoilModelBase<Grid, BlackoilSolventModel<Grid>, StandardWellsSolvent>;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -104,10 +104,6 @@ namespace Opm {
         const bool is_miscible_;
         std::vector<ADB> mu_eff_;
         std::vector<ADB> b_eff_;
-        StandardWellsSolvent std_wells_;
-        const StandardWellsSolvent& stdWells() const { return std_wells_; }
-        StandardWellsSolvent& stdWells() { return std_wells_; }
-
 
         // Need to declare Base members we want to use here.
         using Base::grid_;
@@ -134,7 +130,7 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        // using Base::stdWells;
+        using Base::stdWells;
         using Base::wells;
         using Base::variableState;
         using Base::computeGasPressure;

@@ -36,7 +36,11 @@ namespace Opm {
             using Base = StandardWells;
 
             // ---------  Public methods  ---------
-            explicit StandardWellsSolvent(const Wells* wells, const SolventPropsAdFromDeck& solvent_props, const int solvent_pos);
+            explicit StandardWellsSolvent(const Wells* wells);
+
+            // added the Solvent related
+            // TODO: Should add interface in StandardWells, so this can be put in the constructor
+            void initilazeSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos);
 
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
@@ -59,8 +63,8 @@ namespace Opm {
                                            std::vector<ADB>& mob_perfcells,
                                            std::vector<ADB>& b_perfcells) const;
         protected:
-            const SolventPropsAdFromDeck& solvent_props_;
-            const int solvent_pos_;
+            const SolventPropsAdFromDeck* solvent_props_;
+            int solvent_pos_;
 
         };
 

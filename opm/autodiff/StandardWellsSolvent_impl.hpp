@@ -32,13 +32,19 @@ namespace Opm
 
 
 
-    StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg,
-                                               const SolventPropsAdFromDeck& solvent_props,
-                                               const int solvent_pos)
+    StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg)
         : Base(wells_arg)
-        , solvent_props_(solvent_props)
-        , solvent_pos_(solvent_pos)
     {
+    }
+
+
+
+
+
+    void StandardWellsSolvent::initilazeSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos)
+    {
+        solvent_props_ = solvent_props;
+        solvent_pos_ = solvent_pos;
     }
 
 
@@ -129,7 +135,7 @@ namespace Opm
             // to handle solvent related
             {
 
-                const Vector bs = solvent_props_.bSolvent(avg_press_ad,well_cells).value();
+                const Vector bs = solvent_props_->bSolvent(avg_press_ad,well_cells).value();
                 //const V bs_eff = subset(rq_[solvent_pos_].b,well_cells).value();
 
                 // number of cells
@@ -161,7 +167,7 @@ namespace Opm
                 bg = bg * (ones - F_solvent);
                 bg = bg + F_solvent * bs;
 
-                const Vector& rhos = solvent_props_.solventSurfaceDensity(well_cells);
+                const Vector& rhos = solvent_props_->solventSurfaceDensity(well_cells);
                 rhog = ( (ones - F_solvent) * rhog ) + (F_solvent * rhos);
             }
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;

@@ -89,8 +89,7 @@ namespace Opm {
           has_solvent_(has_solvent),
           solvent_pos_(detail::solventPos(fluid.phaseUsage())),
           solvent_props_(solvent_props),
-          is_miscible_(is_miscible),
-          std_wells_(wells_arg, solvent_props, solvent_pos_)
+          is_miscible_(is_miscible)
 
     {
         if (has_solvent_) {
@@ -105,6 +104,8 @@ namespace Opm {
             }
 
             residual_.matbalscale.resize(fluid_.numPhases() + 1, 0.0031); // use the same as gas
+
+            stdWells().initilazeSolvent(&solvent_props_, solvent_pos_);
         }
         if (is_miscible_) {
             mu_eff_.resize(fluid_.numPhases() + 1, ADB::null());
