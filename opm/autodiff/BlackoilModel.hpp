@@ -41,10 +41,10 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     template<class Grid>
-    class BlackoilModel : public BlackoilModelBase<Grid, BlackoilModel<Grid>, StandardWells>
+    class BlackoilModel : public BlackoilModelBase<Grid, StandardWells, BlackoilModel<Grid> >
     {
     public:
-        typedef BlackoilModelBase<Grid, BlackoilModel<Grid>, StandardWells> Base;
+        typedef BlackoilModelBase<Grid, StandardWells, BlackoilModel<Grid> > Base;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to

@@ -36,18 +36,18 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     template<class Grid>
-    class BlackoilSolventModel : public BlackoilModelBase<Grid, BlackoilSolventModel<Grid>, StandardWellsSolvent>
+    class BlackoilSolventModel : public BlackoilModelBase<Grid, StandardWellsSolvent, BlackoilSolventModel<Grid> >
     {
     public:
 
         // ---------  Types and enums  ---------
 
-        typedef BlackoilModelBase<Grid, BlackoilSolventModel<Grid>, StandardWellsSolvent> Base;
+        typedef BlackoilModelBase<Grid, StandardWellsSolvent, BlackoilSolventModel<Grid> > Base;
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
         // The next line requires C++11 support available in g++ 4.7.
         // friend Base;
-        friend class BlackoilModelBase<Grid, BlackoilSolventModel<Grid>, StandardWellsSolvent>;
+        friend class BlackoilModelBase<Grid, StandardWellsSolvent, BlackoilSolventModel<Grid> >;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to

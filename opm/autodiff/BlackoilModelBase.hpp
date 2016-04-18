@@ -105,7 +105,7 @@ namespace Opm {
     /// to simplify assembly of the jacobian matrix.
     /// \tparam  Grid            UnstructuredGrid or CpGrid.
     /// \tparam  Implementation  Provides concrete state types.
-    template<class Grid, class Implementation, class WellModel>
+    template<class Grid, class WellModel, class Implementation>
     class BlackoilModelBase
     {
     public:
