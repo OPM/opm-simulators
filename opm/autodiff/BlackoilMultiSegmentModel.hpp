@@ -25,6 +25,7 @@
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateMultiSegment.hpp>
 #include <opm/autodiff/WellMultiSegment.hpp>
+#include <opm/autodiff/StandardWells.hpp>
 
 namespace Opm {
 
@@ -48,11 +49,11 @@ namespace Opm {
     /// \tparam  Grid            UnstructuredGrid or CpGrid.
     /// \tparam  Implementation  Provides concrete state types.
     template<class Grid>
-    class BlackoilMultiSegmentModel : public BlackoilModelBase<Grid, BlackoilMultiSegmentModel<Grid>>
+    class BlackoilMultiSegmentModel : public BlackoilModelBase<Grid, StandardWells, BlackoilMultiSegmentModel<Grid> >
     {
     public:
 
-        typedef BlackoilModelBase<Grid, BlackoilMultiSegmentModel<Grid> > Base; // base class
+        typedef BlackoilModelBase<Grid, StandardWells, BlackoilMultiSegmentModel<Grid> > Base; // base class
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
         typedef BlackoilMultiSegmentSolutionState SolutionState;
