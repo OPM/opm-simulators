@@ -26,6 +26,7 @@
 #include <opm/autodiff/BlackoilModelBase.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/StandardWells.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 
 namespace Opm {
@@ -40,10 +41,10 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     template<class Grid>
-    class BlackoilModel : public BlackoilModelBase<Grid, BlackoilModel<Grid> >
+    class BlackoilModel : public BlackoilModelBase<Grid, BlackoilModel<Grid>, StandardWells>
     {
     public:
-        typedef BlackoilModelBase<Grid, BlackoilModel<Grid> > Base;
+        typedef BlackoilModelBase<Grid, BlackoilModel<Grid>, StandardWells> Base;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to

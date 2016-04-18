@@ -32,7 +32,6 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/StandardWells.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 
 #include <array>
@@ -106,7 +105,7 @@ namespace Opm {
     /// to simplify assembly of the jacobian matrix.
     /// \tparam  Grid            UnstructuredGrid or CpGrid.
     /// \tparam  Implementation  Provides concrete state types.
-    template<class Grid, class Implementation>
+    template<class Grid, class Implementation, class WellModel>
     class BlackoilModelBase
     {
     public:
@@ -276,7 +275,7 @@ namespace Opm {
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        StandardWells                   std_wells_;
+        WellModel                       std_wells_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -328,11 +327,11 @@ namespace Opm {
             return static_cast<const Implementation&>(*this);
         }
 
-        /// return the StandardWells object
-        StandardWells& stdWells() { return std_wells_; }
-        const StandardWells& stdWells() const { return std_wells_; }
+        /// return the WellModel object
+        WellModel& stdWells() { return std_wells_; }
+        const WellModel& stdWells() const { return std_wells_; }
 
-        /// return the Well struct in the StandardWells
+        /// return the Well struct in the WellModel
         const Wells& wells() const { return std_wells_.wells(); }
 
         /// return true if wells are available in the reservoir
