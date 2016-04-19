@@ -222,12 +222,13 @@ namespace Opm
             // Increment timer, remember well state.
             ++timer;
             prev_well_state = well_state;
-            // Compute Well potentials (only used to determine default guide rates for group controlled wells)
-            // TODO: add some logic to avoid unnecessary calulations of well potentials.
-            asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
+            // Compute Well potentials if they are needed
+            // Only used to determine default guide rates for group controlled wells
+            if ( param_.getDefault("compute_well_potentials", false ) ) {
+                asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
+            }
 
         }
-
         // Write final simulation state.
         output_writer_.writeTimeStep( timer, state, prev_well_state );
 
