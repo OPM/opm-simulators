@@ -90,7 +90,7 @@ try
     Opm::DeckConstPtr deck = parser->parseFile(deck_filename , parseContext);
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck, parseContext));
     const double grav = param.getDefault("gravity", unit::gravity);
-    GridManager gm(deck);
+    GridManager gm(eclipseState->getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
     BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param);
     warnIfUnusedParams(param);
