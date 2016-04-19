@@ -1744,7 +1744,7 @@ namespace detail {
                     const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
 
                     if (well_type == INJECTOR) {
-                        double dp = detail::computeHydrostaticCorrection(
+                        double dp = wellhelpers::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
                                    stdWells().wellPerforationDensities(), gravity);
                         const double bhp = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
@@ -1754,7 +1754,7 @@ namespace detail {
                         }
                     }
                     else if (well_type == PRODUCER) {
-                        double dp = detail::computeHydrostaticCorrection(
+                        double dp = wellhelpers::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
                                     stdWells().wellPerforationDensities(), gravity);
 
@@ -1779,7 +1779,7 @@ namespace detail {
         // compute well potentials
         V aliveWells;
         std::vector<ADB> well_potentials;
-        asImpl().computeWellFlux(state0, mob_perfcells,  b_perfcells, aliveWells, well_potentials);
+        asImpl().stdWells().computeWellFlux(state0, fluid_.phaseUsage(), active_, mob_perfcells,  b_perfcells, aliveWells, well_potentials);
 
         // store well potentials in the well state
         // transform to a single vector instead of separate vectors pr phase
