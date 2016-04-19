@@ -380,9 +380,6 @@ namespace Opm {
         computeAccum(const SolutionState& state,
                      const int            aix  );
 
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
-
         void
         assembleMassBalanceEq(const SolutionState& state);
 
@@ -410,6 +407,8 @@ namespace Opm {
                               const std::vector<ADB>& mob_perfcells,
                               const std::vector<ADB>& b_perfcells,
                               WellState& well_state);
+
+        void
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                            const SolutionState& state,
                                            const WellState& xw);

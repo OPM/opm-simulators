@@ -799,41 +799,6 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    void 
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    computeWellConnectionPressures(const SolutionState& state,
-                                   const WellState& xw)
-    {
-        if( ! localWellsActive() ) return ;
-
-        using namespace Opm::AutoDiffGrid;
-        // 1. Compute properties required by computeConnectionPressureDelta().
-        //    Note that some of the complexity of this part is due to the function
-        //    taking std::vector<double> arguments, and not Eigen objects.
-        std::vector<double> b_perf;
-        std::vector<double> rsmax_perf;
-        std::vector<double> rvmax_perf;
-        std::vector<double> surf_dens_perf;
-        asImpl().stdWells().computePropertiesForWellConnectionPressures(state, xw, fluid_, active_, phaseCondition_, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-
-        // Extract well connection depths.
-        const typename WellModel::Vector depth = cellCentroidsZToEigen(grid_);
-        const typename WellModel::Vector pdepth = subset(depth, asImpl().stdWells().wellOps().well_cells);
-        const int nperf = wells().well_connpos[wells().number_of_wells];
-        const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
-
-        // Gravity
-        const double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
-
-        asImpl().stdWells().computeWellConnectionDensitesPressures(xw, fluid_, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, grav);
-
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
     assemble(const ReservoirState& reservoir_state,
@@ -842,6 +807,9 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
 
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        const V depth = cellCentroidsZToEigen(grid_);
+
         // If we have VFP tables, we need the well connection
         // pressures for the "simple" hydrostatic correction
         // between well depth and vfp table depth.
@@ -849,14 +817,15 @@ namespace detail {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            asImpl().computeWellConnectionPressures(state0, well_state);
+            // asImpl().computeWellConnectionPressures(state0, well_state);
+            // Extract well connection depths.
+            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
         }
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
         // asImpl().updateWellControls(well_state);
         // asImpl().stdWells().updateWellControls(well_state);
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         asImpl().stdWells().updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
 
         // Create the primary variables.
@@ -869,7 +838,8 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            asImpl().computeWellConnectionPressures(state0, well_state);
+            // asImpl().computeWellConnectionPressures(state0, well_state);
+            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -1133,6 +1103,9 @@ namespace detail {
             }
         }
 
+        // gravity
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+
         int it  = 0;
         bool converged;
         do {
@@ -1147,7 +1120,6 @@ namespace detail {
             asImpl().stdWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
             asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             asImpl().stdWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             asImpl().stdWells().addWellControlEq(wellSolutionState, well_state, aliveWells,
                                                  active_, vfp_properties_, gravity, residual_);
             converged = getWellConvergence(it);
@@ -1201,7 +1173,9 @@ namespace detail {
                 std::vector<ADB::M> old_derivs = state.qs.derivative();
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
-            asImpl().computeWellConnectionPressures(state, well_state);
+            // asImpl().computeWellConnectionPressures(state, well_state);
+            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+            asImpl().stdWells().computeWellConnectionPressures(state, well_state, fluid_, active_, phaseCondition(), depth, gravity);
         }
 
         if (!converged) {

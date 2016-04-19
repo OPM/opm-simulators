@@ -133,29 +133,39 @@ namespace Opm {
                                  const VFPProperties& vfp_properties,
                                  WellState& well_state);
 
-           template <class WellState>
-           void updateWellControls(const Opm::PhaseUsage& pu,
-                                   const double gravity,
-                                   const VFPProperties& vfp_properties,
-                                   const bool terminal_output,
-                                   const std::vector<bool>& active,
-                                   WellState& xw) const;
+            template <class WellState>
+            void updateWellControls(const Opm::PhaseUsage& pu,
+                                    const double gravity,
+                                    const VFPProperties& vfp_properties,
+                                    const bool terminal_output,
+                                    const std::vector<bool>& active,
+                                    WellState& xw) const;
 
-           // TODO: should LinearisedBlackoilResidual also be a template class?
-           template <class SolutionState>
-           void addWellFluxEq(const std::vector<ADB>& cq_s,
-                              const SolutionState& state,
-                              LinearisedBlackoilResidual& residual);
+            // TODO: should LinearisedBlackoilResidual also be a template class?
+            template <class SolutionState>
+            void addWellFluxEq(const std::vector<ADB>& cq_s,
+                               const SolutionState& state,
+                               LinearisedBlackoilResidual& residual);
 
-           // TODO: some parameters, like gravity, maybe it is better to put in the member list
-           template <class SolutionState, class WellState>
-           void addWellControlEq(const SolutionState& state,
-                                 const WellState& xw,
-                                 const Vector& aliveWells,
-                                 const std::vector<bool> active,
-                                 const VFPProperties& vfp_properties,
-                                 const double gravity,
-                                 LinearisedBlackoilResidual& residual);
+            // TODO: some parameters, like gravity, maybe it is better to put in the member list
+            template <class SolutionState, class WellState>
+            void addWellControlEq(const SolutionState& state,
+                                  const WellState& xw,
+                                  const Vector& aliveWells,
+                                  const std::vector<bool> active,
+                                  const VFPProperties& vfp_properties,
+                                  const double gravity,
+                                  LinearisedBlackoilResidual& residual);
+
+            template <class SolutionState, class WellState>
+            void computeWellConnectionPressures(const SolutionState& state,
+                                                const WellState& xw,
+                                                const BlackoilPropsAdInterface& fluid,
+                                                const std::vector<bool>& active,
+                                                const std::vector<PhasePresence>& phaseCondition,
+                                                const Vector& depth,
+                                                const double gravity);
+
 
 
 

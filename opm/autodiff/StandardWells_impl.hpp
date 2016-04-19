@@ -289,6 +289,42 @@ namespace Opm
 
 
 
+    template <class SolutionState, class WellState>
+    void
+    StandardWells::
+    computeWellConnectionPressures(const SolutionState& state,
+                                   const WellState& xw,
+                                   const BlackoilPropsAdInterface& fluid,
+                                   const std::vector<bool>& active,
+                                   const std::vector<PhasePresence>& phaseCondition,
+                                   const Vector& depth,
+                                   const double gravity)
+    {
+        if( ! localWellsActive() ) return ;
+        // 1. Compute properties required by computeConnectionPressureDelta().
+        //    Note that some of the complexity of this part is due to the function
+        //    taking std::vector<double> arguments, and not Eigen objects.
+        std::vector<double> b_perf;
+        std::vector<double> rsmax_perf;
+        std::vector<double> rvmax_perf;
+        std::vector<double> surf_dens_perf;
+        computePropertiesForWellConnectionPressures(state, xw, fluid, active, phaseCondition,
+                                                    b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+
+        // Extract well connection depths
+        // TODO: depth_perf should be a member of the StandardWells class
+        const Vector pdepth = subset(depth, wellOps().well_cells);
+        const int nperf = wells().well_connpos[wells().number_of_wells];
+        const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
+
+        computeWellConnectionDensitesPressures(xw, fluid, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity);
+
+    }
+
+
+
+
+
     template <class ReservoirResidualQuant, class SolutionState>
     void
     StandardWells::
