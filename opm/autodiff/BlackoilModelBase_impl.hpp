@@ -1712,14 +1712,14 @@ namespace detail {
             const int nwc = well_controls_get_num(ctrl);
             //Loop over all controls until we find a BHP control
             //or a THP control that specifies what we need.
-            //Pick the value that gives largest potential flow
+            //Pick the value that gives the most restrictive flow
             for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
 
                 if (well_controls_iget_type(ctrl, ctrl_index) == BHP) {
                     bhps[w] = well_controls_iget_target(ctrl, ctrl_index);
                 }
 
-                if(well_controls_iget_type(ctrl, ctrl_index) == THP) {
+                if (well_controls_iget_type(ctrl, ctrl_index) == THP) {
                     double aqua = 0.0;
                     double liquid = 0.0;
                     double vapour = 0.0;
@@ -1746,10 +1746,10 @@ namespace detail {
                     if (well_type == INJECTOR) {
                         double dp = wellhelpers::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
-                                   stdWells().wellPerforationDensities(), gravity);
+                                    stdWells().wellPerforationDensities(), gravity);
                         const double bhp = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                        // pick the bhp that gives the largest potentials i.e. largest bhp for injectors
-                        if ( bhp > bhps[w]) {
+                        // apply the strictes of the bhp controlls i.e. smallest bhp for injectors
+                        if ( bhp < bhps[w]) {
                             bhps[w] = bhp;
                         }
                     }
@@ -1759,8 +1759,8 @@ namespace detail {
                                     stdWells().wellPerforationDensities(), gravity);
 
                         const double bhp = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                        // pick the bhp that gives the largest potentials i.e. smalest bhp for producers
-                        if ( bhp < bhps[w]) {
+                        // apply the strictes of the bhp controlls i.e. largest bhp for injectors
+                        if ( bhp > bhps[w]) {
                             bhps[w] = bhp;
                         }
                     }
@@ -1769,6 +1769,7 @@ namespace detail {
                     }
                 }
             }
+
         }
 
         // use bhp limit from control
@@ -1789,6 +1790,7 @@ namespace detail {
             cq += superset(well_potentials[phase].value(), Span(nperf, np, phase), nperf*np);
         }
         well_state.wellPotentials().assign(cq.data(), cq.data() + nperf*np);
+
     }
 
 
