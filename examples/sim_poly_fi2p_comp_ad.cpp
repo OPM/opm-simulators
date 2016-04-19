@@ -168,9 +168,9 @@ try
 
     if (eclipseState->get3DProperties().hasDeckDoubleGridProperty("PORV")) {
         const auto& porv = eclipseState->get3DProperties().getDoubleGridProperty("PORV").getData();
-        grid.reset(new GridManager(eclipseState->getEclipseGrid(), porv));
+        grid.reset(new GridManager(eclipseState->getInputGrid(), porv));
     } else {
-        grid.reset(new GridManager(eclipseState->getEclipseGrid()));
+        grid.reset(new GridManager(eclipseState->getInputGrid()));
     }
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);

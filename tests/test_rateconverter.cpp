@@ -71,7 +71,7 @@ struct TestFixture : public Setup
 {
     TestFixture()
         : Setup()
-        , grid (deck)
+        , grid (eclState->getInputGrid())
         , ad_props(deck, eclState, *grid.c_grid(), param.getDefault("init_rock", false))
     {
     }

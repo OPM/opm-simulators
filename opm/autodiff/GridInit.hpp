@@ -54,7 +54,7 @@ namespace Opm
     public:
         /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
         GridInit(DeckConstPtr, EclipseStateConstPtr eclipse_state, const std::vector<double>& porv)
-            : grid_manager_(eclipse_state->getEclipseGrid(), porv)
+            : grid_manager_(eclipse_state->getInputGrid(), porv)
         {
         }
         /// Access the created grid.

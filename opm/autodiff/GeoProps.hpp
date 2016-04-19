@@ -107,7 +107,7 @@ namespace Opm
             }
 
             // Get grid from parser.
-            EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
+            EclipseGridConstPtr eclgrid = eclState->getInputGrid();
 
             // Pore volume.
             // New keywords MINPVF will add some PV due to OPM cpgrid process algorithm.
@@ -277,7 +277,7 @@ namespace Opm
         int numCells = Opm::AutoDiffGrid::numCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
         const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
-        EclipseGridConstPtr eclgrid = eclState->getEclipseGrid();
+        EclipseGridConstPtr eclgrid = eclState->getInputGrid();
         const auto& porv = eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             const int nx = cartdims[0];

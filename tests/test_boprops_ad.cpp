@@ -71,7 +71,7 @@ struct TestFixture : public Setup
 {
     TestFixture()
         : Setup()
-        , grid (deck)
+        , grid (eclState->getInputGrid())
         , boprops_ad(deck, eclState, *grid.c_grid(), param.getDefault("init_rock", false))
     {
     }
@@ -89,7 +89,7 @@ struct TestFixtureAd : public Setup
 {
     TestFixtureAd()
         : Setup()
-        , grid (deck)
+        , grid (eclState->getInputGrid())
         , props(deck, eclState, *grid.c_grid(),
                 param.getDefault("init_rock", false))
     {
