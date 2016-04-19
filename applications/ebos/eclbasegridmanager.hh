@@ -171,7 +171,7 @@ public:
      * to write EGRID files (which tends to be difficult with a plain Dune::CpGrid)
      */
     Opm::EclipseGridConstPtr eclGrid() const
-    { return eclState()->getEclipseGrid(); }
+    { return eclState()->getInputGrid(); }
 
     /*!
      * \brief Returns the name of the case.

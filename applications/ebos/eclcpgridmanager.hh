@@ -171,7 +171,7 @@ protected:
         const std::vector<double> &porv = gridProps.getDoubleGridProperty("PORV").getData();
 
         grid_ = new Dune::CpGrid();
-        grid_->processEclipseFormat(this->eclState()->getEclipseGrid(),
+        grid_->processEclipseFormat(this->eclState()->getInputGrid(),
                                     /*isPeriodic=*/false,
                                     /*flipNormals=*/false,
                                     /*clipZ=*/false,
@@ -182,7 +182,7 @@ protected:
         // is allergic to distributed grids and the simulation grid is distributed before
         // the initial condition is calculated.
         equilGrid_ = new Dune::CpGrid();
-        equilGrid_->processEclipseFormat(this->eclState()->getEclipseGrid(),
+        equilGrid_->processEclipseFormat(this->eclState()->getInputGrid(),
                                          /*isPeriodic=*/false,
                                          /*flipNormals=*/false,
                                          /*clipZ=*/false,

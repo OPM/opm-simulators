@@ -667,7 +667,7 @@ protected:
     {
         auto eclStatePtr = simulator_.gridManager().eclState();
         auto deckSchedule = eclStatePtr->getSchedule();
-        auto eclGrid = eclStatePtr->getEclipseGrid();
+        auto eclGrid = eclStatePtr->getInputGrid();
 
         assert( int(eclGrid->getNX()) == simulator_.gridManager().cartesianDimensions()[ 0 ] );
         assert( int(eclGrid->getNY()) == simulator_.gridManager().cartesianDimensions()[ 1 ] );
