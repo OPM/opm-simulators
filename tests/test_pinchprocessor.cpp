@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(Processing)
     Opm::DeckConstPtr deck = parser->parseFile(filename, parseContext);
     std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(deck, parseContext));
     const auto& porv = eclstate->get3DProperties().getDoubleGridProperty("PORV").getData();
-    EclipseGridConstPtr eclgrid = eclstate->getEclipseGrid();
+    EclipseGridConstPtr eclgrid = eclstate->getInputGrid();
 
     BOOST_CHECK_EQUAL(eclgrid->getMinpvMode(), MinpvMode::EclSTD);
 

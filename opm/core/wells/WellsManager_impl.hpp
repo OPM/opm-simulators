@@ -390,7 +390,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     DoubleArray ntg_glob(eclipseState, "NTG", 1.0);
     NTGArray    ntg(ntg_glob, global_cell);
 
-    EclipseGridConstPtr eclGrid = eclipseState->getEclipseGrid();
+    EclipseGridConstPtr eclGrid = eclipseState->getInputGrid();
 
     // use cell thickness (dz) from eclGrid
     // dz overwrites values calculated by WellDetails::getCubeDim

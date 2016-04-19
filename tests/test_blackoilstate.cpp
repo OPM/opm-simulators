@@ -28,6 +28,13 @@ using namespace Opm;
 using namespace std;
 
 
+// ACTNUM 1 998*2 3
+std::vector<int> get_testBlackoilStateActnum() {
+    std::vector<int> actnum(10 * 10 * 10, 2);
+    actnum.front() = 1;
+    actnum.back() = 3;
+    return actnum;
+}
 
 BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
 
@@ -35,12 +42,20 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
     const string filename1 = "testBlackoilState1.DATA";
     const string filename2 = "testBlackoilState2.DATA";
     Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck1(parser->parseFile(filename1, parseContext));
-    Opm::DeckConstPtr deck2(parser->parseFile(filename2, parseContext));
 
-    GridManager gridManager1(deck1);
+    Opm::DeckConstPtr deck1(parser->parseFile(filename1, parseContext));
+    auto eg1 = std::make_shared<Opm::EclipseGrid>(deck1);
+    std::vector<int> actnum = get_testBlackoilStateActnum();
+    eg1->resetACTNUM(actnum.data());
+
+
+    Opm::DeckConstPtr deck2(parser->parseFile(filename2, parseContext));
+    auto eg2 = std::make_shared<Opm::EclipseGrid>(deck2);
+
+    GridManager gridManager1(eg1);
     const UnstructuredGrid& grid1 = *gridManager1.c_grid();
-    GridManager gridManager2(deck2);
+
+    GridManager gridManager2(eg2);
     const UnstructuredGrid& grid2 = *gridManager2.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid1 ) , UgGridHelpers::numFaces( grid1 ) , 3);
@@ -58,8 +73,11 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
     Opm::ParseContext parseContext;
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::DeckConstPtr deck(parser->parseFile(filename , parseContext));
+    auto eg = std::make_shared<Opm::EclipseGrid>(deck);
+    std::vector<int> actnum = get_testBlackoilStateActnum();
+    eg->resetACTNUM(actnum.data());
 
-    GridManager gridManager(deck);
+    GridManager gridManager(eg);
     const UnstructuredGrid& grid = *gridManager.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid ) , UgGridHelpers::numFaces( grid ) , 3);

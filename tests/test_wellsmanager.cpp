@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
     Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
 
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck, parseContext));
-    Opm::GridManager gridManager(deck);
+    Opm::GridManager gridManager(eclipseState->getInputGrid());
 
     {
         Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
     Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
 
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck, parseContext));
-    Opm::GridManager gridManager(deck);
+    Opm::GridManager gridManager(eclipseState->getInputGrid());
 
     Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid(), NULL);
     Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid(), NULL);
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
     Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
 
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck, parseContext));
-    Opm::GridManager gridManager(deck);
+    Opm::GridManager gridManager(eclipseState->getInputGrid());
 
     Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid(), NULL);
     Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid(), NULL);
@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
     Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
 
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck, parseContext));
-    Opm::GridManager gridManager(deck);
+    Opm::GridManager gridManager(eclipseState->getInputGrid());
 
     Opm::WellsManager wellsManager2(eclipseState, 2, *gridManager.c_grid(), NULL);
 
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
 
     Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck, parseContext));
-    Opm::GridManager gridManager(deck);
+    Opm::GridManager gridManager(eclipseState->getInputGrid());
 
     Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
 
