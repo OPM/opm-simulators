@@ -203,7 +203,7 @@ namespace Opm {
 
         // using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
-        using Base::addWellControlEq;
+        // using Base::addWellControlEq;
         using Base::computeRelPerm;
 
 

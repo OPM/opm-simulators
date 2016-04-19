@@ -147,6 +147,16 @@ namespace Opm {
                               const SolutionState& state,
                               LinearisedBlackoilResidual& residual);
 
+           // TODO: some parameters, like gravity, maybe it is better to put in the member list
+           template <class SolutionState, class WellState>
+           void addWellControlEq(const SolutionState& state,
+                                 const WellState& xw,
+                                 const Vector& aliveWells,
+                                 const std::vector<bool> active,
+                                 const VFPProperties& vfp_properties,
+                                 const double gravity,
+                                 LinearisedBlackoilResidual& residual);
+
 
 
         protected:

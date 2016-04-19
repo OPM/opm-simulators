@@ -414,11 +414,6 @@ namespace Opm {
                                            const SolutionState& state,
                                            const WellState& xw);
 
-        void
-        addWellControlEq(const SolutionState& state,
-                         const WellState& xw,
-                         const V& aliveWells);
-
         bool getWellConvergence(const int iteration);
 
         bool isVFPActive() const;

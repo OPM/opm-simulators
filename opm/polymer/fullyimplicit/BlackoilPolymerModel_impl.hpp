@@ -575,7 +575,7 @@ namespace Opm {
         stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         stdWells().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        addWellControlEq(state, well_state, aliveWells);
+        stdWells().addWellControlEq(state, well_state, aliveWells, active_, vfp_properties_, gravity, residual_);
     }
 
 

@@ -147,7 +147,7 @@ namespace Opm {
         using Base::maxResidualAllowed;
         // using Base::updateWellControls;
         using Base::computeWellConnectionPressures;
-        using Base::addWellControlEq;
+        // using Base::addWellControlEq;
         // using Base::computePropertiesForWellConnectionPressures;
 
         std::vector<ADB>
