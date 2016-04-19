@@ -62,7 +62,7 @@ public:
      *        another parameter cache.
      */
     template <class OtherCache>
-    void assignPersistentData(const OtherCache& other)
+    void assignPersistentData(const OtherCache& /* other */)
     {}
 
     /*!
