@@ -230,8 +230,6 @@ public:
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
                                      const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalProblem,
@@ -247,7 +245,7 @@ public:
             const Evaluation& dh_dp =
                 Rs * temperature*
                 Region1::tau(temperature)*
-                Region1::dpi_dp(Toolbox::value(pv))*
+                Region1::dpi_dp(pv)*
                 Region1::ddgamma_dtaudpi(temperature, pv);
 
             return
