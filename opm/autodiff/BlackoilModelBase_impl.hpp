@@ -1723,9 +1723,12 @@ namespace detail {
     }
 
 
-    template <class Grid, class Implementation>
+
+
+
+    template <class Grid, class WellModel, class Implementation>
     void
-    BlackoilModelBase<Grid, Implementation>::
+    BlackoilModelBase<Grid, WellModel, Implementation>::
     computeWellPotentials(const SolutionState& state,
                           const std::vector<ADB>& mob_perfcells,
                           const std::vector<ADB>& b_perfcells,
