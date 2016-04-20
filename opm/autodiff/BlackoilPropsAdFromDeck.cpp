@@ -373,7 +373,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                 muLad = oilPvt_->saturatedViscosity(pvtRegionIdx, TLad, pLad);
             }
             else {
-                RsLad.value = rs.value()[i];
+                if (phase_usage_.phase_used[Gas]) {
+                    RsLad.value = rs.value()[i];
+                }
                 muLad = oilPvt_->viscosity(pvtRegionIdx, TLad, pLad, RsLad);
             }
 
@@ -388,9 +390,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         std::vector<ADB::M> jacs(num_blocks);
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(dmudp_diag, po.derivative()[block], jacs[block]);
-            ADB::M temp;
-            fastSparseProduct(dmudr_diag, rs.derivative()[block], temp);
-            jacs[block] += temp;
+            if (phase_usage_.phase_used[Gas]) {
+                ADB::M temp;
+                fastSparseProduct(dmudr_diag, rs.derivative()[block], temp);
+                jacs[block] += temp;
+            }
         }
         return ADB::function(std::move(mu), std::move(jacs));
     }
@@ -532,6 +536,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         typedef Opm::LocalAd::Evaluation<double, /*size=*/2> LadEval;
 
+        // FIXME: What is Lad?
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
         LadEval RsLad = 0.0;
@@ -545,12 +550,18 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             pLad.value = po.value()[i];
             TLad.value = T.value()[i];
 
-            if (cond[i].hasFreeGas()) {
-                bLad = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+            if (phase_usage_.phase_used[Gas]) {
+                //RS/RV only makes sense when gas phase is active
+                if (cond[i].hasFreeGas()) {
+                    bLad = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                }
+                else {
+                    RsLad.value = rs.value()[i];
+                    bLad = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
+                }
             }
             else {
-                RsLad.value = rs.value()[i];
-                bLad = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
+                bLad = 0.0;
             }
 
             b[i] = bLad.value;
@@ -562,11 +573,14 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         ADB::M dbdr_diag(dbdr.matrix().asDiagonal());
         const int num_blocks = po.numBlocks();
         std::vector<ADB::M> jacs(num_blocks);
+
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(dbdp_diag, po.derivative()[block], jacs[block]);
-            ADB::M temp;
-            fastSparseProduct(dbdr_diag, rs.derivative()[block], temp);
-            jacs[block] += temp;
+            if (phase_usage_.phase_used[Gas]) {
+                ADB::M temp;
+                fastSparseProduct(dbdr_diag, rs.derivative()[block], temp);
+                jacs[block] += temp;
+            }
         }
         return ADB::function(std::move(b), std::move(jacs));
     }
@@ -853,6 +867,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         std::vector<ADB> adbCapPressures;
         adbCapPressures.reserve(3);
         const ADB* s[3] = { &sw, &so, &sg };
+        //const std::vector<int>& block_pattern = sw.blockPattern();
+        assert(sw.blockPattern() == so.blockPattern());
+        assert(sw.blockPattern() == sg.blockPattern());
         for (int phase1 = 0; phase1 < 3; ++phase1) {
             if (phase_usage_.phase_used[phase1]) {
                 const int phase1_pos = phase_usage_.phase_pos[phase1];

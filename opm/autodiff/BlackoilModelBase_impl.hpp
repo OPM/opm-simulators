@@ -658,12 +658,16 @@ namespace detail {
                 sg = isSg_*xvar + isRv_*so;
                 so -= sg;
 
-                if (active_[ Oil ]) {
-                    // RS and RV is only defined if both oil and gas phase are active.
+                //Compute the phase pressures before computing RS/RV
+                {
                     const ADB& sw = (active_[ Water ]
                                              ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADB::constant(V::Zero(nc, 1)));
+                                             : ADB::constant(V::Zero(nc, 1), sg.blockPattern()));
                     state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
+                }
+
+                if (active_[ Oil ]) {
+                    // RS and RV is only defined if both oil and gas phase are active.
                     const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
                         state.rs = (1-isRs_)*rsSat + isRs_*xvar;
@@ -677,6 +681,14 @@ namespace detail {
                         state.rv = rvSat;
                     }
                 }
+            }
+            else {
+                // Compute phase pressures also if gas phase is not active
+                const ADB& sw = (active_[ Water ]
+                                         ? state.saturation[ pu.phase_pos[ Water ] ]
+                                         : ADB::constant(V::Zero(nc, 1), so.blockPattern()));
+                const ADB& sg = ADB::constant(V::Zero(nc, 1), so.blockPattern());
+                state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
             }
 
             if (active_[ Oil ]) {

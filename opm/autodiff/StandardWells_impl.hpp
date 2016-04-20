@@ -219,26 +219,22 @@ namespace Opm
         }
         assert(active[Oil]);
         const Vector perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
+        if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rs = subset(state.rs, well_cells);
             const Vector bo = fluid.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
             // const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
             const Vector rssat = fluid.rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
-        } else {
-            rsmax_perf.assign(nperf, 0.0);
-        }
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
+
             const ADB perf_rv = subset(state.rv, well_cells);
             const Vector bg = fluid.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
             // const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
             const Vector rvsat = fluid.rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
             rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
-        } else {
-            rvmax_perf.assign(nperf, 0.0);
         }
+
         // b is row major, so can just copy data.
         b_perf.assign(b.data(), b.data() + nperf * pu.num_phases);
 
@@ -347,8 +343,6 @@ namespace Opm
         const Vector& cdp = wellPerforationPressureDiffs();
         // Extract needed quantities for the perforation cells
         const ADB& p_perfcells = subset(state.pressure, well_cells);
-        const ADB& rv_perfcells = subset(state.rv, well_cells);
-        const ADB& rs_perfcells = subset(state.rs, well_cells);
 
         // Perforation pressure
         const ADB perfpressure = (wellOps().w2p * state.bhp) + cdp;
@@ -401,6 +395,8 @@ namespace Opm
             const int gaspos = pu.phase_pos[Gas];
             const ADB cq_psOil = cq_ps[oilpos];
             const ADB cq_psGas = cq_ps[gaspos];
+            const ADB& rv_perfcells = subset(state.rv, well_cells);
+            const ADB& rs_perfcells = subset(state.rs, well_cells);
             cq_ps[gaspos] += rs_perfcells * cq_psOil;
             cq_ps[oilpos] += rv_perfcells * cq_psGas;
         }
@@ -440,20 +436,45 @@ namespace Opm
 
         // compute volume ratio between connection at standard conditions
         ADB volumeRatio = ADB::constant(Vector::Zero(nperf));
-        const ADB d = Vector::Constant(nperf,1.0) -  rv_perfcells * rs_perfcells;
-        for (int phase = 0; phase < np; ++phase) {
-            ADB tmp = cmix_s[phase];
 
-            if (phase == Oil && active[Gas]) {
-                const int gaspos = pu.phase_pos[Gas];
-                tmp -= rv_perfcells * cmix_s[gaspos] / d;
-            }
-            if (phase == Gas && active[Oil]) {
-                const int oilpos = pu.phase_pos[Oil];
-                tmp -= rs_perfcells * cmix_s[oilpos] / d;
-            }
-            volumeRatio += tmp / b_perfcells[phase];
+        if (active[Water]) {
+            const int watpos = pu.phase_pos[Water];
+            volumeRatio += cmix_s[watpos] / b_perfcells[watpos];
         }
+
+        if (active[Oil] && active[Gas]) {
+            // Incorporate RS/RV factors if both oil and gas active
+            const ADB& rv_perfcells = subset(state.rv, well_cells);
+            const ADB& rs_perfcells = subset(state.rs, well_cells);
+            const ADB d = Vector::Constant(nperf,1.0) - rv_perfcells * rs_perfcells;
+
+            const int oilpos = pu.phase_pos[Oil];
+            const int gaspos = pu.phase_pos[Gas];
+
+
+            // First compute for Oil
+            {
+                const ADB tmp = cmix_s[oilpos] - (rv_perfcells * cmix_s[gaspos] / d);
+                volumeRatio += tmp / b_perfcells[oilpos];
+            }
+
+            // Then compute for Gas
+            {
+                const ADB tmp = cmix_s[gaspos] - (rs_perfcells * cmix_s[oilpos] / d);
+                volumeRatio += tmp / b_perfcells[gaspos];
+            }
+        }
+        else {
+            if (active[Oil]) {
+                const int oilpos = pu.phase_pos[Oil];
+                volumeRatio += cmix_s[oilpos] / b_perfcells[oilpos];
+            }
+            if (active[Gas]) {
+                const int gaspos = pu.phase_pos[Gas];
+                volumeRatio += cmix_s[gaspos] / b_perfcells[gaspos];
+            }
+        }
+
 
         // injecting connections total volumerates at standard conditions
         ADB cqt_is = cqt_i/volumeRatio;
