@@ -120,7 +120,7 @@ namespace Opm
 
         unsigned int totalNonlinearIterations = 0;
         unsigned int totalLinearIterations = 0;
-
+        bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
         std::vector<double> well_potentials;
 
         // Main simulation loop.
@@ -222,9 +222,9 @@ namespace Opm
             // Increment timer, remember well state.
             ++timer;
             prev_well_state = well_state;
-            // Compute Well potentials if they are needed
-            // Only used to determine default guide rates for group controlled wells
-            if ( param_.getDefault("compute_well_potentials", false ) ) {
+            // The well potentials are only computed if they are needed
+            // For now thay are only used to determine default guide rates for group controlled wells
+            if ( is_well_potentials_computed ) {
                 asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
             }
 

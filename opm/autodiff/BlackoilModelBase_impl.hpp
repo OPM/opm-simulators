@@ -1750,7 +1750,7 @@ namespace detail {
                                         wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
                                         stdWells().wellPerforationDensities(), gravity);
                             const double bhp = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                            // apply the strictes of the bhp controlls i.e. smallest bhp for injectors
+                            // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
                             if ( bhp < bhps[w]) {
                                 bhps[w] = bhp;
                             }
@@ -1761,7 +1761,7 @@ namespace detail {
                                         stdWells().wellPerforationDensities(), gravity);
 
                             const double bhp = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                            // apply the strictes of the bhp controlls i.e. largest bhp for injectors
+                            // apply the strictest of the bhp controlls i.e. largest bhp for producers
                             if ( bhp > bhps[w]) {
                                 bhps[w] = bhp;
                             }
