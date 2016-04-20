@@ -741,7 +741,7 @@ namespace Opm
     }
 
     /// Initialize surface volume from pressure and saturation by z = As.
-    /// Here  saturation is used as an intial guess for z in the
+    /// Here  saturation is used as an initial guess for z in the
     /// computation of A.
     template <class Props, class State>
     void initBlackoilSurfvol(const UnstructuredGrid& grid,
@@ -801,9 +801,9 @@ namespace Opm
                                         State& state)
     {
 
-        if (props.numPhases() != 3) {
-            OPM_THROW(std::runtime_error, "initBlackoilSurfvol() is only supported in three-phase simulations.");
-        }
+        //if (props.numPhases() != 3) {
+        //    OPM_THROW(std::runtime_error, "initBlackoilSurfvol() is only supported in three-phase simulations.");
+        //}
         const std::vector<double>& rs = state.gasoilratio();
         const std::vector<double>& rv = state.rv();
 
@@ -828,6 +828,8 @@ namespace Opm
         std::vector<double> capPressures(number_of_cells*np);
         props.capPress(number_of_cells,&state.saturation()[0],&allcells[0],&capPressures[0],NULL);
 
+        /*
+         * FIXME: This never used?
         std::vector<double> Pw(number_of_cells);
         std::vector<double> Pg(number_of_cells);
 
@@ -835,6 +837,7 @@ namespace Opm
             Pw[c] = state.pressure()[c] + capPressures[c*np + BlackoilPhases::Aqua];
             Pg[c] = state.pressure()[c] + capPressures[c*np + BlackoilPhases::Vapour];
         }
+        */
 
 
         double z_tmp;

@@ -88,8 +88,14 @@ namespace Opm
         }
         pu.num_phases = 0;
         for (int i = 0; i < BlackoilPhases::MaxNumPhases; ++i) {
-            pu.phase_pos[i] = pu.num_phases;
-            pu.num_phases += pu.phase_used[i];
+            if (pu.phase_used[i]) {
+                pu.phase_pos[i] = pu.num_phases;
+                pu.num_phases += 1;
+            }
+            else {
+                //Set to ridiculous value on purpose: should never be used
+                pu.phase_pos[i] = -1;
+            }
         }
 
         // Only 2 or 3 phase systems handled.
