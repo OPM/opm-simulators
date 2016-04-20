@@ -132,8 +132,8 @@ public:
 #ifndef NDEBUG
         typedef Opm::MathToolbox<Scalar> Toolbox;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            assert(std::abs(FsToolbox::value(fs.temperature(phaseIdx))
-                            - Toolbox::value(temperature_)) < 1e-30);
+            assert(std::abs(FsToolbox::scalarValue(fs.temperature(phaseIdx))
+                            - Toolbox::scalarValue(temperature_)) < 1e-30);
         }
 #endif
     }

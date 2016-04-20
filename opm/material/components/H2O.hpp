@@ -230,8 +230,6 @@ public:
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
                                      const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalProblem,
@@ -247,7 +245,7 @@ public:
             const Evaluation& dh_dp =
                 Rs * temperature*
                 Region1::tau(temperature)*
-                Region1::dpi_dp(Toolbox::value(pv))*
+                Region1::dpi_dp(pv)*
                 Region1::ddgamma_dtaudpi(temperature, pv);
 
             return
@@ -590,7 +588,7 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = Toolbox::value(pv)*1e-8;
+            Scalar eps = Toolbox::scalarValue(pv)*1e-8;
             Evaluation v0 = volumeRegion2_(temperature, pv);
             Evaluation v1 = volumeRegion2_(temperature, pv + eps);
             Evaluation dv_dp = (v1 - v0)/eps;
@@ -652,7 +650,7 @@ public:
         Evaluation deltaP = pressure*2;
         Valgrind::CheckDefined(pressure);
         Valgrind::CheckDefined(deltaP);
-        for (int i = 0; i < 5 && std::abs(Toolbox::value(pressure)*1e-9) < std::abs(Toolbox::value(deltaP)); ++i) {
+        for (int i = 0; i < 5 && std::abs(Toolbox::scalarValue(pressure)*1e-9) < std::abs(Toolbox::scalarValue(deltaP)); ++i) {
             Evaluation f = gasDensity(temperature, pressure) - density;
 
             Evaluation df_dp;

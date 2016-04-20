@@ -306,9 +306,9 @@ public:
         // < epsilon/2 and interpolate between the oridinary and the regularized kro between
         // epsilon and epsilon/2
         const Scalar epsilon = 1e-5;
-        if (Toolbox::value(Sw_ow) - Swco < epsilon) {
+        if (Toolbox::scalarValue(Sw_ow) - Swco < epsilon) {
             Evaluation kro2 = (kro_ow + kro_go)/2;;
-            if (Toolbox::value(Sw_ow) - Swco > epsilon/2) {
+            if (Toolbox::scalarValue(Sw_ow) - Swco > epsilon/2) {
                 Evaluation kro1 = (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
                 Evaluation alpha = (epsilon - (Sw_ow - Swco))/(epsilon/2);
                 return kro2*alpha + kro1*(1 - alpha);
@@ -332,9 +332,9 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        Scalar Sw = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-        Scalar So = FsToolbox::value(fluidState.saturation(oilPhaseIdx));
-        Scalar Sg = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
+        Scalar Sw = FsToolbox::scalarValue(fluidState.saturation(waterPhaseIdx));
+        Scalar So = FsToolbox::scalarValue(fluidState.saturation(oilPhaseIdx));
+        Scalar Sg = FsToolbox::scalarValue(fluidState.saturation(gasPhaseIdx));
 
         if (params.inconsistentHysteresisUpdate()) {
             Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));

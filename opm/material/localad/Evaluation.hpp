@@ -171,7 +171,7 @@ public:
     }
 
     template <class RhsValueType>
-    Evaluation& operator*=(const RhsValueType& other)
+    Evaluation& operator*=(RhsValueType other)
     {
         // values and derivatives are multiplied
         this->value *= other;
@@ -202,9 +202,10 @@ public:
     Evaluation& operator/=(const RhsValueType& other)
     {
         // values and derivatives are divided
-        this->value /= other;
+        auto tmp = 1.0/other;
+        this->value *= tmp;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            this->derivatives[varIdx] /= other;
+            this->derivatives[varIdx] *= tmp;
 
         return *this;
     }

@@ -492,8 +492,8 @@ public:
             const Evaluation& delta = f/fPrime;
             pSat -= delta;
 
-            Scalar absDelta = std::abs(Toolbox::value(delta));
-            if (absDelta < Toolbox::value(pSat) * 1e-10 || absDelta < 1e-4)
+            Scalar absDelta = std::abs(Toolbox::scalarValue(delta));
+            if (absDelta < Toolbox::scalarValue(pSat) * 1e-10 || absDelta < 1e-4)
                 return pSat;
         }
 

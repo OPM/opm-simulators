@@ -1042,9 +1042,9 @@ protected:
         size_t n = numSamples();
 
         // create a vector containing 0...n-1
-        std::vector<unsigned> idxVector(static_cast<unsigned>(n));
+        std::vector<unsigned> idxVector(n);
         for (unsigned i = 0; i < n; ++i)
-            idxVector[static_cast<unsigned>(i)] = i;
+            idxVector[i] = i;
 
         // sort the indices according to the x values of the sample
         // points
@@ -1148,8 +1148,10 @@ protected:
         M.solve(moments, d);
 
         moments.resize(numSamples());
-        for (int i = static_cast<int>(numSamples()) - 2; i >= 0; --i)
-            moments[static_cast<unsigned>(i+1)] = moments[static_cast<unsigned>(i)];
+        for (int i = static_cast<int>(numSamples()) - 2; i >= 0; --i) {
+            unsigned ui = static_cast<unsigned>(i);
+            moments[ui+1] = moments[ui];
+        }
         moments[0] = moments[numSamples() - 1];
 
         // convert the moments to slopes at the sample points
@@ -1731,7 +1733,7 @@ protected:
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        Scalar x = Toolbox::value(xEval);
+        Scalar x = Toolbox::scalarValue(xEval);
 
         // bisection
         size_t iLow = 0;

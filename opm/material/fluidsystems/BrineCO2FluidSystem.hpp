@@ -579,7 +579,7 @@ private:
         theta = T - 273.15;
 
         // Regularization
-        Scalar scalarTheta = LhsToolbox::value(theta);
+        Scalar scalarTheta = LhsToolbox::scalarValue(theta);
         Scalar S_lSAT = f[0] + scalarTheta*(f[1] + scalarTheta*(f[2] + scalarTheta*f[3]));
         if (S > S_lSAT)
             S = S_lSAT;

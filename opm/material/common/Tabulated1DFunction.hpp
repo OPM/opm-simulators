@@ -259,7 +259,7 @@ public:
             segIdx = numSamples() - 2;
         else {
             assert(xValues_.front() <= x && x <= xValues_.back());
-            segIdx = findSegmentIndex_(Toolbox::value(x));
+            segIdx = findSegmentIndex_(Toolbox::scalarValue(x));
         }
 
         Scalar x0 = xValues_[segIdx];
