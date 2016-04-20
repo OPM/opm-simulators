@@ -5,10 +5,10 @@
 
 Module: opm-material
 Description: This module contains the thermodynamic framework used by OPM
-Version: 2016.04-pre
-Label: 2016.04-pre
-Maintainer: and@poware.org
-MaintainerName: Andreas Lauser
+Version: 2016.04.0
+Label: 2016.04.0
+Maintainer: opm@opm-project.org
+MaintainerName: The Open Porous Media Project
 Url: http://opm-project.org
 Depends: dune-common opm-common
 Suggests: opm-parser
