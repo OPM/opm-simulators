@@ -424,7 +424,7 @@ namespace Opm
             // Create grid.
             const std::vector<double>& porv =
                     eclipse_state_->get3DProperties().getDoubleGridProperty("PORV").getData();
-            grid_init_.reset(new GridInit<Grid>(deck_, eclipse_state_, porv));
+            grid_init_.reset(new GridInit<Grid>(eclipse_state_, porv));
             const Grid& grid = grid_init_->grid();
 
             // Create material law manager.
