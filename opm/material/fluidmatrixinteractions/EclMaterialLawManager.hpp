@@ -117,7 +117,8 @@ public:
                       const std::vector<int>& compressedToCartesianElemIdx)
     {
         // get the number of saturation regions and the number of cells in the deck
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0));
+        int ntsFun = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get<int>(0);
+        unsigned numSatRegions = static_cast<unsigned>(ntsFun);
         size_t numCompressedElems = compressedToCartesianElemIdx.size();
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
@@ -355,7 +356,7 @@ private:
                                 const std::vector<int>& compressedToCartesianElemIdx,
                                 const std::vector<int>& satnumRegionArray)
     {
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0));
+        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get<int>(0));
         unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
 
         // read the end point scaling configuration. this needs to be done only once per

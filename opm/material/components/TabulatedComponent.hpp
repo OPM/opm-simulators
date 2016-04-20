@@ -547,7 +547,7 @@ private:
         if (alphaT < 0 || alphaT >= nTemp_ - 1)
             return std::numeric_limits<Scalar>::quiet_NaN();
 
-        unsigned iT = (unsigned) Toolbox::scalarValue(alphaT);
+        size_t iT = static_cast<size_t>(Toolbox::scalarValue(alphaT));
         alphaT -= iT;
 
         return
@@ -567,20 +567,17 @@ private:
             return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        int iT =
-            std::max<int>(0,
-                          std::min<int>(nTemp_ - 2,
-                                        static_cast<int>(Toolbox::scalarValue(alphaT))));
+        size_t iT = static_cast<size_t>(Toolbox::scalarValue(alphaT));
         alphaT -= iT;
 
         Evaluation alphaP1 = pressLiquidIdx_(p, iT);
         Evaluation alphaP2 = pressLiquidIdx_(p, iT + 1);
 
-        int iP1 =
+        size_t iP1 =
             std::max<int>(0,
-                          std::min<int>(nPress_ - 2,
-                                        static_cast<int>(Toolbox::scalarValue(alphaP1))));
-        int iP2 =
+                             std::min<int>(nPress_ - 2,
+                                           static_cast<int>(Toolbox::scalarValue(alphaP1))));
+        size_t iP2 =
             std::max<int>(0,
                           std::min<int>(nPress_ - 2,
                                         static_cast<int>(Toolbox::scalarValue(alphaP2))));
@@ -618,7 +615,7 @@ private:
             return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
         }
 
-        int iT =
+        size_t iT =
             std::max<int>(0,
                           std::min<int>(nTemp_ - 2,
                                         static_cast<int>(Toolbox::scalarValue(alphaT))));
@@ -626,10 +623,10 @@ private:
 
         Evaluation alphaP1 = pressGasIdx_(p, iT);
         Evaluation alphaP2 = pressGasIdx_(p, iT + 1);
-        int iP1 =
+        size_t iP1 =
             std::max<int>(0, std::min<int>(nPress_ - 2,
                                            static_cast<int>(Toolbox::scalarValue(alphaP1))));
-        int iP2 =
+        size_t iP2 =
             std::max<int>(0,
                           std::min<int>(nPress_ - 2,
                                         static_cast<int>(Toolbox::scalarValue(alphaP2))));
@@ -661,7 +658,7 @@ private:
     static Evaluation interpolateGasTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
     {
         Evaluation alphaT = tempIdx_(T);
-        int iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
         alphaT -= iT;
 
         Evaluation alphaP1 = densityGasIdx_(rho, iT);
@@ -684,13 +681,13 @@ private:
     static Evaluation interpolateLiquidTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
     {
         Evaluation alphaT = tempIdx_(T);
-        int iT = std::max<int>(0, std::min<int>(nTemp_ - 2, (int) alphaT));
+        unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, static_cast<int>(alphaT)));
         alphaT -= iT;
 
         Evaluation alphaP1 = densityLiquidIdx_(rho, iT);
         Evaluation alphaP2 = densityLiquidIdx_(rho, iT + 1);
-        unsigned iP1 = std::max<int>(0, std::min<int>(nDensity_ - 2, (int) alphaP1));
-        unsigned iP2 = std::max<int>(0, std::min<int>(nDensity_ - 2, (int) alphaP2));
+        unsigned iP1 = std::max<int>(0, std::min<int>(nDensity_ - 2, static_cast<int>(alphaP1)));
+        unsigned iP2 = std::max<int>(0, std::min<int>(nDensity_ - 2, static_cast<int>(alphaP2)));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 

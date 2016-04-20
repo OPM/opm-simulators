@@ -228,7 +228,7 @@ public:
         Scalar i = xToI(x, /*extrapolate=*/false);
         const auto &col1SamplePoints = samples_.at(unsigned(i));
         const auto &col2SamplePoints = samples_.at(unsigned(i));
-        Scalar alpha = i - int(i);
+        Scalar alpha = i - static_cast<int>(i);
 
         Scalar minY =
                 alpha*std::get<1>(col1SamplePoints.front()) +
@@ -262,8 +262,8 @@ public:
         // table ...
         Evaluation alpha = xToI(x, extrapolate);
         size_t i =
-            static_cast<size_t>(std::max(0, std::min(static_cast<int>(numX() - 2),
-                                                     static_cast<int>(Toolbox::value(alpha)))));
+            static_cast<size_t>(std::max(0, std::min(static_cast<int>(numX()) - 2,
+                                                     static_cast<int>(Toolbox::scalarValue(alpha)))));
         alpha -= i;
 
         Evaluation beta1;
@@ -272,14 +272,13 @@ public:
         beta1 = yToJ(i, y, extrapolate);
         beta2 = yToJ(i + 1, y, extrapolate);
 
-        size_t j1 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i) - 2),
-                                                             static_cast<int>(Toolbox::value(beta1)))));
-        size_t j2 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i + 1) - 2),
-                                                             static_cast<int>(Toolbox::value(beta2)))));
-        
+        size_t j1 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i)) - 2,
+                                                             static_cast<int>(Toolbox::scalarValue(beta1)))));
+        size_t j2 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i + 1)) - 2,
+                                                             static_cast<int>(Toolbox::scalarValue(beta2)))));
+
         beta1 -= j1;
         beta2 -= j2;
-
 
         // evaluate the two function values for the same y value ...
         Evaluation s1, s2;
