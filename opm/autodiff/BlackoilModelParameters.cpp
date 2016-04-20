@@ -48,6 +48,7 @@ namespace Opm
         tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
         solve_welleq_initially_ = param.getDefault("solve_welleq_initially",solve_welleq_initially_);
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
+        compute_well_potentials_ = param.getDefault("compute_well_potentials", compute_well_potentials_);
     }
 
 
@@ -65,6 +66,7 @@ namespace Opm
         tolerance_wells_ = 1.0e-3;
         solve_welleq_initially_ = true;
         update_equations_scaling_ = false;
+        compute_well_potentials_ = false;
     }
 
 

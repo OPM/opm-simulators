@@ -49,6 +49,10 @@ namespace Opm
         /// Update scaling factors for mass balance equations
         bool update_equations_scaling_;
 
+        /// Compute well potentials, needed to calculate default guide rates for group
+        /// controlled wells
+        bool compute_well_potentials_;
+
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const parameter::ParameterGroup& param );
 

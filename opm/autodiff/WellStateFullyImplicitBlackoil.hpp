@@ -102,6 +102,9 @@ namespace Opm
                 current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
             }
 
+            well_potentials_.clear();
+            well_potentials_.resize(nperf * np, 0.0);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if( ! prevState.wellMap().empty() )
@@ -184,9 +187,14 @@ namespace Opm
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
 
+        /// One rate per phase and well connection.
+        std::vector<double>& wellPotentials() { return well_potentials_; }
+        const std::vector<double>& wellPotentials() const { return well_potentials_; }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
+        std::vector<double> well_potentials_;
     };
 
 } // namespace Opm

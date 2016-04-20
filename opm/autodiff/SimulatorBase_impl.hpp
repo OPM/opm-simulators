@@ -120,7 +120,7 @@ namespace Opm
 
         unsigned int totalNonlinearIterations = 0;
         unsigned int totalLinearIterations = 0;
-
+        bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
         std::vector<double> well_potentials;
 
         // Main simulation loop.
@@ -222,12 +222,13 @@ namespace Opm
             // Increment timer, remember well state.
             ++timer;
             prev_well_state = well_state;
-            // Compute Well potentials (only used to determine default guide rates for group controlled wells)
-            // TODO: add some logic to avoid unnecessary calulations of well potentials.
-            asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
+            // The well potentials are only computed if they are needed
+            // For now thay are only used to determine default guide rates for group controlled wells
+            if ( is_well_potentials_computed ) {
+                asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
+            }
 
         }
-
         // Write final simulation state.
         output_writer_.writeTimeStep( timer, state, prev_well_state );
 
@@ -396,30 +397,12 @@ namespace Opm
     {
         const int nw = wells->number_of_wells;
         const int np = wells->number_of_phases;
-
         well_potentials.clear();
-        well_potentials.resize(nw*np,0.0);       
+        well_potentials.resize(nw*np,0.0);
         for (int w = 0; w < nw; ++w) {
             for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
-                const double well_cell_pressure = x.pressure()[wells->well_cells[perf]];
-                const double drawdown_used = well_cell_pressure - xw.perfPress()[perf];
-                const WellControls* ctrl = wells->ctrls[w];
-                const int nwc = well_controls_get_num(ctrl);
-                //Loop over all controls until we find a BHP control
-                //that specifies what we need...
-                double bhp = 0.0;
-                for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
-                    if (well_controls_iget_type(ctrl, ctrl_index) == BHP) {
-                        bhp = well_controls_iget_target(ctrl, ctrl_index);
-                    }
-                    // TODO: do something for thp;
-                }
-                // Calculate the pressure difference in the well perforation
-                const double dp = xw.perfPress()[perf] - xw.bhp()[w];
-                const double drawdown_maximum = well_cell_pressure - (bhp + dp);
-
                 for (int phase = 0; phase < np; ++phase) {
-                    well_potentials[w*np + phase] += (drawdown_maximum / drawdown_used * xw.perfPhaseRates()[perf*np + phase]);
+                    well_potentials[w*np + phase] += xw.wellPotentials()[perf*np + phase];
                 }
             }
         }
