@@ -40,7 +40,7 @@ namespace Opm
     {
     public:
         /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
-        GridInit(DeckConstPtr, EclipseStateConstPtr, const std::vector<double>&)
+        GridInit(EclipseStateConstPtr, const std::vector<double>&)
         {
             OPM_THROW(std::logic_error, "Found no specialization for GridInit for the requested Grid class.");
         }
@@ -53,8 +53,8 @@ namespace Opm
     {
     public:
         /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
-        GridInit(DeckConstPtr, EclipseStateConstPtr eclipse_state, const std::vector<double>& porv)
-            : grid_manager_(eclipse_state->getEclipseGrid(), porv)
+        GridInit(EclipseStateConstPtr eclipse_state, const std::vector<double>& porv)
+            : grid_manager_(eclipse_state->getInputGrid(), porv)
         {
         }
         /// Access the created grid.
@@ -74,9 +74,9 @@ namespace Opm
     {
     public:
         /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
-        GridInit(DeckConstPtr deck, EclipseStateConstPtr, const std::vector<double>& porv)
+        GridInit(EclipseStateConstPtr eclipse_state, const std::vector<double>& porv)
         {
-            grid_.processEclipseFormat(deck, false, false, false, porv);
+            grid_.processEclipseFormat(eclipse_state->getInputGrid(), false, false, false, porv);
         }
         /// Access the created grid. Note that mutable access may be required for load balancing.
         Dune::CpGrid& grid()
