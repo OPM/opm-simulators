@@ -290,12 +290,12 @@ public:
         // assume the pressure to be 10% higher than the vapor
         // pressure
         Evaluation pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = Toolbox::value(pressure)*1e-7;
+        Scalar eps = Toolbox::scalarValue(pressure)*1e-7;
 
         Evaluation deltaP = pressure*2;
         for (int i = 0;
              i < 5
-                 && std::abs(Toolbox::value(pressure)*1e-9) < std::abs(Toolbox::value(deltaP));
+                 && std::abs(Toolbox::scalarValue(pressure)*1e-9) < std::abs(Toolbox::scalarValue(deltaP));
              ++i)
         {
             const Evaluation& f = liquidDensity(temperature, pressure) - density;

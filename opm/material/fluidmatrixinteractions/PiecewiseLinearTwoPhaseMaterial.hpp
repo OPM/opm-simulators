@@ -239,7 +239,7 @@ private:
         if (x >= xValues.back())
             return yValues.back();
 
-        size_t segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
+        size_t segIdx = findSegmentIndex_(xValues, Toolbox::scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -264,7 +264,7 @@ private:
         if (x <= xValues.back())
             return yValues.back();
 
-        size_t segIdx = findSegmentIndexDescending_(xValues, Toolbox::value(x));
+        size_t segIdx = findSegmentIndexDescending_(xValues, Toolbox::scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -284,12 +284,12 @@ private:
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
-        if (Toolbox::value(x) <= xValues.front())
+        if (Toolbox::scalarValue(x) <= xValues.front())
             return Toolbox::createConstant(0.0);
-        if (Toolbox::value(x) >= xValues.back())
+        if (Toolbox::scalarValue(x) >= xValues.back())
             return Toolbox::createConstant(0.0);
 
-        size_t segIdx = findSegmentIndex_(xValues, Toolbox::value(x));
+        size_t segIdx = findSegmentIndex_(xValues, Toolbox::scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];

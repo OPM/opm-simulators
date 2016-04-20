@@ -337,8 +337,8 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        Scalar Sw = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-        Scalar Sg = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
+        Scalar Sw = FsToolbox::scalarValue(fluidState.saturation(waterPhaseIdx));
+        Scalar Sg = FsToolbox::scalarValue(fluidState.saturation(gasPhaseIdx));
 
         params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
         params.gasOilParams().update(/*pcSw=*/1 - Sg, /*krwSw=*/1 - Sg, /*krnSw=*/1 - Sg);

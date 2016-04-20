@@ -241,7 +241,7 @@ protected:
             fluidState.setFugacityCoefficient(phaseIdx, i, phi);
 
             defect[i] = targetFug[i] - f;
-            absError = std::max(absError, std::abs(Toolbox::value(defect[i])));
+            absError = std::max(absError, std::abs(Toolbox::scalarValue(defect[i])));
         }
 
         // assemble jacobian matrix of the constraints for the composition
@@ -307,7 +307,7 @@ protected:
         Evaluation sumx = Toolbox::createConstant(0.0);
         for (unsigned i = 0; i < numComponents; ++i) {
             origComp[i] = fluidState.moleFraction(phaseIdx, i);
-            relError = std::max(relError, std::abs(Toolbox::value(x[i])));
+            relError = std::max(relError, std::abs(Toolbox::scalarValue(x[i])));
 
             sumx += Toolbox::abs(fluidState.moleFraction(phaseIdx, i));
             sumDelta += Toolbox::abs(x[i]);

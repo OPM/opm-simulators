@@ -304,7 +304,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        Scalar Sw = FsToolbox::value(fs.saturation(Traits::wettingPhaseIdx));
+        Scalar Sw = FsToolbox::scalarValue(fs.saturation(Traits::wettingPhaseIdx));
 
         if (Sw > 1 - 1e-5) {
             // if the absolute saturation is almost 1,
@@ -392,7 +392,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         // calculate the current apparent saturation
-        ScanningCurve *sc = findScanningCurve_(params, Toolbox::value(Sw));
+        ScanningCurve *sc = findScanningCurve_(params, Toolbox::scalarValue(Sw));
 
         // calculate the apparant saturation
         const Evaluation& Sw_app = absoluteToApparentSw_(params, Sw);

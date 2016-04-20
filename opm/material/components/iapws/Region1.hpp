@@ -63,8 +63,8 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         return
-            Toolbox::value(temperature) <= 623.15 &&
-            Toolbox::value(pressure) <= 100e6;
+            Toolbox::scalarValue(temperature) <= 623.15 &&
+            Toolbox::scalarValue(pressure) <= 100e6;
 
         // actually this is:
         /*

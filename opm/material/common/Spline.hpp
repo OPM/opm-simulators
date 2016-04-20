@@ -1731,7 +1731,7 @@ protected:
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        Scalar x = Toolbox::value(xEval);
+        Scalar x = Toolbox::scalarValue(xEval);
 
         // bisection
         size_t iLow = 0;

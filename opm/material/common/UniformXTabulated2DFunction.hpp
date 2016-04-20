@@ -252,7 +252,7 @@ public:
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
 #ifndef NDEBUG
-        if (!extrapolate && !applies(Toolbox::value(x), Toolbox::value(y))) {
+        if (!extrapolate && !applies(Toolbox::scalarValue(x), Toolbox::scalarValue(y))) {
             OPM_THROW(NumericalProblem,
                       "Attempt to get undefined table value (" << x << ", " << y << ")");
         };
