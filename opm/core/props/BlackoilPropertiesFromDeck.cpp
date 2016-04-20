@@ -322,8 +322,8 @@ namespace Opm
             this->compute_R_(n, p, T, z, cells, &R_[0]);
         }
         const auto& pu = phaseUsage();
-        bool oil_and_gas = pu.phase_pos[BlackoilPhases::Liquid] &&
-            pu.phase_pos[BlackoilPhases::Vapour];
+        bool oil_and_gas = pu.phase_used[BlackoilPhases::Liquid] &&
+            pu.phase_used[BlackoilPhases::Vapour];
         const int o = pu.phase_pos[BlackoilPhases::Liquid];
         const int g = pu.phase_pos[BlackoilPhases::Vapour];
 
