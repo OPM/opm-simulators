@@ -247,7 +247,7 @@ inline void testAll()
 
         const auto deck = parser.parseString(fam1DeckString, parseContext);
         const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseContext);
-        const auto eclGrid = eclState->getEclipseGrid();
+        const auto eclGrid = eclState->getInputGrid();
 
         size_t n = eclGrid->getCartesianSize();
         std::vector<int> compressedToCartesianIdx(n);
