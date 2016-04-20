@@ -27,6 +27,7 @@
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
+#include <opm/autodiff/StandardWells.hpp>
 
 namespace Opm {
 
@@ -40,18 +41,18 @@ namespace Opm {
     /// It uses automatic differentiation via the class AutoDiffBlock
     /// to simplify assembly of the jacobian matrix.
     template<class Grid>
-    class BlackoilPolymerModel : public BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> >
+    class BlackoilPolymerModel : public BlackoilModelBase<Grid, StandardWells, BlackoilPolymerModel<Grid> >
     {
     public:
 
         // ---------  Types and enums  ---------
 
-        typedef BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> > Base;
+        typedef BlackoilModelBase<Grid, StandardWells, BlackoilPolymerModel<Grid> > Base;
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
         // The next line requires C++11 support available in g++ 4.7.
         // friend Base;
-        friend class BlackoilModelBase<Grid, BlackoilPolymerModel<Grid> >;
+        friend class BlackoilModelBase<Grid, StandardWells, BlackoilPolymerModel<Grid> >;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
