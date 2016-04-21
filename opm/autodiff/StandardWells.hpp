@@ -185,6 +185,8 @@ namespace Opm {
                                      int& next) const;
 
 
+            std::vector<int>
+            variableWellStateIndices() const;
 
         protected:
             bool wells_active_;

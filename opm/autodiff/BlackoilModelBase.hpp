@@ -363,9 +363,6 @@ namespace Opm {
         std::vector<int>
         variableStateIndices() const;
 
-        std::vector<int>
-        variableWellStateIndices() const;
-
         SolutionState
         variableStateExtractVars(const ReservoirState& x,
                                  const std::vector<int>& indices,

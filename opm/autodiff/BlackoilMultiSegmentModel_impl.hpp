@@ -1559,7 +1559,7 @@ namespace Opm {
         V aliveWells;
         const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
-        std::vector<int> indices = variableWellStateIndices();
+        std::vector<int> indices = stdWells().variableWellStateIndices();
         SolutionState state0 = state;
         WellState well_state0 = well_state;
         makeConstantState(state0);

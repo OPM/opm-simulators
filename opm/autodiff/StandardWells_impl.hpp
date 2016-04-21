@@ -1130,4 +1130,22 @@ namespace Opm
         indices[Bhp] = next++;
     }
 
+
+
+
+
+    std::vector<int>
+    StandardWells::variableWellStateIndices() const
+    {
+        // Black oil model standard is 5 equation.
+        // For the pure well solve, only the well equations are picked.
+        std::vector<int> indices(5, -1);
+        int next = 0;
+
+        variableStateWellIndices(indices, next);
+
+        assert(next == 2);
+        return indices;
+    }
+
 }

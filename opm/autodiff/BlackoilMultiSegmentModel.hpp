@@ -223,7 +223,7 @@ namespace Opm {
         using Base::convergenceReduction;
         using Base::maxResidualAllowed;
         using Base::variableState;
-        using Base::variableWellStateIndices;
+        // using Base::variableWellStateIndices;
         using Base::asImpl;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
