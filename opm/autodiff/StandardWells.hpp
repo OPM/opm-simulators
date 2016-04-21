@@ -166,6 +166,18 @@ namespace Opm {
                                                 const Vector& depth,
                                                 const double gravity);
 
+            // state0 is non-constant, while it will not be used outside of the function
+            template <class SolutionState, class WellState>
+            void
+            computeWellPotentials(SolutionState& state0,
+                                  const std::vector<ADB>& mob_perfcells,
+                                  const std::vector<ADB>& b_perfcells,
+                                  const Opm::PhaseUsage& pu,
+                                  const std::vector<bool> active,
+                                  const VFPProperties& vfp_properties,
+                                  const bool compute_well_potentials,
+                                  const bool gravity,
+                                  WellState& well_state);
 
 
 

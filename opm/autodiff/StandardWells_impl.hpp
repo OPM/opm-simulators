@@ -1014,4 +1014,108 @@ namespace Opm
         // OPM_AD_DUMP(residual_.well_eq);
     }
 
+
+
+
+
+    template <class SolutionState, class WellState>
+    void
+    StandardWells::computeWellPotentials(SolutionState& state0,
+                                         const std::vector<ADB>& mob_perfcells,
+                                         const std::vector<ADB>& b_perfcells,
+                                         const Opm::PhaseUsage& pu,
+                                         const std::vector<bool> active,
+                                         const VFPProperties& vfp_properties,
+                                         const bool compute_well_potentials,
+                                         const bool gravity,
+                                         WellState& well_state)
+    {
+        //only compute well potentials if they are needed
+        if (compute_well_potentials) {
+            const int nw = wells().number_of_wells;
+            const int np = wells().number_of_phases;
+            Vector bhps = Vector::Zero(nw);
+            for (int w = 0; w < nw; ++w) {
+                const WellControls* ctrl = wells().ctrls[w];
+                const int nwc = well_controls_get_num(ctrl);
+                //Loop over all controls until we find a BHP control
+                //or a THP control that specifies what we need.
+                //Pick the value that gives the most restrictive flow
+                for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
+
+                    if (well_controls_iget_type(ctrl, ctrl_index) == BHP) {
+                        bhps[w] = well_controls_iget_target(ctrl, ctrl_index);
+                    }
+
+                    if (well_controls_iget_type(ctrl, ctrl_index) == THP) {
+                        double aqua = 0.0;
+                        double liquid = 0.0;
+                        double vapour = 0.0;
+
+                        if (active[ Water ]) {
+                            aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                        }
+                        if (active[ Oil ]) {
+                            liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+                        }
+                        if (active[ Gas ]) {
+                            vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
+                        }
+
+                        const int vfp        = well_controls_iget_vfp(ctrl, ctrl_index);
+                        const double& thp    = well_controls_iget_target(ctrl, ctrl_index);
+                        const double& alq    = well_controls_iget_alq(ctrl, ctrl_index);
+
+                        //Set *BHP* target by calculating bhp from THP
+                        const WellType& well_type = wells().type[w];
+
+                        if (well_type == INJECTOR) {
+                            double dp = wellhelpers::computeHydrostaticCorrection(
+                                        wells(), w, vfp_properties.getInj()->getTable(vfp)->getDatumDepth(),
+                                        wellPerforationDensities(), gravity);
+                            const double bhp = vfp_properties.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                            // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
+                            if ( bhp < bhps[w]) {
+                                bhps[w] = bhp;
+                            }
+                        }
+                        else if (well_type == PRODUCER) {
+                            double dp = wellhelpers::computeHydrostaticCorrection(
+                                        wells(), w, vfp_properties.getProd()->getTable(vfp)->getDatumDepth(),
+                                        wellPerforationDensities(), gravity);
+
+                            const double bhp = vfp_properties.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                            // apply the strictest of the bhp controlls i.e. largest bhp for producers
+                            if ( bhp > bhps[w]) {
+                                bhps[w] = bhp;
+                            }
+                        }
+                        else {
+                            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                        }
+                    }
+                }
+
+            }
+
+            // use bhp limit from control
+            state0.bhp = ADB::constant(bhps);
+
+            // compute well potentials
+            Vector aliveWells;
+            std::vector<ADB> well_potentials;
+            computeWellFlux(state0, pu, active, mob_perfcells,  b_perfcells, aliveWells, well_potentials);
+
+            // store well potentials in the well state
+            // transform to a single vector instead of separate vectors pr phase
+            const int nperf = wells().well_connpos[nw];
+            V cq = superset(well_potentials[0].value(), Span(nperf, np, 0), nperf*np);
+            for (int phase = 1; phase < np; ++phase) {
+                cq += superset(well_potentials[phase].value(), Span(nperf, np, phase), nperf*np);
+            }
+            well_state.wellPotentials().assign(cq.data(), cq.data() + nperf*np);
+        }
+
+    }
+
 }
