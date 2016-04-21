@@ -94,7 +94,7 @@ namespace Opm
             }
             else {
                 //Set to ridiculous value on purpose: should never be used
-                pu.phase_pos[i] = -1;
+                pu.phase_pos[i] = 2000000000;
             }
         }
 
