@@ -158,7 +158,6 @@ namespace Opm
                     WellState& xw);
 
         void computeWellPotentials(const Wells*                    wells,
-                                   const BlackoilState&            x,
                                    const WellState& xw,
                                    std::vector<double>& well_potentials);
 

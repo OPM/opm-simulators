@@ -225,7 +225,7 @@ namespace Opm
             // The well potentials are only computed if they are needed
             // For now thay are only used to determine default guide rates for group controlled wells
             if ( is_well_potentials_computed ) {
-                asImpl().computeWellPotentials(wells, state, well_state, well_potentials);
+                asImpl().computeWellPotentials(wells, well_state, well_potentials);
             }
 
         }
@@ -391,7 +391,6 @@ namespace Opm
 
     template <class Implementation>
     void SimulatorBase<Implementation>::computeWellPotentials(const Wells* wells,
-                                                              const BlackoilState& x,
                                                               const WellState& xw,
                                                               std::vector<double>& well_potentials)
     {
