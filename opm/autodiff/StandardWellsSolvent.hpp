@@ -39,7 +39,9 @@ namespace Opm {
             explicit StandardWellsSolvent(const Wells* wells);
 
             // added the Solvent related
-            void initSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos);
+            void initSolvent(const SolventPropsAdFromDeck* solvent_props,
+                             const int solvent_pos,
+                             const bool has_solvent);
 
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
@@ -64,6 +66,7 @@ namespace Opm {
         protected:
             const SolventPropsAdFromDeck* solvent_props_;
             int solvent_pos_;
+            bool has_solvent_;
 
         };
 
