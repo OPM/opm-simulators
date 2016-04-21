@@ -181,6 +181,8 @@ namespace Opm
                                                 std::vector<double>& rvmax_perf,
                                                 std::vector<double>& surf_dens_perf)
     {
+        static_cast<void>(active); // Silence unused argument warning in release mode.
+
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const int nw = wells().number_of_wells;
 
