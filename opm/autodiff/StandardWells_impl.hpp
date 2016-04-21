@@ -1118,4 +1118,16 @@ namespace Opm
 
     }
 
+
+
+
+
+    void
+    StandardWells::variableStateWellIndices(std::vector<int>& indices,
+                                            int& next) const
+    {
+        indices[Qs] = next++;
+        indices[Bhp] = next++;
+    }
+
 }

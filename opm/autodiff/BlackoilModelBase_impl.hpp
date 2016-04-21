@@ -604,8 +604,7 @@ namespace detail {
         if (active_[Gas]) {
             indices[Xvar] = next++;
         }
-        indices[Qs] = next++;
-        indices[Bhp] = next++;
+        asImpl().stdWells().variableStateWellIndices(indices, next);
         assert(next == fluid_.numPhases() + 2);
         return indices;
     }
