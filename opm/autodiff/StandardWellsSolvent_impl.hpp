@@ -36,6 +36,7 @@ namespace Opm
         : Base(wells_arg)
         , solvent_props_(nullptr)
         , solvent_pos_(-1)
+        , has_solvent_(false)
     {
     }
 
@@ -43,10 +44,14 @@ namespace Opm
 
 
 
-    void StandardWellsSolvent::initSolvent(const SolventPropsAdFromDeck* solvent_props, const int solvent_pos)
+    void
+    StandardWellsSolvent::initSolvent(const SolventPropsAdFromDeck* solvent_props,
+                                      const int solvent_pos,
+                                      const bool has_solvent)
     {
         solvent_props_ = solvent_props;
         solvent_pos_ = solvent_pos;
+        has_solvent_ = has_solvent;
     }
 
 
@@ -135,7 +140,7 @@ namespace Opm
             Vector bg = fluid.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             Vector rhog = fluid.surfaceDensity(pu.phase_pos[BlackoilPhases::Vapour], well_cells);
             // to handle solvent related
-            {
+            if (has_solvent_) {
 
                 const Vector bs = solvent_props_->bSolvent(avg_press_ad,well_cells).value();
                 //const V bs_eff = subset(rq_[solvent_pos_].b,well_cells).value();
@@ -205,7 +210,7 @@ namespace Opm
     {
         Base::extractWellPerfProperties(state, rq, np, fluid, active, mob_perfcells, b_perfcells);
         // handle the solvent related
-        {
+        if (has_solvent_) {
             int gas_pos = fluid.phaseUsage().phase_pos[Gas];
             const std::vector<int>& well_cells = wellOps().well_cells;
             const int nperf = well_cells.size();
