@@ -219,18 +219,20 @@ namespace Opm
         }
         assert(active[Oil]);
         const Vector perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
-        if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
-            const ADB perf_rs = subset(state.rs, well_cells);
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const ADB perf_rs = (state.rs.size() > 0) ? subset(state.rs, well_cells) : ADB::null();
             const Vector bo = fluid.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
-            // const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const ADB perf_rv = (state.rv.size() > 0) ? subset(state.rv, well_cells) : ADB::null();
+            const Vector bg = fluid.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
+        }
+        if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
             const Vector rssat = fluid.rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
 
-            const ADB perf_rv = subset(state.rv, well_cells);
-            const Vector bg = fluid.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
-            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
-            // const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
             const Vector rvsat = fluid.rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
             rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
         }

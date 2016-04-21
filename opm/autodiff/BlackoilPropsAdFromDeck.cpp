@@ -550,18 +550,19 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             pLad.value = po.value()[i];
             TLad.value = T.value()[i];
 
-            if (phase_usage_.phase_used[Gas]) {
-                //RS/RV only makes sense when gas phase is active
-                if (cond[i].hasFreeGas()) {
-                    bLad = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+            //RS/RV only makes sense when gas phase is active
+            if (cond[i].hasFreeGas()) {
+                bLad = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+            }
+            else {
+                if (rs.size() == 0) {
+                    // If FIXME
+                    RsLad.value = 0.0;
                 }
                 else {
                     RsLad.value = rs.value()[i];
-                    bLad = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
                 }
-            }
-            else {
-                bLad = 0.0;
+                bLad = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
             }
 
             b[i] = bLad.value;
@@ -867,9 +868,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         std::vector<ADB> adbCapPressures;
         adbCapPressures.reserve(3);
         const ADB* s[3] = { &sw, &so, &sg };
-        //const std::vector<int>& block_pattern = sw.blockPattern();
-        assert(sw.blockPattern() == so.blockPattern());
-        assert(sw.blockPattern() == sg.blockPattern());
         for (int phase1 = 0; phase1 < 3; ++phase1) {
             if (phase_usage_.phase_used[phase1]) {
                 const int phase1_pos = phase_usage_.phase_pos[phase1];

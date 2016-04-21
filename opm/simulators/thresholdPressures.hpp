@@ -110,20 +110,25 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
     // the inverse formation volume factors
     std::vector<PhasePresence> cond(numCells);
     for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-        const double sw = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Aqua]];
-        const double so = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid]];
-        const double sg = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour]];
-
-        if (pu.phase_used[BlackoilPhases::Aqua] && sw > 0.0) {
-            cond[cellIdx].setFreeWater();
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const double sw = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Aqua]];
+            if (sw > 0.0) {
+                cond[cellIdx].setFreeWater();
+            }
         }
 
-        if (pu.phase_used[BlackoilPhases::Liquid] && so > 0.0) {
-            cond[cellIdx].setFreeOil();
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const double so = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid]];
+            if (so > 0.0) {
+                cond[cellIdx].setFreeOil();
+            }
         }
 
-        if (pu.phase_used[BlackoilPhases::Vapour] && sg > 0.0) {
-            cond[cellIdx].setFreeGas();
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const double sg = initialState.saturation()[numPhases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour]];
+            if (sg > 0.0) {
+                cond[cellIdx].setFreeGas();
+            }
         }
     }
 
