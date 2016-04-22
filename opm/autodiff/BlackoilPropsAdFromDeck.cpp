@@ -536,7 +536,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         typedef Opm::LocalAd::Evaluation<double, /*size=*/2> LadEval;
 
-        // FIXME: What is Lad?
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
         LadEval RsLad = 0.0;
@@ -556,7 +555,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             }
             else {
                 if (rs.size() == 0) {
-                    // If FIXME
                     RsLad.value = 0.0;
                 }
                 else {

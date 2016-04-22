@@ -292,16 +292,6 @@ namespace Opm
         /// Elementwise operator -
         AutoDiffBlock operator-(const AutoDiffBlock& rhs) const
         {
-            /*
-            assert(val_.rows() > 0 || rhs.val_.rows() > 0);
-            if (val_.rows() == 0) {
-                return rhs*(-1.0);
-            }
-            if (rhs.val_.rows() == 0) {
-                return *this;
-            }
-            */
-
             if (jac_.empty() && rhs.jac_.empty()) {
                 return constant(val_ - rhs.val_);
             }
