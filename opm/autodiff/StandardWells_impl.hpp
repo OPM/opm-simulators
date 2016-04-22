@@ -1148,4 +1148,39 @@ namespace Opm
         return indices;
     }
 
+
+
+
+
+    template <class WellState>
+    void
+    StandardWells::variableWellStateInitials(const WellState& xw,
+                                             std::vector<Vector>& vars0) const
+    {
+        // Initial well rates.
+        if ( localWellsActive() )
+        {
+            // Need to reshuffle well rates, from phase running fastest
+            // to wells running fastest.
+            const int nw = wells().number_of_wells;
+            const int np = wells().number_of_phases;
+
+            // The transpose() below switches the ordering.
+            const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
+            const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
+            vars0.push_back(qs);
+
+            // Initial well bottom-hole pressure.
+            assert (not xw.bhp().empty());
+            const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
+            vars0.push_back(bhp);
+        }
+        else
+        {
+            // push null states for qs and bhp
+            vars0.push_back(V());
+            vars0.push_back(V());
+        }
+    }
+
 }

@@ -225,6 +225,7 @@ namespace Opm {
         using Base::variableState;
         // using Base::variableWellStateIndices;
         using Base::asImpl;
+        using Base::variableReservoirStateInitials;
 
         const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
 
@@ -233,6 +234,10 @@ namespace Opm {
 
         void updateWellState(const V& dwells,
                              WellState& well_state);
+
+        std::vector<V>
+        variableStateInitials(const ReservoirState& x,
+                              const WellState& xw) const;
 
         void
         variableWellStateInitials(const WellState& xw,

@@ -507,7 +507,7 @@ namespace detail {
         // and bhp and Q for the wells
         vars0.reserve(np + 1);
         variableReservoirStateInitials(x, vars0);
-        asImpl().variableWellStateInitials(xw, vars0);
+        asImpl().stdWells().variableWellStateInitials(xw, vars0);
         return vars0;
     }
 
@@ -547,41 +547,6 @@ namespace detail {
             const V rv = Eigen::Map<const V>(& x.rv()[0], x.rv().size());
             xvar = isRs_*rs + isRv_*rv + isSg_*sg;
             vars0.push_back(xvar);
-        }
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    variableWellStateInitials(const WellState& xw, std::vector<V>& vars0) const
-    {
-        // Initial well rates.
-        if ( stdWells().localWellsActive() )
-        {
-            // Need to reshuffle well rates, from phase running fastest
-            // to wells running fastest.
-            const int nw = wells().number_of_wells;
-            const int np = wells().number_of_phases;
-
-            // The transpose() below switches the ordering.
-            const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
-            const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
-            vars0.push_back(qs);
-
-            // Initial well bottom-hole pressure.
-            assert (not xw.bhp().empty());
-            const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
-            vars0.push_back(bhp);
-        }
-        else
-        {
-            // push null states for qs and bhp
-            vars0.push_back(V());
-            vars0.push_back(V());
         }
     }
 
@@ -1100,7 +1065,7 @@ namespace detail {
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
-            asImpl().variableWellStateInitials(well_state, vars0);
+            asImpl().stdWells().variableWellStateInitials(well_state, vars0);
             std::vector<ADB> vars = ADB::variables(vars0);
 
             SolutionState wellSolutionState = state0;

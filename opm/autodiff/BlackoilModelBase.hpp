@@ -356,9 +356,6 @@ namespace Opm {
         void
         variableReservoirStateInitials(const ReservoirState& x,
                                        std::vector<V>& vars0) const;
-        void
-        variableWellStateInitials(const WellState& xw,
-                                  std::vector<V>& vars0) const;
 
         std::vector<int>
         variableStateIndices() const;

@@ -188,6 +188,11 @@ namespace Opm {
             std::vector<int>
             variableWellStateIndices() const;
 
+            template <class WellState>
+            void
+            variableWellStateInitials(const WellState& xw,
+                                      std::vector<Vector>& vars0) const;
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
