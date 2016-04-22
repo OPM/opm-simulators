@@ -2,10 +2,10 @@
 # spec file for package opm-autodiff
 #
 
-%define tag rc4
+%define tag rc1
 
 Name:           opm-simulators
-Version:        2015.10
+Version:        2016.04
 Release:        0
 Summary:        Open Porous Media - core library
 License:        GPL-3.0
