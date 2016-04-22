@@ -27,6 +27,8 @@
 #include <opm/autodiff/WellMultiSegment.hpp>
 #include <opm/autodiff/StandardWells.hpp>
 
+#include <opm/autodiff/MultisegmentWells.hpp>
+
 namespace Opm {
 
     struct BlackoilMultiSegmentSolutionState : public DefaultBlackoilSolutionState
@@ -178,34 +180,13 @@ namespace Opm {
         //       maybe it is not better just to store the Reynolds number?
         ADB segment_viscosities_;
 
-        const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
-
         std::vector<int> top_well_segments_;
 
         // segment volume by dt (time step)
         // to handle the volume effects of the segment
         V segvdt_;
 
-        // Well operations and data needed.
-        struct MultiSegmentWellOps {
-            explicit MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms);
-            Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
-            Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
-            Eigen::SparseMatrix<double> w2s;              // well -> segment (scatter)
-            Eigen::SparseMatrix<double> s2w;              // segment -> well (gather)
-            Eigen::SparseMatrix<double> s2p;              // segment -> perf (scatter)
-            Eigen::SparseMatrix<double> p2s;              // perf -> segment (gather)
-            Eigen::SparseMatrix<double> s2s_inlets;       // segment -> its inlet segments
-            Eigen::SparseMatrix<double> s2s_outlet;       // segment -> its outlet segment
-            Eigen::SparseMatrix<double> topseg2w;         // top segment -> well
-            AutoDiffMatrix eliminate_topseg;              // change the top segment related to be zero
-            std::vector<int> well_cells;                  // the set of perforated cells
-            V conn_trans_factors;                         // connection transmissibility factors
-            bool has_multisegment_wells;                  // flag indicating whether there is any muli-segment well
-        };
-
-        MultiSegmentWellOps wops_ms_;
-
+        MultisegmentWells ms_wells_;
 
         using Base::stdWells;
         using Base::wells;
@@ -227,7 +208,14 @@ namespace Opm {
         using Base::asImpl;
         using Base::variableReservoirStateInitials;
 
-        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
+        // TODO: fixing the confusing naming
+        const MultisegmentWells& msWells() const { return ms_wells_; }
+        MultisegmentWells& msWells() { return ms_wells_; }
+
+        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return msWells().wells(); }
+
+        const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return msWells().wellOps(); }
+
 
         void updateWellControls(WellState& xw) const;
 
