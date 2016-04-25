@@ -339,7 +339,7 @@ namespace Opm
         if ( eclWriter_ )
         {
             const auto initConfig = eclipseState_->getInitConfig();
-            if (initConfig->getRestartInitiated() && ((initConfig->getRestartStep()) == (timer.currentStepNum()))) {
+            if (initConfig->restartRequested() && ((initConfig->getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
                  eclWriter_->writeTimeStep(timer, state, wellState, substep );
@@ -448,6 +448,6 @@ namespace Opm
 
     bool BlackoilOutputWriter::isRestart() const {
         const auto initconfig = eclipseState_->getInitConfig();
-        return initconfig->getRestartInitiated();
+        return initconfig->restartRequested();
     }
 }
