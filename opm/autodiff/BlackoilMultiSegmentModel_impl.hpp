@@ -95,7 +95,7 @@ namespace Opm {
         , segment_comp_surf_volume_current_(fluid.numPhases(), ADB::null())
         , segment_mass_flow_rates_(ADB::null())
         , segment_viscosities_(ADB::null())
-        , ms_wells_(wells_multisegment)
+        , ms_wells_(wells_multisegment, fluid.numPhases())
     {
     }
 

@@ -71,7 +71,7 @@ namespace Opm {
             // ---------  Public methods  ---------
             // TODO: using a vector of WellMultiSegmentConstPtr for now
             // TODO: it should use const Wells or something else later.
-            explicit MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
+            MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment, const int np);
 
             const std::vector<WellMultiSegmentConstPtr>& wells() const;
             const MultisegmentWellOps& wellOps() const;
@@ -79,11 +79,98 @@ namespace Opm {
             int numSegment() const { return nseg_total_; };
             int numPerf() const { return nperf_total_; };
 
+            const Vector& wellPerforationCellPerssureDiffs() const { return well_perforation_cell_pressure_diffs_; };
+            Vector& wellPerforationCellPerssureDiffs() { return well_perforation_cell_pressure_diffs_; };
+
+            const ADB& wellSegmentPerforationPressureDiffs() const { return well_segment_perforation_pressure_diffs_; };
+            ADB& wellSegmentPerforationPressureDiffs() { return well_segment_perforation_pressure_diffs_; };
+
+            const Vector& wellSegmentPerforationDepthDiffs() const { return well_segment_perforation_depth_diffs_; };
+            Vector& wellSegmentPerforationDepthDiffsO() { return well_segment_perforation_depth_diffs_; };
+
+            const Vector& wellPerforationCellDensities() const { return well_perforation_cell_densities_; };
+            Vector& wellPerforationCellDensities() { return well_perforation_cell_densities_; };
+
+            const ADB& wellSegmentDensities() const { return well_segment_densities_; };
+            ADB& wellSegmentDensities() { return well_segment_densities_; };
+
+            const ADB& wellSegmentPressureDelta() const { return well_segment_pressures_delta_; };
+            ADB& wellSegmentPressureDelta() { return well_segment_pressures_delta_; };
+
+            const std::vector<Vector>& segmentCompSurfVolumeInitial() const { return segment_comp_surf_volume_initial_; };
+            std::vector<Vector>& segmentCompSurfVolumeInitial() { return segment_comp_surf_volume_initial_; };
+
+            const std::vector<ADB>& segmentCompSurfVolumeCurrent() const { return segment_comp_surf_volume_current_; };
+            std::vector<ADB>& segmentCompSurfVolumeCurrent() { return segment_comp_surf_volume_current_; };
+
+            const ADB& segmentMassFlowRates() const { return segment_mass_flow_rates_; };
+            ADB& segmentMassFlowRates() { return segment_mass_flow_rates_; };
+
+            const ADB& segmentViscosities() const { return segment_viscosities_; };
+            ADB& segmentViscosities() { return segment_viscosities_; };
+
+            const std::vector<int>& topWellSegments() const { return top_well_segments_; };
+            std::vector<int>& topWellSegments() { return top_well_segments_; };
+
+            const Vector& segVDt() const { return segvdt_; };
+            Vector& segVDt() { return segvdt_; };
+
+
     protected:
+        // TODO: probably a wells_active_ will be required here.
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
         const MultisegmentWellOps wops_ms_;
         int nseg_total_;
         int nperf_total_;
+
+        // Pressure correction due to the different depth of the perforation
+        // and the cell center of the grid block
+        // For the non-segmented wells, since the perforation are forced to be
+        // at the center of the grid cell, it should be ZERO.
+        // It only applies to the mutli-segmented wells.
+        Vector well_perforation_cell_pressure_diffs_;
+
+        // Pressure correction due to the depth differennce between segment depth and perforation depth.
+        ADB well_segment_perforation_pressure_diffs_;
+
+        // The depth difference between segment nodes and perforations
+        Vector well_segment_perforation_depth_diffs_;
+
+        // the average of the fluid densities in the grid block
+        // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
+        // and the cell center of the grid block
+        Vector well_perforation_cell_densities_;
+
+        // the density of the fluid mixture in the segments
+        // which is calculated in an implicit way
+        ADB well_segment_densities_;
+
+        // the hydrostatic pressure drop between segment nodes
+        // calculated with the above density of fluid mixtures
+        // for the top segment, they should always be zero for the moment.
+        ADB well_segment_pressures_delta_;
+
+        // the surface volume of components in the segments
+        // the initial value at the beginning of the time step
+        std::vector<Vector>   segment_comp_surf_volume_initial_;
+
+        // the value within the current iteration.
+        std::vector<ADB> segment_comp_surf_volume_current_;
+
+        // the mass flow rate in the segments
+        ADB segment_mass_flow_rates_;
+
+        // the viscosity of the fluid mixture in the segments
+        // TODO: it is only used to calculate the Reynolds number as we know
+        //       maybe it is not better just to store the Reynolds number?
+        ADB segment_viscosities_;
+
+        std::vector<int> top_well_segments_;
+
+        // segment volume by dt (time step)
+        // to handle the volume effects of the segment
+        Vector segvdt_;
+
     };
 
 } // namespace Opm

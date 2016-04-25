@@ -138,9 +138,16 @@ namespace Opm {
 
 
     MultisegmentWells::
-    MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_ms)
+    MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_ms, const int np)
       : wells_multisegment_(wells_ms)
       , wops_ms_(wells_ms)
+      , well_segment_perforation_pressure_diffs_(ADB::null())
+      , well_segment_densities_(ADB::null())
+      , well_segment_pressures_delta_(ADB::null())
+      , segment_comp_surf_volume_initial_(np)
+      , segment_comp_surf_volume_current_(np, ADB::null())
+      , segment_mass_flow_rates_(ADB::null())
+      , segment_viscosities_(ADB::null())
     {
         // TODO: repeated with the wellOps's initialization, delete one soon.
         // Count the total number of perforations and segments.
