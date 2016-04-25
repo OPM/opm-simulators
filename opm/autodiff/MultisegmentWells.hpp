@@ -79,14 +79,14 @@ namespace Opm {
             int numSegment() const { return nseg_total_; };
             int numPerf() const { return nperf_total_; };
 
-            const Vector& wellPerforationCellPerssureDiffs() const { return well_perforation_cell_pressure_diffs_; };
-            Vector& wellPerforationCellPerssureDiffs() { return well_perforation_cell_pressure_diffs_; };
+            const Vector& wellPerforationCellPressureDiffs() const { return well_perforation_cell_pressure_diffs_; };
+            Vector& wellPerforationCellPressureDiffs() { return well_perforation_cell_pressure_diffs_; };
 
             const ADB& wellSegmentPerforationPressureDiffs() const { return well_segment_perforation_pressure_diffs_; };
             ADB& wellSegmentPerforationPressureDiffs() { return well_segment_perforation_pressure_diffs_; };
 
             const Vector& wellSegmentPerforationDepthDiffs() const { return well_segment_perforation_depth_diffs_; };
-            Vector& wellSegmentPerforationDepthDiffsO() { return well_segment_perforation_depth_diffs_; };
+            Vector& wellSegmentPerforationDepthDiffs() { return well_segment_perforation_depth_diffs_; };
 
             const Vector& wellPerforationCellDensities() const { return well_perforation_cell_densities_; };
             Vector& wellPerforationCellDensities() { return well_perforation_cell_densities_; };

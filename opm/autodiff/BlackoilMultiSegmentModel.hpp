@@ -138,54 +138,6 @@ namespace Opm {
         using Base::param_;
         using Base::linsolver_;
 
-        // Pressure correction due to the different depth of the perforation
-        // and the cell center of the grid block
-        // For the non-segmented wells, since the perforation are forced to be
-        // at the center of the grid cell, it should be ZERO.
-        // It only applies to the mutli-segmented wells.
-        V well_perforation_cell_pressure_diffs_;
-
-        // Pressure correction due to the depth differennce between segment depth and perforation depth.
-        ADB well_segment_perforation_pressure_diffs_;
-
-        // The depth difference between segment nodes and perforations
-        V well_segment_perforation_depth_diffs_;
-
-        // the average of the fluid densities in the grid block
-        // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
-        // and the cell center of the grid block
-        V well_perforation_cell_densities_;
-
-        // the density of the fluid mixture in the segments
-        // which is calculated in an implicit way
-        ADB well_segment_densities_;
-
-        // the hydrostatic pressure drop between segment nodes
-        // calculated with the above density of fluid mixtures
-        // for the top segment, they should always be zero for the moment.
-        ADB well_segment_pressures_delta_;
-
-        // the surface volume of components in the segments
-        // the initial value at the beginning of the time step
-        std::vector<V>   segment_comp_surf_volume_initial_;
-
-        // the value within the current iteration.
-        std::vector<ADB> segment_comp_surf_volume_current_;
-
-        // the mass flow rate in the segments
-        ADB segment_mass_flow_rates_;
-
-        // the viscosity of the fluid mixture in the segments
-        // TODO: it is only used to calculate the Reynolds number as we know
-        //       maybe it is not better just to store the Reynolds number?
-        ADB segment_viscosities_;
-
-        std::vector<int> top_well_segments_;
-
-        // segment volume by dt (time step)
-        // to handle the volume effects of the segment
-        V segvdt_;
-
         MultisegmentWells ms_wells_;
 
         using Base::stdWells;
