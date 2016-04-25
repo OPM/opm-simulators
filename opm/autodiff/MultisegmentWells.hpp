@@ -76,9 +76,14 @@ namespace Opm {
             const std::vector<WellMultiSegmentConstPtr>& wells() const;
             const MultisegmentWellOps& wellOps() const;
 
+            int numSegment() const { return nseg_total_; };
+            int numPerf() const { return nperf_total_; };
+
     protected:
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
         const MultisegmentWellOps wops_ms_;
+        int nseg_total_;
+        int nperf_total_;
     };
 
 } // namespace Opm
