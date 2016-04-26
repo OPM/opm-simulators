@@ -1613,7 +1613,9 @@ namespace detail {
             auto ixg = sg < 0;
             for (int c = 0; c < nc; ++c) {
                 if (ixg[c]) {
-                    sw[c] = sw[c] / (1-sg[c]);
+                    if (active_[Water]) {
+                        sw[c] = sw[c] / (1-sg[c]);
+                    }
                     so[c] = so[c] / (1-sg[c]);
                     sg[c] = 0;
                 }
@@ -1624,8 +1626,12 @@ namespace detail {
             auto ixo = so < 0;
             for (int c = 0; c < nc; ++c) {
                 if (ixo[c]) {
-                    sw[c] = sw[c] / (1-so[c]);
-                    sg[c] = sg[c] / (1-so[c]);
+                    if (active_[Water]) {
+                        sw[c] = sw[c] / (1-so[c]);
+                    }
+                    if (active_[Gas]) {
+                        sg[c] = sg[c] / (1-so[c]);
+                    }
                     so[c] = 0;
                 }
             }
@@ -1636,7 +1642,9 @@ namespace detail {
             for (int c = 0; c < nc; ++c) {
                 if (ixw[c]) {
                     so[c] = so[c] / (1-sw[c]);
-                    sg[c] = sg[c] / (1-sw[c]);
+                    if (active_[Gas]) {
+                        sg[c] = sg[c] / (1-sw[c]);
+                    }
                     sw[c] = 0;
                 }
             }
