@@ -498,201 +498,17 @@ namespace Opm {
         // it is related to the segment location
         V aliveWells;
         std::vector<ADB> cq_s;
-        asImpl().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        const int nw = wellsMultiSegment().size();
+        const int np = numPhases();
+        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
+        const V perf_press_diffs = stdWells().wellPerforationPressureDiffs();
+        msWells().computeWellFlux(state, fluid_.phaseUsage(), active_,
+                                  perf_press_diffs, compi,
+                                  mob_perfcells, b_perfcells, np, aliveWells, cq_s);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().addWellFluxEq(cq_s, state);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().addWellControlEq(state, well_state, aliveWells);
-    }
-
-
-
-
-
-    template <class Grid>
-    void
-    BlackoilMultiSegmentModel<Grid>::computeWellFlux(const SolutionState& state,
-                                                     const std::vector<ADB>& mob_perfcells,
-                                                     const std::vector<ADB>& b_perfcells,
-                                                     V& aliveWells,
-                                                     std::vector<ADB>& cq_s) const
-    {
-        // if( ! wellsActive() ) return ;
-        if (wellsMultiSegment().size() == 0) return;
-
-        const int nw = wellsMultiSegment().size();
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-
-        aliveWells = V::Constant(nw, 1.0);
-
-        const int np = numPhases();
-        const int nseg = msWellOps().s2p.cols();
-        const int nperf = msWellOps().s2p.rows();
-
-        cq_s.resize(np, ADB::null());
-
-        {
-            const V& Tw = msWellOps().conn_trans_factors;
-            const std::vector<int>& well_cells = msWellOps().well_cells;
-
-            // determining in-flow (towards well-bore) or out-flow (towards reservoir)
-            // for mutli-segmented wells and non-segmented wells, the calculation of the drawdown are different.
-            const ADB& p_perfcells = subset(state.pressure, well_cells);
-            const ADB& rs_perfcells = subset(state.rs, well_cells);
-            const ADB& rv_perfcells = subset(state.rv, well_cells);
-
-            const ADB& seg_pressures = state.segp;
-
-            const ADB seg_pressures_perf = msWellOps().s2p * seg_pressures;
-
-            // Create selector for perforations of multi-segment vs. regular wells.
-            V is_multisegment_well(nw);
-            for (int w = 0; w < nw; ++w) {
-                is_multisegment_well[w] = double(wellsMultiSegment()[w]->isMultiSegmented());
-            }
-            // Take one flag per well and expand to one flag per perforation.
-            V is_multisegment_perf = msWellOps().w2p * is_multisegment_well.matrix();
-            Selector<double> msperf_selector(is_multisegment_perf, Selector<double>::NotEqualZero);
-
-            // Compute drawdown.
-            ADB h_nc = msperf_selector.select(msWells().wellSegmentPerforationPressureDiffs(),
-                                              ADB::constant( stdWells().wellPerforationPressureDiffs() ));
-            const V h_cj = msperf_selector.select(msWells().wellPerforationCellPressureDiffs(), V::Zero(nperf));
-
-            // Special handling for when we are called from solveWellEq().
-            // TODO: restructure to eliminate need for special treatmemt.
-            if ((h_nc.numBlocks() != 0) && (h_nc.numBlocks() != seg_pressures_perf.numBlocks())) {
-                assert(seg_pressures_perf.numBlocks() == 2);
-                assert(h_nc.numBlocks() > 2);
-                h_nc = wellhelpers::onlyWellDerivs(h_nc);
-                assert(h_nc.numBlocks() == 2);
-            }
-
-            ADB drawdown = (p_perfcells + h_cj - seg_pressures_perf - h_nc);
-
-            // selects injection perforations
-            V selectInjectingPerforations = V::Zero(nperf);
-            // selects producing perforations
-            V selectProducingPerforations = V::Zero(nperf);
-            for (int c = 0; c < nperf; ++c){
-                if (drawdown.value()[c] < 0)
-                    selectInjectingPerforations[c] = 1;
-                else
-                    selectProducingPerforations[c] = 1;
-            }
-
-            // handling flow into wellbore
-            // maybe there are something to do there make the procedure easier.
-            std::vector<ADB> cq_ps(np, ADB::null());
-            for (int phase = 0; phase < np; ++phase) {
-                const ADB cq_p = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
-                cq_ps[phase] = b_perfcells[phase] * cq_p;
-            }
-
-            if (active_[Oil] && active_[Gas]) {
-                const int oilpos = pu.phase_pos[Oil];
-                const int gaspos = pu.phase_pos[Gas];
-                const ADB cq_psOil = cq_ps[oilpos];
-                const ADB cq_psGas = cq_ps[gaspos];
-                cq_ps[gaspos] += rs_perfcells * cq_psOil;
-                cq_ps[oilpos] += rv_perfcells * cq_psGas;
-            }
-
-            // hadling flow out from wellbore
-            ADB total_mob = mob_perfcells[0];
-            for (int phase = 1; phase < np; ++phase) {
-                total_mob += mob_perfcells[phase];
-            }
-
-            // injection perforations total volume rates
-            const ADB cqt_i = -(selectInjectingPerforations * Tw) * (total_mob * drawdown);
-
-            // compute wellbore mixture for injecting perforations
-            // The wellbore mixture depends on the inflow from the reservoir
-            // and the well injection rates.
-            // TODO: should this based on the segments?
-            // TODO: for the usual wells, the well rates are the sum of the perforations.
-            // TODO: for multi-segmented wells, the segment rates are not the sum of the perforations.
-
-            // TODO: two options here
-            // TODO: 1. for each segment, only the inflow from the perforations related to this segment are considered.
-            // TODO: 2. for each segment, the inflow from the perforrations related to this segment and also all the inflow
-            // TODO: from the upstreaming sgments and their perforations need to be considered.
-            // TODO: This way can be the more consistent way, while let us begin with the first option. The second option
-            // TODO: involves one operations that are not valid now. (i.e. how to transverse from the leaves to the root,
-            // TODO: although we can begin from the brutal force way)
-
-            // TODO: stop using wells() here.
-            const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
-            std::vector<ADB> wbq(np, ADB::null());
-            ADB wbqt = ADB::constant(V::Zero(nseg));
-
-            for (int phase = 0; phase < np; ++phase) {
-                const ADB& q_ps = msWellOps().p2s * cq_ps[phase];
-                const ADB& q_s = subset(state.segqs, Span(nseg, 1, phase * nseg));
-                Selector<double> injectingPhase_selector(q_s.value(), Selector<double>::GreaterZero);
-
-                const int pos = pu.phase_pos[phase];
-
-                // this is per segment
-                wbq[phase] = (msWellOps().w2s * ADB::constant(compi.col(pos)) * injectingPhase_selector.select(q_s, ADB::constant(V::Zero(nseg)))) - q_ps;
-
-                // TODO: it should be a single value for this certain well.
-                // TODO: it need to be changed later to handle things more consistently
-                // or there should be an earsier way to decide if the well is dead.
-                wbqt += wbq[phase];
-            }
-
-            // Set aliveWells.
-            // the first value of the wbqt is the one to decide if the well is dead
-            // or there should be some dead segments?
-            {
-                int topseg = 0;
-                for (int w = 0; w < nw; ++w) {
-                    if (wbqt.value()[topseg] == 0.0) { // yes we really mean == here, no fuzzyness
-                        aliveWells[w] = 0.0;
-                    }
-                    topseg += wellsMultiSegment()[w]->numberOfSegments();
-                }
-            }
-
-            // compute wellbore mixture at standard conditions.
-            // before, the determination of alive wells is based on wells.
-            // now, will there be any dead segment? I think no.
-            // TODO: it is not clear if the cmix_s should be based on segment or the well
-            std::vector<ADB> cmix_s(np, ADB::null());
-            Selector<double> aliveWells_selector(aliveWells, Selector<double>::NotEqualZero);
-            for (int phase = 0; phase < np; ++phase) {
-                const int pos = pu.phase_pos[phase];
-                const ADB phase_fraction = msWellOps().topseg2w * (wbq[phase] / wbqt);
-                cmix_s[phase] = msWellOps().w2p * aliveWells_selector.select(phase_fraction, ADB::constant(compi.col(pos)));
-            }
-
-            // compute volume ration between connection at standard conditions
-            ADB volumeRatio = ADB::constant(V::Zero(nperf));
-            const ADB d = V::Constant(nperf,1.0) -  rv_perfcells * rs_perfcells;
-
-            for (int phase = 0; phase < np; ++phase) {
-                ADB tmp = cmix_s[phase];
-                if (phase == Oil && active_[Gas]) {
-                    const int gaspos = pu.phase_pos[Gas];
-                    tmp = tmp - rv_perfcells * cmix_s[gaspos] / d;
-                }
-                if (phase == Gas && active_[Oil]) {
-                    const int oilpos = pu.phase_pos[Oil];
-                    tmp = tmp - rs_perfcells * cmix_s[oilpos] / d;
-                }
-                volumeRatio += tmp / b_perfcells[phase];
-            }
-
-            // injecting connections total volumerates at standard conditions
-            ADB cqt_is = cqt_i/volumeRatio;
-
-            // connection phase volumerates at standard conditions
-            for (int phase = 0; phase < np; ++phase) {
-                cq_s[phase] = cq_ps[phase] + cmix_s[phase]*cqt_is;
-            }
-        }
     }
 
 
@@ -1385,7 +1201,14 @@ namespace Opm {
 
             SolutionState wellSolutionState = state0;
             variableStateExtractWellsVars(indices, vars, wellSolutionState);
-            computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+
+            const int nw = wellsMultiSegment().size();
+            const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
+            const V perf_press_diffs = stdWells().wellPerforationPressureDiffs();
+            msWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_,
+                                      perf_press_diffs, compi,
+                                      mob_perfcells_const, b_perfcells_const, np, aliveWells, cq_s);
+
             updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             addWellFluxEq(cq_s, wellSolutionState);
             addWellControlEq(wellSolutionState, well_state, aliveWells);

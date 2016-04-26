@@ -29,8 +29,11 @@
 
 #include <cassert>
 
+#include <opm/core/props/BlackoilPhases.hpp>
+
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 
 #include <opm/autodiff/WellMultiSegment.hpp>
 
@@ -126,6 +129,21 @@ namespace Opm {
                             const int np,
                             const double dpmaxrel,
                             WellState& well_state) const;
+
+            // TODO: some arguments can be removed later
+            // TODO: compi will be required in the multisegment wells
+            template <class SolutionState>
+            void
+            computeWellFlux(const SolutionState& state,
+                            const Opm::PhaseUsage& pu,
+                            const std::vector<bool>& active,
+                            const Vector& well_perforation_pressure_diffs,
+                            const DataBlock& compi,
+                            const std::vector<ADB>& mob_perfcells,
+                            const std::vector<ADB>& b_perfcells,
+                            const int np,
+                            Vector& aliveWells,
+                            std::vector<ADB>& cq_s) const;
 
 
     protected:
