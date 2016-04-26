@@ -55,23 +55,6 @@
 namespace Opm {
 
 
-    namespace detail
-    {
-        ADB onlyWellDerivs(const ADB& x)
-        {
-            V val = x.value();
-            const int nb = x.numBlocks();
-            if (nb < 2) {
-                OPM_THROW(std::logic_error, "Called onlyWellDerivs() with argument that has " << nb << " blocks.");
-            }
-            std::vector<M> derivs = { x.derivative()[nb - 2], x.derivative()[nb - 1] };
-            return ADB::function(std::move(val), std::move(derivs));
-        }
-    } // namespace detail
-
-
-
-
     template <class Grid>
     BlackoilMultiSegmentModel<Grid>::
     BlackoilMultiSegmentModel(const typename Base::ModelParameters&  param,
@@ -581,7 +564,7 @@ namespace Opm {
             if ((h_nc.numBlocks() != 0) && (h_nc.numBlocks() != seg_pressures_perf.numBlocks())) {
                 assert(seg_pressures_perf.numBlocks() == 2);
                 assert(h_nc.numBlocks() > 2);
-                h_nc = detail::onlyWellDerivs(h_nc);
+                h_nc = wellhelpers::onlyWellDerivs(h_nc);
                 assert(h_nc.numBlocks() == 2);
             }
 
@@ -793,7 +776,7 @@ namespace Opm {
                 if (segment_volume_change_dt[phase].numBlocks() != segqs.numBlocks()) {
                     assert(segment_volume_change_dt[phase].numBlocks() > 2);
                     assert(segqs.numBlocks() == 2);
-                    segment_volume_change_dt[phase] = detail::onlyWellDerivs(segment_volume_change_dt[phase]);
+                    segment_volume_change_dt[phase] = wellhelpers::onlyWellDerivs(segment_volume_change_dt[phase]);
                     assert(segment_volume_change_dt[phase].numBlocks() == 2);
                 }
 
@@ -1070,7 +1053,7 @@ namespace Opm {
             // Special handling for when we are called from solveWellEq().
             // TODO: restructure to eliminate need for special treatmemt.
             ADB wspd = (state.segp.numBlocks() == 2)
-                ? detail::onlyWellDerivs(msWells().wellSegmentPressureDelta())
+                ? wellhelpers::onlyWellDerivs(msWells().wellSegmentPressureDelta())
                 : msWells().wellSegmentPressureDelta();
 
             others_residual = msWellOps().eliminate_topseg * (state.segp - msWellOps().s2s_outlet * state.segp + wspd);

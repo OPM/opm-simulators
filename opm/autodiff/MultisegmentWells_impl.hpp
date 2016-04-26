@@ -22,9 +22,30 @@
 #define OPM_MULTISEGMENTWELLS_IMPL_HEADER_INCLUDED
 
 
-
 namespace Opm
 {
+
+
+
+    namespace wellhelpers {
+
+        using ADB = MultisegmentWells::ADB;
+        using Vector = MultisegmentWells::Vector;
+
+        inline
+        ADB onlyWellDerivs(const ADB& x)
+        {
+            Vector val = x.value();
+            const int nb = x.numBlocks();
+            if (nb < 2) {
+                OPM_THROW(std::logic_error, "Called onlyWellDerivs() with argument that has " << nb << " blocks.");
+            }
+            std::vector<ADB::M> derivs = { x.derivative()[nb - 2], x.derivative()[nb - 1] };
+            return ADB::function(std::move(val), std::move(derivs));
+        }
+    }
+
+
 
     template <class WellState>
     void
