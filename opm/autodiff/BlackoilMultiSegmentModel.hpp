@@ -172,6 +172,7 @@ namespace Opm {
         void updateWellControls(WellState& xw) const;
 
 
+        // TODO: kept for now. to be removed soon.
         void updateWellState(const V& dwells,
                              WellState& well_state);
 

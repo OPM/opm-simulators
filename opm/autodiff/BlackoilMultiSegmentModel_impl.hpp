@@ -1116,66 +1116,7 @@ namespace Opm {
     BlackoilMultiSegmentModel<Grid>::updateWellState(const V& dwells,
                                                      WellState& well_state)
     {
-
-        if (!wellsMultiSegment().empty())
-        {
-            const int np = numPhases();
-            const int nw = wellsMultiSegment().size();
-            const int nseg_total = well_state.numSegments();
-
-            // Extract parts of dwells corresponding to each part.
-            int varstart = 0;
-            const V dsegqs = subset(dwells, Span(np * nseg_total, 1, varstart));
-            varstart += dsegqs.size();
-            const V dsegp = subset(dwells, Span(nseg_total, 1, varstart));
-            varstart += dsegp.size();
-            assert(varstart == dwells.size());
-            const double dpmaxrel = dpMaxRel();
-
-
-            // segment phase rates update
-            // in dwells, the phase rates are ordered by phase.
-            // while in WellStateMultiSegment, the phase rates are ordered by segments
-            const DataBlock wsr = Eigen::Map<const DataBlock>(dsegqs.data(), np, nseg_total).transpose();
-            const V dwsr = Eigen::Map<const V>(wsr.data(), nseg_total * np);
-            const V wsr_old = Eigen::Map<const V>(&well_state.segPhaseRates()[0], nseg_total * np);
-            const V sr = wsr_old - dwsr;
-            std::copy(&sr[0], &sr[0] + sr.size(), well_state.segPhaseRates().begin());
-
-
-            // segment pressure updates
-            const V segp_old = Eigen::Map<const V>(&well_state.segPress()[0], nseg_total, 1);
-            // TODO: applying the pressure change limiter to all the segments, not sure if it is the correct thing to do
-            const V dsegp_limited = sign(dsegp) * dsegp.abs().min(segp_old.abs() * dpmaxrel);
-            const V segp = segp_old - dsegp_limited;
-            std::copy(&segp[0], &segp[0] + segp.size(), well_state.segPress().begin());
-
-            // update the well rates and bhps, which are not anymore primary vabriables.
-            // they are updated directly from the updated segment phase rates and segment pressures.
-
-            // Bhp update.
-            V bhp = V::Zero(nw);
-            V wr = V::Zero(nw * np);
-            // it is better to use subset
-
-            int start_segment = 0;
-            for (int w = 0; w < nw; ++w) {
-                bhp[w] = well_state.segPress()[start_segment];
-                // insert can be faster
-                for (int p = 0; p < np; ++p) {
-                    wr[p + np * w] = well_state.segPhaseRates()[p + np * start_segment];
-                }
-
-                const int nseg = wellsMultiSegment()[w]->numberOfSegments();
-                start_segment += nseg;
-            }
-
-            assert(start_segment == nseg_total);
-            std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
-            std::copy(&wr[0], &wr[0] + wr.size(), well_state.wellRates().begin());
-
-            // TODO: handling the THP control related.
-        }
+        msWells().updateWellState(dwells, fluid_.numPhases(), dpMaxRel(), well_state);
     }
 
 
@@ -1487,8 +1428,7 @@ namespace Opm {
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
-                // asImpl().updateWellState(dx.array(), well_state);
-                updateWellState(dx.array(), well_state);
+                asImpl().updateWellState(dx.array(), well_state);
                 updateWellControls(well_state);
             }
         } while (it < 15);

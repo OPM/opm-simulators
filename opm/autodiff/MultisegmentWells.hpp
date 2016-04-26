@@ -30,7 +30,10 @@
 #include <cassert>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
+
 #include <opm/autodiff/WellMultiSegment.hpp>
+
 
 
 namespace Opm {
@@ -116,6 +119,15 @@ namespace Opm {
             Vector& segVDt() { return segvdt_; };
 
 
+
+            template <class WellState>
+            void
+            updateWellState(const Vector& dwells,
+                            const int np,
+                            const double dpmaxrel,
+                            WellState& well_state) const;
+
+
     protected:
         // TODO: probably a wells_active_ will be required here.
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
@@ -174,5 +186,7 @@ namespace Opm {
     };
 
 } // namespace Opm
+
+#include "MultisegmentWells_impl.hpp"
 
 #endif // OPM_MULTISEGMENTWELLS_HEADER_INCLUDED
