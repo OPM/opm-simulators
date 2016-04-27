@@ -512,7 +512,8 @@ namespace Opm {
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         msWells().addWellFluxEq(cq_s, state, np, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        asImpl().addWellControlEq(state, well_state, aliveWells);
+        // asImpl().addWellControlEq(state, well_state, aliveWells);
+        msWells().addWellControlEq(state, well_state, aliveWells, np, active_, residual_);
     }
 
 
@@ -702,171 +703,6 @@ namespace Opm {
 
 
     template <class Grid>
-    void BlackoilMultiSegmentModel<Grid>::addWellControlEq(const SolutionState& state,
-                                                           const WellState& xw,
-                                                           const V& aliveWells)
-    {
-        // the name of the function is a a little misleading.
-        // Basically it is the function for the pressure equation.
-        // And also, it work as the control equation when it is the segment
-        if( wellsMultiSegment().empty() ) return;
-
-        const int np = numPhases();
-        const int nw = wellsMultiSegment().size();
-        const int nseg_total = xw.numSegments();
-
-        ADB aqua   = ADB::constant(ADB::V::Zero(nseg_total));
-        ADB liquid = ADB::constant(ADB::V::Zero(nseg_total));
-        ADB vapour = ADB::constant(ADB::V::Zero(nseg_total));
-
-        if (active_[Water]) {
-            aqua += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Aqua * nseg_total));
-        }
-        if (active_[Oil]) {
-            liquid += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Liquid * nseg_total));
-        }
-        if (active_[Gas]) {
-            vapour += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Vapour * nseg_total));
-        }
-
-        // THP control is not implemented for the moment.
-
-        // Hydrostatic correction variables
-        ADB::V rho_v = ADB::V::Zero(nw);
-        ADB::V vfp_ref_depth_v = ADB::V::Zero(nw);
-
-        // Target vars
-        ADB::V bhp_targets  = ADB::V::Zero(nw);
-        ADB::V rate_targets = ADB::V::Zero(nw);
-        Eigen::SparseMatrix<double>  rate_distr(nw, np*nw);
-
-        // Selection variables
-        // well selectors
-        std::vector<int> bhp_well_elems;
-        std::vector<int> rate_well_elems;
-        // segment selectors
-        std::vector<int> bhp_top_elems;
-        std::vector<int> rate_top_elems;
-        std::vector<int> rate_top_phase_elems;
-        std::vector<int> others_elems;
-
-        //Run through all wells to calculate BHP/RATE targets
-        //and gather info about current control
-        int start_segment = 0;
-        for (int w = 0; w < nw; ++w) {
-            const struct WellControls* wc = wellsMultiSegment()[w]->wellControls();
-
-            // The current control in the well state overrides
-            // the current control set in the Wells struct, which
-            // is instead treated as a default.
-            const int current = xw.currentControls()[w];
-
-            const int nseg = wellsMultiSegment()[w]->numberOfSegments();
-
-            switch (well_controls_iget_type(wc, current)) {
-            case BHP:
-            {
-                bhp_well_elems.push_back(w);
-                bhp_top_elems.push_back(start_segment);
-                bhp_targets(w)  = well_controls_iget_target(wc, current);
-                rate_targets(w) = -1e100;
-                for (int p = 0; p < np; ++p) {
-                    rate_top_phase_elems.push_back(np * start_segment + p);
-                }
-            }
-            break;
-
-            case THP:
-            {
-                OPM_THROW(std::runtime_error, "THP control is not implemented for multi-sgement wells yet!!");
-            }
-            break;
-
-            case RESERVOIR_RATE: // Intentional fall-through
-            case SURFACE_RATE:
-            {
-                rate_well_elems.push_back(w);
-                rate_top_elems.push_back(start_segment);
-                for (int p = 0; p < np; ++p) {
-                    rate_top_phase_elems.push_back(np * start_segment + p);
-                }
-                // RESERVOIR and SURFACE rates look the same, from a
-                // high-level point of view, in the system of
-                // simultaneous linear equations.
-
-                const double* const distr =
-                    well_controls_iget_distr(wc, current);
-
-                for (int p = 0; p < np; ++p) {
-                    rate_distr.insert(w, p*nw + w) = distr[p];
-                }
-
-                bhp_targets(w)  = -1.0e100;
-                rate_targets(w) = well_controls_iget_target(wc, current);
-            }
-            break;
-
-            }
-
-            for (int i = 1; i < nseg; ++i) {
-                others_elems.push_back(i + start_segment);
-            }
-            start_segment += nseg;
-        }
-
-        // for each segment: 1, if the segment is the top segment, then control equation
-        //                   2, if the segment is not the top segment, then the pressure equation
-        const ADB bhp_residual = subset(state.segp, bhp_top_elems) - subset(bhp_targets, bhp_well_elems);
-        const ADB rate_residual = subset(rate_distr * subset(state.segqs, rate_top_phase_elems) - rate_targets, rate_well_elems);
-
-        ADB others_residual = ADB::constant(V::Zero(nseg_total));
-
-        if ( msWellOps().has_multisegment_wells ) {
-            // Special handling for when we are called from solveWellEq().
-            // TODO: restructure to eliminate need for special treatmemt.
-            ADB wspd = (state.segp.numBlocks() == 2)
-                ? wellhelpers::onlyWellDerivs(msWells().wellSegmentPressureDelta())
-                : msWells().wellSegmentPressureDelta();
-
-            others_residual = msWellOps().eliminate_topseg * (state.segp - msWellOps().s2s_outlet * state.segp + wspd);
-        } else {
-            others_residual = msWellOps().eliminate_topseg * (state.segp - msWellOps().s2s_outlet * state.segp);
-        }
-
-        //       all the control equations
-        // TODO: can be optimized better
-        ADB well_eq_topsegment = subset(superset(bhp_residual, bhp_top_elems, nseg_total) +
-                                        superset(rate_residual, rate_top_elems, nseg_total), xw.topSegmentLoc());
-
-        // For wells that are dead (not flowing), and therefore not communicating
-        // with the reservoir, we set the equation to be equal to the well's total
-        // flow. This will be a solution only if the target rate is also zero.
-        Eigen::SparseMatrix<double> rate_summer(nw, np*nw);
-        for (int w = 0; w < nw; ++w) {
-            for (int phase = 0; phase < np; ++phase) {
-                rate_summer.insert(w, phase*nw + w) = 1.0;
-            }
-        }
-        Selector<double> alive_selector(aliveWells, Selector<double>::NotEqualZero);
-        // TODO: Here only handles the wells, or the top segments
-        // should we also handle some non-alive non-top segments?
-        // should we introduce the cocept of non-alive segments?
-        // At the moment, we only handle the control equations
-        well_eq_topsegment = alive_selector.select(well_eq_topsegment, rate_summer * subset(state.segqs, rate_top_phase_elems));
-
-        /* residual_.well_eq = superset(bhp_residual, bhp_top_elems, nseg_total) +
-                            superset(rate_residual, rate_top_elems, nseg_total) +
-                            superset(others_residual, others_elems, nseg_total); */
-        residual_.well_eq = superset(well_eq_topsegment, xw.topSegmentLoc(), nseg_total) +
-                            others_residual;
-
-    }
-
-
-
-
-
-    template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::updateWellState(const V& dwells,
                                                      WellState& well_state)
@@ -926,7 +762,8 @@ namespace Opm {
 
             updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             msWells().addWellFluxEq(cq_s, wellSolutionState, np, residual_);
-            addWellControlEq(wellSolutionState, well_state, aliveWells);
+            // addWellControlEq(wellSolutionState, well_state, aliveWells);
+            msWells().addWellControlEq(wellSolutionState, well_state, aliveWells, np, active_, residual_);
             converged = Base::getWellConvergence(it);
 
             if (converged) {

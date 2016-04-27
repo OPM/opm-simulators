@@ -168,6 +168,14 @@ namespace Opm {
                           const int np,
                           LinearisedBlackoilResidual& residual);
 
+            template <class SolutionState, class WellState>
+            void
+            addWellControlEq(const SolutionState& state,
+                             const WellState& xw,
+                             const Vector& aliveWells,
+                             const int np,
+                             const std::vector<bool>& active,
+                             LinearisedBlackoilResidual& residual);
 
     protected:
         // TODO: probably a wells_active_ will be required here.

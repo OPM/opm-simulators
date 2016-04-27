@@ -205,11 +205,6 @@ namespace Opm {
                                          const SolutionState& state,
                                          WellState& xw) const;
 
-        void
-        addWellControlEq(const SolutionState& state,
-                         const WellState& xw,
-                         const V& aliveWells);
-
         int numWellVars() const;
 
         void
