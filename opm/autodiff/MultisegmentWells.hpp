@@ -36,6 +36,7 @@
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
+#include <opm/autodiff/WellHelpers.hpp>
 
 #include <opm/autodiff/WellMultiSegment.hpp>
 
@@ -176,6 +177,11 @@ namespace Opm {
                              const int np,
                              const std::vector<bool>& active,
                              LinearisedBlackoilResidual& residual);
+
+            template <class WellState>
+            void
+            updateWellControls(const bool terminal_output,
+                               WellState& xw) const;
 
     protected:
         // TODO: probably a wells_active_ will be required here.

@@ -738,5 +738,101 @@ namespace Opm
                             others_residual;
     }
 
+
+
+
+
+    template <class WellState>
+    void
+    MultisegmentWells::
+    updateWellControls(const bool terminal_output,
+                       WellState& xw) const
+    {
+        if( wells().empty() ) return ;
+
+        std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
+        // Find, for each well, if any constraints are broken. If so,
+        // switch control to first broken constraint.
+        const int np = wells()[0]->numberOfPhases();
+        const int nw = wells().size();
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells()[w]->wellControls();
+            // The current control in the well state overrides
+            // the current control set in the Wells struct, which
+            // is instead treated as a default.
+            int current = xw.currentControls()[w];
+            // Loop over all controls except the current one, and also
+            // skip any RESERVOIR_RATE controls, since we cannot
+            // handle those.
+            const int nwc = well_controls_get_num(wc);
+            int ctrl_index = 0;
+            for (; ctrl_index < nwc; ++ctrl_index) {
+                if (ctrl_index == current) {
+                    // This is the currently used control, so it is
+                    // used as an equation. So this is not used as an
+                    // inequality constraint, and therefore skipped.
+                    continue;
+                }
+                if (wellhelpers::constraintBroken(
+                        xw.bhp(), xw.thp(), xw.wellRates(),
+                        w, np, wells()[w]->wellType(), wc, ctrl_index)) {
+                    // ctrl_index will be the index of the broken constraint after the loop.
+                    break;
+                }
+            }
+
+            if (ctrl_index != nwc) {
+                // Constraint number ctrl_index was broken, switch to it.
+                if (terminal_output)
+                {
+                    std::cout << "Switching control mode for well " << wells()[w]->name()
+                              << " from " << modestring[well_controls_iget_type(wc, current)]
+                              << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                }
+                xw.currentControls()[w] = ctrl_index;
+                current = xw.currentControls()[w];
+            }
+
+            // Get gravity for THP hydrostatic corrrection
+            // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+
+            // Updating well state and primary variables.
+            // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
+            const double target = well_controls_iget_target(wc, current);
+            const double* distr = well_controls_iget_distr(wc, current);
+            switch (well_controls_iget_type(wc, current)) {
+            case BHP:
+                xw.bhp()[w] = target;
+                xw.segPress()[top_well_segments_[w]] = target;
+                break;
+
+            case THP: {
+                OPM_THROW(std::runtime_error, "THP control is not implemented for multi-sgement wells yet!!");
+            }
+
+            case RESERVOIR_RATE:
+                // No direct change to any observable quantity at
+                // surface condition.  In this case, use existing
+                // flow rates as initial conditions as reservoir
+                // rate acts only in aggregate.
+                break;
+
+            case SURFACE_RATE:
+                for (int phase = 0; phase < np; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        xw.wellRates()[np * w + phase] = target * distr[phase];
+                        // TODO: consider changing all (not just top) segment rates
+                        // to make them consistent, it could possibly improve convergence.
+                        xw.segPhaseRates()[np * xw.topSegmentLoc()[w] + phase] = target * distr[phase];
+                    }
+                }
+                break;
+            }
+
+        }
+
+    }
+
+
 }
 #endif // OPM_MULTISEGMENTWELLS_IMPL_HEADER_INCLUDED

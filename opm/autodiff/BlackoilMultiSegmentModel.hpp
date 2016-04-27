@@ -168,10 +168,6 @@ namespace Opm {
 
         const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return msWells().wellOps(); }
 
-
-        void updateWellControls(WellState& xw) const;
-
-
         // TODO: kept for now. to be removed soon.
         void updateWellState(const V& dwells,
                              WellState& well_state);
