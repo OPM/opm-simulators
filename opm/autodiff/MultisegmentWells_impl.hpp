@@ -51,7 +51,6 @@ namespace Opm
     void
     MultisegmentWells::
     updateWellState(const Vector& dwells,
-                    const int np,
                     const double dpmaxrel,
                     WellState& well_state) const
     {
@@ -59,6 +58,7 @@ namespace Opm
         {
             const int nw = wells().size();
             const int nseg_total = nseg_total_;
+            const int np = numPhases();
 
             // Extract parts of dwells corresponding to each part.
             int varstart = 0;
@@ -128,12 +128,12 @@ namespace Opm
                     const DataBlock& compi,
                     const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
-                    const int np,
                     Vector& aliveWells,
                     std::vector<ADB>& cq_s) const
     {
         if (wells().size() == 0) return;
 
+        const int np = numPhases();
         const int nw = wells().size();
 
         aliveWells = Vector::Constant(nw, 1.0);
@@ -316,9 +316,9 @@ namespace Opm
     computeSegmentFluidProperties(const SolutionState& state,
                                   const std::vector<PhasePresence>& pc,
                                   const std::vector<bool>& active,
-                                  const BlackoilPropsAdInterface& fluid,
-                                  const int np)
+                                  const BlackoilPropsAdInterface& fluid)
     {
+        const int np = numPhases();
         const int nw = wells().size();
         const int nseg_total = nseg_total_;
 
@@ -524,7 +524,6 @@ namespace Opm
     MultisegmentWells::
     addWellFluxEq(const std::vector<ADB>& cq_s,
                   const SolutionState& state,
-                  const int np,
                   LinearisedBlackoilResidual& residual)
     {
         // the well flux equations are for each segment and each phase.
@@ -538,6 +537,7 @@ namespace Opm
         // 3. for the third term, it is the inflow through the perforations.
         // 4. for the last term, it is the outlet rates and also the segment rates,
         //    which are the primary variable.
+        const int np = numPhases();
         const int nseg_total = nseg_total_;
 
         ADB segqs = state.segqs;
@@ -580,7 +580,6 @@ namespace Opm
     addWellControlEq(const SolutionState& state,
                      const WellState& xw,
                      const Vector& aliveWells,
-                     const int np,
                      const std::vector<bool>& active,
                      LinearisedBlackoilResidual& residual)
     {
@@ -589,6 +588,7 @@ namespace Opm
         // And also, it work as the control equation when it is the segment
         if( wells().empty() ) return;
 
+        const int np = numPhases();
         const int nw = wells().size();
         const int nseg_total = nseg_total_;
 
@@ -753,7 +753,7 @@ namespace Opm
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
-        const int np = wells()[0]->numberOfPhases();
+        const int np = numPhases();
         const int nw = wells().size();
         for (int w = 0; w < nw; ++w) {
             const WellControls* wc = wells()[w]->wellControls();

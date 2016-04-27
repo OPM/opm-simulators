@@ -85,7 +85,10 @@ namespace Opm {
             const std::vector<WellMultiSegmentConstPtr>& wells() const;
             const MultisegmentWellOps& wellOps() const;
 
+            int numPhases() const { return num_phases_; };
+
             int numSegment() const { return nseg_total_; };
+
             int numPerf() const { return nperf_total_; };
 
             const Vector& wellPerforationCellPressureDiffs() const { return well_perforation_cell_pressure_diffs_; };
@@ -129,7 +132,6 @@ namespace Opm {
             template <class WellState>
             void
             updateWellState(const Vector& dwells,
-                            const int np,
                             const double dpmaxrel,
                             WellState& well_state) const;
 
@@ -144,7 +146,6 @@ namespace Opm {
                             const DataBlock& compi,
                             const std::vector<ADB>& mob_perfcells,
                             const std::vector<ADB>& b_perfcells,
-                            const int np,
                             Vector& aliveWells,
                             std::vector<ADB>& cq_s) const;
 
@@ -156,8 +157,7 @@ namespace Opm {
             computeSegmentFluidProperties(const SolutionState& state,
                                           const std::vector<PhasePresence>& pc,
                                           const std::vector<bool>& active,
-                                          const BlackoilPropsAdInterface& fluid,
-                                          const int np);
+                                          const BlackoilPropsAdInterface& fluid);
 
             void
             computeSegmentPressuresDelta(const double grav);
@@ -166,7 +166,6 @@ namespace Opm {
             void
             addWellFluxEq(const std::vector<ADB>& cq_s,
                           const SolutionState& state,
-                          const int np,
                           LinearisedBlackoilResidual& residual);
 
             template <class SolutionState, class WellState>
@@ -174,7 +173,6 @@ namespace Opm {
             addWellControlEq(const SolutionState& state,
                              const WellState& xw,
                              const Vector& aliveWells,
-                             const int np,
                              const std::vector<bool>& active,
                              LinearisedBlackoilResidual& residual);
 
@@ -187,6 +185,7 @@ namespace Opm {
         // TODO: probably a wells_active_ will be required here.
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
         const MultisegmentWellOps wops_ms_;
+        const int num_phases_;
         int nseg_total_;
         int nperf_total_;
 
