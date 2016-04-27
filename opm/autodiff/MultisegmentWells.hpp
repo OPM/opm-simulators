@@ -35,6 +35,7 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 
 #include <opm/autodiff/WellMultiSegment.hpp>
 
@@ -159,6 +160,13 @@ namespace Opm {
 
             void
             computeSegmentPressuresDelta(const double grav);
+
+            template <class SolutionState>
+            void
+            addWellFluxEq(const std::vector<ADB>& cq_s,
+                          const SolutionState& state,
+                          const int np,
+                          LinearisedBlackoilResidual& residual);
 
 
     protected:

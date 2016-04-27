@@ -510,7 +510,7 @@ namespace Opm {
                                   perf_press_diffs, compi,
                                   mob_perfcells, b_perfcells, np, aliveWells, cq_s);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        asImpl().addWellFluxEq(cq_s, state);
+        msWells().addWellFluxEq(cq_s, state, np, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().addWellControlEq(state, well_state, aliveWells);
     }
@@ -563,54 +563,6 @@ namespace Opm {
     }
 
 
-
-    template <class Grid>
-    void BlackoilMultiSegmentModel<Grid>::addWellFluxEq(const std::vector<ADB>& cq_s,
-                                                        const SolutionState& state)
-    {
-        // the well flux equations are for each segment and each phase.
-        //    /delta m_p_n / dt  - /sigma Q_pi - /sigma q_pj + Q_pn = 0
-        // 1. It is the gain of the amount of the component p in the segment n during the
-        //    current time step under stock-tank conditions.
-        //    It is used to handle the volume storage effects of the wellbore.
-        //    We need the information from the previous step and the crrent time step.
-        // 2. for the second term, it is flow into the segment from the inlet segments,
-        //    which are unknown and treated implictly.
-        // 3. for the third term, it is the inflow through the perforations.
-        // 4. for the last term, it is the outlet rates and also the segment rates,
-        //    which are the primary variable.
-        const int np = numPhases();
-        const int nseg_total = state.segp.size();
-
-        ADB segqs = state.segqs;
-
-        std::vector<ADB> segment_volume_change_dt(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            if ( msWellOps().has_multisegment_wells ) {
-                // Gain of the surface volume of each component in the segment by dt
-                segment_volume_change_dt[phase] = msWells().segmentCompSurfVolumeCurrent()[phase] -
-                                                  msWells().segmentCompSurfVolumeInitial()[phase];
-
-                // Special handling for when we are called from solveWellEq().
-                // TODO: restructure to eliminate need for special treatmemt.
-                if (segment_volume_change_dt[phase].numBlocks() != segqs.numBlocks()) {
-                    assert(segment_volume_change_dt[phase].numBlocks() > 2);
-                    assert(segqs.numBlocks() == 2);
-                    segment_volume_change_dt[phase] = wellhelpers::onlyWellDerivs(segment_volume_change_dt[phase]);
-                    assert(segment_volume_change_dt[phase].numBlocks() == 2);
-                }
-
-                const ADB cq_s_seg = msWellOps().p2s * cq_s[phase];
-                const ADB segqs_phase = subset(segqs, Span(nseg_total, 1, phase * nseg_total));
-                segqs -= superset(cq_s_seg + msWellOps().s2s_inlets * segqs_phase + segment_volume_change_dt[phase],
-                                  Span(nseg_total, 1, phase * nseg_total), np * nseg_total);
-            } else {
-                segqs -= superset(msWellOps().p2s * cq_s[phase], Span(nseg_total, 1, phase * nseg_total), np * nseg_total);
-            }
-        }
-
-        residual_.well_flux_eq = segqs;
-    }
 
 
 
@@ -973,7 +925,7 @@ namespace Opm {
                                       mob_perfcells_const, b_perfcells_const, np, aliveWells, cq_s);
 
             updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
-            addWellFluxEq(cq_s, wellSolutionState);
+            msWells().addWellFluxEq(cq_s, wellSolutionState, np, residual_);
             addWellControlEq(wellSolutionState, well_state, aliveWells);
             converged = Base::getWellConvergence(it);
 

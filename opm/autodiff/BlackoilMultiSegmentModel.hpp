@@ -206,10 +206,6 @@ namespace Opm {
                                          WellState& xw) const;
 
         void
-        addWellFluxEq(const std::vector<ADB>& cq_s,
-                      const SolutionState& state);
-
-        void
         addWellControlEq(const SolutionState& state,
                          const WellState& xw,
                          const V& aliveWells);
