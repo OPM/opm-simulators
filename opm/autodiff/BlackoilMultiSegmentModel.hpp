@@ -224,11 +224,6 @@ namespace Opm {
                                       std::vector<ADB>& vars,
                                       SolutionState& state) const;
 
-        // Calculate the density of the mixture in the segments
-        // And the surface volume of the components in the segments by dt
-        void
-        computeSegmentFluidProperties(const SolutionState& state);
-
         void
         computeSegmentPressuresDelta(const SolutionState& state);
 

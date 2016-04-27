@@ -34,6 +34,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
+#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
 #include <opm/autodiff/WellMultiSegment.hpp>
 
@@ -144,6 +145,17 @@ namespace Opm {
                             const int np,
                             Vector& aliveWells,
                             std::vector<ADB>& cq_s) const;
+
+
+            // Calculate the density of the mixture in the segments
+            // And the surface volume of the components in the segments by dt
+            template <class SolutionState>
+            void
+            computeSegmentFluidProperties(const SolutionState& state,
+                                          const std::vector<PhasePresence>& pc,
+                                          const std::vector<bool>& active,
+                                          const BlackoilPropsAdInterface& fluid,
+                                          const int np);
 
 
     protected:
