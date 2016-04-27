@@ -224,9 +224,6 @@ namespace Opm {
                                       std::vector<ADB>& vars,
                                       SolutionState& state) const;
 
-        void
-        computeSegmentPressuresDelta(const SolutionState& state);
-
 
     };
 

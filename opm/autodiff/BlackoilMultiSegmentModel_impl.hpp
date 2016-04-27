@@ -485,7 +485,10 @@ namespace Opm {
 
         // asImpl().computeSegmentFluidProperties(state);
         msWells().computeSegmentFluidProperties(state, phaseCondition(), active_, fluid_, numPhases());
-        asImpl().computeSegmentPressuresDelta(state);
+
+        // asImpl().computeSegmentPressuresDelta(state);
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        msWells().computeSegmentPressuresDelta(gravity);
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
@@ -920,46 +923,6 @@ namespace Opm {
     }
 
 
-
-
-
-    template <class Grid>
-    void
-    BlackoilMultiSegmentModel<Grid>::computeSegmentPressuresDelta(const SolutionState& state)
-    {
-        const int nw = wellsMultiSegment().size();
-        const int nseg_total = state.segp.size();
-
-        if ( !msWellOps().has_multisegment_wells ) {
-            msWells().wellSegmentPressureDelta() = ADB::constant(V::Zero(nseg_total));
-            msWells().wellSegmentPerforationPressureDiffs() = msWellOps().s2p * msWells().wellSegmentPressureDelta();
-            return;
-        }
-
-        // calculate the depth difference of the segments
-        // TODO: we need to store the following values somewhere to avoid recomputation.
-        V segment_depth_delta = V::Zero(nseg_total);
-        int start_segment = 0;
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-            const int nseg = well->numberOfSegments();
-            for (int s = 1; s < nseg; ++s) {
-                const int s_outlet = well->outletSegment()[s];
-                assert(s_outlet >= 0 && s_outlet < nseg);
-                segment_depth_delta[s + start_segment] = well->segmentDepth()[s_outlet] - well->segmentDepth()[s];
-            }
-            start_segment += nseg;
-        }
-        assert(start_segment == nseg_total);
-
-        const double grav = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const ADB grav_adb = ADB::constant(V::Constant(nseg_total, grav));
-        msWells().wellSegmentPressureDelta() = segment_depth_delta * grav_adb * msWells().wellSegmentDensities();
-
-        ADB well_segment_perforation_densities = msWellOps().s2p * msWells().wellSegmentDensities();
-        msWells().wellSegmentPerforationPressureDiffs() = grav * msWells().wellSegmentPerforationDepthDiffs() * well_segment_perforation_densities;
-
-    }
 
 
 

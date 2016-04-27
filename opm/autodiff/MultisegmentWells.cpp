@@ -185,6 +185,46 @@ namespace Opm {
         return wops_ms_;
     }
 
+
+
+
+
+    void
+    MultisegmentWells::
+    computeSegmentPressuresDelta(const double grav)
+    {
+        const int nw = wells().size();
+        const int nseg_total = nseg_total_;
+
+        if ( !wellOps().has_multisegment_wells ) {
+            wellSegmentPressureDelta() = ADB::constant(Vector::Zero(nseg_total));
+            wellSegmentPerforationPressureDiffs() = wellOps().s2p * wellSegmentPressureDelta();
+            return;
+        }
+
+        // calculate the depth difference of the segments
+        // TODO: we need to store the following values somewhere to avoid recomputation.
+        Vector segment_depth_delta = Vector::Zero(nseg_total);
+        int start_segment = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wells()[w];
+            const int nseg = well->numberOfSegments();
+            for (int s = 1; s < nseg; ++s) {
+                const int s_outlet = well->outletSegment()[s];
+                assert(s_outlet >= 0 && s_outlet < nseg);
+                segment_depth_delta[s + start_segment] = well->segmentDepth()[s_outlet] - well->segmentDepth()[s];
+            }
+            start_segment += nseg;
+        }
+        assert(start_segment == nseg_total);
+
+        const ADB grav_adb = ADB::constant(Vector::Constant(nseg_total, grav));
+        wellSegmentPressureDelta() = segment_depth_delta * grav_adb * wellSegmentDensities();
+
+        ADB well_segment_perforation_densities = wellOps().s2p * wellSegmentDensities();
+        wellSegmentPerforationPressureDiffs() = grav * wellSegmentPerforationDepthDiffs() * well_segment_perforation_densities;
+    }
+
 } // end of namespace Opm
 
 

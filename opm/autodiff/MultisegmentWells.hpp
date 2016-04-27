@@ -157,6 +157,9 @@ namespace Opm {
                                           const BlackoilPropsAdInterface& fluid,
                                           const int np);
 
+            void
+            computeSegmentPressuresDelta(const double grav);
+
 
     protected:
         // TODO: probably a wells_active_ will be required here.
