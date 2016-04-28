@@ -50,9 +50,6 @@ namespace Opm {
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
                                                              const WellState& xw,
-                                                             const BlackoilPropsAdInterface& fluid,
-                                                             const std::vector<bool>& active,
-                                                             const std::vector<PhasePresence>& pc,
                                                              std::vector<double>& b_perf,
                                                              std::vector<double>& rsmax_perf,
                                                              std::vector<double>& rvmax_perf,
@@ -81,6 +78,8 @@ namespace Opm {
             const SolventPropsAdFromDeck* solvent_props_;
             int solvent_pos_;
             bool has_solvent_;
+
+            using Base::phase_condition_;
 
         };
 

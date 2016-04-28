@@ -89,9 +89,6 @@ namespace Opm {
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
                                                              const WellState& xw,
-                                                             const BlackoilPropsAdInterface& fluid,
-                                                             const std::vector<bool>& active,
-                                                             const std::vector<PhasePresence>& pc,
                                                              std::vector<double>& b_perf,
                                                              std::vector<double>& rsmax_perf,
                                                              std::vector<double>& rvmax_perf,

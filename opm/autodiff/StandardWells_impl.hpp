@@ -180,16 +180,11 @@ namespace Opm
     StandardWells::
     computePropertiesForWellConnectionPressures(const SolutionState& state,
                                                 const WellState& xw,
-                                                const BlackoilPropsAdInterface& fluid,
-                                                const std::vector<bool>& active,
-                                                const std::vector<PhasePresence>& pc,
                                                 std::vector<double>& b_perf,
                                                 std::vector<double>& rsmax_perf,
                                                 std::vector<double>& rvmax_perf,
                                                 std::vector<double>& surf_dens_perf)
     {
-        static_cast<void>(active); // Silence unused argument warning in release mode.
-
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const int nw = wells().number_of_wells;
 
@@ -216,28 +211,28 @@ namespace Opm
         std::vector<PhasePresence> perf_cond(nperf);
         // const std::vector<PhasePresence>& pc = phaseCondition();
         for (int perf = 0; perf < nperf; ++perf) {
-            perf_cond[perf] = pc[well_cells[perf]];
+            perf_cond[perf] = phase_condition_[well_cells[perf]];
         }
-        const PhaseUsage& pu = fluid.phaseUsage();
+        const PhaseUsage& pu = fluid_.phaseUsage();
         DataBlock b(nperf, pu.num_phases);
         if (pu.phase_used[BlackoilPhases::Aqua]) {
-            const Vector bw = fluid.bWat(avg_press_ad, perf_temp, well_cells).value();
+            const Vector bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
         }
-        assert(active[Oil]);
+        assert(active_[Oil]);
         const Vector perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const ADB perf_rs = (state.rs.size() > 0) ? subset(state.rs, well_cells) : ADB::null();
-            const Vector bo = fluid.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
+            const Vector bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = (state.rv.size() > 0) ? subset(state.rv, well_cells) : ADB::null();
-            const Vector bg = fluid.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
+            const Vector bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
         }
         if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
-            const Vector rssat = fluid.rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
+            const Vector rssat = fluid_.rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
 
             const Vector rvsat = fluid.rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
@@ -250,9 +245,9 @@ namespace Opm
         // Surface density.
         // The compute density segment wants the surface densities as
         // an np * number of wells cells array
-        Vector rho = superset(fluid.surfaceDensity(0 , well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
+        Vector rho = superset(fluid_.surfaceDensity(0 , well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
         for (int phase = 1; phase < pu.num_phases; ++phase) {
-            rho += superset(fluid.surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
+            rho += superset(fluid_.surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
         }
         surf_dens_perf.assign(rho.data(), rho.data() + nperf * pu.num_phases);
 
@@ -315,8 +310,7 @@ namespace Opm
         std::vector<double> rsmax_perf;
         std::vector<double> rvmax_perf;
         std::vector<double> surf_dens_perf;
-        computePropertiesForWellConnectionPressures(state, xw, fluid, active, phaseCondition,
-                                                    b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+        computePropertiesForWellConnectionPressures(state, xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // Extract well connection depths
         // TODO: depth_perf should be a member of the StandardWells class
