@@ -56,6 +56,7 @@
 #include <iomanip>
 #include <limits>
 #include <vector>
+#include <algorithm>
 //#include <fstream>
 
 // A debugging utility.
@@ -184,10 +185,21 @@ namespace detail {
                         { 1.1169, 1.0031, 0.0031 }, // the default magic numbers
                         false } )
         , terminal_output_ (terminal_output)
-        , material_name_{ "Water", "Oil", "Gas" }
+        , material_name_(0)
         , current_relaxation_(1.0)
     {
-        assert(numMaterials() == 3); // Due to the material_name_ init above.
+        if (active_[Water]) {
+            material_name_.push_back("Water");
+        }
+        if (active_[Oil]) {
+            material_name_.push_back("Oil");
+        }
+        if (active_[Gas]) {
+            material_name_.push_back("Gas");
+        }
+
+        assert(numMaterials() == std::accumulate(active_.begin(), active_.end(), 0)); // Due to the material_name_ init above.
+
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
@@ -658,12 +670,16 @@ namespace detail {
                 sg = isSg_*xvar + isRv_*so;
                 so -= sg;
 
-                if (active_[ Oil ]) {
-                    // RS and RV is only defined if both oil and gas phase are active.
+                //Compute the phase pressures before computing RS/RV
+                {
                     const ADB& sw = (active_[ Water ]
                                              ? state.saturation[ pu.phase_pos[ Water ] ]
-                                             : ADB::constant(V::Zero(nc, 1)));
+                                             : ADB::null());
                     state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
+                }
+
+                if (active_[ Oil ]) {
+                    // RS and RV is only defined if both oil and gas phase are active.
                     const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
                         state.rs = (1-isRs_)*rsSat + isRs_*xvar;
@@ -677,6 +693,14 @@ namespace detail {
                         state.rv = rvSat;
                     }
                 }
+            }
+            else {
+                // Compute phase pressures also if gas phase is not active
+                const ADB& sw = (active_[ Water ]
+                                         ? state.saturation[ pu.phase_pos[ Water ] ]
+                                         : ADB::null());
+                const ADB& sg = ADB::null();
+                state.canonical_phase_pressures = computePressures(state.pressure, sw, so, sg);
             }
 
             if (active_[ Oil ]) {
@@ -1578,37 +1602,51 @@ namespace detail {
                 sg = sg_old - step * dsg;
             }
 
+            assert(active_[Oil]);
             const int pos = pu.phase_pos[ Oil ];
             const V so_old = s_old.col(pos);
             so = so_old - step * dso;
         }
 
         // Appleyard chop process.
-        auto ixg = sg < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixg[c]) {
-                sw[c] = sw[c] / (1-sg[c]);
-                so[c] = so[c] / (1-sg[c]);
-                sg[c] = 0;
+        if (active_[Gas]) {
+            auto ixg = sg < 0;
+            for (int c = 0; c < nc; ++c) {
+                if (ixg[c]) {
+                    if (active_[Water]) {
+                        sw[c] = sw[c] / (1-sg[c]);
+                    }
+                    so[c] = so[c] / (1-sg[c]);
+                    sg[c] = 0;
+                }
             }
         }
 
-
-        auto ixo = so < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixo[c]) {
-                sw[c] = sw[c] / (1-so[c]);
-                sg[c] = sg[c] / (1-so[c]);
-                so[c] = 0;
+        if (active_[Oil]) {
+            auto ixo = so < 0;
+            for (int c = 0; c < nc; ++c) {
+                if (ixo[c]) {
+                    if (active_[Water]) {
+                        sw[c] = sw[c] / (1-so[c]);
+                    }
+                    if (active_[Gas]) {
+                        sg[c] = sg[c] / (1-so[c]);
+                    }
+                    so[c] = 0;
+                }
             }
         }
 
-        auto ixw = sw < 0;
-        for (int c = 0; c < nc; ++c) {
-            if (ixw[c]) {
-                so[c] = so[c] / (1-sw[c]);
-                sg[c] = sg[c] / (1-sw[c]);
-                sw[c] = 0;
+        if (active_[Water]) {
+            auto ixw = sw < 0;
+            for (int c = 0; c < nc; ++c) {
+                if (ixw[c]) {
+                    so[c] = so[c] / (1-sw[c]);
+                    if (active_[Gas]) {
+                        sg[c] = sg[c] / (1-sw[c]);
+                    }
+                    sw[c] = 0;
+                }
             }
         }
 
@@ -1618,18 +1656,21 @@ namespace detail {
         //sg = sg / sumSat;
 
         // Update the reservoir_state
-        for (int c = 0; c < nc; ++c) {
-            reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
+        if (active_[Water]) {
+            for (int c = 0; c < nc; ++c) {
+                reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
+            }
         }
 
-        for (int c = 0; c < nc; ++c) {
-            reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
+        if (active_[Gas]) {
+            for (int c = 0; c < nc; ++c) {
+                reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
+            }
         }
 
         if (active_[ Oil ]) {
-            const int pos = pu.phase_pos[ Oil ];
             for (int c = 0; c < nc; ++c) {
-                reservoir_state.saturation()[c*np + pos] = so[c];
+                reservoir_state.saturation()[c*np + pu.phase_pos[ Oil ]] = so[c];
             }
         }
 
@@ -1875,7 +1916,9 @@ namespace detail {
             // The reference pressure is always the liquid phase (oil) pressure.
             if (phaseIdx == BlackoilPhases::Liquid)
                 continue;
-            pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];
+            if (active_[phaseIdx]) {
+                pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];
+            }
         }
 
         // Since pcow = po - pw, but pcog = pg - po,
@@ -1884,10 +1927,12 @@ namespace detail {
         //   pg = po + pcgo
         // This is an unfortunate inconsistency, but a convention we must handle.
         for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-            if (phaseIdx == BlackoilPhases::Aqua) {
-                pressure[phaseIdx] = po - pressure[phaseIdx];
-            } else {
-                pressure[phaseIdx] += po;
+            if (active_[phaseIdx]) {
+                if (phaseIdx == BlackoilPhases::Aqua) {
+                    pressure[phaseIdx] = po - pressure[phaseIdx];
+                } else {
+                    pressure[phaseIdx] += po;
+                }
             }
         }
 
@@ -2648,13 +2693,17 @@ namespace detail {
     BlackoilModelBase<Grid, WellModel, Implementation>::
     updatePhaseCondFromPrimalVariable()
     {
-        if (! active_[Gas]) {
-            OPM_THROW(std::logic_error, "updatePhaseCondFromPrimarVariable() logic requires active gas phase.");
-        }
-        const int nc = primalVariable_.size();
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
         isRs_ = V::Zero(nc);
         isRv_ = V::Zero(nc);
         isSg_ = V::Zero(nc);
+
+        if (! (active_[Gas] && active_[Oil])) {
+            // updatePhaseCondFromPrimarVariable() logic requires active gas and oil phase.
+            phaseCondition_.assign(nc, PhasePresence());
+            return;
+        }
+
         for (int c = 0; c < nc; ++c) {
             phaseCondition_[c] = PhasePresence(); // No free phases.
             phaseCondition_[c].setFreeWater(); // Not necessary for property calculation usage.
