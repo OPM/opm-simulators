@@ -276,7 +276,6 @@ namespace Opm {
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        WellModel                       std_wells_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -294,6 +293,10 @@ namespace Opm {
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
+
+        // Well Model
+        WellModel                       std_wells_;
+
         V isRs_;
         V isRv_;
         V isSg_;

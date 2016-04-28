@@ -32,8 +32,11 @@ namespace Opm
 
 
 
-    StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg)
-        : Base(wells_arg)
+    StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg,
+                                 const BlackoilPropsAdInterface& fluid_arg,
+                                 const std::vector<bool>& active_arg,
+                                 const std::vector<PhasePresence>& pc_arg)
+        : Base(wells_arg, fluid_arg, active_arg, pc_arg)
         , solvent_props_(nullptr)
         , solvent_pos_(-1)
         , has_solvent_(false)

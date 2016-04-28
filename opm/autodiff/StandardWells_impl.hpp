@@ -71,9 +71,16 @@ namespace Opm
 
 
 
-    StandardWells::StandardWells(const Wells* wells_arg)
+    StandardWells::StandardWells(const Wells* wells_arg,
+                                 const BlackoilPropsAdInterface& fluid_arg,
+                                 const std::vector<bool>& active_arg,
+                                 const std::vector<PhasePresence>& pc_arg)
       : wells_(wells_arg)
       , wops_(wells_arg)
+      , num_phases_(wells_arg->number_of_phases)
+      , fluid_(fluid_arg)
+      , active_(active_arg)
+      , phase_condition_(pc_arg)
       , well_perforation_densities_(Vector())
       , well_perforation_pressure_diffs_(Vector())
     {

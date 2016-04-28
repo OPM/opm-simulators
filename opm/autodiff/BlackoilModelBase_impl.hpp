@@ -162,7 +162,6 @@ namespace detail {
         , fluid_ (fluid)
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
-        , std_wells_ (wells_arg)
         , vfp_properties_(
                     eclState->getTableManager().getVFPInjTables(),
                     eclState->getTableManager().getVFPProdTables())
@@ -177,6 +176,7 @@ namespace detail {
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
+        , std_wells_ (wells_arg, fluid_, active_, phaseCondition_)
         , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isRv_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))

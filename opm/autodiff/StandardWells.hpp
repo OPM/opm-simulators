@@ -60,7 +60,14 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            explicit StandardWells(const Wells* wells);
+            StandardWells(const Wells* wells_arg,
+                          const BlackoilPropsAdInterface& fluid_arg,
+                          const std::vector<bool>& active_arg,
+                          const std::vector<PhasePresence>& pc_arg);
+
+            const WellOps& wellOps() const;
+
+            int numPhases() const { return num_phases_; };
 
             const Wells& wells() const;
 
@@ -70,7 +77,6 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            const WellOps& wellOps() const;
 
             /// Density of each well perforation
             Vector& wellPerforationDensities(); // mutable version kept for BlackoilMultisegmentModel
@@ -197,6 +203,10 @@ namespace Opm {
             bool wells_active_;
             const Wells*   wells_;
             const WellOps  wops_;
+            const int num_phases_;
+            const BlackoilPropsAdInterface& fluid_;
+            const std::vector<bool>& active_;
+            const std::vector<PhasePresence>& phase_condition_;
             Vector well_perforation_densities_;
             Vector well_perforation_pressure_diffs_;
         };
