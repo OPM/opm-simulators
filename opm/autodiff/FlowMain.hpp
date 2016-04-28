@@ -392,7 +392,7 @@ namespace Opm
                 checkDeck(deck_, parser);
                 eclipse_state_.reset(new EclipseState(deck_, parseContext));
                 auto ioConfig = eclipse_state_->getIOConfig();
-                ioConfig->setOutputDir(param_.getDefault("output_dir", std::string("output")));
+                ioConfig->setOutputDir(output_dir_);
             }
             catch (const std::invalid_argument& e) {
                 std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;
