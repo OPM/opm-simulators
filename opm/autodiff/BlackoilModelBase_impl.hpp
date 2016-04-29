@@ -774,7 +774,7 @@ namespace detail {
         // get reasonable initial conditions for the wells
         // asImpl().updateWellControls(well_state);
         // asImpl().stdWells().updateWellControls(well_state);
-        asImpl().stdWells().updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
+        asImpl().stdWells().updateWellControls(gravity, vfp_properties_, terminal_output_, well_state);
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
@@ -817,17 +817,16 @@ namespace detail {
         }
         V aliveWells;
         std::vector<ADB> cq_s;
-        asImpl().stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        asImpl().stdWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().stdWells().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        asImpl().stdWells().addWellControlEq(state, well_state, aliveWells, active_, vfp_properties_, gravity, residual_);
+        asImpl().stdWells().addWellControlEq(state, well_state, aliveWells, vfp_properties_, gravity, residual_);
         // asImpl().computeWellPotentials(state, mob_perfcells, b_perfcells, well_state);
         {
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            asImpl().stdWells().computeWellPotentials(state0, mob_perfcells, b_perfcells,
-                                                      fluid_.phaseUsage(), active_, vfp_properties_,
+            asImpl().stdWells().computeWellPotentials(state0, mob_perfcells, b_perfcells, vfp_properties_,
                                                       param_.compute_well_potentials_, gravity, well_state);
         }
 
@@ -1072,11 +1071,11 @@ namespace detail {
 
             SolutionState wellSolutionState = state0;
             asImpl().variableStateExtractWellsVars(indices, vars, wellSolutionState);
-            asImpl().stdWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            asImpl().stdWells().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
             asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             asImpl().stdWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
             asImpl().stdWells().addWellControlEq(wellSolutionState, well_state, aliveWells,
-                                                 active_, vfp_properties_, gravity, residual_);
+                                                 vfp_properties_, gravity, residual_);
             converged = getWellConvergence(it);
 
             if (converged) {
@@ -1100,8 +1099,8 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 // asImpl().updateWellState(dx.array(), well_state);
-                asImpl().stdWells().updateWellState(dx.array(), gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
-                asImpl().stdWells(). updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
+                asImpl().stdWells().updateWellState(dx.array(), gravity, dpMaxRel(), vfp_properties_, well_state);
+                asImpl().stdWells().updateWellControls(gravity, vfp_properties_, terminal_output_, well_state);
             }
         } while (it < 15);
 
@@ -2333,8 +2332,8 @@ namespace detail {
                     WellState& well_state)
     {
         const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(),
-                                            active_, vfp_properties_, well_state);
+        asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(),
+                                            vfp_properties_, well_state);
 
     }
 

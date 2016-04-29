@@ -501,7 +501,7 @@ namespace Opm {
         const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         const V depth = cellCentroidsZToEigen(grid_);
         // updateWellControls(well_state);
-        stdWells().updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
+        stdWells().updateWellControls(gravity, vfp_properties_, terminal_output_, well_state);
 
         // Create the primary variables.
         SolutionState state = variableState(reservoir_state, well_state);
@@ -554,7 +554,7 @@ namespace Opm {
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
-        stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        stdWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
 
         if (has_plyshlog_) {
             std::vector<double> water_vel_wells;
@@ -573,11 +573,11 @@ namespace Opm {
             mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
         }
 
-        stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        stdWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         stdWells().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        stdWells().addWellControlEq(state, well_state, aliveWells, active_, vfp_properties_, gravity, residual_);
+        stdWells().addWellControlEq(state, well_state, aliveWells, vfp_properties_, gravity, residual_);
     }
 
 

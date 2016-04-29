@@ -111,8 +111,6 @@ namespace Opm {
 
             template <class SolutionState>
             void computeWellFlux(const SolutionState& state,
-                                 const Opm::PhaseUsage& phase_usage,
-                                 const std::vector<bool>& active,
                                  const std::vector<ADB>& mob_perfcells,
                                  const std::vector<ADB>& b_perfcells,
                                  Vector& aliveWells,
@@ -127,17 +125,13 @@ namespace Opm {
             void updateWellState(const Vector& dwells,
                                  const double gravity,
                                  const double dpmaxrel,
-                                 const Opm::PhaseUsage& pu,
-                                 const std::vector<bool>& active,
                                  const VFPProperties& vfp_properties,
                                  WellState& well_state);
 
             template <class WellState>
-            void updateWellControls(const Opm::PhaseUsage& pu,
-                                    const double gravity,
+            void updateWellControls(const double gravity,
                                     const VFPProperties& vfp_properties,
                                     const bool terminal_output,
-                                    const std::vector<bool>& active,
                                     WellState& xw) const;
 
             // TODO: should LinearisedBlackoilResidual also be a template class?
@@ -151,7 +145,6 @@ namespace Opm {
             void addWellControlEq(const SolutionState& state,
                                   const WellState& xw,
                                   const Vector& aliveWells,
-                                  const std::vector<bool> active,
                                   const VFPProperties& vfp_properties,
                                   const double gravity,
                                   LinearisedBlackoilResidual& residual);
@@ -168,8 +161,6 @@ namespace Opm {
             computeWellPotentials(SolutionState& state0,
                                   const std::vector<ADB>& mob_perfcells,
                                   const std::vector<ADB>& b_perfcells,
-                                  const Opm::PhaseUsage& pu,
-                                  const std::vector<bool> active,
                                   const VFPProperties& vfp_properties,
                                   const bool compute_well_potentials,
                                   const bool gravity,
