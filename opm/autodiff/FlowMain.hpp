@@ -605,25 +605,24 @@ namespace Opm
 
         void extractMessages()
         {
-            // extract messages from deck.
+            auto extractMessage = [](const Message& msg) {
+                auto log_type = detail::convertMessageType(msg.mtype);
+                const auto& location = msg.location;
+                if (location) {
+                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
+                } else {
+                    OpmLog::addMessage(log_type, msg.message);
+                }
+            };
+
+            // Extract messages from Deck.
             for(const auto& msg : deck_->getMessageContainer()) {
-                auto log_type = convertMessageType(msg.mtype);
-                const auto& location = msg.location;
-                if (location) {
-                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
-                } else {
-                    OpmLog::addMessage(log_type, msg.message);
-                }
+                extractMessage(msg);
             }
-            // extract messages from EclipseState.
+
+            // Extract messages from EclipseState.
             for (const auto& msg : eclipse_state_->getMessageContainer()) {
-                auto log_type = convertMessageType(msg.mtype);
-                const auto& location = msg.location;
-                if (location) {
-                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
-                } else {
-                    OpmLog::addMessage(log_type, msg.message);
-                }
+                extractMessage(msg);
             }
         }
 
