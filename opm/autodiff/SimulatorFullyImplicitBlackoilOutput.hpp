@@ -295,7 +295,7 @@ namespace Opm
                      new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
         eclWriter_( output_ && parallelOutput_->isIORank() &&
                     param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState, phaseUsage,
+                    new EclipseWriter(eclipseState,
                                       parallelOutput_->numCells(),
                                       parallelOutput_->globalCell() )
                    : 0 ),
