@@ -91,40 +91,21 @@ namespace Opm {
 
             int numPerf() const { return nperf_total_; };
 
-            const Vector& wellPerforationCellPressureDiffs() const { return well_perforation_cell_pressure_diffs_; };
             Vector& wellPerforationCellPressureDiffs() { return well_perforation_cell_pressure_diffs_; };
 
-            const ADB& wellSegmentPerforationPressureDiffs() const { return well_segment_perforation_pressure_diffs_; };
-            ADB& wellSegmentPerforationPressureDiffs() { return well_segment_perforation_pressure_diffs_; };
-
-            const Vector& wellSegmentPerforationDepthDiffs() const { return well_segment_perforation_depth_diffs_; };
             Vector& wellSegmentPerforationDepthDiffs() { return well_segment_perforation_depth_diffs_; };
 
             const Vector& wellPerforationCellDensities() const { return well_perforation_cell_densities_; };
             Vector& wellPerforationCellDensities() { return well_perforation_cell_densities_; };
 
-            const ADB& wellSegmentDensities() const { return well_segment_densities_; };
-            ADB& wellSegmentDensities() { return well_segment_densities_; };
-
-            const ADB& wellSegmentPressureDelta() const { return well_segment_pressures_delta_; };
-            ADB& wellSegmentPressureDelta() { return well_segment_pressures_delta_; };
-
             const std::vector<Vector>& segmentCompSurfVolumeInitial() const { return segment_comp_surf_volume_initial_; };
             std::vector<Vector>& segmentCompSurfVolumeInitial() { return segment_comp_surf_volume_initial_; };
 
             const std::vector<ADB>& segmentCompSurfVolumeCurrent() const { return segment_comp_surf_volume_current_; };
-            std::vector<ADB>& segmentCompSurfVolumeCurrent() { return segment_comp_surf_volume_current_; };
-
-            const ADB& segmentMassFlowRates() const { return segment_mass_flow_rates_; };
-            ADB& segmentMassFlowRates() { return segment_mass_flow_rates_; };
-
-            const ADB& segmentViscosities() const { return segment_viscosities_; };
-            ADB& segmentViscosities() { return segment_viscosities_; };
 
             const std::vector<int>& topWellSegments() const { return top_well_segments_; };
             std::vector<int>& topWellSegments() { return top_well_segments_; };
 
-            const Vector& segVDt() const { return segvdt_; };
             Vector& segVDt() { return segvdt_; };
 
 

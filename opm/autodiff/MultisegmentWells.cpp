@@ -198,8 +198,8 @@ namespace Opm {
         const int nseg_total = nseg_total_;
 
         if ( !wellOps().has_multisegment_wells ) {
-            wellSegmentPressureDelta() = ADB::constant(Vector::Zero(nseg_total));
-            wellSegmentPerforationPressureDiffs() = wellOps().s2p * wellSegmentPressureDelta();
+            well_segment_pressures_delta_ = ADB::constant(Vector::Zero(nseg_total));
+            well_segment_perforation_pressure_diffs_ = wellOps().s2p * well_segment_pressures_delta_;
             return;
         }
 
@@ -220,10 +220,10 @@ namespace Opm {
         assert(start_segment == nseg_total);
 
         const ADB grav_adb = ADB::constant(Vector::Constant(nseg_total, grav));
-        wellSegmentPressureDelta() = segment_depth_delta * grav_adb * wellSegmentDensities();
+        well_segment_pressures_delta_ = segment_depth_delta * grav_adb * well_segment_densities_;
 
-        ADB well_segment_perforation_densities = wellOps().s2p * wellSegmentDensities();
-        wellSegmentPerforationPressureDiffs() = grav * wellSegmentPerforationDepthDiffs() * well_segment_perforation_densities;
+        ADB well_segment_perforation_densities = wellOps().s2p * well_segment_densities_;
+        well_segment_perforation_pressure_diffs_ = grav * well_segment_perforation_depth_diffs_ * well_segment_perforation_densities;
     }
 
 } // end of namespace Opm

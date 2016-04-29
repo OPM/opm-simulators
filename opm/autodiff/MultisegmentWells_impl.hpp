@@ -167,9 +167,9 @@ namespace Opm
             Selector<double> msperf_selector(is_multisegment_perf, Selector<double>::NotEqualZero);
 
             // Compute drawdown.
-            ADB h_nc = msperf_selector.select(wellSegmentPerforationPressureDiffs(),
+            ADB h_nc = msperf_selector.select(well_segment_perforation_pressure_diffs_,
                                               ADB::constant(well_perforation_pressure_diffs));
-            const Vector h_cj = msperf_selector.select(wellPerforationCellPressureDiffs(), Vector::Zero(nperf));
+            const Vector h_cj = msperf_selector.select(well_perforation_cell_pressure_diffs_, Vector::Zero(nperf));
 
             // Special handling for when we are called from solveWellEq().
             // TODO: restructure to eliminate need for special treatmemt.
@@ -325,11 +325,11 @@ namespace Opm
         if ( !wellOps().has_multisegment_wells ){
             // not sure if this is needed actually
             // TODO: to check later if this is really necessary.
-            wellSegmentDensities() = ADB::constant(Vector::Zero(nseg_total));
-            segmentMassFlowRates() = ADB::constant(Vector::Zero(nseg_total));
-            segmentViscosities() = ADB::constant(Vector::Zero(nseg_total));
+            well_segment_densities_ = ADB::constant(Vector::Zero(nseg_total));
+            segment_mass_flow_rates_ = ADB::constant(Vector::Zero(nseg_total));
+            segment_viscosities_ = ADB::constant(Vector::Zero(nseg_total));
             for (int phase = 0; phase < np; ++phase) {
-                segmentCompSurfVolumeCurrent()[phase] = ADB::constant(Vector::Zero(nseg_total));
+                segment_comp_surf_volume_current_[phase] = ADB::constant(Vector::Zero(nseg_total));
                 segmentCompSurfVolumeInitial()[phase] = Vector::Zero(nseg_total);
             }
             return;
@@ -491,27 +491,27 @@ namespace Opm
             const Vector surface_density = fluid.surfaceDensity(phase, segment_cells);
             dens += surface_density * mix[phase];
         }
-        wellSegmentDensities() = dens / volrat;
+        well_segment_densities_ = dens / volrat;
 
         // Calculating the surface volume of each component in the segment
-        assert(np == int(segmentCompSurfVolumeCurrent().size()));
-        const ADB segment_surface_volume = segVDt() / volrat;
+        assert(np == int(segment_comp_surf_volume_current_.size()));
+        const ADB segment_surface_volume = segvdt_ / volrat;
         for (int phase = 0; phase < np; ++phase) {
-            segmentCompSurfVolumeCurrent()[phase] = segment_surface_volume * mix[phase];
+            segment_comp_surf_volume_current_[phase] = segment_surface_volume * mix[phase];
         }
 
         // Mass flow rate of the segments
-        segmentMassFlowRates() = ADB::constant(Vector::Zero(nseg_total));
+        segment_mass_flow_rates_ = ADB::constant(Vector::Zero(nseg_total));
         for (int phase = 0; phase < np; ++phase) {
             // TODO: how to remove one repeated surfaceDensity()
             const Vector surface_density = fluid.surfaceDensity(phase, segment_cells);
-            segmentMassFlowRates() += surface_density * segqs[phase];
+            segment_mass_flow_rates_ += surface_density * segqs[phase];
         }
 
         // Viscosity of the fluid mixture in the segments
-        segmentViscosities() = ADB::constant(Vector::Zero(nseg_total));
+        segment_viscosities_ = ADB::constant(Vector::Zero(nseg_total));
         for (int phase = 0; phase < np; ++phase) {
-            segmentViscosities() += x[phase] * mu_seg[phase];
+            segment_viscosities_ += x[phase] * mu_seg[phase];
         }
     }
 
@@ -546,7 +546,7 @@ namespace Opm
         for (int phase = 0; phase < np; ++phase) {
             if ( wellOps().has_multisegment_wells ) {
                 // Gain of the surface volume of each component in the segment by dt
-                segment_volume_change_dt[phase] = segmentCompSurfVolumeCurrent()[phase] -
+                segment_volume_change_dt[phase] = segment_comp_surf_volume_current_[phase] -
                                                   segmentCompSurfVolumeInitial()[phase];
 
                 // Special handling for when we are called from solveWellEq().
@@ -702,8 +702,8 @@ namespace Opm
             // Special handling for when we are called from solveWellEq().
             // TODO: restructure to eliminate need for special treatmemt.
             ADB wspd = (state.segp.numBlocks() == 2)
-                ? wellhelpers::onlyWellDerivs(wellSegmentPressureDelta())
-                : wellSegmentPressureDelta();
+                ? wellhelpers::onlyWellDerivs(well_segment_pressures_delta_)
+                : well_segment_pressures_delta_;
 
             others_residual = wellOps().eliminate_topseg * (state.segp - wellOps().s2s_outlet * state.segp + wspd);
         } else {
