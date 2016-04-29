@@ -150,7 +150,7 @@ namespace Opm
         case Message::type::Bug:
             return Log::MessageType::Bug;
         }
-        throw std::logic_error("Invalide messages type!\n");
+        throw std::logic_error("Invalid messages type!\n");
     }
 
     /// This class encapsulates the setup and running of
