@@ -111,7 +111,11 @@ namespace Opm {
 
             Vector& segVDt() { return segvdt_; };
 
+            const Vector& wellPerforationDensities() const { return well_perforation_densities_; };
+            Vector& wellPerforationDensities() { return well_perforation_densities_; };
 
+            const Vector& wellPerforationPressureDiffs() const { return well_perforation_pressure_diffs_; };
+            Vector& wellPerforationPressureDiffs() { return well_perforation_pressure_diffs_; };
 
             template <class WellState>
             void
@@ -217,6 +221,13 @@ namespace Opm {
         // segment volume by dt (time step)
         // to handle the volume effects of the segment
         Vector segvdt_;
+
+        // technically, they are only useful for standard wells
+        // since at the moment, we are handling both the standard
+        // wells and the multi-segment wells under the MultisegmentWells
+        // we need them to remove the dependency on StandardWells
+        Vector well_perforation_densities_;
+        Vector well_perforation_pressure_diffs_;
 
     };
 

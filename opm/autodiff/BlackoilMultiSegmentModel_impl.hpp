@@ -226,7 +226,7 @@ namespace Opm {
 
         const std::vector<int>& well_cells = msWellOps().well_cells;
 
-        stdWells().wellPerforationDensities() = V::Zero(nperf_total);
+        msWells().wellPerforationDensities() = V::Zero(nperf_total);
 
         const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf_total);
 
@@ -327,8 +327,8 @@ namespace Opm {
                         wells(), perf_cell_depth, cd, grav);
 
         // 4. Store the results
-        stdWells().wellPerforationDensities() = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
-        stdWells().wellPerforationPressureDiffs() = Eigen::Map<const V>(cdp.data(), nperf_total);
+        msWells().wellPerforationDensities() = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
+        msWells().wellPerforationPressureDiffs() = Eigen::Map<const V>(cdp.data(), nperf_total);
 
         if ( !msWellOps().has_multisegment_wells ) {
             msWells().wellPerforationCellDensities() = V::Zero(nperf_total);
@@ -503,7 +503,7 @@ namespace Opm {
         const int nw = wellsMultiSegment().size();
         const int np = numPhases();
         const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
-        const V perf_press_diffs = stdWells().wellPerforationPressureDiffs();
+        const V perf_press_diffs = msWells().wellPerforationPressureDiffs();
         msWells().computeWellFlux(state, perf_press_diffs, compi,
                                   mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
@@ -538,7 +538,7 @@ namespace Opm {
         // we need th concept of preforation pressures
         xw.perfPress().resize(nperf_total, -1.e100);
 
-        const V& cdp = stdWells().wellPerforationPressureDiffs();
+        const V& cdp = msWells().wellPerforationPressureDiffs();
         int start_segment = 0;
         int start_perforation = 0;
         for (int i = 0; i < nw; ++i) {
@@ -661,7 +661,7 @@ namespace Opm {
 
             const int nw = wellsMultiSegment().size();
             const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
-            const V perf_press_diffs = stdWells().wellPerforationPressureDiffs();
+            const V perf_press_diffs = msWells().wellPerforationPressureDiffs();
             msWells().computeWellFlux(wellSolutionState, perf_press_diffs, compi,
                                       mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
 
