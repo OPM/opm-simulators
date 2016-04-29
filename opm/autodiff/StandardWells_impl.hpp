@@ -327,9 +327,6 @@ namespace Opm
     StandardWells::
     extractWellPerfProperties(const SolutionState& /* state */,
                               const std::vector<ReservoirResidualQuant>& rq,
-                              const int np,
-                              const BlackoilPropsAdInterface& /* fluid */,
-                              const std::vector<bool>& /* active */,
                               std::vector<ADB>& mob_perfcells,
                               std::vector<ADB>& b_perfcells) const
     {
@@ -341,9 +338,9 @@ namespace Opm
             return;
         } else {
             const std::vector<int>& well_cells = wellOps().well_cells;
-            mob_perfcells.resize(np, ADB::null());
-            b_perfcells.resize(np, ADB::null());
-            for (int phase = 0; phase < np; ++phase) {
+            mob_perfcells.resize(num_phases_, ADB::null());
+            b_perfcells.resize(num_phases_, ADB::null());
+            for (int phase = 0; phase < num_phases_; ++phase) {
                 mob_perfcells[phase] = subset(rq[phase].mob, well_cells);
                 b_perfcells[phase] = subset(rq[phase].b, well_cells);
             }

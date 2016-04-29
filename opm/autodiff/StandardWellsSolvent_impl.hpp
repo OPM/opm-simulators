@@ -234,16 +234,14 @@ namespace Opm
     StandardWellsSolvent::
     extractWellPerfProperties(const SolutionState& state,
                               const std::vector<ReservoirResidualQuant>& rq,
-                              const int np,
-                              const BlackoilPropsAdInterface& fluid,
-                              const std::vector<bool>& active,
                               std::vector<ADB>& mob_perfcells,
                               std::vector<ADB>& b_perfcells) const
     {
-        Base::extractWellPerfProperties(state, rq, np, fluid, active, mob_perfcells, b_perfcells);
+        Base::extractWellPerfProperties(state, rq, mob_perfcells, b_perfcells);
         // handle the solvent related
         if (has_solvent_) {
-            int gas_pos = fluid.phaseUsage().phase_pos[Gas];
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            int gas_pos = pu.phase_pos[Gas];
             const std::vector<int>& well_cells = wellOps().well_cells;
             const int nperf = well_cells.size();
             // Gas and solvent is combinded and solved together
@@ -256,10 +254,9 @@ namespace Opm
             // A weighted sum of the b-factors of gas and solvent are used.
             const int nc = rq[solvent_pos_].mob.size();
 
-            const Opm::PhaseUsage& pu = fluid.phaseUsage();
             const ADB zero = ADB::constant(Vector::Zero(nc));
             const ADB& ss = state.solvent_saturation;
-            const ADB& sg = (active[ Gas ]
+            const ADB& sg = (active_[ Gas ]
                              ? state.saturation[ pu.phase_pos[ Gas ] ]
                              : zero);
 
