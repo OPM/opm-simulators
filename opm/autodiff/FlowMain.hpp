@@ -72,6 +72,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
+#include <opm/common/OpmLog/LogUtil.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -129,6 +130,29 @@ namespace Opm
         throw std::invalid_argument( "Cannot find input case " + casename );
     }
 
+
+
+
+
+    int64_t convertMessageType(const Message::type& mtype)
+    {
+        switch (mtype) {
+        case Message::type::Debug:
+            return Log::MessageType::Debug;
+        case Message::type::Info:
+            return Log::MessageType::Info;
+        case Message::type::Warning:
+            return Log::MessageType::Warning;
+        case Message::type::Error:
+            return Log::MessageType::Error;
+        case Message::type::Problem:
+            return Log::MessageType::Problem;
+        case Message::type::Bug:
+            return Log::MessageType::Bug;
+        }
+        throw std::logic_error("Invalide messages type!\n");
+    }
+
     /// This class encapsulates the setup and running of
     /// a simulator based on an input deck.
     template <class Implementation, class Grid, class Simulator>
@@ -154,6 +178,7 @@ namespace Opm
             asImpl().setupOutput();
             asImpl().readDeckInput();
             asImpl().setupGridAndProps();
+            asImpl().extractMessages();
             asImpl().runDiagnostics();
             asImpl().setupState();
             asImpl().distributeData();
@@ -569,6 +594,38 @@ namespace Opm
             }
         }
 
+
+
+
+
+
+        // extract messages from parser
+        // Write to:
+        //    logFile_
+
+        void extractMessages()
+        {
+            // extract messages from deck.
+            for(const auto& msg : deck_->getMessageContainer()) {
+                auto log_type = convertMessageType(msg.mtype);
+                const auto& location = msg.location;
+                if (location) {
+                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
+                } else {
+                    OpmLog::addMessage(log_type, msg.message);
+                }
+            }
+            // extract messages from EclipseState.
+            for (const auto& msg : eclipse_state_->getMessageContainer()) {
+                auto log_type = convertMessageType(msg.mtype);
+                const auto& location = msg.location;
+                if (location) {
+                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
+                } else {
+                    OpmLog::addMessage(log_type, msg.message);
+                }
+            }
+        }
 
 
 
