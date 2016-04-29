@@ -234,6 +234,38 @@ namespace Opm {
         well_segment_perforation_pressure_diffs_ = grav * well_segment_perforation_depth_diffs_ * well_segment_perforation_densities;
     }
 
+
+
+
+
+    void
+    MultisegmentWells::
+    variableStateWellIndices(std::vector<int>& indices,
+                             int& next) const
+    {
+        indices[Qs] = next++;
+        indices[Bhp] = next++;
+    }
+
+
+
+
+
+    std::vector<int>
+    MultisegmentWells::
+    variableWellStateIndices() const
+    {
+        // Black oil model standard is 5 equation.
+        // For the pure well solve, only the well equations are picked.
+        std::vector<int> indices(5, -1);
+        int next = 0;
+
+        variableStateWellIndices(indices, next);
+
+        assert(next == 2);
+        return indices;
+    }
+
 } // end of namespace Opm
 
 

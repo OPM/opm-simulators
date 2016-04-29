@@ -140,7 +140,7 @@ namespace Opm {
 
         MultisegmentWells ms_wells_;
 
-        using Base::stdWells;
+        // using Base::stdWells;
         using Base::wells;
         using Base::wellsActive;
         using Base::updatePrimalVariableFromState;

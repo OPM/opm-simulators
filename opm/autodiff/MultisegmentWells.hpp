@@ -163,6 +163,14 @@ namespace Opm {
             updateWellControls(const bool terminal_output,
                                WellState& xw) const;
 
+            // TODO: these code are same with the StandardWells
+            // to find a better solution later.
+            void
+            variableStateWellIndices(std::vector<int>& indices,
+                                     int& next) const;
+            std::vector<int>
+            variableWellStateIndices() const;
+
     protected:
         // TODO: probably a wells_active_ will be required here.
         const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
