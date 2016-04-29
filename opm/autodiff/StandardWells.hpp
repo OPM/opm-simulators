@@ -86,23 +86,6 @@ namespace Opm {
             Vector& wellPerforationPressureDiffs(); // mutable version kept for BlackoilMultisegmentModel
             const Vector& wellPerforationPressureDiffs() const;
 
-            template <class SolutionState, class WellState>
-            void computePropertiesForWellConnectionPressures(const SolutionState& state,
-                                                             const WellState& xw,
-                                                             std::vector<double>& b_perf,
-                                                             std::vector<double>& rsmax_perf,
-                                                             std::vector<double>& rvmax_perf,
-                                                             std::vector<double>& surf_dens_perf);
-
-            template <class WellState>
-            void computeWellConnectionDensitesPressures(const WellState& xw,
-                                                        const std::vector<double>& b_perf,
-                                                        const std::vector<double>& rsmax_perf,
-                                                        const std::vector<double>& rvmax_perf,
-                                                        const std::vector<double>& surf_dens_perf,
-                                                        const std::vector<double>& depth_perf,
-                                                        const double grav);
-
             template <class ReservoirResidualQuant, class SolutionState>
             void extractWellPerfProperties(const SolutionState& state,
                                            const std::vector<ReservoirResidualQuant>& rq,
@@ -190,6 +173,25 @@ namespace Opm {
             const std::vector<PhasePresence>& phase_condition_;
             Vector well_perforation_densities_;
             Vector well_perforation_pressure_diffs_;
+
+            // protected methods
+            template <class SolutionState, class WellState>
+            void computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                             const WellState& xw,
+                                                             std::vector<double>& b_perf,
+                                                             std::vector<double>& rsmax_perf,
+                                                             std::vector<double>& rvmax_perf,
+                                                             std::vector<double>& surf_dens_perf);
+
+            template <class WellState>
+            void computeWellConnectionDensitesPressures(const WellState& xw,
+                                                        const std::vector<double>& b_perf,
+                                                        const std::vector<double>& rsmax_perf,
+                                                        const std::vector<double>& rvmax_perf,
+                                                        const std::vector<double>& surf_dens_perf,
+                                                        const std::vector<double>& depth_perf,
+                                                        const double grav);
+
         };
 
 
