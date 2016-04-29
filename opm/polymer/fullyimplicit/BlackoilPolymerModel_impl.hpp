@@ -514,7 +514,7 @@ namespace Opm {
             // and well connection pressures.
             computeAccum(state0, 0);
             // computeWellConnectionPressures(state0, well_state);
-            stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            stdWells().computeWellConnectionPressures(state0, well_state, depth, gravity);
         }
 
         // OPM_AD_DISKVAL(state.pressure);

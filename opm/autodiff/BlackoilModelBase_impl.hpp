@@ -767,7 +767,7 @@ namespace detail {
             asImpl().makeConstantState(state0);
             // asImpl().computeWellConnectionPressures(state0, well_state);
             // Extract well connection depths.
-            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, depth, gravity);
         }
 
         // Possibly switch well controls and updating well state to
@@ -787,7 +787,7 @@ namespace detail {
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
             // asImpl().computeWellConnectionPressures(state0, well_state);
-            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, depth, gravity);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -1130,7 +1130,7 @@ namespace detail {
             }
             // asImpl().computeWellConnectionPressures(state, well_state);
             const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            asImpl().stdWells().computeWellConnectionPressures(state, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            asImpl().stdWells().computeWellConnectionPressures(state, well_state, depth, gravity);
         }
 
         if (!converged) {

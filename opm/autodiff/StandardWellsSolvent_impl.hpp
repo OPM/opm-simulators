@@ -202,9 +202,6 @@ namespace Opm
     StandardWellsSolvent::
     computeWellConnectionPressures(const SolutionState& state,
                                    const WellState& xw,
-                                   const BlackoilPropsAdInterface& fluid,
-                                   const std::vector<bool>& active,
-                                   const std::vector<PhasePresence>& phaseCondition,
                                    const Vector& depth,
                                    const double gravity)
     {
@@ -224,7 +221,7 @@ namespace Opm
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
 
-        computeWellConnectionDensitesPressures(xw, fluid, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity);
+        computeWellConnectionDensitesPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity);
 
     }
 
