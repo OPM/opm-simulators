@@ -34,6 +34,7 @@ namespace Opm {
         public:
 
             using Base = StandardWells;
+            using Base::computeWellConnectionDensitesPressures;
 
             // ---------  Public methods  ---------
             explicit StandardWellsSolvent(const Wells* wells);
@@ -63,6 +64,16 @@ namespace Opm {
                                            const std::vector<bool>& active,
                                            std::vector<ADB>& mob_perfcells,
                                            std::vector<ADB>& b_perfcells) const;
+
+            template <class SolutionState, class WellState>
+            void computeWellConnectionPressures(const SolutionState& state,
+                                                const WellState& xw,
+                                                const BlackoilPropsAdInterface& fluid,
+                                                const std::vector<bool>& active,
+                                                const std::vector<PhasePresence>& phaseCondition,
+                                                const Vector& depth,
+                                                const double gravity);
+
         protected:
             const SolventPropsAdFromDeck* solvent_props_;
             int solvent_pos_;

@@ -1559,7 +1559,7 @@ namespace Opm {
         V aliveWells;
         const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
-        std::vector<int> indices = variableWellStateIndices();
+        std::vector<int> indices = stdWells().variableWellStateIndices();
         SolutionState state0 = state;
         WellState well_state0 = well_state;
         makeConstantState(state0);
@@ -1652,6 +1652,28 @@ namespace Opm {
         return converged;
     }
 
+
+
+
+
+    template <class Grid>
+    std::vector<V>
+    BlackoilMultiSegmentModel<Grid>::
+    variableStateInitials(const ReservoirState& x,
+                          const WellState&     xw) const
+    {
+        assert(active_[ Oil ]);
+
+        const int np = x.numPhases();
+
+        std::vector<V> vars0;
+        // p, Sw and Rs, Rv or Sg is used as primary depending on solution conditions
+        // and bhp and Q for the wells
+        vars0.reserve(np + 1);
+        variableReservoirStateInitials(x, vars0);
+        variableWellStateInitials(xw, vars0);
+        return vars0;
+    }
 
 } // namespace Opm
 

@@ -507,7 +507,7 @@ namespace detail {
         // and bhp and Q for the wells
         vars0.reserve(np + 1);
         variableReservoirStateInitials(x, vars0);
-        asImpl().variableWellStateInitials(xw, vars0);
+        asImpl().stdWells().variableWellStateInitials(xw, vars0);
         return vars0;
     }
 
@@ -555,41 +555,6 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    variableWellStateInitials(const WellState& xw, std::vector<V>& vars0) const
-    {
-        // Initial well rates.
-        if ( stdWells().localWellsActive() )
-        {
-            // Need to reshuffle well rates, from phase running fastest
-            // to wells running fastest.
-            const int nw = wells().number_of_wells;
-            const int np = wells().number_of_phases;
-
-            // The transpose() below switches the ordering.
-            const DataBlock wrates = Eigen::Map<const DataBlock>(& xw.wellRates()[0], nw, np).transpose();
-            const V qs = Eigen::Map<const V>(wrates.data(), nw*np);
-            vars0.push_back(qs);
-
-            // Initial well bottom-hole pressure.
-            assert (not xw.bhp().empty());
-            const V bhp = Eigen::Map<const V>(& xw.bhp()[0], xw.bhp().size());
-            vars0.push_back(bhp);
-        }
-        else
-        {
-            // push null states for qs and bhp
-            vars0.push_back(V());
-            vars0.push_back(V());
-        }
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
     std::vector<int>
     BlackoilModelBase<Grid, WellModel, Implementation>::
     variableStateIndices() const
@@ -604,27 +569,8 @@ namespace detail {
         if (active_[Gas]) {
             indices[Xvar] = next++;
         }
-        indices[Qs] = next++;
-        indices[Bhp] = next++;
+        asImpl().stdWells().variableStateWellIndices(indices, next);
         assert(next == fluid_.numPhases() + 2);
-        return indices;
-    }
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
-    std::vector<int>
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    variableWellStateIndices() const
-    {
-        // Black oil model standard is 5 equation.
-        // For the pure well solve, only the well equations are picked.
-        std::vector<int> indices(5, -1);
-        int next = 0;
-        indices[Qs] = next++;
-        indices[Bhp] = next++;
-        assert(next == 2);
         return indices;
     }
 
@@ -799,41 +745,6 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    void 
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    computeWellConnectionPressures(const SolutionState& state,
-                                   const WellState& xw)
-    {
-        if( ! localWellsActive() ) return ;
-
-        using namespace Opm::AutoDiffGrid;
-        // 1. Compute properties required by computeConnectionPressureDelta().
-        //    Note that some of the complexity of this part is due to the function
-        //    taking std::vector<double> arguments, and not Eigen objects.
-        std::vector<double> b_perf;
-        std::vector<double> rsmax_perf;
-        std::vector<double> rvmax_perf;
-        std::vector<double> surf_dens_perf;
-        asImpl().stdWells().computePropertiesForWellConnectionPressures(state, xw, fluid_, active_, phaseCondition_, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-
-        // Extract well connection depths.
-        const typename WellModel::Vector depth = cellCentroidsZToEigen(grid_);
-        const typename WellModel::Vector pdepth = subset(depth, asImpl().stdWells().wellOps().well_cells);
-        const int nperf = wells().well_connpos[wells().number_of_wells];
-        const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
-
-        // Gravity
-        const double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
-
-        asImpl().stdWells().computeWellConnectionDensitesPressures(xw, fluid_, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, grav);
-
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
     assemble(const ReservoirState& reservoir_state,
@@ -842,6 +753,9 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
 
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        const V depth = cellCentroidsZToEigen(grid_);
+
         // If we have VFP tables, we need the well connection
         // pressures for the "simple" hydrostatic correction
         // between well depth and vfp table depth.
@@ -849,14 +763,15 @@ namespace detail {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            asImpl().computeWellConnectionPressures(state0, well_state);
+            // asImpl().computeWellConnectionPressures(state0, well_state);
+            // Extract well connection depths.
+            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
         }
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
         // asImpl().updateWellControls(well_state);
         // asImpl().stdWells().updateWellControls(well_state);
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         asImpl().stdWells().updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
 
         // Create the primary variables.
@@ -869,7 +784,8 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            asImpl().computeWellConnectionPressures(state0, well_state);
+            // asImpl().computeWellConnectionPressures(state0, well_state);
+            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -901,10 +817,17 @@ namespace detail {
         std::vector<ADB> cq_s;
         asImpl().stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        asImpl().addWellFluxEq(cq_s, state);
+        asImpl().stdWells().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        asImpl().addWellControlEq(state, well_state, aliveWells);
-        asImpl().computeWellPotentials(state, mob_perfcells, b_perfcells, well_state);
+        asImpl().stdWells().addWellControlEq(state, well_state, aliveWells, active_, vfp_properties_, gravity, residual_);
+        // asImpl().computeWellPotentials(state, mob_perfcells, b_perfcells, well_state);
+        {
+            SolutionState state0 = state;
+            asImpl().makeConstantState(state0);
+            asImpl().stdWells().computeWellPotentials(state0, mob_perfcells, b_perfcells,
+                                                      fluid_.phaseUsage(), active_, vfp_properties_,
+                                                      param_.compute_well_potentials_, gravity, well_state);
+        }
 
     }
 
@@ -1070,34 +993,6 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    addWellFluxEq(const std::vector<ADB>& cq_s,
-                  const SolutionState& state)
-    {
-        if( !asImpl().localWellsActive() )
-        {
-            // If there are no wells in the subdomain of the proces then
-            // cq_s has zero size and will cause a segmentation fault below.
-            return;
-        }
-
-        const int np = wells().number_of_phases;
-        const int nw = wells().number_of_wells;
-        ADB qs = state.qs;
-        for (int phase = 0; phase < np; ++phase) {
-            qs -= superset(stdWells().wellOps().p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
-
-        }
-
-        residual_.well_flux_eq = qs;
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
     bool
     BlackoilModelBase<Grid, WellModel, Implementation>::
     isVFPActive() const
@@ -1144,7 +1039,7 @@ namespace detail {
         V aliveWells;
         const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
-        std::vector<int> indices = variableWellStateIndices();
+        std::vector<int> indices = asImpl().stdWells().variableWellStateIndices();
         SolutionState state0 = state;
         WellState well_state0 = well_state;
         asImpl().makeConstantState(state0);
@@ -1161,21 +1056,25 @@ namespace detail {
             }
         }
 
+        // gravity
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+
         int it  = 0;
         bool converged;
         do {
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
-            asImpl().variableWellStateInitials(well_state, vars0);
+            asImpl().stdWells().variableWellStateInitials(well_state, vars0);
             std::vector<ADB> vars = ADB::variables(vars0);
 
             SolutionState wellSolutionState = state0;
             asImpl().variableStateExtractWellsVars(indices, vars, wellSolutionState);
             asImpl().stdWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
             asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
-            asImpl().addWellFluxEq(cq_s, wellSolutionState);
-            asImpl().addWellControlEq(wellSolutionState, well_state, aliveWells);
+            asImpl().stdWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
+            asImpl().stdWells().addWellControlEq(wellSolutionState, well_state, aliveWells,
+                                                 active_, vfp_properties_, gravity, residual_);
             converged = getWellConvergence(it);
 
             if (converged) {
@@ -1199,7 +1098,6 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 // asImpl().updateWellState(dx.array(), well_state);
-                const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
                 asImpl().stdWells().updateWellState(dx.array(), gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
                 asImpl().stdWells(). updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
             }
@@ -1228,7 +1126,9 @@ namespace detail {
                 std::vector<ADB::M> old_derivs = state.qs.derivative();
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
-            asImpl().computeWellConnectionPressures(state, well_state);
+            // asImpl().computeWellConnectionPressures(state, well_state);
+            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+            asImpl().stdWells().computeWellConnectionPressures(state, well_state, fluid_, active_, phaseCondition(), depth, gravity);
         }
 
         if (!converged) {
@@ -1236,174 +1136,6 @@ namespace detail {
         }
 
         return converged;
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    addWellControlEq(const SolutionState& state,
-                     const WellState& xw,
-                     const V& aliveWells)
-    {
-        if( ! localWellsActive() ) return;
-
-        const int np = wells().number_of_phases;
-        const int nw = wells().number_of_wells;
-
-        ADB aqua   = ADB::constant(ADB::V::Zero(nw));
-        ADB liquid = ADB::constant(ADB::V::Zero(nw));
-        ADB vapour = ADB::constant(ADB::V::Zero(nw));
-
-        if (active_[Water]) {
-            aqua += subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
-        }
-        if (active_[Oil]) {
-            liquid += subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
-        }
-        if (active_[Gas]) {
-            vapour += subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
-        }
-
-        //THP calculation variables
-        std::vector<int> inj_table_id(nw, -1);
-        std::vector<int> prod_table_id(nw, -1);
-        ADB::V thp_inj_target_v = ADB::V::Zero(nw);
-        ADB::V thp_prod_target_v = ADB::V::Zero(nw);
-        ADB::V alq_v = ADB::V::Zero(nw);
-
-        //Hydrostatic correction variables
-        ADB::V rho_v = ADB::V::Zero(nw);
-        ADB::V vfp_ref_depth_v = ADB::V::Zero(nw);
-
-        //Target vars
-        ADB::V bhp_targets  = ADB::V::Zero(nw);
-        ADB::V rate_targets = ADB::V::Zero(nw);
-        Eigen::SparseMatrix<double> rate_distr(nw, np*nw);
-
-        //Selection variables
-        std::vector<int> bhp_elems;
-        std::vector<int> thp_inj_elems;
-        std::vector<int> thp_prod_elems;
-        std::vector<int> rate_elems;
-
-        //Run through all wells to calculate BHP/RATE targets
-        //and gather info about current control
-        for (int w = 0; w < nw; ++w) {
-            auto wc = wells().ctrls[w];
-
-            // The current control in the well state overrides
-            // the current control set in the Wells struct, which
-            // is instead treated as a default.
-            const int current = xw.currentControls()[w];
-
-            switch (well_controls_iget_type(wc, current)) {
-            case BHP:
-            {
-                bhp_elems.push_back(w);
-                bhp_targets(w)  = well_controls_iget_target(wc, current);
-                rate_targets(w) = -1e100;
-            }
-            break;
-
-            case THP:
-            {
-                const int perf = wells().well_connpos[w];
-                rho_v[w] = asImpl().stdWells().wellPerforationDensities()[perf];
-
-                const int table_id = well_controls_iget_vfp(wc, current);
-                const double target = well_controls_iget_target(wc, current);
-
-                const WellType& well_type = wells().type[w];
-                if (well_type == INJECTOR) {
-                    inj_table_id[w]  = table_id;
-                    thp_inj_target_v[w] = target;
-                    alq_v[w]     = -1e100;
-
-                    vfp_ref_depth_v[w] = vfp_properties_.getInj()->getTable(table_id)->getDatumDepth();
-
-                    thp_inj_elems.push_back(w);
-                }
-                else if (well_type == PRODUCER) {
-                    prod_table_id[w]  = table_id;
-                    thp_prod_target_v[w] = target;
-                    alq_v[w]      = well_controls_iget_alq(wc, current);
-
-                    vfp_ref_depth_v[w] =  vfp_properties_.getProd()->getTable(table_id)->getDatumDepth();
-
-                    thp_prod_elems.push_back(w);
-                }
-                else {
-                    OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER type well");
-                }
-                bhp_targets(w)  = -1e100;
-                rate_targets(w) = -1e100;
-            }
-            break;
-
-            case RESERVOIR_RATE: // Intentional fall-through
-            case SURFACE_RATE:
-            {
-                rate_elems.push_back(w);
-                // RESERVOIR and SURFACE rates look the same, from a
-                // high-level point of view, in the system of
-                // simultaneous linear equations.
-
-                const double* const distr =
-                    well_controls_iget_distr(wc, current);
-
-                for (int p = 0; p < np; ++p) {
-                    rate_distr.insert(w, p*nw + w) = distr[p];
-                }
-
-                bhp_targets(w)  = -1.0e100;
-                rate_targets(w) = well_controls_iget_target(wc, current);
-            }
-            break;
-            }
-        }
-
-        //Calculate BHP target from THP
-        const ADB thp_inj_target = ADB::constant(thp_inj_target_v);
-        const ADB thp_prod_target = ADB::constant(thp_prod_target_v);
-        const ADB alq = ADB::constant(alq_v);
-        const ADB bhp_from_thp_inj = vfp_properties_.getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj_target);
-        const ADB bhp_from_thp_prod = vfp_properties_.getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
-
-        //Perform hydrostatic correction to computed targets
-        double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const ADB::V dp_v = wellhelpers::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, asImpl().stdWells().wellPerforationDensities(), gravity);
-        const ADB dp = ADB::constant(dp_v);
-        const ADB dp_inj = superset(subset(dp, thp_inj_elems), thp_inj_elems, nw);
-        const ADB dp_prod = superset(subset(dp, thp_prod_elems), thp_prod_elems, nw);
-
-        //Calculate residuals
-        const ADB thp_inj_residual = state.bhp - bhp_from_thp_inj + dp_inj;
-        const ADB thp_prod_residual = state.bhp - bhp_from_thp_prod + dp_prod;
-        const ADB bhp_residual = state.bhp - bhp_targets;
-        const ADB rate_residual = rate_distr * state.qs - rate_targets;
-
-        //Select the right residual for each well
-        residual_.well_eq = superset(subset(bhp_residual, bhp_elems), bhp_elems, nw) +
-                superset(subset(thp_inj_residual, thp_inj_elems), thp_inj_elems, nw) +
-                superset(subset(thp_prod_residual, thp_prod_elems), thp_prod_elems, nw) +
-                superset(subset(rate_residual, rate_elems), rate_elems, nw);
-
-        // For wells that are dead (not flowing), and therefore not communicating
-        // with the reservoir, we set the equation to be equal to the well's total
-        // flow. This will be a solution only if the target rate is also zero.
-        Eigen::SparseMatrix<double> rate_summer(nw, np*nw);
-        for (int w = 0; w < nw; ++w) {
-            for (int phase = 0; phase < np; ++phase) {
-                rate_summer.insert(w, phase*nw + w) = 1.0;
-            }
-        }
-        Selector<double> alive_selector(aliveWells, Selector<double>::NotEqualZero);
-        residual_.well_eq = alive_selector.select(residual_.well_eq, rate_summer * state.qs);
-        // OPM_AD_DUMP(residual_.well_eq);
     }
 
 
@@ -1761,111 +1493,6 @@ namespace detail {
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable();
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    computeWellPotentials(const SolutionState& state,
-                          const std::vector<ADB>& mob_perfcells,
-                          const std::vector<ADB>& b_perfcells,
-                          WellState& well_state)
-    {
-        //only compute well potentials if they are needed
-        if (param_.compute_well_potentials_) {
-            const int nw = wells().number_of_wells;
-            const int np = wells().number_of_phases;
-            const Opm::PhaseUsage pu = fluid_.phaseUsage();
-            V bhps = V::Zero(nw);
-            for (int w = 0; w < nw; ++w) {
-                const WellControls* ctrl = wells().ctrls[w];
-                const int nwc = well_controls_get_num(ctrl);
-                //Loop over all controls until we find a BHP control
-                //or a THP control that specifies what we need.
-                //Pick the value that gives the most restrictive flow
-                for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
-
-                    if (well_controls_iget_type(ctrl, ctrl_index) == BHP) {
-                        bhps[w] = well_controls_iget_target(ctrl, ctrl_index);
-                    }
-
-                    if (well_controls_iget_type(ctrl, ctrl_index) == THP) {
-                        double aqua = 0.0;
-                        double liquid = 0.0;
-                        double vapour = 0.0;
-
-                        if (active_[ Water ]) {
-                            aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
-                        }
-                        if (active_[ Oil ]) {
-                            liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
-                        }
-                        if (active_[ Gas ]) {
-                            vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
-                        }
-
-                        const int vfp        = well_controls_iget_vfp(ctrl, ctrl_index);
-                        const double& thp    = well_controls_iget_target(ctrl, ctrl_index);
-                        const double& alq    = well_controls_iget_alq(ctrl, ctrl_index);
-
-                        //Set *BHP* target by calculating bhp from THP
-                        const WellType& well_type = wells().type[w];
-
-                        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-
-                        if (well_type == INJECTOR) {
-                            double dp = wellhelpers::computeHydrostaticCorrection(
-                                        wells(), w, vfp_properties_.getInj()->getTable(vfp)->getDatumDepth(),
-                                        stdWells().wellPerforationDensities(), gravity);
-                            const double bhp = vfp_properties_.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                            // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
-                            if ( bhp < bhps[w]) {
-                                bhps[w] = bhp;
-                            }
-                        }
-                        else if (well_type == PRODUCER) {
-                            double dp = wellhelpers::computeHydrostaticCorrection(
-                                        wells(), w, vfp_properties_.getProd()->getTable(vfp)->getDatumDepth(),
-                                        stdWells().wellPerforationDensities(), gravity);
-
-                            const double bhp = vfp_properties_.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                            // apply the strictest of the bhp controlls i.e. largest bhp for producers
-                            if ( bhp > bhps[w]) {
-                                bhps[w] = bhp;
-                            }
-                        }
-                        else {
-                            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
-                        }
-                    }
-                }
-
-            }
-
-            // use bhp limit from control
-            SolutionState state0 = state;
-            asImpl().makeConstantState(state0);
-            state0.bhp = ADB::constant(bhps);
-
-            // compute well potentials
-            V aliveWells;
-            std::vector<ADB> well_potentials;
-            asImpl().stdWells().computeWellFlux(state0, fluid_.phaseUsage(), active_, mob_perfcells,  b_perfcells, aliveWells, well_potentials);
-
-            // store well potentials in the well state
-            // transform to a single vector instead of separate vectors pr phase
-            const int nperf = wells().well_connpos[nw];
-            V cq = superset(well_potentials[0].value(), Span(nperf, np, 0), nperf*np);
-            for (int phase = 1; phase < np; ++phase) {
-                cq += superset(well_potentials[phase].value(), Span(nperf, np, phase), nperf*np);
-            }
-            well_state.wellPotentials().assign(cq.data(), cq.data() + nperf*np);
-        }
-
     }
 
 

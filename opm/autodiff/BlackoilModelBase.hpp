@@ -356,15 +356,9 @@ namespace Opm {
         void
         variableReservoirStateInitials(const ReservoirState& x,
                                        std::vector<V>& vars0) const;
-        void
-        variableWellStateInitials(const WellState& xw,
-                                  std::vector<V>& vars0) const;
 
         std::vector<int>
         variableStateIndices() const;
-
-        std::vector<int>
-        variableWellStateIndices() const;
 
         SolutionState
         variableStateExtractVars(const ReservoirState& x,
@@ -379,9 +373,6 @@ namespace Opm {
         void
         computeAccum(const SolutionState& state,
                      const int            aix  );
-
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
 
         void
         assembleMassBalanceEq(const SolutionState& state);
@@ -406,25 +397,9 @@ namespace Opm {
                     WellState& well_state);
 
         void
-        computeWellPotentials(const SolutionState& state,
-                              const std::vector<ADB>& mob_perfcells,
-                              const std::vector<ADB>& b_perfcells,
-                              WellState& well_state);
-
-
-        void
-        addWellFluxEq(const std::vector<ADB>& cq_s,
-                      const SolutionState& state);
-
-        void
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,
                                            const SolutionState& state,
                                            const WellState& xw);
-
-        void
-        addWellControlEq(const SolutionState& state,
-                         const WellState& xw,
-                         const V& aliveWells);
 
         bool getWellConvergence(const int iteration);
 

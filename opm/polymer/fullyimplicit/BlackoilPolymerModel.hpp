@@ -202,8 +202,8 @@ namespace Opm {
         using Base::maxResidualAllowed;
 
         // using Base::updateWellControls;
-        using Base::computeWellConnectionPressures;
-        using Base::addWellControlEq;
+        // using Base::computeWellConnectionPressures;
+        // using Base::addWellControlEq;
         using Base::computeRelPerm;
 
 
