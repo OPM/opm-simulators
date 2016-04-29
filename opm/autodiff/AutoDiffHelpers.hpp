@@ -360,6 +360,7 @@ spdiag(const AutoDiffBlock<double>::V& d)
         Selector(const typename ADB::V& selection_basis,
                  CriterionForLeftElement crit = GreaterEqualZero)
         {
+            using std::isnan;
             // Define selector structure.
             const int n = selection_basis.size();
             // Over-reserving so we do not have to count.
