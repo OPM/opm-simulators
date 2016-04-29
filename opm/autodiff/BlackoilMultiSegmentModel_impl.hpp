@@ -71,7 +71,7 @@ namespace Opm {
                   const std::vector<WellMultiSegmentConstPtr>& wells_multisegment)
         : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output)
-        , ms_wells_(wells_multisegment, fluid.numPhases())
+        , ms_wells_(wells_multisegment, fluid_, active_, phaseCondition_)
     {
     }
 
@@ -454,7 +454,7 @@ namespace Opm {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            msWells().computeSegmentFluidProperties(state0, phaseCondition(), active_, fluid_);
+            msWells().computeSegmentFluidProperties(state0);
             const int np = numPhases();
             assert(np == int(msWells().segmentCompSurfVolumeInitial().size()));
             for (int phase = 0; phase < np; ++phase) {
@@ -482,7 +482,7 @@ namespace Opm {
         }
 
         // asImpl().computeSegmentFluidProperties(state);
-        msWells().computeSegmentFluidProperties(state, phaseCondition(), active_, fluid_);
+        msWells().computeSegmentFluidProperties(state);
 
         // asImpl().computeSegmentPressuresDelta(state);
         const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
@@ -504,14 +504,13 @@ namespace Opm {
         const int np = numPhases();
         const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
         const V perf_press_diffs = stdWells().wellPerforationPressureDiffs();
-        msWells().computeWellFlux(state, fluid_.phaseUsage(), active_,
-                                  perf_press_diffs, compi,
+        msWells().computeWellFlux(state, perf_press_diffs, compi,
                                   mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         msWells().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         // asImpl().addWellControlEq(state, well_state, aliveWells);
-        msWells().addWellControlEq(state, well_state, aliveWells, active_, residual_);
+        msWells().addWellControlEq(state, well_state, aliveWells, residual_);
     }
 
 
@@ -663,14 +662,13 @@ namespace Opm {
             const int nw = wellsMultiSegment().size();
             const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
             const V perf_press_diffs = stdWells().wellPerforationPressureDiffs();
-            msWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_,
-                                      perf_press_diffs, compi,
+            msWells().computeWellFlux(wellSolutionState, perf_press_diffs, compi,
                                       mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
 
             updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             msWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
             // addWellControlEq(wellSolutionState, well_state, aliveWells);
-            msWells().addWellControlEq(wellSolutionState, well_state, aliveWells, active_, residual_);
+            msWells().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = Base::getWellConvergence(it);
 
             if (converged) {

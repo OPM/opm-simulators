@@ -122,8 +122,6 @@ namespace Opm
     void
     MultisegmentWells::
     computeWellFlux(const SolutionState& state,
-                    const Opm::PhaseUsage& pu,
-                    const std::vector<bool>& active,
                     const Vector& well_perforation_pressure_diffs,
                     const DataBlock& compi,
                     const std::vector<ADB>& mob_perfcells,
@@ -140,6 +138,8 @@ namespace Opm
 
         const int nseg = nseg_total_;
         const int nperf = nperf_total_;
+
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         cq_s.resize(np, ADB::null());
 
@@ -201,7 +201,7 @@ namespace Opm
                 cq_ps[phase] = b_perfcells[phase] * cq_p;
             }
 
-            if (active[Oil] && active[Gas]) {
+            if (active_[Oil] && active_[Gas]) {
                 const int oilpos = pu.phase_pos[Oil];
                 const int gaspos = pu.phase_pos[Gas];
                 const ADB cq_psOil = cq_ps[oilpos];
@@ -285,11 +285,11 @@ namespace Opm
 
             for (int phase = 0; phase < np; ++phase) {
                 ADB tmp = cmix_s[phase];
-                if (phase == Oil && active[Gas]) {
+                if (phase == Oil && active_[Gas]) {
                     const int gaspos = pu.phase_pos[Gas];
                     tmp = tmp - rv_perfcells * cmix_s[gaspos] / d;
                 }
-                if (phase == Gas && active[Oil]) {
+                if (phase == Gas && active_[Oil]) {
                     const int oilpos = pu.phase_pos[Oil];
                     tmp = tmp - rs_perfcells * cmix_s[oilpos] / d;
                 }
@@ -313,10 +313,7 @@ namespace Opm
     template <class SolutionState>
     void
     MultisegmentWells::
-    computeSegmentFluidProperties(const SolutionState& state,
-                                  const std::vector<PhasePresence>& pc,
-                                  const std::vector<bool>& active,
-                                  const BlackoilPropsAdInterface& fluid)
+    computeSegmentFluidProperties(const SolutionState& state)
     {
         const int np = numPhases();
         const int nw = wells().size();
@@ -360,37 +357,37 @@ namespace Opm
         // Compute PVT properties for segments.
         std::vector<PhasePresence> segment_cond(nseg_total);
         for (int s = 0; s < nseg_total; ++s) {
-            segment_cond[s] = pc[segment_cells[s]];
+            segment_cond[s] = phase_condition_[segment_cells[s]];
         }
         std::vector<ADB> b_seg(np, ADB::null());
         // Viscosities for different phases
         std::vector<ADB> mu_seg(np, ADB::null());
         ADB rsmax_seg = ADB::null();
         ADB rvmax_seg = ADB::null();
-        const PhaseUsage& pu = fluid.phaseUsage();
+        const PhaseUsage& pu = fluid_.phaseUsage();
         if (pu.phase_used[Water]) {
-            b_seg[pu.phase_pos[Water]] = fluid.bWat(segment_press, segment_temp, segment_cells);
-            mu_seg[pu.phase_pos[Water]] = fluid.muWat(segment_press, segment_temp, segment_cells);
+            b_seg[pu.phase_pos[Water]] = fluid_.bWat(segment_press, segment_temp, segment_cells);
+            mu_seg[pu.phase_pos[Water]] = fluid_.muWat(segment_press, segment_temp, segment_cells);
         }
-        assert(active[Oil]);
+        assert(active_[Oil]);
         const ADB segment_so = subset(state.saturation[pu.phase_pos[Oil]], segment_cells);
         if (pu.phase_used[Oil]) {
             const ADB segment_rs = subset(state.rs, segment_cells);
-            b_seg[pu.phase_pos[Oil]] = fluid.bOil(segment_press, segment_temp, segment_rs,
+            b_seg[pu.phase_pos[Oil]] = fluid_.bOil(segment_press, segment_temp, segment_rs,
                                                    segment_cond, segment_cells);
             // rsmax_seg = fluidRsSat(segment_press, segment_so, segment_cells);
-            rsmax_seg = fluid.rsSat(segment_press, segment_so, segment_cells);
-            mu_seg[pu.phase_pos[Oil]] = fluid.muOil(segment_press, segment_temp, segment_rs,
+            rsmax_seg = fluid_.rsSat(segment_press, segment_so, segment_cells);
+            mu_seg[pu.phase_pos[Oil]] = fluid_.muOil(segment_press, segment_temp, segment_rs,
                                                      segment_cond, segment_cells);
         }
-        assert(active[Gas]);
+        assert(active_[Gas]);
         if (pu.phase_used[Gas]) {
             const ADB segment_rv = subset(state.rv, segment_cells);
-            b_seg[pu.phase_pos[Gas]] = fluid.bGas(segment_press, segment_temp, segment_rv,
+            b_seg[pu.phase_pos[Gas]] = fluid_.bGas(segment_press, segment_temp, segment_rv,
                                                    segment_cond, segment_cells);
             // rvmax_seg = fluidRvSat(segment_press, segment_so, segment_cells);
-            rvmax_seg = fluid.rvSat(segment_press, segment_so, segment_cells);
-            mu_seg[pu.phase_pos[Gas]] = fluid.muGas(segment_press, segment_temp, segment_rv,
+            rvmax_seg = fluid_.rvSat(segment_press, segment_so, segment_cells);
+            mu_seg[pu.phase_pos[Gas]] = fluid_.muGas(segment_press, segment_temp, segment_rv,
                                                    segment_cond, segment_cells);
         }
 
@@ -444,7 +441,7 @@ namespace Opm
         ADB big_values = ADB::constant(Vector::Constant(nseg_total, 1.e100));
         ADB mix_gas_oil = non_zero_mix_oilpos.select(mix[gaspos] / mix[oilpos], big_values);
         ADB mix_oil_gas = non_zero_mix_gaspos.select(mix[oilpos] / mix[gaspos], big_values);
-        if (active[Oil]) {
+        if (active_[Oil]) {
             Vector selectorUnderRsmax = Vector::Zero(nseg_total);
             Vector selectorAboveRsmax = Vector::Zero(nseg_total);
             for (int s = 0; s < nseg_total; ++s) {
@@ -456,7 +453,7 @@ namespace Opm
             }
             rs = non_zero_mix_oilpos.select(selectorAboveRsmax * rsmax_seg + selectorUnderRsmax * mix_gas_oil, rs);
         }
-        if (active[Gas]) {
+        if (active_[Gas]) {
             Vector selectorUnderRvmax = Vector::Zero(nseg_total);
             Vector selectorAboveRvmax = Vector::Zero(nseg_total);
             for (int s = 0; s < nseg_total; ++s) {
@@ -474,7 +471,7 @@ namespace Opm
         for (int phase = 0; phase < np; ++phase) {
             x[phase] = mix[phase];
         }
-        if (active[Gas] && active[Oil]) {
+        if (active_[Gas] && active_[Oil]) {
             x[gaspos] = (mix[gaspos] - mix[oilpos] * rs) / (Vector::Ones(nseg_total) - rs * rv);
             x[oilpos] = (mix[oilpos] - mix[gaspos] * rv) / (Vector::Ones(nseg_total) - rs * rv);
         }
@@ -488,7 +485,7 @@ namespace Opm
         // Compute segment densities.
         ADB dens = ADB::constant(Vector::Zero(nseg_total));
         for (int phase = 0; phase < np; ++phase) {
-            const Vector surface_density = fluid.surfaceDensity(phase, segment_cells);
+            const Vector surface_density = fluid_.surfaceDensity(phase, segment_cells);
             dens += surface_density * mix[phase];
         }
         well_segment_densities_ = dens / volrat;
@@ -504,7 +501,7 @@ namespace Opm
         segment_mass_flow_rates_ = ADB::constant(Vector::Zero(nseg_total));
         for (int phase = 0; phase < np; ++phase) {
             // TODO: how to remove one repeated surfaceDensity()
-            const Vector surface_density = fluid.surfaceDensity(phase, segment_cells);
+            const Vector surface_density = fluid_.surfaceDensity(phase, segment_cells);
             segment_mass_flow_rates_ += surface_density * segqs[phase];
         }
 
@@ -580,7 +577,6 @@ namespace Opm
     addWellControlEq(const SolutionState& state,
                      const WellState& xw,
                      const Vector& aliveWells,
-                     const std::vector<bool>& active,
                      LinearisedBlackoilResidual& residual)
     {
         // the name of the function is a a little misleading.
@@ -596,13 +592,13 @@ namespace Opm
         ADB liquid = ADB::constant(Vector::Zero(nseg_total));
         ADB vapour = ADB::constant(Vector::Zero(nseg_total));
 
-        if (active[Water]) {
+        if (active_[Water]) {
             aqua += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Aqua * nseg_total));
         }
-        if (active[Oil]) {
+        if (active_[Oil]) {
             liquid += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Liquid * nseg_total));
         }
-        if (active[Gas]) {
+        if (active_[Gas]) {
             vapour += subset(state.segqs, Span(nseg_total, 1, BlackoilPhases::Vapour * nseg_total));
         }
 

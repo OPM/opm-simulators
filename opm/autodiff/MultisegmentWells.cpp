@@ -140,10 +140,16 @@ namespace Opm {
 
 
     MultisegmentWells::
-    MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_ms, const int np)
+    MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_ms,
+                      const BlackoilPropsAdInterface& fluid_arg,
+                      const std::vector<bool>& active_arg,
+                      const std::vector<PhasePresence>& pc_arg)
       : wells_multisegment_(wells_ms)
       , wops_ms_(wells_ms)
-      , num_phases_(np)
+      , num_phases_(wells_ms.empty()? 0 : wells_ms[0]->numberOfPhases())
+      , fluid_(fluid_arg)
+      , active_(active_arg)
+      , phase_condition_(pc_arg)
       , well_segment_perforation_pressure_diffs_(ADB::null())
       , well_segment_densities_(ADB::null())
       , well_segment_pressures_delta_(ADB::null())

@@ -80,7 +80,10 @@ namespace Opm {
             // ---------  Public methods  ---------
             // TODO: using a vector of WellMultiSegmentConstPtr for now
             // TODO: it should use const Wells or something else later.
-            MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment, const int np);
+            MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment,
+                              const BlackoilPropsAdInterface& fluid_arg,
+                              const std::vector<bool>& active_arg,
+                              const std::vector<PhasePresence>& pc_arg);
 
             const std::vector<WellMultiSegmentConstPtr>& wells() const;
             const MultisegmentWellOps& wellOps() const;
@@ -121,8 +124,6 @@ namespace Opm {
             template <class SolutionState>
             void
             computeWellFlux(const SolutionState& state,
-                            const Opm::PhaseUsage& pu,
-                            const std::vector<bool>& active,
                             const Vector& well_perforation_pressure_diffs,
                             const DataBlock& compi,
                             const std::vector<ADB>& mob_perfcells,
@@ -135,10 +136,7 @@ namespace Opm {
             // And the surface volume of the components in the segments by dt
             template <class SolutionState>
             void
-            computeSegmentFluidProperties(const SolutionState& state,
-                                          const std::vector<PhasePresence>& pc,
-                                          const std::vector<bool>& active,
-                                          const BlackoilPropsAdInterface& fluid);
+            computeSegmentFluidProperties(const SolutionState& state);
 
             void
             computeSegmentPressuresDelta(const double grav);
@@ -154,7 +152,6 @@ namespace Opm {
             addWellControlEq(const SolutionState& state,
                              const WellState& xw,
                              const Vector& aliveWells,
-                             const std::vector<bool>& active,
                              LinearisedBlackoilResidual& residual);
 
             template <class WellState>
@@ -169,6 +166,9 @@ namespace Opm {
         const int num_phases_;
         int nseg_total_;
         int nperf_total_;
+        const BlackoilPropsAdInterface& fluid_;
+        const std::vector<bool>& active_;
+        const std::vector<PhasePresence>& phase_condition_;
 
         // Pressure correction due to the different depth of the perforation
         // and the cell center of the grid block
