@@ -80,10 +80,11 @@ namespace Opm {
             // ---------  Public methods  ---------
             // TODO: using a vector of WellMultiSegmentConstPtr for now
             // TODO: it should use const Wells or something else later.
-            MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment,
-                              const BlackoilPropsAdInterface& fluid_arg,
-                              const std::vector<bool>& active_arg,
-                              const std::vector<PhasePresence>& pc_arg);
+            MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
+
+            void init(const BlackoilPropsAdInterface* fluid_arg,
+                      const std::vector<bool>* active_arg,
+                      const std::vector<PhasePresence>* pc_arg);
 
             const std::vector<WellMultiSegmentConstPtr>& wells() const;
             const MultisegmentWellOps& wellOps() const;
@@ -178,9 +179,10 @@ namespace Opm {
         const int num_phases_;
         int nseg_total_;
         int nperf_total_;
-        const BlackoilPropsAdInterface& fluid_;
-        const std::vector<bool>& active_;
-        const std::vector<PhasePresence>& phase_condition_;
+
+        const BlackoilPropsAdInterface* fluid_;
+        const std::vector<bool>*  active_;
+        const std::vector<PhasePresence>*  phase_condition_;
 
         // Pressure correction due to the different depth of the perforation
         // and the cell center of the grid block
