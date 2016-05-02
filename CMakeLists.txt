@@ -92,6 +92,9 @@ macro (sources_hook)
 			${PROJECT_SOURCE_DIR}/examples/flow_mpi.cpp
 			${PROJECT_SOURCE_DIR}/examples/flow_multisegment_mpi.cpp
 			)
+		list (APPEND examples_SOURCES_DIST
+			${PROJECT_SOURCE_DIR}/examples/flow_mpi.cpp
+			)
 	endif()
 endmacro (sources_hook)
 
