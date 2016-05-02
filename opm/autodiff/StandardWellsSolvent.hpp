@@ -37,10 +37,7 @@ namespace Opm {
             using Base::computeWellConnectionDensitesPressures;
 
             // ---------  Public methods  ---------
-            StandardWellsSolvent(const Wells* wells_arg,
-                                 const BlackoilPropsAdInterface& fluid_arg,
-                                 const std::vector<bool>& active_arg,
-                                 const std::vector<PhasePresence>& pc_arg);
+            StandardWellsSolvent(const Wells* wells_arg);
 
             // added the Solvent related
             void initSolvent(const SolventPropsAdFromDeck* solvent_props,

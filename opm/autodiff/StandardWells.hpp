@@ -60,10 +60,12 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            StandardWells(const Wells* wells_arg,
-                          const BlackoilPropsAdInterface& fluid_arg,
-                          const std::vector<bool>& active_arg,
-                          const std::vector<PhasePresence>& pc_arg);
+            StandardWells(const Wells* wells_arg);
+
+            void init(const BlackoilPropsAdInterface* fluid_arg,
+                      const std::vector<bool>* active_arg,
+                      const std::vector<PhasePresence>* pc_arg);
+
 
             const WellOps& wellOps() const;
 
@@ -168,9 +170,11 @@ namespace Opm {
             const Wells*   wells_;
             const WellOps  wops_;
             const int num_phases_;
-            const BlackoilPropsAdInterface& fluid_;
-            const std::vector<bool>& active_;
-            const std::vector<PhasePresence>& phase_condition_;
+
+            const BlackoilPropsAdInterface* fluid_;
+            const std::vector<bool>*  active_;
+            const std::vector<PhasePresence>*  phase_condition_;
+
             Vector well_perforation_densities_;
             Vector well_perforation_pressure_diffs_;
 

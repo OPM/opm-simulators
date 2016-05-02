@@ -71,19 +71,27 @@ namespace Opm
 
 
 
-    StandardWells::StandardWells(const Wells* wells_arg,
-                                 const BlackoilPropsAdInterface& fluid_arg,
-                                 const std::vector<bool>& active_arg,
-                                 const std::vector<PhasePresence>& pc_arg)
+    StandardWells::StandardWells(const Wells* wells_arg)
       : wells_(wells_arg)
       , wops_(wells_arg)
       , num_phases_(wells_arg->number_of_phases)
-      , fluid_(fluid_arg)
-      , active_(active_arg)
-      , phase_condition_(pc_arg)
       , well_perforation_densities_(Vector())
       , well_perforation_pressure_diffs_(Vector())
     {
+    }
+
+
+
+
+
+    void
+    StandardWells::init(const BlackoilPropsAdInterface* fluid_arg,
+                        const std::vector<bool>* active_arg,
+                        const std::vector<PhasePresence>* pc_arg)
+    {
+        fluid_ = fluid_arg;
+        active_ = active_arg;
+        phase_condition_ = pc_arg;
     }
 
 
@@ -211,31 +219,31 @@ namespace Opm
         std::vector<PhasePresence> perf_cond(nperf);
         // const std::vector<PhasePresence>& pc = phaseCondition();
         for (int perf = 0; perf < nperf; ++perf) {
-            perf_cond[perf] = phase_condition_[well_cells[perf]];
+            perf_cond[perf] = (*phase_condition_)[well_cells[perf]];
         }
-        const PhaseUsage& pu = fluid_.phaseUsage();
+        const PhaseUsage& pu = fluid_->phaseUsage();
         DataBlock b(nperf, pu.num_phases);
         if (pu.phase_used[BlackoilPhases::Aqua]) {
-            const Vector bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
+            const Vector bw = fluid_->bWat(avg_press_ad, perf_temp, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
         }
-        assert(active_[Oil]);
+        assert((*active_)[Oil]);
         const Vector perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const ADB perf_rs = (state.rs.size() > 0) ? subset(state.rs, well_cells) : ADB::null();
-            const Vector bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
+            const Vector bo = fluid_->bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const ADB perf_rv = (state.rv.size() > 0) ? subset(state.rv, well_cells) : ADB::null();
-            const Vector bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
+            const Vector bg = fluid_->bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
         }
         if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
-            const Vector rssat = fluid_.rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
+            const Vector rssat = fluid_->rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
             rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
 
-            const Vector rvsat = fluid_.rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
+            const Vector rvsat = fluid_->rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
             rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
         }
 
@@ -245,9 +253,9 @@ namespace Opm
         // Surface density.
         // The compute density segment wants the surface densities as
         // an np * number of wells cells array
-        Vector rho = superset(fluid_.surfaceDensity(0 , well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
+        Vector rho = superset(fluid_->surfaceDensity(0 , well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
         for (int phase = 1; phase < pu.num_phases; ++phase) {
-            rho += superset(fluid_.surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
+            rho += superset(fluid_->surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
         }
         surf_dens_perf.assign(rho.data(), rho.data() + nperf * pu.num_phases);
 
@@ -271,7 +279,7 @@ namespace Opm
         // Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        wells(), xw, fluid_.phaseUsage(),
+                        wells(), xw, fluid_->phaseUsage(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         const int nperf = wells().well_connpos[wells().number_of_wells];
@@ -420,8 +428,8 @@ namespace Opm
             const ADB cq_p = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
             cq_ps[phase] = b_perfcells[phase] * cq_p;
         }
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-        if (active_[Oil] && active_[Gas]) {
+        const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+        if ((*active_)[Oil] && (*active_)[Gas]) {
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
             const ADB cq_psOil = cq_ps[oilpos];
@@ -468,12 +476,12 @@ namespace Opm
         // compute volume ratio between connection at standard conditions
         ADB volumeRatio = ADB::constant(Vector::Zero(nperf));
 
-        if (active_[Water]) {
+        if ((*active_)[Water]) {
             const int watpos = pu.phase_pos[Water];
             volumeRatio += cmix_s[watpos] / b_perfcells[watpos];
         }
 
-        if (active_[Oil] && active_[Gas]) {
+        if ((*active_)[Oil] && (*active_)[Gas]) {
             // Incorporate RS/RV factors if both oil and gas active
             const ADB& rv_perfcells = subset(state.rv, well_cells);
             const ADB& rs_perfcells = subset(state.rs, well_cells);
@@ -489,11 +497,11 @@ namespace Opm
             volumeRatio += tmp_gas / b_perfcells[gaspos];
         }
         else {
-            if (active_[Oil]) {
+            if ((*active_)[Oil]) {
                 const int oilpos = pu.phase_pos[Oil];
                 volumeRatio += cmix_s[oilpos] / b_perfcells[oilpos];
             }
-            if (active_[Gas]) {
+            if ((*active_)[Gas]) {
                 const int gaspos = pu.phase_pos[Gas];
                 volumeRatio += cmix_s[gaspos] / b_perfcells[gaspos];
             }
@@ -597,7 +605,7 @@ namespace Opm
             std::copy(&bhp[0], &bhp[0] + bhp.size(), well_state.bhp().begin());
 
 
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            const Opm::PhaseUsage& pu = fluid_->phaseUsage();
             //Loop over all wells
 #pragma omp parallel for schedule(static)
             for (int w = 0; w < nw; ++w) {
@@ -612,13 +620,13 @@ namespace Opm
                         double liquid = 0.0;
                         double vapour = 0.0;
 
-                        if (active_[ Water ]) {
+                        if ((*active_)[ Water ]) {
                             aqua = wr[w*np + pu.phase_pos[ Water ] ];
                         }
-                        if (active_[ Oil ]) {
+                        if ((*active_)[ Oil ]) {
                             liquid = wr[w*np + pu.phase_pos[ Oil ] ];
                         }
-                        if (active_[ Gas ]) {
+                        if ((*active_)[ Gas ]) {
                             vapour = wr[w*np + pu.phase_pos[ Gas ] ];
                         }
 
@@ -723,15 +731,15 @@ namespace Opm
                 double liquid = 0.0;
                 double vapour = 0.0;
 
-                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
 
-                if (active_[ Water ]) {
+                if ((*active_)[ Water ]) {
                     aqua = xw.wellRates()[w*np + pu.phase_pos[ Water ] ];
                 }
-                if (active_[ Oil ]) {
+                if ((*active_)[ Oil ]) {
                     liquid = xw.wellRates()[w*np + pu.phase_pos[ Oil ] ];
                 }
-                if (active_[ Gas ]) {
+                if ((*active_)[ Gas ]) {
                     vapour = xw.wellRates()[w*np + pu.phase_pos[ Gas ] ];
                 }
 
@@ -858,13 +866,13 @@ namespace Opm
         ADB liquid = ADB::constant(Vector::Zero(nw));
         ADB vapour = ADB::constant(Vector::Zero(nw));
 
-        if (active_[Water]) {
+        if ((*active_)[Water]) {
             aqua += subset(state.qs, Span(nw, 1, BlackoilPhases::Aqua*nw));
         }
-        if (active_[Oil]) {
+        if ((*active_)[Oil]) {
             liquid += subset(state.qs, Span(nw, 1, BlackoilPhases::Liquid*nw));
         }
-        if (active_[Gas]) {
+        if ((*active_)[Gas]) {
             vapour += subset(state.qs, Span(nw, 1, BlackoilPhases::Vapour*nw));
         }
 
@@ -1024,7 +1032,7 @@ namespace Opm
         if (compute_well_potentials) {
             const int nw = wells().number_of_wells;
             const int np = wells().number_of_phases;
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            const Opm::PhaseUsage& pu = fluid_->phaseUsage();
 
             Vector bhps = Vector::Zero(nw);
             for (int w = 0; w < nw; ++w) {
@@ -1044,13 +1052,13 @@ namespace Opm
                         double liquid = 0.0;
                         double vapour = 0.0;
 
-                        if (active_[ Water ]) {
+                        if ((*active_)[ Water ]) {
                             aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
                         }
-                        if (active_[ Oil ]) {
+                        if ((*active_)[ Oil ]) {
                             liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
                         }
-                        if (active_[ Gas ]) {
+                        if ((*active_)[ Gas ]) {
                             vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
                         }
 

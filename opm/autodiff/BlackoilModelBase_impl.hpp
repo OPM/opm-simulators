@@ -176,7 +176,7 @@ namespace detail {
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
-        , std_wells_ (wells_arg, fluid_, active_, phaseCondition_)
+        , std_wells_ (wells_arg)
         , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isRv_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))
@@ -200,6 +200,8 @@ namespace detail {
         }
 
         assert(numMaterials() == std::accumulate(active_.begin(), active_.end(), 0)); // Due to the material_name_ init above.
+
+        std_wells_.init(&fluid_, &active_, &phaseCondition_);
 
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
