@@ -80,7 +80,7 @@ public:
 
 protected:
 
-    std::unique_ptr<Solver> createSolver(const Wells* wells, std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
+    std::unique_ptr<Solver> createSolver(const Wells* wells, const MultisegmentWells& multisegment_wells);
 
     using Base::output_writer_;
     using Base::param_;

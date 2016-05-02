@@ -68,10 +68,10 @@ namespace Opm {
                   const bool has_disgas,
                   const bool has_vapoil,
                   const bool terminal_output,
-                  const std::vector<WellMultiSegmentConstPtr>& wells_multisegment)
+                  const MultisegmentWells& multisegment_wells)
         : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output)
-        , ms_wells_(wells_multisegment)
+        , ms_wells_(multisegment_wells)
     {
         ms_wells_.init(&fluid_, &active_, &phaseCondition_);
     }

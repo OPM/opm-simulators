@@ -80,7 +80,13 @@ namespace Opm {
             // ---------  Public methods  ---------
             // TODO: using a vector of WellMultiSegmentConstPtr for now
             // TODO: it should use const Wells or something else later.
-            MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
+            MultisegmentWells(const Wells* wells_arg,
+                              const std::vector<WellConstPtr>& wells_ecl,
+                              const int time_step);
+
+            std::vector<WellMultiSegmentConstPtr> createMSWellVector(const Wells* wells_arg,
+                                                                     const std::vector<WellConstPtr>& wells_ecl,
+                                                                     const int time_step);
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -174,8 +180,8 @@ namespace Opm {
 
     protected:
         // TODO: probably a wells_active_ will be required here.
-        const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
-        const MultisegmentWellOps wops_ms_;
+        std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
+        MultisegmentWellOps wops_ms_;
         const int num_phases_;
         int nseg_total_;
         int nperf_total_;

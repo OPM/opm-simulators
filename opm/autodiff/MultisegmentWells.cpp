@@ -140,10 +140,12 @@ namespace Opm {
 
 
     MultisegmentWells::
-    MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_ms)
-      : wells_multisegment_(wells_ms)
-      , wops_ms_(wells_ms)
-      , num_phases_(wells_ms.empty()? 0 : wells_ms[0]->numberOfPhases())
+    MultisegmentWells(const Wells* wells_arg,
+                      const std::vector<WellConstPtr>& wells_ecl,
+                      const int time_step)
+      : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
+      , wops_ms_(wells_multisegment_)
+      , num_phases_(wells_arg ? wells_arg->number_of_phases : 0)
       , well_segment_perforation_pressure_diffs_(ADB::null())
       , well_segment_densities_(ADB::null())
       , well_segment_pressures_delta_(ADB::null())
@@ -166,6 +168,48 @@ namespace Opm {
 
         nperf_total_ = nperf_total;
         nseg_total_ = nseg_total;
+    }
+
+
+
+
+
+    std::vector<WellMultiSegmentConstPtr>
+    MultisegmentWells::createMSWellVector(const Wells* wells_arg,
+                                          const std::vector<WellConstPtr>& wells_ecl,
+                                          const int time_step)
+    {
+        std::vector<WellMultiSegmentConstPtr> wells_multisegment;
+
+        if (wells_arg) {
+            // number of wells in wells_arg structure
+            const int nw = wells_arg->number_of_wells;
+            // number of wells in EclipseState
+            const int nw_ecl = wells_ecl.size();
+
+            wells_multisegment.reserve(nw);
+
+            for(int i = 0; i < nw_ecl; ++i) {
+                // not processing SHUT wells
+                if (wells_ecl[i]->getStatus(time_step) == WellCommon::SHUT) {
+                    continue;
+                }
+
+                // checking if the well can be found in the wells
+                const std::string& well_name = wells_ecl[i]->name();
+                int index_well;
+                for (index_well = 0; index_well < nw; ++index_well) {
+                    if (well_name == std::string(wells_arg->name[index_well])) {
+                        break;
+                    }
+                }
+
+                if (index_well != nw) { // found in the wells
+                    wells_multisegment.push_back(std::make_shared<WellMultiSegment>(wells_ecl[i], time_step, wells_arg));
+                }
+            }
+        }
+        return wells_multisegment;
     }
 
 

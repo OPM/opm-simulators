@@ -91,7 +91,7 @@ namespace Opm {
                           const bool has_disgas,
                           const bool has_vapoil,
                           const bool terminal_output,
-                          const std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
+                          const MultisegmentWells& multisegment_wells);
 
         /// Called once before each time step.
         /// \param[in] dt                     time step size

@@ -25,7 +25,7 @@ namespace Opm
 
     template <class GridT>
     auto SimulatorFullyImplicitBlackoilMultiSegment<GridT>::
-    createSolver(const Wells* wells, std::vector<WellMultiSegmentConstPtr>& wells_multisegment)
+    createSolver(const Wells* wells, const MultisegmentWells& multisegment_wells)
         -> std::unique_ptr<Solver>
     {
         typedef typename Traits::Model Model;
@@ -41,7 +41,7 @@ namespace Opm
                                                       has_disgas_,
                                                       has_vapoil_,
                                                       terminal_output_,
-                                                      wells_multisegment));
+                                                      multisegment_wells));
 
         if (!Base::threshold_pressures_by_face_.empty()) {
             model->setThresholdPressures(Base::threshold_pressures_by_face_);
@@ -112,30 +112,11 @@ namespace Opm
             // well_state.init(wells, state, prev_well_state);
 
             const std::vector<WellConstPtr>& wells_ecl = eclipse_state_->getSchedule()->getWells(timer.currentStepNum());
-            std::vector<WellMultiSegmentConstPtr> wells_multisegment;
-            wells_multisegment.reserve(wells_ecl.size());
-            for (size_t i = 0; i < wells_ecl.size(); ++i) {
-                // not processing SHUT wells.
-                if (wells_ecl[i]->getStatus(timer.currentStepNum()) == WellCommon::SHUT) {
-                    continue;
-                }
-                // checking if the well can be found in the wells
-                const std::string& well_name = wells_ecl[i]->name();
-                // number of wells in wells
-                const int nw_wells = wells->number_of_wells;
-                int index_well;
-                for (index_well = 0; index_well < nw_wells; ++index_well) {
-                    if (well_name == std::string(wells->name[index_well])) {
-                        break;
-                    }
-                }
+            const int current_time_step = timer.currentStepNum();
 
-                if (index_well != nw_wells) { // found in the wells
-                    wells_multisegment.push_back(std::make_shared<WellMultiSegment>(wells_ecl[i], timer.currentStepNum(), wells));
-                }
-            }
+            const MultisegmentWells multisegment_wells(wells, wells_ecl, current_time_step);
 
-            well_state.init(wells_multisegment, state, prev_well_state);
+            well_state.init(multisegment_wells, state, prev_well_state);
 
             // give the polymer and surfactant simulators the chance to do their stuff
             Base::asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
@@ -153,7 +134,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            auto solver = createSolver(wells, wells_multisegment);
+            auto solver = createSolver(wells, multisegment_wells);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
