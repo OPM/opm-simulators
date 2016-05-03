@@ -146,6 +146,7 @@ namespace Opm {
       : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
       , wops_ms_(wells_multisegment_)
       , num_phases_(wells_arg ? wells_arg->number_of_phases : 0)
+      , wells_(wells_arg)
       , well_segment_perforation_pressure_diffs_(ADB::null())
       , well_segment_densities_(ADB::null())
       , well_segment_pressures_delta_(ADB::null())
@@ -234,6 +235,17 @@ namespace Opm {
     MultisegmentWells::wells() const
     {
         return wells_multisegment_;
+    }
+
+
+
+
+
+    const Wells&
+    MultisegmentWells::wellsStruct() const
+    {
+        assert(wells_ !=  nullptr);
+        return *(wells_);
     }
 
 

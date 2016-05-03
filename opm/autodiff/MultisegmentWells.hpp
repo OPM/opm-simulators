@@ -95,7 +95,11 @@ namespace Opm {
             const std::vector<WellMultiSegmentConstPtr>& wells() const;
             const MultisegmentWellOps& wellOps() const;
 
+            const Wells& wellsStruct() const;
+
             int numPhases() const { return num_phases_; };
+
+            int numWells() const { return wells_multisegment_.size(); }
 
             int numSegment() const { return nseg_total_; };
 
@@ -135,8 +139,6 @@ namespace Opm {
             template <class SolutionState>
             void
             computeWellFlux(const SolutionState& state,
-                            const Vector& well_perforation_pressure_diffs,
-                            const DataBlock& compi,
                             const std::vector<ADB>& mob_perfcells,
                             const std::vector<ADB>& b_perfcells,
                             Vector& aliveWells,
@@ -185,6 +187,12 @@ namespace Opm {
         const int num_phases_;
         int nseg_total_;
         int nperf_total_;
+
+        // TODO: put the Wells here to simplify the interface
+        // TODO: at the moment, both wells_ and wells_multisegment_
+        // TODO: acutally contain all the wells
+        // TODO: they should be split eventually.
+        const Wells* wells_;
 
         const BlackoilPropsAdInterface* fluid_;
         const std::vector<bool>*  active_;

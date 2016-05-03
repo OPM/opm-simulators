@@ -319,13 +319,13 @@ namespace Opm {
         // 2. Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        wells(), xw, fluid_.phaseUsage(),
+                        msWells().wellsStruct(), xw, fluid_.phaseUsage(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // 3. Compute pressure deltas
         std::vector<double> cdp =
                 WellDensitySegmented::computeConnectionPressureDelta(
-                        wells(), perf_cell_depth, cd, grav);
+                        msWells().wellsStruct(), perf_cell_depth, cd, grav);
 
         // 4. Store the results
         msWells().wellPerforationDensities() = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
@@ -501,12 +501,7 @@ namespace Opm {
         // it is related to the segment location
         V aliveWells;
         std::vector<ADB> cq_s;
-        const int nw = wellsMultiSegment().size();
-        const int np = numPhases();
-        const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
-        const V perf_press_diffs = msWells().wellPerforationPressureDiffs();
-        msWells().computeWellFlux(state, perf_press_diffs, compi,
-                                  mob_perfcells, b_perfcells, aliveWells, cq_s);
+        msWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         msWells().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
@@ -629,7 +624,7 @@ namespace Opm {
                                                      SolutionState& state,
                                                      WellState& well_state) {
         V aliveWells;
-        const int np = wells().number_of_phases;
+        const int np = msWells().numPhases();
         std::vector<ADB> cq_s(np, ADB::null());
         std::vector<int> indices = msWells().variableWellStateIndices();
         SolutionState state0 = state;
@@ -660,11 +655,7 @@ namespace Opm {
             SolutionState wellSolutionState = state0;
             variableStateExtractWellsVars(indices, vars, wellSolutionState);
 
-            const int nw = wellsMultiSegment().size();
-            const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
-            const V perf_press_diffs = msWells().wellPerforationPressureDiffs();
-            msWells().computeWellFlux(wellSolutionState, perf_press_diffs, compi,
-                                      mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            msWells().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
 
             updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             msWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
@@ -701,7 +692,7 @@ namespace Opm {
             if ( terminal_output_ ) {
                 std::cout << "well converged iter: " << it << std::endl;
             }
-            const int nw = wells().number_of_wells;
+            const int nw = msWells().numWells();
             {
                 // We will set the bhp primary variable to the new ones,
                 // but we do not change the derivatives here.

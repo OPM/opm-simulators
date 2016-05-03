@@ -122,8 +122,6 @@ namespace Opm
     void
     MultisegmentWells::
     computeWellFlux(const SolutionState& state,
-                    const Vector& well_perforation_pressure_diffs,
-                    const DataBlock& compi,
                     const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     Vector& aliveWells,
@@ -168,7 +166,7 @@ namespace Opm
 
             // Compute drawdown.
             ADB h_nc = msperf_selector.select(well_segment_perforation_pressure_diffs_,
-                                              ADB::constant(well_perforation_pressure_diffs));
+                                              ADB::constant(well_perforation_pressure_diffs_));
             const Vector h_cj = msperf_selector.select(well_perforation_cell_pressure_diffs_, Vector::Zero(nperf));
 
             // Special handling for when we are called from solveWellEq().
@@ -237,6 +235,8 @@ namespace Opm
             // TODO: stop using wells() here.
             std::vector<ADB> wbq(np, ADB::null());
             ADB wbqt = ADB::constant(Vector::Zero(nseg));
+
+            const DataBlock compi = Eigen::Map<const DataBlock>(wellsStruct().comp_frac, nw, np);
 
             for (int phase = 0; phase < np; ++phase) {
                 const ADB& q_ps = wellOps().p2s * cq_ps[phase];
