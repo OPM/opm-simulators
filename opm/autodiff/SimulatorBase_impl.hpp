@@ -110,7 +110,7 @@ namespace Opm
         }
 
         // init output writer
-        output_writer_.writeInit( timer );
+        output_writer_.writeInit( timer, geo_.nnc() );
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )

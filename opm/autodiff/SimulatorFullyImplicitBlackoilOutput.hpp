@@ -153,7 +153,7 @@ namespace Opm
         {}
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface& /* timer */)
+        void writeInit(const SimulatorTimerInterface& /* timer */, const NNC& nnc)
         {}
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
@@ -183,7 +183,7 @@ namespace Opm
         {}
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface& /* timer */)
+        void writeInit(const SimulatorTimerInterface& /* timer */, const NNC& nnc)
         {}
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
@@ -214,7 +214,7 @@ namespace Opm
                              const double* permeability );
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface &timer);
+        void writeInit(const SimulatorTimerInterface &timer, const NNC& nnc);
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
