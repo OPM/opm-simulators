@@ -47,6 +47,37 @@ namespace Opm
 
 
 
+
+
+    template <class ReservoirResidualQuant, class SolutionState>
+    void
+    MultisegmentWells::
+    extractWellPerfProperties(const SolutionState& /* state */,
+                              const std::vector<ReservoirResidualQuant>& rq,
+                              std::vector<ADB>& mob_perfcells,
+                              std::vector<ADB>& b_perfcells) const
+    {
+        // If we have wells, extract the mobilities and b-factors for
+        // the well-perforated cells.
+        if ( !localWellsActive() ) {
+            mob_perfcells.clear();
+            b_perfcells.clear();
+            return;
+        } else {
+            const std::vector<int>& well_cells = wellOps().well_cells;
+            mob_perfcells.resize(num_phases_, ADB::null());
+            b_perfcells.resize(num_phases_, ADB::null());
+            for (int phase = 0; phase < num_phases_; ++phase) {
+                mob_perfcells[phase] = subset(rq[phase].mob, well_cells);
+                b_perfcells[phase] = subset(rq[phase].b, well_cells);
+            }
+        }
+    }
+
+
+
+
+
     template <class WellState>
     void
     MultisegmentWells::

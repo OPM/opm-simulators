@@ -105,6 +105,18 @@ namespace Opm {
 
             int numPerf() const { return nperf_total_; };
 
+            bool localWellsActive() const { return ! wells_multisegment_.empty(); }
+
+            // TODO: will be wrong for the parallel version.
+            // TODO: to be fixed after other interfaces are unified.
+            bool WellsActive() const { return localWellsActive(); };
+
+            template <class ReservoirResidualQuant, class SolutionState>
+            void extractWellPerfProperties(const SolutionState& state,
+                                           const std::vector<ReservoirResidualQuant>& rq,
+                                           std::vector<ADB>& mob_perfcells,
+                                           std::vector<ADB>& b_perfcells) const;
+
             Vector& wellPerforationCellPressureDiffs() { return well_perforation_cell_pressure_diffs_; };
 
             Vector& wellSegmentPerforationDepthDiffs() { return well_segment_perforation_depth_diffs_; };

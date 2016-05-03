@@ -381,13 +381,6 @@ namespace Opm {
 
         // TODO: only kept for now due to flow_multisegment
         // will be removed soon
-        void
-        extractWellPerfProperties(const SolutionState& state,
-                                  std::vector<ADB>& mob_perfcells,
-                                  std::vector<ADB>& b_perfcells) const;
-
-        // TODO: only kept for now due to flow_multisegment
-        // will be removed soon
         void updateWellState(const V& dwells,
                              WellState& well_state);
 

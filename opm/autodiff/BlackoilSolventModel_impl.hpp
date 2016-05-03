@@ -816,43 +816,6 @@ namespace Opm {
 
     }
 
-    template <class Grid>
-    void
-    BlackoilSolventModel<Grid>::extractWellPerfProperties(const SolutionState& state,
-                                                          std::vector<ADB>& mob_perfcells,
-                                                          std::vector<ADB>& b_perfcells)
-    {
-        Base::extractWellPerfProperties(state, mob_perfcells, b_perfcells);
-        if (has_solvent_) {
-            int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
-            const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
-            const int nperf = well_cells.size();
-            // Gas and solvent is combinded and solved together
-            // The input in the well equation is then the
-            // total gas phase = hydro carbon gas + solvent gas
-
-            // The total mobility is the sum of the solvent and gas mobiliy
-            mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
-
-            // A weighted sum of the b-factors of gas and solvent are used.
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const ADB zero = ADB::constant(V::Zero(nc));
-            const ADB& ss = state.solvent_saturation;
-            const ADB& sg = (active_[ Gas ]
-                             ? state.saturation[ pu.phase_pos[ Gas ] ]
-                             : zero);
-
-            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-            ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
-            V ones = V::Constant(nperf,1.0);
-
-            b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
-            b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
-
-        }
-    }
 
     template <class Grid>
     void

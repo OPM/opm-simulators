@@ -965,36 +965,6 @@ namespace detail {
 
 
 
-
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    extractWellPerfProperties(const SolutionState&,
-                              std::vector<ADB>& mob_perfcells,
-                              std::vector<ADB>& b_perfcells) const
-    {
-        // If we have wells, extract the mobilities and b-factors for
-        // the well-perforated cells.
-        if (!asImpl().localWellsActive()) {
-            mob_perfcells.clear();
-            b_perfcells.clear();
-            return;
-        } else {
-            const int np = asImpl().numPhases();
-            const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
-            mob_perfcells.resize(np, ADB::null());
-            b_perfcells.resize(np, ADB::null());
-            for (int phase = 0; phase < np; ++phase) {
-                mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-                b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-            }
-        }
-    }
-
-
-
-
-
     template <class Grid, class WellModel, class Implementation>
     bool
     BlackoilModelBase<Grid, WellModel, Implementation>::

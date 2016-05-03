@@ -491,7 +491,7 @@ namespace Opm {
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        asImpl().extractWellPerfProperties(state, mob_perfcells, b_perfcells);
+        msWells().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
