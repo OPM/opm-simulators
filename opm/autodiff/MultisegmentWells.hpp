@@ -156,6 +156,11 @@ namespace Opm {
                             Vector& aliveWells,
                             std::vector<ADB>& cq_s) const;
 
+            template <class SolutionState, class WellState>
+            void updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                                  const SolutionState& state,
+                                                  WellState& xw) const;
+
 
             // Calculate the density of the mixture in the segments
             // And the surface volume of the components in the segments by dt

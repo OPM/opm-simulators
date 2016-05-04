@@ -341,6 +341,56 @@ namespace Opm
 
 
 
+    template <class SolutionState, class WellState>
+    void
+    MultisegmentWells::
+    updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                     const SolutionState& state,
+                                     WellState& xw) const
+    {
+        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
+        const int np = numPhases();
+        const int nw = numWells();
+
+        Vector cq = superset(cq_s[0].value(), Span(nperf_total_, np, 0), nperf_total_ * np);
+        for (int phase = 1; phase < np; ++phase) {
+            cq += superset(cq_s[phase].value(), Span(nperf_total_, np, phase), nperf_total_ * np);
+        }
+        xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf_total_ * np);
+
+        // Update the perforation pressures for usual wells first to recover the resutls
+        // without mutlti segment wells. For segment wells, it has not been decided if
+        // we need th concept of preforation pressures
+        xw.perfPress().resize(nperf_total_, -1.e100);
+
+        const Vector& cdp = well_perforation_pressure_diffs_;
+        int start_segment = 0;
+        int start_perforation = 0;
+        for (int i = 0; i < nw; ++i) {
+            WellMultiSegmentConstPtr well = wells_multisegment_[i];
+            const int nperf = well->numberOfPerforations();
+            const int nseg = well->numberOfSegments();
+            if (well->isMultiSegmented()) {
+                start_segment += nseg;
+                start_perforation += nperf;
+                continue;
+            }
+            const Vector cdp_well = subset(cdp, Span(nperf, 1, start_perforation));
+            const ADB segp = subset(state.segp, Span(nseg, 1, start_segment));
+            const Vector perfpressure = (well->wellOps().s2p * segp.value().matrix()).array() + cdp_well;
+            std::copy(perfpressure.data(), perfpressure.data() + nperf, &xw.perfPress()[start_perforation]);
+
+            start_segment += nseg;
+            start_perforation += nperf;
+        }
+        assert(start_segment == nseg_total_);
+        assert(start_perforation == nperf_total_);
+    }
+
+
+
+
+
     template <class SolutionState>
     void
     MultisegmentWells::

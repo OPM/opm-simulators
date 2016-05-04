@@ -502,58 +502,11 @@ namespace Opm {
         V aliveWells;
         std::vector<ADB> cq_s;
         msWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        asImpl().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        msWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         msWells().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         // asImpl().addWellControlEq(state, well_state, aliveWells);
         msWells().addWellControlEq(state, well_state, aliveWells, residual_);
-    }
-
-
-
-
-
-    template <class Grid>
-    void BlackoilMultiSegmentModel<Grid>::updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                                                           const SolutionState& state,
-                                                                           WellState& xw) const
-    {
-        // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
-        const int np = numPhases();
-        const int nw = wellsMultiSegment().size();
-        const int nperf_total = xw.perfPress().size();
-
-        V cq = superset(cq_s[0].value(), Span(nperf_total, np, 0), nperf_total * np);
-        for (int phase = 1; phase < np; ++phase) {
-            cq += superset(cq_s[phase].value(), Span(nperf_total, np, phase), nperf_total * np);
-        }
-        xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf_total * np);
-
-        // Update the perforation pressures for usual wells first to recover the resutls
-        // without mutlti segment wells. For segment wells, it has not been decided if
-        // we need th concept of preforation pressures
-        xw.perfPress().resize(nperf_total, -1.e100);
-
-        const V& cdp = msWells().wellPerforationPressureDiffs();
-        int start_segment = 0;
-        int start_perforation = 0;
-        for (int i = 0; i < nw; ++i) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[i];
-            const int nperf = well->numberOfPerforations();
-            const int nseg = well->numberOfSegments();
-            if (well->isMultiSegmented()) {
-                start_segment += nseg;
-                start_perforation += nperf;
-                continue;
-            }
-            const V cdp_well = subset(cdp, Span(nperf, 1, start_perforation));
-            const ADB segp = subset(state.segp, Span(nseg, 1, start_segment));
-            const V perfpressure = (well->wellOps().s2p * segp.value().matrix()).array() + cdp_well;
-            std::copy(perfpressure.data(), perfpressure.data() + nperf, &xw.perfPress()[start_perforation]);
-
-            start_segment += nseg;
-            start_perforation += nperf;
-        }
     }
 
 
@@ -657,7 +610,7 @@ namespace Opm {
 
             msWells().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
 
-            updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
+            msWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             msWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
             // addWellControlEq(wellSolutionState, well_state, aliveWells);
             msWells().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
