@@ -91,8 +91,6 @@ namespace Opm {
             updatePrimalVariableFromState(reservoir_state);
         }
 
-        msWells().topWellSegments() = well_state.topSegmentLoc();
-
         const int nw = wellsMultiSegment().size();
 
         if ( !msWellOps().has_multisegment_wells ) {

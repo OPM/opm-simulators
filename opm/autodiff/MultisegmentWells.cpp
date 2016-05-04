@@ -155,9 +155,11 @@ namespace Opm {
         // TODO: repeated with the wellOps's initialization, delete one soon.
         // Count the total number of perforations and segments.
         const int nw = wells_ms.size();
+        top_well_segments_.resize(nw);
         int nperf_total = 0;
         int nseg_total = 0;
         for (int w = 0; w < nw; ++w) {
+            top_well_segments_[w] = nseg_total;
             nperf_total += wells_ms[w]->numberOfPerforations();
             nseg_total += wells_ms[w]->numberOfSegments();
         }
