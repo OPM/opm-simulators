@@ -155,16 +155,14 @@ namespace Opm {
       , segment_mass_flow_rates_(ADB::null())
       , segment_viscosities_(ADB::null())
     {
-        // TODO: repeated with the wellOps's initialization, delete one soon.
-        // Count the total number of perforations and segments.
-        const int nw = wells_ms.size();
-        top_well_segments_.resize(nw);
+        const int nw = wells_multisegment_.size();
         int nperf_total = 0;
         int nseg_total = 0;
+        top_well_segments_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             top_well_segments_[w] = nseg_total;
-            nperf_total += wells_ms[w]->numberOfPerforations();
-            nseg_total += wells_ms[w]->numberOfSegments();
+            nperf_total += wells_multisegment_[w]->numberOfPerforations();
+            nseg_total += wells_multisegment_[w]->numberOfSegments();
         }
 
         nperf_total_ = nperf_total;

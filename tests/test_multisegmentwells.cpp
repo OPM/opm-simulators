@@ -106,31 +106,7 @@ struct SetupMSW {
         const Wells* wells = wells_manager.c_wells();
         const std::vector<Opm::WellConstPtr>& wells_ecl = ecl_state->getSchedule()->getWells(current_timestep);
 
-        std::vector<Opm::WellMultiSegmentConstPtr> wells_multisegment;
-        wells_multisegment.reserve(wells_ecl.size());
-        for (size_t i = 0; i < wells_ecl.size(); ++i) {
-            // not processing SHUT wells.
-            if (wells_ecl[i]->getStatus(current_timestep) == Opm::WellCommon::SHUT) {
-                continue;
-            }
-            // checking if the well can be found in the wells
-            const std::string& well_name = wells_ecl[i]->name();
-            // number of wells in wells
-            const int nw_wells = wells->number_of_wells;
-            int index_well;
-            for (index_well = 0; index_well < nw_wells; ++index_well) {
-                if (well_name == std::string(wells->name[index_well])) {
-                    break;
-                }
-            }
-
-            // have to be able to be found
-            assert(index_well != nw_wells);
-
-            wells_multisegment.push_back(std::make_shared<Opm::WellMultiSegment>(wells_ecl[i], current_timestep, wells));
-        }
-
-        ms_wells.reset(new Opm::MultisegmentWells(wells_multisegment, wells->number_of_phases));
+        ms_wells.reset(new Opm::MultisegmentWells(wells, wells_ecl, current_timestep));
     };
 
     std::shared_ptr<const Opm::MultisegmentWells> ms_wells;
