@@ -84,6 +84,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_vfpproperties.cpp
   tests/test_singlecellsolves.cpp
   tests/test_solventprops_ad.cpp
+	tests/test_multisegmentwells.cpp
 	# tests/test_thresholdpressure.cpp
   )
 
@@ -91,6 +92,7 @@ list (APPEND TEST_DATA_FILES
   tests/fluid.data
   tests/VFPPROD1
   tests/VFPPROD2
+	tests/msw.data
   )
 
 
