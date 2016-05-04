@@ -72,6 +72,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
+#include <opm/common/OpmLog/LogUtil.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -102,32 +103,17 @@
 namespace Opm
 {
 
-    boost::filesystem::path simulationCaseName( const std::string& casename ) {
-        namespace fs = boost::filesystem;
 
-        const auto exists = []( const fs::path& f ) -> bool {
-            if( !fs::exists( f ) ) return false;
-
-            if( fs::is_regular_file( f ) ) return true;
-
-            return fs::is_symlink( f )
-                && fs::is_regular_file( fs::read_symlink( f ) );
-        };
-
-        auto simcase = fs::path( casename );
-
-        if( exists( simcase ) ) {
-            return simcase;
-        }
-
-        for( const auto& ext : { std::string("data"), std::string("DATA") } ) {
-            if( exists( simcase.replace_extension( ext ) ) ) {
-                return simcase;
-            }
-        }
-
-        throw std::invalid_argument( "Cannot find input case " + casename );
+    namespace detail
+    {
+        boost::filesystem::path simulationCaseName( const std::string& casename );
+        int64_t convertMessageType(const Message::type& mtype);
     }
+
+
+
+
+
 
     /// This class encapsulates the setup and running of
     /// a simulator based on an input deck.
@@ -154,6 +140,7 @@ namespace Opm
             asImpl().setupOutput();
             asImpl().readDeckInput();
             asImpl().setupGridAndProps();
+            asImpl().extractMessages();
             asImpl().runDiagnostics();
             asImpl().setupState();
             asImpl().distributeData();
@@ -306,7 +293,7 @@ namespace Opm
                     std::cerr << "You can only specify a single input deck on the command line.\n";
                     return false;
                 } else {
-                    const auto casename = simulationCaseName( param_.unhandledArguments()[ 0 ] );
+                    const auto casename = detail::simulationCaseName( param_.unhandledArguments()[ 0 ] );
                     param_.insertParameter("deck_filename", casename.string() );
                 }
             }
@@ -575,9 +562,39 @@ namespace Opm
 
 
 
-        // run diagnostics
+        // Extract messages from parser.
         // Writes to:
-        //   logFile_
+        //    OpmLog singleton.
+        void extractMessages()
+        {
+            auto extractMessage = [](const Message& msg) {
+                auto log_type = detail::convertMessageType(msg.mtype);
+                const auto& location = msg.location;
+                if (location) {
+                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
+                } else {
+                    OpmLog::addMessage(log_type, msg.message);
+                }
+            };
+
+            // Extract messages from Deck.
+            for(const auto& msg : deck_->getMessageContainer()) {
+                extractMessage(msg);
+            }
+
+            // Extract messages from EclipseState.
+            for (const auto& msg : eclipse_state_->getMessageContainer()) {
+                extractMessage(msg);
+            }
+        }
+
+
+
+
+
+        // Run diagnostics.
+        // Writes to:
+        //   OpmLog singleton.
         void runDiagnostics()
         {
             // Run relperm diagnostics
@@ -739,6 +756,67 @@ namespace Opm
                                                  Base::threshold_pressures_));
         }
     };
+
+
+
+
+
+
+    namespace detail
+    {
+
+        boost::filesystem::path simulationCaseName( const std::string& casename ) {
+            namespace fs = boost::filesystem;
+
+            const auto exists = []( const fs::path& f ) -> bool {
+                if( !fs::exists( f ) ) return false;
+
+                if( fs::is_regular_file( f ) ) return true;
+
+                return fs::is_symlink( f )
+                && fs::is_regular_file( fs::read_symlink( f ) );
+            };
+
+            auto simcase = fs::path( casename );
+
+            if( exists( simcase ) ) {
+                return simcase;
+            }
+
+            for( const auto& ext : { std::string("data"), std::string("DATA") } ) {
+                if( exists( simcase.replace_extension( ext ) ) ) {
+                    return simcase;
+                }
+            }
+
+            throw std::invalid_argument( "Cannot find input case " + casename );
+        }
+
+
+
+
+
+        int64_t convertMessageType(const Message::type& mtype)
+        {
+            switch (mtype) {
+            case Message::type::Debug:
+                return Log::MessageType::Debug;
+            case Message::type::Info:
+                return Log::MessageType::Info;
+            case Message::type::Warning:
+                return Log::MessageType::Warning;
+            case Message::type::Error:
+                return Log::MessageType::Error;
+            case Message::type::Problem:
+                return Log::MessageType::Problem;
+            case Message::type::Bug:
+                return Log::MessageType::Bug;
+            }
+            throw std::logic_error("Invalid messages type!\n");
+        }
+
+
+    } // namespace detail
 
 
 
