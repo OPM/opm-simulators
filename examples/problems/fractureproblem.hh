@@ -34,11 +34,8 @@
 #define DISABLE_ALUGRID_SFC_ORDERING 1
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/dgf.hh>
-#elif HAVE_ALUGRID
-#include <dune/grid/alugrid.hh>
-#include <dune/grid/io/file/dgfparser/dgfalu.hh>
 #else
-#error "No ALUGrid found"
+#error "dune-alugrid not found!"
 #endif
 
 #include <ewoms/models/discretefracture/discretefracturemodel.hh>
