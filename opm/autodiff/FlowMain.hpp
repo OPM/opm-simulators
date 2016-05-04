@@ -198,7 +198,7 @@ namespace Opm
         parameter::ParameterGroup param_;
         // setupOutput()
         bool output_to_files_ = false;
-        std::string output_dir_ = std::string("output");
+        std::string output_dir_ = std::string(".");
         // readDeckInput()
         std::shared_ptr<const Deck> deck_;
         std::shared_ptr<EclipseState> eclipse_state_;
@@ -339,7 +339,7 @@ namespace Opm
             if (output_to_files_) {
                 // Create output directory if needed.
                 output_dir_ =
-                    param_.getDefault("output_dir", std::string("output"));
+                    param_.getDefault("output_dir", std::string("."));
                 boost::filesystem::path fpath(output_dir_);
                 try {
                     create_directories(fpath);

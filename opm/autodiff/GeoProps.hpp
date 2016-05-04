@@ -152,7 +152,7 @@ namespace Opm
 
             // Handle NNCs
             if (eclState) {
-                nnc_ = *(eclState->getNNC());
+                nnc_ = eclState->getNNC();
             }
 
             // opmfil is hardcoded to be true. i.e the pinch processor is never used
