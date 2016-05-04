@@ -33,9 +33,7 @@
 
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
-#elif HAVE_ALUGRID
-#include <dune/grid/alugrid.hh>
-#endif // HAVE_ALUGRID
+#endif
 
 #include <dune/common/version.hh>
 #include <dune/geometry/quadraturerules.hh>
@@ -105,7 +103,7 @@ void testIdenityMapping()
 template <class Grid>
 void writeTetrahedronSubControlVolumes(const Grid &grid)
 {
-#if HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#if HAVE_DUNE_ALUGRID
     typedef typename Grid::LeafGridView GridView;
 
     typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid2;
@@ -154,12 +152,12 @@ void writeTetrahedronSubControlVolumes(const Grid &grid)
     typedef Dune::VTKWriter<GridView2> VtkWriter;
     VtkWriter writer(grid2.leafView(), Dune::VTK::conforming);
     writer.write("tetrahedron-scvs", Dune::VTK::ascii);
-#endif // HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#endif // HAVE_DUNE_ALUGRID
 }
 
 void testTetrahedron()
 {
-#if HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#if HAVE_DUNE_ALUGRID
     typedef Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> Grid;
     typedef Dune::GridFactory<Grid> GridFactory;
     GridFactory gf;
@@ -179,13 +177,13 @@ void testTetrahedron()
     writeTetrahedronSubControlVolumes(*grid);
 
     delete grid;
-#endif // HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#endif // HAVE_DUNE_ALUGRID
 }
 
 template <class Grid>
 void writeCubeSubControlVolumes(const Grid &grid)
 {
-#if HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#if HAVE_DUNE_ALUGRID
     typedef typename Grid::LeafGridView GridView;
 
     typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid2;
@@ -233,12 +231,12 @@ void writeCubeSubControlVolumes(const Grid &grid)
     typedef Dune::VTKWriter<GridView2> VtkWriter;
     VtkWriter writer(grid2.leafView(), Dune::VTK::conforming);
     writer.write("cube-scvs", Dune::VTK::ascii);
-#endif // HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#endif // HAVE_DUNE_ALUGRID
 }
 
 void testCube()
 {
-#if HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#if HAVE_DUNE_ALUGRID
     typedef Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming> Grid;
     typedef Dune::GridFactory<Grid> GridFactory;
     GridFactory gf;
@@ -265,7 +263,7 @@ void testCube()
     writeCubeSubControlVolumes(*grid);
 
     delete grid;
-#endif // HAVE_DUNE_ALUGRID || HAVE_ALUGRID
+#endif // HAVE_DUNE_ALUGRID
 }
 
 void testQuadrature()
