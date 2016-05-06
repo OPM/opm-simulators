@@ -29,9 +29,9 @@ namespace Opm
 {
     template <class PhysicalModel>
     NonlinearSolver<PhysicalModel>::NonlinearSolver(const SolverParameters& param,
-                                                    std::unique_ptr<PhysicalModel> model)
+                                                    std::unique_ptr<PhysicalModel> model_arg)
         : param_(param),
-          model_(std::move(model)),
+          model_(std::move(model_arg)),
           nonlinearIterations_(0),
           linearIterations_(0),
           nonlinearIterationsLast_(0),

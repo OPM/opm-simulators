@@ -80,7 +80,7 @@ namespace Opm {
                                                      const DerivedGeology&                   geo,
                                                      const RockCompressibility*              rock_comp_props,
                                                      const PolymerPropsAd&                   polymer_props_ad,
-                                                     const Wells*                            wells,
+                                                     const Wells*                            wells_arg,
                                                      const NewtonIterationBlackoilInterface& linsolver,
                                                      EclipseStateConstPtr                    eclipse_state,
                                                      const bool                              has_disgas,
@@ -92,7 +92,7 @@ namespace Opm {
                                                      const std::vector<double>&              wells_perf_length,
                                                      const std::vector<double>&              wells_bore_diameter,
                                                      const bool                              terminal_output)
-        : Base(param, grid, fluid, geo, rock_comp_props, wells, linsolver, eclipse_state,
+        : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver, eclipse_state,
                has_disgas, has_vapoil, terminal_output),
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
