@@ -1121,5 +1121,40 @@ namespace Opm
     }
 
 
+
+
+
+    template <class WellState>
+    void
+    MultisegmentWells::
+    variableWellStateInitials(const WellState& xw,
+                              std::vector<Vector>& vars0) const
+    {
+        // Initial well rates
+        if ( wells_multisegment_.size() > 0 )
+        {
+            // Need to reshuffle well segment rates, from phase running fastest
+            const int nseg = xw.numSegments();
+            const int np = xw.numPhases();
+
+            // The transpose() below switches the ordering of the segment rates
+            const DataBlock segrates = Eigen::Map<const DataBlock>(& xw.segPhaseRates()[0], nseg, np).transpose();
+            // segment phase rates in surface volume
+            const Vector segqs = Eigen::Map<const Vector>(segrates.data(), nseg * np);
+            vars0.push_back(segqs);
+
+            // for the pressure of the segments
+            const Vector segp = Eigen::Map<const Vector>(& xw.segPress()[0], xw.segPress().size());
+            vars0.push_back(segp);
+        }
+        else
+        {
+            // push null sates for segqs and segp
+            vars0.push_back(Vector());
+            vars0.push_back(Vector());
+        }
+    }
+
+
 }
 #endif // OPM_MULTISEGMENTWELLS_IMPL_HEADER_INCLUDED

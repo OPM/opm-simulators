@@ -198,6 +198,11 @@ namespace Opm {
             std::vector<int>
             variableWellStateIndices() const;
 
+            template <class WellState>
+            void
+            variableWellStateInitials(const WellState& xw,
+                                      std::vector<Vector>& vars0) const;
+
             template <class SolutionState, class WellState>
             void computeWellConnectionPressures(const SolutionState& state,
                                                 const WellState& xw,

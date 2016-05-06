@@ -176,10 +176,6 @@ namespace Opm {
         variableStateInitials(const ReservoirState& x,
                               const WellState& xw) const;
 
-        void
-        variableWellStateInitials(const WellState& xw,
-                                  std::vector<V>& vars0) const;
-
         /// added to fixing the flow_multisegment running
         bool
         baseSolveWellEq(const std::vector<ADB>& mob_perfcells,

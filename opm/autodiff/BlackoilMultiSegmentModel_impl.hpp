@@ -145,39 +145,6 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilMultiSegmentModel<Grid>::variableWellStateInitials(const WellState& xw, std::vector<V>& vars0) const
-    {
-        // Initial well rates
-        if ( wellsMultiSegment().size() > 0 )
-        {
-            // Need to reshuffle well segment rates, from phase running fastest
-            const int nseg = xw.numSegments();
-            const int np = xw.numPhases();
-
-            // The transpose() below switches the ordering of the segment rates
-            const DataBlock segrates = Eigen::Map<const DataBlock>(& xw.segPhaseRates()[0], nseg, np).transpose();
-            // segment phase rates in surface volume
-            const V segqs = Eigen::Map<const V>(segrates.data(), nseg * np);
-            vars0.push_back(segqs);
-
-            // for the pressure of the segments
-            const V segp = Eigen::Map<const V>(& xw.segPress()[0], xw.segPress().size());
-            vars0.push_back(segp);
-        }
-        else
-        {
-            // push null sates for segqs and segp
-            vars0.push_back(V());
-            vars0.push_back(V());
-        }
-    }
-
-
-
-
-
-    template <class Grid>
-    void
     BlackoilMultiSegmentModel<Grid>::variableStateExtractWellsVars(const std::vector<int>& indices,
                                                                    std::vector<ADB>& vars,
                                                                    SolutionState& state) const
@@ -415,7 +382,7 @@ namespace Opm {
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
-            variableWellStateInitials(well_state, vars0);
+            msWells().variableWellStateInitials(well_state, vars0);
             std::vector<ADB> vars = ADB::variables(vars0);
 
             SolutionState wellSolutionState = state0;
@@ -517,7 +484,7 @@ namespace Opm {
         // and bhp and Q for the wells
         vars0.reserve(np + 1);
         variableReservoirStateInitials(x, vars0);
-        variableWellStateInitials(xw, vars0);
+        msWells().variableWellStateInitials(xw, vars0);
         return vars0;
     }
 
