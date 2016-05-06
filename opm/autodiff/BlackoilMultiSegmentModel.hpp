@@ -180,9 +180,6 @@ namespace Opm {
         variableWellStateInitials(const WellState& xw,
                                   std::vector<V>& vars0) const;
 
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
-
         /// added to fixing the flow_multisegment running
         bool
         baseSolveWellEq(const std::vector<ADB>& mob_perfcells,

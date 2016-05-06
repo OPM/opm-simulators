@@ -911,5 +911,215 @@ namespace Opm
     }
 
 
+
+
+
+    // TODO: This is just a preliminary version, remains to be improved later when we decide a better way
+    // TODO: to intergrate the usual wells and multi-segment wells.
+    template <class SolutionState, class WellState>
+    void
+    MultisegmentWells::
+    computeWellConnectionPressures(const SolutionState& state,
+                                   const WellState& xw,
+                                   const std::vector<ADB>& kr_adb,
+                                   const std::vector<ADB>& fluid_density,
+                                   const Vector& depth,
+                                   const double grav)
+    {
+        if( ! wellsActive() ) return ;
+
+        using namespace Opm::AutoDiffGrid;
+        // 1. Compute properties required by computeConnectionPressureDelta().
+        //    Note that some of the complexity of this part is due to the function
+        //    taking std::vector<double> arguments, and not Eigen objects.
+        const int nperf_total = nperf_total_;
+        const int nw = numWells();
+
+        const std::vector<int>& well_cells = wellOps().well_cells;
+
+        well_perforation_densities_ = Vector::Zero(nperf_total);
+
+        const Vector perf_press = Eigen::Map<const Vector>(xw.perfPress().data(), nperf_total);
+
+        Vector avg_press = perf_press * 0.0;
+
+        // for the non-segmented/regular wells, calculated the average pressures.
+        // If it is the top perforation, then average with the bhp().
+        // If it is not the top perforation, then average with the perforation above it().
+        int start_segment = 0;
+        for (int w = 0; w < nw; ++w) {
+            const int nseg = wells_multisegment_[w]->numberOfSegments();
+            if (wells_multisegment_[w]->isMultiSegmented()) {
+                // maybe we should give some reasonable values to prevent the following calculations fail
+                start_segment += nseg;
+                continue;
+            }
+
+            std::string well_name(wells_multisegment_[w]->name());
+            typedef typename WellState::SegmentedWellMapType::const_iterator const_iterator;
+            const_iterator it_well = xw.segmentedWellMap().find(well_name);
+            assert(it_well != xw.segmentedWellMap().end());
+
+            const int start_perforation = (*it_well).second.start_perforation;
+            const int end_perforation = start_perforation + (*it_well).second.number_of_perforations;
+            for (int perf = start_perforation; perf < end_perforation; ++perf) {
+                const double p_above = perf == start_perforation ? state.segp.value()[start_segment] : perf_press[perf - 1];
+                const double p_avg = (perf_press[perf] + p_above)/2;
+                avg_press[perf] = p_avg;
+            }
+            start_segment += nseg;
+        }
+        assert(start_segment == xw.numSegments());
+
+        // Use cell values for the temperature as the wells don't knows its temperature yet.
+        const ADB perf_temp = subset(state.temperature, well_cells);
+
+        // Compute b, rsmax, rvmax values for perforations.
+        // Evaluate the properties using average well block pressures
+        // and cell values for rs, rv, phase condition and temperature.
+        const ADB avg_press_ad = ADB::constant(avg_press);
+        std::vector<PhasePresence> perf_cond(nperf_total);
+        for (int perf = 0; perf < nperf_total; ++perf) {
+            perf_cond[perf] = (*phase_condition_)[well_cells[perf]];
+        }
+        const PhaseUsage& pu = fluid_->phaseUsage();
+        DataBlock b(nperf_total, pu.num_phases);
+        std::vector<double> rsmax_perf(nperf_total, 0.0);
+        std::vector<double> rvmax_perf(nperf_total, 0.0);
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            const Vector bw = fluid_->bWat(avg_press_ad, perf_temp, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
+        }
+        assert((*active_)[Oil]);
+        const Vector perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            const ADB perf_rs = subset(state.rs, well_cells);
+            const Vector bo = fluid_->bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
+            const Vector rssat = fluid_->rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
+            rsmax_perf.assign(rssat.data(), rssat.data() + nperf_total);
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            const ADB perf_rv = subset(state.rv, well_cells);
+            const Vector bg = fluid_->bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
+            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
+            const Vector rvsat = fluid_->rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
+            rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf_total);
+        }
+        // b is row major, so can just copy data.
+        std::vector<double> b_perf(b.data(), b.data() + nperf_total * pu.num_phases);
+        // Extract well connection depths.
+        const Vector perfcelldepth = subset(depth, well_cells);
+        std::vector<double> perf_cell_depth(perfcelldepth.data(), perfcelldepth.data() + nperf_total);
+
+        // Surface density.
+        // The compute density segment wants the surface densities as
+        // an np * number of wells cells array
+        Vector rho = superset(fluid_->surfaceDensity(0 , well_cells), Span(nperf_total, pu.num_phases, 0), nperf_total * pu.num_phases);
+        for (int phase = 1; phase < pu.num_phases; ++phase) {
+            rho += superset(fluid_->surfaceDensity(phase , well_cells), Span(nperf_total, pu.num_phases, phase), nperf_total * pu.num_phases);
+        }
+        std::vector<double> surf_dens_perf(rho.data(), rho.data() + nperf_total * pu.num_phases);
+
+        // 2. Compute densities
+        std::vector<double> cd =
+                WellDensitySegmented::computeConnectionDensities(
+                        wellsStruct(), xw, fluid_->phaseUsage(),
+                        b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+
+        // 3. Compute pressure deltas
+        std::vector<double> cdp =
+                WellDensitySegmented::computeConnectionPressureDelta(
+                        wellsStruct(), perf_cell_depth, cd, grav);
+
+        // 4. Store the results
+        well_perforation_densities_ = Eigen::Map<const Vector>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
+        well_perforation_pressure_diffs_ = Eigen::Map<const Vector>(cdp.data(), nperf_total);
+
+        if ( !wellOps().has_multisegment_wells ) {
+            well_perforation_cell_densities_ = Vector::Zero(nperf_total);
+            well_perforation_cell_pressure_diffs_ = Vector::Zero(nperf_total);
+            return;
+        }
+
+        // compute the average of the fluid densites in the well blocks.
+        // the average is weighted according to the fluid relative permeabilities.
+        // const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
+        size_t temp_size = kr_adb.size();
+        std::vector<Vector> perf_kr;
+        for(size_t i = 0; i < temp_size; ++i) {
+            // const ADB kr_phase_adb = subset(kr_adb[i], well_cells);
+            const Vector kr_phase = (subset(kr_adb[i], well_cells)).value();
+            perf_kr.push_back(kr_phase);
+        }
+
+
+        // compute the averaged density for the well block
+        // TODO: for the non-segmented wells, they should be set to zero
+        // TODO: for the moment, they are still calculated, while not used later.
+        for (int i = 0; i < nperf_total; ++i) {
+            double sum_kr = 0.;
+            int np = perf_kr.size(); // make sure it is 3
+            for (int p = 0;  p < np; ++p) {
+                sum_kr += perf_kr[p][i];
+            }
+
+            for (int p = 0; p < np; ++p) {
+                perf_kr[p][i] /= sum_kr;
+            }
+        }
+
+        Vector rho_avg_perf = Vector::Constant(nperf_total, 0.0);
+        // TODO: make sure the order of the density and the order of the kr are the same.
+        for (int phaseIdx = 0; phaseIdx < fluid_->numPhases(); ++phaseIdx) {
+            // const int canonicalPhaseIdx = canph_[phaseIdx];
+            // const ADB fluid_density = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
+            const Vector rho_perf = subset(fluid_density[phaseIdx], well_cells).value();
+            // TODO: phaseIdx or canonicalPhaseIdx ?
+            rho_avg_perf += rho_perf * perf_kr[phaseIdx];
+        }
+
+        well_perforation_cell_densities_ = Eigen::Map<const Vector>(rho_avg_perf.data(), nperf_total);
+
+        // We should put this in a global class
+        std::vector<double> perf_depth_vec;
+        perf_depth_vec.reserve(nperf_total);
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wells_multisegment_[w];
+            const std::vector<double>& perf_depth_well = well->perfDepth();
+            perf_depth_vec.insert(perf_depth_vec.end(), perf_depth_well.begin(), perf_depth_well.end());
+        }
+        assert(int(perf_depth_vec.size()) == nperf_total);
+        const Vector perf_depth = Eigen::Map<Vector>(perf_depth_vec.data(), nperf_total);
+
+        const Vector perf_cell_depth_diffs = perf_depth - perfcelldepth;
+
+        well_perforation_cell_pressure_diffs_ = grav * well_perforation_cell_densities_ * perf_cell_depth_diffs;
+
+
+        // Calculating the depth difference between segment nodes and perforations.
+        // TODO: should be put somewhere else for better clarity later
+        well_segment_perforation_depth_diffs_ = Vector::Constant(nperf_total, -1e100);
+
+        int start_perforation = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wells_multisegment_[w];
+            const int nseg = well->numberOfSegments();
+            const int nperf = well->numberOfPerforations();
+            const std::vector<std::vector<int>>& segment_perforations = well->segmentPerforations();
+            for (int s = 0; s < nseg; ++s) {
+                const int nperf_seg = segment_perforations[s].size();
+                const double segment_depth = well->segmentDepth()[s];
+                for (int perf = 0; perf < nperf_seg; ++perf) {
+                    const int perf_number = segment_perforations[s][perf] + start_perforation;
+                    well_segment_perforation_depth_diffs_[perf_number] = segment_depth - perf_depth[perf_number];
+                }
+            }
+            start_perforation += nperf;
+        }
+        assert(start_perforation == nperf_total);
+    }
+
+
 }
 #endif // OPM_MULTISEGMENTWELLS_IMPL_HEADER_INCLUDED

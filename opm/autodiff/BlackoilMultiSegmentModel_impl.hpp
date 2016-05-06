@@ -74,6 +74,8 @@ namespace Opm {
         , ms_wells_(multisegment_wells)
     {
         ms_wells_.init(&fluid_, &active_, &phaseCondition_);
+        // TODO: there should be a better way do the following
+        ms_wells_.setWellsActive(Base::wellsActive());
     }
 
 
@@ -210,216 +212,6 @@ namespace Opm {
 
 
 
-    // TODO: This is just a preliminary version, remains to be improved later when we decide a better way
-    // TODO: to intergrate the usual wells and multi-segment wells.
-    template <class Grid>
-    void BlackoilMultiSegmentModel<Grid>::computeWellConnectionPressures(const SolutionState& state,
-                                                                         const WellState& xw)
-    {
-        if( ! wellsActive() ) return ;
-
-        using namespace Opm::AutoDiffGrid;
-        // 1. Compute properties required by computeConnectionPressureDelta().
-        //    Note that some of the complexity of this part is due to the function
-        //    taking std::vector<double> arguments, and not Eigen objects.
-        const int nperf_total = xw.numPerforations();
-        const int nw = xw.numWells();
-
-        const std::vector<int>& well_cells = msWellOps().well_cells;
-
-        msWells().wellPerforationDensities() = V::Zero(nperf_total);
-
-        const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf_total);
-
-        V avg_press = perf_press * 0.0;
-
-        // for the non-segmented/regular wells, calculated the average pressures.
-        // If it is the top perforation, then average with the bhp().
-        // If it is not the top perforation, then average with the perforation above it().
-        int start_segment = 0;
-        for (int w = 0; w < nw; ++w) {
-            const int nseg = wellsMultiSegment()[w]->numberOfSegments();
-            if (wellsMultiSegment()[w]->isMultiSegmented()) {
-                // maybe we should give some reasonable values to prevent the following calculations fail
-                start_segment += nseg;
-                continue;
-            }
-
-            std::string well_name(wellsMultiSegment()[w]->name());
-            typedef typename WellStateMultiSegment::SegmentedWellMapType::const_iterator const_iterator;
-            const_iterator it_well = xw.segmentedWellMap().find(well_name);
-            assert(it_well != xw.segmentedWellMap().end());
-
-            const int start_perforation = (*it_well).second.start_perforation;
-            const int end_perforation = start_perforation + (*it_well).second.number_of_perforations;
-            for (int perf = start_perforation; perf < end_perforation; ++perf) {
-                const double p_above = perf == start_perforation ? state.segp.value()[start_segment] : perf_press[perf - 1];
-                const double p_avg = (perf_press[perf] + p_above)/2;
-                avg_press[perf] = p_avg;
-            }
-            start_segment += nseg;
-        }
-        assert(start_segment == xw.numSegments());
-
-        // Use cell values for the temperature as the wells don't knows its temperature yet.
-        const ADB perf_temp = subset(state.temperature, well_cells);
-
-        // Compute b, rsmax, rvmax values for perforations.
-        // Evaluate the properties using average well block pressures
-        // and cell values for rs, rv, phase condition and temperature.
-        const ADB avg_press_ad = ADB::constant(avg_press);
-        std::vector<PhasePresence> perf_cond(nperf_total);
-        const std::vector<PhasePresence>& pc = phaseCondition();
-        for (int perf = 0; perf < nperf_total; ++perf) {
-            perf_cond[perf] = pc[well_cells[perf]];
-        }
-        const PhaseUsage& pu = fluid_.phaseUsage();
-        DataBlock b(nperf_total, pu.num_phases);
-        std::vector<double> rsmax_perf(nperf_total, 0.0);
-        std::vector<double> rvmax_perf(nperf_total, 0.0);
-        if (pu.phase_used[BlackoilPhases::Aqua]) {
-            const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
-            b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
-        }
-        assert(active_[Oil]);
-        const V perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
-        if (pu.phase_used[BlackoilPhases::Liquid]) {
-            const ADB perf_rs = subset(state.rs, well_cells);
-            const V bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
-            b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
-            const V rssat = fluidRsSat(avg_press, perf_so, well_cells);
-            rsmax_perf.assign(rssat.data(), rssat.data() + nperf_total);
-        }
-        if (pu.phase_used[BlackoilPhases::Vapour]) {
-            const ADB perf_rv = subset(state.rv, well_cells);
-            const V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
-            b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
-            const V rvsat = fluidRvSat(avg_press, perf_so, well_cells);
-            rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf_total);
-        }
-        // b is row major, so can just copy data.
-        std::vector<double> b_perf(b.data(), b.data() + nperf_total * pu.num_phases);
-        // Extract well connection depths.
-        const V depth = cellCentroidsZToEigen(grid_);
-        const V perfcelldepth = subset(depth, well_cells);
-        std::vector<double> perf_cell_depth(perfcelldepth.data(), perfcelldepth.data() + nperf_total);
-
-        // Surface density.
-        // The compute density segment wants the surface densities as
-        // an np * number of wells cells array
-        V rho = superset(fluid_.surfaceDensity(0 , well_cells), Span(nperf_total, pu.num_phases, 0), nperf_total * pu.num_phases);
-        for (int phase = 1; phase < pu.num_phases; ++phase) {
-            rho += superset(fluid_.surfaceDensity(phase , well_cells), Span(nperf_total, pu.num_phases, phase), nperf_total * pu.num_phases);
-        }
-        std::vector<double> surf_dens_perf(rho.data(), rho.data() + nperf_total * pu.num_phases);
-
-        // Gravity
-        double grav = detail::getGravity(geo_.gravity(), dimensions(grid_));
-
-        // 2. Compute densities
-        std::vector<double> cd =
-                WellDensitySegmented::computeConnectionDensities(
-                        msWells().wellsStruct(), xw, fluid_.phaseUsage(),
-                        b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-
-        // 3. Compute pressure deltas
-        std::vector<double> cdp =
-                WellDensitySegmented::computeConnectionPressureDelta(
-                        msWells().wellsStruct(), perf_cell_depth, cd, grav);
-
-        // 4. Store the results
-        msWells().wellPerforationDensities() = Eigen::Map<const V>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
-        msWells().wellPerforationPressureDiffs() = Eigen::Map<const V>(cdp.data(), nperf_total);
-
-        if ( !msWellOps().has_multisegment_wells ) {
-            msWells().wellPerforationCellDensities() = V::Zero(nperf_total);
-            msWells().wellPerforationCellPressureDiffs() = V::Zero(nperf_total);
-            return;
-        }
-
-        // compute the average of the fluid densites in the well blocks.
-        // the average is weighted according to the fluid relative permeabilities.
-        const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
-        size_t temp_size = kr_adb.size();
-        std::vector<V> perf_kr;
-        for(size_t i = 0; i < temp_size; ++i) {
-            // const ADB kr_phase_adb = subset(kr_adb[i], well_cells);
-            const V kr_phase = (subset(kr_adb[i], well_cells)).value();
-            perf_kr.push_back(kr_phase);
-        }
-
-
-        // compute the averaged density for the well block
-        // TODO: for the non-segmented wells, they should be set to zero
-        // TODO: for the moment, they are still calculated, while not used later.
-        for (int i = 0; i < nperf_total; ++i) {
-            double sum_kr = 0.;
-            int np = perf_kr.size(); // make sure it is 3
-            for (int p = 0;  p < np; ++p) {
-                sum_kr += perf_kr[p][i];
-            }
-
-            for (int p = 0; p < np; ++p) {
-                perf_kr[p][i] /= sum_kr;
-            }
-        }
-
-        V rho_avg_perf = V::Constant(nperf_total, 0.0);
-        // TODO: make sure the order of the density and the order of the kr are the same.
-        for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-            const int canonicalPhaseIdx = canph_[phaseIdx];
-            const ADB fluid_density = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
-            const V rho_perf = subset(fluid_density, well_cells).value();
-            // TODO: phaseIdx or canonicalPhaseIdx ?
-            rho_avg_perf += rho_perf * perf_kr[phaseIdx];
-        }
-
-        msWells().wellPerforationCellDensities() = Eigen::Map<const V>(rho_avg_perf.data(), nperf_total);
-
-        // We should put this in a global class
-        std::vector<double> perf_depth_vec;
-        perf_depth_vec.reserve(nperf_total);
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-            const std::vector<double>& perf_depth_well = well->perfDepth();
-            perf_depth_vec.insert(perf_depth_vec.end(), perf_depth_well.begin(), perf_depth_well.end());
-        }
-        assert(int(perf_depth_vec.size()) == nperf_total);
-        const V perf_depth = Eigen::Map<V>(perf_depth_vec.data(), nperf_total);
-
-        const V perf_cell_depth_diffs = perf_depth - perfcelldepth;
-
-        msWells().wellPerforationCellPressureDiffs() = grav * msWells().wellPerforationCellDensities() * perf_cell_depth_diffs;
-
-
-        // Calculating the depth difference between segment nodes and perforations.
-        // TODO: should be put somewhere else for better clarity later
-        msWells().wellSegmentPerforationDepthDiffs() = V::Constant(nperf_total, -1e100);
-
-        int start_perforation = 0;
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wellsMultiSegment()[w];
-            const int nseg = well->numberOfSegments();
-            const int nperf = well->numberOfPerforations();
-            const std::vector<std::vector<int>>& segment_perforations = well->segmentPerforations();
-            for (int s = 0; s < nseg; ++s) {
-                const int nperf_seg = segment_perforations[s].size();
-                const double segment_depth = well->segmentDepth()[s];
-                for (int perf = 0; perf < nperf_seg; ++perf) {
-                    const int perf_number = segment_perforations[s][perf] + start_perforation;
-                    msWells().wellSegmentPerforationDepthDiffs()[perf_number] = segment_depth - perf_depth[perf_number];
-                }
-            }
-            start_perforation += nperf;
-        }
-        assert(start_perforation == nperf_total);
-    }
-
-
-
-
-
-
 
     template <class Grid>
     void
@@ -461,7 +253,18 @@ namespace Opm {
             for (int phase = 0; phase < np; ++phase) {
                 msWells().segmentCompSurfVolumeInitial()[phase] = msWells().segmentCompSurfVolumeCurrent()[phase].value();
             }
-            asImpl().computeWellConnectionPressures(state0, well_state);
+
+            const std::vector<ADB> kr_adb = Base::computeRelPerm(state0);
+            std::vector<ADB> fluid_density(numPhases(), ADB::null());
+            // TODO: make sure the order of the density and the order of the kr are the same.
+            for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+                const int canonicalPhaseIdx = canph_[phaseIdx];
+                fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state0.rs, state0.rv);
+            }
+            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+            msWells().computeWellConnectionPressures(state0, well_state, kr_adb, fluid_density, depth, gravity);
+            // asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -547,7 +350,17 @@ namespace Opm {
 
             // This is also called by the base version, but since we have updated
             // state.segp we must call it again.
-            asImpl().computeWellConnectionPressures(state, well_state);
+            const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
+            std::vector<ADB> fluid_density(np, ADB::null());
+            // TODO: make sure the order of the density and the order of the kr are the same.
+            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                const int canonicalPhaseIdx = canph_[phaseIdx];
+                fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
+            }
+            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density, depth, gravity);
+            // asImpl().computeWellConnectionPressures(state, well_state);
         }
 
         return converged;
@@ -664,7 +477,18 @@ namespace Opm {
                 std::vector<ADB::M> old_derivs = state.qs.derivative();
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
-            computeWellConnectionPressures(state, well_state);
+
+            const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
+            std::vector<ADB> fluid_density(np, ADB::null());
+            // TODO: make sure the order of the density and the order of the kr are the same.
+            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                const int canonicalPhaseIdx = canph_[phaseIdx];
+                fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
+            }
+            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density, depth, gravity);
+            // computeWellConnectionPressures(state, well_state);
         }
 
         if (!converged) {

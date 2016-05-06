@@ -39,6 +39,7 @@
 #include <opm/autodiff/WellHelpers.hpp>
 
 #include <opm/autodiff/WellMultiSegment.hpp>
+#include <opm/autodiff/WellDensitySegmented.hpp>
 
 
 
@@ -105,11 +106,11 @@ namespace Opm {
 
             int numPerf() const { return nperf_total_; };
 
-            bool localWellsActive() const { return ! wells_multisegment_.empty(); }
+            bool wellsActive() const { return wells_active_; };
 
-            // TODO: will be wrong for the parallel version.
-            // TODO: to be fixed after other interfaces are unified.
-            bool WellsActive() const { return localWellsActive(); };
+            void setWellsActive(const bool wells_active) { wells_active_ = wells_active; };
+
+            bool localWellsActive() const { return ! wells_multisegment_.empty(); }
 
             template <class ReservoirResidualQuant, class SolutionState>
             void extractWellPerfProperties(const SolutionState& state,
@@ -197,8 +198,17 @@ namespace Opm {
             std::vector<int>
             variableWellStateIndices() const;
 
+            template <class SolutionState, class WellState>
+            void computeWellConnectionPressures(const SolutionState& state,
+                                                const WellState& xw,
+                                                const std::vector<ADB>& kr_adb,
+                                                const std::vector<ADB>& fluid_density,
+                                                const Vector& depth,
+                                                const double gravity);
+
     protected:
         // TODO: probably a wells_active_ will be required here.
+        bool wells_active_;
         std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
         MultisegmentWellOps wops_ms_;
         const int num_phases_;
