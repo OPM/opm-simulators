@@ -662,11 +662,11 @@ namespace Opm
         /**
          * Constructor which sets all members
          */
-        AutoDiffMatrix(AudoDiffMatrixType type, int rows, int cols,
+        AutoDiffMatrix(AudoDiffMatrixType type, int rows_arg, int cols_arg,
                 DiagRep diag=DiagRep(), SparseRep sparse=SparseRep())
             : type_(type),
-              rows_(rows),
-              cols_(cols),
+              rows_(rows_arg),
+              cols_(cols_arg),
               diag_(diag),
               sparse_(sparse)
         {
