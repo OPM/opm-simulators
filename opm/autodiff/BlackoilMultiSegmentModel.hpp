@@ -27,6 +27,8 @@
 #include <opm/autodiff/WellMultiSegment.hpp>
 #include <opm/autodiff/StandardWells.hpp>
 
+#include <opm/autodiff/MultisegmentWells.hpp>
+
 namespace Opm {
 
     struct BlackoilMultiSegmentSolutionState : public DefaultBlackoilSolutionState
@@ -136,76 +138,7 @@ namespace Opm {
         using Base::param_;
         using Base::linsolver_;
 
-        // Pressure correction due to the different depth of the perforation
-        // and the cell center of the grid block
-        // For the non-segmented wells, since the perforation are forced to be
-        // at the center of the grid cell, it should be ZERO.
-        // It only applies to the mutli-segmented wells.
-        V well_perforation_cell_pressure_diffs_;
-
-        // Pressure correction due to the depth differennce between segment depth and perforation depth.
-        ADB well_segment_perforation_pressure_diffs_;
-
-        // The depth difference between segment nodes and perforations
-        V well_segment_perforation_depth_diffs_;
-
-        // the average of the fluid densities in the grid block
-        // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
-        // and the cell center of the grid block
-        V well_perforation_cell_densities_;
-
-        // the density of the fluid mixture in the segments
-        // which is calculated in an implicit way
-        ADB well_segment_densities_;
-
-        // the hydrostatic pressure drop between segment nodes
-        // calculated with the above density of fluid mixtures
-        // for the top segment, they should always be zero for the moment.
-        ADB well_segment_pressures_delta_;
-
-        // the surface volume of components in the segments
-        // the initial value at the beginning of the time step
-        std::vector<V>   segment_comp_surf_volume_initial_;
-
-        // the value within the current iteration.
-        std::vector<ADB> segment_comp_surf_volume_current_;
-
-        // the mass flow rate in the segments
-        ADB segment_mass_flow_rates_;
-
-        // the viscosity of the fluid mixture in the segments
-        // TODO: it is only used to calculate the Reynolds number as we know
-        //       maybe it is not better just to store the Reynolds number?
-        ADB segment_viscosities_;
-
-        const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
-
-        std::vector<int> top_well_segments_;
-
-        // segment volume by dt (time step)
-        // to handle the volume effects of the segment
-        V segvdt_;
-
-        // Well operations and data needed.
-        struct MultiSegmentWellOps {
-            explicit MultiSegmentWellOps(const std::vector<WellMultiSegmentConstPtr>& wells_ms);
-            Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
-            Eigen::SparseMatrix<double> p2w;              // perf -> well (gather)
-            Eigen::SparseMatrix<double> w2s;              // well -> segment (scatter)
-            Eigen::SparseMatrix<double> s2w;              // segment -> well (gather)
-            Eigen::SparseMatrix<double> s2p;              // segment -> perf (scatter)
-            Eigen::SparseMatrix<double> p2s;              // perf -> segment (gather)
-            Eigen::SparseMatrix<double> s2s_inlets;       // segment -> its inlet segments
-            Eigen::SparseMatrix<double> s2s_outlet;       // segment -> its outlet segment
-            Eigen::SparseMatrix<double> topseg2w;         // top segment -> well
-            AutoDiffMatrix eliminate_topseg;              // change the top segment related to be zero
-            std::vector<int> well_cells;                  // the set of perforated cells
-            V conn_trans_factors;                         // connection transmissibility factors
-            bool has_multisegment_wells;                  // flag indicating whether there is any muli-segment well
-        };
-
-        MultiSegmentWellOps wops_ms_;
-
+        MultisegmentWells ms_wells_;
 
         using Base::stdWells;
         using Base::wells;
@@ -227,11 +160,15 @@ namespace Opm {
         using Base::asImpl;
         using Base::variableReservoirStateInitials;
 
-        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return wells_multisegment_; }
+        // TODO: fixing the confusing naming
+        const MultisegmentWells& msWells() const { return ms_wells_; }
+        MultisegmentWells& msWells() { return ms_wells_; }
 
-        void updateWellControls(WellState& xw) const;
+        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return msWells().wells(); }
 
+        const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return msWells().wellOps(); }
 
+        // TODO: kept for now. to be removed soon.
         void updateWellState(const V& dwells,
                              WellState& well_state);
 
@@ -260,25 +197,9 @@ namespace Opm {
                     WellState& well_state);
 
         void
-        computeWellFlux(const SolutionState& state,
-                        const std::vector<ADB>& mob_perfcells,
-                        const std::vector<ADB>& b_perfcells,
-                        V& aliveWells,
-                        std::vector<ADB>& cq_s) const;
-
-        void
         updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
                                          const SolutionState& state,
                                          WellState& xw) const;
-
-        void
-        addWellFluxEq(const std::vector<ADB>& cq_s,
-                      const SolutionState& state);
-
-        void
-        addWellControlEq(const SolutionState& state,
-                         const WellState& xw,
-                         const V& aliveWells);
 
         int numWellVars() const;
 
@@ -289,14 +210,6 @@ namespace Opm {
         variableStateExtractWellsVars(const std::vector<int>& indices,
                                       std::vector<ADB>& vars,
                                       SolutionState& state) const;
-
-        // Calculate the density of the mixture in the segments
-        // And the surface volume of the components in the segments by dt
-        void
-        computeSegmentFluidProperties(const SolutionState& state);
-
-        void
-        computeSegmentPressuresDelta(const SolutionState& state);
 
 
     };
