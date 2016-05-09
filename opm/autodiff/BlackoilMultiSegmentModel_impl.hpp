@@ -73,7 +73,10 @@ namespace Opm {
                eclState, has_disgas, has_vapoil, terminal_output)
         , ms_wells_(multisegment_wells)
     {
-        ms_wells_.init(&fluid_, &active_, &phaseCondition_);
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+
+        ms_wells_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, &depth);
         // TODO: there should be a better way do the following
         ms_wells_.setWellsActive(Base::wellsActive());
     }

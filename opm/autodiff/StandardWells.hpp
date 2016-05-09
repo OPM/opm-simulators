@@ -64,8 +64,10 @@ namespace Opm {
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
-                      const std::vector<PhasePresence>* pc_arg);
-
+                      const std::vector<PhasePresence>* pc_arg,
+                      const VFPProperties*  vfp_properties_arg,
+                      const double gravity_arg,
+                      const Vector* depth_arg);
 
             const WellOps& wellOps() const;
 
@@ -174,6 +176,11 @@ namespace Opm {
             const BlackoilPropsAdInterface* fluid_;
             const std::vector<bool>*  active_;
             const std::vector<PhasePresence>*  phase_condition_;
+            const VFPProperties* vfp_properties_;
+            double gravity_;
+            // TODO: the depth of the all the cell centers
+            // it can be better to store only the perforation depth and segment depth
+            const Vector* depth_;
 
             Vector well_perforation_densities_;
             Vector well_perforation_pressure_diffs_;

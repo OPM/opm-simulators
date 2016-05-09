@@ -137,6 +137,7 @@ namespace Opm {
         using Base::param_;
         using Base::linsolver_;
         using Base::phaseCondition_;
+        using Base::vfp_properties_;
 
         MultisegmentWells ms_wells_;
 

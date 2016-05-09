@@ -142,6 +142,21 @@ namespace detail {
         return act2can;
     }
 
+
+
+    inline
+    double getGravity(const double* g, const int dim) {
+        double grav = 0.0;
+        if (g) {
+            // Guard against gravity in anything but last dimension.
+            for (int dd = 0; dd < dim - 1; ++dd) {
+                assert(g[dd] == 0.0);
+            }
+            grav = g[dim - 1];
+        }
+        return grav;
+    }
+
 } // namespace detail
 
 
@@ -201,7 +216,10 @@ namespace detail {
 
         assert(numMaterials() == std::accumulate(active_.begin(), active_.end(), 0)); // Due to the material_name_ init above.
 
-        std_wells_.init(&fluid_, &active_, &phaseCondition_);
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+
+        std_wells_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, &depth);
 
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
@@ -726,21 +744,6 @@ namespace detail {
             rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
             rq_[po].accum[aix] += state.rv * accum_gas_copy;
             // OPM_AD_DUMP(rq_[pg].accum[aix]);
-        }
-    }
-
-    namespace detail {
-        inline
-        double getGravity(const double* g, const int dim) {
-            double grav = 0.0;
-            if (g) {
-                // Guard against gravity in anything but last dimension.
-                for (int dd = 0; dd < dim - 1; ++dd) {
-                    assert(g[dd] == 0.0);
-                }
-                grav = g[dim - 1];
-            }
-            return grav;
         }
     }
 
