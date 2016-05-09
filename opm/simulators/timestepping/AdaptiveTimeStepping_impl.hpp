@@ -26,6 +26,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
 #include <opm/core/simulator/TimeStepControl.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <dune/istl/istlexception.hh>
 #include <dune/istl/ilu.hh> // For MatrixBlockException
 
@@ -149,15 +150,15 @@ namespace Opm {
         int restarts = 0;
 
         // sub step time loop
+        std::ostringstream ss;
         while( ! substepTimer.done() )
         {
             // get current delta t
             const double dt = substepTimer.currentStepLength() ;
-
             if( timestep_verbose_ )
             {
-                std::cout <<"Substep( " << substepTimer.currentStepNum() << " ), try with stepsize "
-                          << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " (days)." << std::endl;
+                ss <<"Substep( " << substepTimer.currentStepNum() << " ), try with stepsize "
+                   << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " (days)." << std::endl;
             }
 
             int linearIterations = -1;
@@ -167,7 +168,7 @@ namespace Opm {
 
                 if( solver_verbose_ ) {
                     // report number of linear iterations
-                    std::cout << "Overall linear iterations used: " << linearIterations << std::endl;
+                    ss << "Overall linear iterations used: " << linearIterations << std::endl;
                 }
             }
             catch (const Opm::NumericalProblem& e) {
@@ -213,7 +214,7 @@ namespace Opm {
 
                 if( timestep_verbose_ )
                 {
-                    std::cout << "Substep( " << substepTimer.currentStepNum()-1 // it was already advanced by ++
+                    ss << "Substep( " << substepTimer.currentStepNum()-1 // it was already advanced by ++
                                              << " ) finished at time " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << " (days)." << std::endl << std::endl;
                 }
 
@@ -258,13 +259,15 @@ namespace Opm {
         suggested_next_timestep_ = substepTimer.currentStepLength();
         if( timestep_verbose_ )
         {
-            substepTimer.report( std::cout );
-            std::cout << "Suggested next step size = " << unit::convert::to( suggested_next_timestep_, unit::day ) << " (days)" << std::endl;
+            substepTimer.report(ss);
+            ss << "Suggested next step size = " << unit::convert::to( suggested_next_timestep_, unit::day ) << " (days)" << std::endl;
         }
 
         if( ! std::isfinite( suggested_next_timestep_ ) ) { // check for NaN
             suggested_next_timestep_ = timestep;
         }
+        std::cout << ss.str();
+        OpmLog::info(ss.str());
     }
 }
 
