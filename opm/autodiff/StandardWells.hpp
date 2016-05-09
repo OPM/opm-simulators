@@ -67,7 +67,7 @@ namespace Opm {
                       const std::vector<PhasePresence>* pc_arg,
                       const VFPProperties*  vfp_properties_arg,
                       const double gravity_arg,
-                      const Vector* depth_arg);
+                      const Vector& depth_arg);
 
             const WellOps& wellOps() const;
 
@@ -110,15 +110,11 @@ namespace Opm {
 
             template <class WellState>
             void updateWellState(const Vector& dwells,
-                                 const double gravity,
                                  const double dpmaxrel,
-                                 const VFPProperties& vfp_properties,
                                  WellState& well_state);
 
             template <class WellState>
-            void updateWellControls(const double gravity,
-                                    const VFPProperties& vfp_properties,
-                                    const bool terminal_output,
+            void updateWellControls(const bool terminal_output,
                                     WellState& xw) const;
 
             // TODO: should LinearisedBlackoilResidual also be a template class?
@@ -132,15 +128,11 @@ namespace Opm {
             void addWellControlEq(const SolutionState& state,
                                   const WellState& xw,
                                   const Vector& aliveWells,
-                                  const VFPProperties& vfp_properties,
-                                  const double gravity,
                                   LinearisedBlackoilResidual& residual);
 
             template <class SolutionState, class WellState>
             void computeWellConnectionPressures(const SolutionState& state,
-                                                const WellState& xw,
-                                                const Vector& depth,
-                                                const double gravity);
+                                                const WellState& xw);
 
             // state0 is non-constant, while it will not be used outside of the function
             template <class SolutionState, class WellState>
@@ -178,9 +170,9 @@ namespace Opm {
             const std::vector<PhasePresence>*  phase_condition_;
             const VFPProperties* vfp_properties_;
             double gravity_;
-            // TODO: the depth of the all the cell centers
-            // it can be better to store only the perforation depth and segment depth
-            const Vector* depth_;
+            // the depth of the all the cell centers
+            // for standard Wells, it the same with the perforation depth
+            Vector perf_cell_depth_;
 
             Vector well_perforation_densities_;
             Vector well_perforation_pressure_diffs_;

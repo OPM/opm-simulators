@@ -198,9 +198,7 @@ namespace Opm
     void
     StandardWellsSolvent::
     computeWellConnectionPressures(const SolutionState& state,
-                                   const WellState& xw,
-                                   const Vector& depth,
-                                   const double gravity)
+                                   const WellState& xw)
     {
         if( ! localWellsActive() ) return ;
         // 1. Compute properties required by computeConnectionPressureDelta().
@@ -212,13 +210,11 @@ namespace Opm
         std::vector<double> surf_dens_perf;
         computePropertiesForWellConnectionPressures(state, xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
-        // Extract well connection depths
-        // TODO: depth_perf should be a member of the StandardWells class
-        const Vector pdepth = subset(depth, wellOps().well_cells);
+        const Vector pdepth = perf_cell_depth_;
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
 
-        computeWellConnectionDensitesPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity);
+        computeWellConnectionDensitesPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity_);
 
     }
 

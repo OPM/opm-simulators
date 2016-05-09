@@ -76,7 +76,7 @@ namespace Opm {
         const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
 
-        ms_wells_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, &depth);
+        ms_wells_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
         // TODO: there should be a better way do the following
         ms_wells_.setWellsActive(Base::wellsActive());
     }
@@ -231,9 +231,7 @@ namespace Opm {
                 const int canonicalPhaseIdx = canph_[phaseIdx];
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state0.rs, state0.rv);
             }
-            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            msWells().computeWellConnectionPressures(state0, well_state, kr_adb, fluid_density, depth, gravity);
+            msWells().computeWellConnectionPressures(state0, well_state, kr_adb, fluid_density);
             // asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
@@ -327,9 +325,7 @@ namespace Opm {
                 const int canonicalPhaseIdx = canph_[phaseIdx];
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
             }
-            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density, depth, gravity);
+            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
             // asImpl().computeWellConnectionPressures(state, well_state);
         }
 
@@ -455,9 +451,7 @@ namespace Opm {
                 const int canonicalPhaseIdx = canph_[phaseIdx];
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
             }
-            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density, depth, gravity);
+            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
             // computeWellConnectionPressures(state, well_state);
         }
 

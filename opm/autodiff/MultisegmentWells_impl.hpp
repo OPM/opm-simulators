@@ -922,9 +922,7 @@ namespace Opm
     computeWellConnectionPressures(const SolutionState& state,
                                    const WellState& xw,
                                    const std::vector<ADB>& kr_adb,
-                                   const std::vector<ADB>& fluid_density,
-                                   const Vector& depth,
-                                   const double grav)
+                                   const std::vector<ADB>& fluid_density)
     {
         if( ! wellsActive() ) return ;
 
@@ -1008,8 +1006,8 @@ namespace Opm
         }
         // b is row major, so can just copy data.
         std::vector<double> b_perf(b.data(), b.data() + nperf_total * pu.num_phases);
-        // Extract well connection depths.
-        const Vector perfcelldepth = subset(depth, well_cells);
+
+        const Vector& perfcelldepth = perf_cell_depth_;
         std::vector<double> perf_cell_depth(perfcelldepth.data(), perfcelldepth.data() + nperf_total);
 
         // Surface density.
@@ -1030,7 +1028,7 @@ namespace Opm
         // 3. Compute pressure deltas
         std::vector<double> cdp =
                 WellDensitySegmented::computeConnectionPressureDelta(
-                        wellsStruct(), perf_cell_depth, cd, grav);
+                        wellsStruct(), perf_cell_depth, cd, gravity_);
 
         // 4. Store the results
         well_perforation_densities_ = Eigen::Map<const Vector>(cd.data(), nperf_total); // This one is not useful for segmented wells at all
@@ -1094,7 +1092,7 @@ namespace Opm
 
         const Vector perf_cell_depth_diffs = perf_depth - perfcelldepth;
 
-        well_perforation_cell_pressure_diffs_ = grav * well_perforation_cell_densities_ * perf_cell_depth_diffs;
+        well_perforation_cell_pressure_diffs_ = gravity_ * well_perforation_cell_densities_ * perf_cell_depth_diffs;
 
 
         // Calculating the depth difference between segment nodes and perforations.

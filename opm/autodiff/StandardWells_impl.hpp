@@ -90,14 +90,14 @@ namespace Opm
                         const std::vector<PhasePresence>* pc_arg,
                         const VFPProperties*  vfp_properties_arg,
                         const double gravity_arg,
-                        const Vector* depth_arg)
+                        const Vector& depth_arg)
     {
         fluid_ = fluid_arg;
         active_ = active_arg;
         phase_condition_ = pc_arg;
         vfp_properties_ = vfp_properties_arg;
         gravity_ = gravity_arg;
-        depth_ = depth_arg;
+        perf_cell_depth_ = subset(depth_arg, wellOps().well_cells);;
     }
 
 
@@ -308,9 +308,7 @@ namespace Opm
     void
     StandardWells::
     computeWellConnectionPressures(const SolutionState& state,
-                                   const WellState& xw,
-                                   const Vector& depth,
-                                   const double gravity)
+                                   const WellState& xw)
     {
         if( ! localWellsActive() ) return ;
         // 1. Compute properties required by computeConnectionPressureDelta().
@@ -322,13 +320,11 @@ namespace Opm
         std::vector<double> surf_dens_perf;
         computePropertiesForWellConnectionPressures(state, xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
-        // Extract well connection depths
-        // TODO: depth_perf should be a member of the StandardWells class
-        const Vector pdepth = subset(depth, wellOps().well_cells);
+        const Vector& pdepth = perf_cell_depth_;
         const int nperf = wells().well_connpos[wells().number_of_wells];
         const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
 
-        computeWellConnectionDensitesPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity);
+        computeWellConnectionDensitesPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity_);
 
     }
 
@@ -574,9 +570,7 @@ namespace Opm
     void
     StandardWells::
     updateWellState(const Vector& dwells,
-                    const double gravity,
                     const double dpmaxrel,
-                    const VFPProperties& vfp_properties,
                     WellState& well_state)
     {
         if( localWellsActive() )
@@ -642,17 +636,17 @@ namespace Opm
                         const WellType& well_type = wells().type[w];
                         if (well_type == INJECTOR) {
                             double dp = wellhelpers::computeHydrostaticCorrection(
-                                    wells(), w, vfp_properties.getInj()->getTable(table_id)->getDatumDepth(),
-                                    wellPerforationDensities(), gravity);
+                                    wells(), w, vfp_properties_->getInj()->getTable(table_id)->getDatumDepth(),
+                                    wellPerforationDensities(), gravity_);
 
-                            well_state.thp()[w] = vfp_properties.getInj()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp);
+                            well_state.thp()[w] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp);
                         }
                         else if (well_type == PRODUCER) {
                             double dp = wellhelpers::computeHydrostaticCorrection(
-                                    wells(), w, vfp_properties.getProd()->getTable(table_id)->getDatumDepth(),
-                                    wellPerforationDensities(), gravity);
+                                    wells(), w, vfp_properties_->getProd()->getTable(table_id)->getDatumDepth(),
+                                    wellPerforationDensities(), gravity_);
 
-                            well_state.thp()[w] = vfp_properties.getProd()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp, alq);
+                            well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp, alq);
                         }
                         else {
                             OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
@@ -673,9 +667,7 @@ namespace Opm
     template <class WellState>
     void
     StandardWells::
-    updateWellControls(const double gravity,
-                       const VFPProperties& vfp_properties,
-                       const bool terminal_output,
+    updateWellControls(const bool terminal_output,
                        WellState& xw) const
     {
         if( !localWellsActive() ) return ;
@@ -758,17 +750,17 @@ namespace Opm
 
                 if (well_type == INJECTOR) {
                     double dp = wellhelpers::computeHydrostaticCorrection(
-                            wells(), w, vfp_properties.getInj()->getTable(vfp)->getDatumDepth(),
-                            wellPerforationDensities(), gravity);
+                            wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
+                            wellPerforationDensities(), gravity_);
 
-                    xw.bhp()[w] = vfp_properties.getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                    xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
                 else if (well_type == PRODUCER) {
                     double dp = wellhelpers::computeHydrostaticCorrection(
-                            wells(), w, vfp_properties.getProd()->getTable(vfp)->getDatumDepth(),
-                            wellPerforationDensities(), gravity);
+                            wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
+                            wellPerforationDensities(), gravity_);
 
-                    xw.bhp()[w] = vfp_properties.getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                    xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                 }
                 else {
                     OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
@@ -857,11 +849,9 @@ namespace Opm
     template <class SolutionState, class WellState>
     void
     StandardWells::addWellControlEq(const SolutionState& state,
-                                 const WellState& xw,
-                                 const Vector& aliveWells,
-                                 const VFPProperties& vfp_properties,
-                                 const double gravity,
-                                 LinearisedBlackoilResidual& residual)
+                                    const WellState& xw,
+                                    const Vector& aliveWells,
+                                    LinearisedBlackoilResidual& residual)
     {
         if( ! localWellsActive() ) return;
 
@@ -937,7 +927,7 @@ namespace Opm
                     thp_inj_target_v[w] = target;
                     alq_v[w]     = -1e100;
 
-                    vfp_ref_depth_v[w] = vfp_properties.getInj()->getTable(table_id)->getDatumDepth();
+                    vfp_ref_depth_v[w] = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
 
                     thp_inj_elems.push_back(w);
                 }
@@ -946,7 +936,7 @@ namespace Opm
                     thp_prod_target_v[w] = target;
                     alq_v[w]      = well_controls_iget_alq(wc, current);
 
-                    vfp_ref_depth_v[w] =  vfp_properties.getProd()->getTable(table_id)->getDatumDepth();
+                    vfp_ref_depth_v[w] =  vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
 
                     thp_prod_elems.push_back(w);
                 }
@@ -984,12 +974,11 @@ namespace Opm
         const ADB thp_inj_target = ADB::constant(thp_inj_target_v);
         const ADB thp_prod_target = ADB::constant(thp_prod_target_v);
         const ADB alq = ADB::constant(alq_v);
-        const ADB bhp_from_thp_inj = vfp_properties.getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj_target);
-        const ADB bhp_from_thp_prod = vfp_properties.getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
+        const ADB bhp_from_thp_inj = vfp_properties_->getInj()->bhp(inj_table_id, aqua, liquid, vapour, thp_inj_target);
+        const ADB bhp_from_thp_prod = vfp_properties_->getProd()->bhp(prod_table_id, aqua, liquid, vapour, thp_prod_target, alq);
 
         //Perform hydrostatic correction to computed targets
-        // double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const Vector dp_v = wellhelpers::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, wellPerforationDensities(), gravity);
+        const Vector dp_v = wellhelpers::computeHydrostaticCorrection(wells(), vfp_ref_depth_v, wellPerforationDensities(), gravity_);
         const ADB dp = ADB::constant(dp_v);
         const ADB dp_inj = superset(subset(dp, thp_inj_elems), thp_inj_elems, nw);
         const ADB dp_prod = superset(subset(dp, thp_prod_elems), thp_prod_elems, nw);

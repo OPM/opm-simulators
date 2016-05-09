@@ -61,9 +61,7 @@ namespace Opm {
 
             template <class SolutionState, class WellState>
             void computeWellConnectionPressures(const SolutionState& state,
-                                                const WellState& xw,
-                                                const Vector& depth,
-                                                const double gravity);
+                                                const WellState& xw);
 
         protected:
             const SolventPropsAdFromDeck* solvent_props_;

@@ -498,10 +498,8 @@ namespace Opm {
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const V depth = cellCentroidsZToEigen(grid_);
         // updateWellControls(well_state);
-        stdWells().updateWellControls(gravity, vfp_properties_, terminal_output_, well_state);
+        stdWells().updateWellControls(terminal_output_, well_state);
 
         // Create the primary variables.
         SolutionState state = variableState(reservoir_state, well_state);
@@ -514,7 +512,7 @@ namespace Opm {
             // and well connection pressures.
             computeAccum(state0, 0);
             // computeWellConnectionPressures(state0, well_state);
-            stdWells().computeWellConnectionPressures(state0, well_state, depth, gravity);
+            stdWells().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -577,7 +575,7 @@ namespace Opm {
         stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         stdWells().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        stdWells().addWellControlEq(state, well_state, aliveWells, vfp_properties_, gravity, residual_);
+        stdWells().addWellControlEq(state, well_state, aliveWells, residual_);
     }
 
 
