@@ -33,6 +33,8 @@ namespace Opm {
 template <class GridT>
 class SimulatorFullyImplicitBlackoilMultiSegment;
 
+class MultisegmentWells;
+
 template <class GridT>
 struct SimulatorTraits<SimulatorFullyImplicitBlackoilMultiSegment<GridT> >
 {
@@ -42,6 +44,7 @@ struct SimulatorTraits<SimulatorFullyImplicitBlackoilMultiSegment<GridT> >
     typedef GridT Grid;
     typedef BlackoilMultiSegmentModel<Grid> Model;
     typedef NonlinearSolver<Model> Solver;
+    typedef MultisegmentWells WellModel;
 };
 
 /// a simulator for the blackoil model
@@ -56,6 +59,7 @@ public:
     typedef typename Traits::ReservoirState ReservoirState;
     typedef typename Traits::WellState WellState;
     typedef typename Traits::Solver Solver;
+    typedef typename Traits::WellModel WellModel;
 
     // forward the constructor to the base class
     SimulatorFullyImplicitBlackoilMultiSegment(const parameter::ParameterGroup& param,
@@ -80,7 +84,7 @@ public:
 
 protected:
 
-    std::unique_ptr<Solver> createSolver(const Wells* wells, const MultisegmentWells& multisegment_wells);
+    std::unique_ptr<Solver> createSolver(const WellModel& well_model);
 
     using Base::output_writer_;
     using Base::param_;

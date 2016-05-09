@@ -236,7 +236,7 @@ namespace Opm {
 
 
     const std::vector<WellMultiSegmentConstPtr>&
-    MultisegmentWells::wells() const
+    MultisegmentWells::msWells() const
     {
         return wells_multisegment_;
     }
@@ -246,7 +246,7 @@ namespace Opm {
 
 
     const Wells&
-    MultisegmentWells::wellsStruct() const
+    MultisegmentWells::wells() const
     {
         assert(wells_ !=  nullptr);
         return *(wells_);
@@ -270,7 +270,7 @@ namespace Opm {
     MultisegmentWells::
     computeSegmentPressuresDelta(const double grav)
     {
-        const int nw = wells().size();
+        const int nw = msWells().size();
         const int nseg_total = nseg_total_;
 
         if ( !wellOps().has_multisegment_wells ) {
@@ -284,7 +284,7 @@ namespace Opm {
         Vector segment_depth_delta = Vector::Zero(nseg_total);
         int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wells()[w];
+            WellMultiSegmentConstPtr well = msWells()[w];
             const int nseg = well->numberOfSegments();
             for (int s = 1; s < nseg; ++s) {
                 const int s_outlet = well->outletSegment()[s];

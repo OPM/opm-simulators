@@ -67,7 +67,7 @@ namespace Opm
         template <class ReservoirState, class PrevWellState>
         void init(const MultisegmentWells& ms_wells, const ReservoirState& state, const PrevWellState& prevState)
         {
-            const std::vector<WellMultiSegmentConstPtr>& wells = ms_wells.wells();
+            const std::vector<WellMultiSegmentConstPtr>& wells = ms_wells.msWells();
             const int nw = wells.size();
             nseg_ = 0;
             nperf_ = 0;

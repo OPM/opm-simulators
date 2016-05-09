@@ -81,6 +81,8 @@ namespace Opm
     template <class GridT>
     class SimulatorFullyImplicitBlackoilPolymer;
 
+    class StandardWells;
+
     template<class GridT>
     struct SimulatorTraits<SimulatorFullyImplicitBlackoilPolymer<GridT> >
     {
@@ -90,6 +92,7 @@ namespace Opm
         typedef GridT Grid;
         typedef BlackoilPolymerModel<Grid> Model;
         typedef NonlinearSolver<Model> Solver;
+        typedef StandardWells WellModel;
     };
 
     /// Class collecting all necessary components for a blackoil simulation with polymer
@@ -103,6 +106,7 @@ namespace Opm
 
         typedef SimulatorTraits<ThisType> Traits;
         typedef typename Traits::Solver Solver;
+        typedef typename Traits::WellModel WellModel;
 
     public:
         SimulatorFullyImplicitBlackoilPolymer(const parameter::ParameterGroup& param,
@@ -123,7 +127,7 @@ namespace Opm
                                               Opm::DeckConstPtr& deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 
-        std::unique_ptr<Solver> createSolver(const Wells* wells);
+        std::unique_ptr<Solver> createSolver(const WellModel& well_model);
 
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,

@@ -97,10 +97,10 @@ namespace Opm {
                       const double gravity_arg,
                       const Vector& depth_arg);
 
-            const std::vector<WellMultiSegmentConstPtr>& wells() const;
+            const std::vector<WellMultiSegmentConstPtr>& msWells() const;
             const MultisegmentWellOps& wellOps() const;
 
-            const Wells& wellsStruct() const;
+            const Wells& wells() const;
 
             int numPhases() const { return num_phases_; };
 

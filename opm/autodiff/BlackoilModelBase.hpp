@@ -142,7 +142,7 @@ namespace Opm {
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
-                          const Wells*                    wells,
+                          const WellModel&                well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,

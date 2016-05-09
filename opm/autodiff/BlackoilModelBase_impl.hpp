@@ -167,7 +167,7 @@ namespace detail {
                   const BlackoilPropsAdInterface& fluid,
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
-                  const Wells*                    wells_arg,
+                  const WellModel&                well_model,
                   const NewtonIterationBlackoilInterface&    linsolver,
                   Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
@@ -191,7 +191,7 @@ namespace detail {
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
-        , std_wells_ (wells_arg)
+        , std_wells_ (well_model)
         , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isRv_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))
@@ -220,6 +220,10 @@ namespace detail {
         const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
 
         std_wells_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
+
+        // TODO: put this for now to avoid modify the following code.
+        // TODO: this code is fragile.
+        const Wells* wells_arg = &(asImpl().std_wells_.wells());
 
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )

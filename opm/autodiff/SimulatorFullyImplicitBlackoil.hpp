@@ -28,6 +28,7 @@ namespace Opm {
 
 template <class GridT>
 class SimulatorFullyImplicitBlackoil;
+class StandardWells;
 
 template <class GridT>
 struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
@@ -38,6 +39,7 @@ struct SimulatorTraits<SimulatorFullyImplicitBlackoil<GridT> >
     typedef GridT Grid;
     typedef BlackoilModel<Grid> Model;
     typedef NonlinearSolver<Model> Solver;
+    typedef StandardWells WellModel;
 };
 
 /// a simulator for the blackoil model

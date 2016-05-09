@@ -85,9 +85,9 @@ namespace Opm
                     const double dpmaxrel,
                     WellState& well_state) const
     {
-        if (!wells().empty())
+        if (!msWells().empty())
         {
-            const int nw = wells().size();
+            const int nw = msWells().size();
             const int nseg_total = nseg_total_;
             const int np = numPhases();
 
@@ -133,7 +133,7 @@ namespace Opm
                     wr[p + np * w] = well_state.segPhaseRates()[p + np * start_segment];
                 }
 
-                const int nseg = wells()[w]->numberOfSegments();
+                const int nseg = msWells()[w]->numberOfSegments();
                 start_segment += nseg;
             }
 
@@ -158,10 +158,10 @@ namespace Opm
                     Vector& aliveWells,
                     std::vector<ADB>& cq_s) const
     {
-        if (wells().size() == 0) return;
+        if (msWells().size() == 0) return;
 
         const int np = numPhases();
-        const int nw = wells().size();
+        const int nw = msWells().size();
 
         aliveWells = Vector::Constant(nw, 1.0);
 
@@ -189,7 +189,7 @@ namespace Opm
             // Create selector for perforations of multi-segment vs. regular wells.
             Vector is_multisegment_well(nw);
             for (int w = 0; w < nw; ++w) {
-                is_multisegment_well[w] = double(wells()[w]->isMultiSegmented());
+                is_multisegment_well[w] = double(msWells()[w]->isMultiSegmented());
             }
             // Take one flag per well and expand to one flag per perforation.
             Vector is_multisegment_perf = wellOps().w2p * is_multisegment_well.matrix();
@@ -263,11 +263,11 @@ namespace Opm
             // TODO: involves one operations that are not valid now. (i.e. how to transverse from the leaves to the root,
             // TODO: although we can begin from the brutal force way)
 
-            // TODO: stop using wells() here.
+            // TODO: stop using msWells() here.
             std::vector<ADB> wbq(np, ADB::null());
             ADB wbqt = ADB::constant(Vector::Zero(nseg));
 
-            const DataBlock compi = Eigen::Map<const DataBlock>(wellsStruct().comp_frac, nw, np);
+            const DataBlock compi = Eigen::Map<const DataBlock>(wells().comp_frac, nw, np);
 
             for (int phase = 0; phase < np; ++phase) {
                 const ADB& q_ps = wellOps().p2s * cq_ps[phase];
@@ -294,7 +294,7 @@ namespace Opm
                     if (wbqt.value()[topseg] == 0.0) { // yes we really mean == here, no fuzzyness
                         aliveWells[w] = 0.0;
                     }
-                    topseg += wells()[w]->numberOfSegments();
+                    topseg += msWells()[w]->numberOfSegments();
                 }
             }
 
@@ -397,7 +397,7 @@ namespace Opm
     computeSegmentFluidProperties(const SolutionState& state)
     {
         const int np = numPhases();
-        const int nw = wells().size();
+        const int nw = msWells().size();
         const int nseg_total = nseg_total_;
 
         if ( !wellOps().has_multisegment_wells ){
@@ -425,7 +425,7 @@ namespace Opm
         std::vector<int> segment_cells;
         segment_cells.reserve(nseg_total);
         for (int w = 0; w < nw; ++w) {
-            const std::vector<int>& segment_cells_well = wells()[w]->segmentCells();
+            const std::vector<int>& segment_cells_well = msWells()[w]->segmentCells();
             segment_cells.insert(segment_cells.end(), segment_cells_well.begin(), segment_cells_well.end());
         }
         assert(int(segment_cells.size()) == nseg_total);
@@ -484,7 +484,7 @@ namespace Opm
         std::vector<std::vector<double>> comp_frac(np, std::vector<double>(nseg_total, 0.0));
         int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wells()[w];
+            WellMultiSegmentConstPtr well = msWells()[w];
             const int nseg = well->numberOfSegments();
             const std::vector<double>& comp_frac_well = well->compFrac();
             for (int phase = 0; phase < np; ++phase) {
@@ -663,10 +663,10 @@ namespace Opm
         // the name of the function is a a little misleading.
         // Basically it is the function for the pressure equation.
         // And also, it work as the control equation when it is the segment
-        if( wells().empty() ) return;
+        if( msWells().empty() ) return;
 
         const int np = numPhases();
-        const int nw = wells().size();
+        const int nw = msWells().size();
         const int nseg_total = nseg_total_;
 
         ADB aqua   = ADB::constant(Vector::Zero(nseg_total));
@@ -708,14 +708,14 @@ namespace Opm
         //and gather info about current control
         int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
-            const struct WellControls* wc = wells()[w]->wellControls();
+            const struct WellControls* wc = msWells()[w]->wellControls();
 
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
             const int current = xw.currentControls()[w];
 
-            const int nseg = wells()[w]->numberOfSegments();
+            const int nseg = msWells()[w]->numberOfSegments();
 
             switch (well_controls_iget_type(wc, current)) {
             case BHP:
@@ -825,15 +825,15 @@ namespace Opm
     updateWellControls(const bool terminal_output,
                        WellState& xw) const
     {
-        if( wells().empty() ) return ;
+        if( msWells().empty() ) return ;
 
         std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = numPhases();
-        const int nw = wells().size();
+        const int nw = msWells().size();
         for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wells()[w]->wellControls();
+            const WellControls* wc = msWells()[w]->wellControls();
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
@@ -852,7 +852,7 @@ namespace Opm
                 }
                 if (wellhelpers::constraintBroken(
                         xw.bhp(), xw.thp(), xw.wellRates(),
-                        w, np, wells()[w]->wellType(), wc, ctrl_index)) {
+                        w, np, msWells()[w]->wellType(), wc, ctrl_index)) {
                     // ctrl_index will be the index of the broken constraint after the loop.
                     break;
                 }
@@ -862,7 +862,7 @@ namespace Opm
                 // Constraint number ctrl_index was broken, switch to it.
                 if (terminal_output)
                 {
-                    std::cout << "Switching control mode for well " << wells()[w]->name()
+                    std::cout << "Switching control mode for well " << msWells()[w]->name()
                               << " from " << modestring[well_controls_iget_type(wc, current)]
                               << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 }
@@ -1022,13 +1022,13 @@ namespace Opm
         // 2. Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        wellsStruct(), xw, fluid_->phaseUsage(),
+                        wells(), xw, fluid_->phaseUsage(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // 3. Compute pressure deltas
         std::vector<double> cdp =
                 WellDensitySegmented::computeConnectionPressureDelta(
-                        wellsStruct(), perf_cell_depth, cd, gravity_);
+                        wells(), perf_cell_depth, cd, gravity_);
 
         // 4. Store the results
         well_perforation_densities_ = Eigen::Map<const Vector>(cd.data(), nperf_total); // This one is not useful for segmented wells at all

@@ -71,7 +71,7 @@ namespace Opm {
                              const DerivedGeology&                   geo,
                              const RockCompressibility*              rock_comp_props,
                              const SolventPropsAdFromDeck&           solvent_props,
-                             const Wells*                            wells,
+                             const StandardWellsSolvent&             well_model,
                              const NewtonIterationBlackoilInterface& linsolver,
                              const EclipseStateConstPtr              eclState,
                              const bool                              has_disgas,

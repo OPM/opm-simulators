@@ -51,11 +51,11 @@ namespace Opm {
     /// \tparam  Grid            UnstructuredGrid or CpGrid.
     /// \tparam  Implementation  Provides concrete state types.
     template<class Grid>
-    class BlackoilMultiSegmentModel : public BlackoilModelBase<Grid, StandardWells, BlackoilMultiSegmentModel<Grid> >
+    class BlackoilMultiSegmentModel : public BlackoilModelBase<Grid, MultisegmentWells, BlackoilMultiSegmentModel<Grid> >
     {
     public:
 
-        typedef BlackoilModelBase<Grid, StandardWells, BlackoilMultiSegmentModel<Grid> > Base; // base class
+        typedef BlackoilModelBase<Grid, MultisegmentWells, BlackoilMultiSegmentModel<Grid> > Base; // base class
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
         typedef BlackoilMultiSegmentSolutionState SolutionState;
@@ -85,13 +85,12 @@ namespace Opm {
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
-                          const Wells*                    wells,
+                          const MultisegmentWells&        well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,
                           const bool has_vapoil,
-                          const bool terminal_output,
-                          const MultisegmentWells& multisegment_wells);
+                          const bool terminal_output);
 
         /// Called once before each time step.
         /// \param[in] dt                     time step size
@@ -165,7 +164,7 @@ namespace Opm {
         const MultisegmentWells& msWells() const { return ms_wells_; }
         MultisegmentWells& msWells() { return ms_wells_; }
 
-        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return msWells().wells(); }
+        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return msWells().msWells(); }
 
         const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return msWells().wellOps(); }
 

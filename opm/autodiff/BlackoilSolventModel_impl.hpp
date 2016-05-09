@@ -76,7 +76,7 @@ namespace Opm {
                                                      const DerivedGeology&                   geo,
                                                      const RockCompressibility*              rock_comp_props,
                                                      const SolventPropsAdFromDeck&           solvent_props,
-                                                     const Wells*                            wells_arg,
+                                                     const StandardWellsSolvent&             well_model,
                                                      const NewtonIterationBlackoilInterface& linsolver,
                                                      const EclipseStateConstPtr              eclState,
                                                      const bool                              has_disgas,
@@ -84,7 +84,7 @@ namespace Opm {
                                                      const bool                              terminal_output,
                                                      const bool                              has_solvent,
                                                      const bool                              is_miscible)
-        : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
+        : Base(param, grid, fluid, geo, rock_comp_props, well_model, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output),
           has_solvent_(has_solvent),
           solvent_pos_(detail::solventPos(fluid.phaseUsage())),

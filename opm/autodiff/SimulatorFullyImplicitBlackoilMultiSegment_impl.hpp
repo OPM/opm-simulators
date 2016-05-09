@@ -25,7 +25,7 @@ namespace Opm
 
     template <class GridT>
     auto SimulatorFullyImplicitBlackoilMultiSegment<GridT>::
-    createSolver(const Wells* wells, const MultisegmentWells& multisegment_wells)
+    createSolver(const WellModel& well_model)
         -> std::unique_ptr<Solver>
     {
         typedef typename Traits::Model Model;
@@ -35,13 +35,12 @@ namespace Opm
                                                       props_,
                                                       geo_,
                                                       rock_comp_props_,
-                                                      wells,
+                                                      well_model,
                                                       solver_,
                                                       eclipse_state_,
                                                       has_disgas_,
                                                       has_vapoil_,
-                                                      terminal_output_,
-                                                      multisegment_wells));
+                                                      terminal_output_));
 
         if (!Base::threshold_pressures_by_face_.empty()) {
             model->setThresholdPressures(Base::threshold_pressures_by_face_);
@@ -134,7 +133,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            auto solver = createSolver(wells, multisegment_wells);
+            auto solver = createSolver(multisegment_wells);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge

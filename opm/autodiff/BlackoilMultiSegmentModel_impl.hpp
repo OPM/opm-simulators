@@ -62,16 +62,15 @@ namespace Opm {
                   const BlackoilPropsAdInterface& fluid,
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
-                  const Wells*                    wells_arg,
+                  const MultisegmentWells&        well_model,
                   const NewtonIterationBlackoilInterface&    linsolver,
                   Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
                   const bool has_vapoil,
-                  const bool terminal_output,
-                  const MultisegmentWells& multisegment_wells)
-        : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
+                  const bool terminal_output)
+        : Base(param, grid, fluid, geo, rock_comp_props, well_model, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output)
-        , ms_wells_(multisegment_wells)
+        , ms_wells_(well_model)
     {
         const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
