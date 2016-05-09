@@ -145,7 +145,7 @@ namespace Opm
         {
             os << " step[ " << i << " ] = " << unit::convert::to( steps_[ i ], unit::day ) << " (days)" << std::endl;
         }
-        std::cout << "sub steps end time = " << unit::convert::to( simulationTimeElapsed(), unit::day ) << " (days)" << std::endl;
+        os << "sub steps end time = " << unit::convert::to( simulationTimeElapsed(), unit::day ) << " (days)" << std::endl;
     }
 
     boost::posix_time::ptime AdaptiveSimulatorTimer::startDateTime() const
