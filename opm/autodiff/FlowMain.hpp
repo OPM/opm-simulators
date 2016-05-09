@@ -264,9 +264,9 @@ namespace Opm
                 std::cout << "**********************************************************************\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "*                   This is Flow (version " << version << ")"
-                          << std::string(26 - version.size(), ' ') << "*\n";
+                   << std::string(26 - version.size(), ' ') << "*\n";
                 std::cout << "*                                                                    *\n";
-                std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
+                std::cout <<    "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
                 std::cout << "*            and is part of OPM. For more information see:           *\n";
                 std::cout << "*                       http://opm-project.org                       *\n";
                 std::cout << "*                                                                    *\n";
@@ -677,15 +677,20 @@ namespace Opm
 
             if (!schedule->initOnly()) {
                 if (output_cout_) {
-                    std::cout << "\n\n================ Starting main simulation loop ===============\n"
-                              << std::flush;
+                    std::string msg;
+                    msg = "\n\n================ Starting main simulation loop ===============\n";
+                    std::cout << msg << std::endl;
+                    OpmLog::info(msg);
                 }
 
                 SimulatorReport fullReport = simulator_->run(simtimer, *state_);
 
                 if (output_cout_) {
-                    std::cout << "\n\n================    End of simulation     ===============\n\n";
-                    fullReport.reportFullyImplicit(std::cout);
+                    std::ostringstream ss;
+                    ss << "\n\n================    End of simulation     ===============\n\n";
+                    fullReport.reportFullyImplicit(ss);
+                    std::cout << ss.str() << std::endl;
+                    OpmLog::info(ss.str());
                     if (param_.anyUnused()) {
                         // This allows a user to catch typos and misunderstandings in the
                         // use of simulator parameters.

@@ -43,6 +43,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -282,8 +283,10 @@ namespace detail {
                 current_relaxation_ -= nonlinear_solver.relaxIncrement();
                 current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
                 if (terminalOutputEnabled()) {
-                    std::cout << " Oscillating behavior detected: Relaxation set to "
-                              << current_relaxation_ << std::endl;
+                    std::string msg = " Oscillating behavior detected: Relaxation set to "
+                        + std::to_string(current_relaxation_);
+                    std::cout << msg << std::endl;
+                    OpmLog::info(msg);
                 }
             }
             nonlinear_solver.stabilizeNonlinearUpdate(dx, dx_old_, current_relaxation_);
@@ -1106,6 +1109,7 @@ namespace detail {
         if (converged) {
             if ( terminal_output_ ) {
                 std::cout << "well converged iter: " << it << std::endl;
+                OpmLog::info("well converged iter: " + std::to_string(it));
             }
             const int nw = wells().number_of_wells;
             {
@@ -1895,35 +1899,38 @@ namespace detail {
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
-                std::cout << "\nIter";
+                std::string msg = "Iter";
                 for (int idx = 0; idx < nm; ++idx) {
-                    std::cout << "   MB(" << materialName(idx).substr(0, 3) << ") ";
+                    msg += "   MB(" + materialName(idx).substr(0, 3) + ") ";
                 }
                 for (int idx = 0; idx < nm; ++idx) {
-                    std::cout << "    CNV(" << materialName(idx).substr(0, 1) << ") ";
+                    msg += "    CNV(" + materialName(idx).substr(0, 1) + ") ";
                 }
                 for (int idx = 0; idx < np; ++idx) {
-                    std::cout << "  W-FLUX(" << materialName(idx).substr(0, 1) << ")";
+                    msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
                 // std::cout << "  WELL-CONT ";
-                std::cout << '\n';
+                std::cout << msg << std::endl;
+                OpmLog::info(msg);
             }
-            const std::streamsize oprec = std::cout.precision(3);
-            const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
-            std::cout << std::setw(4) << iteration;
+            std::ostringstream ss;
+            const std::streamsize oprec = ss.precision(3);
+            const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
+            ss << std::setw(4) << iteration;
             for (int idx = 0; idx < nm; ++idx) {
-                std::cout << std::setw(11) << mass_balance_residual[idx];
+                ss << std::setw(11) << mass_balance_residual[idx];
             }
             for (int idx = 0; idx < nm; ++idx) {
-                std::cout << std::setw(11) << CNV[idx];
+                ss << std::setw(11) << CNV[idx];
             }
             for (int idx = 0; idx < np; ++idx) {
-                std::cout << std::setw(11) << well_flux_residual[idx];
+                ss << std::setw(11) << well_flux_residual[idx];
             }
             // std::cout << std::setw(11) << residualWell;
-            std::cout << std::endl;
-            std::cout.precision(oprec);
-            std::cout.flags(oflags);
+            ss.precision(oprec);
+            ss.flags(oflags);
+            OpmLog::info(ss.str());
+            std::cout << ss.str() << std::endl;
         }
 
         for (int idx = 0; idx < nm; ++idx) {
@@ -2006,21 +2013,25 @@ namespace detail {
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
-                std::cout << "\nIter";
+                std::string msg;
+                msg = "Iter";
                 for (int idx = 0; idx < np; ++idx) {
-                    std::cout << "  W-FLUX(" << materialName(idx).substr(0, 1) << ")";
+                    msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
-                std::cout << '\n';
+                OpmLog::info(msg);
+                std::cout << msg << std::endl;
             }
-            const std::streamsize oprec = std::cout.precision(3);
-            const std::ios::fmtflags oflags = std::cout.setf(std::ios::scientific);
-            std::cout << std::setw(4) << iteration;
+            std::ostringstream ss;
+            const std::streamsize oprec = ss.precision(3);
+            const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
+            ss << std::setw(4) << iteration;
             for (int idx = 0; idx < np; ++idx) {
-                std::cout << std::setw(11) << well_flux_residual[idx];
+                ss << std::setw(11) << well_flux_residual[idx];
             }
-            std::cout << std::endl;
-            std::cout.precision(oprec);
-            std::cout.flags(oflags);
+            ss.precision(oprec);
+            ss.flags(oflags);
+            OpmLog::info(ss.str());
+            std::cout << ss.str() << std::endl;
         }
         return converged;
     }
