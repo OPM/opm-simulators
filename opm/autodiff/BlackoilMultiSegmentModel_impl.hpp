@@ -117,7 +117,7 @@ namespace Opm {
     BlackoilMultiSegmentModel<Grid>::numWellVars() const
     {
         // For each segment, we have a pressure variable, and one flux per phase.
-        const int nseg = msWellOps().p2s.rows();
+        const int nseg = wellModel().numSegment();
         return (numPhases() + 1) * nseg;
     }
 
@@ -245,10 +245,8 @@ namespace Opm {
             return;
         }
 
-        // asImpl().computeSegmentFluidProperties(state);
         wellModel().computeSegmentFluidProperties(state);
 
-        // asImpl().computeSegmentPressuresDelta(state);
         const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         wellModel().computeSegmentPressuresDelta(gravity);
 
@@ -268,7 +266,6 @@ namespace Opm {
         wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        // asImpl().addWellControlEq(state, well_state, aliveWells);
         wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
     }
 
@@ -318,7 +315,6 @@ namespace Opm {
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
             }
             wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
-            // asImpl().computeWellConnectionPressures(state, well_state);
         }
 
         return converged;
@@ -340,7 +336,7 @@ namespace Opm {
 
 
 
-        /// added to fixing the flow_multisegment running
+    /// added to fixing the flow_multisegment running
     template <class Grid>
     bool
     BlackoilMultiSegmentModel<Grid>::baseSolveWellEq(const std::vector<ADB>& mob_perfcells,
@@ -383,7 +379,6 @@ namespace Opm {
 
             wellModel().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);
-            // addWellControlEq(wellSolutionState, well_state, aliveWells);
             wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = Base::getWellConvergence(it);
 
@@ -444,7 +439,6 @@ namespace Opm {
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
             }
             wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
-            // computeWellConnectionPressures(state, well_state);
         }
 
         if (!converged) {
