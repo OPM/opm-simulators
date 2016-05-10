@@ -150,15 +150,16 @@ namespace Opm {
         int restarts = 0;
 
         // sub step time loop
-        std::ostringstream ss;
         while( ! substepTimer.done() )
         {
             // get current delta t
             const double dt = substepTimer.currentStepLength() ;
             if( timestep_verbose_ )
             {
+                std::ostringstream ss;
                 ss <<"Substep( " << substepTimer.currentStepNum() << " ), try with stepsize "
                    << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " (days)." << std::endl;
+                OpmLog::info(ss.str());
             }
 
             int linearIterations = -1;
@@ -168,7 +169,7 @@ namespace Opm {
 
                 if( solver_verbose_ ) {
                     // report number of linear iterations
-                    ss << "Overall linear iterations used: " << linearIterations << std::endl;
+                    OpmLog::info("Overall linear iterations used: " + std::to_string(linearIterations));
                 }
             }
             catch (const Opm::NumericalProblem& e) {
@@ -214,8 +215,10 @@ namespace Opm {
 
                 if( timestep_verbose_ )
                 {
+                    std::ostringstream ss;                    
                     ss << "Substep( " << substepTimer.currentStepNum()-1 // it was already advanced by ++
                                              << " ) finished at time " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << " (days)." << std::endl << std::endl;
+                    OpmLog::info(ss.str());
                 }
 
                 // write data if outputWriter was provided
@@ -243,8 +246,10 @@ namespace Opm {
                 // we need to revise this
                 substepTimer.provideTimeStepEstimate( newTimeStep );
                 if( solver_verbose_ )
-                    std::cerr << "Solver convergence failed, restarting solver with new time step ("
-                              << unit::convert::to( newTimeStep, unit::day ) <<" days)." << std::endl;
+                    std::string msg;
+                    msg = "Solver convergence failed, restarting solver with new time step ("
+                        + std::to_string(unit::convert::to( newTimeStep, unit::day )) + " days).\n";
+                    OpmLog::error(msg);
 
                 // reset states
                 state      = last_state;
@@ -259,15 +264,15 @@ namespace Opm {
         suggested_next_timestep_ = substepTimer.currentStepLength();
         if( timestep_verbose_ )
         {
+            std::ostringstream ss;
             substepTimer.report(ss);
             ss << "Suggested next step size = " << unit::convert::to( suggested_next_timestep_, unit::day ) << " (days)" << std::endl;
+            OpmLog::info(ss.str());
         }
 
         if( ! std::isfinite( suggested_next_timestep_ ) ) { // check for NaN
             suggested_next_timestep_ = timestep;
         }
-        std::cout << ss.str();
-        OpmLog::info(ss.str());
     }
 }
 
