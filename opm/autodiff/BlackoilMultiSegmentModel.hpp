@@ -139,8 +139,6 @@ namespace Opm {
         using Base::vfp_properties_;
         using Base::well_model_;
 
-        MultisegmentWells ms_wells_;
-
         using Base::wellModel;
         // using Base::wells;
         using Base::wellsActive;

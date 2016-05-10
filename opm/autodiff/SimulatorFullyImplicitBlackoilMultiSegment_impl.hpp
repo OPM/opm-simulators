@@ -113,9 +113,9 @@ namespace Opm
             const std::vector<WellConstPtr>& wells_ecl = eclipse_state_->getSchedule()->getWells(timer.currentStepNum());
             const int current_time_step = timer.currentStepNum();
 
-            const MultisegmentWells multisegment_wells(wells, wells_ecl, current_time_step);
+            const WellModel well_model(wells, wells_ecl, current_time_step);
 
-            well_state.init(multisegment_wells, state, prev_well_state);
+            well_state.init(well_model, state, prev_well_state);
 
             // give the polymer and surfactant simulators the chance to do their stuff
             Base::asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
@@ -133,7 +133,7 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            auto solver = createSolver(multisegment_wells);
+            auto solver = createSolver(well_model);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge

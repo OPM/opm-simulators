@@ -70,14 +70,7 @@ namespace Opm {
                   const bool terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, well_model, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output)
-        , ms_wells_(well_model)
     {
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-
-        ms_wells_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
-        // TODO: there should be a better way do the following
-        ms_wells_.setWellsActive(Base::wellsActive());
     }
 
 
