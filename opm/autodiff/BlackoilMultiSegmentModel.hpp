@@ -164,20 +164,9 @@ namespace Opm {
 
         const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return well_model_.wellOps(); }
 
-        // TODO: kept for now. to be removed soon.
-        void updateWellState(const V& dwells,
-                             WellState& well_state);
-
         std::vector<V>
         variableStateInitials(const ReservoirState& x,
                               const WellState& xw) const;
-
-        /// added to fixing the flow_multisegment running
-        bool
-        baseSolveWellEq(const std::vector<ADB>& mob_perfcells,
-                        const std::vector<ADB>& b_perfcells,
-                        SolutionState& state,
-                        WellState& well_state);
 
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
@@ -195,6 +184,11 @@ namespace Opm {
                                       std::vector<ADB>& vars,
                                       SolutionState& state) const;
 
+        // TODO: added since the interfaces of the function are different
+        // TODO: for StandardWells and MultisegmentWells
+        void
+        computeWellConnectionPressures(const SolutionState& state,
+                                       const WellState& well_state);
 
     };
 

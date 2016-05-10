@@ -216,15 +216,7 @@ namespace Opm {
                 wellModel().segmentCompSurfVolumeInitial()[phase] = wellModel().segmentCompSurfVolumeCurrent()[phase].value();
             }
 
-            const std::vector<ADB> kr_adb = Base::computeRelPerm(state0);
-            std::vector<ADB> fluid_density(numPhases(), ADB::null());
-            // TODO: make sure the order of the density and the order of the kr are the same.
-            for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-                const int canonicalPhaseIdx = canph_[phaseIdx];
-                fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state0.rs, state0.rv);
-            }
-            wellModel().computeWellConnectionPressures(state0, well_state, kr_adb, fluid_density);
-            // asImpl().computeWellConnectionPressures(state0, well_state);
+            asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -279,7 +271,7 @@ namespace Opm {
                                                       SolutionState& state,
                                                       WellState& well_state)
     {
-        const bool converged = baseSolveWellEq(mob_perfcells, b_perfcells, state, well_state);
+        const bool converged = Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
 
         if (converged) {
             // We must now update the state.segp and state.segqs members,
@@ -307,130 +299,7 @@ namespace Opm {
 
             // This is also called by the base version, but since we have updated
             // state.segp we must call it again.
-            const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
-            std::vector<ADB> fluid_density(np, ADB::null());
-            // TODO: make sure the order of the density and the order of the kr are the same.
-            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                const int canonicalPhaseIdx = canph_[phaseIdx];
-                fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
-            }
-            wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
-        }
-
-        return converged;
-    }
-
-
-
-
-
-    /// added to fixing the flow_multisegment running
-    template <class Grid>
-    bool
-    BlackoilMultiSegmentModel<Grid>::baseSolveWellEq(const std::vector<ADB>& mob_perfcells,
-                                                     const std::vector<ADB>& b_perfcells,
-                                                     SolutionState& state,
-                                                     WellState& well_state) {
-        V aliveWells;
-        const int np = wellModel().numPhases();
-        std::vector<ADB> cq_s(np, ADB::null());
-        std::vector<int> indices = wellModel().variableWellStateIndices();
-        SolutionState state0 = state;
-        WellState well_state0 = well_state;
-        makeConstantState(state0);
-
-        std::vector<ADB> mob_perfcells_const(np, ADB::null());
-        std::vector<ADB> b_perfcells_const(np, ADB::null());
-
-        if ( Base::localWellsActive() ){
-            // If there are non well in the sudomain of the process
-            // thene mob_perfcells_const and b_perfcells_const would be empty
-            for (int phase = 0; phase < np; ++phase) {
-                mob_perfcells_const[phase] = ADB::constant(mob_perfcells[phase].value());
-                b_perfcells_const[phase] = ADB::constant(b_perfcells[phase].value());
-            }
-        }
-
-        int it  = 0;
-        bool converged;
-        do {
-            // bhp and Q for the wells
-            std::vector<V> vars0;
-            vars0.reserve(2);
-            wellModel().variableWellStateInitials(well_state, vars0);
-            std::vector<ADB> vars = ADB::variables(vars0);
-
-            SolutionState wellSolutionState = state0;
-            variableStateExtractWellsVars(indices, vars, wellSolutionState);
-
-            wellModel().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
-
-            wellModel().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
-            wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);
-            wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
-            converged = Base::getWellConvergence(it);
-
-            if (converged) {
-                break;
-            }
-
-            ++it;
-            if( Base::localWellsActive() )
-            {
-                std::vector<ADB> eqs;
-                eqs.reserve(2);
-                eqs.push_back(residual_.well_flux_eq);
-                eqs.push_back(residual_.well_eq);
-                ADB total_residual = vertcatCollapseJacs(eqs);
-                const std::vector<M>& Jn = total_residual.derivative();
-                typedef Eigen::SparseMatrix<double> Sp;
-                Sp Jn0;
-                Jn[0].toSparse(Jn0);
-                const Eigen::SparseLU< Sp > solver(Jn0);
-                ADB::V total_residual_v = total_residual.value();
-                const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
-                assert(dx.size() == total_residual_v.size());
-                wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
-                wellModel().updateWellControls(terminal_output_, well_state);
-            }
-        } while (it < 15);
-
-        if (converged) {
-            if ( terminal_output_ ) {
-                std::cout << "well converged iter: " << it << std::endl;
-            }
-            const int nw = wellModel().numWells();
-            {
-                // We will set the bhp primary variable to the new ones,
-                // but we do not change the derivatives here.
-                ADB::V new_bhp = Eigen::Map<ADB::V>(well_state.bhp().data(), nw);
-                // Avoiding the copy below would require a value setter method
-                // in AutoDiffBlock.
-                std::vector<ADB::M> old_derivs = state.bhp.derivative();
-                state.bhp = ADB::function(std::move(new_bhp), std::move(old_derivs));
-            }
-            {
-                // Need to reshuffle well rates, from phase running fastest
-                // to wells running fastest.
-                // The transpose() below switches the ordering.
-                const DataBlock wrates = Eigen::Map<const DataBlock>(well_state.wellRates().data(), nw, np).transpose();
-                ADB::V new_qs = Eigen::Map<const V>(wrates.data(), nw*np);
-                std::vector<ADB::M> old_derivs = state.qs.derivative();
-                state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
-            }
-
-            const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
-            std::vector<ADB> fluid_density(np, ADB::null());
-            // TODO: make sure the order of the density and the order of the kr are the same.
-            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                const int canonicalPhaseIdx = canph_[phaseIdx];
-                fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
-            }
-            wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
-        }
-
-        if (!converged) {
-            well_state = well_state0;
+            asImpl().computeWellConnectionPressures(state, well_state);
         }
 
         return converged;
@@ -457,6 +326,26 @@ namespace Opm {
         variableReservoirStateInitials(x, vars0);
         wellModel().variableWellStateInitials(xw, vars0);
         return vars0;
+    }
+
+
+
+
+    template <class Grid>
+    void
+    BlackoilMultiSegmentModel<Grid>::
+    computeWellConnectionPressures(const SolutionState& state,
+                                   const WellState& well_state)
+    {
+        const int np = numPhases();
+        const std::vector<ADB> kr_adb = Base::computeRelPerm(state);
+        std::vector<ADB> fluid_density(np, ADB::null());
+        // TODO: make sure the order of the density and the order of the kr are the same.
+        for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+            const int canonicalPhaseIdx = canph_[phaseIdx];
+            fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
+         }
+         wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
     }
 
 } // namespace Opm

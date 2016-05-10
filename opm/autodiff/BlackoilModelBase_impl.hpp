@@ -773,8 +773,6 @@ namespace detail {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            // asImpl().computeWellConnectionPressures(state0, well_state);
-            // Extract well connection depths.
             asImpl().wellModel().computeWellConnectionPressures(state0, well_state);
         }
 
@@ -794,7 +792,6 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            // asImpl().computeWellConnectionPressures(state0, well_state);
             asImpl().wellModel().computeWellConnectionPressures(state0, well_state);
         }
 
@@ -1100,9 +1097,7 @@ namespace detail {
                 std::vector<ADB::M> old_derivs = state.qs.derivative();
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
-            // asImpl().computeWellConnectionPressures(state, well_state);
-            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            asImpl().wellModel().computeWellConnectionPressures(state, well_state);
+            asImpl().computeWellConnectionPressures(state, well_state);
         }
 
         if (!converged) {
@@ -2289,6 +2284,19 @@ namespace detail {
             }
         }
     }
+
+
+
+
+
+   template <class Grid, class WellModel, class Implementation>
+   void
+   BlackoilModelBase<Grid, WellModel, Implementation>::
+   computeWellConnectionPressures(const SolutionState& state,
+                                  const WellState& well_state)
+   {
+            asImpl().wellModel().computeWellConnectionPressures(state, well_state);
+   }
 
 
 

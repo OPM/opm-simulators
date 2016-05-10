@@ -491,6 +491,12 @@ namespace Opm {
         void
         updatePhaseCondFromPrimalVariable(const ReservoirState& state);
 
+        // TODO: added since the interfaces of the function are different
+        // TODO: for StandardWells and MultisegmentWells
+        void
+        computeWellConnectionPressures(const SolutionState& state,
+                                       const WellState& well_state);
+
         /// \brief Compute the reduction within the convergence check.
         /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows
         ///                  as the number of cells of the grid. B.col(i) contains the values
