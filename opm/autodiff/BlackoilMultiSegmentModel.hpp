@@ -164,10 +164,6 @@ namespace Opm {
 
         const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return well_model_.wellOps(); }
 
-        std::vector<V>
-        variableStateInitials(const ReservoirState& x,
-                              const WellState& xw) const;
-
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,

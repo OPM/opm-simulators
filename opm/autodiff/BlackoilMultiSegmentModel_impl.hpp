@@ -308,29 +308,6 @@ namespace Opm {
 
 
 
-
-    template <class Grid>
-    std::vector<V>
-    BlackoilMultiSegmentModel<Grid>::
-    variableStateInitials(const ReservoirState& x,
-                          const WellState&     xw) const
-    {
-        assert(active_[ Oil ]);
-
-        const int np = x.numPhases();
-
-        std::vector<V> vars0;
-        // p, Sw and Rs, Rv or Sg is used as primary depending on solution conditions
-        // and bhp and Q for the wells
-        vars0.reserve(np + 1);
-        variableReservoirStateInitials(x, vars0);
-        wellModel().variableWellStateInitials(xw, vars0);
-        return vars0;
-    }
-
-
-
-
     template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::
