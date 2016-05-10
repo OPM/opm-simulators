@@ -1072,7 +1072,6 @@ namespace detail {
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
-                // asImpl().updateWellState(dx.array(), well_state);
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
                 asImpl().wellModel().updateWellControls(terminal_output_, well_state);
             }
@@ -1461,10 +1460,8 @@ namespace detail {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
-        // TODO: gravity should be stored as a member
-        // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        // asImpl().wellModel().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
-        asImpl().updateWellState(dwells,well_state);
+
+        asImpl().wellModel().updateWellState(dwells, dpMaxRel(), well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
@@ -2292,23 +2289,6 @@ namespace detail {
             }
         }
     }
-
-
-
-
-
-    // TODO: only kept for now due to flow_multisegment
-    // will be removed soon
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    updateWellState(const V& dwells,
-                    WellState& well_state)
-    {
-        asImpl().wellModel().updateWellState(dwells, dpMaxRel(), well_state);
-
-    }
-
 
 
 

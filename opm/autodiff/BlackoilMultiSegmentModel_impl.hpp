@@ -324,18 +324,6 @@ namespace Opm {
 
 
 
-    template <class Grid>
-    void
-    BlackoilMultiSegmentModel<Grid>::updateWellState(const V& dwells,
-                                                     WellState& well_state)
-    {
-        wellModel().updateWellState(dwells, dpMaxRel(), well_state);
-    }
-
-
-
-
-
     /// added to fixing the flow_multisegment running
     template <class Grid>
     bool
@@ -402,7 +390,7 @@ namespace Opm {
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
-                asImpl().updateWellState(dx.array(), well_state);
+                wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
                 wellModel().updateWellControls(terminal_output_, well_state);
             }
         } while (it < 15);
