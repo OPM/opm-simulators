@@ -285,7 +285,6 @@ namespace detail {
                 if (terminalOutputEnabled()) {
                     std::string msg = " Oscillating behavior detected: Relaxation set to "
                         + std::to_string(current_relaxation_);
-                    std::cout << msg << std::endl;
                     OpmLog::info(msg);
                 }
             }
@@ -1108,7 +1107,6 @@ namespace detail {
 
         if (converged) {
             if ( terminal_output_ ) {
-                std::cout << "well converged iter: " << it << std::endl;
                 OpmLog::info("well converged iter: " + std::to_string(it));
             }
             const int nw = wells().number_of_wells;
@@ -1910,7 +1908,6 @@ namespace detail {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
                 // std::cout << "  WELL-CONT ";
-                std::cout << msg << std::endl;
                 OpmLog::info(msg);
             }
             std::ostringstream ss;
@@ -1930,7 +1927,6 @@ namespace detail {
             ss.precision(oprec);
             ss.flags(oflags);
             OpmLog::info(ss.str());
-            std::cout << ss.str() << std::endl;
         }
 
         for (int idx = 0; idx < nm; ++idx) {
@@ -2019,7 +2015,6 @@ namespace detail {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
                 OpmLog::info(msg);
-                std::cout << msg << std::endl;
             }
             std::ostringstream ss;
             const std::streamsize oprec = ss.precision(3);
@@ -2031,7 +2026,6 @@ namespace detail {
             ss.precision(oprec);
             ss.flags(oflags);
             OpmLog::info(ss.str());
-            std::cout << ss.str() << std::endl;
         }
         return converged;
     }

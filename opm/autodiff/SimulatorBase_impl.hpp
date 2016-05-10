@@ -132,7 +132,6 @@ namespace Opm
                 std::ostringstream ss;
                 timer.report(ss);
                 OpmLog::info(ss.str());
-                std::cout << ss.str();
             }
 
             // Create wells and well state.
@@ -215,7 +214,6 @@ namespace Opm
                 std::string msg;
                 msg = "Fully implicit solver took: " + std::to_string(st) + " seconds. Total solver time taken: " + std::to_string(stime) + " seconds.";
                 OpmLog::info(msg);
-                std::cout << msg << std::endl;
             }
 
             if ( output_writer_.output() ) {
