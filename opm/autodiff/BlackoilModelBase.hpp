@@ -295,7 +295,7 @@ namespace Opm {
         std::vector<PhasePresence> phaseCondition_;
 
         // Well Model
-        WellModel                       std_wells_;
+        WellModel                       well_model_;
 
         V isRs_;
         V isRv_;
@@ -331,17 +331,17 @@ namespace Opm {
         }
 
         /// return the WellModel object
-        WellModel& stdWells() { return std_wells_; }
-        const WellModel& stdWells() const { return std_wells_; }
+        WellModel& wellModel() { return well_model_; }
+        const WellModel& wellModel() const { return well_model_; }
 
         /// return the Well struct in the WellModel
-        const Wells& wells() const { return std_wells_.wells(); }
+        const Wells& wells() const { return well_model_.wells(); }
 
         /// return true if wells are available in the reservoir
-        bool wellsActive() const { return std_wells_.wellsActive(); }
+        bool wellsActive() const { return well_model_.wellsActive(); }
 
         /// return true if wells are available on this process
-        bool localWellsActive() const { return std_wells_.localWellsActive(); }
+        bool localWellsActive() const { return well_model_.localWellsActive(); }
 
         int numWellVars() const;
 

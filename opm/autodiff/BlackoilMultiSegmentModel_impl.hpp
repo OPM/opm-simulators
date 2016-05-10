@@ -99,7 +99,7 @@ namespace Opm {
         const int nw = wellsMultiSegment().size();
 
         if ( !msWellOps().has_multisegment_wells ) {
-            msWells().segVDt() = V::Zero(nw);
+            wellModel().segVDt() = V::Zero(nw);
             return;
         }
 
@@ -112,7 +112,7 @@ namespace Opm {
             segment_volume.insert(segment_volume.end(), segment_volume_well.begin(), segment_volume_well.end());
         }
         assert(int(segment_volume.size()) == nseg_total);
-        msWells().segVDt() = Eigen::Map<V>(segment_volume.data(), nseg_total) / dt;
+        wellModel().segVDt() = Eigen::Map<V>(segment_volume.data(), nseg_total) / dt;
     }
 
 
@@ -165,17 +165,17 @@ namespace Opm {
         // pressures and flows of the top segments.
         const int np = numPhases();
         const int ns = state.segp.size();
-        const int nw = msWells().topWellSegments().size();
+        const int nw = wellModel().topWellSegments().size();
         state.qs = ADB::constant(ADB::V::Zero(np*nw));
         for (int phase = 0; phase < np; ++phase) {
             // Extract segment fluxes for this phase (ns consecutive elements).
             ADB segqs_phase = subset(state.segqs, Span(ns, 1, ns*phase));
             // Extract top segment fluxes (= well fluxes)
-            ADB wellqs_phase = subset(segqs_phase, msWells().topWellSegments());
+            ADB wellqs_phase = subset(segqs_phase, wellModel().topWellSegments());
             // Expand to full size of qs (which contains all phases) and add.
             state.qs += superset(wellqs_phase, Span(nw, 1, nw*phase), nw*np);
         }
-        state.bhp = subset(state.segp, msWells().topWellSegments());
+        state.bhp = subset(state.segp, wellModel().topWellSegments());
     }
 
 
@@ -204,7 +204,7 @@ namespace Opm {
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        msWells().updateWellControls(terminal_output_, well_state);
+        wellModel().updateWellControls(terminal_output_, well_state);
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
@@ -216,11 +216,11 @@ namespace Opm {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            msWells().computeSegmentFluidProperties(state0);
+            wellModel().computeSegmentFluidProperties(state0);
             const int np = numPhases();
-            assert(np == int(msWells().segmentCompSurfVolumeInitial().size()));
+            assert(np == int(wellModel().segmentCompSurfVolumeInitial().size()));
             for (int phase = 0; phase < np; ++phase) {
-                msWells().segmentCompSurfVolumeInitial()[phase] = msWells().segmentCompSurfVolumeCurrent()[phase].value();
+                wellModel().segmentCompSurfVolumeInitial()[phase] = wellModel().segmentCompSurfVolumeCurrent()[phase].value();
             }
 
             const std::vector<ADB> kr_adb = Base::computeRelPerm(state0);
@@ -230,7 +230,7 @@ namespace Opm {
                 const int canonicalPhaseIdx = canph_[phaseIdx];
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state0.rs, state0.rv);
             }
-            msWells().computeWellConnectionPressures(state0, well_state, kr_adb, fluid_density);
+            wellModel().computeWellConnectionPressures(state0, well_state, kr_adb, fluid_density);
             // asImpl().computeWellConnectionPressures(state0, well_state);
         }
 
@@ -253,15 +253,15 @@ namespace Opm {
         }
 
         // asImpl().computeSegmentFluidProperties(state);
-        msWells().computeSegmentFluidProperties(state);
+        wellModel().computeSegmentFluidProperties(state);
 
         // asImpl().computeSegmentPressuresDelta(state);
         const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        msWells().computeSegmentPressuresDelta(gravity);
+        wellModel().computeSegmentPressuresDelta(gravity);
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        msWells().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
+        wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
@@ -271,12 +271,12 @@ namespace Opm {
         // it is related to the segment location
         V aliveWells;
         std::vector<ADB> cq_s;
-        msWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        msWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        msWells().addWellFluxEq(cq_s, state, residual_);
+        wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         // asImpl().addWellControlEq(state, well_state, aliveWells);
-        msWells().addWellControlEq(state, well_state, aliveWells, residual_);
+        wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
     }
 
 
@@ -324,7 +324,7 @@ namespace Opm {
                 const int canonicalPhaseIdx = canph_[phaseIdx];
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
             }
-            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
+            wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
             // asImpl().computeWellConnectionPressures(state, well_state);
         }
 
@@ -340,7 +340,7 @@ namespace Opm {
     BlackoilMultiSegmentModel<Grid>::updateWellState(const V& dwells,
                                                      WellState& well_state)
     {
-        msWells().updateWellState(dwells, dpMaxRel(), well_state);
+        wellModel().updateWellState(dwells, dpMaxRel(), well_state);
     }
 
 
@@ -355,9 +355,9 @@ namespace Opm {
                                                      SolutionState& state,
                                                      WellState& well_state) {
         V aliveWells;
-        const int np = msWells().numPhases();
+        const int np = wellModel().numPhases();
         std::vector<ADB> cq_s(np, ADB::null());
-        std::vector<int> indices = msWells().variableWellStateIndices();
+        std::vector<int> indices = wellModel().variableWellStateIndices();
         SolutionState state0 = state;
         WellState well_state0 = well_state;
         makeConstantState(state0);
@@ -380,18 +380,18 @@ namespace Opm {
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
-            msWells().variableWellStateInitials(well_state, vars0);
+            wellModel().variableWellStateInitials(well_state, vars0);
             std::vector<ADB> vars = ADB::variables(vars0);
 
             SolutionState wellSolutionState = state0;
             variableStateExtractWellsVars(indices, vars, wellSolutionState);
 
-            msWells().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            wellModel().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
 
-            msWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
-            msWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
+            wellModel().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
+            wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);
             // addWellControlEq(wellSolutionState, well_state, aliveWells);
-            msWells().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
+            wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = Base::getWellConvergence(it);
 
             if (converged) {
@@ -415,7 +415,7 @@ namespace Opm {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().updateWellState(dx.array(), well_state);
-                msWells().updateWellControls(terminal_output_, well_state);
+                wellModel().updateWellControls(terminal_output_, well_state);
             }
         } while (it < 15);
 
@@ -423,7 +423,7 @@ namespace Opm {
             if ( terminal_output_ ) {
                 std::cout << "well converged iter: " << it << std::endl;
             }
-            const int nw = msWells().numWells();
+            const int nw = wellModel().numWells();
             {
                 // We will set the bhp primary variable to the new ones,
                 // but we do not change the derivatives here.
@@ -450,7 +450,7 @@ namespace Opm {
                 const int canonicalPhaseIdx = canph_[phaseIdx];
                 fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
             }
-            msWells().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
+            wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
             // computeWellConnectionPressures(state, well_state);
         }
 
@@ -480,7 +480,7 @@ namespace Opm {
         // and bhp and Q for the wells
         vars0.reserve(np + 1);
         variableReservoirStateInitials(x, vars0);
-        msWells().variableWellStateInitials(xw, vars0);
+        wellModel().variableWellStateInitials(xw, vars0);
         return vars0;
     }
 

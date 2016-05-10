@@ -499,7 +499,7 @@ namespace Opm {
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
         // updateWellControls(well_state);
-        stdWells().updateWellControls(terminal_output_, well_state);
+        wellModel().updateWellControls(terminal_output_, well_state);
 
         // Create the primary variables.
         SolutionState state = variableState(reservoir_state, well_state);
@@ -512,7 +512,7 @@ namespace Opm {
             // and well connection pressures.
             computeAccum(state0, 0);
             // computeWellConnectionPressures(state0, well_state);
-            stdWells().computeWellConnectionPressures(state0, well_state);
+            wellModel().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -552,7 +552,7 @@ namespace Opm {
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
-        stdWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
 
         if (has_plyshlog_) {
             std::vector<double> water_vel_wells;
@@ -571,11 +571,11 @@ namespace Opm {
             mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
         }
 
-        stdWells().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        stdWells().addWellFluxEq(cq_s, state, residual_);
+        wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        wellModel().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        stdWells().addWellControlEq(state, well_state, aliveWells, residual_);
+        wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
     }
 
 
@@ -734,8 +734,8 @@ namespace Opm {
         ADB b_perfcells = subset(rq_[water_pos].b, well_cells);
 
         const ADB& p_perfcells = subset(state.pressure, well_cells);
-        const V& cdp = stdWells().wellPerforationPressureDiffs();
-        const ADB perfpressure = (stdWells().wellOps().w2p * state.bhp) + cdp;
+        const V& cdp = wellModel().wellPerforationPressureDiffs();
+        const ADB perfpressure = (wellModel().wellOps().w2p * state.bhp) + cdp;
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcells - perfpressure;
 

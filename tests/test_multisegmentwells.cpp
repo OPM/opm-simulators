@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE(testStructure)
     BOOST_CHECK_EQUAL(nperf, ms_wells->numPerf());
 
     BOOST_CHECK_EQUAL(nw, ms_wells->topWellSegments().size());
-    BOOST_CHECK_EQUAL(nw, ms_wells->wells().size());
+    BOOST_CHECK_EQUAL(nw, ms_wells->msWells().size());
     BOOST_CHECK_EQUAL(0, ms_wells->topWellSegments()[0]);
     BOOST_CHECK_EQUAL(1, ms_wells->topWellSegments()[1]);
 }

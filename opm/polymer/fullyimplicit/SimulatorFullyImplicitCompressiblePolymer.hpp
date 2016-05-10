@@ -71,6 +71,8 @@ namespace Opm
     template <class GridT>
     class SimulatorFullyImplicitCompressiblePolymer;
 
+    class StandardWells;
+
     template <class GridT>
     struct SimulatorTraits<SimulatorFullyImplicitCompressiblePolymer<GridT> >
     {
@@ -79,6 +81,7 @@ namespace Opm
         typedef BlackoilOutputWriter OutputWriter;
         typedef GridT Grid;
         typedef FullyImplicitCompressiblePolymerSolver Solver;
+        typedef StandardWells WellModel;
         /// Dummy class, this Solver does not use a Model.
         struct Model
         {
@@ -94,6 +97,7 @@ namespace Opm
         typedef SimulatorFullyImplicitCompressiblePolymer ThisType;
         typedef SimulatorBase<ThisType> BaseType;
         typedef typename BaseType::Solver Solver;
+        typedef typename BaseType::WellModel WellModel;
 
     public:
         /// Initialise from parameters and objects to observe.
@@ -109,7 +113,7 @@ namespace Opm
                                                   NewtonIterationBlackoilInterface& linsolver,
                                                   const double* gravity);
 
-        std::unique_ptr<Solver> createSolver(const Wells* wells);
+        std::unique_ptr<Solver> createSolver(const WellModel& well_model);
 
         void handleAdditionalWellInflow(SimulatorTimer& timer,
                                         WellsManager& wells_manager,

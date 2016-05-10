@@ -137,10 +137,11 @@ namespace Opm {
         using Base::linsolver_;
         using Base::phaseCondition_;
         using Base::vfp_properties_;
+        using Base::well_model_;
 
         MultisegmentWells ms_wells_;
 
-        // using Base::stdWells;
+        using Base::wellModel;
         // using Base::wells;
         using Base::wellsActive;
         using Base::updatePrimalVariableFromState;
@@ -160,13 +161,10 @@ namespace Opm {
         using Base::asImpl;
         using Base::variableReservoirStateInitials;
 
-        // TODO: fixing the confusing naming
-        const MultisegmentWells& msWells() const { return ms_wells_; }
-        MultisegmentWells& msWells() { return ms_wells_; }
 
-        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return msWells().msWells(); }
+        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return well_model_.msWells(); }
 
-        const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return msWells().wellOps(); }
+        const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return well_model_.wellOps(); }
 
         // TODO: kept for now. to be removed soon.
         void updateWellState(const V& dwells,
