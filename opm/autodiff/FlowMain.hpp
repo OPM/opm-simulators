@@ -270,40 +270,6 @@ namespace Opm
             return false;
         }
 
-
-        /// Write the NNC structure of the given grid to NNC.
-        ///
-        /// Write cell adjacencies beyond Cartesian neighborhoods to NNC.
-        ///
-        /// The trans vector is indexed by face number as it is in grid.
-        void exportNncStructure(NNC& nnc, const Grid& grid, const std::vector<double>& trans) {
-            // we use numFaces, numCells, cell2Faces, globalCell from UgGridHelpers
-            using namespace UgGridHelpers;
-
-            size_t num_faces = numFaces(grid);
-            if (trans.size() > 0 && trans.size() != num_faces) {
-                throw std::logic_error(
-                    "non-empty trans vector with wrong dimension.");
-            }
-
-            auto fc = faceCells(grid);
-            for (size_t i = 0; i < num_faces; ++i) {
-                auto c1 = fc(i, 0);
-                auto c2 = fc(i, 1);
-
-                if (c1 == -1 || c2 == -1)
-                    continue; // face on grid boundary
-                // translate from active cell idx (ac1,ac2) to global cell idx
-                c1 = globalCell(grid) ? globalCell(grid)[c1] : c1;
-                c2 = globalCell(grid) ? globalCell(grid)[c2] : c2;
-                if (!cartesianAdjacent(grid, c1, c2)) {
-                    // suppose c1,c2 is specified in ECLIPSE input
-                    // we here overwrite its trans by grid's
-                    nnc.addNNC(c1, c2, trans[i]);
-                }
-            }
-        }
-
         // Print startup message if on output rank.
         void printStartupMessage()
         {
@@ -723,9 +689,6 @@ namespace Opm
             // initialize variables
             const auto initConfig = eclipse_state_->getInitConfig();
             simtimer.init(timeMap, (size_t)initConfig->getRestartStep());
-
-            Opm::NNC nnc = eclipse_state_->getNNC(); // copy, otherwise we write to ecl_state
-            exportNncStructure(nnc, grid_init_->grid(), trans_);
 
             if (!schedule->initOnly()) {
                 if (output_cout_) {
