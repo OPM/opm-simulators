@@ -328,11 +328,13 @@ namespace Opm
                 output_dir_ =
                     param_.getDefault("output_dir", std::string("."));
                 boost::filesystem::path fpath(output_dir_);
-                try {
-                    create_directories(fpath);
-                }
-                catch (...) {
-                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                if (!is_directory(fpath)) {
+                    try {
+                        create_directories(fpath);
+                    }
+                    catch (...) {
+                        OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                    }
                 }
                 // Write simulation parameters.
                 param_.writeParam(output_dir_ + "/simulation.param");
