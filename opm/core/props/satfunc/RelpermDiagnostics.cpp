@@ -107,14 +107,14 @@ namespace Opm{
         bool family2 = ((!swfnTables.empty() && !sgfnTables.empty()) || !sgwfnTables.empty()) && (!sof3Tables.empty() || !sof2Tables.empty());
 
         if (family1 && family2) {
-            const std::string msg = "-- Error:   Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
+            const std::string msg = "Error:   Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
 
         if (!family1 && !family2) {
-            const std::string msg = "-- Error,   Saturations function must be specified using either \n \
+            const std::string msg = "Error,   Saturations function must be specified using either \n \
                              family 1 or family 2 keywords \n \
                              Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             messages_.push_back(msg);
@@ -217,7 +217,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sw column.
         if (sw.front() < 0.0 || sw.back() > 1.0) {
-            const std::string msg = "-- Error:   In SWOF table SATNUM = "+ regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SWOF table SATNUM = "+ regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -225,13 +225,13 @@ namespace Opm{
         //TODO check endpoint sw.back() == 1. - Sor.
         //Check krw column.
         if (krw.front() != 0.0) {
-            const std::string msg = "-- Error:   In SWOF table SATNUM = " + regionIdx + ", first value of krw should be 0.";
+            const std::string msg = "Error:   In SWOF table SATNUM = " + regionIdx + ", first value of krw should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (krw.front() < 0.0 || krw.back() > 1.0) {
-            const std::string msg = "-- Error:   In SWOF table SATNUM = " + regionIdx + ", krw should be in range [0,1].";
+            const std::string msg = "Error:   In SWOF table SATNUM = " + regionIdx + ", krw should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -239,7 +239,7 @@ namespace Opm{
 
         ///Check krow column.
         if (krow.front() > 1.0 || krow.back() < 0.0) {
-            const std::string msg = "-- Error:   In SWOF table SATNUM = "+ regionIdx + ", krow should be in range [0, 1].";
+            const std::string msg = "Error:   In SWOF table SATNUM = "+ regionIdx + ", krow should be in range [0, 1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -260,13 +260,13 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sw column.
         if (sg.front() < 0.0 || sg.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGOF table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGOF table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (sg.front() != 0.0) {
-            const std::string msg = "-- Error:   In SGOF table SATNUM = " + regionIdx + ", first value of sg should be 0.";
+            const std::string msg = "Error:   In SGOF table SATNUM = " + regionIdx + ", first value of sg should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -274,13 +274,13 @@ namespace Opm{
         //TODO check endpoint sw.back() == 1. - Sor.
         //Check krw column.
         if (krg.front() != 0.0) {
-            const std::string msg = "-- Error:   In SGOF table SATNUM = " + regionIdx + ", first value of krg should be 0.";
+            const std::string msg = "Error:   In SGOF table SATNUM = " + regionIdx + ", first value of krg should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (krg.front() < 0.0 || krg.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGOF table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
+            const std::string msg = "Error:   In SGOF table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -288,7 +288,7 @@ namespace Opm{
 
         //Check krow column.
         if (krog.front() > 1.0 || krog.back() < 0.0) {
-            const std::string msg = "-- Error:   In SGOF table SATNUM = " + regionIdx + ", krog should be in range [0, 1].";
+            const std::string msg = "Error:   In SGOF table SATNUM = " + regionIdx + ", krog should be in range [0, 1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -306,33 +306,33 @@ namespace Opm{
         //Check sl column.
         //TODO first value means sl = swco + sor
         if (sl.front() < 0.0 || sl.back() > 1.0) {
-            const std::string msg = "-- Error:   In SLGOF table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SLGOF table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (sl.back() != 1.0) {
-            const std::string msg = "-- Error:   In SLGOF table SATNUM = " + regionIdx + ", last value of sl should be 1.";
+            const std::string msg = "Error:   In SLGOF table SATNUM = " + regionIdx + ", last value of sl should be 1.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
 
         if (krg.front() > 1.0 || krg.back() < 0) {
-            const std::string msg = "-- Error:   In SLGOF table SATNUM = " + regionIdx + ", krg shoule be in range [0, 1].";
+            const std::string msg = "Error:   In SLGOF table SATNUM = " + regionIdx + ", krg shoule be in range [0, 1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (krg.back() != 0.0) {
-            const std::string msg = "-- Error:   In SLGOF table SATNUM = " + regionIdx + ", last value of krg hould be 0.";
+            const std::string msg = "Error:   In SLGOF table SATNUM = " + regionIdx + ", last value of krg hould be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
 
         if (krog.front() < 0.0 || krog.back() > 1.0) {
-            const std::string msg = "-- Error:   In SLGOF table SATNUM = " + regionIdx + ", krog shoule be in range [0, 1].";
+            const std::string msg = "Error:   In SLGOF table SATNUM = " + regionIdx + ", krog shoule be in range [0, 1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -351,7 +351,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sw column.
         if (sw.front() < 0.0 || sw.back() > 1.0) {
-            const std::string msg = "-- Error:   In SWFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SWFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -359,14 +359,14 @@ namespace Opm{
         
         //Check krw column.
         if (krw.front() < 0.0 || krw.back() > 1.0) {
-            const std::string msg = "-- Error:   In SWFN table SATNUM = " + regionIdx + ", krw should be in range [0,1].";
+            const std::string msg = "Error:   In SWFN table SATNUM = " + regionIdx + ", krw should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
 
         if (krw.front() != 0.0) {
-            const std::string msg = "-- Error:   In SWFN table SATNUM = " + regionIdx + ", first value of krw should be 0.";
+            const std::string msg = "Error:   In SWFN table SATNUM = " + regionIdx + ", first value of krw should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -385,7 +385,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sg column.
         if (sg.front() < 0.0 || sg.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -393,13 +393,13 @@ namespace Opm{
         
         //Check krg column.
         if (krg.front() < 0.0 || krg.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGFN table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
+            const std::string msg = "Error:   In SGFN table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (krg.front() != 0.0) {
-            const std::string msg = "-- Error:   In SGFN table SATNUM = " + regionIdx + ", first value of krg should be 0.";
+            const std::string msg = "Error:   In SGFN table SATNUM = " + regionIdx + ", first value of krg should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -420,7 +420,7 @@ namespace Opm{
         //Check so column.
         //TODO: The max so = 1 - Swco
         if (so.front() < 0.0 || so.back() > 1.0) {
-            const std::string msg = "-- Error:   In SOF3 table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SOF3 table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -428,13 +428,13 @@ namespace Opm{
 
         //Check krow column.
         if (krow.front() < 0.0 || krow.back() > 1.0) {
-            const std::string msg = "-- Error:   In SOF3 table SATNUM = " + regionIdx + ", krow should be in range [0,1].";
+            const std::string msg = "Error:   In SOF3 table SATNUM = " + regionIdx + ", krow should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (krow.front() != 0.0) {
-            const std::string msg = "-- Error:   In SOF3 table SATNUM = " + regionIdx + ", first value of krow should be 0.";
+            const std::string msg = "Error:   In SOF3 table SATNUM = " + regionIdx + ", first value of krow should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -442,21 +442,21 @@ namespace Opm{
 
         //Check krog column.
         if (krog.front() < 0.0 || krog.back() > 1.0) {
-            const std::string msg = "-- Error:   In SOF3 table SATNUM = " + regionIdx + ", krog should be in range [0,1].";
+            const std::string msg = "Error:   In SOF3 table SATNUM = " + regionIdx + ", krog should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
 
         if (krog.front() != 0.0) {
-            const std::string msg = "-- Error:   In SOF3 table SATNUM = " + regionIdx + ", first value of krog should be 0.";
+            const std::string msg = "Error:   In SOF3 table SATNUM = " + regionIdx + ", first value of krog should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
     
         if (krog.back() != krow.back()) {
-            const std::string msg = "-- Error:   In SOF3 table SATNUM = " + regionIdx + ", max value of krog and krow should be the same.";
+            const std::string msg = "Error:   In SOF3 table SATNUM = " + regionIdx + ", max value of krog and krow should be the same.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -476,7 +476,7 @@ namespace Opm{
         //Check so column.
         //TODO: The max so = 1 - Swco
         if (so.front() < 0.0 || so.back() > 1.0) {
-            const std::string msg = "-- Error:   In SOF2 table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SOF2 table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -484,13 +484,13 @@ namespace Opm{
 
         //Check krow column.
         if (kro.front() < 0.0 || kro.back() > 1.0) {
-            const std::string msg = "-- Error:   In SOF2 table SATNUM = " + regionIdx + ", krow should be in range [0,1].";
+            const std::string msg = "Error:   In SOF2 table SATNUM = " + regionIdx + ", krow should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (kro.front() != 0.0) {
-            const std::string msg = "-- Error:   In SOF2 table SATNUM = " + regionIdx + ", first value of krow should be 0.";
+            const std::string msg = "Error:   In SOF2 table SATNUM = " + regionIdx + ", first value of krow should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -510,7 +510,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sg column.
         if (sg.front() < 0.0 || sg.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGWFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGWFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -518,13 +518,13 @@ namespace Opm{
 
         //Check krg column.
         if (krg.front() < 0.0 || krg.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGWFN table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
+            const std::string msg = "Error:   In SGWFN table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (krg.front() != 0.0) {
-            const std::string msg = "-- Error:   In SGWFN table SATNUM = " + regionIdx + ", first value of krg should be 0.";
+            const std::string msg = "Error:   In SGWFN table SATNUM = " + regionIdx + ", first value of krg should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -533,13 +533,13 @@ namespace Opm{
         //Check krgw column.
         //TODO check saturation sw = 1. - sg
         if (krgw.front() > 1.0 || krgw.back() < 0.0) {
-            const std::string msg = "-- Error:   In SGWFN table SATNUM = " + regionIdx + ", krgw should be in range [0,1].";
+            const std::string msg = "Error:   In SGWFN table SATNUM = " + regionIdx + ", krgw should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
         }
         if (krgw.back() != 0.0) {
-            const std::string msg = "-- Error:   In SGWFN table SATNUM = " + regionIdx + ", last value of krgw should be 0.";
+            const std::string msg = "Error:   In SGWFN table SATNUM = " + regionIdx + ", last value of krgw should be 0.";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -556,7 +556,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sw column.
         if (sw.front() < 0.0 || sw.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGCWMIS table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGCWMIS table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -564,7 +564,7 @@ namespace Opm{
 
         //Check critical gas column.
         if (sgc.front() < 0.0 || sgc.back() > 1.0) {
-            const std::string msg = "-- Error:   In SGCWMIS table SATNUM = " + regionIdx + ", critical gas saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SGCWMIS table SATNUM = " + regionIdx + ", critical gas saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -583,7 +583,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sw column.
         if (sw.front() < 0.0 || sw.back() > 1.0) {
-            const std::string msg = "-- Error:   In SORWMIS table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SORWMIS table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -591,7 +591,7 @@ namespace Opm{
 
         //Check critical oil column.
         if (sor.front() < 0.0 || sor.back() > 1.0) {
-            const std::string msg = "-- Error:   In SORWMIS table SATNUM = " + regionIdx + ", critical oil saturation should be in range [0,1].";
+            const std::string msg = "Error:   In SORWMIS table SATNUM = " + regionIdx + ", critical oil saturation should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -610,7 +610,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check phase fraction column.
         if (frac.front() < 0.0 || frac.back() > 1.0) {
-            const std::string msg = "-- Error:   In SSFN table SATNUM = " + regionIdx + ", phase fraction should be in range [0,1].";
+            const std::string msg = "Error:   In SSFN table SATNUM = " + regionIdx + ", phase fraction should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -618,7 +618,7 @@ namespace Opm{
 
         //Check gas relperm multiplier column.
         if (krgm.front() < 0.0 || krgm.back() > 1.0) {
-            const std::string msg = "-- Error:   In SSFN table SATNUM = " + regionIdx + ", gas relative permeability multiplier should be in range [0,1].";
+            const std::string msg = "Error:   In SSFN table SATNUM = " + regionIdx + ", gas relative permeability multiplier should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -626,7 +626,7 @@ namespace Opm{
 
         //Check solvent relperm multiplier column.
         if (krsm.front() < 0.0 || krsm.back() > 1.0) {
-            const std::string msg = "-- Error:   In SSFN table SATNUM = " + regionIdx + ", solvent relative permeability multiplier should be in range [0,1].";
+            const std::string msg = "Error:   In SSFN table SATNUM = " + regionIdx + ", solvent relative permeability multiplier should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -647,7 +647,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check phase fraction column.
         if (frac.front() < 0.0 || frac.back() > 1.0) {
-            const std::string msg = "-- Error:   In MISC table SATNUM = " + regionIdx + ", phase fraction should be in range [0,1].";
+            const std::string msg = "Error:   In MISC table SATNUM = " + regionIdx + ", phase fraction should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -655,7 +655,7 @@ namespace Opm{
 
         //Check miscibility column.
         if (misc.front() < 0.0 || misc.back() > 1.0) {
-            const std::string msg = "-- Error:   In MISC table SATNUM = " + regionIdx + ", miscibility should be in range [0,1].";
+            const std::string msg = "Error:   In MISC table SATNUM = " + regionIdx + ", miscibility should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -676,7 +676,7 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check phase fraction column.
         if (frac.front() < 0.0 || frac.back() > 1.0) {
-            const std::string msg = "-- Error:   In MSFN table SATNUM = " + regionIdx + ", total gas fraction should be in range [0,1].";
+            const std::string msg = "Error:   In MSFN table SATNUM = " + regionIdx + ", total gas fraction should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -684,7 +684,7 @@ namespace Opm{
 
         //Check gas_solvent relperm multiplier column.
         if (krgsm.front() < 0.0 || krgsm.back() > 1.0) {
-            const std::string msg = "-- Error:   In MSFN table SATNUM = " + regionIdx + ", gas+solvent relative permeability multiplier should be in range [0,1].";
+            const std::string msg = "Error:   In MSFN table SATNUM = " + regionIdx + ", gas+solvent relative permeability multiplier should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -692,7 +692,7 @@ namespace Opm{
 
         //Check oil relperm multiplier column.
         if (krom.front() > 1.0 || krom.back() < 0.0) {
-            const std::string msg = "-- Error:   In MSFN table SATNUM = " + regionIdx + ", oil relative permeability multiplier should be in range [0,1].";
+            const std::string msg = "Error:   In MSFN table SATNUM = " + regionIdx + ", oil relative permeability multiplier should be in range [0,1].";
             messages_.push_back(msg);
             OpmLog::error(msg);
             counter_.error += 1;
@@ -722,13 +722,13 @@ namespace Opm{
              const std::string regionIdx = std::to_string(satnumIdx + 1);
              ///Consistency check.
              if (unscaledEpsInfo_[satnumIdx].Sgu > (1. - unscaledEpsInfo_[satnumIdx].Swl)) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sgmax should not exceed 1-Swco.";
+                const std::string msg = "Warning: In saturation table SATNUM = " + regionIdx + ", Sgmax should not exceed 1-Swco.";
                 messages_.push_back(msg);
                 OpmLog::warning(msg);
                 counter_.warning += 1;
              }
              if (unscaledEpsInfo_[satnumIdx].Sgl > (1. - unscaledEpsInfo_[satnumIdx].Swu)) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sgco should not exceed 1-Swmax.";
+                const std::string msg = "Warning: In saturation table SATNUM = " + regionIdx + ", Sgco should not exceed 1-Swmax.";
                 messages_.push_back(msg);
                 OpmLog::warning(msg);
                 counter_.warning += 1;
@@ -762,7 +762,7 @@ namespace Opm{
                      krog_value = table.evaluate("KROG" , Sou);
                  }
                  if (krow_value != krog_value) {
-                     const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Krow(Somax) should be equal to Krog(Somax).";
+                     const std::string msg = "Warning: In saturation table SATNUM = " + regionIdx + ", Krow(Somax) should be equal to Krog(Somax).";
                      messages_.push_back(msg);
                      OpmLog::warning(msg);
                      counter_.warning += 1;
@@ -771,13 +771,13 @@ namespace Opm{
              //Krw(Sw=0)=Krg(Sg=0)=Krow(So=0)=Krog(So=0)=0.
              //Mobile fluid requirements
             if (((unscaledEpsInfo_[satnumIdx].Sowcr + unscaledEpsInfo_[satnumIdx].Swcr)-1) >= 0) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sowcr + Swcr should be less than 1.";
+                const std::string msg = "Warning: In saturation table SATNUM = " + regionIdx + ", Sowcr + Swcr should be less than 1.";
                 messages_.push_back(msg);
                 OpmLog::warning(msg);
                 counter_.warning += 1;
             }
             if (((unscaledEpsInfo_[satnumIdx].Sogcr + unscaledEpsInfo_[satnumIdx].Sgcr + unscaledEpsInfo_[satnumIdx].Swl) - 1 ) > 0) {
-                const std::string msg = "-- Warning: In saturation table SATNUM = " + regionIdx + ", Sogcr + Sgcr + Swco should be less than 1.";
+                const std::string msg = "Warning: In saturation table SATNUM = " + regionIdx + ", Sogcr + Sgcr + Swco should be less than 1.";
                 messages_.push_back(msg);
                 OpmLog::warning(msg);
                 counter_.warning += 1;
