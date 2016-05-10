@@ -969,19 +969,20 @@ namespace Opm {
         const ADB mu_o_pow = pow(mu_o, 0.25);
         const ADB mu_g_pow = pow(mu_g, 0.25);
 
-        const ADB mu_mos = zero_selectorSos.select(mu_o + mu_s, mu_o * mu_s / pow( ( (so_eff / sos_eff) * mu_s_pow) + ( (ss_eff / sos_eff) * mu_o_pow) , 4.0));
-        const ADB mu_msg = zero_selectorSsg.select(mu_g + mu_s , mu_g * mu_s / pow( ( (sg_eff / ssg_eff) * mu_s_pow) + ( (ss_eff / ssg_eff) * mu_g_pow) , 4.0));
-        const ADB mu_m = zero_selectorSn.select(mu_s + mu_o + mu_g, mu_o * mu_s * mu_g / pow( ( (so_eff / sn_eff) * mu_s_pow *  mu_g_pow)
+        const ADB mu_mos = zero_selectorSos.select(mu_o, mu_o * mu_s / pow( ( (so_eff / sos_eff) * mu_s_pow) + ( (ss_eff / sos_eff) * mu_o_pow) , 4.0));
+        const ADB mu_msg = zero_selectorSsg.select(mu_g, mu_g * mu_s / pow( ( (sg_eff / ssg_eff) * mu_s_pow) + ( (ss_eff / ssg_eff) * mu_g_pow) , 4.0));
+        const ADB mu_m = zero_selectorSn.select(mu_s, mu_o * mu_s * mu_g / pow( ( (so_eff / sn_eff) * mu_s_pow *  mu_g_pow)
                                                        + ( (ss_eff / sn_eff) * mu_o_pow *  mu_g_pow) + ( (sg_eff / sn_eff) * mu_s_pow * mu_o_pow), 4.0));
         // Mixing parameter for viscosity
         // The pressureMixingParameter represent the miscibility of the solvent while the mixingParameterViscosity the effect of the porous media.
         // The pressureMixingParameter is not implemented in ecl100.
         const ADB mix_param_mu = solvent_props_.mixingParameterViscosity(cells_) * solvent_props_.pressureMixingParameter(po, cells_);
 
-        // Update viscosities
-        viscosity[pu.phase_pos[ Oil ]] = pow(mu_o,ones - mix_param_mu) * pow(mu_mos, mix_param_mu);
-        viscosity[pu.phase_pos[ Gas ]] = pow(mu_g,ones - mix_param_mu) * pow(mu_msg, mix_param_mu);
-        viscosity[solvent_pos_] = pow(mu_s,ones - mix_param_mu) * pow(mu_m, mix_param_mu);
+        Selector<double> zero_selectorSs(ss_eff.value(), Selector<double>::Zero);
+        // Update viscosities, use pure values if solvent saturation is zero
+        viscosity[pu.phase_pos[ Oil ]] = zero_selectorSs.select(mu_o, pow(mu_o,ones - mix_param_mu) * pow(mu_mos, mix_param_mu));
+        viscosity[pu.phase_pos[ Gas ]] = zero_selectorSs.select(mu_g, pow(mu_g,ones - mix_param_mu) * pow(mu_msg, mix_param_mu));
+        viscosity[solvent_pos_] =  zero_selectorSs.select(mu_s, pow(mu_s,ones - mix_param_mu) * pow(mu_m, mix_param_mu));
 
         // Density
         ADB& rho_o = density[pu.phase_pos[ Oil ]];
@@ -998,8 +999,10 @@ namespace Opm {
         const ADB mu_s_eff = pow(mu_s,ones - mix_param_rho) * pow(mu_m, mix_param_rho);
 
         const ADB sog_eff = so_eff + sg_eff;
-        const ADB sof = so_eff / sog_eff;
-        const ADB sgf = sg_eff / sog_eff;
+        // Avoid division by zero
+        Selector<double> zero_selectorSog_eff(sog_eff.value(), Selector<double>::Zero);
+        const ADB sof = zero_selectorSog_eff.select(zero , so_eff / sog_eff);
+        const ADB sgf = zero_selectorSog_eff.select(zero , sg_eff / sog_eff);
 
         // Effective densities
         const ADB mu_sog_pow = mu_s_pow * ( (sgf * mu_o_pow) + (sof * mu_g_pow) );
@@ -1024,10 +1027,11 @@ namespace Opm {
         const ADB rho_g_eff_simple = ((ones - mix_param_rho) * rho_g) + (mix_param_rho * rho_m);
         //const ADB rho_s_eff_simple = ((ones - mix_param_rho) * rho_s) + (mix_param_rho * rho_m);
 
-        // Update densities
-        rho_o = unitOilSolventMobilityRatio_selector.select(rho_o_eff_simple, rho_o_eff);
-        rho_g = unitGasSolventMobilityRatio_selector.select(rho_g_eff_simple, rho_g_eff);
-        rho_s = rho_s_eff;
+        // Update densities, use pure values if solvent saturation is zero
+        rho_o = zero_selectorSs.select(rho_o, unitOilSolventMobilityRatio_selector.select(rho_o_eff_simple, rho_o_eff) );
+        rho_g = zero_selectorSs.select(rho_g, unitGasSolventMobilityRatio_selector.select(rho_g_eff_simple, rho_g_eff) );
+        rho_s = zero_selectorSs.select(rho_s, rho_s_eff);
+
 
     }
 
