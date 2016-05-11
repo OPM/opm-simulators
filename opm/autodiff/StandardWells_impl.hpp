@@ -75,6 +75,10 @@ namespace Opm
       : wells_(wells_arg)
       , wops_(wells_arg)
       , num_phases_(wells_arg->number_of_phases)
+      , fluid_(nullptr)
+      , active_(nullptr)
+      , phase_condition_(nullptr)
+      , vfp_properties_(nullptr)
       , well_perforation_densities_(Vector())
       , well_perforation_pressure_diffs_(Vector())
     {
