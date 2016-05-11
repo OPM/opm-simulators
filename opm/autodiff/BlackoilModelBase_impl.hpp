@@ -222,7 +222,7 @@ namespace detail {
         well_model_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
 
         // TODO: put this for now to avoid modify the following code.
-        // TODO: this code is fragile.
+        // TODO: this code can be fragile.
         const Wells* wells_arg = &(asImpl().well_model_.wells());
 
 #if HAVE_MPI
@@ -765,8 +765,6 @@ namespace detail {
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        // asImpl().updateWellControls(well_state);
-        // asImpl().wellModel().updateWellControls(well_state);
         asImpl().wellModel().updateWellControls(terminal_output_, well_state);
 
         // Create the primary variables.
@@ -814,7 +812,6 @@ namespace detail {
         asImpl().wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
-        // asImpl().computeWellPotentials(state, mob_perfcells, b_perfcells, well_state);
         {
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);

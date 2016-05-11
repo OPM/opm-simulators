@@ -591,7 +591,6 @@ namespace Opm
     {
         if( localWellsActive() )
         {
-            // TODO: these parameter should be stored in the StandardWells class
             const int np = num_phases_;
             const int nw = wells().number_of_wells;
 

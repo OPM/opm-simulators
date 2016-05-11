@@ -377,11 +377,6 @@ namespace Opm {
         void
         assembleMassBalanceEq(const SolutionState& state);
 
-        // TODO: only kept for now due to flow_multisegment
-        // will be removed soon
-        void updateWellState(const V& dwells,
-                             WellState& well_state);
-
 
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
