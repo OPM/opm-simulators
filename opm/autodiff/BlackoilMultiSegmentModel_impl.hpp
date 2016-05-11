@@ -113,19 +113,6 @@ namespace Opm {
 
 
     template <class Grid>
-    int
-    BlackoilMultiSegmentModel<Grid>::numWellVars() const
-    {
-        // For each segment, we have a pressure variable, and one flux per phase.
-        const int nseg = wellModel().numSegment();
-        return (numPhases() + 1) * nseg;
-    }
-
-
-
-
-
-    template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::makeConstantState(SolutionState& state) const
     {

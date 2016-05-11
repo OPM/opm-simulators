@@ -461,19 +461,6 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    int
-    BlackoilModelBase<Grid, WellModel, Implementation>::numWellVars() const
-    {
-        // For each well, we have a bhp variable, and one flux per phase.
-        const int nw = wellModel().localWellsActive() ? wells().number_of_wells : 0;
-        return (numPhases() + 1) * nw;
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
     makeConstantState(SolutionState& state) const
@@ -1248,7 +1235,7 @@ namespace detail {
         varstart += dxvar.size();
 
         // Extract well parts np phase rates + bhp
-        const V dwells = subset(dx, Span(asImpl().numWellVars(), 1, varstart));
+        const V dwells = subset(dx, Span(asImpl().wellModel().numWellVars(), 1, varstart));
         varstart += dwells.size();
 
         assert(varstart == dx.size());

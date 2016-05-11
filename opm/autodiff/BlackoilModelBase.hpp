@@ -343,8 +343,6 @@ namespace Opm {
         /// return true if wells are available on this process
         bool localWellsActive() const { return well_model_.localWellsActive(); }
 
-        int numWellVars() const;
-
         void
         makeConstantState(SolutionState& state) const;
 

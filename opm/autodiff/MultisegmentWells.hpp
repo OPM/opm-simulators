@@ -114,7 +114,9 @@ namespace Opm {
 
             void setWellsActive(const bool wells_active) { wells_active_ = wells_active; };
 
-            bool localWellsActive() const { return ! wells_multisegment_.empty(); }
+            bool localWellsActive() const { return ! wells_multisegment_.empty(); };
+
+            int numWellVars() const { return (num_phases_ + 1) * nseg_total_; };
 
             template <class ReservoirResidualQuant, class SolutionState>
             void extractWellPerfProperties(const SolutionState& state,

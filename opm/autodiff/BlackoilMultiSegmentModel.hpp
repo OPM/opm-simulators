@@ -170,8 +170,6 @@ namespace Opm {
                     SolutionState& state,
                     WellState& well_state);
 
-        int numWellVars() const;
-
         void
         makeConstantState(SolutionState& state) const;
 

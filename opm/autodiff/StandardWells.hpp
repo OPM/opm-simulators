@@ -81,6 +81,7 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
+            int numWellVars() const;
 
             /// Density of each well perforation
             Vector& wellPerforationDensities(); // mutable version kept for BlackoilMultisegmentModel
