@@ -296,12 +296,23 @@ namespace Opm
             // Find sparsity structure as union of basic block sparsity structures,
             // corresponding to the jacobians with respect to pressure.
             // Use our custom PointOneOp to get to the union structure.
-            // Note that we only iterate over the pressure derivatives on purpose.
+            // As default we only iterate over the pressure derivatives.
             Eigen::SparseMatrix<double, Eigen::ColMajor> col_major = eqs[0].derivative()[0].getSparse();
             detail::PointOneOp<double> point_one;
             for (int phase = 1; phase < np; ++phase) {
                 const AutoDiffMatrix::SparseRep& mat = eqs[phase].derivative()[0].getSparse();
                 col_major = col_major.binaryExpr(mat, point_one);
+            }
+            // For some cases (for instance involving Solvent flow) the reasoning for only adding
+            // the pressure derivatives fails. As getting the sparsity pattern is non-trivial, in terms
+            // of work, the full sparsity pattern is only added when required.
+            if (parameters_.require_full_sparsity_pattern_) {
+                for (int p1 = 0; p1 < np; ++p1) {
+                    for (int p2 = 1; p2 < np; ++p2) { // pressure is already added
+                        const AutoDiffMatrix::SparseRep& mat = eqs[p1].derivative()[p2].getSparse();
+                        col_major = col_major.binaryExpr(mat, point_one);
+                    }
+                }
             }
 
             // Automatically convert the column major structure to a row-major structure
