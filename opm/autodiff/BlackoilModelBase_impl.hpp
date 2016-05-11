@@ -751,8 +751,6 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
 
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-
         // If we have VFP tables, we need the well connection
         // pressures for the "simple" hydrostatic correction
         // between well depth and vfp table depth.
@@ -812,11 +810,11 @@ namespace detail {
         asImpl().wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
-        {
+
+        if (param_.compute_well_potentials_) {
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            asImpl().wellModel().computeWellPotentials(state0, mob_perfcells, b_perfcells, vfp_properties_,
-                                                      param_.compute_well_potentials_, gravity, well_state);
+            asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
         }
 
     }

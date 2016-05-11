@@ -138,12 +138,9 @@ namespace Opm {
             // state0 is non-constant, while it will not be used outside of the function
             template <class SolutionState, class WellState>
             void
-            computeWellPotentials(SolutionState& state0,
-                                  const std::vector<ADB>& mob_perfcells,
+            computeWellPotentials(const std::vector<ADB>& mob_perfcells,
                                   const std::vector<ADB>& b_perfcells,
-                                  const VFPProperties& vfp_properties,
-                                  const bool compute_well_potentials,
-                                  const bool gravity,
+                                  SolutionState& state0,
                                   WellState& well_state);
 
 
