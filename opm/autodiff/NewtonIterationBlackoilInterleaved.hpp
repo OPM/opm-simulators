@@ -41,6 +41,7 @@ namespace Opm
         int    linear_solver_restart_;
         int    linear_solver_verbosity_;
         bool   newton_use_gmres_;
+        bool   require_full_sparsity_pattern_;
 
         NewtonIterationBlackoilInterleavedParameters() { reset(); }
         // read values from parameter class
@@ -55,6 +56,7 @@ namespace Opm
             linear_solver_maxiter_   = param.getDefault("linear_solver_maxiter", linear_solver_maxiter_);
             linear_solver_restart_   = param.getDefault("linear_solver_restart", linear_solver_restart_);
             linear_solver_verbosity_ = param.getDefault("linear_solver_verbosity", linear_solver_verbosity_);
+            require_full_sparsity_pattern_ = param.getDefault("require_full_sparsity_pattern", require_full_sparsity_pattern_);
         }
 
         // set default values
@@ -65,6 +67,7 @@ namespace Opm
             linear_solver_maxiter_   = 75;
             linear_solver_restart_   = 40;
             linear_solver_verbosity_ = 0;
+            require_full_sparsity_pattern_ = false;
         }
     };
 

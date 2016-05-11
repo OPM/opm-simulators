@@ -107,6 +107,15 @@ namespace Opm
                                                  Base::deck_->hasKeyword("SOLVENT")));
         }
 
+        void setupLinearSolver()
+        {
+            // require_full_sparsity_pattern as default for solvent runs
+            if (Base::deck_->hasKeyword("SOLVENT") && !Base::param_.has("require_full_sparsity_pattern") )  {
+                Base::param_.insertParameter("require_full_sparsity_pattern","true");
+            }
+            Base::setupLinearSolver();
+        }
+
     };
 
 
