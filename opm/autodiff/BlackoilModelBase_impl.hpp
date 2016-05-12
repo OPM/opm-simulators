@@ -1485,6 +1485,7 @@ namespace detail {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
+        reservoir_state.hydroCarbonState() = primalVariable_;
 
         // TODO: gravity should be stored as a member
         // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
@@ -2269,42 +2270,48 @@ namespace detail {
     BlackoilModelBase<Grid, WellModel, Implementation>::
     updatePrimalVariableFromState(const ReservoirState& state)
     {
-        using namespace Opm::AutoDiffGrid;
-        const int nc = numCells(grid_);
-        const int np = state.numPhases();
+        if (state.hydroCarbonState().size() > 0) {
+            primalVariable_ = state.hydroCarbonState();
+        } else {
+            // if not provided by the state, the primalVariables are computed based
+            // on the saturations
+            using namespace Opm::AutoDiffGrid;
+            const int nc = numCells(grid_);
+            const int np = state.numPhases();
 
-        const PhaseUsage& pu = fluid_.phaseUsage();
-        const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+            const PhaseUsage& pu = fluid_.phaseUsage();
+            const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
 
-        // Water/Oil/Gas system
-        assert (active_[ Gas ]);
+            // Water/Oil/Gas system
+            assert (active_[ Gas ]);
 
-        // reset the primary variables if RV and RS is not set Sg is used as primary variable.
-        primalVariable_.resize(nc);
-        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
+            // reset the primary variables if RV and RS is not set Sg is used as primary variable.
+            primalVariable_.resize(nc);
+            std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
 
-        const V sg = s.col(pu.phase_pos[ Gas ]);
-        const V so = s.col(pu.phase_pos[ Oil ]);
-        const V sw = s.col(pu.phase_pos[ Water ]);
+            const V sg = s.col(pu.phase_pos[ Gas ]);
+            const V so = s.col(pu.phase_pos[ Oil ]);
+            const V sw = s.col(pu.phase_pos[ Water ]);
 
-        const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
-        auto watOnly = sw >  (1 - epsilon);
-        auto hasOil = so > 0;
-        auto hasGas = sg > 0;
+            const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
+            auto watOnly = sw >  (1 - epsilon);
+            auto hasOil = so > 0;
+            auto hasGas = sg > 0;
 
-        // For oil only cells Rs is used as primal variable. For cells almost full of water
-        // the default primal variable (Sg) is used.
-        if (has_disgas_) {
-            for (V::Index c = 0, e = sg.size(); c != e; ++c) {
-                if ( !watOnly[c] && hasOil[c] && !hasGas[c] ) {primalVariable_[c] = PrimalVariables::RS; }
+            // For oil only cells Rs is used as primal variable. For cells almost full of water
+            // the default primal variable (Sg) is used.
+            if (has_disgas_) {
+                for (V::Index c = 0, e = sg.size(); c != e; ++c) {
+                    if ( !watOnly[c] && hasOil[c] && !hasGas[c] ) {primalVariable_[c] = PrimalVariables::RS; }
+                }
             }
-        }
 
-        // For gas only cells Rv is used as primal variable. For cells almost full of water
-        // the default primal variable (Sg) is used.
-        if (has_vapoil_) {
-            for (V::Index c = 0, e = so.size(); c != e; ++c) {
-                if ( !watOnly[c] && hasGas[c] && !hasOil[c] ) {primalVariable_[c] = PrimalVariables::RV; }
+            // For gas only cells Rv is used as primal variable. For cells almost full of water
+            // the default primal variable (Sg) is used.
+            if (has_vapoil_) {
+                for (V::Index c = 0, e = so.size(); c != e; ++c) {
+                    if ( !watOnly[c] && hasGas[c] && !hasOil[c] ) {primalVariable_[c] = PrimalVariables::RV; }
+                }
             }
         }
         updatePhaseCondFromPrimalVariable();
