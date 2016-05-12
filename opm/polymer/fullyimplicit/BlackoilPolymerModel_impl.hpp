@@ -245,10 +245,10 @@ namespace Opm {
             const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], AutoDiffGrid::numCells(grid_));
             const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
             // Compute polymer accumulation term.
-            rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) 
+            rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol)
                                         + pv_mult * rho_rock * (1. - phi) / phi * ads;
         }
- 
+
     }
 
 
@@ -532,25 +532,16 @@ namespace Opm {
             return;
         }
 
-        V aliveWells;
-
-        const int np = wells().number_of_phases;
-        std::vector<ADB> cq_s(np, ADB::null());
-
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-
-        std::vector<ADB> mob_perfcells(np, ADB::null());
-        std::vector<ADB> b_perfcells(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-        }
+        std::vector<ADB> mob_perfcells;
+        std::vector<ADB> b_perfcells;
+        wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
+
+        V aliveWells;
+        std::vector<ADB> cq_s;
 
         wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
 
