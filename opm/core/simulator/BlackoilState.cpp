@@ -24,12 +24,14 @@ BlackoilState::BlackoilState( const BlackoilState& other )
     : SimulationDataContainer(other)
 {
     setBlackoilStateReferencePointers();
+    hydrocarbonstate_ = other.hydroCarbonState();
 }
 
 BlackoilState& BlackoilState::operator=( const BlackoilState& other )
 {
     SimulationDataContainer::operator=(other);
     setBlackoilStateReferencePointers();
+    hydrocarbonstate_ = other.hydroCarbonState();
     return *this;
 }
 
