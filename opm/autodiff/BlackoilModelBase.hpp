@@ -366,11 +366,6 @@ namespace Opm {
                                  std::vector<ADB>& vars) const;
 
         void
-        variableStateExtractWellsVars(const std::vector<int>& indices,
-                                      std::vector<ADB>& vars,
-                                      SolutionState& state) const;
-
-        void
         computeAccum(const SolutionState& state,
                      const int            aix  );
 

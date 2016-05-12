@@ -143,11 +143,15 @@ namespace Opm {
                                   SolutionState& state0,
                                   WellState& well_state);
 
+            template <class SolutionState>
+            void
+            variableStateExtractWellsVars(const std::vector<int>& indices,
+                                          std::vector<ADB>& vars,
+                                          SolutionState& state) const;
 
             void
             variableStateWellIndices(std::vector<int>& indices,
                                      int& next) const;
-
 
             std::vector<int>
             variableWellStateIndices() const;

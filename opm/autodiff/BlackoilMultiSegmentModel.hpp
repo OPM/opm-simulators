@@ -173,11 +173,6 @@ namespace Opm {
         void
         makeConstantState(SolutionState& state) const;
 
-        void
-        variableStateExtractWellsVars(const std::vector<int>& indices,
-                                      std::vector<ADB>& vars,
-                                      SolutionState& state) const;
-
         // TODO: added since the interfaces of the function are different
         // TODO: for StandardWells and MultisegmentWells
         void

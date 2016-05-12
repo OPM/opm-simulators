@@ -127,43 +127,6 @@ namespace Opm {
 
     template <class Grid>
     void
-    BlackoilMultiSegmentModel<Grid>::variableStateExtractWellsVars(const std::vector<int>& indices,
-                                                                   std::vector<ADB>& vars,
-                                                                   SolutionState& state) const
-    {
-        // TODO: using the original Qs for the segment rates for now, to be fixed eventually.
-        // TODO: using the original Bhp for the segment pressures for now, to be fixed eventually.
-
-        // segment phase rates in surface volume
-        state.segqs = std::move(vars[indices[Qs]]);
-
-        // segment pressures
-        state.segp = std::move(vars[indices[Bhp]]);
-
-        // The qs and bhp are no longer primary variables, but could
-        // still be used in computations. They are identical to the
-        // pressures and flows of the top segments.
-        const int np = numPhases();
-        const int ns = state.segp.size();
-        const int nw = wellModel().topWellSegments().size();
-        state.qs = ADB::constant(ADB::V::Zero(np*nw));
-        for (int phase = 0; phase < np; ++phase) {
-            // Extract segment fluxes for this phase (ns consecutive elements).
-            ADB segqs_phase = subset(state.segqs, Span(ns, 1, ns*phase));
-            // Extract top segment fluxes (= well fluxes)
-            ADB wellqs_phase = subset(segqs_phase, wellModel().topWellSegments());
-            // Expand to full size of qs (which contains all phases) and add.
-            state.qs += superset(wellqs_phase, Span(nw, 1, nw*phase), nw*np);
-        }
-        state.bhp = subset(state.segp, wellModel().topWellSegments());
-    }
-
-
-
-
-
-    template <class Grid>
-    void
     BlackoilMultiSegmentModel<Grid>::
     assemble(const ReservoirState& reservoir_state,
              WellState& well_state,

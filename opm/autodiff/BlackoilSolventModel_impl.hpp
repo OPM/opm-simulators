@@ -241,7 +241,7 @@ namespace Opm {
             }
         }
         // wells
-        Base::variableStateExtractWellsVars(indices, vars, state);
+        wellModel().variableStateExtractWellsVars(indices, vars, state);
         return state;
 
     }

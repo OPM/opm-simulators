@@ -668,26 +668,8 @@ namespace detail {
             }
         }
         // wells
-        asImpl().variableStateExtractWellsVars(indices, vars, state);
+        asImpl().wellModel().variableStateExtractWellsVars(indices, vars, state);
         return state;
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    variableStateExtractWellsVars(const std::vector<int>& indices,
-                                  std::vector<ADB>& vars,
-                                  SolutionState& state) const
-    {
-        // Qs.
-        state.qs = std::move(vars[indices[Qs]]);
-
-        // Bhp.
-        state.bhp = std::move(vars[indices[Bhp]]);
     }
 
 
@@ -1024,7 +1006,7 @@ namespace detail {
             std::vector<ADB> vars = ADB::variables(vars0);
 
             SolutionState wellSolutionState = state0;
-            asImpl().variableStateExtractWellsVars(indices, vars, wellSolutionState);
+            asImpl().wellModel().variableStateExtractWellsVars(indices, vars, wellSolutionState);
             asImpl().wellModel().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
             asImpl().wellModel().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             asImpl().wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);

@@ -1137,6 +1137,24 @@ namespace Opm
 
 
 
+    template <class SolutionState>
+    void
+    StandardWells::
+    variableStateExtractWellsVars(const std::vector<int>& indices,
+                                  std::vector<ADB>& vars,
+                                  SolutionState& state) const
+    {
+        // Qs.
+        state.qs = std::move(vars[indices[Qs]]);
+
+        // Bhp.
+        state.bhp = std::move(vars[indices[Bhp]]);
+    }
+
+
+
+
+
     std::vector<int>
     StandardWells::variableWellStateIndices() const
     {
