@@ -1428,7 +1428,7 @@ namespace detail {
         auto watOnly = sw >  (1 - epsilon);
 
         // phase translation sg <-> rs
-        std::vector<int>& hydroCarbonState = reservoir_state.hydroCarbonState();
+        std::vector<HydroCarbonState>& hydroCarbonState = reservoir_state.hydroCarbonState();
         std::fill(hydroCarbonState.begin(), hydroCarbonState.end(), HydroCarbonState::GasAndOil);
 
         if (has_disgas_) {
