@@ -21,6 +21,7 @@
 #define OPM_BLACKOILMODELENUMS_HEADER_INCLUDED
 
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/core/simulator/BlackoilState.hpp>
 
 namespace Opm
 {
@@ -37,7 +38,6 @@ namespace Opm
         RS = 1,
         RV = 2
     };
-
 
     enum CanonicalVariablePositions {
         Pressure = 0,

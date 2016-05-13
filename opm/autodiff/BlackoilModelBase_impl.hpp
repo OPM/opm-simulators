@@ -1428,7 +1428,8 @@ namespace detail {
         auto watOnly = sw >  (1 - epsilon);
 
         // phase translation sg <-> rs
-        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
+        std::vector<int>& hydroCarbonState = reservoir_state.hydroCarbonState();
+        std::fill(hydroCarbonState.begin(), hydroCarbonState.end(), HydroCarbonState::GasAndOil);
 
         if (has_disgas_) {
             const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
@@ -1444,7 +1445,7 @@ namespace detail {
                 if (useSg[c]) {
                     rs[c] = rsSat[c];
                 } else {
-                    primalVariable_[c] = PrimalVariables::RS;
+                    hydroCarbonState[c] = HydroCarbonState::OilOnly;
                 }
             }
 
@@ -1470,7 +1471,7 @@ namespace detail {
                 if (useSg[c]) {
                     rv[c] = rvSat[c];
                 } else {
-                    primalVariable_[c] = PrimalVariables::RV;
+                    hydroCarbonState[c] = HydroCarbonState::GasOnly;
                 }
             }
 
@@ -1485,15 +1486,13 @@ namespace detail {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
-        reservoir_state.hydroCarbonState() = primalVariable_;
-
         // TODO: gravity should be stored as a member
         // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
         // asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
         asImpl().updateWellState(dwells,well_state);
 
         // Update phase conditions used for property calculations.
-        updatePhaseCondFromPrimalVariable();
+        updatePhaseCondFromPrimalVariable(reservoir_state);
     }
 
 
@@ -2270,51 +2269,7 @@ namespace detail {
     BlackoilModelBase<Grid, WellModel, Implementation>::
     updatePrimalVariableFromState(const ReservoirState& state)
     {
-        if (state.hydroCarbonState().size() > 0) {
-            primalVariable_ = state.hydroCarbonState();
-        } else {
-            // if not provided by the state, the primalVariables are computed based
-            // on the saturations
-            using namespace Opm::AutoDiffGrid;
-            const int nc = numCells(grid_);
-            const int np = state.numPhases();
-
-            const PhaseUsage& pu = fluid_.phaseUsage();
-            const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
-
-            // Water/Oil/Gas system
-            assert (active_[ Gas ]);
-
-            // reset the primary variables if RV and RS is not set Sg is used as primary variable.
-            primalVariable_.resize(nc);
-            std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
-
-            const V sg = s.col(pu.phase_pos[ Gas ]);
-            const V so = s.col(pu.phase_pos[ Oil ]);
-            const V sw = s.col(pu.phase_pos[ Water ]);
-
-            const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
-            auto watOnly = sw >  (1 - epsilon);
-            auto hasOil = so > 0;
-            auto hasGas = sg > 0;
-
-            // For oil only cells Rs is used as primal variable. For cells almost full of water
-            // the default primal variable (Sg) is used.
-            if (has_disgas_) {
-                for (V::Index c = 0, e = sg.size(); c != e; ++c) {
-                    if ( !watOnly[c] && hasOil[c] && !hasGas[c] ) {primalVariable_[c] = PrimalVariables::RS; }
-                }
-            }
-
-            // For gas only cells Rv is used as primal variable. For cells almost full of water
-            // the default primal variable (Sg) is used.
-            if (has_vapoil_) {
-                for (V::Index c = 0, e = so.size(); c != e; ++c) {
-                    if ( !watOnly[c] && hasGas[c] && !hasOil[c] ) {primalVariable_[c] = PrimalVariables::RV; }
-                }
-            }
-        }
-        updatePhaseCondFromPrimalVariable();
+        updatePhaseCondFromPrimalVariable(state);
     }
 
 
@@ -2325,7 +2280,7 @@ namespace detail {
     template <class Grid, class WellModel, class Implementation>
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
-    updatePhaseCondFromPrimalVariable()
+    updatePhaseCondFromPrimalVariable(const ReservoirState& state)
     {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         isRs_ = V::Zero(nc);
@@ -2336,27 +2291,26 @@ namespace detail {
             // updatePhaseCondFromPrimarVariable() logic requires active gas and oil phase.
             phaseCondition_.assign(nc, PhasePresence());
             return;
-        }
-
+        }       
         for (int c = 0; c < nc; ++c) {
             phaseCondition_[c] = PhasePresence(); // No free phases.
             phaseCondition_[c].setFreeWater(); // Not necessary for property calculation usage.
-            switch (primalVariable_[c]) {
-            case PrimalVariables::Sg:
+            switch (state.hydroCarbonState()[c]) {
+            case HydroCarbonState::GasAndOil:
                 phaseCondition_[c].setFreeOil();
                 phaseCondition_[c].setFreeGas();
                 isSg_[c] = 1;
                 break;
-            case PrimalVariables::RS:
+            case HydroCarbonState::OilOnly:
                 phaseCondition_[c].setFreeOil();
                 isRs_[c] = 1;
                 break;
-            case PrimalVariables::RV:
+            case HydroCarbonState::GasOnly:
                 phaseCondition_[c].setFreeGas();
                 isRv_[c] = 1;
                 break;
             default:
-                OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << c << ": " << primalVariable_[c]);
+                OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << c << ": " << state.hydroCarbonState()[c]);
             }
         }
     }

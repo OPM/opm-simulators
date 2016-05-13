@@ -305,7 +305,6 @@ namespace Opm {
         /// \brief The number of cells of the global grid.
         int global_nc_;
 
-        std::vector<int>         primalVariable_;
         V pvdt_;
         std::vector<std::string> material_name_;
         std::vector<std::vector<double>> residual_norms_history_;
@@ -494,7 +493,7 @@ namespace Opm {
         /// Update the phaseCondition_ member based on the primalVariable_ member.
         /// Also updates isRs_, isRv_ and isSg_;
         void
-        updatePhaseCondFromPrimalVariable();
+        updatePhaseCondFromPrimalVariable(const ReservoirState& state);
 
         /// \brief Compute the reduction within the convergence check.
         /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows

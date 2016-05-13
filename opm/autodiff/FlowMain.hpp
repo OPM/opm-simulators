@@ -69,7 +69,7 @@
 #include <opm/autodiff/moduleVersion.hpp>
 
 #include <opm/core/utility/share_obj.hpp>
-
+#include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
@@ -533,6 +533,7 @@ namespace Opm
                 props.capPress(numCells, state_->saturation().data(), cells.data(), pc.data(), nullptr);
                 fluidprops_->setSwatInitScaling(state_->saturation(), pc);
             }
+            initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid));
         }
 
 

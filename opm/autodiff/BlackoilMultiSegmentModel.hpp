@@ -133,7 +133,6 @@ namespace Opm {
         using Base::isRv_;
         using Base::has_disgas_;
         using Base::has_vapoil_;
-        using Base::primalVariable_;
         using Base::cells_;
         using Base::param_;
         using Base::linsolver_;

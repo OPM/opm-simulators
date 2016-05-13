@@ -173,7 +173,6 @@ namespace Opm {
         using Base::phaseCondition_;
         using Base::residual_;
         using Base::terminal_output_;
-        using Base::primalVariable_;
         using Base::pvdt_;
         using Base::vfp_properties_;
 
