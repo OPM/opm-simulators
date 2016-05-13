@@ -10,12 +10,14 @@ void initHydroCarbonState(BlackoilState& state, const PhaseUsage& pu, const int 
     enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour, Water = BlackoilPhases::Aqua };
     // hydrocarbonstate is only used when gas and oil is present
     assert(pu.phase_used[Oil]);
-    if (!pu.phase_used[Gas]) {
-        return; // do nothing
-    }
-    std::vector<int>& hydroCarbonState = state.hydroCarbonState();
-    const int np = pu.num_phases;
+    std::vector<HydroCarbonState>& hydroCarbonState = state.hydroCarbonState();
     hydroCarbonState.resize(num_cells);
+    if (!pu.phase_used[Gas]) {
+        // hydroCarbonState should only be used when oil and gas is present. Return OilOnly to avoid potential trouble.
+        std::fill(hydroCarbonState.begin(), hydroCarbonState.end(), HydroCarbonState::OilOnly);
+        return;
+    }
+    const int np = pu.num_phases;
     std::fill(hydroCarbonState.begin(), hydroCarbonState.end(), HydroCarbonState::GasAndOil);
 
     // set hydrocarbon state

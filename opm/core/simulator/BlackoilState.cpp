@@ -21,10 +21,11 @@ BlackoilState::BlackoilState( size_t num_cells , size_t num_faces , size_t num_p
 }
 
 BlackoilState::BlackoilState( const BlackoilState& other )
-    : SimulationDataContainer(other)
+    : SimulationDataContainer(other),
+      hydrocarbonstate_(other.hydroCarbonState())
 {
     setBlackoilStateReferencePointers();
-    hydrocarbonstate_ = other.hydroCarbonState();
+
 }
 
 BlackoilState& BlackoilState::operator=( const BlackoilState& other )
