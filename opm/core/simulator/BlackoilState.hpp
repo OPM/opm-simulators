@@ -30,6 +30,12 @@
 namespace Opm
 {
 
+enum HydroCarbonState {
+    GasOnly = 0,
+    GasAndOil = 1,
+    OilOnly = 2
+};
+
     /// Simulator state for a blackoil simulator.
     class BlackoilState : public SimulationDataContainer
     {
