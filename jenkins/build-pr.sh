@@ -29,7 +29,7 @@ then
   OPM_COMMON_REVISION=pull/`echo $ghprbCommentBody | sed -r 's/.*opm-common=([0-9]+).*/\1/g'`/merge
 fi
 
-for upstream in $upstreams
+for upstream in ${upstreams[*]}
 do
   if grep -q "$upstream=" <<< $ghprbCommentBody
   then
