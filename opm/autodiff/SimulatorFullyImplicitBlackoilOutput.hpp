@@ -316,7 +316,7 @@ namespace Opm
             // create output thread if enabled and rank is I/O rank
             // async output is enabled by default if pthread are enabled
 #if HAVE_PTHREAD
-            const bool asyncOutputDefault = true;
+            const bool asyncOutputDefault = false;
 #else
             const bool asyncOutputDefault = false;
 #endif
