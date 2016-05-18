@@ -23,7 +23,7 @@
 
 #include <opm/core/linalg/LinearSolverFactory.hpp>
 
-#if HAVE_SUITESPARSE_UMFPACK_H
+#if HAVE_UMFPACK
 #include <opm/core/linalg/LinearSolverUmfpack.hpp>
 #endif
 
@@ -45,7 +45,7 @@ namespace Opm
 
     LinearSolverFactory::LinearSolverFactory()
     {
-#if HAVE_SUITESPARSE_UMFPACK_H
+#if HAVE_UMFPACK
         solver_.reset(new LinearSolverUmfpack);
 #elif HAVE_DUNE_ISTL
         solver_.reset(new LinearSolverIstl);
@@ -65,7 +65,7 @@ namespace Opm
             param.getDefault<std::string>("linsolver", "umfpack");
 
         if (ls == "umfpack") {
-#if HAVE_SUITESPARSE_UMFPACK_H
+#if HAVE_UMFPACK
             solver_.reset(new LinearSolverUmfpack);
 #endif
         }
