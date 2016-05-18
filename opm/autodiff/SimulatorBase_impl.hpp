@@ -22,6 +22,7 @@
 #include <algorithm>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
 
 namespace Opm
@@ -83,10 +84,11 @@ namespace Opm
         WellState prev_well_state;
 
 
-		if (output_writer_.isRestart()) {
-			// This is a restart, populate WellState and ReservoirState state objects from restart file
-			output_writer_.initFromRestartFile(props_.phaseUsage(), props_.permeability(), grid_, state, prev_well_state);
-		}
+        if (output_writer_.isRestart()) {
+            // This is a restart, populate WellState and ReservoirState state objects from restart file
+            output_writer_.initFromRestartFile(props_.phaseUsage(), props_.permeability(), grid_, state, prev_well_state);
+            initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid_));
+        }
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
