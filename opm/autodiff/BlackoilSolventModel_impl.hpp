@@ -532,7 +532,8 @@ namespace Opm {
         auto watOnly = sw >  (1 - epsilon);
 
         // phase translation sg <-> rs
-        std::fill(primalVariable_.begin(), primalVariable_.end(), PrimalVariables::Sg);
+        std::vector<HydroCarbonState>& hydroCarbonState = reservoir_state.hydroCarbonState();
+        std::fill(hydroCarbonState.begin(), hydroCarbonState.end(), HydroCarbonState::GasAndOil);
 
         if (has_disgas_) {
             const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
@@ -548,7 +549,7 @@ namespace Opm {
                 if (useSg[c]) {
                     rs[c] = rsSat[c];
                 } else {
-                    primalVariable_[c] = PrimalVariables::RS;
+                    hydroCarbonState[c] = HydroCarbonState::OilOnly;
                 }
             }
 
@@ -574,7 +575,7 @@ namespace Opm {
                 if (useSg[c]) {
                     rv[c] = rvSat[c];
                 } else {
-                    primalVariable_[c] = PrimalVariables::RV;
+                    hydroCarbonState[c] = HydroCarbonState::GasOnly;
                 }
             }
         }
@@ -615,7 +616,7 @@ namespace Opm {
         Base::updateWellState(dwells,well_state);
 
         // Update phase conditions used for property calculations.
-        updatePhaseCondFromPrimalVariable();
+        updatePhaseCondFromPrimalVariable(reservoir_state);
     }
 
 
