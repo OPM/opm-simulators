@@ -28,6 +28,8 @@
 
 #include <iostream>
 #include <map>
+#include <cstdlib>
+
 
 #include <ert/ecl/ecl_rst_file.h>
 #include <ert/ecl/ecl_kw.h>
@@ -52,23 +54,38 @@ BOOST_AUTO_TEST_CASE(CompareRestartFileResults)
     ecl_file_type*  file1 =  ecl_file_open_rstblock_report_step( filename1.c_str() , last_report_step, 1);
     ecl_file_type*  file2 =  ecl_file_open_rstblock_report_step( filename2.c_str() , last_report_step, 1);
 
-    for (auto key : {"PRESSURE", "SWAT", "SGAS", "RS", "RV"}) {
-        ecl_kw_type * kw_1 =  ecl_file_iget_named_kw( file1 , key, 0);
-        ecl_kw_type * kw_2 =  ecl_file_iget_named_kw( file2 , key, 0);
+    if (!file1) {
+        std::cerr << "Failed to open restart file: " << filename1 << std::endl;
+        BOOST_REQUIRE( false );
+    }
 
-        bool numeric_equal = ecl_kw_numeric_equal(kw_1, kw_2, abs_diff , relative_diffs[key]);
-        if (numeric_equal) {
-            std::cout << " Restart results for " << key << " compared ok" << std::endl;
+    if (!file2) {
+        std::cerr << "Failed to open restart file: " << filename2 << std::endl;
+        BOOST_REQUIRE( false );
+    }
+
+    for (const char * key : {"PRESSURE", "SWAT", "SGAS", "RS", "RV"}) {
+        if ((ecl_file_has_kw( file1 , key)) && (ecl_file_has_kw( file2 , key))) {
+            ecl_kw_type * kw_1 =  ecl_file_iget_named_kw( file1 , key , 0);
+            ecl_kw_type * kw_2 =  ecl_file_iget_named_kw( file2 , key , 0);
+
+            bool numeric_equal = ecl_kw_numeric_equal(kw_1, kw_2, abs_diff , relative_diffs[key]);
+            if (numeric_equal) {
+                std::cout << " Restart results for " << key << " compared ok" << std::endl;
+            } else {
+                float max_value,min_value;
+                ecl_kw_inplace_sub(kw_1, kw_2);
+                ecl_kw_max_min(kw_1,&max_value, &min_value);
+                std::cout <<  " Restart results for " << key << " is not ok, failing test: " <<  std::endl
+                          <<  " Relative difference allowed is " << relative_diffs[key] << std::endl
+                          <<  " Actual absolute difference minimum value, maximum value is: " <<  min_value << ", " << max_value << std::endl;
+            }
+
+            BOOST_CHECK(numeric_equal);
         } else {
-            float max_value,min_value;
-            ecl_kw_inplace_sub(kw_1, kw_2);
-            ecl_kw_max_min(kw_1,&max_value, &min_value);
-            std::cout <<  " Restart results for " << key << " is not ok, failing test: " <<  std::endl
-                      <<  " Relative difference allowed is " << relative_diffs[key] << std::endl
-                      <<  " Actual absolute difference minimum value, maximum value is: " <<  min_value << ", " << max_value << std::endl;
+            std::cerr << "Could not find keyword: " << key << " in restart files" << std::endl;
+            BOOST_REQUIRE( false );
         }
-
-        BOOST_CHECK_EQUAL(numeric_equal, true);
     }
 
     ecl_file_close(file1);
