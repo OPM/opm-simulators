@@ -385,7 +385,12 @@ namespace Opm
             ParserPtr parser(new Parser());
             {
                 std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::DefaultMessageTypes);
+                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::DefaultMessageTypes);
                 OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
+                OpmLog::addBackend( "STREAMLOG", streamLog);
+                prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false, false));
+                streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
+                streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false, true));
             }
 
             // Create Deck and EclipseState.
@@ -692,15 +697,18 @@ namespace Opm
 
             if (!schedule->initOnly()) {
                 if (output_cout_) {
-                    std::cout << "\n\n================ Starting main simulation loop ===============\n"
-                              << std::flush;
+                    std::string msg;
+                    msg = "\n\n================ Starting main simulation loop ===============\n";
+                    OpmLog::info(msg);
                 }
 
                 SimulatorReport fullReport = simulator_->run(simtimer, *state_);
 
                 if (output_cout_) {
-                    std::cout << "\n\n================    End of simulation     ===============\n\n";
-                    fullReport.reportFullyImplicit(std::cout);
+                    std::ostringstream ss;
+                    ss << "\n\n================    End of simulation     ===============\n\n";
+                    fullReport.reportFullyImplicit(ss);
+                    OpmLog::info(ss.str());
                     if (param_.anyUnused()) {
                         // This allows a user to catch typos and misunderstandings in the
                         // use of simulator parameters.
