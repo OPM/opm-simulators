@@ -246,10 +246,10 @@ namespace Opm
 
     void
     BlackoilOutputWriter::
-    writeInit(const SimulatorTimerInterface& timer)
+    writeInit(const SimulatorTimerInterface& timer, const NNC& nnc)
     {
         if( eclWriter_ ) {
-            eclWriter_->writeInit(timer);
+            eclWriter_->writeInit(timer, nnc);
         }
     }
 

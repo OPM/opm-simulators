@@ -252,9 +252,23 @@ namespace Opm
 #endif
         }
 
+        /// checks cartesian adjacency of global indices g1 and g2
+        bool cartesianAdjacent(const Grid& grid, int g1, int g2) {
+            // we need cartDims from UgGridHelpers
+            using namespace UgGridHelpers;
 
+            int diff = std::abs(g1 - g2);
 
+            const int * dimens = cartDims(grid);
+            if (diff == 1)
+               return true;
+            if (diff == dimens[0])
+               return true;
+            if (diff == dimens[0] * dimens[1])
+               return true;
 
+            return false;
+        }
 
         // Print startup message if on output rank.
         void printStartupMessage()
@@ -676,8 +690,6 @@ namespace Opm
             const auto initConfig = eclipse_state_->getInitConfig();
             simtimer.init(timeMap, (size_t)initConfig->getRestartStep());
 
-
-
             if (!schedule->initOnly()) {
                 if (output_cout_) {
                     std::cout << "\n\n================ Starting main simulation loop ===============\n"
@@ -704,10 +716,11 @@ namespace Opm
                     fullReport.reportParam(tot_os);
                 }
             } else {
-                output_writer_->writeInit( simtimer );
+                output_writer_->writeInit( simtimer, geoprops_->nnc() );
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
+
             }
             return EXIT_SUCCESS;
         }
