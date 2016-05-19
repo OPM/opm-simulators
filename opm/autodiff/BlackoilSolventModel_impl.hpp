@@ -384,6 +384,11 @@ namespace Opm {
                 ReservoirState& reservoir_state,
                 WellState& well_state)
     {
+        //TODO:
+        // This is basicly a copy of updateState in the Base class
+        // The convergence is very sensitive to details in the appelyard process
+        // and the hydrocarbonstate detection. Further changes may occur, refactoring
+        // to reuse more of the base class is planned when the code mature a bit more.
         using namespace Opm::AutoDiffGrid;
         const int np = fluid_.numPhases();
         const int nc = numCells(grid_);
@@ -425,13 +430,13 @@ namespace Opm {
 
         // initialize with zeros
         // if the phase is active the saturation are overwritten.
-        V so = zero;
+        V so;
         V sw = zero;
         V sg = zero;
         V ss = zero;
 
         // Appleyard chop process.
-        // We chop to large updates in saturations
+        // We chop too large updates in the saturations
         {
             V maxVal = zero;
             V dso = zero;
@@ -507,7 +512,7 @@ namespace Opm {
         // The oil saturation is defined to
         // fill the rest of the pore space.
         // For convergence reasons oil saturations
-        // must be included in the appelyard copping
+        // is included in the appelyard chopping.
         so = V::Constant(nc,1.0) - sw - sg - ss;
 
         // Update rs and rv
