@@ -83,7 +83,8 @@ namespace Opm {
         EclEpsGridProperties epsGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
         const auto& satnum = eclState->get3DProperties().getIntGridProperty("SATNUM");
-
+        
+        const std::string tag = "Scaled endpoints";
         for (int c = 0; c < nc; ++c) {
             const int cartIdx = compressedToCartesianIdx[c];
             const std::string satnumIdx = std::to_string(satnum.iget(cartIdx));
@@ -100,7 +101,7 @@ namespace Opm {
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
                 const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGU exceed 1.0 - SWL";
                 scaled_messages_.push_back(msg);
-                OpmLog::warning(msg);
+                OpmLog::warning(tag, msg);
                 counter_.warning += 1;
             }
             
@@ -108,7 +109,7 @@ namespace Opm {
             if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
                 const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL exceed 1.0 - SWU";
                 scaled_messages_.push_back(msg);
-                OpmLog::warning(msg);
+                OpmLog::warning(tag, msg);
                 counter_.warning += 1;
             }
 
@@ -117,14 +118,14 @@ namespace Opm {
                 if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
 
                 if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR + SGCR + SWL exceed 1.0";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
             }
@@ -133,21 +134,21 @@ namespace Opm {
                 if (scaledEpsInfo_[c].Swl > scaledEpsInfo_[c].Swcr) {
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SWL > SWCR";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
 
                 if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SWCR > SOWCR";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
             
                 if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR > SWU";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
             }
@@ -156,7 +157,7 @@ namespace Opm {
                 if (scaledEpsInfo_[c].Sgl > scaledEpsInfo_[c].Sgcr) {
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL > SGCR";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
             }
@@ -165,14 +166,14 @@ namespace Opm {
                 if (scaledEpsInfo_[c].Sgcr > scaledEpsInfo_[c].Sogcr) {
                     const std::string msg = "-- Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGCR > SOGCR";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
 
                 if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
                     const std::string msg = "Warning: For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR > SGU";
                     scaled_messages_.push_back(msg);
-                    OpmLog::warning(msg);
+                    OpmLog::warning(tag, msg);
                     counter_.warning += 1;
                 }
             }
