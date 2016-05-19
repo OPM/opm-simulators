@@ -372,6 +372,9 @@ namespace Opm
                 std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::DefaultMessageTypes);
                 OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
                 OpmLog::addBackend( "STREAMLOG", streamLog);
+                prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false, false));
+                streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
+                streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false, true));
             }
 
             // Create Deck and EclipseState.
