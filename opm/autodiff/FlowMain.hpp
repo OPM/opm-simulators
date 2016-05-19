@@ -264,9 +264,9 @@ namespace Opm
                 std::cout << "**********************************************************************\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "*                   This is Flow (version " << version << ")"
-                   << std::string(26 - version.size(), ' ') << "*\n";
+                          << std::string(26 - version.size(), ' ') << "*\n";
                 std::cout << "*                                                                    *\n";
-                std::cout <<    "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
+                std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
                 std::cout << "*            and is part of OPM. For more information see:           *\n";
                 std::cout << "*                       http://opm-project.org                       *\n";
                 std::cout << "*                                                                    *\n";
