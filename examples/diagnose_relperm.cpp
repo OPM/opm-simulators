@@ -92,6 +92,9 @@ try
     std::string logFile = baseName + ".SATFUNCLOG";
     std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile, Log::DefaultMessageTypes);
     OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
+    std::shared_ptr<StreamLog> streamLog = std::make_shared<EclipsePRTLog>(std::cout, Log::DefaultMessageTypes);
+    OpmLog::addBackend( "STREAMLOG" , streamLog );
+    streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
     Opm::time::StopWatch timer;
     timer.start();
     RelpermDiagnostics diagnostic;
