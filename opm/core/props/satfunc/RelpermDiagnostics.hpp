@@ -62,8 +62,6 @@ namespace Opm {
                        DeckConstPtr deck,
                        const GridT& grid);
 
-        std::vector<std::string> getMessages() const;
-
     private:
         enum FluidSystem {
             OilWater,
@@ -83,22 +81,9 @@ namespace Opm {
   
         SaturationFunctionFamily satFamily_;
 
-        struct Counter {
-            Counter();
-            int error;
-            int warning;
-            int problem;
-            int bug;
-        };
-
-        Counter counter_;
-        
         std::vector<Opm::EclEpsScalingPointsInfo<double> > unscaledEpsInfo_;
         std::vector<Opm::EclEpsScalingPointsInfo<double> > scaledEpsInfo_;
 
-        std::vector<std::string> messages_;
-        ///Store scaled information.
-        std::vector<std::string> scaled_messages_;
 
         ///Check the phase that used.
         void phaseCheck_(DeckConstPtr deck);
