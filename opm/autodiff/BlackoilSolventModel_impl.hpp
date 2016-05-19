@@ -365,7 +365,7 @@ namespace Opm {
             int oil_pos = fluid_.phaseUsage().phase_pos[Oil];
 
             // remove contribution from the dissolved gas.
-            const ADB cq_s_solvent = (isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction) * (cq_s[gas_pos] - (rs_perfcells * cq_s[oil_pos] / (ones - rs_perfcells * rv_perfcells)));
+            const ADB cq_s_solvent = (isProducer * F_solvent + (ones - isProducer) * injectedSolventFraction) * (cq_s[gas_pos] - rs_perfcells * cq_s[oil_pos]) / (ones - rs_perfcells * rv_perfcells);
 
             // Solvent contribution to the mass balance equation is given as a fraction
             // of the gas contribution.
