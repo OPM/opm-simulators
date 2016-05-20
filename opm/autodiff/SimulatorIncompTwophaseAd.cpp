@@ -37,6 +37,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
+#include <opm/core/utility/DataMap.hpp>
 #include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 

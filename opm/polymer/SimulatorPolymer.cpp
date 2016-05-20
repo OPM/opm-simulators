@@ -36,6 +36,8 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
+#include <opm/core/utility/Compat.hpp>
+#include <opm/core/utility/DataMap.hpp>
 #include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 
@@ -608,17 +610,20 @@ namespace Opm
                                const std::string& output_dir)
         {
 #ifdef HAVE_ERT
-            Opm::DataMap dm;
-            dm["saturation"] = &state.saturation();
-            dm["pressure"] = &state.pressure();
-            dm["concentration"] = &state.getCellData( state.CONCENTRATION ) ;
-            dm["cmax"] = &state.getCellData( state.CMAX ) ;
-            std::vector<double> cell_velocity;
-            Opm::estimateCellVelocity(grid, state.faceflux(), cell_velocity);
-            dm["velocity"] = &cell_velocity;
+            using ds = data::Solution::key;
+            data::Solution sol;
+            sol.insert( ds::PRESSURE, state.pressure() );
+            sol.insert( ds::SWAT, destripe( state.saturation(), 0, 2 ) );
 
-            writeECLData(grid, dm, simtimer.currentStepNum(), simtimer.simulationTimeElapsed(), simtimer.currentDateTime(),
-                         output_dir, "polymer_ecl");
+            writeECLData( grid.cartdims[ 0 ],
+                          grid.cartdims[ 1 ],
+                          grid.cartdims[ 2 ],
+                          grid.number_of_cells,
+                          sol,
+                          simtimer.currentStepNum(),
+                          simtimer.simulationTimeElapsed(),
+                          simtimer.currentPosixTime(),
+                          output_dir, "polymer_ecl");
 #else
         OPM_THROW(std::runtime_error, "Cannot call outputStateBinary() without ert library support. Reconfigure with --with-ert and recompile.");
 #endif

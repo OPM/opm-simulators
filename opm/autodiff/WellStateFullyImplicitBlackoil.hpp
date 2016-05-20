@@ -191,6 +191,60 @@ namespace Opm
         std::vector<double>& wellPotentials() { return well_potentials_; }
         const std::vector<double>& wellPotentials() const { return well_potentials_; }
 
+        data::Wells report() const override {
+            data::Wells res = WellState::report();
+
+            const int nw = this->numWells();
+            const int np = this->numPhases();
+
+            /* this is a reference or example on **how** to convert from
+             * WellState to something understood by opm-output. it is intended
+             * to be properly implemented and maintained as a part of
+             * simulators, as it relies on simulator internals, details and
+             * representations.
+             */
+
+            for( auto w = 0; w < nw; ++w ) {
+                using rt = data::Rates::opt;
+                std::map< size_t, data::Completion > completions;
+
+                // completions aren't supported yet
+                //const auto* begin = wells_->well_connpos + w;
+                //const auto* end = wells_->well_connpos + w + 1;
+                //for( auto* i = begin; i != end; ++i ) {
+                //    const auto perfrate = this->perfPhaseRates().begin() + *i;
+                //    data::Rates perfrates;
+                //    perfrates.set( rt::wat, *(perfrate + 0) );
+                //    perfrates.set( rt::oil, *(perfrate + 1) );
+                //    perfrates.set( rt::gas, *(perfrate + 2) );
+
+                //    const size_t active_index = wells_->well_cells[ *i ];
+
+                //    completions.emplace( active_index,
+                //        data::Completion{ active_index, perfrates } );
+                //}
+
+                const auto wellrate_index = np * w;
+                const auto& wv = this->wellRates();
+
+                data::Rates wellrates;
+                if( np == 3 ) {
+                    /* only write if 3-phase solution */
+                    wellrates.set( rt::wat, wv[ wellrate_index + 0 ] );
+                    wellrates.set( rt::oil, wv[ wellrate_index + 1 ] );
+                    wellrates.set( rt::gas, wv[ wellrate_index + 2 ] );
+                }
+
+                const double bhp  = this->bhp()[ w ];
+                const double thp  = this->thp()[ w ];
+
+                res.emplace( wells_->name[ w ],
+                    data::Well { wellrates, bhp, thp, std::move( completions ) } );
+            }
+
+            return res;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;

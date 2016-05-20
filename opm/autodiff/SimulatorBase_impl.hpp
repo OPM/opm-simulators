@@ -110,14 +110,19 @@ namespace Opm
         }
 
         // init output writer
-        output_writer_.writeInit( timer, geo_.nonCartesianConnections() );
+        output_writer_.writeInit( geo_.nonCartesianConnections() );
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
         {
             // -1 means that we'll take the last report step that was written
             const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
-            output_writer_.restore( timer, state, prev_well_state, restorefilename, desiredRestoreStep );
+
+            output_writer_.restore( timer,
+                                    state,
+                                    prev_well_state,
+                                    restorefilename,
+                                    desiredRestoreStep );
         }
 
         unsigned int totalNonlinearIterations = 0;
@@ -179,7 +184,7 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                adaptiveTimeStepping->step( timer, *solver, state, well_state,  output_writer_ );
+                adaptiveTimeStepping->step( timer, *solver, state, well_state, output_writer_ );
             }
             else {
                 // solve for complete report step

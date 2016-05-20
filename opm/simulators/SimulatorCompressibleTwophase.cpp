@@ -34,6 +34,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
+#include <opm/core/utility/DataMap.hpp>
 #include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
@@ -158,6 +159,7 @@ namespace Opm
         if (!vtkfile) {
             OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
         }
+
         Opm::DataMap dm;
         dm["saturation"] = &state.saturation();
         dm["pressure"] = &state.pressure();
