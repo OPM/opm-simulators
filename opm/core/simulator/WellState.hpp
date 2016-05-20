@@ -22,6 +22,8 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
+#include <opm/output/Wells.hpp>
+
 #include <array>
 #include <map>
 #include <string>
@@ -207,6 +209,18 @@ namespace Opm
         {
             return wellRates().size() / numWells();
         }
+
+        virtual data::Wells report() const
+        {
+            return { { /* WellState offers no completion data, so that has to be added later */ },
+                this->bhp(),
+                this->temperature(),
+                this->wellRates(),
+                this->perfPress(),
+                this->perfRates() };
+        }
+
+        virtual ~WellState() {}
 
     private:
         std::vector<double> bhp_;
