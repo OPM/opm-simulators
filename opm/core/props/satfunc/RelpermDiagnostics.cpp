@@ -316,17 +316,17 @@ namespace Opm{
         const std::string regionIdx = std::to_string(satnumIdx);
         //Check sg column.
         if (sg.front() < 0.0 || sg.back() > 1.0) {
-            const std::string msg = "Error:   In SGFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            const std::string msg = "In SGFN table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
             OpmLog::error(msg);
         }
         
         //Check krg column.
         if (krg.front() < 0.0 || krg.back() > 1.0) {
-            const std::string msg = "Error:   In SGFN table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
+            const std::string msg = "In SGFN table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
             OpmLog::error(msg);
         }
         if (krg.front() != 0.0) {
-            const std::string msg = "Error:   In SGFN table SATNUM = " + regionIdx + ", first value of krg should be 0.";
+            const std::string msg = "In SGFN table SATNUM = " + regionIdx + ", first value of krg should be 0.";
             OpmLog::error(msg);
         }
     }
