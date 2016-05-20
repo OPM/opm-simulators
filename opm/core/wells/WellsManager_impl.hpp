@@ -2,6 +2,7 @@
 #include <opm/core/grid/GridHelpers.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
@@ -233,9 +234,9 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     // Check that the complete well is on this process
                     if ( sum_completions_on_proc < completionSet->size() )
                     {
-                        std::cout<< "Well "<< well->name() << " does not seem to be"
-                                 << "completely in the disjoint partition of "
-                                 << "process. Therefore we  deactivate it here." << std::endl;
+                        OpmLog::warning("Well " + well->name() + " does not seem to be"
+                                        + "completely in the disjoint partition of "
+                                        + "process. Therefore we  deactivate it here.");
                         // Mark well as not existent on this process
                         wells_on_proc[wellIter-wells.begin()] = 0;
                         wellperf_data[well_index_on_proc].clear();
