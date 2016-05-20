@@ -66,16 +66,16 @@ namespace Opm {
             \param  well_state   additional well state object
             \param  outputWriter writer object to write sub steps
         */
-        template <class Solver, class State, class WellState>
+        template <class Solver, class State, class WellState, class Output>
         void step( const SimulatorTimer& timer,
                    Solver& solver, State& state, WellState& well_state,
-                   OutputWriter& outputWriter );
+                   Output& outputWriter );
 
     protected:
-        template <class Solver, class State, class WellState>
+        template <class Solver, class State, class WellState, class Output>
         void stepImpl( const SimulatorTimer& timer,
                        Solver& solver, State& state, WellState& well_state,
-                       OutputWriter* outputWriter);
+                       Output* outputWriter);
 
         typedef std::unique_ptr< TimeStepControlInterface > TimeStepControlType;
 

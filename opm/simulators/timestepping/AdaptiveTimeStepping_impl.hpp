@@ -110,20 +110,20 @@ namespace Opm {
         stepImpl( simulatorTimer, solver, state, well_state );
     }
 
-    template <class Solver, class State, class WellState>
+    template <class Solver, class State, class WellState, class Output>
     void AdaptiveTimeStepping::
     step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state,
-          OutputWriter& outputWriter )
+          Output& outputWriter )
     {
         stepImpl( simulatorTimer, solver, state, well_state, &outputWriter );
     }
 
     // implementation of the step method
-    template <class Solver, class State, class WState>
+    template <class Solver, class State, class WState, class Output >
     void AdaptiveTimeStepping::
     stepImpl( const SimulatorTimer& simulatorTimer,
               Solver& solver, State& state, WState& well_state,
-              OutputWriter* outputWriter )
+              Output* outputWriter )
     {
         const double timestep = simulatorTimer.currentStepLength();
 
