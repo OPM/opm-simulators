@@ -22,6 +22,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
@@ -64,14 +65,16 @@ namespace Opm
             if (rockKeyword.size() != 1) {
                 // here it would be better not to use std::cout directly but to add the
                 // warning to some "warning list"...
-                std::cout << "Can only handle a single region in ROCK ("<<rockKeyword.size()<<" regions specified)."
-                          << " Ignoring all except for the first.\n";
+                OpmLog::warning("Can only handle a single region in ROCK ("
+                                + std::to_string(rockKeyword.size())
+                                + " regions specified)."
+                                + " Ignoring all except for the first.");
             }
 
             pref_ = rockKeyword.getRecord(0).getItem("PREF").getSIDouble(0);
             rock_comp_ = rockKeyword.getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(0);
         } else {
-            std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
+            OpmLog::warning("**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB).");
         }
     }
 
