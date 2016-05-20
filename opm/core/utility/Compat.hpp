@@ -117,15 +117,6 @@ inline void solution2sim( const data::Solution& sol,
         state.getCellData( "RV" ) = sol[ ds::RV ];
 }
 
-inline data::Wells state2wells( const WellState& ws ) {
-    return { {},
-            ws.bhp(),
-            ws.temperature(),
-            ws.wellRates(),
-            ws.perfPress(),
-            ws.perfRates() };
-}
-
 inline void wells2state( const data::Wells& wells, WellState& state ) {
     state.bhp() = wells.bhp;
     state.temperature() = wells.temperature;
