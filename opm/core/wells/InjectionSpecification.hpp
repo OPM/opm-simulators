@@ -2,6 +2,7 @@
 #define	OPM_INJECTORSPECIFICATION_HPP
 
 #include <opm/core/wells.h>
+#include <string>
 
 namespace Opm
 {
@@ -25,7 +26,9 @@ namespace Opm
         };
 
         InjectionSpecification();
-
+        const std::string ControlMode2String(const ControlMode& mode);
+        const std::string InjectorType2String(const InjectorType& type);
+        const std::string GuideRateType2String(const GuideRateType& type);
         InjectorType injector_type_;
         ControlMode control_mode_;
         double surface_flow_max_rate_;

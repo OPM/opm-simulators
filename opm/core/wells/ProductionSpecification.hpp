@@ -2,6 +2,7 @@
 #define	OPM_PRODUCTIONSPECIFICATION_HPP
 
 #include <opm/core/wells.h>
+#include <string>
 
 namespace Opm
 {
@@ -25,6 +26,9 @@ namespace Opm
         };
 
         ProductionSpecification();
+        const std::string ControlMode2String(const ControlMode& mode);
+        const std::string Procedure2String(const Procedure& type);
+        const std::string GuideRateType2String(const GuideRateType& type);
 
         ControlMode control_mode_;
         Procedure procedure_;
