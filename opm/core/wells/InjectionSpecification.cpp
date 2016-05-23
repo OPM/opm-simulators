@@ -18,80 +18,40 @@ namespace Opm
 
     }
 
-    const std::string
-    InjectionSpecification::ControlMode2String(const ControlMode& mode)
+    std::string
+    InjectionSpecification::toString(const ControlMode& mode)
     {
-        std::string stringValue;
-
         switch(mode) {
-        case ControlMode::NONE:
-            stringValue = "NONE";
-            break;
-        case ControlMode::RATE:
-            stringValue = "RATE";
-            break;
-        case ControlMode::RESV:
-            stringValue = "RESV";
-            break;
-        case ControlMode::BHP:
-            stringValue = "BHP";
-            break;
-        case ControlMode::THP:
-            stringValue = "THP";
-            break;
-        case ControlMode::REIN:
-            stringValue = "REIN";
-            break;
-        case ControlMode::VREP:
-            stringValue = "VREP";
-            break;
-        case ControlMode::GRUP:
-            stringValue = "GRUP";
-            break;
-        case ControlMode::FLD:
-            stringValue = "FLD";
-            break;
+        case ControlMode::NONE: return "NONE";
+        case ControlMode::RATE: return "RATE";
+        case ControlMode::RESV: return "RESV";
+        case ControlMode::BHP : return "BHP" ;
+        case ControlMode::THP : return "THP" ;
+        case ControlMode::REIN: return "REIN";
+        case ControlMode::VREP: return "VREP";
+        case ControlMode::GRUP: return "GRUP";
+        case ControlMode::FLD : return "FLD" ;
         }
-
-        return stringValue;
     }
 
 
-    const std::string
-    InjectionSpecification::InjectorType2String(const InjectorType& type)
+    std::string
+    InjectionSpecification::toString(const InjectorType& type)
     {
-        std::string stringValue;
-
         switch(type) {
-        case InjectorType::WATER:
-            stringValue = "WATER";
-            break;
-        case InjectorType::OIL:
-            stringValue = "OIL";
-            break;
-        case InjectorType::GAS:
-            stringValue = "GAS";
-            break;
+        case InjectorType::WATER: return "WATER";
+        case InjectorType::OIL  : return "OIL"  ;
+        case InjectorType::GAS  : return "GAS"  ;
         }
-
-        return stringValue;
     }
 
 
-    const std::string 
-    InjectionSpecification::GuideRateType2String(const GuideRateType& type)
+    std::string 
+    InjectionSpecification::toString(const GuideRateType& type)
     {
-        std::string stringValue;
-        
         switch(type) {
-        case GuideRateType::RAT:
-            stringValue = "RAT";
-            break;
-        case GuideRateType::NONE_GRT:
-            stringValue = "NONE_GRT";
-            break;
+        case GuideRateType::RAT     : return "RAT"     ;
+        case GuideRateType::NONE_GRT: return "NONE_GRT";
         }
-
-        return stringValue;
     }
 } // namespace Opm

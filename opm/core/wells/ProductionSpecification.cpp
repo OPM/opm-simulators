@@ -20,96 +20,46 @@ namespace Opm
     }
 
 
-    const std::string
-    ProductionSpecification::ControlMode2String(const ControlMode& mode)
+    std::string
+    ProductionSpecification::toString(const ControlMode& mode)
     {
-        std::string stringValue;
-
         switch(mode) {
-        case ControlMode::NONE:
-            stringValue = "NONE";
-            break;
-        case ControlMode::ORAT:
-            stringValue = "ORAT";
-            break;
-        case ControlMode::WRAT:
-            stringValue = "WRAT";
-            break;
-        case ControlMode::GRAT:
-            stringValue = "GRAT";
-            break;
-        case ControlMode::LRAT:
-            stringValue = "LRAT";
-            break;
-        case ControlMode::CRAT:
-            stringValue = "CRAT";
-            break;
-        case ControlMode::RESV:
-            stringValue = "RESV";
-            break;
-        case ControlMode::PRBL:
-            stringValue = "RPBL";
-            break;
-        case ControlMode::BHP:
-            stringValue = "BHP";
-            break;
-        case ControlMode::THP:
-            stringValue = "THP";
-            break;
-        case ControlMode::GRUP:
-            stringValue = "GRUP";
-            break;
-        case ControlMode::FLD:
-            stringValue = "FLD";
-            break;
+        case ControlMode::NONE: return "NONE";
+        case ControlMode::ORAT: return "ORAT";
+        case ControlMode::WRAT: return "WRAT";
+        case ControlMode::GRAT: return "GRAT";
+        case ControlMode::LRAT: return "LRAT";
+        case ControlMode::CRAT: return "CRAT";
+        case ControlMode::RESV: return "RESV";
+        case ControlMode::PRBL: return "RPBL";
+        case ControlMode::BHP : return "BHP" ;
+        case ControlMode::THP : return "THP" ;
+        case ControlMode::GRUP: return "GRUP";
+        case ControlMode::FLD : return "FLD" ;
         }
-
-        return stringValue;
     }
 
 
-    const std::string 
-    ProductionSpecification::Procedure2String(const Procedure& type)
+    std::string 
+    ProductionSpecification::toString(const Procedure& type)
     {
-        std::string stringValue;
-
         switch(type) {
-        case Procedure::NONE_P:
-            stringValue = "NONE_P";
-            break;
-        case Procedure::RATE:
-            stringValue = "RATE";
-            break;
-        case Procedure::WELL:
-            stringValue = "WELL";
-            break;
+        case Procedure::NONE_P: return "NONE_P";
+        case Procedure::RATE  : return "RATE"  ;
+        case Procedure::WELL  : return "WELL"  ;
         }
-
-        return stringValue;
     }
 
 
-    const std::string 
-    ProductionSpecification::GuideRateType2String(const GuideRateType& type)
+    std::string 
+    ProductionSpecification::toString(const GuideRateType& type)
     {
-        std::string stringValue;
-        
         switch(type) {
-        case GuideRateType::OIL:
-            stringValue = "OIL";
-            break;
-        case GuideRateType::GAS:
-            stringValue = "GAS";
-            break;
-        case GuideRateType::WATER:
-            stringValue = "WATER";
-            break;
-        case GuideRateType::NONE_GRT:
-            stringValue = "NONE_GRT";
-            break;
+        case GuideRateType::OIL     : return "OIL"     ;
+        case GuideRateType::GAS     : return "GAS"     ;
+        case GuideRateType::WATER   : return "WATER"   ;
+        case GuideRateType::NONE_GRT: return "NONE_GRT";
         }
-
-        return stringValue;
     }
 
 

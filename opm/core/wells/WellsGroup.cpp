@@ -345,7 +345,7 @@ namespace Opm
                                             mode);
 
                 if (my_rate > target_rate) {
-                    OpmLog::warning("Group " + injSpec().ControlMode2String(mode) 
+                    OpmLog::warning("Group " + injSpec().toString(mode) 
                                     + " target not met for group " + name() + "\n"
                                     + "target = " + std::to_string(target_rate) + "\n"
                                     + "rate   = " + std::to_string(my_rate));
@@ -378,7 +378,7 @@ namespace Opm
                                                   child_phases_summed.surf_prod_rates,
                                                   mode);
                 if (std::fabs(my_rate) > target_rate) {
-                    OpmLog::warning("Group" + prodSpec().ControlMode2String(mode) 
+                    OpmLog::warning("Group" + prodSpec().toString(mode) 
                                     + " target not met for group " + name() + "\n"
                                     + "target = " + std::to_string(target_rate) + '\n'
                                     + "rate   = " + std::to_string(my_rate));
