@@ -489,10 +489,10 @@ namespace Opm
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
 
-            const ADB tmp_oil = cmix_s[oilpos] - (rv_perfcells * cmix_s[gaspos] / d);
+            const ADB tmp_oil = (cmix_s[oilpos] - rv_perfcells * cmix_s[gaspos]) / d;
             volumeRatio += tmp_oil / b_perfcells[oilpos];
 
-            const ADB tmp_gas = cmix_s[gaspos] - (rs_perfcells * cmix_s[oilpos] / d);
+            const ADB tmp_gas = (cmix_s[gaspos] - rs_perfcells * cmix_s[oilpos]) / d;
             volumeRatio += tmp_gas / b_perfcells[gaspos];
         }
         else {
