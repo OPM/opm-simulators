@@ -378,6 +378,11 @@ namespace Opm {
 
         }
     }
+
+
+
+
+
     template <class Grid>
     void
     BlackoilSolventModel<Grid>::
@@ -410,7 +415,7 @@ namespace Opm {
         varstart += dss.size();
 
         // Extract well parts np phase rates + bhp
-        const V dwells = subset(dx, Span(Base::numWellVars(), 1, varstart));
+        const V dwells = subset(dx, Span(wellModel().numWellVars(), 1, varstart));
         varstart += dwells.size();
 
         assert(varstart == dx.size());
@@ -616,10 +621,7 @@ namespace Opm {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
-        // TODO: gravity should be stored as a member
-        // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        // asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
-        Base::updateWellState(dwells,well_state);
+        wellModel().updateWellState(dwells, dpMaxRel(), well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
