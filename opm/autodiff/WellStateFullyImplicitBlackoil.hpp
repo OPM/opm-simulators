@@ -21,6 +21,7 @@
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
 
+#include <opm/output/Wells.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
@@ -196,6 +197,53 @@ namespace Opm
         std::vector<int> current_controls_;
         std::vector<double> well_potentials_;
     };
+
+    static inline data::Wells report( const WellStateFullyImplicitBlackoil& state,
+                                      const Wells* wells,
+                                      double step_len ) {
+
+        using rt = data::Rates::opt;
+
+        std::map< std::string, data::Well > res;
+
+        const int nw = state.numWells();
+        const int np = state.numPhases();
+
+        for( auto w = 0; w < nw; ++w ) {
+
+            std::map< size_t, data::Completion > completions;
+            const auto* begin = wells->well_connpos + w;
+            const auto* end = wells->well_connpos + w + 1;
+            for( auto* i = begin; i != end; ++i ) {
+
+                const auto perfrate = state.perfPhaseRates().begin() + *i;
+                data::Rates perfrates;
+                perfrates.set( rt::wat, *(perfrate + 0 ) );
+                perfrates.set( rt::oil, *(perfrate + 1 ) );
+                perfrates.set( rt::gas, *(perfrate + 2 ) );
+                /* needs conversion to logical cartesian index */
+                const size_t globalindex = wells->well_cells[ *i ];
+
+                completions.emplace( globalindex,
+                    data::Completion{ globalindex, perfrates } );
+            }
+
+            const auto wellrate_index = np * w;
+            const auto& wv = state.wellRates();
+
+            data::Rates wellrates;
+            wellrates.set( rt::wat, wv[ wellrate_index + 0 ] );
+            wellrates.set( rt::oil, wv[ wellrate_index + 1 ] );
+            wellrates.set( rt::gas, wv[ wellrate_index + 2 ] );
+
+            const double bhp  = state.bhp()[ w ];
+
+            res.emplace( wells->name[ w ],
+                data::Well { wellrates, bhp, std::move( completions ) } );
+        }
+
+        return { step_len, std::move( res ) };
+    }
 
 } // namespace Opm
 
