@@ -1079,43 +1079,7 @@ namespace Opm
 
         well_perforation_cell_densities_ = Eigen::Map<const Vector>(rho_avg_perf.data(), nperf_total);
 
-        // We should put this in a global class
-        std::vector<double> perf_depth_vec;
-        perf_depth_vec.reserve(nperf_total);
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wells_multisegment_[w];
-            const std::vector<double>& perf_depth_well = well->perfDepth();
-            perf_depth_vec.insert(perf_depth_vec.end(), perf_depth_well.begin(), perf_depth_well.end());
-        }
-        assert(int(perf_depth_vec.size()) == nperf_total);
-        const Vector perf_depth = Eigen::Map<Vector>(perf_depth_vec.data(), nperf_total);
-
-        const Vector perf_cell_depth_diffs = perf_depth - perfcelldepth;
-
-        well_perforation_cell_pressure_diffs_ = gravity_ * well_perforation_cell_densities_ * perf_cell_depth_diffs;
-
-
-        // Calculating the depth difference between segment nodes and perforations.
-        // TODO: should be put somewhere else for better clarity later
-        well_segment_perforation_depth_diffs_ = Vector::Constant(nperf_total, -1e100);
-
-        int start_perforation = 0;
-        for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wells_multisegment_[w];
-            const int nseg = well->numberOfSegments();
-            const int nperf = well->numberOfPerforations();
-            const std::vector<std::vector<int>>& segment_perforations = well->segmentPerforations();
-            for (int s = 0; s < nseg; ++s) {
-                const int nperf_seg = segment_perforations[s].size();
-                const double segment_depth = well->segmentDepth()[s];
-                for (int perf = 0; perf < nperf_seg; ++perf) {
-                    const int perf_number = segment_perforations[s][perf] + start_perforation;
-                    well_segment_perforation_depth_diffs_[perf_number] = segment_depth - perf_depth[perf_number];
-                }
-            }
-            start_perforation += nperf;
-        }
-        assert(start_perforation == nperf_total);
+        well_perforation_cell_pressure_diffs_ = gravity_ * well_perforation_cell_densities_ * perf_cell_depth_diffs_;
     }
 
 

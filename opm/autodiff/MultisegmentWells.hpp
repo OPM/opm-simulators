@@ -259,6 +259,9 @@ namespace Opm {
         // The depth difference between segment nodes and perforations
         Vector well_segment_perforation_depth_diffs_;
 
+        // The depth difference between the perforations and the perforation cells.
+        Vector perf_cell_depth_diffs_;
+
         // the average of the fluid densities in the grid block
         // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
         // and the cell center of the grid block

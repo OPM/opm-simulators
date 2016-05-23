@@ -233,6 +233,43 @@ namespace Opm {
         vfp_properties_ = vfp_properties_arg;
         gravity_ = gravity_arg;
         perf_cell_depth_ = subset(depth_arg, wellOps().well_cells);;
+
+        const int nw = wells_multisegment_.size();
+
+        // Calculating the depth difference between perforation and the cell center in the peforated cells.
+        std::vector<double> perf_depth_vec;
+        perf_depth_vec.reserve(nperf_total_);
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wells_multisegment_[w];
+            const std::vector<double>& perf_depth_well = well->perfDepth();
+            perf_depth_vec.insert(perf_depth_vec.end(), perf_depth_well.begin(), perf_depth_well.end());
+        }
+        assert(int(perf_depth_vec.size()) == nperf_total_);
+        const Vector perf_depth = Eigen::Map<Vector>(perf_depth_vec.data(), nperf_total_);
+
+        perf_cell_depth_diffs_ = perf_depth - perf_cell_depth_;
+
+        // Calculating the depth difference between segment nodes and perforations.
+        well_segment_perforation_depth_diffs_ = Vector::Constant(nperf_total_, -1e100);
+
+        int start_perforation = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wells_multisegment_[w];
+            const int nseg = well->numberOfSegments();
+            const int nperf = well->numberOfPerforations();
+            const std::vector<std::vector<int>>& segment_perforations = well->segmentPerforations();
+            for (int s = 0; s < nseg; ++s) {
+                const int nperf_seg = segment_perforations[s].size();
+                const double segment_depth = well->segmentDepth()[s];
+                for (int perf = 0; perf < nperf_seg; ++perf) {
+                    const int perf_number = segment_perforations[s][perf] + start_perforation;
+                    well_segment_perforation_depth_diffs_[perf_number] = segment_depth - perf_depth[perf_number];
+                }
+            }
+            start_perforation += nperf;
+        }
+
+        assert(start_perforation == nperf_total_);
     }
 
 
