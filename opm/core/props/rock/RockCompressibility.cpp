@@ -74,7 +74,7 @@ namespace Opm
             pref_ = rockKeyword.getRecord(0).getItem("PREF").getSIDouble(0);
             rock_comp_ = rockKeyword.getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(0);
         } else {
-            OpmLog::warning("**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB).");
+            OpmLog::warning("No rock compressibility data found in deck (ROCK or ROCKTAB).");
         }
     }
 
