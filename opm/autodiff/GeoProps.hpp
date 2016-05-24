@@ -94,8 +94,6 @@ namespace Opm
                 * cartDims[1]
                 * cartDims[2];
 
-            nnc_ = eclState->getInputNNC();
-
             // get the pore volume multipliers from the EclipseState
             std::vector<double> multpv(numCartesianCells, 1.0);
             const auto& eclProps = eclState->get3DProperties();
@@ -128,6 +126,8 @@ namespace Opm
                 }
             }
 
+            // Non-neighbour connections.
+            nnc_ = eclState->getInputNNC();
 
             // Transmissibility
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
@@ -142,8 +142,6 @@ namespace Opm
 
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
-
-
 
             // Use volume weighted arithmetic average of the NTG values for
             // the cells effected by the current OPM cpgrid process algorithm
@@ -160,6 +158,7 @@ namespace Opm
                 pinchProcess_(grid, *eclState, htrans, numCells);
             }
 
+
             // combine the half-face transmissibilites into the final face
             // transmissibilites.
             tpfa_trans_compute(ug, htrans.data(), trans_.data());
@@ -169,6 +168,10 @@ namespace Opm
             for (int faceIdx = 0; faceIdx < numFaces; faceIdx++) {
                 trans_[faceIdx] *= mult[faceIdx];
             }
+
+            // Create the set of noncartesian connections.
+            noncartesian_ = nnc_;
+            exportNncStructure(grid);
 
             // Compute z coordinates
             for (int c = 0; c<numCells; ++c){
@@ -200,7 +203,6 @@ namespace Opm
                 }
                 std::copy(grav, grav + nd, gravity_);
             }
-            exportNncStructure(grid);
         }
 
 
@@ -214,6 +216,7 @@ namespace Opm
         Vector&       poreVolume()             { return pvol_   ;}
         Vector&       transmissibility()       { return trans_  ;}
         const NNC& nnc() const { return nnc_;}
+        const NNC& nonCartesianConnections() const { return noncartesian_;}
 
     private:
         template <class Grid>
@@ -283,7 +286,7 @@ namespace Opm
                 if (!cartesianAdjacent(grid, c1, c2)) {
                     // suppose c1,c2 is specified in ECLIPSE input
                     // we here overwrite its trans by grid's
-                    nnc_.addNNC(c1, c2, trans_[i]);
+                    noncartesian_.addNNC(c1, c2, trans_[i]);
                 }
             }
         }
@@ -295,8 +298,10 @@ namespace Opm
         double gravity_[3]; // Size 3 even if grid is 2-dim.
         bool use_local_perm_;
 
-        /// Non-neighboring connections
+        // Non-neighboring connections
         NNC nnc_;
+        // Non-cartesian connections
+        NNC noncartesian_;
     };
 
     template <class GridType>
