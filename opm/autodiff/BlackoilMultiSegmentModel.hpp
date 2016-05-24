@@ -51,11 +51,11 @@ namespace Opm {
     /// \tparam  Grid            UnstructuredGrid or CpGrid.
     /// \tparam  Implementation  Provides concrete state types.
     template<class Grid>
-    class BlackoilMultiSegmentModel : public BlackoilModelBase<Grid, StandardWells, BlackoilMultiSegmentModel<Grid> >
+    class BlackoilMultiSegmentModel : public BlackoilModelBase<Grid, MultisegmentWells, BlackoilMultiSegmentModel<Grid> >
     {
     public:
 
-        typedef BlackoilModelBase<Grid, StandardWells, BlackoilMultiSegmentModel<Grid> > Base; // base class
+        typedef BlackoilModelBase<Grid, MultisegmentWells, BlackoilMultiSegmentModel<Grid> > Base; // base class
         typedef typename Base::ReservoirState ReservoirState;
         typedef typename Base::WellState WellState;
         typedef BlackoilMultiSegmentSolutionState SolutionState;
@@ -85,13 +85,12 @@ namespace Opm {
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
-                          const Wells*                    wells,
+                          const MultisegmentWells&        well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,
                           const bool has_vapoil,
-                          const bool terminal_output,
-                          const std::vector<WellMultiSegmentConstPtr>& wells_multisegment);
+                          const bool terminal_output);
 
         /// Called once before each time step.
         /// \param[in] dt                     time step size
@@ -136,11 +135,12 @@ namespace Opm {
         using Base::cells_;
         using Base::param_;
         using Base::linsolver_;
+        using Base::phaseCondition_;
+        using Base::vfp_properties_;
+        using Base::well_model_;
 
-        MultisegmentWells ms_wells_;
-
-        using Base::stdWells;
-        using Base::wells;
+        using Base::wellModel;
+        // using Base::wells;
         using Base::wellsActive;
         using Base::updatePrimalVariableFromState;
         using Base::phaseCondition;
@@ -159,35 +159,10 @@ namespace Opm {
         using Base::asImpl;
         using Base::variableReservoirStateInitials;
 
-        // TODO: fixing the confusing naming
-        const MultisegmentWells& msWells() const { return ms_wells_; }
-        MultisegmentWells& msWells() { return ms_wells_; }
 
-        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return msWells().wells(); }
+        const std::vector<WellMultiSegmentConstPtr>& wellsMultiSegment() const { return well_model_.msWells(); }
 
-        const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return msWells().wellOps(); }
-
-        // TODO: kept for now. to be removed soon.
-        void updateWellState(const V& dwells,
-                             WellState& well_state);
-
-        std::vector<V>
-        variableStateInitials(const ReservoirState& x,
-                              const WellState& xw) const;
-
-        void
-        variableWellStateInitials(const WellState& xw,
-                                  std::vector<V>& vars0) const;
-
-        void computeWellConnectionPressures(const SolutionState& state,
-                                            const WellState& xw);
-
-        /// added to fixing the flow_multisegment running
-        bool
-        baseSolveWellEq(const std::vector<ADB>& mob_perfcells,
-                        const std::vector<ADB>& b_perfcells,
-                        SolutionState& state,
-                        WellState& well_state);
+        const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return well_model_.wellOps(); }
 
         bool
         solveWellEq(const std::vector<ADB>& mob_perfcells,
@@ -196,20 +171,13 @@ namespace Opm {
                     WellState& well_state);
 
         void
-        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                         const SolutionState& state,
-                                         WellState& xw) const;
-
-        int numWellVars() const;
-
-        void
         makeConstantState(SolutionState& state) const;
 
+        // TODO: added since the interfaces of the function are different
+        // TODO: for StandardWells and MultisegmentWells
         void
-        variableStateExtractWellsVars(const std::vector<int>& indices,
-                                      std::vector<ADB>& vars,
-                                      SolutionState& state) const;
-
+        computeWellConnectionPressures(const SolutionState& state,
+                                       const WellState& well_state);
 
     };
 

@@ -71,7 +71,7 @@ namespace Opm {
                              const DerivedGeology&                   geo,
                              const RockCompressibility*              rock_comp_props,
                              const SolventPropsAdFromDeck&           solvent_props,
-                             const Wells*                            wells,
+                             const StandardWellsSolvent&             well_model,
                              const NewtonIterationBlackoilInterface& linsolver,
                              const EclipseStateConstPtr              eclState,
                              const bool                              has_disgas,
@@ -129,7 +129,7 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        using Base::stdWells;
+        using Base::wellModel;
         using Base::wells;
         using Base::variableState;
         using Base::computeGasPressure;
@@ -214,11 +214,6 @@ namespace Opm {
 
         const std::vector<PhasePresence>
         phaseCondition() const {return this->phaseCondition_;}
-
-        void extractWellPerfProperties(const SolutionState& state,
-                                       std::vector<ADB>& mob_perfcells,
-                                       std::vector<ADB>& b_perfcells);
-
 
         // compute effective viscosities (mu_eff_) and effective b factors (b_eff_)  using the ToddLongstaff model
         void computeEffectiveProperties(const SolutionState&  state);

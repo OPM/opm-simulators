@@ -90,6 +90,7 @@ namespace Opm
         typedef typename Traits::OutputWriter OutputWriter;
         typedef typename Traits::Grid Grid;
         typedef typename Traits::Solver Solver;
+        typedef typename Traits::WellModel WellModel;
 
         /// Initialise from parameters and objects to observe.
         /// \param[in] param       parameters, this class accepts the following:
@@ -149,7 +150,7 @@ namespace Opm
                                         WellState& well_state,
                                         const Wells* wells);
 
-        std::unique_ptr<Solver> createSolver(const Wells* wells);
+        std::unique_ptr<Solver> createSolver(const WellModel& well_model);
 
         void
         computeRESV(const std::size_t               step,

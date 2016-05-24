@@ -142,7 +142,7 @@ namespace Opm {
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
-                          const Wells*                    wells,
+                          const WellModel&                well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,
@@ -276,7 +276,6 @@ namespace Opm {
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        WellModel                       std_wells_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -294,6 +293,10 @@ namespace Opm {
 
         std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
+
+        // Well Model
+        WellModel                       well_model_;
+
         V isRs_;
         V isRv_;
         V isSg_;
@@ -328,19 +331,17 @@ namespace Opm {
         }
 
         /// return the WellModel object
-        WellModel& stdWells() { return std_wells_; }
-        const WellModel& stdWells() const { return std_wells_; }
+        WellModel& wellModel() { return well_model_; }
+        const WellModel& wellModel() const { return well_model_; }
 
         /// return the Well struct in the WellModel
-        const Wells& wells() const { return std_wells_.wells(); }
+        const Wells& wells() const { return well_model_.wells(); }
 
         /// return true if wells are available in the reservoir
-        bool wellsActive() const { return std_wells_.wellsActive(); }
+        bool wellsActive() const { return well_model_.wellsActive(); }
 
         /// return true if wells are available on this process
-        bool localWellsActive() const { return std_wells_.localWellsActive(); }
-
-        int numWellVars() const;
+        bool localWellsActive() const { return well_model_.localWellsActive(); }
 
         void
         makeConstantState(SolutionState& state) const;
@@ -365,28 +366,11 @@ namespace Opm {
                                  std::vector<ADB>& vars) const;
 
         void
-        variableStateExtractWellsVars(const std::vector<int>& indices,
-                                      std::vector<ADB>& vars,
-                                      SolutionState& state) const;
-
-        void
         computeAccum(const SolutionState& state,
                      const int            aix  );
 
         void
         assembleMassBalanceEq(const SolutionState& state);
-
-        // TODO: only kept for now due to flow_multisegment
-        // will be removed soon
-        void
-        extractWellPerfProperties(const SolutionState& state,
-                                  std::vector<ADB>& mob_perfcells,
-                                  std::vector<ADB>& b_perfcells) const;
-
-        // TODO: only kept for now due to flow_multisegment
-        // will be removed soon
-        void updateWellState(const V& dwells,
-                             WellState& well_state);
 
 
         bool
@@ -494,6 +478,12 @@ namespace Opm {
         /// Also updates isRs_, isRv_ and isSg_;
         void
         updatePhaseCondFromPrimalVariable(const ReservoirState& state);
+
+        // TODO: added since the interfaces of the function are different
+        // TODO: for StandardWells and MultisegmentWells
+        void
+        computeWellConnectionPressures(const SolutionState& state,
+                                       const WellState& well_state);
 
         /// \brief Compute the reduction within the convergence check.
         /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows

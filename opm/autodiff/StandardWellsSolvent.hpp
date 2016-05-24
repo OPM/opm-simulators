@@ -37,7 +37,7 @@ namespace Opm {
             using Base::computeWellConnectionDensitesPressures;
 
             // ---------  Public methods  ---------
-            explicit StandardWellsSolvent(const Wells* wells);
+            StandardWellsSolvent(const Wells* wells_arg);
 
             // added the Solvent related
             void initSolvent(const SolventPropsAdFromDeck* solvent_props,
@@ -47,9 +47,6 @@ namespace Opm {
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
                                                              const WellState& xw,
-                                                             const BlackoilPropsAdInterface& fluid,
-                                                             const std::vector<bool>& active,
-                                                             const std::vector<PhasePresence>& pc,
                                                              std::vector<double>& b_perf,
                                                              std::vector<double>& rsmax_perf,
                                                              std::vector<double>& rvmax_perf,
@@ -59,25 +56,19 @@ namespace Opm {
             template <class ReservoirResidualQuant, class SolutionState>
             void extractWellPerfProperties(const SolutionState& state,
                                            const std::vector<ReservoirResidualQuant>& rq,
-                                           const int np,
-                                           const BlackoilPropsAdInterface& fluid,
-                                           const std::vector<bool>& active,
                                            std::vector<ADB>& mob_perfcells,
                                            std::vector<ADB>& b_perfcells) const;
 
             template <class SolutionState, class WellState>
             void computeWellConnectionPressures(const SolutionState& state,
-                                                const WellState& xw,
-                                                const BlackoilPropsAdInterface& fluid,
-                                                const std::vector<bool>& active,
-                                                const std::vector<PhasePresence>& phaseCondition,
-                                                const Vector& depth,
-                                                const double gravity);
+                                                const WellState& xw);
 
         protected:
             const SolventPropsAdFromDeck* solvent_props_;
             int solvent_pos_;
             bool has_solvent_;
+
+            using Base::phase_condition_;
 
         };
 

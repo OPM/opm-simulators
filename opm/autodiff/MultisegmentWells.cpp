@@ -140,10 +140,17 @@ namespace Opm {
 
 
     MultisegmentWells::
-    MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_ms, const int np)
-      : wells_multisegment_(wells_ms)
-      , wops_ms_(wells_ms)
-      , num_phases_(np)
+    MultisegmentWells(const Wells* wells_arg,
+                      const std::vector<WellConstPtr>& wells_ecl,
+                      const int time_step)
+      : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
+      , wops_ms_(wells_multisegment_)
+      , num_phases_(wells_arg ? wells_arg->number_of_phases : 0)
+      , wells_(wells_arg)
+      , fluid_(nullptr)
+      , active_(nullptr)
+      , phase_condition_(nullptr)
+      , vfp_properties_(nullptr)
       , well_segment_perforation_pressure_diffs_(ADB::null())
       , well_segment_densities_(ADB::null())
       , well_segment_pressures_delta_(ADB::null())
@@ -152,16 +159,14 @@ namespace Opm {
       , segment_mass_flow_rates_(ADB::null())
       , segment_viscosities_(ADB::null())
     {
-        // TODO: repeated with the wellOps's initialization, delete one soon.
-        // Count the total number of perforations and segments.
-        const int nw = wells_ms.size();
-        top_well_segments_.resize(nw);
+        const int nw = wells_multisegment_.size();
         int nperf_total = 0;
         int nseg_total = 0;
+        top_well_segments_.resize(nw);
         for (int w = 0; w < nw; ++w) {
             top_well_segments_[w] = nseg_total;
-            nperf_total += wells_ms[w]->numberOfPerforations();
-            nseg_total += wells_ms[w]->numberOfSegments();
+            nperf_total += wells_multisegment_[w]->numberOfPerforations();
+            nseg_total += wells_multisegment_[w]->numberOfSegments();
         }
 
         nperf_total_ = nperf_total;
@@ -172,10 +177,120 @@ namespace Opm {
 
 
 
+    std::vector<WellMultiSegmentConstPtr>
+    MultisegmentWells::createMSWellVector(const Wells* wells_arg,
+                                          const std::vector<WellConstPtr>& wells_ecl,
+                                          const int time_step)
+    {
+        std::vector<WellMultiSegmentConstPtr> wells_multisegment;
+
+        if (wells_arg) {
+            // number of wells in wells_arg structure
+            const int nw = wells_arg->number_of_wells;
+            // number of wells in EclipseState
+            const int nw_ecl = wells_ecl.size();
+
+            wells_multisegment.reserve(nw);
+
+            for(int i = 0; i < nw_ecl; ++i) {
+                // not processing SHUT wells
+                if (wells_ecl[i]->getStatus(time_step) == WellCommon::SHUT) {
+                    continue;
+                }
+
+                // checking if the well can be found in the wells
+                const std::string& well_name = wells_ecl[i]->name();
+                int index_well;
+                for (index_well = 0; index_well < nw; ++index_well) {
+                    if (well_name == std::string(wells_arg->name[index_well])) {
+                        break;
+                    }
+                }
+
+                if (index_well != nw) { // found in the wells
+                    wells_multisegment.push_back(std::make_shared<WellMultiSegment>(wells_ecl[i], time_step, wells_arg));
+                }
+            }
+        }
+        return wells_multisegment;
+    }
+
+
+
+
+
+    void
+    MultisegmentWells::init(const BlackoilPropsAdInterface* fluid_arg,
+                            const std::vector<bool>* active_arg,
+                            const std::vector<PhasePresence>* pc_arg,
+                            const VFPProperties*  vfp_properties_arg,
+                            const double gravity_arg,
+                            const Vector& depth_arg)
+    {
+        fluid_ = fluid_arg;
+        active_ = active_arg;
+        phase_condition_ = pc_arg;
+        vfp_properties_ = vfp_properties_arg;
+        gravity_ = gravity_arg;
+        perf_cell_depth_ = subset(depth_arg, wellOps().well_cells);;
+
+        const int nw = wells_multisegment_.size();
+
+        // Calculating the depth difference between perforation and the cell center in the peforated cells.
+        std::vector<double> perf_depth_vec;
+        perf_depth_vec.reserve(nperf_total_);
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wells_multisegment_[w];
+            const std::vector<double>& perf_depth_well = well->perfDepth();
+            perf_depth_vec.insert(perf_depth_vec.end(), perf_depth_well.begin(), perf_depth_well.end());
+        }
+        assert(int(perf_depth_vec.size()) == nperf_total_);
+        const Vector perf_depth = Eigen::Map<Vector>(perf_depth_vec.data(), nperf_total_);
+
+        perf_cell_depth_diffs_ = perf_depth - perf_cell_depth_;
+
+        // Calculating the depth difference between segment nodes and perforations.
+        well_segment_perforation_depth_diffs_ = Vector::Constant(nperf_total_, -1e100);
+
+        int start_perforation = 0;
+        for (int w = 0; w < nw; ++w) {
+            WellMultiSegmentConstPtr well = wells_multisegment_[w];
+            const int nseg = well->numberOfSegments();
+            const int nperf = well->numberOfPerforations();
+            const std::vector<std::vector<int>>& segment_perforations = well->segmentPerforations();
+            for (int s = 0; s < nseg; ++s) {
+                const int nperf_seg = segment_perforations[s].size();
+                const double segment_depth = well->segmentDepth()[s];
+                for (int perf = 0; perf < nperf_seg; ++perf) {
+                    const int perf_number = segment_perforations[s][perf] + start_perforation;
+                    well_segment_perforation_depth_diffs_[perf_number] = segment_depth - perf_depth[perf_number];
+                }
+            }
+            start_perforation += nperf;
+        }
+
+        assert(start_perforation == nperf_total_);
+    }
+
+
+
+
+
     const std::vector<WellMultiSegmentConstPtr>&
-    MultisegmentWells::wells() const
+    MultisegmentWells::msWells() const
     {
         return wells_multisegment_;
+    }
+
+
+
+
+
+    const Wells&
+    MultisegmentWells::wells() const
+    {
+        assert(wells_ !=  nullptr);
+        return *(wells_);
     }
 
 
@@ -196,7 +311,7 @@ namespace Opm {
     MultisegmentWells::
     computeSegmentPressuresDelta(const double grav)
     {
-        const int nw = wells().size();
+        const int nw = msWells().size();
         const int nseg_total = nseg_total_;
 
         if ( !wellOps().has_multisegment_wells ) {
@@ -210,7 +325,7 @@ namespace Opm {
         Vector segment_depth_delta = Vector::Zero(nseg_total);
         int start_segment = 0;
         for (int w = 0; w < nw; ++w) {
-            WellMultiSegmentConstPtr well = wells()[w];
+            WellMultiSegmentConstPtr well = msWells()[w];
             const int nseg = well->numberOfSegments();
             for (int s = 1; s < nseg; ++s) {
                 const int s_outlet = well->outletSegment()[s];
@@ -226,6 +341,38 @@ namespace Opm {
 
         ADB well_segment_perforation_densities = wellOps().s2p * well_segment_densities_;
         well_segment_perforation_pressure_diffs_ = grav * well_segment_perforation_depth_diffs_ * well_segment_perforation_densities;
+    }
+
+
+
+
+
+    void
+    MultisegmentWells::
+    variableStateWellIndices(std::vector<int>& indices,
+                             int& next) const
+    {
+        indices[Qs] = next++;
+        indices[Bhp] = next++;
+    }
+
+
+
+
+
+    std::vector<int>
+    MultisegmentWells::
+    variableWellStateIndices() const
+    {
+        // Black oil model standard is 5 equation.
+        // For the pure well solve, only the well equations are picked.
+        std::vector<int> indices(5, -1);
+        int next = 0;
+
+        variableStateWellIndices(indices, next);
+
+        assert(next == 2);
+        return indices;
     }
 
 } // end of namespace Opm

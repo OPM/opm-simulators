@@ -169,7 +169,9 @@ namespace Opm
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            auto solver = asImpl().createSolver(wells);
+            const WellModel well_model(wells);
+
+            auto solver = asImpl().createSolver(well_model);
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
@@ -373,7 +375,7 @@ namespace Opm
     { }
 
     template <class Implementation>
-    auto SimulatorBase<Implementation>::createSolver(const Wells* wells)
+    auto SimulatorBase<Implementation>::createSolver(const WellModel& well_model)
         -> std::unique_ptr<Solver>
     {
         auto model = std::unique_ptr<Model>(new Model(model_param_,
@@ -381,7 +383,7 @@ namespace Opm
                                                       props_,
                                                       geo_,
                                                       rock_comp_props_,
-                                                      wells,
+                                                      well_model,
                                                       solver_,
                                                       eclipse_state_,
                                                       has_disgas_,

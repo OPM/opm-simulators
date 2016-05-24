@@ -76,7 +76,7 @@ namespace Opm {
                                                      const DerivedGeology&                   geo,
                                                      const RockCompressibility*              rock_comp_props,
                                                      const SolventPropsAdFromDeck&           solvent_props,
-                                                     const Wells*                            wells_arg,
+                                                     const StandardWellsSolvent&             well_model,
                                                      const NewtonIterationBlackoilInterface& linsolver,
                                                      const EclipseStateConstPtr              eclState,
                                                      const bool                              has_disgas,
@@ -84,7 +84,7 @@ namespace Opm {
                                                      const bool                              terminal_output,
                                                      const bool                              has_solvent,
                                                      const bool                              is_miscible)
-        : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver,
+        : Base(param, grid, fluid, geo, rock_comp_props, well_model, linsolver,
                eclState, has_disgas, has_vapoil, terminal_output),
           has_solvent_(has_solvent),
           solvent_pos_(detail::solventPos(fluid.phaseUsage())),
@@ -100,7 +100,8 @@ namespace Opm {
             Base::material_name_.push_back("Solvent");
             assert(solvent_pos_ == fluid_.numPhases());
             residual_.matbalscale.resize(fluid_.numPhases() + 1, 0.0031); // use the same as gas
-            stdWells().initSolvent(&solvent_props_, solvent_pos_, has_solvent_);
+
+            wellModel().initSolvent(&solvent_props_, solvent_pos_, has_solvent_);
         }
         if (is_miscible_) {
             mu_eff_.resize(fluid_.numPhases() + 1, ADB::null());
@@ -240,7 +241,7 @@ namespace Opm {
             }
         }
         // wells
-        Base::variableStateExtractWellsVars(indices, vars, state);
+        wellModel().variableStateExtractWellsVars(indices, vars, state);
         return state;
 
     }
@@ -377,6 +378,11 @@ namespace Opm {
 
         }
     }
+
+
+
+
+
     template <class Grid>
     void
     BlackoilSolventModel<Grid>::
@@ -409,7 +415,7 @@ namespace Opm {
         varstart += dss.size();
 
         // Extract well parts np phase rates + bhp
-        const V dwells = subset(dx, Span(Base::numWellVars(), 1, varstart));
+        const V dwells = subset(dx, Span(wellModel().numWellVars(), 1, varstart));
         varstart += dwells.size();
 
         assert(varstart == dx.size());
@@ -615,10 +621,7 @@ namespace Opm {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
-        // TODO: gravity should be stored as a member
-        // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        // asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
-        Base::updateWellState(dwells,well_state);
+        wellModel().updateWellState(dwells, dpMaxRel(), well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
@@ -816,43 +819,6 @@ namespace Opm {
 
     }
 
-    template <class Grid>
-    void
-    BlackoilSolventModel<Grid>::extractWellPerfProperties(const SolutionState& state,
-                                                          std::vector<ADB>& mob_perfcells,
-                                                          std::vector<ADB>& b_perfcells)
-    {
-        Base::extractWellPerfProperties(state, mob_perfcells, b_perfcells);
-        if (has_solvent_) {
-            int gas_pos = fluid_.phaseUsage().phase_pos[Gas];
-            const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
-            const int nperf = well_cells.size();
-            // Gas and solvent is combinded and solved together
-            // The input in the well equation is then the
-            // total gas phase = hydro carbon gas + solvent gas
-
-            // The total mobility is the sum of the solvent and gas mobiliy
-            mob_perfcells[gas_pos] += subset(rq_[solvent_pos_].mob, well_cells);
-
-            // A weighted sum of the b-factors of gas and solvent are used.
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const ADB zero = ADB::constant(V::Zero(nc));
-            const ADB& ss = state.solvent_saturation;
-            const ADB& sg = (active_[ Gas ]
-                             ? state.saturation[ pu.phase_pos[ Gas ] ]
-                             : zero);
-
-            Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
-            ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
-            V ones = V::Constant(nperf,1.0);
-
-            b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
-            b_perfcells[gas_pos] += (F_solvent * subset(rq_[solvent_pos_].b, well_cells));
-
-        }
-    }
 
     template <class Grid>
     void

@@ -79,7 +79,7 @@ namespace Opm {
                              const DerivedGeology&                   geo,
                              const RockCompressibility*              rock_comp_props,
                              const PolymerPropsAd&                   polymer_props_ad,
-                             const Wells*                            wells,
+                             const StandardWells&                    well_model,
                              const NewtonIterationBlackoilInterface& linsolver,
                              EclipseStateConstPtr                    eclipse_state,
                              const bool                              has_disgas,
@@ -179,7 +179,7 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        using Base::stdWells;
+        using Base::wellModel;
         using Base::wells;
         using Base::wellsActive;
         using Base::variableState;

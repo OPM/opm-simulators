@@ -60,7 +60,18 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            explicit StandardWells(const Wells* wells);
+            StandardWells(const Wells* wells_arg);
+
+            void init(const BlackoilPropsAdInterface* fluid_arg,
+                      const std::vector<bool>* active_arg,
+                      const std::vector<PhasePresence>* pc_arg,
+                      const VFPProperties*  vfp_properties_arg,
+                      const double gravity_arg,
+                      const Vector& depth_arg);
+
+            const WellOps& wellOps() const;
+
+            int numPhases() const { return num_phases_; };
 
             const Wells& wells() const;
 
@@ -70,7 +81,7 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            const WellOps& wellOps() const;
+            int numWellVars() const;
 
             /// Density of each well perforation
             Vector& wellPerforationDensities(); // mutable version kept for BlackoilMultisegmentModel
@@ -80,40 +91,14 @@ namespace Opm {
             Vector& wellPerforationPressureDiffs(); // mutable version kept for BlackoilMultisegmentModel
             const Vector& wellPerforationPressureDiffs() const;
 
-            template <class SolutionState, class WellState>
-            void computePropertiesForWellConnectionPressures(const SolutionState& state,
-                                                             const WellState& xw,
-                                                             const BlackoilPropsAdInterface& fluid,
-                                                             const std::vector<bool>& active,
-                                                             const std::vector<PhasePresence>& pc,
-                                                             std::vector<double>& b_perf,
-                                                             std::vector<double>& rsmax_perf,
-                                                             std::vector<double>& rvmax_perf,
-                                                             std::vector<double>& surf_dens_perf);
-
-            template <class WellState>
-            void computeWellConnectionDensitesPressures(const WellState& xw,
-                                                        const BlackoilPropsAdInterface& fluid,
-                                                        const std::vector<double>& b_perf,
-                                                        const std::vector<double>& rsmax_perf,
-                                                        const std::vector<double>& rvmax_perf,
-                                                        const std::vector<double>& surf_dens_perf,
-                                                        const std::vector<double>& depth_perf,
-                                                        const double grav);
-
             template <class ReservoirResidualQuant, class SolutionState>
             void extractWellPerfProperties(const SolutionState& state,
                                            const std::vector<ReservoirResidualQuant>& rq,
-                                           const int np,
-                                           const BlackoilPropsAdInterface& fluid,
-                                           const std::vector<bool>& active,
                                            std::vector<ADB>& mob_perfcells,
                                            std::vector<ADB>& b_perfcells) const;
 
             template <class SolutionState>
             void computeWellFlux(const SolutionState& state,
-                                 const Opm::PhaseUsage& phase_usage,
-                                 const std::vector<bool>& active,
                                  const std::vector<ADB>& mob_perfcells,
                                  const std::vector<ADB>& b_perfcells,
                                  Vector& aliveWells,
@@ -126,19 +111,11 @@ namespace Opm {
 
             template <class WellState>
             void updateWellState(const Vector& dwells,
-                                 const double gravity,
                                  const double dpmaxrel,
-                                 const Opm::PhaseUsage& pu,
-                                 const std::vector<bool>& active,
-                                 const VFPProperties& vfp_properties,
                                  WellState& well_state);
 
             template <class WellState>
-            void updateWellControls(const Opm::PhaseUsage& pu,
-                                    const double gravity,
-                                    const VFPProperties& vfp_properties,
-                                    const bool terminal_output,
-                                    const std::vector<bool>& active,
+            void updateWellControls(const bool terminal_output,
                                     WellState& xw) const;
 
             // TODO: should LinearisedBlackoilResidual also be a template class?
@@ -152,38 +129,29 @@ namespace Opm {
             void addWellControlEq(const SolutionState& state,
                                   const WellState& xw,
                                   const Vector& aliveWells,
-                                  const std::vector<bool> active,
-                                  const VFPProperties& vfp_properties,
-                                  const double gravity,
                                   LinearisedBlackoilResidual& residual);
 
             template <class SolutionState, class WellState>
             void computeWellConnectionPressures(const SolutionState& state,
-                                                const WellState& xw,
-                                                const BlackoilPropsAdInterface& fluid,
-                                                const std::vector<bool>& active,
-                                                const std::vector<PhasePresence>& phaseCondition,
-                                                const Vector& depth,
-                                                const double gravity);
+                                                const WellState& xw);
 
             // state0 is non-constant, while it will not be used outside of the function
             template <class SolutionState, class WellState>
             void
-            computeWellPotentials(SolutionState& state0,
-                                  const std::vector<ADB>& mob_perfcells,
+            computeWellPotentials(const std::vector<ADB>& mob_perfcells,
                                   const std::vector<ADB>& b_perfcells,
-                                  const Opm::PhaseUsage& pu,
-                                  const std::vector<bool> active,
-                                  const VFPProperties& vfp_properties,
-                                  const bool compute_well_potentials,
-                                  const bool gravity,
+                                  SolutionState& state0,
                                   WellState& well_state);
 
+            template <class SolutionState>
+            void
+            variableStateExtractWellsVars(const std::vector<int>& indices,
+                                          std::vector<ADB>& vars,
+                                          SolutionState& state) const;
 
             void
             variableStateWellIndices(std::vector<int>& indices,
                                      int& next) const;
-
 
             std::vector<int>
             variableWellStateIndices() const;
@@ -197,8 +165,38 @@ namespace Opm {
             bool wells_active_;
             const Wells*   wells_;
             const WellOps  wops_;
+            const int num_phases_;
+
+            const BlackoilPropsAdInterface* fluid_;
+            const std::vector<bool>*  active_;
+            const std::vector<PhasePresence>*  phase_condition_;
+            const VFPProperties* vfp_properties_;
+            double gravity_;
+            // the depth of the all the cell centers
+            // for standard Wells, it the same with the perforation depth
+            Vector perf_cell_depth_;
+
             Vector well_perforation_densities_;
             Vector well_perforation_pressure_diffs_;
+
+            // protected methods
+            template <class SolutionState, class WellState>
+            void computePropertiesForWellConnectionPressures(const SolutionState& state,
+                                                             const WellState& xw,
+                                                             std::vector<double>& b_perf,
+                                                             std::vector<double>& rsmax_perf,
+                                                             std::vector<double>& rvmax_perf,
+                                                             std::vector<double>& surf_dens_perf);
+
+            template <class WellState>
+            void computeWellConnectionDensitesPressures(const WellState& xw,
+                                                        const std::vector<double>& b_perf,
+                                                        const std::vector<double>& rsmax_perf,
+                                                        const std::vector<double>& rvmax_perf,
+                                                        const std::vector<double>& surf_dens_perf,
+                                                        const std::vector<double>& depth_perf,
+                                                        const double grav);
+
         };
 
 

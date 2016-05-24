@@ -37,8 +37,10 @@
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
+#include <opm/autodiff/VFPProperties.hpp>
 
 #include <opm/autodiff/WellMultiSegment.hpp>
+#include <opm/autodiff/WellDensitySegmented.hpp>
 
 
 
@@ -80,16 +82,47 @@ namespace Opm {
             // ---------  Public methods  ---------
             // TODO: using a vector of WellMultiSegmentConstPtr for now
             // TODO: it should use const Wells or something else later.
-            MultisegmentWells(const std::vector<WellMultiSegmentConstPtr>& wells_multisegment, const int np);
+            MultisegmentWells(const Wells* wells_arg,
+                              const std::vector<WellConstPtr>& wells_ecl,
+                              const int time_step);
 
-            const std::vector<WellMultiSegmentConstPtr>& wells() const;
+            std::vector<WellMultiSegmentConstPtr> createMSWellVector(const Wells* wells_arg,
+                                                                     const std::vector<WellConstPtr>& wells_ecl,
+                                                                     const int time_step);
+
+            void init(const BlackoilPropsAdInterface* fluid_arg,
+                      const std::vector<bool>* active_arg,
+                      const std::vector<PhasePresence>* pc_arg,
+                      const VFPProperties*  vfp_properties_arg,
+                      const double gravity_arg,
+                      const Vector& depth_arg);
+
+            const std::vector<WellMultiSegmentConstPtr>& msWells() const;
             const MultisegmentWellOps& wellOps() const;
 
+            const Wells& wells() const;
+
             int numPhases() const { return num_phases_; };
+
+            int numWells() const { return wells_multisegment_.size(); }
 
             int numSegment() const { return nseg_total_; };
 
             int numPerf() const { return nperf_total_; };
+
+            bool wellsActive() const { return wells_active_; };
+
+            void setWellsActive(const bool wells_active) { wells_active_ = wells_active; };
+
+            bool localWellsActive() const { return ! wells_multisegment_.empty(); };
+
+            int numWellVars() const { return (num_phases_ + 1) * nseg_total_; };
+
+            template <class ReservoirResidualQuant, class SolutionState>
+            void extractWellPerfProperties(const SolutionState& state,
+                                           const std::vector<ReservoirResidualQuant>& rq,
+                                           std::vector<ADB>& mob_perfcells,
+                                           std::vector<ADB>& b_perfcells) const;
 
             Vector& wellPerforationCellPressureDiffs() { return well_perforation_cell_pressure_diffs_; };
 
@@ -108,7 +141,11 @@ namespace Opm {
 
             Vector& segVDt() { return segvdt_; };
 
+            const Vector& wellPerforationDensities() const { return well_perforation_densities_; };
+            Vector& wellPerforationDensities() { return well_perforation_densities_; };
 
+            const Vector& wellPerforationPressureDiffs() const { return well_perforation_pressure_diffs_; };
+            Vector& wellPerforationPressureDiffs() { return well_perforation_pressure_diffs_; };
 
             template <class WellState>
             void
@@ -121,24 +158,22 @@ namespace Opm {
             template <class SolutionState>
             void
             computeWellFlux(const SolutionState& state,
-                            const Opm::PhaseUsage& pu,
-                            const std::vector<bool>& active,
-                            const Vector& well_perforation_pressure_diffs,
-                            const DataBlock& compi,
                             const std::vector<ADB>& mob_perfcells,
                             const std::vector<ADB>& b_perfcells,
                             Vector& aliveWells,
                             std::vector<ADB>& cq_s) const;
+
+            template <class SolutionState, class WellState>
+            void updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
+                                                  const SolutionState& state,
+                                                  WellState& xw) const;
 
 
             // Calculate the density of the mixture in the segments
             // And the surface volume of the components in the segments by dt
             template <class SolutionState>
             void
-            computeSegmentFluidProperties(const SolutionState& state,
-                                          const std::vector<PhasePresence>& pc,
-                                          const std::vector<bool>& active,
-                                          const BlackoilPropsAdInterface& fluid);
+            computeSegmentFluidProperties(const SolutionState& state);
 
             void
             computeSegmentPressuresDelta(const double grav);
@@ -154,7 +189,6 @@ namespace Opm {
             addWellControlEq(const SolutionState& state,
                              const WellState& xw,
                              const Vector& aliveWells,
-                             const std::vector<bool>& active,
                              LinearisedBlackoilResidual& residual);
 
             template <class WellState>
@@ -162,13 +196,55 @@ namespace Opm {
             updateWellControls(const bool terminal_output,
                                WellState& xw) const;
 
+            // TODO: these code are same with the StandardWells
+            // to find a better solution later.
+            void
+            variableStateWellIndices(std::vector<int>& indices,
+                                     int& next) const;
+
+            template <class SolutionState>
+            void
+            variableStateExtractWellsVars(const std::vector<int>& indices,
+                                          std::vector<ADB>& vars,
+                                          SolutionState& state) const;
+
+            std::vector<int>
+            variableWellStateIndices() const;
+
+            template <class WellState>
+            void
+            variableWellStateInitials(const WellState& xw,
+                                      std::vector<Vector>& vars0) const;
+
+            template <class SolutionState, class WellState>
+            void computeWellConnectionPressures(const SolutionState& state,
+                                                const WellState& xw,
+                                                const std::vector<ADB>& kr_adb,
+                                                const std::vector<ADB>& fluid_density);
+
     protected:
         // TODO: probably a wells_active_ will be required here.
-        const std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
-        const MultisegmentWellOps wops_ms_;
+        bool wells_active_;
+        std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
+        MultisegmentWellOps wops_ms_;
         const int num_phases_;
         int nseg_total_;
         int nperf_total_;
+
+        // TODO: put the Wells here to simplify the interface
+        // TODO: at the moment, both wells_ and wells_multisegment_
+        // TODO: acutally contain all the wells
+        // TODO: they should be split eventually.
+        const Wells* wells_;
+
+        const BlackoilPropsAdInterface* fluid_;
+        const std::vector<bool>*  active_;
+        const std::vector<PhasePresence>*  phase_condition_;
+        const VFPProperties* vfp_properties_;
+        double gravity_;
+        // The depth of the all the cell centers
+        // It is different from the perforation depth in MultisegmentWells
+        Vector perf_cell_depth_;
 
         // Pressure correction due to the different depth of the perforation
         // and the cell center of the grid block
@@ -182,6 +258,9 @@ namespace Opm {
 
         // The depth difference between segment nodes and perforations
         Vector well_segment_perforation_depth_diffs_;
+
+        // The depth difference between the perforations and the perforation cells.
+        Vector perf_cell_depth_diffs_;
 
         // the average of the fluid densities in the grid block
         // which is used to calculate the hydrostatic head correction due to the depth difference of the perforation
@@ -217,6 +296,13 @@ namespace Opm {
         // segment volume by dt (time step)
         // to handle the volume effects of the segment
         Vector segvdt_;
+
+        // technically, they are only useful for standard wells
+        // since at the moment, we are handling both the standard
+        // wells and the multi-segment wells under the MultisegmentWells
+        // we need them to remove the dependency on StandardWells
+        Vector well_perforation_densities_;
+        Vector well_perforation_pressure_diffs_;
 
     };
 

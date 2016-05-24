@@ -142,6 +142,21 @@ namespace detail {
         return act2can;
     }
 
+
+
+    inline
+    double getGravity(const double* g, const int dim) {
+        double grav = 0.0;
+        if (g) {
+            // Guard against gravity in anything but last dimension.
+            for (int dd = 0; dd < dim - 1; ++dd) {
+                assert(g[dd] == 0.0);
+            }
+            grav = g[dim - 1];
+        }
+        return grav;
+    }
+
 } // namespace detail
 
 
@@ -152,7 +167,7 @@ namespace detail {
                   const BlackoilPropsAdInterface& fluid,
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
-                  const Wells*                    wells_arg,
+                  const WellModel&                well_model,
                   const NewtonIterationBlackoilInterface&    linsolver,
                   Opm::EclipseStateConstPtr eclState,
                   const bool has_disgas,
@@ -162,7 +177,6 @@ namespace detail {
         , fluid_ (fluid)
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
-        , std_wells_ (wells_arg)
         , vfp_properties_(
                     eclState->getTableManager().getVFPInjTables(),
                     eclState->getTableManager().getVFPProdTables())
@@ -177,6 +191,7 @@ namespace detail {
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
+        , well_model_ (well_model)
         , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isRv_(V::Zero(AutoDiffGrid::numCells(grid)))
         , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))
@@ -201,6 +216,15 @@ namespace detail {
 
         assert(numMaterials() == std::accumulate(active_.begin(), active_.end(), 0)); // Due to the material_name_ init above.
 
+        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
+        const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
+
+        well_model_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
+
+        // TODO: put this for now to avoid modify the following code.
+        // TODO: this code can be fragile.
+        const Wells* wells_arg = &(asImpl().well_model_.wells());
+
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
@@ -213,7 +237,7 @@ namespace detail {
             int local_number_of_wells = localWellsActive() ? wells().number_of_wells : 0;
             int global_number_of_wells = info.communicator().sum(local_number_of_wells);
             const bool wells_active = ( wells_arg && global_number_of_wells > 0 );
-            stdWells().setWellsActive(wells_active);
+            wellModel().setWellsActive(wells_active);
             // Compute the global number of cells
             std::vector<int> v( Opm::AutoDiffGrid::numCells(grid_), 1);
             global_nc_ = 0;
@@ -221,7 +245,7 @@ namespace detail {
         }else
 #endif
         {
-            stdWells().setWellsActive( localWellsActive() );
+            wellModel().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
     }
@@ -437,19 +461,6 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    int
-    BlackoilModelBase<Grid, WellModel, Implementation>::numWellVars() const
-    {
-        // For each well, we have a bhp variable, and one flux per phase.
-        const int nw = stdWells().localWellsActive() ? wells().number_of_wells : 0;
-        return (numPhases() + 1) * nw;
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
     makeConstantState(SolutionState& state) const
@@ -509,7 +520,7 @@ namespace detail {
         // and bhp and Q for the wells
         vars0.reserve(np + 1);
         variableReservoirStateInitials(x, vars0);
-        asImpl().stdWells().variableWellStateInitials(xw, vars0);
+        asImpl().wellModel().variableWellStateInitials(xw, vars0);
         return vars0;
     }
 
@@ -571,7 +582,7 @@ namespace detail {
         if (active_[Gas]) {
             indices[Xvar] = next++;
         }
-        asImpl().stdWells().variableStateWellIndices(indices, next);
+        asImpl().wellModel().variableStateWellIndices(indices, next);
         assert(next == fluid_.numPhases() + 2);
         return indices;
     }
@@ -657,26 +668,8 @@ namespace detail {
             }
         }
         // wells
-        asImpl().variableStateExtractWellsVars(indices, vars, state);
+        asImpl().wellModel().variableStateExtractWellsVars(indices, vars, state);
         return state;
-    }
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    variableStateExtractWellsVars(const std::vector<int>& indices,
-                                  std::vector<ADB>& vars,
-                                  SolutionState& state) const
-    {
-        // Qs.
-        state.qs = std::move(vars[indices[Qs]]);
-
-        // Bhp.
-        state.bhp = std::move(vars[indices[Bhp]]);
     }
 
 
@@ -727,21 +720,6 @@ namespace detail {
         }
     }
 
-    namespace detail {
-        inline
-        double getGravity(const double* g, const int dim) {
-            double grav = 0.0;
-            if (g) {
-                // Guard against gravity in anything but last dimension.
-                for (int dd = 0; dd < dim - 1; ++dd) {
-                    assert(g[dd] == 0.0);
-                }
-                grav = g[dim - 1];
-            }
-            return grav;
-        }
-    }
-
 
 
 
@@ -755,9 +733,6 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
 
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const V depth = cellCentroidsZToEigen(grid_);
-
         // If we have VFP tables, we need the well connection
         // pressures for the "simple" hydrostatic correction
         // between well depth and vfp table depth.
@@ -765,16 +740,12 @@ namespace detail {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            // asImpl().computeWellConnectionPressures(state0, well_state);
-            // Extract well connection depths.
-            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            asImpl().wellModel().computeWellConnectionPressures(state0, well_state);
         }
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        // asImpl().updateWellControls(well_state);
-        // asImpl().stdWells().updateWellControls(well_state);
-        asImpl().stdWells().updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
+        asImpl().wellModel().updateWellControls(terminal_output_, well_state);
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
@@ -786,8 +757,7 @@ namespace detail {
             // Compute initial accumulation contributions
             // and well connection pressures.
             asImpl().computeAccum(state0, 0);
-            // asImpl().computeWellConnectionPressures(state0, well_state);
-            asImpl().stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            asImpl().wellModel().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -810,25 +780,23 @@ namespace detail {
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        asImpl().stdWells().extractWellPerfProperties(state, rq_, fluid_.numPhases(), fluid_, active_, mob_perfcells, b_perfcells);
+        asImpl().wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
         V aliveWells;
         std::vector<ADB> cq_s;
-        asImpl().stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        asImpl().stdWells().addWellFluxEq(cq_s, state, residual_);
+        asImpl().wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        asImpl().wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        asImpl().wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        asImpl().stdWells().addWellControlEq(state, well_state, aliveWells, active_, vfp_properties_, gravity, residual_);
-        // asImpl().computeWellPotentials(state, mob_perfcells, b_perfcells, well_state);
-        {
+        asImpl().wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
+
+        if (param_.compute_well_potentials_) {
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            asImpl().stdWells().computeWellPotentials(state0, mob_perfcells, b_perfcells,
-                                                      fluid_.phaseUsage(), active_, vfp_properties_,
-                                                      param_.compute_well_potentials_, gravity, well_state);
+            asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
         }
 
     }
@@ -956,37 +924,7 @@ namespace detail {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
         for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase], stdWells().wellOps().well_cells, nc);
-        }
-    }
-
-
-
-
-
-
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    extractWellPerfProperties(const SolutionState&,
-                              std::vector<ADB>& mob_perfcells,
-                              std::vector<ADB>& b_perfcells) const
-    {
-        // If we have wells, extract the mobilities and b-factors for
-        // the well-perforated cells.
-        if (!asImpl().localWellsActive()) {
-            mob_perfcells.clear();
-            b_perfcells.clear();
-            return;
-        } else {
-            const int np = asImpl().numPhases();
-            const std::vector<int>& well_cells = stdWells().wellOps().well_cells;
-            mob_perfcells.resize(np, ADB::null());
-            b_perfcells.resize(np, ADB::null());
-            for (int phase = 0; phase < np; ++phase) {
-                mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-                b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-            }
+            residual_.material_balance_eq[phase] -= superset(cq_s[phase], wellModel().wellOps().well_cells, nc);
         }
     }
 
@@ -1041,7 +979,7 @@ namespace detail {
         V aliveWells;
         const int np = wells().number_of_phases;
         std::vector<ADB> cq_s(np, ADB::null());
-        std::vector<int> indices = asImpl().stdWells().variableWellStateIndices();
+        std::vector<int> indices = asImpl().wellModel().variableWellStateIndices();
         SolutionState state0 = state;
         WellState well_state0 = well_state;
         asImpl().makeConstantState(state0);
@@ -1058,25 +996,21 @@ namespace detail {
             }
         }
 
-        // gravity
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-
         int it  = 0;
         bool converged;
         do {
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
-            asImpl().stdWells().variableWellStateInitials(well_state, vars0);
+            asImpl().wellModel().variableWellStateInitials(well_state, vars0);
             std::vector<ADB> vars = ADB::variables(vars0);
 
             SolutionState wellSolutionState = state0;
-            asImpl().variableStateExtractWellsVars(indices, vars, wellSolutionState);
-            asImpl().stdWells().computeWellFlux(wellSolutionState, fluid_.phaseUsage(), active_, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
-            asImpl().stdWells().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
-            asImpl().stdWells().addWellFluxEq(cq_s, wellSolutionState, residual_);
-            asImpl().stdWells().addWellControlEq(wellSolutionState, well_state, aliveWells,
-                                                 active_, vfp_properties_, gravity, residual_);
+            asImpl().wellModel().variableStateExtractWellsVars(indices, vars, wellSolutionState);
+            asImpl().wellModel().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            asImpl().wellModel().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
+            asImpl().wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);
+            asImpl().wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = getWellConvergence(it);
 
             if (converged) {
@@ -1099,9 +1033,8 @@ namespace detail {
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
-                // asImpl().updateWellState(dx.array(), well_state);
-                asImpl().stdWells().updateWellState(dx.array(), gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
-                asImpl().stdWells(). updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
+                asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
+                asImpl().wellModel().updateWellControls(terminal_output_, well_state);
             }
         } while (it < 15);
 
@@ -1128,9 +1061,7 @@ namespace detail {
                 std::vector<ADB::M> old_derivs = state.qs.derivative();
                 state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
             }
-            // asImpl().computeWellConnectionPressures(state, well_state);
-            const ADB::V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            asImpl().stdWells().computeWellConnectionPressures(state, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            asImpl().computeWellConnectionPressures(state, well_state);
         }
 
         if (!converged) {
@@ -1281,7 +1212,7 @@ namespace detail {
         varstart += dxvar.size();
 
         // Extract well parts np phase rates + bhp
-        const V dwells = subset(dx, Span(asImpl().numWellVars(), 1, varstart));
+        const V dwells = subset(dx, Span(asImpl().wellModel().numWellVars(), 1, varstart));
         varstart += dwells.size();
 
         assert(varstart == dx.size());
@@ -1488,10 +1419,8 @@ namespace detail {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
-        // TODO: gravity should be stored as a member
-        // const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        // asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(), active_, vfp_properties_, well_state);
-        asImpl().updateWellState(dwells,well_state);
+
+        asImpl().wellModel().updateWellState(dwells, dpMaxRel(), well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
@@ -2324,20 +2253,14 @@ namespace detail {
 
 
 
-    // TODO: only kept for now due to flow_multisegment
-    // will be removed soon
-    template <class Grid, class WellModel, class Implementation>
-    void
-    BlackoilModelBase<Grid, WellModel, Implementation>::
-    updateWellState(const V& dwells,
-                    WellState& well_state)
-    {
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        asImpl().stdWells().updateWellState(dwells, gravity, dpMaxRel(), fluid_.phaseUsage(),
-                                            active_, vfp_properties_, well_state);
-
-    }
-
+   template <class Grid, class WellModel, class Implementation>
+   void
+   BlackoilModelBase<Grid, WellModel, Implementation>::
+   computeWellConnectionPressures(const SolutionState& state,
+                                  const WellState& well_state)
+   {
+            asImpl().wellModel().computeWellConnectionPressures(state, well_state);
+   }
 
 
 

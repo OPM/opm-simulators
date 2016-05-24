@@ -62,7 +62,7 @@ namespace Opm
 
     template <class GridT>
     auto SimulatorFullyImplicitBlackoilPolymer<GridT>::
-    createSolver(const Wells* wells)
+    createSolver(const WellModel& well_model)
         -> std::unique_ptr<Solver>
     {
         typedef typename Traits::Model Model;
@@ -74,7 +74,7 @@ namespace Opm
                                                       BaseType::geo_,
                                                       BaseType::rock_comp_props_,
                                                       polymer_props_,
-                                                      wells,
+                                                      well_model,
                                                       BaseType::solver_,
                                                       BaseType::eclipse_state_,
                                                       BaseType::has_disgas_,

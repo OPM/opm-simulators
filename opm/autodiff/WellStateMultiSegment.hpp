@@ -25,7 +25,8 @@
 #include <opm/core/well_controls.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/WellMultiSegment.hpp>
+// #include <opm/autodiff/WellMultiSegment.hpp>
+#include <opm/autodiff/MultisegmentWells.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <vector>
 #include <cassert>
@@ -64,8 +65,9 @@ namespace Opm
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         template <class ReservoirState, class PrevWellState>
-        void init(const std::vector<WellMultiSegmentConstPtr>& wells, const ReservoirState& state, const PrevWellState& prevState)
+        void init(const MultisegmentWells& ms_wells, const ReservoirState& state, const PrevWellState& prevState)
         {
+            const std::vector<WellMultiSegmentConstPtr>& wells = ms_wells.msWells();
             const int nw = wells.size();
             nseg_ = 0;
             nperf_ = 0;

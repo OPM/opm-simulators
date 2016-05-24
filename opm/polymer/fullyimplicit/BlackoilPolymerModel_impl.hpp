@@ -80,7 +80,7 @@ namespace Opm {
                                                      const DerivedGeology&                   geo,
                                                      const RockCompressibility*              rock_comp_props,
                                                      const PolymerPropsAd&                   polymer_props_ad,
-                                                     const Wells*                            wells_arg,
+                                                     const StandardWells&                    well_model,
                                                      const NewtonIterationBlackoilInterface& linsolver,
                                                      EclipseStateConstPtr                    eclipse_state,
                                                      const bool                              has_disgas,
@@ -92,7 +92,7 @@ namespace Opm {
                                                      const std::vector<double>&              wells_perf_length,
                                                      const std::vector<double>&              wells_bore_diameter,
                                                      const bool                              terminal_output)
-        : Base(param, grid, fluid, geo, rock_comp_props, wells_arg, linsolver, eclipse_state,
+        : Base(param, grid, fluid, geo, rock_comp_props, well_model, linsolver, eclipse_state,
                has_disgas, has_vapoil, terminal_output),
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
@@ -245,10 +245,10 @@ namespace Opm {
             const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], AutoDiffGrid::numCells(grid_));
             const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
             // Compute polymer accumulation term.
-            rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol) 
+            rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol)
                                         + pv_mult * rho_rock * (1. - phi) / phi * ads;
         }
- 
+
     }
 
 
@@ -498,10 +498,8 @@ namespace Opm {
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-        const V depth = cellCentroidsZToEigen(grid_);
         // updateWellControls(well_state);
-        stdWells().updateWellControls(fluid_.phaseUsage(), gravity, vfp_properties_, terminal_output_, active_, well_state);
+        wellModel().updateWellControls(terminal_output_, well_state);
 
         // Create the primary variables.
         SolutionState state = variableState(reservoir_state, well_state);
@@ -514,7 +512,7 @@ namespace Opm {
             // and well connection pressures.
             computeAccum(state0, 0);
             // computeWellConnectionPressures(state0, well_state);
-            stdWells().computeWellConnectionPressures(state0, well_state, fluid_, active_, phaseCondition(), depth, gravity);
+            wellModel().computeWellConnectionPressures(state0, well_state);
         }
 
         // OPM_AD_DISKVAL(state.pressure);
@@ -534,27 +532,18 @@ namespace Opm {
             return;
         }
 
-        V aliveWells;
-
-        const int np = wells().number_of_phases;
-        std::vector<ADB> cq_s(np, ADB::null());
-
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
-
-        std::vector<ADB> mob_perfcells(np, ADB::null());
-        std::vector<ADB> b_perfcells(np, ADB::null());
-        for (int phase = 0; phase < np; ++phase) {
-            mob_perfcells[phase] = subset(rq_[phase].mob, well_cells);
-            b_perfcells[phase] = subset(rq_[phase].b, well_cells);
-        }
+        std::vector<ADB> mob_perfcells;
+        std::vector<ADB> b_perfcells;
+        wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
-        stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        V aliveWells;
+        std::vector<ADB> cq_s;
+
+        wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
 
         if (has_plyshlog_) {
             std::vector<double> water_vel_wells;
@@ -573,11 +562,11 @@ namespace Opm {
             mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
         }
 
-        stdWells().computeWellFlux(state, fluid_.phaseUsage(), active_, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        stdWells().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        stdWells().addWellFluxEq(cq_s, state, residual_);
+        wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+        wellModel().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        stdWells().addWellControlEq(state, well_state, aliveWells, active_, vfp_properties_, gravity, residual_);
+        wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
     }
 
 
@@ -736,8 +725,8 @@ namespace Opm {
         ADB b_perfcells = subset(rq_[water_pos].b, well_cells);
 
         const ADB& p_perfcells = subset(state.pressure, well_cells);
-        const V& cdp = stdWells().wellPerforationPressureDiffs();
-        const ADB perfpressure = (stdWells().wellOps().w2p * state.bhp) + cdp;
+        const V& cdp = wellModel().wellPerforationPressureDiffs();
+        const ADB perfpressure = (wellModel().wellOps().w2p * state.bhp) + cdp;
         // Pressure drawdown (also used to determine direction of flow)
         const ADB drawdown =  p_perfcells - perfpressure;
 
