@@ -26,9 +26,9 @@ namespace Opm
         };
 
         ProductionSpecification();
-        std::string toString(const ControlMode& mode);
-        std::string toString(const Procedure& type);
-        std::string toString(const GuideRateType& type);
+        static std::string toString(const ControlMode& mode);
+        static std::string toString(const Procedure& type);
+        static std::string toString(const GuideRateType& type);
 
         ControlMode control_mode_;
         Procedure procedure_;
