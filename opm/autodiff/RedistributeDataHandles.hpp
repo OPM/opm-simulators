@@ -451,7 +451,7 @@ void distributeGridAndData( Dune::CpGrid& grid,
     // construction does not resize surfacevol and hydroCarbonState. Do it manually.
     distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
                                           std::numeric_limits<double>::max());
-    distributed_state.hydroCarbonState().resize(grid.numCells()*state.numPhases());
+    distributed_state.hydroCarbonState().resize(grid.numCells());
     BlackoilStateDataHandle state_handle(global_grid, grid,
                                          state, distributed_state);
     BlackoilPropsDataHandle props_handle(properties,
