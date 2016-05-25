@@ -266,7 +266,7 @@ public:
     void scatter(B& buffer, const T& e, std::size_t size_arg)
     {
         assert( T::codimension == 0);
-        assert( size_arg == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
+        assert( size_arg == 2 * recvState_.numPhases() + 5 +2*recvGrid_.numCellFaces(e.index()));
         static_cast<void>(size_arg);
 
         double val;
