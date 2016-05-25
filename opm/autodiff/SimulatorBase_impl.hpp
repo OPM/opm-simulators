@@ -110,7 +110,7 @@ namespace Opm
         }
 
         // init output writer
-        output_writer_.writeInit( timer, geo_.nnc() );
+        output_writer_.writeInit( timer, geo_.nonCartesianConnections() );
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
