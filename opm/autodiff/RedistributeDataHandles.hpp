@@ -207,7 +207,12 @@ public:
                             const BlackoilState& sendState,
                             BlackoilState& recvState)
         : sendGrid_(sendGrid), recvGrid_(recvGrid), sendState_(sendState), recvState_(recvState)
-    {}
+    {
+        // construction does not resize surfacevol and hydroCarbonState. Do it manually.
+        recvState.surfacevol().resize(grid.numCells()*state.numPhases(),
+                                      std::numeric_limits<double>::max());
+        recvState.hydroCarbonState().resize(grid.numCells());
+    }
 
     bool fixedsize(int /*dim*/, int /*codim*/)
     {
@@ -448,10 +453,6 @@ void distributeGridAndData( Dune::CpGrid& grid,
                                               distributed_material_law_manager,
                                               grid.numCells());
     BlackoilState distributed_state(grid.numCells(), grid.numFaces(), state.numPhases());
-    // construction does not resize surfacevol and hydroCarbonState. Do it manually.
-    distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
-                                          std::numeric_limits<double>::max());
-    distributed_state.hydroCarbonState().resize(grid.numCells());
     BlackoilStateDataHandle state_handle(global_grid, grid,
                                          state, distributed_state);
     BlackoilPropsDataHandle props_handle(properties,
