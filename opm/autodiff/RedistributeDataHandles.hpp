@@ -209,9 +209,9 @@ public:
         : sendGrid_(sendGrid), recvGrid_(recvGrid), sendState_(sendState), recvState_(recvState)
     {
         // construction does not resize surfacevol and hydroCarbonState. Do it manually.
-        recvState.surfacevol().resize(grid.numCells()*state.numPhases(),
+        recvState.surfacevol().resize(recvGrid.numCells()*sendState.numPhases(),
                                       std::numeric_limits<double>::max());
-        recvState.hydroCarbonState().resize(grid.numCells());
+        recvState.hydroCarbonState().resize(recvGrid.numCells());
     }
 
     bool fixedsize(int /*dim*/, int /*codim*/)
