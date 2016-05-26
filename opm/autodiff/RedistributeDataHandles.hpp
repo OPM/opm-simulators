@@ -207,7 +207,12 @@ public:
                             const BlackoilState& sendState,
                             BlackoilState& recvState)
         : sendGrid_(sendGrid), recvGrid_(recvGrid), sendState_(sendState), recvState_(recvState)
-    {}
+    {
+        // construction does not resize surfacevol and hydroCarbonState. Do it manually.
+        recvState.surfacevol().resize(recvGrid.numCells()*sendState.numPhases(),
+                                      std::numeric_limits<double>::max());
+        recvState.hydroCarbonState().resize(recvGrid.numCells());
+    }
 
     bool fixedsize(int /*dim*/, int /*codim*/)
     {
@@ -219,7 +224,7 @@ public:
     {
         if ( T::codimension == 0)
         {
-            return 2 * sendState_.numPhases() +4+2*sendGrid_.numCellFaces(e.index());
+            return 2 * sendState_.numPhases() + 5 + 2*sendGrid_.numCellFaces(e.index());
         }
         else
         {
@@ -240,6 +245,10 @@ public:
         buffer.write(sendState_.rv()[e.index()]);
         buffer.write(sendState_.pressure()[e.index()]);
         buffer.write(sendState_.temperature()[e.index()]);
+	//We can only send one type with this buffer. Ergo we convert the enum to a double.
+	double hydroCarbonState_ = sendState_.hydroCarbonState()[e.index()];
+	buffer.write(hydroCarbonState_);
+
         for ( size_t i=0; i<sendState_.numPhases(); ++i )
         {
             buffer.write(sendState_.saturation()[e.index()*sendState_.numPhases()+i]);
@@ -257,7 +266,7 @@ public:
     void scatter(B& buffer, const T& e, std::size_t size_arg)
     {
         assert( T::codimension == 0);
-        assert( size_arg == 2 * recvState_.numPhases() +4+2*recvGrid_.numCellFaces(e.index()));
+        assert( size_arg == 2 * recvState_.numPhases() + 5 +2*recvGrid_.numCellFaces(e.index()));
         static_cast<void>(size_arg);
 
         double val;
@@ -274,6 +283,10 @@ public:
         recvState_.pressure()[e.index()]=val;
         buffer.read(val);
         recvState_.temperature()[e.index()]=val;
+	//We can only send one type with this buffer. Ergo we convert the enum to a double.
+	buffer.read(val);
+	recvState_.hydroCarbonState()[e.index()]=static_cast<HydroCarbonState>(val);
+
         for ( size_t i=0; i<recvState_.numPhases(); ++i )
         {
             buffer.read(val);
@@ -440,9 +453,6 @@ void distributeGridAndData( Dune::CpGrid& grid,
                                               distributed_material_law_manager,
                                               grid.numCells());
     BlackoilState distributed_state(grid.numCells(), grid.numFaces(), state.numPhases());
-    // construction does not resize surfacevol. Do it manually.
-    distributed_state.surfacevol().resize(grid.numCells()*state.numPhases(),
-                                          std::numeric_limits<double>::max());
     BlackoilStateDataHandle state_handle(global_grid, grid,
                                          state, distributed_state);
     BlackoilPropsDataHandle props_handle(properties,
