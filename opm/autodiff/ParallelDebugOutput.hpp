@@ -269,6 +269,9 @@ namespace Opm
                 }
                 else // all other simply send to the I/O rank
                 {
+                    // globalReservoirState will be deferenced even if this rank is not outputting anything
+                    // To prevent dereferencing a nullptr we create an empty container
+                    globalReservoirState_.reset( new SimulationDataContainer( 0, 0, 0));
                     send.insert( ioRank );
                 }
 
