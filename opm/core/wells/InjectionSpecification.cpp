@@ -18,4 +18,40 @@ namespace Opm
 
     }
 
+    std::string
+    InjectionSpecification::toString(const ControlMode& mode)
+    {
+        switch(mode) {
+        case ControlMode::NONE: return "NONE";
+        case ControlMode::RATE: return "RATE";
+        case ControlMode::RESV: return "RESV";
+        case ControlMode::BHP : return "BHP" ;
+        case ControlMode::THP : return "THP" ;
+        case ControlMode::REIN: return "REIN";
+        case ControlMode::VREP: return "VREP";
+        case ControlMode::GRUP: return "GRUP";
+        case ControlMode::FLD : return "FLD" ;
+        }
+    }
+
+
+    std::string
+    InjectionSpecification::toString(const InjectorType& type)
+    {
+        switch(type) {
+        case InjectorType::WATER: return "WATER";
+        case InjectorType::OIL  : return "OIL"  ;
+        case InjectorType::GAS  : return "GAS"  ;
+        }
+    }
+
+
+    std::string 
+    InjectionSpecification::toString(const GuideRateType& type)
+    {
+        switch(type) {
+        case GuideRateType::RAT     : return "RAT"     ;
+        case GuideRateType::NONE_GRT: return "NONE_GRT";
+        }
+    }
 } // namespace Opm

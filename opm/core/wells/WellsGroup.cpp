@@ -345,9 +345,10 @@ namespace Opm
                                             mode);
 
                 if (my_rate > target_rate) {
-                    std::cout << "Group " << mode<<" target not met for group " << name() << std::endl;
-                    std::cout << "target = " << target_rate << '\n'
-                              << "rate   = " << my_rate << std::endl;
+                    OpmLog::warning("Group " + InjectionSpecification::toString(mode) 
+                                    + " target not met for group " + name() + "\n"
+                                    + "target = " + std::to_string(target_rate) + "\n"
+                                    + "rate   = " + std::to_string(my_rate));
                     applyInjGroupControl(mode, target_rate, true);
                     injSpec().control_mode_ = mode;
                     return false;
@@ -377,9 +378,10 @@ namespace Opm
                                                   child_phases_summed.surf_prod_rates,
                                                   mode);
                 if (std::fabs(my_rate) > target_rate) {
-                    std::cout << "Group" << mode << " target not met for group " << name() << std::endl;
-                    std::cout << "target = " << target_rate << '\n'
-                              << "rate   = " << my_rate << std::endl;
+                    OpmLog::warning("Group" + ProductionSpecification::toString(mode) 
+                                    + " target not met for group " + name() + "\n"
+                                    + "target = " + std::to_string(target_rate) + '\n'
+                                    + "rate   = " + std::to_string(my_rate));
                     production_violated = true;
                     production_mode_violated = mode;
                     break;
@@ -677,9 +679,9 @@ namespace Opm
                 ctrl_violated = is_producer ? (my_target_bhp > my_well_bhp)
                     : (my_target_bhp < my_well_bhp);
                 if (ctrl_violated) {
-                    std::cout << "BHP limit violated for well " << name() << ":\n";
-                    std::cout << "BHP limit = " << my_target_bhp << std::endl;
-                    std::cout << "BHP       = " << my_well_bhp << std::endl;
+                    OpmLog::info("BHP limit violated for well " + name() + ":\n"
+                                 + "BHP limit = " + std::to_string(my_target_bhp)
+                                 + "BHP       = " + std::to_string(my_well_bhp));
                 }
                 break;
             }
@@ -698,9 +700,9 @@ namespace Opm
                 const double my_rate_target = well_controls_iget_target(ctrls , ctrl_index);
                 ctrl_violated = std::fabs(my_rate) - std::fabs(my_rate_target)> std::max(std::abs(my_rate), std::abs(my_rate_target))*1e-6;
                 if (ctrl_violated) {
-                    std::cout << "RESERVOIR_RATE limit violated for well " << name() << ":\n";
-                    std::cout << "rate limit = " << my_rate_target << std::endl;
-                    std::cout << "rate       = " << my_rate << std::endl;
+                    OpmLog::info("RESERVOIR_RATE limit violated for well " + name() + ":\n"
+                                 + "rate limit = " + std::to_string(my_rate_target)
+                                 + "rate       = " + std::to_string(my_rate));
                 }
                 break;
             }
@@ -714,9 +716,9 @@ namespace Opm
                 const double my_rate_target = well_controls_iget_target(ctrls , ctrl_index);
                 ctrl_violated = std::fabs(my_rate) > std::fabs(my_rate_target);
                 if (ctrl_violated) {
-                    std::cout << "SURFACE_RATE limit violated for well " << name() << ":\n";
-                    std::cout << "rate limit = " << my_rate_target << std::endl;
-                    std::cout << "rate       = " << my_rate << std::endl;
+                    OpmLog::info("SURFACE_RATE limit violated for well " + name() + ":\n"
+                                 + "rate limit = " + std::to_string(my_rate_target)
+                                 + "rate       = " + std::to_string(my_rate));
                 }
                 break;
             }
