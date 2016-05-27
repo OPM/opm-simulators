@@ -36,6 +36,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include <fstream>
+
 namespace
 {
     void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
