@@ -382,7 +382,7 @@ namespace Opm
                 logFile_ = baseName + ".PRT";
             }
             // Create Parser
-            ParserPtr parser(new Parser());
+            static ParserPtr parser(new Parser());
             {
                 std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::DefaultMessageTypes);
                 std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::DefaultMessageTypes);
