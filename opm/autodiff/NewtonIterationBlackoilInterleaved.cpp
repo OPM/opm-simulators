@@ -486,7 +486,7 @@ namespace Opm
             iterations_ = result.iterations;
 
             // Check for failure of linear solver.
-            if (!result.converged) {
+            if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
                 OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver.");
             }
 
