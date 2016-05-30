@@ -43,6 +43,10 @@ inline std::vector< double > destripe( const std::vector< double >& v,
     return dst;
 }
 
+
+
+
+
 inline std::vector< double >& stripe( const std::vector< double >& v,
                                       size_t stride,
                                       size_t offset,
@@ -56,6 +60,12 @@ inline std::vector< double >& stripe( const std::vector< double >& v,
 
     return dst;
 }
+
+
+
+
+
+
 
 inline data::Solution sim2solution( const SimulationDataContainer& reservoir,
                              PhaseUsage phases ) {
@@ -91,6 +101,13 @@ inline data::Solution sim2solution( const SimulationDataContainer& reservoir,
 
     return sol;
 }
+
+
+
+
+
+
+
 
 inline void solution2sim( const data::Solution& sol,
                           PhaseUsage phases,
@@ -128,6 +145,14 @@ inline void solution2sim( const data::Solution& sol,
         state.getCellData( "RV" ) = sol[ ds::RV ];
     }
 }
+
+
+
+
+
+
+
+
 
 inline void wells2state( const data::Wells& wells, WellState& state ) {
     state.bhp() = wells.bhp;
