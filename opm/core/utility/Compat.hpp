@@ -36,8 +36,9 @@ inline std::vector< double > destripe( const std::vector< double >& v,
     std::vector< double > dst( v.size() / stride );
 
     size_t di = 0;
-    for( size_t i = offset; i < v.size(); i += stride )
+    for( size_t i = offset; i < v.size(); i += stride ) {
         dst[ di++ ] = v[ i ];
+    }
 
     return dst;
 }
@@ -49,8 +50,9 @@ inline std::vector< double >& stripe( const std::vector< double >& v,
 
     /* does little range checking etc; for future revisions */
     size_t vi = 0;
-    for( size_t i = offset; i < dst.size(); i += stride )
+    for( size_t i = offset; i < dst.size(); i += stride ) {
         dst[ i ] = v[ vi++ ];
+    }
 
     return dst;
 }
@@ -69,17 +71,21 @@ inline data::Solution sim2solution( const SimulationDataContainer& reservoir,
     const auto aqua = BlackoilPhases::Aqua;
     const auto vapour = BlackoilPhases::Vapour;
 
-    if( phases.phase_used[ aqua ] )
+    if( phases.phase_used[ aqua ] ) {
         sol.insert( ds::SWAT, destripe( sat, ph, phases.phase_pos[ aqua ] ) );
+    }
 
-    if( phases.phase_used[ vapour ] )
+    if( phases.phase_used[ vapour ] ) {
         sol.insert( ds::SGAS, destripe( sat, ph, phases.phase_pos[ vapour ] ) );
+    }
 
-    if( reservoir.hasCellData( BlackoilState::GASOILRATIO ) )
+    if( reservoir.hasCellData( BlackoilState::GASOILRATIO ) ) {
         sol.insert( ds::RS, reservoir.getCellData( BlackoilState::GASOILRATIO ) );
+    }
 
-    if( reservoir.hasCellData( BlackoilState::RV ) )
+    if( reservoir.hasCellData( BlackoilState::RV ) ) {
         sol.insert( ds::RV, reservoir.getCellData( BlackoilState::RV ) );
+    }
 
     sol.sdc = &reservoir;
 
@@ -92,29 +98,35 @@ inline void solution2sim( const data::Solution& sol,
     using ds = data::Solution::key;
 
     const auto stride = phases.num_phases;
-    if( sol.has( ds::SWAT ) )
+    if( sol.has( ds::SWAT ) ) {
         stripe( sol[ ds::SWAT ],
                 stride,
                 phases.phase_pos[ BlackoilPhases::Aqua ],
                 state.saturation() );
+    }
 
-    if( sol.has( ds::SGAS ) )
+    if( sol.has( ds::SGAS ) ) {
         stripe( sol[ ds::SGAS ],
                 stride,
                 phases.phase_pos[ BlackoilPhases::Vapour ],
                 state.saturation() );
+    }
 
-    if( sol.has( ds::PRESSURE ) )
+    if( sol.has( ds::PRESSURE ) ) {
         state.pressure() = sol[ ds::PRESSURE ];
+    }
 
-    if( sol.has( ds::TEMP ) )
+    if( sol.has( ds::TEMP ) ) {
         state.temperature() = sol[ ds::TEMP ];
+    }
 
-    if( sol.has( ds::RS ) )
+    if( sol.has( ds::RS ) ) {
         state.getCellData( "GASOILRATIO" ) = sol[ ds::RS ];
+    }
 
-    if( sol.has( ds::RV ) )
+    if( sol.has( ds::RV ) ) {
         state.getCellData( "RV" ) = sol[ ds::RV ];
+    }
 }
 
 inline void wells2state( const data::Wells& wells, WellState& state ) {
