@@ -67,7 +67,7 @@ inline std::vector< double >& stripe( const std::vector< double >& v,
 
 
 
-inline data::Solution sim2solution( const SimulationDataContainer& reservoir,
+inline data::Solution simToSolution( const SimulationDataContainer& reservoir,
                              PhaseUsage phases ) {
     using ds = data::Solution::key;
 
@@ -109,7 +109,7 @@ inline data::Solution sim2solution( const SimulationDataContainer& reservoir,
 
 
 
-inline void solution2sim( const data::Solution& sol,
+inline void solutionToSim( const data::Solution& sol,
                           PhaseUsage phases,
                           SimulationDataContainer& state ) {
     using ds = data::Solution::key;
@@ -154,7 +154,13 @@ inline void solution2sim( const data::Solution& sol,
 
 
 
-inline void wells2state( const data::Wells& wells, WellState& state ) {
+
+
+
+
+
+
+inline void wellsToState( const data::Wells& wells, WellState& state ) {
     state.bhp() = wells.bhp;
     state.temperature() = wells.temperature;
     state.wellRates() = wells.well_rate;
