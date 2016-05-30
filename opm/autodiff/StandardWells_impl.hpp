@@ -722,9 +722,11 @@ namespace Opm
                 // Constraint number ctrl_index was broken, switch to it.
                 if (terminal_output)
                 {
-                    std::cout << "Switching control mode for well " << wells().name[w]
-                              << " from " << modestring[well_controls_iget_type(wc, current)]
-                              << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                    std::ostringstream ss;
+                    ss << "Switching control mode for well " << wells().name[w]
+                       << " from " << modestring[well_controls_iget_type(wc, current)]
+                       << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                    OpmLog::info(ss.str());
                 }
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
