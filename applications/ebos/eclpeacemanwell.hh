@@ -1171,14 +1171,14 @@ protected:
             // well model due to Peaceman; see Chen et al., p. 449
 
             // phase pressure in grid cell
-            const DofEval& p = DofVarsToolbox::template toLhs<DofEval>(dofVars.pressure[phaseIdx]);
+            const DofEval& p = DofVarsToolbox::template decay<DofEval>(dofVars.pressure[phaseIdx]);
 
             // density and mobility of fluid phase
-            const DofEval& rho = DofVarsToolbox::template toLhs<DofEval>(dofVars.density[phaseIdx]);
+            const DofEval& rho = DofVarsToolbox::template decay<DofEval>(dofVars.density[phaseIdx]);
             DofEval lambda;
             if (wellType_ == Producer) {
                 //assert(p < pbh);
-                lambda = DofVarsToolbox::template toLhs<DofEval>(dofVars.mobility[phaseIdx]);
+                lambda = DofVarsToolbox::template decay<DofEval>(dofVars.mobility[phaseIdx]);
             }
             else if (wellType_ == Injector) {
                 //assert(p > pbh);
@@ -1191,7 +1191,7 @@ protected:
                 // 1/viscosity...
                 lambda = 0.0;
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                    lambda += DofVarsToolbox::template toLhs<DofEval>(dofVars.mobility[phaseIdx]);
+                    lambda += DofVarsToolbox::template decay<DofEval>(dofVars.mobility[phaseIdx]);
             }
             else
                 OPM_THROW(std::logic_error,
