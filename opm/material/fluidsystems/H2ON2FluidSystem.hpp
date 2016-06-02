@@ -275,12 +275,12 @@ public:
         typedef Opm::MathToolbox<LhsEval> LhsToolbox;
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         LhsEval sumMoleFrac = 0;
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-            sumMoleFrac += FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
+            sumMoleFrac += FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
 
         // liquid phase
         if (phaseIdx == liquidPhaseIdx) {
@@ -293,8 +293,8 @@ public:
                 const auto& rholH2O = H2O::liquidDensity(T, p);
                 const auto& clH2O = rholH2O/H2O::molarMass();
 
-                const auto& xlH2O = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
-                const auto& xlN2 = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
+                const auto& xlH2O = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
+                const auto& xlN2 = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
 
                 // this assumes each nitrogen molecule displaces exactly one
                 // water molecule in the liquid
@@ -309,13 +309,13 @@ public:
             // for the gas phase assume an ideal gas
             return
                 IdealGas::molarDensity(T, p)
-                * FsToolbox::template toLhs<LhsEval>(fluidState.averageMolarMass(gasPhaseIdx))
+                * FsToolbox::template decay<LhsEval>(fluidState.averageMolarMass(gasPhaseIdx))
                 / LhsToolbox::max(1e-5, sumMoleFrac);
 
         // assume ideal mixture: steam and nitrogen don't "see" each
         // other
-        const auto& xgH2O = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx));
-        const auto& xgN2 = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, N2Idx));
+        const auto& xgH2O = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx));
+        const auto& xgN2 = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, N2Idx));
         const auto& rho_gH2O = H2O::gasDensity(T, p*xgH2O);
         const auto& rho_gN2 = N2::gasDensity(T, p*xgN2);
         return (rho_gH2O + rho_gN2)/LhsToolbox::max(1e-5, sumMoleFrac);
@@ -332,8 +332,8 @@ public:
         typedef Opm::MathToolbox<LhsEval> LhsToolbox;
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         // liquid phase
         if (phaseIdx == liquidPhaseIdx)
@@ -361,7 +361,7 @@ public:
 
             LhsEval sumx = 0.0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-                sumx += FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
+                sumx += FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
             sumx = LhsToolbox::max(1e-10, sumx);
 
             for (unsigned i = 0; i < numComponents; ++i) {
@@ -371,11 +371,11 @@ public:
                     phiIJ *= phiIJ;
                     phiIJ /= std::sqrt(8*(1 + molarMass(i)/molarMass(j)));
                     divisor +=
-                        FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, j))
+                        FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, j))
                         /sumx*phiIJ;
                 }
                 muResult +=
-                    FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, i))
+                    FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, i))
                     /sumx*mu[i]/divisor;
             }
             return muResult;
@@ -394,8 +394,8 @@ public:
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         // liquid phase
         if (phaseIdx == liquidPhaseIdx) {
@@ -421,8 +421,8 @@ public:
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         // liquid phase
         if (phaseIdx == liquidPhaseIdx)
@@ -441,8 +441,8 @@ public:
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
 
@@ -459,8 +459,8 @@ public:
         // "see" the molecules of the other component, which means
         // that the total specific enthalpy is the sum of the
         // "partial specific enthalpies" of the components.
-        const auto& XgH2O = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, H2OIdx));
-        const auto& XgN2 = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, N2Idx));
+        const auto& XgH2O = FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, H2OIdx));
+        const auto& XgN2 = FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, N2Idx));
 
         LhsEval hH2O = XgH2O*H2O::gasEnthalpy(T, p);
         LhsEval hN2 = XgN2*N2::gasEnthalpy(T, p);
@@ -477,8 +477,8 @@ public:
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == liquidPhaseIdx) // liquid phase
             return H2O::liquidThermalConductivity(T, p);
 
@@ -487,8 +487,8 @@ public:
 
         if (useComplexRelations){
             // return the sum of the partial conductivity of Nitrogen and Steam
-            const auto& xH2O = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
-            const auto& xN2 = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, N2Idx));
+            const auto& xH2O = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
+            const auto& xN2 = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, N2Idx));
 
             // Assuming Raoult's, Daltons law and ideal gas in order to obtain the
             // partial pressures in the gas phase
@@ -510,12 +510,12 @@ public:
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& xAlphaH2O = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
-        const auto& xAlphaN2 = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, N2Idx));
-        const auto& XAlphaH2O = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(phaseIdx, H2OIdx));
-        const auto& XAlphaN2 = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(phaseIdx, N2Idx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& xAlphaH2O = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
+        const auto& xAlphaN2 = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, N2Idx));
+        const auto& XAlphaH2O = FsToolbox::template decay<LhsEval>(fluidState.massFraction(phaseIdx, H2OIdx));
+        const auto& XAlphaN2 = FsToolbox::template decay<LhsEval>(fluidState.massFraction(phaseIdx, N2Idx));
 
         if (phaseIdx == liquidPhaseIdx)
             return H2O::liquidHeatCapacity(T, p);

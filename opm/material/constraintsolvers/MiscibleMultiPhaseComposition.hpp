@@ -192,7 +192,7 @@ public:
             // coefficients of the components cannot depend on
             // composition, i.e. the parameters in the cache are valid
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                Evaluation fugCoeff = FsToolbox::template toLhs<Evaluation>(
+                Evaluation fugCoeff = FsToolbox::template decay<Evaluation>(
                     FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, compIdx));
                 fluidState.setFugacityCoefficient(phaseIdx, compIdx, fugCoeff);
             }

@@ -163,7 +163,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& Sw = 1.0 - FsToolbox::template toLhs<Evaluation>(fs.saturation(gasPhaseIdx));
+        const auto& Sw = 1.0 - FsToolbox::template decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -182,7 +182,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(waterPhaseIdx));
+        const auto& Sw = FsToolbox::template decay<Evaluation>(fs.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
     }
 
@@ -263,7 +263,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const Evaluation& Sw = 1 - FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation& Sw = 1 - FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -276,7 +276,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const Evaluation& Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation& Sw = FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
@@ -294,8 +294,8 @@ public:
 
         Evaluation Sw =
             Toolbox::max(Evaluation(Swco),
-                         FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx)));
-        Evaluation Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
+                         FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
+        Evaluation Sg = FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         Evaluation Sw_ow = Sg + Sw;
         Evaluation So_go = 1.0 - Sw_ow;

@@ -99,7 +99,7 @@ public:
             Valgrind::CheckDefined(params.fullySaturatedLambda(phaseIdx));
 
             if (FluidSystem::isLiquid(phaseIdx)) {
-                const auto& sat = Toolbox::template toLhs<Evaluation>(fluidState.saturation(phaseIdx));
+                const auto& sat = Toolbox::template decay<Evaluation>(fluidState.saturation(phaseIdx));
                 lambda +=
                     regularizedSqrt_(Toolbox::max(0.0, Toolbox::min(1.0, sat)))
                     * (params.fullySaturatedLambda(phaseIdx) - params.vacuumLambda());

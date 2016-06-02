@@ -120,7 +120,7 @@ public:
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const Evaluation& S =
-                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(phaseIdx));
+                FsToolbox::template decay<Evaluation>(fluidState.saturation(phaseIdx));
             values[phaseIdx] = Toolbox::max(Toolbox::min(S, 1.0), 0.0);
         }
     }
@@ -186,7 +186,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
         return Toolbox::max(0.0, Toolbox::min(1.0, Sw));
     }
@@ -211,7 +211,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& Sn =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
 
         return Toolbox::max(0.0, Toolbox::min(1.0, Sn));
     }
@@ -238,7 +238,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& Sg =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(Traits::gasPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::gasPhaseIdx));
 
         return Toolbox::max(0.0, Toolbox::min(1.0, Sg));
     }

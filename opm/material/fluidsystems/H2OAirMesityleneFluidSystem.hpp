@@ -205,13 +205,13 @@ public:
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const LhsEval& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         if (phaseIdx == waterPhaseIdx) {
             // See: Ochs 2008
             const LhsEval& p =
                 H2O::liquidIsCompressible()
-                ? FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx))
+                ? FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx))
                 : 1e100;
 
             const LhsEval& rholH2O = H2O::liquidDensity(T, p);
@@ -220,24 +220,24 @@ public:
             // this assumes each dissolved molecule displaces exactly one
             // water molecule in the liquid
             return
-                clH2O*(H2O::molarMass()*FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(waterPhaseIdx, H2OIdx)) +
-                       Air::molarMass()*FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(waterPhaseIdx, airIdx)) +
-                       NAPL::molarMass()*FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(waterPhaseIdx, NAPLIdx)));
+                clH2O*(H2O::molarMass()*FsToolbox::template decay<LhsEval>(fluidState.moleFraction(waterPhaseIdx, H2OIdx)) +
+                       Air::molarMass()*FsToolbox::template decay<LhsEval>(fluidState.moleFraction(waterPhaseIdx, airIdx)) +
+                       NAPL::molarMass()*FsToolbox::template decay<LhsEval>(fluidState.moleFraction(waterPhaseIdx, NAPLIdx)));
         }
         else if (phaseIdx == naplPhaseIdx) {
             // assume pure NAPL for the NAPL phase
             const LhsEval& p =
                 NAPL::liquidIsCompressible()
-                ? FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx))
+                ? FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx))
                 : 1e100;
             return NAPL::liquidDensity(T, p);
         }
 
         assert (phaseIdx == gasPhaseIdx);
-        const LhsEval& pg = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(gasPhaseIdx));
-        const LhsEval& pH2O = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx))*pg;
-        const LhsEval& pAir = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, airIdx))*pg;
-        const LhsEval& pNAPL = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, NAPLIdx))*pg;
+        const LhsEval& pg = FsToolbox::template decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
+        const LhsEval& pH2O = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx))*pg;
+        const LhsEval& pAir = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, airIdx))*pg;
+        const LhsEval& pNAPL = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, NAPLIdx))*pg;
         return
             H2O::gasDensity(T, pH2O) +
             Air::gasDensity(T, pAir) +
@@ -252,8 +252,8 @@ public:
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const LhsEval& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == waterPhaseIdx) {
             // assume pure water viscosity
@@ -291,9 +291,9 @@ public:
             NAPL::molarMass()
         };
 
-        const LhsEval& xgAir = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, airIdx));
-        const LhsEval& xgH2O = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx));
-        const LhsEval& xgNapl = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, NAPLIdx));
+        const LhsEval& xgAir = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, airIdx));
+        const LhsEval& xgH2O = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx));
+        const LhsEval& xgNapl = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, NAPLIdx));
         const LhsEval& xgAW = xgAir + xgH2O;
         const LhsEval& muAW = (mu[airIdx]*xgAir + mu[H2OIdx]*xgH2O)/xgAW;
         const LhsEval& MAW = (xgAir*Air::molarMass() + xgH2O*H2O::molarMass())/xgAW;
@@ -319,8 +319,8 @@ public:
 #if 0
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const LhsEval& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         LhsEval diffCont;
 
         if (phaseIdx==gasPhaseIdx) {
@@ -328,9 +328,9 @@ public:
             const LhsEval& diffWC = Opm::BinaryCoeff::H2O_Mesitylene::gasDiffCoeff(T, p);
             const LhsEval& diffAW = Opm::BinaryCoeff::H2O_Air::gasDiffCoeff(T, p);
 
-            const LhsEval& xga = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, airIdx));
-            const LhsEval& xgw = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx));
-            const LhsEval& xgc = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, NAPLIdx));
+            const LhsEval& xga = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, airIdx));
+            const LhsEval& xgw = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx));
+            const LhsEval& xgc = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, NAPLIdx));
 
             if (compIdx==NAPLIdx) return (1 - xgw)/(xga/diffAW + xgc/diffWC);
             else if (compIdx==H2OIdx) return (1 - xgc)/(xgw/diffWC + xga/diffAC);
@@ -343,9 +343,9 @@ public:
             const LhsEval& diffWCl = 1.e-9; // BinaryCoeff::H2O_Mesitylene::liquidDiffCoeff(temperature, pressure);
             const LhsEval& diffAWl = 1.e-9; // BinaryCoeff::H2O_Air::liquidDiffCoeff(temperature, pressure);
 
-            const LhsEval& xwa = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(waterPhaseIdx, airIdx));
-            const LhsEval& xww = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(waterPhaseIdx, H2OIdx));
-            const LhsEval& xwc = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(waterPhaseIdx, NAPLIdx));
+            const LhsEval& xwa = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(waterPhaseIdx, airIdx));
+            const LhsEval& xww = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(waterPhaseIdx, H2OIdx));
+            const LhsEval& xwc = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(waterPhaseIdx, NAPLIdx));
 
             switch (compIdx) {
             case NAPLIdx:
@@ -381,8 +381,8 @@ public:
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
         assert(0 <= compIdx  && compIdx < numComponents);
 
-        const LhsEval& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
 
@@ -426,8 +426,8 @@ public:
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const LhsEval& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == waterPhaseIdx) {
             return H2O::liquidEnthalpy(T, p);
@@ -438,9 +438,9 @@ public:
         else if (phaseIdx == gasPhaseIdx) {
             // gas phase enthalpy depends strongly on composition
             LhsEval result = 0;
-            result += H2O::gasEnthalpy(T, p) * FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, H2OIdx));
-            result += NAPL::gasEnthalpy(T, p) * FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, airIdx));
-            result += Air::gasEnthalpy(T, p) * FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, NAPLIdx));
+            result += H2O::gasEnthalpy(T, p) * FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, H2OIdx));
+            result += NAPL::gasEnthalpy(T, p) * FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, airIdx));
+            result += Air::gasEnthalpy(T, p) * FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, NAPLIdx));
 
             return result;
         }
@@ -458,14 +458,14 @@ public:
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
         if (phaseIdx == waterPhaseIdx){ // water phase
-            const LhsEval& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-            const LhsEval& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+            const LhsEval& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+            const LhsEval& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
             return H2O::liquidThermalConductivity(T, p);
         }
         else if (phaseIdx == gasPhaseIdx) { // gas phase
-            const LhsEval& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-            const LhsEval& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+            const LhsEval& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+            const LhsEval& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
             return Air::gasThermalConductivity(T, p);
         }

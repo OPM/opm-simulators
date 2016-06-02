@@ -127,7 +127,7 @@ public:
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        temperature_ = FsToolbox::template toLhs<Scalar>(fs.temperature(/*phaseIdx=*/0));
+        temperature_ = FsToolbox::template decay<Scalar>(fs.temperature(/*phaseIdx=*/0));
 
 #ifndef NDEBUG
         typedef Opm::MathToolbox<Scalar> Toolbox;

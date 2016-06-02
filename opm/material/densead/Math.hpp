@@ -437,19 +437,19 @@ public:
     template <class LhsEval>
     static typename std::enable_if<std::is_same<Evaluation, LhsEval>::value,
                                    LhsEval>::type
-    toLhs(const Evaluation& eval)
+    decay(const Evaluation& eval)
     { return eval; }
 
     template <class LhsEval>
     static typename std::enable_if<std::is_same<Evaluation, LhsEval>::value,
                                    LhsEval>::type
-    toLhs(const Evaluation&& eval)
+    decay(const Evaluation&& eval)
     { return eval; }
 
     template <class LhsEval>
     static typename std::enable_if<std::is_floating_point<LhsEval>::value,
                                    LhsEval>::type
-    toLhs(const Evaluation& eval)
+    decay(const Evaluation& eval)
     { return eval.value; }
 
     // comparison

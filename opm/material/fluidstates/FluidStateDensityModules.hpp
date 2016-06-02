@@ -85,7 +85,7 @@ public:
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            density_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.density(phaseIdx));
+            density_[phaseIdx] = FsToolbox::template decay<Scalar>(fs.density(phaseIdx));
         }
     }
 

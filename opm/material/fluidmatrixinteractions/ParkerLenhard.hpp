@@ -381,7 +381,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -456,7 +456,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -480,7 +480,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }

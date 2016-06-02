@@ -73,7 +73,7 @@ public:
         typedef typename FluidState::Scalar FsScalar;
         typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            saturation_[phaseIdx] = FsToolbox::template toLhs<Scalar>(fs.saturation(phaseIdx));
+            saturation_[phaseIdx] = FsToolbox::template decay<Scalar>(fs.saturation(phaseIdx));
         }
     }
 

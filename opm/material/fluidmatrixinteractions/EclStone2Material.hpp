@@ -162,7 +162,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& Sw = 1.0 - FsToolbox::template toLhs<Evaluation>(fs.saturation(gasPhaseIdx));
+        const auto& Sw = 1.0 - FsToolbox::template decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -181,7 +181,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const auto& Sw = FsToolbox::template toLhs<Evaluation>(fs.saturation(waterPhaseIdx));
+        const auto& Sw = FsToolbox::template decay<Evaluation>(fs.saturation(waterPhaseIdx));
         Valgrind::CheckDefined(Sw);
         const auto& result = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
         Valgrind::CheckDefined(result);
@@ -265,7 +265,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const Evaluation& Sw = 1 - FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation& Sw = 1 - FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -278,7 +278,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const Evaluation& Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation& Sw = FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
@@ -292,8 +292,8 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         Scalar Swco = params.Swl();
-        const Evaluation& Sw = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
-        const Evaluation& Sg = FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation& Sw = FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation& Sg = FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         Scalar krocw = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Swco);
         Evaluation krow = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
