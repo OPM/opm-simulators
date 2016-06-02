@@ -32,8 +32,8 @@
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
@@ -1392,7 +1392,7 @@ protected:
         bool onBail = false;
 
         // Newton-Raphson method
-        typedef Opm::LocalAd::Evaluation<Scalar, 1> BhpEval;
+        typedef Opm::DenseAd::Evaluation<Scalar, 1> BhpEval;
 
         BhpEval bhpEval(bhpScalar);
         bhpEval.derivatives[0] = 1.0;
