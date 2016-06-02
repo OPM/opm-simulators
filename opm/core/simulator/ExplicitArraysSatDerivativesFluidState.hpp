@@ -20,8 +20,8 @@
 #ifndef OPM_EXPLICIT_ARRAYS_SAT_DERIVATIVES_FLUID_STATE_HEADER_INCLUDED
 #define OPM_EXPLICIT_ARRAYS_SAT_DERIVATIVES_FLUID_STATE_HEADER_INCLUDED
 
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
@@ -44,7 +44,7 @@ public:
     enum { numPhases = BlackoilPhases::MaxNumPhases };
     enum { numComponents = 3 };
 
-    typedef Opm::LocalAd::Evaluation<double, numPhases> Evaluation;
+    typedef Opm::DenseAd::Evaluation<double, numPhases> Evaluation;
     typedef Evaluation Scalar;
 
     ExplicitArraysSatDerivativesFluidState(const PhaseUsage& phaseUsage)

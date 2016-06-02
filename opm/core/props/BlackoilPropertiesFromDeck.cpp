@@ -244,7 +244,7 @@ namespace Opm
         const auto& pu = phaseUsage();
         const int np = numPhases();
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -469,7 +469,7 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -603,7 +603,7 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
         typedef Opm::MathToolbox<LadEval> Toolbox;
 
         LadEval pLad = 0.0;
