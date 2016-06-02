@@ -28,8 +28,8 @@
 #define OPM_IMMISCIBLE_FLASH_HPP
 
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
@@ -141,7 +141,7 @@ public:
         typedef Dune::FieldMatrix<InputEval, numEq, numEq> Matrix;
         typedef Dune::FieldVector<InputEval, numEq> Vector;
 
-        typedef Opm::LocalAd::Evaluation<InputEval, numEq> FlashEval;
+        typedef Opm::DenseAd::Evaluation<InputEval, numEq> FlashEval;
         typedef Dune::FieldVector<FlashEval, numEq> FlashDefectVector;
         typedef Opm::ImmiscibleFluidState<FlashEval, FluidSystem> FlashFluidState;
 

@@ -32,7 +32,7 @@
  */
 #include "config.h"
 
-#include <opm/material/localad/Evaluation.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/material/constraintsolvers/ImmiscibleFlash.hpp>

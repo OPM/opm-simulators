@@ -30,7 +30,7 @@
 #include "config.h"
 
 // include the local AD framwork
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Math.hpp>
 
 // include all capillary pressure laws
 #include <opm/material/fluidmatrixinteractions/BrooksCorey.hpp>
@@ -280,7 +280,7 @@ inline void testAll()
                                           ThreePFluidSystem::oilPhaseIdx,
                                           ThreePFluidSystem::gasPhaseIdx> ThreePhaseTraits;
 
-    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
+    typedef Opm::DenseAd::Evaluation<Scalar, 3> Evaluation;
     typedef Opm::ImmiscibleFluidState<Evaluation, TwoPFluidSystem> TwoPhaseFluidState;
     typedef Opm::ImmiscibleFluidState<Evaluation, ThreePFluidSystem> ThreePhaseFluidState;
 

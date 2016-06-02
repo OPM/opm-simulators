@@ -40,7 +40,7 @@
 #include <algorithm>
 
 namespace Opm {
-namespace LocalAd {
+namespace DenseAd {
 /*!
  * \brief Represents a function evaluation and its derivatives w.r.t. a fixed set of
  *        variables.
@@ -425,7 +425,7 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>&
     return os;
 }
 
-} // namespace LocalAd
+} // namespace DenseAd
 } // namespace Opm
 
 // In Dune 2.3, the Evaluation.hpp header must be included before the fmatrix.hh
@@ -453,15 +453,15 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>&
 #if !(DUNE_VERSION_NEWER(DUNE_COMMON, 2,4))
 
 namespace Opm {
-namespace LocalAd {
+namespace DenseAd {
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>&);
 }}
 
 namespace std {
 template <class ValueType, int numVars>
-const Opm::LocalAd::Evaluation<ValueType, numVars> abs(const Opm::LocalAd::Evaluation<ValueType, numVars>& x)
-{ return Opm::LocalAd::abs(x); }
+const Opm::DenseAd::Evaluation<ValueType, numVars> abs(const Opm::DenseAd::Evaluation<ValueType, numVars>& x)
+{ return Opm::DenseAd::abs(x); }
 
 } // namespace std
 
@@ -479,10 +479,10 @@ const Opm::LocalAd::Evaluation<ValueType, numVars> abs(const Opm::LocalAd::Evalu
 
 namespace Dune {
 template <class ValueType, int numVars>
-struct FieldTraits<Opm::LocalAd::Evaluation<ValueType, numVars> >
+struct FieldTraits<Opm::DenseAd::Evaluation<ValueType, numVars> >
 {
 public:
-    typedef Opm::LocalAd::Evaluation<ValueType, numVars> field_type;
+    typedef Opm::DenseAd::Evaluation<ValueType, numVars> field_type;
     // setting real_type to field_type here potentially leads to slightly worse
     // performance, but at least it makes things compile.
     typedef field_type real_type;

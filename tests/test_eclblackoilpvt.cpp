@@ -44,8 +44,8 @@
 #include <opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>
 
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
@@ -268,7 +268,7 @@ inline void testAll()
     oilPvt.initFromDeck(deck, eclState);
     waterPvt.initFromDeck(deck, eclState);
 
-    typedef Opm::LocalAd::Evaluation<Scalar, 1> FooEval;
+    typedef Opm::DenseAd::Evaluation<Scalar, 1> FooEval;
     ensurePvtApi<Scalar>(oilPvt, gasPvt, waterPvt);
     ensurePvtApi<FooEval>(oilPvt, gasPvt, waterPvt);
 
