@@ -28,8 +28,8 @@
  */
 #include "config.h"
 
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 #include <opm/material/checkFluidSystem.hpp>
 
 #include <ewoms/models/blackoil/blackoilmodel.hh>
