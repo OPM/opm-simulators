@@ -371,6 +371,7 @@ namespace Opm
             using boost::filesystem::path; 
             path fpath(deck_filename);
             std::string baseName;
+            std::string debugFile;
             if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
                 baseName = path(fpath.stem()).string();
             } else {
@@ -378,16 +379,20 @@ namespace Opm
             }
             if (param_.has("output_dir")) {
                 logFile_ = output_dir_ + "/" + baseName + ".PRT";
+                debugFile = output_dir_ + "/." + baseName + ".DEBUG";
             } else {
                 logFile_ = baseName + ".PRT";
+                debugFile = "." + baseName + ".DEBUG";
             }
             // Create Parser
             ParserPtr parser(new Parser());
             {
-                std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::DefaultMessageTypes);
-                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::DefaultMessageTypes);
+                std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
+                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::NoDebugMessageTypes);
                 OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
                 OpmLog::addBackend( "STREAMLOG", streamLog);
+                std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::MessageType::Debug);
+                OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
                 prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false, false));
                 streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
                 streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false, true));
