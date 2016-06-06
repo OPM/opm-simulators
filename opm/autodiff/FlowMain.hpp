@@ -391,7 +391,7 @@ namespace Opm
                 std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::NoDebugMessageTypes);
                 OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
                 OpmLog::addBackend( "STREAMLOG", streamLog);
-                std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::MessageType::Debug);
+                std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes);
                 OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
                 prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false, false));
                 streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
