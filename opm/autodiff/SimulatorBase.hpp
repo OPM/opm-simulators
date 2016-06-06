@@ -21,6 +21,7 @@
 #ifndef OPM_SIMULATORBASE_HEADER_INCLUDED
 #define OPM_SIMULATORBASE_HEADER_INCLUDED
 
+#include <ewoms/common/timer.hh>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>

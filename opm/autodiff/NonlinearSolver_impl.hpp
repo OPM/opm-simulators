@@ -110,7 +110,6 @@ namespace Opm
     }
 
 
-
     template <class PhysicalModel>
     int
     NonlinearSolver<PhysicalModel>::
@@ -167,7 +166,6 @@ namespace Opm
 
         return linIters;
     }
-
 
 
     template <class PhysicalModel>
