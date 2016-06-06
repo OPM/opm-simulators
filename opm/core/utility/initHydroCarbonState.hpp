@@ -6,7 +6,7 @@
 namespace Opm
 {
 
-void initHydroCarbonState(BlackoilState& state, const PhaseUsage& pu, const int num_cells) {
+void initHydroCarbonState(BlackoilState& state, const PhaseUsage& pu, const int num_cells, const bool has_disgas, const bool has_vapoil) {
     enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour, Water = BlackoilPhases::Aqua };
     // hydrocarbonstate is only used when gas and oil is present
     assert(pu.phase_used[Oil]);
@@ -29,11 +29,11 @@ void initHydroCarbonState(BlackoilState& state, const PhaseUsage& pu, const int 
                 continue; // cases (almost) filled with water is treated as GasAndOil case;
             }
         }
-        if ( saturation[c*np + pu.phase_pos[ Gas ]] == 0.0) {
+        if ( saturation[c*np + pu.phase_pos[ Gas ]] == 0.0 && has_disgas) {
             hydroCarbonState[c] = HydroCarbonState::OilOnly;
             continue;
         }
-        if ( saturation[c*np + pu.phase_pos[ Oil ]] == 0.0) {
+        if ( saturation[c*np + pu.phase_pos[ Oil ]] == 0.0 && has_vapoil) {
             hydroCarbonState[c] = HydroCarbonState::GasOnly;
         }
     }
