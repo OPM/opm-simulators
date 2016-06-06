@@ -301,7 +301,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V mu(n);
         V dmudp(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -354,7 +354,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dmudp(n);
         V dmudr(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -421,7 +421,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dmudp(n);
         V dmudr(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -485,7 +485,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdp(n);
         V dbdr(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -534,7 +534,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdp(n);
         V dbdr(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -607,7 +607,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdp(n);
         V dbdr(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 0.0;
@@ -667,7 +667,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rbub(n);
         V drbubdp(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 293.15; // temperature is not supported by this API!
@@ -724,7 +724,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rv(n);
         V drvdp(n);
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
 
         LadEval pLad = 0.0;
         LadEval TLad = 293.15; // temperature is not supported by this API!
