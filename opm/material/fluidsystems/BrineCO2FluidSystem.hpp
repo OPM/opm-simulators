@@ -239,15 +239,15 @@ public:
 
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // use normalized composition for to calculate the density
             // (the relations don't seem to take non-normalized
             // compositions too well...)
-            LhsEval xlBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, BrineIdx))));
-            LhsEval xlCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, CO2Idx))));
+            LhsEval xlBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, BrineIdx))));
+            LhsEval xlCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, CO2Idx))));
             LhsEval sumx = xlBrine + xlCO2;
             xlBrine /= sumx;
             xlCO2 /= sumx;
@@ -266,8 +266,8 @@ public:
         // use normalized composition for to calculate the density
         // (the relations don't seem to take non-normalized
         // compositions too well...)
-        LhsEval xgBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
-        LhsEval xgCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
+        LhsEval xgBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
+        LhsEval xgCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
         LhsEval sumx = xgBrine + xgCO2;
         xgBrine /= sumx;
         xgCO2 /= sumx;
@@ -292,8 +292,8 @@ public:
 
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // assume pure brine for the liquid phase. TODO: viscosity
@@ -330,8 +330,8 @@ public:
             // as the relative fluid compositions are observed,
             return LhsToolbox::createConstant(1.0);
 
-        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         assert(temperature > 0);
         assert(pressure > 0);
 
@@ -377,8 +377,8 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == liquidPhaseIdx)
             return BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
 
@@ -399,11 +399,11 @@ public:
 
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
-            const LhsEval& XlCO2 = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(phaseIdx, CO2Idx));
+            const LhsEval& XlCO2 = FsToolbox::template decay<LhsEval>(fluidState.massFraction(phaseIdx, CO2Idx));
             const LhsEval& result = liquidEnthalpyBrineCO2_(temperature,
                                                             pressure,
                                                             Brine_IAPWS::salinity,
@@ -412,8 +412,8 @@ public:
             return result;
         }
         else {
-            const LhsEval& XCO2 = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, CO2Idx));
-            const LhsEval& XBrine = FsToolbox::template toLhs<LhsEval>(fluidState.massFraction(gasPhaseIdx, BrineIdx));
+            const LhsEval& XCO2 = FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, CO2Idx));
+            const LhsEval& XBrine = FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, BrineIdx));
 
             LhsEval result = LhsToolbox::createConstant(0);
             result += XBrine * Brine::gasEnthalpy(temperature, pressure);
@@ -462,8 +462,8 @@ public:
 
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if(phaseIdx == liquidPhaseIdx)
             return H2O::liquidHeatCapacity(temperature, pressure);

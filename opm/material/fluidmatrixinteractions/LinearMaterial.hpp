@@ -106,7 +106,7 @@ public:
 
         for (unsigned phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
             const Evaluation& S =
-                FsToolbox::template toLhs<Evaluation>(state.saturation(phaseIdx));
+                FsToolbox::template decay<Evaluation>(state.saturation(phaseIdx));
             Valgrind::CheckDefined(S);
 
             values[phaseIdx] =
@@ -140,7 +140,7 @@ public:
 
         for (unsigned phaseIdx = 0; phaseIdx < Traits::numPhases; ++phaseIdx) {
             const Evaluation& S =
-                FsToolbox::template toLhs<Evaluation>(state.saturation(phaseIdx));
+                FsToolbox::template decay<Evaluation>(state.saturation(phaseIdx));
             Valgrind::CheckDefined(S);
 
             values[phaseIdx] = Toolbox::max(Toolbox::min(S,1.0),0.0);
@@ -155,7 +155,7 @@ public:
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
         Valgrind::CheckDefined(Sw);
 
         const Evaluation& wPhasePressure =
@@ -163,7 +163,7 @@ public:
             (1.0 - Sw)*params.pcMinSat(Traits::wettingPhaseIdx);
 
         const Evaluation& Sn =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
         Valgrind::CheckDefined(Sn);
 
         const Evaluation& nPhasePressure =
@@ -236,7 +236,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
         return Toolbox::max(0.0, Toolbox::min(1.0, Sw));
     }
 
@@ -259,7 +259,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const Evaluation& Sn =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
         return Toolbox::max(0.0, Toolbox::min(1.0, Sn));
     }
 
@@ -285,7 +285,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const Evaluation& Sg =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
         return Toolbox::max(0.0, Toolbox::min(1.0, Sg));
     }
 
@@ -301,7 +301,7 @@ public:
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         const Evaluation& Sn =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
         Valgrind::CheckDefined(Sn);
 
         const Evaluation& nPhasePressure =
@@ -309,7 +309,7 @@ public:
             (1.0 - Sn)*params.pcMinSat(Traits::nonWettingPhaseIdx);
 
         const Evaluation& Sg =
-            FsToolbox::template toLhs<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::gasPhaseIdx));
         Valgrind::CheckDefined(Sg);
 
         const Evaluation& gPhasePressure =

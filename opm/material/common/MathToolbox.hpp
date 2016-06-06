@@ -123,7 +123,7 @@ public:
      * in scalar computations.
      */
     template <class LhsEval>
-    static LhsEval toLhs(Scalar value)
+    static LhsEval decay(Scalar value)
     {
         static_assert(std::is_floating_point<LhsEval>::value,
                       "The left-hand side must be a primitive floating point type!");

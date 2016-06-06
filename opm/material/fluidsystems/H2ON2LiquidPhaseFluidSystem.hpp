@@ -259,12 +259,12 @@ public:
 
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         LhsEval sumMoleFrac = 0;
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-            sumMoleFrac += FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
+            sumMoleFrac += FsToolbox::template decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
 
         assert(phaseIdx == liquidPhaseIdx);
 
@@ -277,8 +277,8 @@ public:
             const LhsEval& rholH2O = H2O::liquidDensity(T, p);
             const LhsEval& clH2O = rholH2O/H2O::molarMass();
 
-            const auto& xlH2O = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
-            const auto& xlN2 = FsToolbox::template toLhs<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
+            const auto& xlH2O = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
+            const auto& xlN2 = FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
 
             // this assumes each nitrogen molecule displaces exactly one
             // water molecule in the liquid
@@ -296,8 +296,8 @@ public:
 
         assert(phaseIdx == liquidPhaseIdx);
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         // assume pure water for the liquid phase
         return H2O::liquidViscosity(T, p);
@@ -315,8 +315,8 @@ public:
         assert(phaseIdx == liquidPhaseIdx);
         assert(0 <= compIdx  && compIdx < numComponents);
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (compIdx == H2OIdx)
             return H2O::vaporPressure(T)/p;
@@ -335,8 +335,8 @@ public:
 
         assert(phaseIdx == liquidPhaseIdx);
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         return BinaryCoeff::H2O_N2::liquidDiffCoeff(T, p);
     }
@@ -351,8 +351,8 @@ public:
 
         assert (phaseIdx == liquidPhaseIdx);
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         Valgrind::CheckDefined(T);
         Valgrind::CheckDefined(p);
 
@@ -371,8 +371,8 @@ public:
         assert(phaseIdx == liquidPhaseIdx);
 
         if(useComplexRelations){
-            const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-            const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+            const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+            const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
             return H2O::liquidThermalConductivity(T, p);
         }
         else
@@ -389,8 +389,8 @@ public:
 
         assert (phaseIdx == liquidPhaseIdx);
 
-        const auto& T = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& p = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         return H2O::liquidHeatCapacity(T, p);
     }

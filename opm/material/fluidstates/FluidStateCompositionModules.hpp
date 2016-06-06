@@ -140,7 +140,7 @@ public:
             sumMoleFractions_[phaseIdx] = 0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 moleFraction_[phaseIdx][compIdx] =
-                    FsToolbox::template toLhs<Scalar>(fs.moleFraction(phaseIdx, compIdx));
+                    FsToolbox::template decay<Scalar>(fs.moleFraction(phaseIdx, compIdx));
 
                 averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
                 sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];

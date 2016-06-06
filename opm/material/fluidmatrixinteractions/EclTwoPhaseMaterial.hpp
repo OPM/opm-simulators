@@ -133,7 +133,7 @@ public:
         switch (params.approach()) {
         case EclTwoPhaseGasOil: {
             const Evaluation& So =
-                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(oilPhaseIdx));
+                FsToolbox::template decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
             values[oilPhaseIdx] = 0.0;
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), So);
@@ -142,7 +142,7 @@ public:
 
         case EclTwoPhaseOilWater: {
             const Evaluation& Sw =
-                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = 0.0;
             values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
@@ -151,7 +151,7 @@ public:
 
         case EclTwoPhaseGasWater: {
             const Evaluation& Sw =
-                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = 0.0;
             values[gasPhaseIdx] =
@@ -262,7 +262,7 @@ public:
         switch (params.approach()) {
         case EclTwoPhaseGasOil: {
             const Evaluation& So =
-                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(oilPhaseIdx));
+                FsToolbox::template decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
             values[oilPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So);
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), So);
@@ -271,7 +271,7 @@ public:
 
         case EclTwoPhaseOilWater: {
             const Evaluation& Sw =
-                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
             values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
@@ -280,7 +280,7 @@ public:
 
         case EclTwoPhaseGasWater: {
             const Evaluation& Sw =
-                FsToolbox::template toLhs<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);

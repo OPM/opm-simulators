@@ -230,8 +230,8 @@ public:
 
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::density(temperature, pressure);
         return NonwettingPhase::density(temperature, pressure);
@@ -247,8 +247,8 @@ public:
 
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::viscosity(temperature, pressure);
         return NonwettingPhase::viscosity(temperature, pressure);
@@ -285,8 +285,8 @@ public:
 
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::enthalpy(temperature, pressure);
         return NonwettingPhase::enthalpy(temperature, pressure);
@@ -302,8 +302,8 @@ public:
 
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::thermalConductivity(temperature, pressure);
         return NonwettingPhase::thermalConductivity(temperature, pressure);
@@ -319,8 +319,8 @@ public:
 
         assert(0 <= phaseIdx  && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template toLhs<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template toLhs<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::heatCapacity(temperature, pressure);
         return NonwettingPhase::heatCapacity(temperature, pressure);

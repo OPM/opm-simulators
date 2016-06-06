@@ -129,8 +129,8 @@ public:
 
         // sum of liquid saturations
         const auto& St =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(wettingPhaseIdx))
-            + FsToolbox::template toLhs<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx))
+            + FsToolbox::template decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
 
         Evaluation Se = (St - params.Swrx())/(1. - params.Swrx());
 
@@ -182,7 +182,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
         Evaluation Se = (Sw-params.Swr())/(1.-params.Snr());
 
         Scalar PC_VG_REG = 0.01;
@@ -281,7 +281,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
         // transformation to effective saturation
         const Evaluation& Se = (Sw - params.Swr()) / (1-params.Swr());
 
@@ -312,9 +312,9 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& Sn =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
         const Evaluation& Sw =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
         Evaluation Swe = Toolbox::min((Sw - params.Swr()) / (1 - params.Swr()), 1.);
         Evaluation Ste = Toolbox::min((Sw + Sn - params.Swr()) / (1 - params.Swr()), 1.);
 
@@ -360,7 +360,7 @@ public:
         typedef MathToolbox<Evaluation> Toolbox;
 
         const Evaluation& Sg =
-            FsToolbox::template toLhs<Evaluation>(fluidState.saturation(gasPhaseIdx));
+            FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         const Evaluation& Se = Toolbox::min(((1-Sg) - params.Sgr()) / (1 - params.Sgr()), 1.);
 
         // regularization

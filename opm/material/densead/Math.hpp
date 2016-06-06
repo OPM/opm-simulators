@@ -37,7 +37,7 @@
 #include <opm/material/common/MathToolbox.hpp>
 
 namespace Opm {
-namespace LocalAd {
+namespace DenseAd {
 // provide some algebraic functions
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>& x)
@@ -408,19 +408,19 @@ Evaluation<ValueType, numVars> log(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-} // namespace LocalAd
+} // namespace DenseAd
 
 // a kind of traits class for the automatic differentiation case. (The toolbox for the
 // scalar case is provided by the MathToolbox.hpp header file.)
 template <class ValueT, int numVars>
-struct MathToolbox<Opm::LocalAd::Evaluation<ValueT, numVars> >
+struct MathToolbox<Opm::DenseAd::Evaluation<ValueT, numVars> >
 {
 private:
 public:
     typedef ValueT ValueType;
     typedef Opm::MathToolbox<ValueType> InnerToolbox;
     typedef typename InnerToolbox::Scalar Scalar;
-    typedef Opm::LocalAd::Evaluation<ValueType, numVars> Evaluation;
+    typedef Opm::DenseAd::Evaluation<ValueType, numVars> Evaluation;
 
     static ValueType value(const Evaluation& eval)
     { return eval.value; }
@@ -437,19 +437,19 @@ public:
     template <class LhsEval>
     static typename std::enable_if<std::is_same<Evaluation, LhsEval>::value,
                                    LhsEval>::type
-    toLhs(const Evaluation& eval)
+    decay(const Evaluation& eval)
     { return eval; }
 
     template <class LhsEval>
     static typename std::enable_if<std::is_same<Evaluation, LhsEval>::value,
                                    LhsEval>::type
-    toLhs(const Evaluation&& eval)
+    decay(const Evaluation&& eval)
     { return eval; }
 
     template <class LhsEval>
     static typename std::enable_if<std::is_floating_point<LhsEval>::value,
                                    LhsEval>::type
-    toLhs(const Evaluation& eval)
+    decay(const Evaluation& eval)
     { return eval.value; }
 
     // comparison
@@ -472,55 +472,55 @@ public:
     // arithmetic functions
     template <class Arg1Eval, class Arg2Eval>
     static Evaluation max(const Arg1Eval& arg1, const Arg2Eval& arg2)
-    { return Opm::LocalAd::max(arg1, arg2); }
+    { return Opm::DenseAd::max(arg1, arg2); }
 
     template <class Arg1Eval, class Arg2Eval>
     static Evaluation min(const Arg1Eval& arg1, const Arg2Eval& arg2)
-    { return Opm::LocalAd::min(arg1, arg2); }
+    { return Opm::DenseAd::min(arg1, arg2); }
 
     static Evaluation abs(const Evaluation& arg)
-    { return Opm::LocalAd::abs(arg); }
+    { return Opm::DenseAd::abs(arg); }
 
     static Evaluation tan(const Evaluation& arg)
-    { return Opm::LocalAd::tan(arg); }
+    { return Opm::DenseAd::tan(arg); }
 
     static Evaluation atan(const Evaluation& arg)
-    { return Opm::LocalAd::atan(arg); }
+    { return Opm::DenseAd::atan(arg); }
 
     static Evaluation atan2(const Evaluation& arg1, const Evaluation& arg2)
-    { return Opm::LocalAd::atan2(arg1, arg2); }
+    { return Opm::DenseAd::atan2(arg1, arg2); }
 
     static Evaluation sin(const Evaluation& arg)
-    { return Opm::LocalAd::sin(arg); }
+    { return Opm::DenseAd::sin(arg); }
 
     static Evaluation asin(const Evaluation& arg)
-    { return Opm::LocalAd::asin(arg); }
+    { return Opm::DenseAd::asin(arg); }
 
     static Evaluation cos(const Evaluation& arg)
-    { return Opm::LocalAd::cos(arg); }
+    { return Opm::DenseAd::cos(arg); }
 
     static Evaluation acos(const Evaluation& arg)
-    { return Opm::LocalAd::acos(arg); }
+    { return Opm::DenseAd::acos(arg); }
 
     static Evaluation sqrt(const Evaluation& arg)
-    { return Opm::LocalAd::sqrt(arg); }
+    { return Opm::DenseAd::sqrt(arg); }
 
     static Evaluation exp(const Evaluation& arg)
-    { return Opm::LocalAd::exp(arg); }
+    { return Opm::DenseAd::exp(arg); }
 
     static Evaluation log(const Evaluation& arg)
-    { return Opm::LocalAd::log(arg); }
+    { return Opm::DenseAd::log(arg); }
 
     template <class RhsValueType>
     static Evaluation pow(const Evaluation& arg1, const RhsValueType& arg2)
-    { return Opm::LocalAd::pow(arg1, arg2); }
+    { return Opm::DenseAd::pow(arg1, arg2); }
 
     template <class RhsValueType>
     static Evaluation pow(const RhsValueType& arg1, const Evaluation& arg2)
-    { return Opm::LocalAd::pow(arg1, arg2); }
+    { return Opm::DenseAd::pow(arg1, arg2); }
 
     static Evaluation pow(const Evaluation& arg1, const Evaluation& arg2)
-    { return Opm::LocalAd::pow(arg1, arg2); }
+    { return Opm::DenseAd::pow(arg1, arg2); }
 };
 
 }

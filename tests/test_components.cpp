@@ -27,8 +27,8 @@
  */
 #include "config.h"
 
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 
 #include "checkComponent.hpp"
 
@@ -88,7 +88,7 @@ void testAllComponents()
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
+    typedef Opm::DenseAd::Evaluation<Scalar, 3> Evaluation;
 
     // ensure that all components are API-compliant
     testAllComponents<Scalar, Scalar>();

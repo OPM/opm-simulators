@@ -30,8 +30,8 @@
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
@@ -158,7 +158,7 @@ public:
         typedef Dune::FieldMatrix<InputEval, numEq, numEq> Matrix;
         typedef Dune::FieldVector<InputEval, numEq> Vector;
 
-        typedef Opm::LocalAd::Evaluation</*Scalar=*/InputEval,
+        typedef Opm::DenseAd::Evaluation</*Scalar=*/InputEval,
                                          /*numDerivs=*/numEq> FlashEval;
 
         typedef Dune::FieldVector<FlashEval, numEq> FlashDefectVector;

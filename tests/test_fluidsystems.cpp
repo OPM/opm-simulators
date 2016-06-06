@@ -29,8 +29,8 @@
 #include "config.h"
 
 #include <opm/material/checkFluidSystem.hpp>
-#include <opm/material/localad/Evaluation.hpp>
-#include <opm/material/localad/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 
 // include all fluid systems in opm-material
 #include <opm/material/fluidsystems/SinglePhaseFluidSystem.hpp>
@@ -236,7 +236,7 @@ void testAllFluidSystems()
         typedef Opm::FluidSystems::BlackOil<Scalar> FluidSystem;
         if (false) checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>();
 
-        typedef Opm::LocalAd::Evaluation<Scalar, 1> BlackoilDummyEval;
+        typedef Opm::DenseAd::Evaluation<Scalar, 1> BlackoilDummyEval;
         ensureBlackoilApi<Scalar, FluidSystem>();
         ensureBlackoilApi<BlackoilDummyEval, FluidSystem>();
     }
@@ -309,7 +309,7 @@ void testAllFluidSystems()
 template <class Scalar>
 inline void testAll()
 {
-    typedef Opm::LocalAd::Evaluation<Scalar, 3> Evaluation;
+    typedef Opm::DenseAd::Evaluation<Scalar, 3> Evaluation;
 
     // ensure that all fluid states are API-compliant
     testAllFluidStates<Scalar>();

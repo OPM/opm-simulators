@@ -152,7 +152,7 @@ public:
             ComponentVector fugVec;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 const auto& fug = fluidState.fugacity(refPhaseIdx, compIdx);
-                fugVec[compIdx] = FsToolbox::template toLhs<Evaluation>(fug);
+                fugVec[compIdx] = FsToolbox::template decay<Evaluation>(fug);
             }
 
             CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);
