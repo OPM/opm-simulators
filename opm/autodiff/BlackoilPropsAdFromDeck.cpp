@@ -301,22 +301,22 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V mu(n);
         V dmudp(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
 
-        pLad.derivatives[0] = 1.0;
+        pEval.derivatives[0] = 1.0;
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = pw.value()[i];
-            TLad.value = T.value()[i];
+            pEval.value = pw.value()[i];
+            TEval.value = T.value()[i];
 
-            const LadEval& muLad = waterPvt_->viscosity(pvtRegionIdx, TLad, pLad);
+            const Eval& muEval = waterPvt_->viscosity(pvtRegionIdx, TEval, pEval);
 
-            mu[i] = muLad.value;
-            dmudp[i] = muLad.derivatives[0];
+            mu[i] = muEval.value;
+            dmudp[i] = muEval.derivatives[0];
         }
 
         if (pw.derivative().empty()) {
@@ -354,34 +354,34 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dmudp(n);
         V dmudr(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
-        LadEval RsLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
+        Eval RsEval = 0.0;
 
-        pLad.derivatives[0] = 1.0;
-        RsLad.derivatives[1] = 1.0;
+        pEval.derivatives[0] = 1.0;
+        RsEval.derivatives[1] = 1.0;
 
-        LadEval muLad;
+        Eval muEval;
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = po.value()[i];
-            TLad.value = T.value()[i];
+            pEval.value = po.value()[i];
+            TEval.value = T.value()[i];
 
             if (cond[i].hasFreeGas()) {
-                muLad = oilPvt_->saturatedViscosity(pvtRegionIdx, TLad, pLad);
+                muEval = oilPvt_->saturatedViscosity(pvtRegionIdx, TEval, pEval);
             }
             else {
                 if (phase_usage_.phase_used[Gas]) {
-                    RsLad.value = rs.value()[i];
+                    RsEval.value = rs.value()[i];
                 }
-                muLad = oilPvt_->viscosity(pvtRegionIdx, TLad, pLad, RsLad);
+                muEval = oilPvt_->viscosity(pvtRegionIdx, TEval, pEval, RsEval);
             }
 
-            mu[i] = muLad.value;
-            dmudp[i] = muLad.derivatives[0];
-            dmudr[i] = muLad.derivatives[1];
+            mu[i] = muEval.value;
+            dmudp[i] = muEval.derivatives[0];
+            dmudr[i] = muEval.derivatives[1];
         }
 
         ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
@@ -421,32 +421,32 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dmudp(n);
         V dmudr(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
-        LadEval RvLad = 0.0;
-        LadEval muLad;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
+        Eval RvEval = 0.0;
+        Eval muEval;
 
-        pLad.derivatives[0] = 1.0;
-        RvLad.derivatives[1] = 1.0;
+        pEval.derivatives[0] = 1.0;
+        RvEval.derivatives[1] = 1.0;
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = pg.value()[i];
-            TLad.value = T.value()[i];
+            pEval.value = pg.value()[i];
+            TEval.value = T.value()[i];
 
             if (cond[i].hasFreeOil()) {
-                muLad = gasPvt_->saturatedViscosity(pvtRegionIdx, TLad, pLad);
+                muEval = gasPvt_->saturatedViscosity(pvtRegionIdx, TEval, pEval);
             }
             else {
-                RvLad.value = rv.value()[i];
-                muLad = gasPvt_->viscosity(pvtRegionIdx, TLad, pLad, RvLad);
+                RvEval.value = rv.value()[i];
+                muEval = gasPvt_->viscosity(pvtRegionIdx, TEval, pEval, RvEval);
             }
 
-            mu[i] = muLad.value;
-            dmudp[i] = muLad.derivatives[0];
-            dmudr[i] = muLad.derivatives[1];
+            mu[i] = muEval.value;
+            dmudp[i] = muEval.derivatives[0];
+            dmudr[i] = muEval.derivatives[1];
         }
 
         ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
@@ -485,21 +485,21 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdp(n);
         V dbdr(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
 
-        pLad.derivatives[0] = 1.0;
+        pEval.derivatives[0] = 1.0;
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = pw.value()[i];
-            TLad.value = T.value()[i];
+            pEval.value = pw.value()[i];
+            TEval.value = T.value()[i];
 
-            const LadEval& bLad = waterPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+            const Eval& bEval = waterPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
 
-            b[i] = bLad.value;
-            dbdp[i] = bLad.derivatives[0];
+            b[i] = bEval.value;
+            dbdp[i] = bEval.derivatives[0];
         }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
@@ -534,38 +534,38 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdp(n);
         V dbdr(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
-        LadEval RsLad = 0.0;
-        LadEval bLad;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
+        Eval RsEval = 0.0;
+        Eval bEval;
 
-        pLad.derivatives[0] = 1.0;
-        RsLad.derivatives[1] = 1.0;
+        pEval.derivatives[0] = 1.0;
+        RsEval.derivatives[1] = 1.0;
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = po.value()[i];
-            TLad.value = T.value()[i];
+            pEval.value = po.value()[i];
+            TEval.value = T.value()[i];
 
             //RS/RV only makes sense when gas phase is active
             if (cond[i].hasFreeGas()) {
-                bLad = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                bEval = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
             }
             else {
                 if (rs.size() == 0) {
-                    RsLad.value = 0.0;
+                    RsEval.value = 0.0;
                 }
                 else {
-                    RsLad.value = rs.value()[i];
+                    RsEval.value = rs.value()[i];
                 }
-                bLad = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
+                bEval = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RsEval);
             }
 
-            b[i] = bLad.value;
-            dbdp[i] = bLad.derivatives[0];
-            dbdr[i] = bLad.derivatives[1];
+            b[i] = bEval.value;
+            dbdp[i] = bEval.derivatives[0];
+            dbdr[i] = bEval.derivatives[1];
         }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
@@ -607,32 +607,32 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V dbdp(n);
         V dbdr(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/2> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
-        LadEval RvLad = 0.0;
-        LadEval bLad;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
+        Eval RvEval = 0.0;
+        Eval bEval;
 
-        pLad.derivatives[0] = 1.0;
-        RvLad.derivatives[1] = 1.0;
+        pEval.derivatives[0] = 1.0;
+        RvEval.derivatives[1] = 1.0;
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = pg.value()[i];
-            TLad.value = T.value()[i];
+            pEval.value = pg.value()[i];
+            TEval.value = T.value()[i];
 
             if (cond[i].hasFreeOil()) {
-                bLad = gasPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                bEval = gasPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
             }
             else {
-                RvLad.value = rv.value()[i];
-                bLad = gasPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RvLad);
+                RvEval.value = rv.value()[i];
+                bEval = gasPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RvEval);
             }
 
-            b[i] = bLad.value;
-            dbdp[i] = bLad.derivatives[0];
-            dbdr[i] = bLad.derivatives[1];
+            b[i] = bEval.value;
+            dbdp[i] = bEval.derivatives[0];
+            dbdr[i] = bEval.derivatives[1];
         }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
@@ -667,21 +667,21 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rbub(n);
         V drbubdp(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 293.15; // temperature is not supported by this API!
+        Eval pEval = 0.0;
+        Eval TEval = 293.15; // temperature is not supported by this API!
 
-        pLad.derivatives[0] = 1.0;
+        pEval.derivatives[0] = 1.0;
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = po.value()[i];
+            pEval.value = po.value()[i];
 
-            const LadEval& RsLad = oilPvt_->saturatedGasDissolutionFactor(pvtRegionIdx, TLad, pLad);
+            const Eval& RsEval = oilPvt_->saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
 
-            rbub[i] = RsLad.value;
-            drbubdp[i] = RsLad.derivatives[0];
+            rbub[i] = RsEval.value;
+            drbubdp[i] = RsEval.derivatives[0];
         }
 
         ADB::M drbubdp_diag(drbubdp.matrix().asDiagonal());
@@ -724,21 +724,21 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rv(n);
         V drvdp(n);
 
-        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 293.15; // temperature is not supported by this API!
+        Eval pEval = 0.0;
+        Eval TEval = 293.15; // temperature is not supported by this API!
 
-        pLad.derivatives[0] = 1.0;
+        pEval.derivatives[0] = 1.0;
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pLad.value = pg.value()[i];
+            pEval.value = pg.value()[i];
 
-            const LadEval& RvLad = gasPvt_->saturatedOilVaporizationFactor(pvtRegionIdx, TLad, pLad);
+            const Eval& RvEval = gasPvt_->saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
 
-            rv[i] = RvLad.value;
-            drvdp[i] = RvLad.derivatives[0];
+            rv[i] = RvEval.value;
+            drvdp[i] = RvEval.derivatives[0];
         }
 
         ADB::M drvdp_diag(drvdp.matrix().asDiagonal());
