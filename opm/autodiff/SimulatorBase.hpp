@@ -22,11 +22,12 @@
 #define OPM_SIMULATORBASE_HEADER_INCLUDED
 
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
+#include <opm/autodiff/IterationReport.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/BlackoilModel.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>

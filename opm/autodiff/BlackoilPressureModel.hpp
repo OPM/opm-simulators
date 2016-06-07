@@ -26,6 +26,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/autodiff/StandardWells.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 #include <algorithm>
