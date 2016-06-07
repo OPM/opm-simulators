@@ -185,6 +185,7 @@ public:
     /// to compute a reduction. Or with tuples of them to compute multiple reductions with only
     /// one global communication.
     /// The possible functors needed can be constructed with Opm::Reduction::makeGlobalMaxFunctor(),
+    /// Opm::Reduction::makeLInfinityNormFunctor(),
     /// Opm::Reduction::makeGlobalMinFunctor(), and 
     /// Opm::Reduction::makeGlobalSumFunctor().
     /// \tparam type of the container or the tuple of  containers.
@@ -573,6 +574,30 @@ private:
         return MaskToMinOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
             (std::pointer_to_binary_function<const T&,const T&,const T&>
              ((const T&(*)(const T&, const T&))std::max<T>));
+    }
+
+    namespace detail
+    {
+    /// \brief Computes the maximum of theabsolute values of two values.
+    template<typename T>
+    struct MaxAbsFunctor
+    {
+        typedef T result_type;
+
+        result_type operator()(const T& t1, const T& t2)
+        {
+            return std::max(std::abs(t1),std::abs(t2));
+        }
+    };
+    }
+    /// \brief Create a functor for computing a global L infinity norm
+    ///
+    /// To be used with ParallelISTLInformation::computeReduction.
+    template<class T>
+    MaskIDOperator<detail::MaxAbsFunctor<T> >
+    makeLInfinityNormFunctor()
+    {
+        return MaskIDOperator<detail::MaxAbsFunctor<T> >();
     }
     /// \brief Create a functor for computing a global minimum.
     ///
