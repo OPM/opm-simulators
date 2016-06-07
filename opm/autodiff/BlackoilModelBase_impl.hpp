@@ -1104,7 +1104,7 @@ namespace detail {
                 const ParallelISTLInformation& real_info =
                     boost::any_cast<const ParallelISTLInformation&>(pinfo);
                 double result=0;
-                real_info.computeReduction(a.value(), Reduction::makeGlobalMaxFunctor<double>(), result);
+                real_info.computeReduction(a.value(), Reduction::makeLInfinityNormFunctor<double>(), result);
                 return result;
             }
             else
