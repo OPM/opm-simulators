@@ -106,6 +106,11 @@ NEW_PROP_TAG(RestartWritingInterval);
 // Disable well treatment (for users which do this externally)
 NEW_PROP_TAG(DisableWells);
 
+// Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
+// macro undefined). Next to a slightly better performance, this also eliminates some
+// print statements in debug mode.
+NEW_PROP_TAG(EnableDebuggingChecks);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -203,6 +208,9 @@ SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 // By default, ebos should handle the wells internally, so we don't disable the well
 // treatment
 SET_INT_PROP(EclBaseProblem, DisableWells, false);
+
+// By default, we enable the debugging checks if we're compiled in debug mode
+SET_INT_PROP(EclBaseProblem, EnableDebuggingChecks, true);
 } // namespace Properties
 
 /*!
@@ -442,11 +450,13 @@ public:
     void endTimeStep()
     {
 #ifndef NDEBUG
-        // in debug mode, we don't care about performance, so we check if the model does
-        // the right thing (i.e., the mass change inside the whole reservoir must be
-        // equivalent to the fluxes over the grid's boundaries plus the source rates
-        // specified by the problem)
-        this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
+        if (GET_PROP_VALUE(TypeTag, EnableDebuggingChecks)) {
+            // in debug mode, we don't care about performance, so we check if the model does
+            // the right thing (i.e., the mass change inside the whole reservoir must be
+            // equivalent to the fluxes over the grid's boundaries plus the source rates
+            // specified by the problem)
+            this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
+        }
 #endif // NDEBUG
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
