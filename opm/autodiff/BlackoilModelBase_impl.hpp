@@ -747,7 +747,7 @@ namespace detail {
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        asImpl().wellModel().updateWellControls(terminal_output_, well_state);
+        asImpl().wellModel().updateWellControls(well_state);
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
@@ -1036,7 +1036,7 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
-                asImpl().wellModel().updateWellControls(terminal_output_, well_state);
+                asImpl().wellModel().updateWellControls(well_state);
             }
         } while (it < 15);
 

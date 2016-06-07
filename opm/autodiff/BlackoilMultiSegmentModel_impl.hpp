@@ -147,7 +147,7 @@ namespace Opm {
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
-        wellModel().updateWellControls(terminal_output_, well_state);
+        wellModel().updateWellControls(well_state);
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
