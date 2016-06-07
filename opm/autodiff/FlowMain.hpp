@@ -557,7 +557,9 @@ namespace Opm
                 props.capPress(numCells, state_->saturation().data(), cells.data(), pc.data(), nullptr);
                 fluidprops_->setSwatInitScaling(state_->saturation(), pc);
             }
-            initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid));
+            initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid), deck_->hasKeyword("DISGAS"), deck_->hasKeyword("VAPOIL"));
+
+
         }
 
 
