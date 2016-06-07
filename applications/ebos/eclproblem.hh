@@ -103,6 +103,9 @@ NEW_PROP_TAG(EnableWriteAllSolutions);
 // The number of time steps skipped between writing two consequtive restart files
 NEW_PROP_TAG(RestartWritingInterval);
 
+// Disable well treatment (for users which do this externally)
+NEW_PROP_TAG(DisableWells);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -197,6 +200,9 @@ SET_STRING_PROP(EclBaseProblem, GridFile, "data/ecl.DATA");
 // between writing restart files
 SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 
+// By default, ebos should handle the wells internally, so we don't disable the well
+// treatment
+SET_INT_PROP(EclBaseProblem, DisableWells, false);
 } // namespace Properties
 
 /*!
@@ -389,8 +395,9 @@ public:
             simulator.setTimeStepSize(dt);
         }
 
-        // set up the wells
-        wellManager_.beginEpisode(this->simulator().gridManager().eclState(), isOnRestart);
+        if (!GET_PROP_VALUE(TypeTag, DisableWells))
+            // set up the wells
+            wellManager_.beginEpisode(this->simulator().gridManager().eclState(), isOnRestart);
     }
 
     /*!
@@ -398,14 +405,16 @@ public:
      */
     void beginTimeStep()
     {
-        wellManager_.beginTimeStep();
+        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
+            wellManager_.beginTimeStep();
 
-        // this is a little hack to write the initial condition, which we need to do
-        // before the first time step has finished.
-        static bool initialWritten = false;
-        if (this->simulator().episodeIndex() == 0 && !initialWritten) {
-            summaryWriter_.write(wellManager_, /*isInitial=*/true);
-            initialWritten = true;
+            // this is a little hack to write the initial condition, which we need to do
+            // before the first time step has finished.
+            static bool initialWritten = false;
+            if (this->simulator().episodeIndex() == 0 && !initialWritten) {
+                summaryWriter_.write(wellManager_, /*isInitial=*/true);
+                initialWritten = true;
+            }
         }
     }
 
@@ -413,13 +422,19 @@ public:
      * \brief Called by the simulator before each Newton-Raphson iteration.
      */
     void beginIteration()
-    { wellManager_.beginIteration(); }
+    {
+        if (!GET_PROP_VALUE(TypeTag, DisableWells))
+            wellManager_.beginIteration();
+    }
 
     /*!
      * \brief Called by the simulator after each Newton-Raphson iteration.
      */
     void endIteration()
-    { wellManager_.endIteration(); }
+    {
+        if (!GET_PROP_VALUE(TypeTag, DisableWells))
+            wellManager_.endIteration();
+    }
 
     /*!
      * \brief Called by the simulator after each time integration.
@@ -434,10 +449,12 @@ public:
         this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
 #endif // NDEBUG
 
-        wellManager_.endTimeStep();
+        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
+            wellManager_.endTimeStep();
 
-        // write the summary information after each time step
-        summaryWriter_.write(wellManager_);
+            // write the summary information after each time step
+            summaryWriter_.write(wellManager_);
+        }
 
         bool cachesInvalid = false;
 
@@ -696,10 +713,12 @@ public:
      */
     void initialSolutionApplied()
     {
-        // initialize the wells. Note that this needs to be done after initializing the
-        // intrinsic permeabilities and the after applying the initial solution because
-        // the well model uses these...
-        wellManager_.init(this->simulator().gridManager().eclState());
+        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
+            // initialize the wells. Note that this needs to be done after initializing the
+            // intrinsic permeabilities and the after applying the initial solution because
+            // the well model uses these...
+            wellManager_.init(this->simulator().gridManager().eclState());
+        }
 
         // update the data required for capillary pressure hysteresis
         updateHysteresis_();
@@ -723,13 +742,15 @@ public:
     {
         rate = 0.0;
 
-        wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
+        if (!GET_PROP_VALUE(TypeTag, DisableWells)) {
+            wellManager_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
 
-        // convert the source term from the total mass rate of the
-        // cell to the one per unit of volume as used by the model.
-        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-            rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
+            // convert the source term from the total mass rate of the
+            // cell to the one per unit of volume as used by the model.
+            unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+                rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
+        }
     }
 
     /*!
