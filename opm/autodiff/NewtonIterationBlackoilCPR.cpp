@@ -63,7 +63,7 @@ namespace Opm
         linear_solver_maxiter_( param.getDefault("linear_solver_maxiter", 50 ) ),
         linear_solver_restart_( param.getDefault("linear_solver_restart", 40 ) ),
         linear_solver_verbosity_( param.getDefault("linear_solver_verbosity", 0 )),
-        ignoreConvergenceFailure_(param.getDefault("linear_solver_ignoreconvergencefailure", ignoreConvergenceFailure_))
+        linear_solver_ignoreconvergencefailure_(param.getDefault("linear_solver_ignoreconvergencefailure", ignoreConvergenceFailure_))
     {
     }
 
@@ -168,7 +168,7 @@ namespace Opm
         iterations_ = result.iterations;
 
         // Check for failure of linear solver.
-        if (!result.converged && !ignoreConvergenceFailure_) {
+        if (!result.converged && !linear_solver_ignoreconvergencefailure_) {
             OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver.");
         }
 

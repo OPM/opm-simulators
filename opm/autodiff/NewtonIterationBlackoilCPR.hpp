@@ -128,7 +128,7 @@ namespace Opm
         const int    linear_solver_maxiter_;
         const int    linear_solver_restart_;
         const int    linear_solver_verbosity_;
-        const bool   ignoreConvergenceFailure_;
+        const bool   linear_solver_ignoreconvergencefailure_;
     };
 
 } // namespace Opm
