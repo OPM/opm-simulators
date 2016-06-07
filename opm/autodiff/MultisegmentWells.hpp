@@ -193,8 +193,7 @@ namespace Opm {
 
             template <class WellState>
             void
-            updateWellControls(const bool terminal_output,
-                               WellState& xw) const;
+            updateWellControls(WellState& xw) const;
 
             // TODO: these code are same with the StandardWells
             // to find a better solution later.

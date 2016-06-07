@@ -682,8 +682,7 @@ namespace Opm
     template <class WellState>
     void
     StandardWells::
-    updateWellControls(const bool terminal_output,
-                       WellState& xw) const
+    updateWellControls(WellState& xw) const
     {
         if( !localWellsActive() ) return ;
 
@@ -720,14 +719,13 @@ namespace Opm
             }
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
-                if (terminal_output)
-                {
-                    std::ostringstream ss;
-                    ss << "Switching control mode for well " << wells().name[w]
-                       << " from " << modestring[well_controls_iget_type(wc, current)]
-                       << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
-                    OpmLog::info(ss.str());
-                }
+                // We disregard terminal_ouput here as with it only messages
+                // for wells on one process will be printed.
+                std::ostringstream ss;
+                ss << "Switching control mode for well " << wells().name[w]
+                   << " from " << modestring[well_controls_iget_type(wc, current)]
+                   << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                OpmLog::info(ss.str());
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
             }
