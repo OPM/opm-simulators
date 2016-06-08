@@ -388,7 +388,7 @@ namespace Opm
             ParserPtr parser(new Parser());
             {
                 std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
-                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::NoDebugMessageTypes);
+                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
                 OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
                 OpmLog::addBackend( "STREAMLOG", streamLog);
                 std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes);
@@ -842,6 +842,8 @@ namespace Opm
                 return Log::MessageType::Problem;
             case Message::type::Bug:
                 return Log::MessageType::Bug;
+            case Message::type::Note:
+                return Log::MessageType::Note;
             }
             throw std::logic_error("Invalid messages type!\n");
         }
