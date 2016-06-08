@@ -528,7 +528,7 @@ namespace Opm
                         gor[c] = surface_vol[ c * numPhases + pu.phase_pos[Gas]] / surface_vol[ c * numPhases + pu.phase_pos[Oil]];
                     }
                 }
-            } else if (deck_->hasKeyword("EQUIL") && props.numPhases() == 3) {
+            } else if (deck_->hasKeyword("EQUIL")) {
                 // Which state class are we really using - what a f... mess?
                 state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
                                                   Opm::UgGridHelpers::numFaces(grid),
