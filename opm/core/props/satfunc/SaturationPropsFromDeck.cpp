@@ -139,6 +139,7 @@ namespace Opm
         assert(cells != 0);
 
         const int np = numPhases();
+
         if (dpcds) {
             ExplicitArraysSatDerivativesFluidState fluidState(phaseUsage_);
             typedef ExplicitArraysSatDerivativesFluidState::Evaluation Evaluation;
@@ -153,10 +154,13 @@ namespace Opm
                 // copy the values calculated using opm-material to the target arrays
                 for (int pcPhaseIdx = 0; pcPhaseIdx < np; ++pcPhaseIdx) {
                     double sign = (pcPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
-                    pc[np*i + pcPhaseIdx] = sign*capillaryPressures[pcPhaseIdx].value;
-
+                    // in opm-material the wetting phase is the reference phase
+                    // for two-phase problems i.e water for oil-water system,
+                    // but for flow it is always oil. Add oil (liquid) capillary pressure value
+                    // to shift the reference phase to oil
+                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].value + sign * capillaryPressures[pcPhaseIdx].value;
                     for (int satPhaseIdx = 0; satPhaseIdx < np; ++satPhaseIdx)
-                        dpcds[np*np*i + satPhaseIdx*np + pcPhaseIdx] = sign*capillaryPressures[pcPhaseIdx].derivatives[satPhaseIdx];
+                        dpcds[np*np*i + satPhaseIdx*np + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].derivatives[satPhaseIdx] + sign * capillaryPressures[pcPhaseIdx].derivatives[satPhaseIdx];
                 }
             }
         } else {
@@ -172,7 +176,11 @@ namespace Opm
                 // copy the values calculated using opm-material to the target arrays
                 for (int pcPhaseIdx = 0; pcPhaseIdx < np; ++pcPhaseIdx) {
                     double sign = (pcPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
-                    pc[np*i + pcPhaseIdx] = sign*capillaryPressures[pcPhaseIdx];
+                    // in opm-material the wetting phase is the reference phase
+                    // for two-phase problems i.e water for oil-water system,
+                    // but for flow it is always oil. Add oil (liquid) capillary pressure value
+                    // to shift the reference phase to oil
+                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid] + sign * capillaryPressures[pcPhaseIdx];
                 }
             }
         }
