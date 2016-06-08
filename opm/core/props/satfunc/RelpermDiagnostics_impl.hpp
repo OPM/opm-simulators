@@ -33,7 +33,7 @@ namespace Opm {
                                        Opm::DeckConstPtr deck,
                                        const GridT& grid)
     {
-        OpmLog::info("***************Saturation Functions Diagnostics***************");
+        OpmLog::info("\n***************Saturation Functions Diagnostics***************");
         phaseCheck_(deck);
         satFamilyCheck_(eclState);
         tableCheck_(eclState, deck);
