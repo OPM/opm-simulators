@@ -179,6 +179,17 @@ public:
         }
         return ownerMask_;
     }
+
+    /// \brief Get the owner Mask.
+    ///
+    /// \return A vector with entries 0, and 1. 0 marks an index that we cannot
+    ///         compute correct results for. 1 marks an index that this process
+    ///         is responsible for and computes correct results in parallel.
+    const std::vector<double>& getOwnerMask() const
+    {
+        return ownerMask_;
+    }
+
     /// \brief Compute one or more global reductions.
     ///
     /// This function can either be used with a container, an operator, and an initial value
