@@ -842,8 +842,8 @@ namespace Opm
                 return Log::MessageType::Problem;
             case Message::type::Bug:
                 return Log::MessageType::Bug;
-            case Message::type::Prtinfo:
-                return Log::MessageType::Prtinfo;
+            case Message::type::Note:
+                return Log::MessageType::Note;
             }
             throw std::logic_error("Invalid messages type!\n");
         }
