@@ -4,10 +4,10 @@ source `dirname $0`/build-opm-simulators.sh
 
 declare -a upstreams
 upstreams=(opm-parser
+           opm-output
            opm-material
            opm-core
-           opm-grid
-           opm-output)
+           opm-grid)
 
 declare -A upstreamRev
 upstreamRev[opm-parser]=master
