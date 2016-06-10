@@ -27,6 +27,7 @@
 
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/DataMap.hpp>
+#include <opm/core/utility/Compat.hpp>
 #include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
@@ -246,10 +247,10 @@ namespace Opm
 
     void
     BlackoilOutputWriter::
-    writeInit(const SimulatorTimerInterface& timer, const NNC& non_cartesian_connections)
+    writeInit(const NNC& nnc)
     {
         if( eclWriter_ ) {
-            eclWriter_->writeInit(timer, non_cartesian_connections);
+            eclWriter_->writeInit( nnc );
         }
     }
 
@@ -342,7 +343,11 @@ namespace Opm
             if (initConfig->restartRequested() && ((initConfig->getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                 eclWriter_->writeTimeStep(timer, state, wellState, substep );
+                 eclWriter_->writeTimeStep(timer.currentStepNum(),
+                                           timer.simulationTimeElapsed(),
+                                           simToSolution( state, phaseUsage_ ),
+                                           wellState.report(),
+                                           substep );
             }
         }
 

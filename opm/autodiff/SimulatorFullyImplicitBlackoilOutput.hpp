@@ -20,7 +20,9 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #include <opm/core/grid.h>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <opm/core/simulator/WellState.hpp>
+#include <opm/core/utility/Compat.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/output/eclipse/EclipseReader.hpp>
@@ -140,68 +142,66 @@ namespace Opm
         }
     }
 
-    /** Wrapper class satisfying the OutputWriter interface and writing VTK output. */
-    template <class Grid>
-    class BlackoilVTKWriter : public OutputWriter
-    {
-    public:
-        // constructor taking grid and directory
-        BlackoilVTKWriter(const Grid& grid,
-                          const std::string& outputDir)
-          : grid_( grid ),
-            outputDir_( outputDir )
+    class BlackoilSubWriter {
+        public:
+            BlackoilSubWriter( const std::string& outputDir )
+                : outputDir_( outputDir )
         {}
 
-        /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface& /* timer */, const NNC& /* non_cartesian_connections */)
-        {}
-
-        /** \copydoc Opm::OutputWriter::writeTimeStep */
-        void writeTimeStep(const SimulatorTimerInterface& timer,
+        virtual void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& state,
                            const WellState&,
-                           bool /*substep*/ = false)
-        {
-            outputStateVtk(grid_, state, timer.currentStepNum(), outputDir_);
-        }
-
-    protected:
-        const Grid& grid_;
-        const std::string outputDir_;
+                           bool /*substep*/ = false) = 0;
+        protected:
+            const std::string outputDir_;
     };
 
-    /** Wrapper class satisfying the OutputWriter interface and writing Matlab output. */
-    template <class Grid>
-    class BlackoilMatlabWriter : public OutputWriter
+    template< class Grid >
+    class BlackoilVTKWriter : public BlackoilSubWriter {
+        public:
+            BlackoilVTKWriter( const Grid& grid,
+                               const std::string& outputDir )
+                : BlackoilSubWriter( outputDir )
+                , grid_( grid )
+        {}
+
+            void writeTimeStep(const SimulatorTimerInterface& timer,
+                    const SimulationDataContainer& state,
+                    const WellState&,
+                    bool /*substep*/ = false) override
+            {
+                outputStateVtk(grid_, state, timer.currentStepNum(), outputDir_);
+            }
+
+        protected:
+            const Grid& grid_;
+    };
+
+    template< typename Grid >
+    class BlackoilMatlabWriter : public BlackoilSubWriter
     {
-    public:
-        // constructor taking grid and directory
-        BlackoilMatlabWriter(const Grid& grid,
-                             const std::string& outputDir)
-          : grid_( grid ),
-            outputDir_( outputDir )
+        public:
+            BlackoilMatlabWriter( const Grid& grid,
+                             const std::string& outputDir )
+                : BlackoilSubWriter( outputDir )
+                , grid_( grid )
         {}
 
-        /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface& /* timer */, const NNC& /* non_cartesian_connections */)
-        {}
-
-        /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const WellState& wellState,
-                           bool /*substep*/ = false)
+                           bool /*substep*/ = false) override
         {
             outputStateMatlab(grid_, reservoirState, timer.currentStepNum(), outputDir_);
             outputWellStateMatlab(wellState, timer.currentStepNum(), outputDir_);
         }
-    protected:
-        const Grid& grid_;
-        const std::string outputDir_;
+
+        protected:
+            const Grid& grid_;
     };
 
     /** \brief Wrapper class for VTK, Matlab, and ECL output. */
-    class BlackoilOutputWriter : public OutputWriter
+    class BlackoilOutputWriter
     {
 
     public:
@@ -214,7 +214,7 @@ namespace Opm
                              const double* permeability );
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const SimulatorTimerInterface &timer, const NNC& non_cartesian_connections);
+        void writeInit(const NNC& non_cartesian_connections);
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
@@ -261,8 +261,9 @@ namespace Opm
         int lastBackupReportStep_;
 
         std::ofstream backupfile_;
-        std::unique_ptr< OutputWriter  > vtkWriter_;
-        std::unique_ptr< OutputWriter  > matlabWriter_;
+        Opm::PhaseUsage phaseUsage_;
+        std::unique_ptr< BlackoilSubWriter > vtkWriter_;
+        std::unique_ptr< BlackoilSubWriter > matlabWriter_;
         std::unique_ptr< EclipseWriter > eclWriter_;
         EclipseStateConstPtr eclipseState_;
 
@@ -288,6 +289,7 @@ namespace Opm
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
+        phaseUsage_( phaseUsage ),
         vtkWriter_( output_ && param.getDefault("output_vtk",false) ?
                      new BlackoilVTKWriter< Grid >( grid, outputDir_ ) : 0 ),
         matlabWriter_( output_ && parallelOutput_->isIORank() &&
@@ -359,7 +361,12 @@ namespace Opm
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate); //Resize for restart step
-        Opm::init_from_restart_file(eclipseState_, Opm::UgGridHelpers::numCells(grid), phaseusage, simulatorstate, wellstate);
+        auto restarted = Opm::init_from_restart_file(
+                                *eclipseState_,
+                                Opm::UgGridHelpers::numCells(grid) );
+
+        solutionToSim( restarted.first, phaseusage, simulatorstate );
+        wellsToState( restarted.second, wellstate );
     }
 
 
