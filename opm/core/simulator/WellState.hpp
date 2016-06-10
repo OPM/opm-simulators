@@ -22,8 +22,11 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
+#include <opm/output/Wells.hpp>
+
 #include <array>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -49,6 +52,7 @@ namespace Opm
         {
             // clear old name mapping
             wellMap_.clear();
+            wells_.reset( clone_wells( wells ) );
 
             if (wells) {
                 const int nw = wells->number_of_wells;
@@ -208,6 +212,43 @@ namespace Opm
             return wellRates().size() / numWells();
         }
 
+        virtual data::Wells report() const
+        {
+            return { { /* WellState offers no completion data, so that has to be added later */ },
+                this->bhp(),
+                this->temperature(),
+                this->wellRates(),
+                this->perfPress(),
+                this->perfRates() };
+        }
+
+        virtual ~WellState() {}
+
+        WellState() = default;
+        WellState( const WellState& rhs ) :
+            bhp_( rhs.bhp_ ),
+            thp_( rhs.thp_ ),
+            temperature_( rhs.temperature_ ),
+            wellrates_( rhs.wellrates_ ),
+            perfrates_( rhs.perfrates_ ),
+            perfpress_( rhs.perfpress_ ),
+            wellMap_( rhs.wellMap_ ),
+            wells_( clone_wells( rhs.wells_.get() ) )
+        {}
+
+        WellState& operator=( const WellState& rhs ) {
+            this->bhp_ = rhs.bhp_;
+            this->thp_ = rhs.thp_;
+            this->temperature_ = rhs.temperature_;
+            this->wellrates_ = rhs.wellrates_;
+            this->perfrates_ = rhs.perfrates_;
+            this->perfpress_ = rhs.perfpress_;
+            this->wellMap_ = rhs.wellMap_;
+            this->wells_.reset( clone_wells( rhs.wells_.get() ) );
+
+            return *this;
+        }
+
     private:
         std::vector<double> bhp_;
         std::vector<double> thp_;
@@ -217,6 +258,12 @@ namespace Opm
         std::vector<double> perfpress_;
 
         WellMapType wellMap_;
+
+    protected:
+        struct wdel {
+            void operator()( Wells* w ) { destroy_wells( w ); }
+        };
+        std::unique_ptr< Wells, wdel > wells_;
     };
 
 } // namespace Opm
