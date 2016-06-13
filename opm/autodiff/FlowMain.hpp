@@ -297,7 +297,7 @@ namespace Opm
         {
             // Read parameters.
             if ( output_cout_ ) {
-                std::cout << "---------------    Reading parameters     ---------------" << std::endl;
+                std::cout << "\n---------------    Reading parameters     ---------------\n" << std::endl;
             }
             param_ = parameter::ParameterGroup(argc, argv, false, output_cout_);
 
