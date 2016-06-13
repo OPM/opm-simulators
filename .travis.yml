@@ -8,7 +8,6 @@ addons:
     sources:
       - boost-latest
       - ubuntu-toolchain-r-test
-      
     packages:
       - libboost1.55-all-dev
       - gcc-4.8
@@ -19,30 +18,12 @@ addons:
       - libsuitesparse-dev
       - libeigen3-dev
 
-install:
+before_script:
     - export CXX="g++-4.8" CC="gcc-4.8" FC="gfortran-4.8"
     - cd ..
-
     - git clone https://github.com/OPM/opm-common.git
-    - git clone https://github.com/OPM/opm-parser.git
-    - git clone https://github.com/OPM/opm-material.git
-    - git clone https://github.com/OPM/opm-core.git
-    - git clone https://github.com/OPM/opm-grid.git
-    - git clone https://github.com/OPM/opm-output.git
-    - git clone https://github.com/OPM/opm-data.git
+    - opm-common/travis/clone-opm.sh opm-simulators
+    - opm-common/travis/build-prereqs.sh
+    
 
-    - opm-parser/travis/clone-and-build-ert.sh
-    - opm-material/travis/clone-and-build-dune-common.sh
-    - opm-core/travis/clone-and-build-dune-istl.sh
-    - opm-core/travis/clone-and-build-superlu.sh
-    - opm-grid/travis/clone-and-build-dune-geometry.sh
-    - opm-grid/travis/clone-and-build-dune-grid.sh
-
-    - opm-common/travis/build-opm-common.sh
-    - opm-parser/travis/build-opm-parser.sh
-    - opm-material/travis/build-opm-material.sh
-    - opm-core/travis/build-opm-core.sh
-    - opm-grid/travis/build-opm-grid.sh
-    - opm-output/travis/build-opm-output.sh
-
-script: opm-simulators/travis/build-and-test-opm-simulators.sh
+script: opm-common/travis/build-and-test.sh opm-simulators
