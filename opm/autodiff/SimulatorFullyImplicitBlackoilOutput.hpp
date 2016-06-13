@@ -29,7 +29,6 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
-#include <opm/output/OutputWriter.hpp>
 #include <opm/output/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
@@ -297,9 +296,7 @@ namespace Opm
                      new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
         eclWriter_( output_ && parallelOutput_->isIORank() &&
                     param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState,
-                                      parallelOutput_->numCells(),
-                                      parallelOutput_->globalCell() )
+                    new EclipseWriter(eclipseState)
                    : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()
