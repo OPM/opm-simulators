@@ -184,7 +184,8 @@ protected:
     unsigned upstreamIndex_(unsigned phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (pressureDifferential_[phaseIdx] >= 0)?exteriorDofIdx_:interiorDofIdx_;
+
+        return upIdx_[phaseIdx];
     }
 
     /*!
@@ -197,7 +198,8 @@ protected:
     unsigned downstreamIndex_(unsigned phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
-        return (pressureDifferential_[phaseIdx] < 0)?exteriorDofIdx_:interiorDofIdx_;
+
+        return dnIdx_[phaseIdx];
     }
 
     /*!
@@ -249,6 +251,29 @@ protected:
 
             pressureDifferential_[phaseIdx] = pressureExterior - pressureInterior;
 
+            // decide the upstream index for the phase. for this we make sure that the
+            // degree of freedom which is regarded upstream if both pressures are equal
+            // is always the same: if the pressure is equal, the DOF with the lower
+            // global index is regarded to be the upstream one.
+            if (pressureDifferential_[phaseIdx] == 0) {
+                if (I > J) {
+                    upIdx_[phaseIdx] = exteriorDofIdx_;
+                    dnIdx_[phaseIdx] = interiorDofIdx_;
+                }
+                else {
+                    upIdx_[phaseIdx] = interiorDofIdx_;
+                    dnIdx_[phaseIdx] = exteriorDofIdx_;
+                }
+            }
+            else if (pressureDifferential_[phaseIdx] > 0) {
+                upIdx_[phaseIdx] = exteriorDofIdx_;
+                dnIdx_[phaseIdx] = interiorDofIdx_;
+            }
+            else {
+                upIdx_[phaseIdx] = interiorDofIdx_;
+                dnIdx_[phaseIdx] = exteriorDofIdx_;
+            }
+
             // apply the threshold pressure for the intersection. note that the concept
             // of threshold pressure is a quite big hack that only makes sense for ECL
             // datasets. (and even there its physical justification is quite
@@ -283,10 +308,6 @@ protected:
     void calculateFluxes_(const ElementContext &elemCtx, unsigned scvfIdx, unsigned timeIdx)
     { }
 
-    // the local indices of the interior and exterior degrees of freedom
-    unsigned interiorDofIdx_;
-    unsigned exteriorDofIdx_;
-
     // transmissibility [m^3 s]
     Scalar trans_;
 
@@ -302,6 +323,12 @@ protected:
     // the difference in effective pressure between the two degrees of
     // freedom [Pa]
     Evaluation pressureDifferential_[numPhases];
+
+    // the local indices of the interior and exterior degrees of freedom
+    unsigned short interiorDofIdx_;
+    unsigned short exteriorDofIdx_;
+    unsigned short upIdx_[numPhases];
+    unsigned short dnIdx_[numPhases];
 };
 
 } // namespace Ewoms
