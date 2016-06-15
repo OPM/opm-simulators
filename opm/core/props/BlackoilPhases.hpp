@@ -60,6 +60,9 @@ namespace Opm
         void setFreeOil  () { insert(BlackoilPhases::Liquid); }
         void setFreeGas  () { insert(BlackoilPhases::Vapour); }
 
+        bool operator==(const PhasePresence& other) const { return present_ == other.present_; }
+        bool operator!=(const PhasePresence& other) const { return !this->operator==(other); }
+
     private:
         unsigned char present_;
 
