@@ -394,7 +394,7 @@ namespace Opm
                         const auto& cells = reg.cells(r);
                         if (cells.empty())
                         {
-                            OpmLog::warning("Equilibration region " + std::to_string(r) 
+                            OpmLog::warning("Equilibration region " + std::to_string(r + 1) 
                                             + " has no active cells");
                             continue;
                         }
