@@ -69,7 +69,7 @@ namespace Opm
                                 + std::to_string(rockKeyword.size())
                                 + " regions specified)."
                                 + " Ignoring all except for the first.\n" 
-				+ "In file " + rockKeyword.getFileName()
+                                + "In file " + rockKeyword.getFileName()
                                 + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
             }
 
