@@ -137,6 +137,7 @@ namespace Opm
             if (!ok) {
                 return EXIT_FAILURE;
             }
+            asImpl().setupLogging();
             asImpl().setupOutput();
             asImpl().readDeckInput();
             asImpl().setupGridAndProps();
@@ -295,10 +296,6 @@ namespace Opm
         // Returns true if ok, false if not.
         bool setupParameters(int argc, char** argv)
         {
-            // Read parameters.
-            if ( output_cout_ ) {
-                std::cout << "\n---------------    Reading parameters     ---------------\n" << std::endl;
-            }
             param_ = parameter::ParameterGroup(argc, argv, false, output_cout_);
 
             // See if a deck was specified on the command line.
@@ -328,6 +325,44 @@ namespace Opm
 
 
 
+
+        void setupLogging()
+        {
+            std::string deck_filename = param_.get<std::string>("deck_filename");
+            // create logFile
+            using boost::filesystem::path; 
+            path fpath(deck_filename);
+            std::string baseName;
+            std::string debugFile;
+            if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
+                baseName = path(fpath.stem()).string();
+            } else {
+                baseName = path(fpath.filename()).string();
+            }
+            if (param_.has("output_dir")) {
+                logFile_ = output_dir_ + "/" + baseName + ".PRT";
+                debugFile = output_dir_ + "/." + baseName + ".DEBUG";
+            } else {
+                logFile_ = baseName + ".PRT";
+                debugFile = "." + baseName + ".DEBUG";
+            }
+            std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
+            std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
+            OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
+            OpmLog::addBackend( "STREAMLOG", streamLog);
+            std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes);
+            OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
+            prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
+            streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
+            streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
+        }
+
+
+
+
+
+
+
         // Set output_to_files_ and set/create output dir. Write parameter file.
         // Writes to:
         //   output_to_files_
@@ -335,6 +370,8 @@ namespace Opm
         // Throws std::runtime_error if failed to create (if requested) output dir.
         void setupOutput()
         {
+            // Read parameters.
+            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
             // Write parameters used for later reference. (only if rank is zero)
             output_to_files_ = output_cout_ && param_.getDefault("output", true);
             if (output_to_files_) {
@@ -367,36 +404,9 @@ namespace Opm
         void readDeckInput()
         {   
             std::string deck_filename = param_.get<std::string>("deck_filename");
-            // create logFile
-            using boost::filesystem::path; 
-            path fpath(deck_filename);
-            std::string baseName;
-            std::string debugFile;
-            if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
-                baseName = path(fpath.stem()).string();
-            } else {
-                baseName = path(fpath.filename()).string();
-            }
-            if (param_.has("output_dir")) {
-                logFile_ = output_dir_ + "/" + baseName + ".PRT";
-                debugFile = output_dir_ + "/." + baseName + ".DEBUG";
-            } else {
-                logFile_ = baseName + ".PRT";
-                debugFile = "." + baseName + ".DEBUG";
-            }
+
             // Create Parser
             ParserPtr parser(new Parser());
-            {
-                std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
-                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
-                OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
-                OpmLog::addBackend( "STREAMLOG", streamLog);
-                std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes);
-                OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
-                prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
-                streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
-                streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
-            }
 
             // Create Deck and EclipseState.
             try {
