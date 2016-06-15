@@ -250,7 +250,11 @@ namespace Opm
     writeInit(const NNC& nnc)
     {
         if( eclWriter_ ) {
-            eclWriter_->writeInit( nnc );
+
+            auto cells = parallelOutput_ ? parallelOutput_->numCells() : 0;
+            auto* activeCells = parallelOutput_ ? parallelOutput_->globalCell() : nullptr;
+
+            eclWriter_->writeInit( nnc, cells, activeCells );
         }
     }
 
