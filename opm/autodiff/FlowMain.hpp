@@ -385,7 +385,7 @@ namespace Opm
                 debugFile = "." + baseName + ".DEBUG";
             }
             // Create Parser
-            ParserPtr parser(new Parser());
+            static ParserPtr parser(new Parser());
             {
                 std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
                 std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
