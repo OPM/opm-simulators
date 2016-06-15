@@ -68,7 +68,8 @@ namespace Opm
                 OpmLog::warning("Can only handle a single region in ROCK ("
                                 + std::to_string(rockKeyword.size())
                                 + " regions specified)."
-                                + " Ignoring all except for the first.\nFile " + rockKeyword.getFileName()
+                                + " Ignoring all except for the first.\n" 
+				+ "In file " + rockKeyword.getFileName()
                                 + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
             }
 
