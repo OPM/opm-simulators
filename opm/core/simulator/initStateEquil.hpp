@@ -390,14 +390,13 @@ namespace Opm
                                  const Grid&                       G    ,
                                  const double grav)
                 {
-                    int regnum = 0;
                     for (const auto& r : reg.activeRegions()) {
-                        regnum++ ;
                         const auto& cells = reg.cells(r);
                         if (cells.empty())
                         {
-                            OpmLog::warning("Equilibration region " + std::to_string(regnum) 
+                            OpmLog::warning("Equilibration region " + std::to_string(r) 
                                             + " has no active cells");
+                            continue;
                         }
                         const int repcell = *cells.begin();
 
