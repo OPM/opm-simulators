@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RsvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <array>
 #include <cassert>
@@ -389,11 +390,14 @@ namespace Opm
                                  const Grid&                       G    ,
                                  const double grav)
                 {
+                    int regnum = 0;
                     for (const auto& r : reg.activeRegions()) {
+                        regnum++ ;
                         const auto& cells = reg.cells(r);
                         if (cells.empty())
                         {
-                            continue;
+                            OpmLog::warning("Equilibration region " + std::to_string(regnum) 
+                                            + " has no active cells");
                         }
                         const int repcell = *cells.begin();
 
