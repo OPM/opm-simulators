@@ -68,11 +68,12 @@ namespace Opm
 #elif HAVE_PETSC
         std::string default_solver = "petsc";
 #else
+        std::string default_solver = "no_solver_available";
         OPM_THROW(std::runtime_error, "No linear solver available, you must have UMFPACK , dune-istl or Petsc installed to use LinearSolverFactory.");
 #endif
 
         const std::string ls =
-            param.getDefault<std::string>("linsolver", default_solver);
+            param.getDefault("linsolver", default_solver);
 
         if (ls == "umfpack") {
 #if HAVE_SUITESPARSE_UMFPACK_H
