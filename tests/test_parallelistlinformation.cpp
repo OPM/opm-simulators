@@ -33,6 +33,7 @@
 #include <functional>
 #ifdef HAVE_DUNE_ISTL
 
+
 template<typename T>
 void runSumMaxMinTest(const T offset)
 {
@@ -60,7 +61,9 @@ void runSumMaxMinTest(const T offset)
     BOOST_CHECK(std::get<1>(values)==std::max(N+offset-1, std::get<1>(oldvalues)));
     BOOST_CHECK(std::get<2>(values)==std::min(offset, std::get<2>(oldvalues)));
     BOOST_CHECK(std::get<3>(values)==((end-1)*end*(2*end-1)-(start-1)*start*(2*start-1))/6+std::get<3>(oldvalues));
-    BOOST_CHECK(std::get<4>(values)==std::max(std::abs(offset),std::abs(N+offset-1)));
+    // Must avoid std::abs() directly to prevent ambiguity with unsigned integers.
+    Opm::Reduction::detail::MaxAbsFunctor<T> maxabsfunc;
+    BOOST_CHECK(std::get<4>(values)==maxabsfunc(offset, N+offset-1));
 }
 
 BOOST_AUTO_TEST_CASE(tupleReductionTestInt)

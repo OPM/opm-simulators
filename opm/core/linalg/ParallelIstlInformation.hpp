@@ -578,18 +578,32 @@ private:
 
     namespace detail
     {
-    /// \brief Computes the maximum of theabsolute values of two values.
-    template<typename T>
-    struct MaxAbsFunctor
-    {
-        typedef T result_type;
-
-        result_type operator()(const T& t1, const T& t2)
+        /// \brief Computes the maximum of the absolute values of two values.
+        template<typename T>
+        struct MaxAbsFunctor
         {
-            return std::max(std::abs(t1),std::abs(t2));
-        }
-    };
+            typedef T result_type;
+
+            result_type operator()(const T& t1, const T& t2)
+            {
+                return std::max(std::abs(t1),std::abs(t2));
+            }
+        };
+
+
+        /// \brief Specialization to avoid ambiguous abs() for unsigned integers.
+        template <>
+        struct MaxAbsFunctor<std::size_t>
+        {
+            typedef std::size_t result_type;
+
+            result_type operator()(const std::size_t& t1, const std::size_t& t2)
+            {
+                return std::max(t1, t2);
+            }
+        };
     }
+
     /// \brief Create a functor for computing a global L infinity norm
     ///
     /// To be used with ParallelISTLInformation::computeReduction.
