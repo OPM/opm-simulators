@@ -141,7 +141,7 @@ namespace Opm {
 
     MultisegmentWells::
     MultisegmentWells(const Wells* wells_arg,
-                      const std::vector<WellConstPtr>& wells_ecl,
+                      const std::vector< const Well* >& wells_ecl,
                       const int time_step)
       : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
       , wops_ms_(wells_multisegment_)
@@ -179,7 +179,7 @@ namespace Opm {
 
     std::vector<WellMultiSegmentConstPtr>
     MultisegmentWells::createMSWellVector(const Wells* wells_arg,
-                                          const std::vector<WellConstPtr>& wells_ecl,
+                                          const std::vector< const Well* >& wells_ecl,
                                           const int time_step)
     {
         std::vector<WellMultiSegmentConstPtr> wells_multisegment;

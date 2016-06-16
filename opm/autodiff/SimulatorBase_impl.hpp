@@ -257,14 +257,14 @@ namespace Opm
     }
 
     namespace SimFIBODetails {
-        typedef std::unordered_map<std::string, WellConstPtr> WellMap;
+        typedef std::unordered_map<std::string, const Well* > WellMap;
 
         inline WellMap
-        mapWells(const std::vector<WellConstPtr>& wells)
+        mapWells(const std::vector< const Well* >& wells)
         {
             WellMap wmap;
 
-            for (std::vector<WellConstPtr>::const_iterator
+            for (std::vector< const Well* >::const_iterator
                      w = wells.begin(), e = wells.end();
                  w != e; ++w)
             {
@@ -306,7 +306,7 @@ namespace Opm
             WellMap::const_iterator i = wmap.find(name);
 
             if (i != wmap.end()) {
-                WellConstPtr wp = i->second;
+                const Well* wp = i->second;
 
                 match = (wp->isProducer(step) &&
                          wp->getProductionProperties(step)
@@ -428,7 +428,7 @@ namespace Opm
     {
         typedef SimFIBODetails::WellMap WellMap;
 
-        const std::vector<WellConstPtr>& w_ecl = eclipse_state_->getSchedule()->getWells(step);
+        const auto w_ecl = eclipse_state_->getSchedule()->getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
@@ -506,7 +506,7 @@ namespace Opm
                     WellMap::const_iterator i = wmap.find(wells->name[*rp]);
 
                     if (i != wmap.end()) {
-                        WellConstPtr wp = i->second;
+                        const auto* wp = i->second;
 
                         const WellProductionProperties& p =
                             wp->getProductionProperties(step);
@@ -563,7 +563,7 @@ namespace Opm
                 if (!is_producer && wells->name[w] != 0) {
                     WellMap::const_iterator i = wmap.find(wells->name[w]);
                     if (i != wmap.end()) {
-                        WellConstPtr wp = i->second;
+                        const auto* wp = i->second;
                         const WellInjectionProperties& injector = wp->getInjectionProperties(step);
                         if (!injector.predictionMode) {
                             //History matching WCONINJEH

@@ -54,7 +54,7 @@ namespace Opm
         /// \param[in]       well information from EclipseState
         /// \param[in]       current time step
         /// \param[in[       pointer to Wells structure, to be removed eventually
-        WellMultiSegment(WellConstPtr well, size_t time_step, const Wells* wells);
+        WellMultiSegment(const Well* well, size_t time_step, const Wells* wells);
 
         /// Well name.
         const std::string& name() const;
@@ -146,8 +146,8 @@ namespace Opm
     private:
         // for the moment, we use the information from wells.
         // TODO: remove the dependency on wells from opm-core.
-        void initMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells);
-        void initNonMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells);
+        void initMultiSegmentWell(const Well* well, size_t time_step, const Wells* wells);
+        void initNonMultiSegmentWell(const Well* well, size_t time_step, const Wells* wells);
         void updateWellOps();
 
     private:
