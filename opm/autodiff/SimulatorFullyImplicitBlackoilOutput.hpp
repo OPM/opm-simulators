@@ -210,11 +210,12 @@ namespace Opm
         BlackoilOutputWriter(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              Opm::EclipseStateConstPtr eclipseState,
+                             const NNC&,
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability );
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const NNC& non_cartesian_connections);
+        void writeInit();
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,
@@ -282,6 +283,7 @@ namespace Opm
     BlackoilOutputWriter(const Grid& grid,
                          const parameter::ParameterGroup& param,
                          Opm::EclipseStateConstPtr eclipseState,
+                         const NNC& nnc,
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),
@@ -299,7 +301,8 @@ namespace Opm
                     param.getDefault("output_ecl", true) ?
                     new EclipseWriter(eclipseState,
                                       parallelOutput_->numCells(),
-                                      parallelOutput_->globalCell() )
+                                      parallelOutput_->globalCell(),
+                                      nnc )
                    : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()

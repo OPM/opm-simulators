@@ -655,6 +655,7 @@ namespace Opm
             output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
                                                           param_,
                                                           eclipse_state_,
+                                                          geoprops_->nonCartesianConnections(),
                                                           Opm::phaseUsageFromDeck(deck_),
                                                           fluidprops_->permeability()));
         }
@@ -740,7 +741,7 @@ namespace Opm
                     fullReport.reportParam(tot_os);
                 }
             } else {
-                output_writer_->writeInit( geoprops_->nonCartesianConnections() );
+                output_writer_->writeInit();
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
