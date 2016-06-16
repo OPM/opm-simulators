@@ -579,25 +579,26 @@ private:
     namespace detail
     {
         /// \brief Computes the maximum of the absolute values of two values.
-        template<typename T>
+        template<typename T, typename Enable = void>
         struct MaxAbsFunctor
         {
-            typedef T result_type;
-
-            result_type operator()(const T& t1, const T& t2)
+            using result_type = T;
+            result_type operator()(const T& t1,
+                                   const T& t2)
             {
-                return std::max(std::abs(t1),std::abs(t2));
+                return std::max(std::abs(t1), std::abs(t2));
             }
         };
 
-
-        /// \brief Specialization to avoid ambiguous abs() for unsigned integers.
-        template <>
-        struct MaxAbsFunctor<std::size_t>
+        // Specialization for unsigned integers. They need their own
+        // version since abs(x) is ambiguous (as well as somewhat
+        // meaningless).
+        template<typename T>
+        struct MaxAbsFunctor<T, typename std::enable_if<std::is_unsigned<T>::value>::type>
         {
-            typedef std::size_t result_type;
-
-            result_type operator()(const std::size_t& t1, const std::size_t& t2)
+            using result_type = T;
+            result_type operator()(const T& t1,
+                                   const T& t2)
             {
                 return std::max(t1, t2);
             }
