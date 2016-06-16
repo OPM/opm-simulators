@@ -138,6 +138,7 @@ namespace Opm
                 return EXIT_FAILURE;
             }
             asImpl().setupOutput();
+            asImpl().setupLogging();
             asImpl().readDeckInput();
             asImpl().setupGridAndProps();
             asImpl().extractMessages();
@@ -295,10 +296,6 @@ namespace Opm
         // Returns true if ok, false if not.
         bool setupParameters(int argc, char** argv)
         {
-            // Read parameters.
-            if ( output_cout_ ) {
-                std::cout << "---------------    Reading parameters     ---------------" << std::endl;
-            }
             param_ = parameter::ParameterGroup(argc, argv, false, output_cout_);
 
             // See if a deck was specified on the command line.
@@ -359,13 +356,9 @@ namespace Opm
 
 
 
-        // Parser the input and creates the Deck and EclipseState objects.
-        // Writes to:
-        //   deck_
-        //   eclipse_state_
-        // May throw if errors are encountered, here configured to be somewhat tolerant.
-        void readDeckInput()
-        {   
+        // Setup OpmLog backend with output_dir. 
+        void setupLogging()
+        {
             std::string deck_filename = param_.get<std::string>("deck_filename");
             // create logFile
             using boost::filesystem::path; 
@@ -384,19 +377,35 @@ namespace Opm
                 logFile_ = baseName + ".PRT";
                 debugFile = "." + baseName + ".DEBUG";
             }
+            std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
+            std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
+            OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
+            OpmLog::addBackend( "STREAMLOG", streamLog);
+            std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes);
+            OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
+            prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
+            streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
+            streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
+            // Read parameters.
+            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
+        }
+
+
+
+
+
+
+        // Parser the input and creates the Deck and EclipseState objects.
+        // Writes to:
+        //   deck_
+        //   eclipse_state_
+        // May throw if errors are encountered, here configured to be somewhat tolerant.
+        void readDeckInput()
+        {   
+            std::string deck_filename = param_.get<std::string>("deck_filename");
+
             // Create Parser
             ParserPtr parser(new Parser());
-            {
-                std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
-                std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
-                OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
-                OpmLog::addBackend( "STREAMLOG", streamLog);
-                std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes);
-                OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
-                prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
-                streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
-                streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
-            }
 
             // Create Deck and EclipseState.
             try {
