@@ -406,14 +406,14 @@ namespace Opm
     /// \param[in] well the Well to construct object for
     /// \param[in] timeStep the time step in question
     /// \param[in] the phase usage
-    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(WellConstPtr well, size_t timeStep,
+    std::shared_ptr<WellsGroupInterface> createWellWellsGroup(const Well* well, size_t timeStep,
                                                               const PhaseUsage& phase_usage );
 
     /// Creates the WellsGroupInterface for the given Group
     /// \param[in] group the Group to construct object for
     /// \param[in] timeStep the time step in question
     /// \param[in] the phase usage
-    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(GroupConstPtr group, size_t timeStep,
+    std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group* group, size_t timeStep,
                                                                const PhaseUsage& phase_usage );
 }
 #endif	/* OPM_WELLSGROUP_HPP */

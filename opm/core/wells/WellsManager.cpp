@@ -414,7 +414,7 @@ namespace Opm
 
 
 
-    void WellsManager::setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
+    void WellsManager::setupWellControls(std::vector< const Well* >& wells, size_t timeStep,
                                          std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
                                          const std::vector<int>& wells_on_proc) {
         int well_index = 0;
@@ -427,7 +427,7 @@ namespace Opm
                 continue;
             }
 
-           WellConstPtr well = (*wellIter);
+           const auto* well = (*wellIter);
 
             if (well->getStatus(timeStep) == WellCommon::STOP) {
                 // STOPed wells are kept in the well list but marked as stopped.
@@ -728,12 +728,12 @@ namespace Opm
     }
 
 
-    void WellsManager::setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
+    void WellsManager::setupGuideRates(std::vector< const Well* >& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
                                        const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials)
     {
         const int np = phaseUsage.num_phases;
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
-            WellConstPtr well = *wellIter;
+            const auto* well = *wellIter;
 
             if (well->getStatus(timeStep) == WellCommon::SHUT) {
                 //SHUT wells does not need guide rates

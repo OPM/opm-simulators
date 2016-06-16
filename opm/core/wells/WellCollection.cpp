@@ -29,7 +29,7 @@
 
 namespace Opm
 {
-    void WellCollection::addField(GroupConstPtr fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
+    void WellCollection::addField(const Group* fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* fieldNode = findNode(fieldGroup->name());
         if (fieldNode) {
             OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
@@ -38,7 +38,7 @@ namespace Opm
         roots_.push_back(createGroupWellsGroup(fieldGroup, timeStep, phaseUsage));
     }
 
-    void WellCollection::addGroup(GroupConstPtr groupChild, std::string parent_name,
+    void WellCollection::addGroup(const Group* groupChild, std::string parent_name,
                                   size_t timeStep, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
@@ -60,7 +60,7 @@ namespace Opm
         child->setParent(parent);
     }
 
-    void WellCollection::addWell(WellConstPtr wellChild, size_t timeStep, const PhaseUsage& phaseUsage) {
+    void WellCollection::addWell(const Well* wellChild, size_t timeStep, const PhaseUsage& phaseUsage) {
         if (wellChild->getStatus(timeStep) == WellCommon::SHUT) {
             //SHUT wells are not added to the well collection
             return;
