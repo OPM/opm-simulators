@@ -247,10 +247,10 @@ namespace Opm
 
     void
     BlackoilOutputWriter::
-    writeInit(const NNC& nnc)
+    writeInit()
     {
         if( eclWriter_ ) {
-            eclWriter_->writeInit( nnc );
+            eclWriter_->writeInit();
         }
     }
 

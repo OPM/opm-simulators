@@ -73,7 +73,7 @@ namespace Opm
         }
 
         // init output writer
-        output_writer_.writeInit( geo_.nonCartesianConnections());
+        output_writer_.writeInit();
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )

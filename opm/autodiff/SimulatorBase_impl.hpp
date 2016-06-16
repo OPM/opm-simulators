@@ -109,8 +109,7 @@ namespace Opm
             adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
         }
 
-        // init output writer
-        output_writer_.writeInit( geo_.nonCartesianConnections() );
+        output_writer_.writeInit();
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
