@@ -325,7 +325,38 @@ namespace Opm
 
 
 
+        // Set output_to_files_ and set/create output dir. Write parameter file.
+        // Writes to:
+        //   output_to_files_
+        //   output_dir_
+        // Throws std::runtime_error if failed to create (if requested) output dir.
+        void setupOutput()
+        {
+            // Write parameters used for later reference. (only if rank is zero)
+            output_to_files_ = output_cout_ && param_.getDefault("output", true);
+            if (output_to_files_) {
+                // Create output directory if needed.
+                output_dir_ =
+                    param_.getDefault("output_dir", std::string("."));
+                boost::filesystem::path fpath(output_dir_);
+                if (!is_directory(fpath)) {
+                    try {
+                        create_directories(fpath);
+                    }
+                    catch (...) {
+                        OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                    }
+                }
+                // Write simulation parameters.
+                param_.writeParam(output_dir_ + "/simulation.param");
+            }
+        }
 
+
+
+
+
+        // Setup OpmLog backend with output_dir. 
         void setupLogging()
         {
             std::string deck_filename = param_.get<std::string>("deck_filename");
@@ -359,38 +390,6 @@ namespace Opm
             OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
         }
 
-
-
-
-
-
-
-        // Set output_to_files_ and set/create output dir. Write parameter file.
-        // Writes to:
-        //   output_to_files_
-        //   output_dir_
-        // Throws std::runtime_error if failed to create (if requested) output dir.
-        void setupOutput()
-        {
-            // Write parameters used for later reference. (only if rank is zero)
-            output_to_files_ = output_cout_ && param_.getDefault("output", true);
-            if (output_to_files_) {
-                // Create output directory if needed.
-                output_dir_ =
-                    param_.getDefault("output_dir", std::string("."));
-                boost::filesystem::path fpath(output_dir_);
-                if (!is_directory(fpath)) {
-                    try {
-                        create_directories(fpath);
-                    }
-                    catch (...) {
-                        OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-                    }
-                }
-                // Write simulation parameters.
-                param_.writeParam(output_dir_ + "/simulation.param");
-            }
-        }
 
 
 
