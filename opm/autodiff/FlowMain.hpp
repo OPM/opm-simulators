@@ -137,8 +137,8 @@ namespace Opm
             if (!ok) {
                 return EXIT_FAILURE;
             }
-            asImpl().setupLogging();
             asImpl().setupOutput();
+            asImpl().setupLogging();
             asImpl().readDeckInput();
             asImpl().setupGridAndProps();
             asImpl().extractMessages();
@@ -355,6 +355,8 @@ namespace Opm
             prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
+            // Read parameters.
+            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
         }
 
 
@@ -370,8 +372,6 @@ namespace Opm
         // Throws std::runtime_error if failed to create (if requested) output dir.
         void setupOutput()
         {
-            // Read parameters.
-            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
             // Write parameters used for later reference. (only if rank is zero)
             output_to_files_ = output_cout_ && param_.getDefault("output", true);
             if (output_to_files_) {
