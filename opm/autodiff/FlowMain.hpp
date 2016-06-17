@@ -672,18 +672,15 @@ namespace Opm
             const std::string cprSolver = "cpr";
             const std::string interleavedSolver = "interleaved";
             const std::string directSolver = "direct";
-            const std::string flowDefaultSolver = interleavedSolver;
+            std::string flowDefaultSolver = interleavedSolver;
 
-            std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipse_state_->getSimulationConfig();
-            std::string solver_approach = flowDefaultSolver;
-
-            if (param_.has("solver_approach")) {
-                solver_approach = param_.get<std::string>("solver_approach");
-            }  else {
-                if (simCfg->useCPR()) {
-                    solver_approach = cprSolver;
+            if (!param_.has("solver_approach")) {
+                if (eclipse_state_->getSimulationConfig()->useCPR()) {
+                    flowDefaultSolver = cprSolver;
                 }
             }
+
+            const std::string solver_approach = param_.getDefault("solver_approach", flowDefaultSolver);
 
             if (solver_approach == cprSolver) {
                 fis_solver_.reset(new NewtonIterationBlackoilCPR(param_, parallel_information_));
