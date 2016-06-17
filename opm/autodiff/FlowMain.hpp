@@ -680,7 +680,7 @@ namespace Opm
                 }
             }
 
-            std::string solver_approach = param_.getDefault<std::string>("solver_approach", flowDefaultSolver);
+            std::string solver_approach = param_.getDefault("solver_approach", flowDefaultSolver);
 
             if (solver_approach == cprSolver) {
                 fis_solver_.reset(new NewtonIterationBlackoilCPR(param_, parallel_information_));
