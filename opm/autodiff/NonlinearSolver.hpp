@@ -76,12 +76,29 @@ namespace Opm {
 
         /// Take a single forward step, after which the states will be modified
         /// according to the physical model.
-        /// \param[in] dt                time step size
-        /// \param[in] reservoir_state   reservoir state variables
-        /// \param[in] well_state        well state variables
-        /// \return                      number of linear iterations used
+        /// \param[in] dt                       time step size
+        /// \param[in, out] reservoir_state     reservoir state variables
+        /// \param[in, out] well_state          well state variables
+        /// \return                             number of linear iterations used
         int
         step(const double dt,
+             ReservoirState& reservoir_state,
+             WellState& well_state);
+
+        /// Take a single forward step, after which the states will be modified
+        /// according to the physical model. This version allows for the
+        /// states passed as in/out arguments to be different from the initial
+        /// states.
+        /// \param[in] dt                       time step size
+        /// \param[in] initial_reservoir_state  reservoir state variables at start of timestep
+        /// \param[in] initial_well_state       well state variables at start of timestep
+        /// \param[in, out] reservoir_state     reservoir state variables
+        /// \param[in, out] well_state          well state variables
+        /// \return                             number of linear iterations used
+        int
+        step(const double dt,
+             const ReservoirState& initial_reservoir_state,
+             const WellState& initial_well_state,
              ReservoirState& reservoir_state,
              WellState& well_state);
 
@@ -99,6 +116,9 @@ namespace Opm {
 
         /// Reference to physical model.
         const PhysicalModel& model() const;
+
+        /// Mutable reference to physical model.
+        PhysicalModel& model();
 
         /// Detect oscillation or stagnation in a given residual history.
         void detectOscillations(const std::vector<std::vector<double>>& residual_history,

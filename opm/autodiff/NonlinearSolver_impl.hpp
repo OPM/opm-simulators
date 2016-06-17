@@ -61,6 +61,12 @@ namespace Opm
     }
 
     template <class PhysicalModel>
+    PhysicalModel& NonlinearSolver<PhysicalModel>::model()
+    {
+        return *model_;
+    }
+
+    template <class PhysicalModel>
     unsigned int NonlinearSolver<PhysicalModel>::nonlinearIterationsLastStep() const
     {
         return nonlinearIterationsLast_;
@@ -80,8 +86,22 @@ namespace Opm
          ReservoirState& reservoir_state,
          WellState& well_state)
     {
+        return step(dt, reservoir_state, well_state, reservoir_state, well_state);
+    }
+
+
+
+    template <class PhysicalModel>
+    int
+    NonlinearSolver<PhysicalModel>::
+    step(const double dt,
+         const ReservoirState& initial_reservoir_state,
+         const WellState& initial_well_state,
+         ReservoirState& reservoir_state,
+         WellState& well_state)
+    {
         // Do model-specific once-per-step calculations.
-        model_->prepareStep(dt, reservoir_state, well_state);
+        model_->prepareStep(dt, initial_reservoir_state, initial_well_state);
 
         int iteration = 0;
 
