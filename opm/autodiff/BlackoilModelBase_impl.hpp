@@ -258,8 +258,8 @@ namespace detail {
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
     prepareStep(const double dt,
-                ReservoirState& reservoir_state,
-                WellState& /* well_state */)
+                const ReservoirState& reservoir_state,
+                const WellState& /* well_state */)
     {
         pvdt_ = geo_.poreVolume() / dt;
         if (active_[Gas]) {
