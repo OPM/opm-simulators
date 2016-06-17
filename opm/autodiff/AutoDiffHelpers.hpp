@@ -71,6 +71,9 @@ struct HelperOps
     /// The NNC transmissibilities
     V nnc_trans;
 
+    /// The set of all connections' cells (face or nnc).
+    TwoColInt connection_cells;
+
     /// Constructs all helper vectors and matrices.
     template<class Grid>
     HelperOps(const Grid& grid, const NNC& nnc = NNC())
@@ -160,6 +163,13 @@ struct HelperOps
         fullngrad.resize(nf+numNNC, nc);
         fullngrad.setFromTriplets(fullngrad_tri.begin(), fullngrad_tri.end());
         fulldiv = fullngrad.transpose();
+
+        if (has_nnc) {
+            connection_cells.resize(nbi.rows() + nnc_cells.rows(), 2);
+            connection_cells << nbi, nnc_cells;
+        } else {
+            connection_cells = nbi;
+        }
     }
 };
 // -------------------- upwinding helper class --------------------
