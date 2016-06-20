@@ -108,11 +108,17 @@ namespace Opm {
         /// Number of linear solver iterations used in all calls to step().
         unsigned int linearIterations() const;
 
+        /// Number of well iterations used in all calls to step().
+        unsigned int wellIterations() const;
+
         /// Number of nonlinear solver iterations used in the last call to step().
         unsigned int nonlinearIterationsLastStep() const;
 
         /// Number of linear solver iterations used in the last call to step().
         unsigned int linearIterationsLastStep() const;
+
+        /// Number of well iterations used in the last call to step().
+        unsigned int wellIterationsLastStep() const;
 
         /// Reference to physical model.
         const PhysicalModel& model() const;
@@ -151,8 +157,10 @@ namespace Opm {
         std::unique_ptr<PhysicalModel> model_;
         unsigned int nonlinearIterations_;
         unsigned int linearIterations_;
+        unsigned int wellIterations_;
         unsigned int nonlinearIterationsLast_;
         unsigned int linearIterationsLast_;
+        unsigned int wellIterationsLast_;
     };
 } // namespace Opm
 
