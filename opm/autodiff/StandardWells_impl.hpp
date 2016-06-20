@@ -472,7 +472,7 @@ namespace Opm
         // Store well perforation total fluxes (reservor volumes) if requested.
         if (store_well_perforation_fluxes_) {
             // Ugly const-cast, but unappealing alternatives.
-            V& wf = const_cast<V&>(well_perforation_fluxes_);
+            Vector& wf = const_cast<Vector&>(well_perforation_fluxes_);
             wf = cqt_i.value();
             for (int phase = 0; phase < np; ++phase) {
                 wf += cq_p[phase].value();
