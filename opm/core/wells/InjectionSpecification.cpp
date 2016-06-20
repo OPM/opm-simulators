@@ -1,5 +1,6 @@
 /*
-  Copyright 2016  The Open Porous Media project.
+  Copyright 2012  Sintef.
+  Copyright 2016  Statoil.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -18,6 +19,8 @@
 
 #include <stdexcept>
 #include "config.h"
+
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/wells/InjectionSpecification.hpp>
 
 namespace Opm
@@ -51,7 +54,7 @@ namespace Opm
         case ControlMode::GRUP: return "GRUP";
         case ControlMode::FLD : return "FLD" ;
         }
-        throw new std::domain_error("Unknown control mode");
+        OPM_THROW(std::domain_error, "Unknown control mode " << mode << " encountered in injection specification");
     }
 
 
@@ -63,7 +66,7 @@ namespace Opm
         case InjectorType::OIL  : return "OIL"  ;
         case InjectorType::GAS  : return "GAS"  ;
         }
-        throw new std::domain_error("Unknown injector type");
+        OPM_THROW(std::domain_error, "Unknown injector type " << type << " encountered in injection specification");
     }
 
 
@@ -74,6 +77,6 @@ namespace Opm
         case GuideRateType::RAT     : return "RAT"     ;
         case GuideRateType::NONE_GRT: return "NONE_GRT";
         }
-        throw new std::domain_error("Unknown guide rate type");
+        OPM_THROW(std::domain_error, "Unknown guide rate type " << type << " encountered in injection specification");
     }
 } // namespace Opm

@@ -1,5 +1,6 @@
 /*
-  Copyright 2016  The Open Porous Media project.
+  Copyright 2012  Sintef.
+  Copyright 2016  Statoil.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -18,6 +19,8 @@
 
 #include <stdexcept>
 #include "config.h"
+
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/core/wells/ProductionSpecification.hpp>
 
 namespace Opm
@@ -56,7 +59,7 @@ namespace Opm
         case ControlMode::GRUP: return "GRUP";
         case ControlMode::FLD : return "FLD" ;
         }
-        throw new std::domain_error("Unknown control mode");
+        OPM_THROW(std::domain_error, "Unknown control mode " << mode << " encountered in production specification");
     }
 
 
@@ -68,7 +71,7 @@ namespace Opm
         case Procedure::RATE  : return "RATE"  ;
         case Procedure::WELL  : return "WELL"  ;
         }
-        throw new std::domain_error("Unknown procedure");
+        OPM_THROW(std::domain_error, "Unknown procedure " << type << " encountered in production specification");
     }
 
 
@@ -81,7 +84,7 @@ namespace Opm
         case GuideRateType::WATER   : return "WATER"   ;
         case GuideRateType::NONE_GRT: return "NONE_GRT";
         }
-        throw new std::domain_error("Unknown guide rate type");
+        OPM_THROW(std::domain_error, "Unknown guide rate type " << type << " encountered in production specification");
     }
 
 
