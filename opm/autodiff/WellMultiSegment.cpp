@@ -26,7 +26,7 @@
 namespace Opm
 {
 
-    WellMultiSegment::WellMultiSegment(WellConstPtr well, size_t time_step, const Wells* wells) {
+    WellMultiSegment::WellMultiSegment(const Well* well, size_t time_step, const Wells* wells) {
         m_well_name_ = well->name();
         if (well->isMultiSegment(time_step)) {
             initMultiSegmentWell(well, time_step, wells);
@@ -36,7 +36,7 @@ namespace Opm
         updateWellOps();
     }
 
-    void WellMultiSegment::initMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells) {
+    void WellMultiSegment::initMultiSegmentWell(const Well* well, size_t time_step, const Wells* wells) {
 
         CompletionSetConstPtr completion_set = well->getCompletions(time_step);
 
@@ -169,7 +169,7 @@ namespace Opm
 
     }
 
-    void WellMultiSegment::initNonMultiSegmentWell(WellConstPtr well, size_t time_step, const Wells* wells) {
+    void WellMultiSegment::initNonMultiSegmentWell(const Well* well, size_t time_step, const Wells* wells) {
 
         CompletionSetConstPtr completion_set = well->getCompletions(time_step);
 
