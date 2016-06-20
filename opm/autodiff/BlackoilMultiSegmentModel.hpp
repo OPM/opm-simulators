@@ -107,7 +107,8 @@ namespace Opm {
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
         void assemble(const ReservoirState& reservoir_state,
                       WellState& well_state,
-                      const bool initial_assembly);
+                      const bool initial_assembly,
+                      int& well_iters);
 
         using Base::numPhases;
         using Base::numMaterials;
@@ -168,7 +169,8 @@ namespace Opm {
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     SolutionState& state,
-                    WellState& well_state);
+                    WellState& well_state,
+                    int& well_iters);
 
         void
         makeConstantState(SolutionState& state) const;

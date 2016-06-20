@@ -82,6 +82,7 @@ namespace Opm {
         bool failed;
         bool converged;
         int linear_iterations;
+        int well_iterations;
     };
 
 
@@ -196,9 +197,11 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
+        /// \return well iterations.
         void assemble(const ReservoirState& reservoir_state,
                       WellState& well_state,
-                      const bool initial_assembly);
+                      const bool initial_assembly,
+                      int& well_iters);
 
         /// \brief Compute the residual norms of the mass balance for each phase,
         /// the well flux, and the well equation.
@@ -377,7 +380,8 @@ namespace Opm {
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     SolutionState& state,
-                    WellState& well_state);
+                    WellState& well_state,
+                    int& well_iters);
 
         void
         addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s,

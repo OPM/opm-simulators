@@ -288,7 +288,8 @@ namespace detail {
             current_relaxation_ = 1.0;
             dx_old_ = V::Zero(sizeNonLinear());
         }
-        asImpl().assemble(reservoir_state, well_state, iteration == 0);
+        int well_iters = 0;
+        asImpl().assemble(reservoir_state, well_state, iteration == 0, well_iters);
         residual_norms_history_.push_back(asImpl().computeResidualNorms());
         const bool converged = asImpl().getConvergence(dt, iteration);
         const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
@@ -322,7 +323,7 @@ namespace detail {
         }
         const bool failed = false; // Not needed in this model.
         const int linear_iters = must_solve ? asImpl().linearIterationsLastSolve() : 0;
-        return IterationReport{ failed, converged, linear_iters };
+        return IterationReport{ failed, converged, linear_iters , well_iters};
     }
 
 
@@ -731,7 +732,8 @@ namespace detail {
     BlackoilModelBase<Grid, WellModel, Implementation>::
     assemble(const ReservoirState& reservoir_state,
              WellState& well_state,
-             const bool initial_assembly)
+             const bool initial_assembly,
+             int& well_iters)
     {
         using namespace Opm::AutoDiffGrid;
 
@@ -785,7 +787,7 @@ namespace detail {
         asImpl().wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state, well_iters);
         }
         V aliveWells;
         std::vector<ADB> cq_s;
@@ -799,8 +801,7 @@ namespace detail {
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
             asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
-        }
-
+        }        
     }
 
 
@@ -976,7 +977,8 @@ namespace detail {
     solveWellEq(const std::vector<ADB>& mob_perfcells,
                 const std::vector<ADB>& b_perfcells,
                 SolutionState& state,
-                WellState& well_state)
+                WellState& well_state,
+                int& well_iters)
     {
         V aliveWells;
         const int np = wells().number_of_phases;
@@ -1041,6 +1043,7 @@ namespace detail {
         } while (it < 15);
 
         if (converged) {
+            well_iters = it;
             if ( terminal_output_ ) {
                 OpmLog::info("well converged iter: " + std::to_string(it));
             }

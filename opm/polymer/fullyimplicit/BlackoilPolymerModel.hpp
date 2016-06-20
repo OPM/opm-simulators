@@ -122,7 +122,8 @@ namespace Opm {
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
         void assemble(const ReservoirState& reservoir_state,
                       WellState& well_state,
-                      const bool initial_assembly);
+                      const bool initial_assembly,
+                      int& well_iters);
 
 
     protected:

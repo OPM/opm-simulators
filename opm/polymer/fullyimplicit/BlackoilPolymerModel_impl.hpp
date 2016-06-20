@@ -492,7 +492,8 @@ namespace Opm {
     void
     BlackoilPolymerModel<Grid>::assemble(const ReservoirState& reservoir_state,
                                          WellState& well_state,
-                                         const bool initial_assembly)
+                                         const bool initial_assembly,
+                                         int& well_iters)
     {
         using namespace Opm::AutoDiffGrid;
 
@@ -537,7 +538,7 @@ namespace Opm {
         wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state, well_iters);
         }
 
         V aliveWells;

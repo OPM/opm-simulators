@@ -110,6 +110,7 @@ namespace Opm
         // Set up for main solver loop.
         int linIters = 0;
         bool converged = false;
+        int wellIters = 0;
 
         // ----------  Main nonlinear solver loop  ----------
         do {
@@ -122,6 +123,7 @@ namespace Opm
             }
             converged = report.converged;
             linIters += report.linear_iterations;
+            wellIters += report.well_iterations;
             ++iteration;
         } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
@@ -134,8 +136,10 @@ namespace Opm
 
         linearIterations_ += linIters;
         nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
+        wellIterations_ += wellIters; 
         linearIterationsLast_ = linIters;
         nonlinearIterationsLast_ = iteration;
+        wellIterationsLast_ = wellIters;
 
         // Do model-specific post-step actions.
         model_->afterStep(dt, reservoir_state, well_state);
