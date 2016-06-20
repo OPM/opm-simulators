@@ -81,6 +81,7 @@ namespace Opm
       , vfp_properties_(nullptr)
       , well_perforation_densities_(Vector())
       , well_perforation_pressure_diffs_(Vector())
+      , store_well_perforation_fluxes_(false)
     {
     }
 
@@ -441,10 +442,11 @@ namespace Opm
 
         // HANDLE FLOW INTO WELLBORE
         // compute phase volumetric rates at standard conditions
+        std::vector<ADB> cq_p(np, ADB::null());
         std::vector<ADB> cq_ps(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            const ADB cq_p = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
-            cq_ps[phase] = b_perfcells[phase] * cq_p;
+            cq_p[phase] = -(selectProducingPerforations * Tw) * (mob_perfcells[phase] * drawdown);
+            cq_ps[phase] = b_perfcells[phase] * cq_p[phase];
         }
         const Opm::PhaseUsage& pu = fluid_->phaseUsage();
         if ((*active_)[Oil] && (*active_)[Gas]) {
@@ -466,6 +468,16 @@ namespace Opm
         }
         // injection perforations total volume rates
         const ADB cqt_i = -(selectInjectingPerforations * Tw) * (total_mob * drawdown);
+
+        // Store well perforation total fluxes (reservor volumes) if requested.
+        if (store_well_perforation_fluxes_) {
+            // Ugly const-cast, but unappealing alternatives.
+            Vector& wf = const_cast<Vector&>(well_perforation_fluxes_);
+            wf = cqt_i.value();
+            for (int phase = 0; phase < np; ++phase) {
+                wf += cq_p[phase].value();
+            }
+        }
 
         // compute wellbore mixture for injecting perforations
         // The wellbore mixture depends on the inflow from the reservoar
@@ -1206,4 +1218,26 @@ namespace Opm
         }
     }
 
-}
+
+
+
+
+    void
+    StandardWells::setStoreWellPerforationFluxesFlag(const bool store_fluxes)
+    {
+        store_well_perforation_fluxes_ = store_fluxes;
+    }
+
+
+
+
+
+    const StandardWells::Vector&
+    StandardWells::getStoredWellPerforationFluxes() const
+    {
+        assert(store_well_perforation_fluxes_);
+        return well_perforation_fluxes_;
+    }
+
+
+} // namespace Opm
