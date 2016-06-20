@@ -107,7 +107,7 @@ getCubeDim(const C2F& c2f,
 namespace Opm
 {
 template<class C2F, class FC, class NTG>
-void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t timeStep,
+void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t timeStep,
                                         const C2F& c2f,
                                         const int* cart_dims,
                                         FC begin_face_centroids,
@@ -138,7 +138,7 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     // the index of the well according to the eclipse state
     int well_index_on_proc = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
-        WellConstPtr well = (*wellIter);
+        const auto* well = (*wellIter);
 
         if (well->getStatus(timeStep) == WellCommon::SHUT) {
             continue;
@@ -379,8 +379,8 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     std::map<std::string, int> well_names_to_index;
 
     auto schedule = eclipseState->getSchedule();
-    std::vector<WellConstPtr> wells    = schedule->getWells(timeStep);
-    std::vector<int>          wells_on_proc;
+    auto wells       = schedule->getWells(timeStep);
+    std::vector<int> wells_on_proc;
 
     well_names.reserve(wells.size());
     well_data.reserve(wells.size());
@@ -418,8 +418,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
         GroupTreeNodeConstPtr fieldNode =
             schedule->getGroupTree(timeStep)->getNode("FIELD");
 
-        GroupConstPtr fieldGroup =
-            schedule->getGroup(fieldNode->name());
+        const auto* fieldGroup = schedule->getGroup(fieldNode->name());
 
         well_collection_.addField(fieldGroup, timeStep, pu);
         addChildGroups(fieldNode, schedule, timeStep, pu);

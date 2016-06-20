@@ -55,10 +55,10 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     EclipseStateConstPtr eclipseState(new EclipseState(deck , parseContext));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-    std::vector<WellConstPtr> wells = eclipseState->getSchedule()->getWells();
+    auto wells = eclipseState->getSchedule()->getWells();
 
     for (size_t i=0; i<wells.size(); i++) {
-        WellConstPtr well = wells[i];
+        const auto* well = wells[i];
         std::shared_ptr<WellsGroupInterface> wellsGroup = createWellWellsGroup(well, 2, pu);
         BOOST_CHECK_EQUAL(well->name(), wellsGroup->name());
         if (well->isInjector(2)) {
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     std::vector<GroupTreeNodeConstPtr> nodes = eclipseState->getSchedule()->getGroupTree(2)->getNodes();
 
     for (size_t i=0; i<nodes.size(); i++) {
-        GroupConstPtr group = eclipseState->getSchedule()->getGroup(nodes[i]->name());
+        const auto* group = eclipseState->getSchedule()->getGroup(nodes[i]->name());
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, 2, pu);
         BOOST_CHECK_EQUAL(group->name(), wellsGroup->name());
         if (group->isInjectionGroup(2)) {
