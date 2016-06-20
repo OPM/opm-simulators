@@ -136,7 +136,8 @@ namespace Opm
                                            double* pc,
                                            double* dpcds) const
     {
-        assert(cells != 0);
+        assert(cells != 0);        
+        assert(phaseUsage_.phase_used[BlackoilPhases::Liquid]);
 
         const int np = numPhases();
 
@@ -152,15 +153,25 @@ namespace Opm
                 MaterialLaw::capillaryPressures(capillaryPressures, params, fluidState);
 
                 // copy the values calculated using opm-material to the target arrays
-                for (int pcPhaseIdx = 0; pcPhaseIdx < np; ++pcPhaseIdx) {
-                    double sign = (pcPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
+                for (int canonicalPhaseIdx = 0; canonicalPhaseIdx < BlackoilPhases::MaxNumPhases; ++canonicalPhaseIdx) {
+                    // skip unused phases
+                    if ( ! phaseUsage_.phase_used[canonicalPhaseIdx])
+                        continue;
+                    const int pcPhaseIdx = phaseUsage_.phase_pos[canonicalPhaseIdx];
+
+                    double sign = (canonicalPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
                     // in opm-material the wetting phase is the reference phase
                     // for two-phase problems i.e water for oil-water system,
                     // but for flow it is always oil. Add oil (liquid) capillary pressure value
                     // to shift the reference phase to oil
-                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].value + sign * capillaryPressures[pcPhaseIdx].value;
-                    for (int satPhaseIdx = 0; satPhaseIdx < np; ++satPhaseIdx)
-                        dpcds[np*np*i + satPhaseIdx*np + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].derivatives[satPhaseIdx] + sign * capillaryPressures[pcPhaseIdx].derivatives[satPhaseIdx];
+                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].value + sign * capillaryPressures[canonicalPhaseIdx].value;
+                    for (int canonicalSatPhaseIdx = 0; canonicalSatPhaseIdx < BlackoilPhases::MaxNumPhases; ++canonicalSatPhaseIdx) {
+                        if ( ! phaseUsage_.phase_used[canonicalSatPhaseIdx])
+                            continue;
+
+                        const int satPhaseIdx = phaseUsage_.phase_pos[canonicalSatPhaseIdx];
+                        dpcds[np*np*i + satPhaseIdx*np + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].derivatives[canonicalSatPhaseIdx] + sign * capillaryPressures[canonicalPhaseIdx].derivatives[canonicalSatPhaseIdx];
+                    }
                 }
             }
         } else {
@@ -174,13 +185,18 @@ namespace Opm
                 MaterialLaw::capillaryPressures(capillaryPressures, params, fluidState);
 
                 // copy the values calculated using opm-material to the target arrays
-                for (int pcPhaseIdx = 0; pcPhaseIdx < np; ++pcPhaseIdx) {
-                    double sign = (pcPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
+                for (int canonicalPhaseIdx = 0; canonicalPhaseIdx < BlackoilPhases::MaxNumPhases; ++canonicalPhaseIdx) {
+                    // skip unused phases
+                    if ( ! phaseUsage_.phase_used[canonicalPhaseIdx])
+                        continue;
+
+                    const int pcPhaseIdx = phaseUsage_.phase_pos[canonicalPhaseIdx];
+                    double sign = (canonicalPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
                     // in opm-material the wetting phase is the reference phase
                     // for two-phase problems i.e water for oil-water system,
                     // but for flow it is always oil. Add oil (liquid) capillary pressure value
                     // to shift the reference phase to oil
-                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid] + sign * capillaryPressures[pcPhaseIdx];
+                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid] + sign * capillaryPressures[canonicalPhaseIdx];
                 }
             }
         }
