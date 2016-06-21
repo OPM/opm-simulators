@@ -159,7 +159,7 @@ namespace Opm {
                 std::ostringstream ss;
                 ss <<"Substep( " << substepTimer.currentStepNum() << " ), try with stepsize "
                    << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " (days)." << std::endl;
-                OpmLog::info(ss.str());
+                OpmLog::note(ss.str());
             }
 
             int linearIterations = -1;
@@ -169,7 +169,7 @@ namespace Opm {
 
                 if( solver_verbose_ ) {
                     // report number of linear iterations
-                    OpmLog::info("Overall linear iterations used: " + std::to_string(linearIterations));
+                    OpmLog::note("Overall linear iterations used: " + std::to_string(linearIterations));
                 }
             }
             catch (const Opm::NumericalProblem& e) {
@@ -218,7 +218,7 @@ namespace Opm {
                     std::ostringstream ss;                    
                     ss << "Substep( " << substepTimer.currentStepNum()-1 // it was already advanced by ++
                                              << " ) finished at time " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << " (days)." << std::endl << std::endl;
-                    OpmLog::info(ss.str());
+                    OpmLog::note(ss.str());
                 }
 
                 // write data if outputWriter was provided
@@ -267,7 +267,7 @@ namespace Opm {
             std::ostringstream ss;
             substepTimer.report(ss);
             ss << "Suggested next step size = " << unit::convert::to( suggested_next_timestep_, unit::day ) << " (days)" << std::endl;
-            OpmLog::info(ss.str());
+            OpmLog::note(ss.str());
         }
 
         if( ! std::isfinite( suggested_next_timestep_ ) ) { // check for NaN
