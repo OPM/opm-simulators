@@ -108,6 +108,11 @@ namespace Opm
     }
 
 
+    boost::posix_time::ptime SimulatorTimer::currentDateTime() const
+    {
+        return startDateTime() + boost::posix_time::seconds( (int) simulationTimeElapsed());
+    }
+
     /// Total time.
     double SimulatorTimer::totalTime() const
     {
