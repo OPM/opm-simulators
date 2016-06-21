@@ -20,7 +20,7 @@
 */
 
 #include <algorithm>
-
+#include <locale>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
@@ -216,10 +216,15 @@ namespace Opm
 
             // accumulate total time
             stime += st;
+            std::stringstream ss;
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+            ss.imbue(std::locale(std::locale::classic(), facet));
+            ss << timer.currentDateTime();
             std::string step_msg = "Time step " + std::to_string(timer.currentStepNum())
                 + " at days = " + std::to_string(unit::convert::to(timer.simulationTimeElapsed(), unit::day))
-                + ", total days = " + std::to_string(unit::convert::to(timer.totalTime(), unit::day)) 
-                + "\n" + "Stepsize " + std::to_string(unit::convert::to(timer.currentStepLength(), unit::day)) 
+                + ", date = " + ss.str() 
+                + "(total days = " + std::to_string(unit::convert::to(timer.totalTime(), unit::day)) 
+                + ")\n" + "Stepsize " + std::to_string(unit::convert::to(timer.currentStepLength(), unit::day)) 
                 + " days, well iterations = " + std::to_string(solver->wellIterations()) 
                 + ", non-linear iterations = " + std::to_string(solver->nonlinearIterations()) 
                 + ", total linear iterations = " + std::to_string(solver->linearIterations()) + "\n";
@@ -229,7 +234,7 @@ namespace Opm
             {
                 std::string msg;
                 msg = "Fully implicit solver took: " + std::to_string(st) + " seconds. Total solver time taken: " + std::to_string(stime) + " seconds.";
-                OpmLog::info(msg);
+                OpmLog::note(msg);
             }
 
             if ( output_writer_.output() ) {
