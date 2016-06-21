@@ -219,6 +219,8 @@ namespace {
         const double r0  = residualNorm();
         const double r_polymer = residual_.material_balance_eq[2].value().matrix().lpNorm<Eigen::Infinity>();
         int it  = 0;
+        // this solver does not solve well equations first.
+        wellIterations_ = 0;
         std::cout << "\nIteration         Residual     Polymer Res\n"
                   << std::setw(9) << it << std::setprecision(9)
                   << std::setw(18) << r0 << std::setprecision(9)
@@ -242,7 +244,7 @@ namespace {
             newtonIterations_ += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::setprecision(9)
-                  << std::setw(18) << rr_polymer << std::endl;
+                      << std::setw(18) << rr_polymer << std::endl;
         }
 
         if (resTooLarge) {
@@ -265,6 +267,11 @@ namespace {
     int FullyImplicitCompressiblePolymerSolver::linearIterations() const
     {
         return linearIterations_;
+    }
+
+    int FullyImplicitCompressiblePolymerSolver::wellIterations() const
+    {
+        return wellIterations_;
     }
 
     FullyImplicitCompressiblePolymerSolver::ReservoirResidualQuant::ReservoirResidualQuant()

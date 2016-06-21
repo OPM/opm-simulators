@@ -88,6 +88,7 @@ namespace Opm {
 
         int nonlinearIterations() const;
         int linearIterations() const;
+        int wellIterations() const;
 
         /// Not used by this class except to satisfy interface requirements.
         typedef parameter::ParameterGroup SolverParameters;
@@ -159,6 +160,7 @@ namespace Opm {
 
         unsigned int newtonIterations_;
         unsigned int linearIterations_;
+        unsigned int wellIterations_;
 
         // Private methods.
         SolutionState
