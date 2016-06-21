@@ -34,8 +34,10 @@ namespace Opm
           model_(std::move(model_arg)),
           nonlinearIterations_(0),
           linearIterations_(0),
+          wellIterations_(0),
           nonlinearIterationsLast_(0),
-          linearIterationsLast_(0)
+          linearIterationsLast_(0),
+          wellIterationsLast_(0)
     {
         if (!model_) {
             OPM_THROW(std::logic_error, "Must provide a non-null model argument for NonlinearSolver.");
