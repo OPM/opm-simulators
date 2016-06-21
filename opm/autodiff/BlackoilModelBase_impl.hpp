@@ -1044,9 +1044,7 @@ namespace detail {
 
         if (converged) {
             well_iters = it;
-            if ( terminal_output_ ) {
-                OpmLog::info("well converged iter: " + std::to_string(it));
-            }
+            OpmLog::note("well converged iter: " + std::to_string(it));
             const int nw = wells().number_of_wells;
             {
                 // We will set the bhp primary variable to the new ones,
@@ -1842,7 +1840,7 @@ namespace detail {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
                 // std::cout << "  WELL-CONT ";
-                OpmLog::info(msg);
+                OpmLog::note(msg);
             }
             std::ostringstream ss;
             const std::streamsize oprec = ss.precision(3);
@@ -1860,7 +1858,7 @@ namespace detail {
             // std::cout << std::setw(11) << residualWell;
             ss.precision(oprec);
             ss.flags(oflags);
-            OpmLog::info(ss.str());
+            OpmLog::note(ss.str());
         }
 
         for (int idx = 0; idx < nm; ++idx) {
@@ -1948,7 +1946,7 @@ namespace detail {
                 for (int idx = 0; idx < np; ++idx) {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
-                OpmLog::info(msg);
+                OpmLog::note(msg);
             }
             std::ostringstream ss;
             const std::streamsize oprec = ss.precision(3);
@@ -1959,7 +1957,7 @@ namespace detail {
             }
             ss.precision(oprec);
             ss.flags(oflags);
-            OpmLog::info(ss.str());
+            OpmLog::note(ss.str());
         }
         return converged;
     }
