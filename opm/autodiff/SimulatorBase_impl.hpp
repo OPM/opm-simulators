@@ -137,7 +137,7 @@ namespace Opm
             {
                 std::ostringstream ss;
                 timer.report(ss);
-                OpmLog::info(ss.str());
+                OpmLog::note(ss.str());
             }
 
             // Create wells and well state.
@@ -216,6 +216,14 @@ namespace Opm
 
             // accumulate total time
             stime += st;
+            std::string step_msg = "Time step " + std::to_string(timer.currentStepNum())
+                + " at days = " + std::to_string(unit::convert::to(timer.simulationTimeElapsed(), unit::day))
+                + ", total days = " + std::to_string(unit::convert::to(timer.totalTime(), unit::day)) 
+                + "\n" + "Stepsize " + std::to_string(unit::convert::to(timer.currentStepLength(), unit::day)) 
+                + " days, well iterations = " + std::to_string(solver->wellIterations()) 
+                + ", non-linear iterations = " + std::to_string(solver->nonlinearIterations()) 
+                + ", total linear iterations = " + std::to_string(solver->linearIterations()) + "\n";
+            OpmLog::info(step_msg);
 
             if ( terminal_output_ )
             {
