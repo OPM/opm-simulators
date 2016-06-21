@@ -40,7 +40,7 @@ namespace Opm {
 
         /// Class for handling the standard well model.
         class StandardWells {
-        protected:
+        public:
             struct WellOps {
                 explicit WellOps(const Wells* wells);
                 Eigen::SparseMatrix<double> w2p;              // well -> perf (scatter)
@@ -48,7 +48,6 @@ namespace Opm {
                 std::vector<int> well_cells;                  // the set of perforated cells
             };
 
-        public:
             // ---------      Types      ---------
             using ADB = AutoDiffBlock<double>;
             using Vector = ADB::V;
@@ -60,7 +59,7 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            StandardWells(const Wells* wells_arg);
+            explicit StandardWells(const Wells* wells_arg);
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -161,6 +160,15 @@ namespace Opm {
             variableWellStateInitials(const WellState& xw,
                                       std::vector<Vector>& vars0) const;
 
+            /// If set, computeWellFlux() will additionally store the
+            /// total reservoir volume perforation fluxes.
+            void setStoreWellPerforationFluxesFlag(const bool store_fluxes);
+
+            /// Retrieves the stored fluxes. It is an error to call this
+            /// unless setStoreWellPerforationFluxesFlag(true) has been
+            /// called.
+            const Vector& getStoredWellPerforationFluxes() const;
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
@@ -178,6 +186,9 @@ namespace Opm {
 
             Vector well_perforation_densities_;
             Vector well_perforation_pressure_diffs_;
+
+            bool store_well_perforation_fluxes_;
+            Vector well_perforation_fluxes_;
 
             // protected methods
             template <class SolutionState, class WellState>

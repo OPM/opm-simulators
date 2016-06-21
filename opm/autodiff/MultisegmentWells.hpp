@@ -83,11 +83,11 @@ namespace Opm {
             // TODO: using a vector of WellMultiSegmentConstPtr for now
             // TODO: it should use const Wells or something else later.
             MultisegmentWells(const Wells* wells_arg,
-                              const std::vector<WellConstPtr>& wells_ecl,
+                              const std::vector< const Well* >& wells_ecl,
                               const int time_step);
 
             std::vector<WellMultiSegmentConstPtr> createMSWellVector(const Wells* wells_arg,
-                                                                     const std::vector<WellConstPtr>& wells_ecl,
+                                                                     const std::vector< const Well* >& wells_ecl,
                                                                      const int time_step);
 
             void init(const BlackoilPropsAdInterface* fluid_arg,

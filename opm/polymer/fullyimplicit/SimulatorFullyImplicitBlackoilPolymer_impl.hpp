@@ -185,13 +185,13 @@ namespace Opm
         setupCompressedToCartesian(global_cell, number_of_cells,
                                    cartesian_to_compressed);
 
-        ScheduleConstPtr          schedule = eclipseState->getSchedule();
-        std::vector<WellConstPtr> wells    = schedule->getWells(timeStep);
+        ScheduleConstPtr schedule = eclipseState->getSchedule();
+        auto wells       = schedule->getWells(timeStep);
 
         int well_index = 0;
 
         for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
-             WellConstPtr well = (*wellIter);
+             const auto* well = (*wellIter);
 
              if (well->getStatus(timeStep) == WellCommon::SHUT) {
                  continue;
