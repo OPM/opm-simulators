@@ -65,8 +65,11 @@ namespace Opm
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         template <class ReservoirState, class PrevWellState>
-        void init(const MultisegmentWells& ms_wells, const ReservoirState& state, const PrevWellState& prevState)
+        void init(const MultisegmentWells& ms_wells, const ReservoirState& state, const PrevWellState& prevState, const Wells* legacy_wells_ptr)
         {
+            // Used by output facilities.
+            this->wells_.reset( clone_wells( legacy_wells_ptr ) );
+
             const std::vector<WellMultiSegmentConstPtr>& wells = ms_wells.msWells();
             const int nw = wells.size();
             nseg_ = 0;

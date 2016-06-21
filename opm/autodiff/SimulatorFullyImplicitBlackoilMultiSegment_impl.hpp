@@ -119,7 +119,7 @@ namespace Opm
 
             const WellModel well_model(wells, wells_ecl, current_time_step);
 
-            well_state.init(well_model, state, prev_well_state);
+            well_state.init(well_model, state, prev_well_state, wells);
 
             // give the polymer and surfactant simulators the chance to do their stuff
             Base::asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
