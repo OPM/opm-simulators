@@ -29,6 +29,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <opm/output/Cells.hpp>
 #include <opm/output/OutputWriter.hpp>
 #include <opm/output/eclipse/EclipseWriter.hpp>
 
@@ -215,7 +216,7 @@ namespace Opm
                              const double* permeability );
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit();
+        void writeInit(const std::vector<data::CellData>& simProps = {} , const NNC& = NNC());
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,

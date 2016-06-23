@@ -247,12 +247,13 @@ namespace Opm
 
     void
     BlackoilOutputWriter::
-    writeInit()
+    writeInit(const std::vector<data::CellData>& simProps,  const NNC& nnc)
     {
         if( eclWriter_ ) {
-            eclWriter_->writeInit();
+            eclWriter_->writeInit(simProps, nnc);
         }
     }
+
 
 
     namespace detail {

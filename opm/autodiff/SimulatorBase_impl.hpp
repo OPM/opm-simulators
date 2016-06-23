@@ -19,6 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <utility>
 #include <algorithm>
 #include <locale>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
@@ -109,7 +110,60 @@ namespace Opm
             adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
         }
 
-        output_writer_.writeInit();
+
+        /// This code block is used to initialize grid properties TRANX, TRANY
+        /// and TRANZ which will be written to the INIT file. These properties
+        /// should be interpreted with a 'the-grid-is-nearly-cartesian'
+        /// mindset:
+        ///
+        ///   TRANX[i,j,k] = T on face between cells (i,j,k) and (i+1,j  ,k  )
+        ///   TRANY[i,j,k] = T on face between cells (i,j,k) and (i  ,j+1,k  )
+        ///   TRANZ[i,j,k] = T on face between cells (i,j,k) and (i  ,j  ,k+1)
+        ///
+        /// If the grid structure has no resemblance to a cartesian grid the
+        /// whole TRAN keyword is quite meaningless.
+
+        {
+            using namespace UgGridHelpers;
+            const int* dims = cartDims( grid_ );
+            const int globalSize = dims[0] * dims[1] * dims[2];
+            const auto& trans = geo_.transmissibility( );
+
+            data::CellData tranx = {"TRANX" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+            data::CellData trany = {"TRANY" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+            data::CellData tranz = {"TRANZ" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+
+            size_t num_faces = numFaces(grid_);
+            auto fc = faceCells(grid_);
+            for (size_t i = 0; i < num_faces; ++i) {
+                auto c1 = std::min( fc(i,0) , fc(i,1));
+                auto c2 = std::max( fc(i,0) , fc(i,1));
+
+                if (c1 == -1 || c2 == -1)
+                    continue;
+
+                c1 = globalCell(grid_) ? globalCell(grid_)[c1] : c1;
+                c2 = globalCell(grid_) ? globalCell(grid_)[c2] : c2;
+
+                if ((c2 - c1) == 1) {
+                    tranx.data[c1] = trans[i];
+                }
+
+                if ((c2 - c1) == dims[0]) {
+                    trany.data[c1] = trans[i];
+                }
+
+                if ((c2 - c1) == dims[0]*dims[1]) {
+                    tranz.data[c1] = trans[i];
+                }
+            }
+
+            std::vector<data::CellData> tran;
+            tran.push_back( std::move( tranx ));
+            tran.push_back( std::move( trany ));
+            tran.push_back( std::move( tranz ));
+            output_writer_.writeInit( tran , geo_.nonCartesianConnections( ));
+        }
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
