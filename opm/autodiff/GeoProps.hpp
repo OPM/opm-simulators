@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/core/grid/PinchProcessor.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
+#include <opm/output/Cells.hpp>
 
 #include <Eigen/Eigen>
 
@@ -217,6 +218,71 @@ namespace Opm
         Vector&       transmissibility()       { return trans_  ;}
         const NNC& nnc() const { return nnc_;}
         const NNC& nonCartesianConnections() const { return noncartesian_;}
+
+
+        /// Most properties are loaded by the parser, and managed by
+        /// the EclipseState class in the opm-parser. However - some
+        /// properties must be calculated by the simulator, the
+        /// purpose of this method is to calculate these properties in
+        /// a form suitable for output. Currently the transmissibility
+        /// is the only property calculated this way:
+        ///
+        /// The grid properties TRANX, TRANY and TRANZ are initialized
+        /// in a form suitable for writing to the INIT file. These
+        /// properties should be interpreted with a
+        /// 'the-grid-is-nearly-cartesian' mindset:
+        ///
+        ///   TRANX[i,j,k] = T on face between cells (i,j,k) and (i+1,j  ,k  )
+        ///   TRANY[i,j,k] = T on face between cells (i,j,k) and (i  ,j+1,k  )
+        ///   TRANZ[i,j,k] = T on face between cells (i,j,k) and (i  ,j  ,k+1)
+        ///
+        /// If the grid structure has no resemblance to a cartesian
+        /// grid the whole TRAN keyword is quite meaningless.
+
+        template <class Grid>
+        const std::vector<data::CellData> simProps( const Grid& grid ) const {
+            using namespace UgGridHelpers;
+            const int* dims = cartDims( grid );
+            const int globalSize = dims[0] * dims[1] * dims[2];
+            const auto& trans = this->transmissibility( );
+
+            data::CellData tranx = {"TRANX" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+            data::CellData trany = {"TRANY" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+            data::CellData tranz = {"TRANZ" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+
+            size_t num_faces = numFaces(grid);
+            auto fc = faceCells(grid);
+            for (size_t i = 0; i < num_faces; ++i) {
+                auto c1 = std::min( fc(i,0) , fc(i,1));
+                auto c2 = std::max( fc(i,0) , fc(i,1));
+
+                if (c1 == -1 || c2 == -1)
+                    continue;
+
+                c1 = globalCell(grid) ? globalCell(grid)[c1] : c1;
+                c2 = globalCell(grid) ? globalCell(grid)[c2] : c2;
+
+                if ((c2 - c1) == 1) {
+                    tranx.data[c1] = trans[i];
+                }
+
+                if ((c2 - c1) == dims[0]) {
+                    trany.data[c1] = trans[i];
+                }
+
+                if ((c2 - c1) == dims[0]*dims[1]) {
+                    tranz.data[c1] = trans[i];
+                }
+            }
+
+            std::vector<data::CellData> tran;
+            tran.push_back( std::move( tranx ));
+            tran.push_back( std::move( trany ));
+            tran.push_back( std::move( tranz ));
+
+            return tran;
+        }
+
 
     private:
         template <class Grid>

@@ -746,7 +746,7 @@ namespace Opm
                     fullReport.reportParam(tot_os);
                 }
             } else {
-                output_writer_->writeInit();
+                output_writer_->writeInit(geoprops_->simProps(grid_init_->grid()) , geoprops_->nonCartesianConnections( ));
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }

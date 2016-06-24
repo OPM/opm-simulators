@@ -216,7 +216,7 @@ namespace Opm
                              const double* permeability );
 
         /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const std::vector<data::CellData>& simProps = {} , const NNC& = NNC());
+        void writeInit(const std::vector<data::CellData>& simProps, const NNC& nnc);
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStep(const SimulatorTimerInterface& timer,

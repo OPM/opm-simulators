@@ -250,7 +250,7 @@ namespace Opm
     writeInit(const std::vector<data::CellData>& simProps,  const NNC& nnc)
     {
         if( eclWriter_ ) {
-            eclWriter_->writeInit(simProps, nnc);
+            eclWriter_->writeInitAndEgrid(simProps, nnc);
         }
     }
 
