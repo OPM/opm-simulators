@@ -155,11 +155,12 @@ namespace Opm
                 // copy the values calculated using opm-material to the target arrays
                 for (int canonicalPhaseIdx = 0; canonicalPhaseIdx < BlackoilPhases::MaxNumPhases; ++canonicalPhaseIdx) {
                     // skip unused phases
-                    if ( ! phaseUsage_.phase_used[canonicalPhaseIdx])
+                    if ( ! phaseUsage_.phase_used[canonicalPhaseIdx]) {
                         continue;
+                    }
                     const int pcPhaseIdx = phaseUsage_.phase_pos[canonicalPhaseIdx];
 
-                    double sign = (canonicalPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
+                    const double sign = (canonicalPhaseIdx == BlackoilPhases::Aqua)? -1.0 : 1.0;
                     // in opm-material the wetting phase is the reference phase
                     // for two-phase problems i.e water for oil-water system,
                     // but for flow it is always oil. Add oil (liquid) capillary pressure value
