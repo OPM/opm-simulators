@@ -120,7 +120,8 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                         const std::map<int,int>& cartesian_to_compressed,
                                         const double* permeability,
                                         const NTG& ntg,
-                                        std::vector<int>& wells_on_proc)
+                                        std::vector<int>& wells_on_proc,
+                                        const DynamicListEconLimited& list_econ_limited)
 {
     if (dimensions != 3) {
         OPM_THROW(std::domain_error,
@@ -141,6 +142,10 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
         const auto* well = (*wellIter);
 
         if (well->getStatus(timeStep) == WellCommon::SHUT) {
+            continue;
+        }
+
+        if (list_econ_limited.wellEconLimited(well->name())) {
             continue;
         }
 
@@ -327,13 +332,14 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const C2F&                      cell_to_faces,
              FC                              begin_face_centroids,
              const double*                   permeability,
+             const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
              const std::vector<double>&      well_potentials)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
-         cell_to_faces, begin_face_centroids, permeability, well_potentials);
+         cell_to_faces, begin_face_centroids, permeability, list_econ_limited, well_potentials);
 }
 
 /// Construct wells from deck.
@@ -348,6 +354,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
                    const double*                   permeability,
+                   const DynamicListEconLimited&   list_econ_limited,
                    const std::vector<double>&      well_potentials)
 {
     if (dimensions != 3) {
@@ -410,7 +417,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                          dz,
                          well_names, well_data, well_names_to_index,
                          pu, cartesian_to_compressed, permeability, ntg,
-                         wells_on_proc);
+                         wells_on_proc, list_econ_limited);
 
     setupWellControls(wells, timeStep, well_names, pu, wells_on_proc);
 

@@ -332,12 +332,15 @@ namespace Opm
                                const double* permeability)
         : w_(0), is_parallel_run_(false)
     {
-        std::vector<double> dummy_well_potentials;
+        std::vector<double> dummy_well_potentials;;
+        // TODO: not sure about the usage of this WellsManager constructor
+        // TODO: not sure whether this is the correct thing to do here.
+        DynamicListEconLimited dummy_list_econ_limited;
         init(eclipseState, timeStep, UgGridHelpers::numCells(grid),
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
-             permeability, dummy_well_potentials);
+             permeability, dummy_list_econ_limited, dummy_well_potentials);
 
     }
 
