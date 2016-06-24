@@ -302,8 +302,7 @@ namespace Opm
                     param.getDefault("output_ecl", true) ?
                     new EclipseWriter(eclipseState,
                                       parallelOutput_->numCells(),
-                                      parallelOutput_->globalCell(),
-                                      nnc )
+                                      parallelOutput_->globalCell())
                    : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()
