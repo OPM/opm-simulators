@@ -337,6 +337,19 @@ public:
     //! Index of the gas component
     static const int gasCompIdx = 2;
 
+protected:
+    static const int phaseToSolventCompIdx_[3];
+    static const int phaseToSoluteCompIdx_[3];
+
+public:
+    //! \brief returns the index of "primary" component of a phase (solvent)
+    static constexpr int solventComponentIndex(unsigned phaseIdx)
+    { return phaseToSolventCompIdx_[phaseIdx]; }
+
+    //! \brief returns the index of "secondary" component of a phase (solute)
+    static constexpr int soluteComponentIndex(unsigned phaseIdx)
+    { return phaseToSoluteCompIdx_[phaseIdx]; }
+
     //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(unsigned compIdx)
     {
@@ -1059,6 +1072,23 @@ private:
     // the BlackOil fluid system in the attribute declaration below...
     static std::vector<std::array<Scalar, /*numPhases=*/3> > referenceDensity_;
     static std::vector<std::array<Scalar, /*numComponents=*/3> > molarMass_;
+};
+
+template <class Scalar>
+const int BlackOil<Scalar>::phaseToSolventCompIdx_[3] =
+{
+    waterCompIdx, // water phase
+    oilCompIdx, // oil phase
+    gasCompIdx // gas phase
+};
+
+
+template <class Scalar>
+const int BlackOil<Scalar>::phaseToSoluteCompIdx_[3] =
+{
+    -1, // water phase
+    gasCompIdx, // oil phase
+    oilCompIdx // gas phase
 };
 
 template <class Scalar>
