@@ -148,5 +148,6 @@ if (HAVE_OPM_DATA)
 
     set_tests_properties(compare_restart_files PROPERTIES DEPENDS flow_SPE1CASE2_restart) # Compares the restart files from tests flow_SPE1CASE2_restart and flow_SPE1CASE2
 
+    add_test( NAME flow_sequential_SPE1 COMMAND flow_sequential ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
 
 endif()
