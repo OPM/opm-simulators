@@ -550,7 +550,7 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
     {
         return true;
     }
-    if( W1 == 0 || W2 == 0)
+    if( W1 == NULL || W2 == NULL)
     {
         return false;
     }
