@@ -123,7 +123,9 @@ namespace Opm
                                             polymer_inflow_c);
         well_state.polymerInflow() = polymer_inflow_c;
 
-        computeRepRadiusPerfLength(BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_, wells_bore_diameter_);
+        if (has_plyshlog_) {
+            computeRepRadiusPerfLength(BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_, wells_bore_diameter_);
+        }
     }
 
 
