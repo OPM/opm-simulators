@@ -822,8 +822,7 @@ namespace Opm
     template <class WellState>
     void
     MultisegmentWells::
-    updateWellControls(const bool terminal_output,
-                       WellState& xw) const
+    updateWellControls(WellState& xw) const
     {
         if( msWells().empty() ) return ;
 
@@ -860,12 +859,10 @@ namespace Opm
 
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
-                if (terminal_output)
-                {
-                    std::cout << "Switching control mode for well " << msWells()[w]->name()
-                              << " from " << modestring[well_controls_iget_type(wc, current)]
-                              << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
-                }
+                // Each well is only active on one process. Therefore we always print the sitch info.
+                std::cout << "Switching control mode for well " << msWells()[w]->name()
+                          << " from " << modestring[well_controls_iget_type(wc, current)]
+                          << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
             }
