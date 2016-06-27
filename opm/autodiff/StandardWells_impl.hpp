@@ -153,8 +153,13 @@ namespace Opm
     int
     StandardWells::numWellVars() const
     {
+        if ( !localWellsActive() )
+        {
+            return 0;
+        }
+
         // For each well, we have a bhp variable, and one flux per phase.
-        const int nw = localWellsActive() ? wells().number_of_wells : 0;
+        const int nw = wells().number_of_wells;
         return (numPhases() + 1) * nw;
     }
 
