@@ -115,6 +115,10 @@ namespace Opm
     }
 
 
+    const Wells* StandardWells::wellsPointer() const
+    {
+        return wells_;
+    }
 
 
 

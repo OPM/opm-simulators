@@ -294,6 +294,12 @@ namespace Opm {
     }
 
 
+    const Wells*
+    MultisegmentWells::wellsPointer() const
+    {
+        return wells_;
+    }
+
 
 
 
