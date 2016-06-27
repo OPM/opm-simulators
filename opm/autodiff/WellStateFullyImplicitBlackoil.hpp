@@ -195,7 +195,9 @@ namespace Opm
             data::Wells res = WellState::report();
 
             const int nw = this->numWells();
-            const int np = this->numPhases();
+            // If there are now wells numPhases throws a floating point
+            // exception.
+            const int np = nw ? this->numPhases() : -1;
 
             /* this is a reference or example on **how** to convert from
              * WellState to something understood by opm-output. it is intended
