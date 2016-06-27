@@ -72,7 +72,8 @@ namespace Opm
 
 
     StandardWells::StandardWells(const Wells* wells_arg)
-      : wells_(wells_arg)
+      : wells_active_(wells_arg!=nullptr)
+      , wells_(wells_arg)
       , wops_(wells_arg)
       , fluid_(nullptr)
       , active_(nullptr)
