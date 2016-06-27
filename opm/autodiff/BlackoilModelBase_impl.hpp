@@ -1122,6 +1122,10 @@ namespace detail {
         }
 
         /// \brief Compute the Euclidian norm of a vector
+        /// \warning In the case that num_components is greater than 1
+        ///          an interleaved ordering is assumed. E.g. for each cell
+        ///          all phases of that cell are stored consecutively. First
+        ///          the ones for cell 0, then the ones for cell 1, ... .
         /// \param it              begin iterator for the given vector
         /// \param end             end iterator for the given vector
         /// \param num_components  number of components (i.e. phases) in the vector
@@ -1137,19 +1141,39 @@ namespace detail {
             {
                 const ParallelISTLInformation& info =
                     boost::any_cast<const ParallelISTLInformation&>(pinfo);
-                int size_per_component = (end - it) / num_components;
+                typedef typename Iterator::value_type Scalar;
+                Scalar product = 0.0;
+                int size_per_component = (end - it);
+                size_per_component /= num_components; // two lines to supresse unused warning.
                 assert((end - it) == num_components * size_per_component);
-                double component_product = 0.0;
-                for( int i = 0; i < num_components; ++i )
+
+                if( num_components == 1 )
                 {
                     auto component_container =
-                        boost::make_iterator_range(it + i * size_per_component,
-                                                   it + (i + 1) * size_per_component);
+                        boost::make_iterator_range(it, end);
                     info.computeReduction(component_container,
                                            Opm::Reduction::makeInnerProductFunctor<double>(),
-                                           component_product);
+                                           product);
                 }
-                return component_product;
+                else
+                {
+                    auto& maskContainer = info.getOwnerMask();
+                    auto mask = maskContainer.begin();
+                    assert(static_cast<int>(maskContainer.size()) == size_per_component);
+
+                    for(int cell = 0; cell < size_per_component; ++cell, ++mask)
+                    {
+                        Scalar cell_product = (*it) * (*it);
+                        ++it;
+                        for(int component=1; component < num_components;
+                            ++component, ++it)
+                        {
+                            cell_product += (*it) * (*it);
+                        }
+                        product += cell_product * (*mask);
+                    }
+                }
+                return info.communicator().sum(product);
             }
             else
 #endif
