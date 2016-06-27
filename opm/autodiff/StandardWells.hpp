@@ -29,7 +29,10 @@
 
 #include <cassert>
 
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+
 #include <opm/core/wells.h>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
@@ -169,6 +172,15 @@ namespace Opm {
             /// unless setStoreWellPerforationFluxesFlag(true) has been
             /// called.
             const Vector& getStoredWellPerforationFluxes() const;
+
+            /// upate the dynamic lists related to economic limits
+            template<class WellState>
+            void
+            updateListEconLimited(ScheduleConstPtr schedule,
+                                  const int current_step,
+                                  const Wells* wells,
+                                  const WellState& well_state,
+                                  DynamicListEconLimited& list_econ_limited) const;
 
         protected:
             bool wells_active_;

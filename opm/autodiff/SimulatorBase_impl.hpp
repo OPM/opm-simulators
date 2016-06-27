@@ -272,6 +272,8 @@ namespace Opm
                 asImpl().computeWellPotentials(wells, well_state, well_potentials);
             }
 
+            solver->model().wellModel().updateListEconLimited(eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
+                                                              well_state, dynamic_list_econ_limited);
         }
         // Write final simulation state.
         output_writer_.writeTimeStep( timer, state, prev_well_state );

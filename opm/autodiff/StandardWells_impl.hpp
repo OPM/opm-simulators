@@ -1248,4 +1248,77 @@ namespace Opm
     }
 
 
+
+
+
+
+   template<class WellState>
+   void
+   StandardWells::
+   updateListEconLimited(ScheduleConstPtr schedule,
+                         const int current_step,
+                         const Wells* wells_struct,
+                         const WellState& well_state,
+                         DynamicListEconLimited& list_econ_limited) const
+   {
+       const int nw = wells_struct->number_of_wells;
+       const int np = wells_struct->number_of_phases;
+
+       for (int w = 0; w < nw; ++w) {
+           // flag to check if the mim oil/gas rate limit is violated
+           bool rate_limit_violated = false;
+           const std::string& well_name = wells_struct->name[w];
+           const Well* well_ecl = schedule->getWell(well_name);
+           const WellEconProductionLimits& econ_production_limits = well_ecl->getEconProductionLimits(current_step);
+
+           // if no limit is effective here, then continue to the next well
+           if ( !econ_production_limits.onAnyEffectiveLimit() ) {
+               continue;
+           }
+           // for the moment, we only handle rate limits, not handling potential limits
+           // the potential limits should not be difficult to add
+           const WellEcon::QuantityLimitEnum quantity_limit = econ_production_limits.quantityLimit();
+           if (quantity_limit == WellEcon::POTN) {
+               OPM_THROW(std::logic_error, "Only RATE limit is supported for the moment");
+           }
+
+           using MapEntryType = typename WellState::mapentry_t;
+           using WellMapType = typename WellState::WellMapType;
+
+           const WellMapType& well_map = well_state.wellMap();
+           typename WellMapType::const_iterator i = well_map.find(well_name);
+
+           assert(i != well_map.end()); // should always be found?
+
+           const int well_number = (i->second)[0];
+
+           const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+
+           // oil rate limit
+           // TODO: SHOULD we give a message when closing a well due to economic limit reason?
+           if (econ_production_limits.onMinOilRate()) {
+               assert((*active_)[Oil]);
+               const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
+               const double min_oil_rate = econ_production_limits.minOilRate();
+               if (std::abs(oil_rate) < min_oil_rate) {
+                   rate_limit_violated = true;
+               }
+           }
+           // gas rate limit
+           if (econ_production_limits.onMinGasRate()) {
+               assert((*active_)[Gas]);
+               const double gas_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Gas ] ];
+               const double min_gas_rate = econ_production_limits.minGasRate();
+               if (std::abs(gas_rate) < min_gas_rate) {
+                   rate_limit_violated = true;
+               }
+           }
+
+           if (rate_limit_violated) {
+               list_econ_limited.addShuttedWell(well_name);
+           }
+       }
+   }
+
+
 } // namespace Opm
