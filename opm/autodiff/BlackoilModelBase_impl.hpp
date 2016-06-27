@@ -1159,7 +1159,7 @@ namespace detail {
                 {
                     auto& maskContainer = info.getOwnerMask();
                     auto mask = maskContainer.begin();
-                    assert(maskContainer.size() == size_per_component);
+                    assert(static_cast<int>(maskContainer.size()) == size_per_component);
 
                     for(int cell = 0; cell < size_per_component; ++cell, ++mask)
                     {
