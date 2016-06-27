@@ -374,10 +374,10 @@ namespace Opm
             return;
         } else {
             const std::vector<int>& well_cells = wellOps().well_cells;
-            const int num_phases_ = wells().number_of_phases;
-            mob_perfcells.resize(num_phases_, ADB::null());
-            b_perfcells.resize(num_phases_, ADB::null());
-            for (int phase = 0; phase < num_phases_; ++phase) {
+            const int num_phases = wells().number_of_phases;
+            mob_perfcells.resize(num_phases, ADB::null());
+            b_perfcells.resize(num_phases, ADB::null());
+            for (int phase = 0; phase < num_phases; ++phase) {
                 mob_perfcells[phase] = subset(rq[phase].mob, well_cells);
                 b_perfcells[phase] = subset(rq[phase].b, well_cells);
             }
