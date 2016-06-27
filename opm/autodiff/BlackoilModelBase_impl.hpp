@@ -1173,7 +1173,7 @@ namespace detail {
                         product += cell_product * (*mask);
                     }
                 }
-                return product;
+                return info.communicator().sum(product);
             }
             else
 #endif
