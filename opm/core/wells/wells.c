@@ -545,6 +545,12 @@ bool
 wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
 /* ---------------------------------------------------------------------- */
 {
+    // Cater the case where W1 and W2 are the same (null) pointers.
+    if( W1 == W2 )
+    {
+        return true;
+    }
+
     bool are_equal = true;
     are_equal = (W1->number_of_wells == W2->number_of_wells);
     are_equal = are_equal && (W1->number_of_phases == W2->number_of_phases);
