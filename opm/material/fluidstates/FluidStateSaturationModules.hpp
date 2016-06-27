@@ -58,6 +58,12 @@ public:
     { return saturation_[phaseIdx]; }
 
     /*!
+     * \brief Returns true iff a fluid phase shall be assumed to be present.
+     */
+    bool phaseIsPresent(int phaseIdx) const
+    { return saturation_[phaseIdx] > 0.0; }
+
+    /*!
      * \brief Set the saturation of a phase [-]
      */
     void setSaturation(unsigned phaseIdx, const Scalar& value)
@@ -110,6 +116,12 @@ public:
      */
     const Scalar& saturation(int /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "Saturation is not provided by this fluid state"); }
+
+    /*!
+     * \brief Returns true iff a fluid phase shall be assumed to be present.
+     */
+    bool phaseIsPresent(int phaseIdx) const
+    { OPM_THROW(std::runtime_error, "phaseIsPresent() is not provided by this fluid state"); }
 
     /*!
      * \brief Retrieve all parameters from an arbitrary fluid

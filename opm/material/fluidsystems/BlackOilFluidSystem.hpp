@@ -579,7 +579,7 @@ public:
         switch (phaseIdx) {
         case oilPhaseIdx: {
             if (enableDissolvedGas()) {
-                if (fluidState.saturation(gasPhaseIdx) > 0.0) {
+                if (fluidState.phaseIsPresent(gasPhaseIdx)) {
                     if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
@@ -603,7 +603,7 @@ public:
         }
         case gasPhaseIdx: {
             if (enableVaporizedOil()) {
-                if (fluidState.saturation(oilPhaseIdx) > 0.0) {
+                if (fluidState.phaseIsPresent(oilPhaseIdx)) {
                     if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
@@ -804,7 +804,7 @@ public:
         switch (phaseIdx) {
         case oilPhaseIdx: {
             if (enableDissolvedGas()) {
-                if (fluidState.saturation(gasPhaseIdx) > 0.0) {
+                if (fluidState.phaseIsPresent(gasPhaseIdx)) {
                     if (fluidState.saturation(gasPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
@@ -829,7 +829,7 @@ public:
 
         case gasPhaseIdx: {
             if (enableVaporizedOil()) {
-                if (fluidState.saturation(oilPhaseIdx) > 0.0) {
+                if (fluidState.phaseIsPresent(oilPhaseIdx)) {
                     if (fluidState.saturation(oilPhaseIdx) < 1e-4) {
                         // here comes the relatively expensive case: first calculate and then
                         // interpolate between the saturated and undersaturated quantities to
