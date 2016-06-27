@@ -72,9 +72,9 @@ namespace Opm
 
 
     StandardWells::StandardWells(const Wells* wells_arg)
-      : wells_(wells_arg)
+      : wells_active_(wells_arg!=nullptr)
+      , wells_(wells_arg)
       , wops_(wells_arg)
-      , num_phases_(wells_arg->number_of_phases)
       , fluid_(nullptr)
       , active_(nullptr)
       , phase_condition_(nullptr)
@@ -116,6 +116,10 @@ namespace Opm
     }
 
 
+    const Wells* StandardWells::wellsPointer() const
+    {
+        return wells_;
+    }
 
 
 
@@ -149,8 +153,13 @@ namespace Opm
     int
     StandardWells::numWellVars() const
     {
+        if ( !localWellsActive() )
+        {
+            return 0;
+        }
+
         // For each well, we have a bhp variable, and one flux per phase.
-        const int nw = localWellsActive() ? wells().number_of_wells : 0;
+        const int nw = wells().number_of_wells;
         return (numPhases() + 1) * nw;
     }
 
@@ -365,9 +374,10 @@ namespace Opm
             return;
         } else {
             const std::vector<int>& well_cells = wellOps().well_cells;
-            mob_perfcells.resize(num_phases_, ADB::null());
-            b_perfcells.resize(num_phases_, ADB::null());
-            for (int phase = 0; phase < num_phases_; ++phase) {
+            const int num_phases = wells().number_of_phases;
+            mob_perfcells.resize(num_phases, ADB::null());
+            b_perfcells.resize(num_phases, ADB::null());
+            for (int phase = 0; phase < num_phases; ++phase) {
                 mob_perfcells[phase] = subset(rq[phase].mob, well_cells);
                 b_perfcells[phase] = subset(rq[phase].b, well_cells);
             }
@@ -390,7 +400,7 @@ namespace Opm
     {
         if( ! localWellsActive() ) return ;
 
-        const int np = num_phases_;
+        const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];
         Vector Tw = Eigen::Map<const Vector>(wells().WI, nperf);
@@ -603,7 +613,7 @@ namespace Opm
     {
         if( localWellsActive() )
         {
-            const int np = num_phases_;
+            const int np = wells().number_of_phases;
             const int nw = wells().number_of_wells;
 
             // Extract parts of dwells corresponding to each part.

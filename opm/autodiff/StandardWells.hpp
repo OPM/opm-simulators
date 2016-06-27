@@ -70,9 +70,11 @@ namespace Opm {
 
             const WellOps& wellOps() const;
 
-            int numPhases() const { return num_phases_; };
+            int numPhases() const { return wells().number_of_phases; };
 
             const Wells& wells() const;
+
+            const Wells* wellsPointer() const;
 
             /// return true if wells are available in the reservoir
             bool wellsActive() const;
@@ -172,7 +174,6 @@ namespace Opm {
             bool wells_active_;
             const Wells*   wells_;
             const WellOps  wops_;
-            const int num_phases_;
 
             const BlackoilPropsAdInterface* fluid_;
             const std::vector<bool>*  active_;
