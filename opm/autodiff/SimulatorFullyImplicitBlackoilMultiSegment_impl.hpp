@@ -89,6 +89,7 @@ namespace Opm
 
         unsigned int totalNonlinearIterations = 0;
         unsigned int totalLinearIterations = 0;
+        DynamicListEconLimited dynamic_list_econ_limited;
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -109,6 +110,7 @@ namespace Opm
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability(),
+                                       dynamic_list_econ_limited,
                                        is_parallel_run_);
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;

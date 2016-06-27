@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 namespace Opm
 {
@@ -131,6 +132,7 @@ namespace Opm
         unsigned int totalLinearIterations = 0;
         bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
         std::vector<double> well_potentials;
+        DynamicListEconLimited dynamic_list_econ_limited;
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -153,6 +155,7 @@ namespace Opm
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability(),
+                                       dynamic_list_econ_limited,
                                        is_parallel_run_,
                                        well_potentials);
             const Wells* wells = wells_manager.c_wells();
