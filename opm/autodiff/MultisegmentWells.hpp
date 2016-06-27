@@ -102,6 +102,8 @@ namespace Opm {
 
             const Wells& wells() const;
 
+            const Wells* wellsPointer() const;
+
             int numPhases() const { return num_phases_; };
 
             int numWells() const { return wells_multisegment_.size(); }

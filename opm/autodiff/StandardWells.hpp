@@ -74,6 +74,8 @@ namespace Opm {
 
             const Wells& wells() const;
 
+            const Wells* wellsPointer() const;
+
             /// return true if wells are available in the reservoir
             bool wellsActive() const;
             void setWellsActive(const bool wells_active);

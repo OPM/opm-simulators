@@ -223,7 +223,7 @@ namespace detail {
 
         // TODO: put this for now to avoid modify the following code.
         // TODO: this code can be fragile.
-        const Wells* wells_arg = &(asImpl().well_model_.wells());
+        const Wells* wells_arg = asImpl().well_model_.wellsPointer();
 
 #if HAVE_MPI
         if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
