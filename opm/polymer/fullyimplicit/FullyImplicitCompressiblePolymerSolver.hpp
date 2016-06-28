@@ -64,12 +64,12 @@ namespace Opm {
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
         FullyImplicitCompressiblePolymerSolver(const UnstructuredGrid&         grid ,
-        		                               const BlackoilPropsAdInterface& fluid,
-                   			                   const DerivedGeology&           geo  ,
-                              			       const RockCompressibility*      rock_comp_props,
-                                    		   const PolymerPropsAd&           polymer_props_ad,
-                                    		   const Wells&                    wells,
-                                    		   const NewtonIterationBlackoilInterface&    linsolver);
+        		                       const BlackoilPropsAdInterface& fluid,
+                   			       const DerivedGeology&           geo  ,
+                                               const RockCompressibility*      rock_comp_props,
+                                               const PolymerPropsAd&           polymer_props_ad,
+                                               const Wells&                    wells,
+                                               const NewtonIterationBlackoilInterface&    linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
