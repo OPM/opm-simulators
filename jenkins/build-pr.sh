@@ -47,9 +47,9 @@ source $WORKSPACE/deps/opm-common/jenkins/compile-opm-module.sh
 
 # Downstream revisions
 declare -a downstreams
-downstreams=(opm-core
+downstreams=(opm-output
+             opm-core
              opm-grid
-             opm-output
              opm-simulators
              opm-upscaling
              ewoms)
