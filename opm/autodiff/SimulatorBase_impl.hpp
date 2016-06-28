@@ -176,6 +176,17 @@ namespace Opm
             const WellModel well_model(wells);
 
             auto solver = asImpl().createSolver(well_model);
+            std::stringstream ss;
+            std::ostringstream step_msg;
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+            ss.imbue(std::locale(std::locale::classic(), facet));
+            ss << timer.currentDateTime();
+            step_msg << "Time step " << std::setw(4) <<timer.currentStepNum()
+		     << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
+		     << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
+		     << ", date = " << ss.str()
+		     << "\n";
+            OpmLog::info(step_msg.str());
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
@@ -188,6 +199,13 @@ namespace Opm
             else {
                 // solve for complete report step
                 solver->step(timer.currentStepLength(), state, well_state);
+                std::ostringstream iter_msg;
+                iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day) 
+			 << " days well iterations = " << solver->wellIterations()
+			 << ", non-linear iterations = " << solver->nonlinearIterations()
+			 << ", total linear iterations = " << solver->linearIterations() 
+			 << "\n";
+                OpmLog::info(iter_msg.str());
             }
 
             // update the derived geology (transmissibilities, pore volumes, etc) if the
@@ -216,19 +234,6 @@ namespace Opm
 
             // accumulate total time
             stime += st;
-            std::stringstream ss;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            ss.imbue(std::locale(std::locale::classic(), facet));
-            ss << timer.currentDateTime();
-            std::string step_msg = "Time step " + std::to_string(timer.currentStepNum())
-                + " at days = " + std::to_string(unit::convert::to(timer.simulationTimeElapsed(), unit::day))
-                + ", date = " + ss.str() 
-                + "(total days = " + std::to_string(unit::convert::to(timer.totalTime(), unit::day)) 
-                + ")\n" + "Stepsize " + std::to_string(unit::convert::to(timer.currentStepLength(), unit::day)) 
-                + " days, well iterations = " + std::to_string(solver->wellIterations()) 
-                + ", non-linear iterations = " + std::to_string(solver->nonlinearIterations()) 
-                + ", total linear iterations = " + std::to_string(solver->linearIterations()) + "\n";
-            OpmLog::info(step_msg);
 
             if ( terminal_output_ )
             {
