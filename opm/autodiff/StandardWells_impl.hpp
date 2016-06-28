@@ -1282,9 +1282,6 @@ namespace Opm
                OPM_THROW(std::logic_error, "Only RATE limit is supported for the moment");
            }
 
-           using MapEntryType = typename WellState::mapentry_t;
-           using WellMapType = typename WellState::WellMapType;
-
            const WellMapType& well_map = well_state.wellMap();
            typename WellMapType::const_iterator i = well_map.find(well_name);
 
@@ -1447,5 +1444,89 @@ namespace Opm
         return false;
     }
 
+
+
+
+
+
+
+    template <class WellState>
+    bool
+    StandardWells::
+    checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                          const WellState& well_state,
+                          const typename WellMapType::const_iterator& i_well,
+                          int& worst_offending_connection,
+                          double& violation_extent,
+                          bool& last_connection) const
+    {
+        bool water_cut_limit_violated = false;
+        worst_offending_connection = -1;
+        violation_extent = -1.0;
+        last_connection = false;
+
+        const int np = well_state.numPhases();
+        const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+        const int well_number = (i_well->second)[0];
+
+        assert((*active_)[Oil]);
+        assert((*active_)[Water]);
+
+        const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
+        const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
+        const double liquid_rate = oil_rate + water_rate;
+        double water_cut;
+        if (std::abs(liquid_rate) != 0.) {
+            water_cut = water_rate / liquid_rate;
+        } else {
+            water_cut = 0.0;
+        }
+
+        const double max_water_cut_limit = econ_production_limits.maxWaterCut();
+        if (water_cut > max_water_cut_limit) {
+            water_cut_limit_violated = true;
+        }
+
+        if (water_cut_limit_violated) {
+            // need to handle the worst_offending_connection
+            const int perf_start = (i_well->second)[1];
+            const int perf_number = (i_well->second)[2];
+
+            std::vector<double> water_cut_perf(perf_number);
+            for (int perf = 0; perf < perf_number; ++perf) {
+                const int i_perf = perf_start + perf;
+                const double oil_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Oil ] ];
+                const double water_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Water ] ];
+                const double liquid_perf_rate = oil_perf_rate + water_perf_rate;
+                if (std::abs(liquid_perf_rate) != 0.) {
+                    water_cut_perf[perf] = water_perf_rate / liquid_perf_rate;
+                } else {
+                    water_cut_perf[perf] = 0.;
+                }
+            }
+
+            if (perf_number == 1) {
+                last_connection = true;
+                worst_offending_connection = 0;
+                violation_extent = water_cut_perf[0] / max_water_cut_limit;
+                return water_cut_limit_violated;
+            }
+
+            double max_water_cut_perf = 0.;
+            for (int perf = 0; perf < perf_number; ++perf) {
+                if (water_cut_perf[perf] > max_water_cut_perf) {
+                    worst_offending_connection = perf;
+                    max_water_cut_perf = water_cut_perf[perf];
+                }
+            }
+
+            assert(max_water_cut_perf != 0.);
+            assert(worst_offending_connection >= 0);
+
+            violation_extent = max_water_cut_perf / max_water_cut_limit;
+        }
+
+        return water_cut_limit_violated;
+    }
 
 } // namespace Opm

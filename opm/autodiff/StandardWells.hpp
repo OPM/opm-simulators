@@ -226,6 +226,17 @@ namespace Opm {
                                      const WellState& well_state,
                                      const int well_number) const;
 
+            using WellMapType = typename WellState::WellMapType;
+
+
+            template <class WellState>
+            bool checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                                       const WellState& well_state,
+                                       const typename WellMapType::const_iterator& i_well,
+                                       int& worst_offending_connection,
+                                       double& violation_extent,
+                                       bool& last_connection) const;
+
         };
 
 
