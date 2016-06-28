@@ -1262,7 +1262,6 @@ namespace Opm
                          DynamicListEconLimited& list_econ_limited) const
    {
        const int nw = wells_struct->number_of_wells;
-       const int np = wells_struct->number_of_phases;
 
        for (int w = 0; w < nw; ++w) {
            // flag to check if the mim oil/gas rate limit is violated
@@ -1283,32 +1282,12 @@ namespace Opm
            }
 
            const WellMapType& well_map = well_state.wellMap();
-           typename WellMapType::const_iterator i = well_map.find(well_name);
+           typename WellMapType::const_iterator i_well = well_map.find(well_name);
+           assert(i_well != well_map.end()); // should always be found?
+           const int well_number = (i_well->second)[0];
 
-           assert(i != well_map.end()); // should always be found?
-
-           const int well_number = (i->second)[0];
-
-           const Opm::PhaseUsage& pu = fluid_->phaseUsage();
-
-           // oil rate limit
-           // TODO: SHOULD we give a message when closing a well due to economic limit reason?
-           if (econ_production_limits.onMinOilRate()) {
-               assert((*active_)[Oil]);
-               const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
-               const double min_oil_rate = econ_production_limits.minOilRate();
-               if (std::abs(oil_rate) < min_oil_rate) {
-                   rate_limit_violated = true;
-               }
-           }
-           // gas rate limit
-           if (econ_production_limits.onMinGasRate()) {
-               assert((*active_)[Gas]);
-               const double gas_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Gas ] ];
-               const double min_gas_rate = econ_production_limits.minGasRate();
-               if (std::abs(gas_rate) < min_gas_rate) {
-                   rate_limit_violated = true;
-               }
+           if (econ_production_limits.onAnyRateLimit()) {
+               rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state, well_number);
            }
 
            if (rate_limit_violated) {
@@ -1327,68 +1306,23 @@ namespace Opm
                continue;
            }
 
-           // checking for other limits, mostly all kinds of ratio.
-           // TODO: not sure when more than one ratio limit is violated, what is the definition of the
-           // worst-offending connection
-           // Should not be more than one connection be closed each time
-           // Maybe we can compare the extent of the different violations to give a worst one.
-           bool water_cut_limit_violated = false;
-           if (econ_production_limits.onMaxWaterCut()) {
-               assert((*active_)[Oil]);
-               assert((*active_)[Water]);
-               const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
-               const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
-               const double liquid_rate = oil_rate + water_rate;
-               if (std::abs(liquid_rate) == 0.) {
-                   continue;
-               }
-               const double water_cut = water_rate / liquid_rate;
-               const double max_water_cut = econ_production_limits.maxWaterCut();
-               if (water_cut > max_water_cut) {
-                   water_cut_limit_violated = true;
-               }
+           // checking for ratio related limits, mostly all kinds of ratio.
+           int worst_offending_connection = -1e4;
+           bool ratio_limits_violated = false;
+
+           if (econ_production_limits.onAnyRateLimit()) {
+               ratio_limits_violated = checkRatioEconLimits(econ_production_limits, well_state, i_well, worst_offending_connection);
            }
 
-           if (econ_production_limits.workover() != WellEcon::CON) {
-               std::cerr << "WARNING: only CON workover over exceeding limit is supported for the moment." << std::endl;
+           // TODO: not decided to use local perf index or global perf index.
+           // UPDATE LATER.
+           if (ratio_limits_violated) {
+               const int perf_start = (i_well->second)[1];
+               const int perf_number = (i_well->second)[2];
+               assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
+               const int cell_worst_offending_connection = wells_struct->well_cells[perf_start + worst_offending_connection];
+               list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
            }
-
-           const int perf_start = (i->second)[1];
-           const int perf_number = (i->second)[2];
-
-           std::vector<double> oil_perf_rate(perf_number);
-           std::vector<double> gas_perf_rate(perf_number);
-           std::vector<double> water_perf_rate(perf_number);
-
-           for (int perf = 0; perf < perf_number; ++perf) {
-               const int i_perf = perf_start + perf;
-               oil_perf_rate[perf] = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Oil ] ];
-               water_perf_rate[perf] = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Water ] ];
-               gas_perf_rate[perf] = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Gas ] ];
-           }
-
-           std::vector<double> water_cut_perf(perf_number);
-           double max_water_cut_perf = 0.0;
-           int worst_offending_perf = -1;
-           for (int perf = 0; perf < perf_number; ++perf) {
-               const double liquid_rate = water_perf_rate[perf] + oil_perf_rate[perf];
-               if (std::abs(liquid_rate) == 0.0) {
-                   water_cut_perf[perf] = 0.0;
-               } else {
-                   water_cut_perf[perf] = water_perf_rate[perf] / liquid_rate;
-               }
-
-               if (water_cut_perf[perf] > max_water_cut_perf) {
-                   worst_offending_perf = perf;
-                   max_water_cut_perf = water_cut_perf[perf];
-               }
-           }
-
-           assert((worst_offending_perf >= 0) && (worst_offending_perf <= perf_number));
-
-           const int cell_worst_offending_perf = wells_struct->well_cells[perf_start + worst_offending_perf];
-
-           list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_perf);
 
        }
    }
@@ -1528,5 +1462,6 @@ namespace Opm
 
         return water_cut_limit_violated;
     }
+
 
 } // namespace Opm
