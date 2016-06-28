@@ -176,15 +176,13 @@ namespace Opm
             const WellModel well_model(wells);
 
             auto solver = asImpl().createSolver(well_model);
-            std::stringstream ss;
             std::ostringstream step_msg;
             boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            ss.imbue(std::locale(std::locale::classic(), facet));
-            ss << timer.currentDateTime();
+            step_msg.imbue(std::locale(std::locale::classic(), facet));
             step_msg << "Time step " << std::setw(4) <<timer.currentStepNum()
 		     << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
 		     << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-		     << ", date = " << ss.str()
+		     << ", date = " << timer.currentDateTime()
 		     << "\n";
             OpmLog::info(step_msg.str());
 
