@@ -146,6 +146,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
         }
 
         if (list_econ_limited.wellEconLimited(well->name())) {
+            // std::cout << " the well " << well->name() << " was closed " << std::endl;
             continue;
         }
 
@@ -419,7 +420,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                          pu, cartesian_to_compressed, permeability, ntg,
                          wells_on_proc, list_econ_limited);
 
-    setupWellControls(wells, timeStep, well_names, pu, wells_on_proc);
+    setupWellControls(wells, timeStep, well_names, pu, wells_on_proc, list_econ_limited);
 
     {
         GroupTreeNodeConstPtr fieldNode =

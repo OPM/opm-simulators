@@ -165,7 +165,8 @@ namespace Opm
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
         void setupWellControls(std::vector<const Well*>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
-                               const std::vector<int>& wells_on_proc);
+                               const std::vector<int>& wells_on_proc,
+                               const DynamicListEconLimited& list_econ_limited);
 
         template<class C2F, class FC, class NTG>
         void createWellsFromSpecs( std::vector<const Well*>& wells, size_t timeStep,

@@ -419,7 +419,8 @@ namespace Opm
 
     void WellsManager::setupWellControls(std::vector< const Well* >& wells, size_t timeStep,
                                          std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
-                                         const std::vector<int>& wells_on_proc) {
+                                         const std::vector<int>& wells_on_proc,
+                                         const DynamicListEconLimited& list_econ_limited) {
         int well_index = 0;
         auto well_on_proc = wells_on_proc.begin();
 
@@ -439,6 +440,10 @@ namespace Opm
 
             if (well->getStatus(timeStep) == WellCommon::SHUT) {
                 //SHUT wells are not added to the well list
+                continue;
+            }
+
+            if (list_econ_limited.wellEconLimited(well->name())) {
                 continue;
             }
 
