@@ -157,9 +157,9 @@ namespace Opm {
             if( timestep_verbose_ )
             {
                 std::ostringstream ss;
-                ss <<"Substep( " << substepTimer.currentStepNum() << " ), try with stepsize "
-                   << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " (days)." << std::endl;
-                OpmLog::note(ss.str());
+                ss <<"Adaptive time step(" << substepTimer.currentStepNum() << "), stepsize "
+                   << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days.";
+                OpmLog::info(ss.str());
             }
 
             int linearIterations = -1;
@@ -215,10 +215,12 @@ namespace Opm {
 
                 if( timestep_verbose_ )
                 {
-                    std::ostringstream ss;                    
-                    ss << "Substep( " << substepTimer.currentStepNum()-1 // it was already advanced by ++
-                                             << " ) finished at time " << unit::convert::to(substepTimer.simulationTimeElapsed(),unit::day) << " (days)." << std::endl << std::endl;
-                    OpmLog::note(ss.str());
+                    std::ostringstream ss;
+                    ss << "well iterations = " << solver.wellIterations()
+		       << ", non-linear iterations = " << solver.nonlinearIterations()
+		       << ", total linear iterations = " << solver.linearIterations() 
+		       << "\n";          
+                    OpmLog::info(ss.str());
                 }
 
                 // write data if outputWriter was provided
