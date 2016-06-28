@@ -220,6 +220,12 @@ namespace Opm {
                                                         const std::vector<double>& depth_perf,
                                                         const double grav);
 
+
+            template <class WellState>
+            bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                     const WellState& well_state,
+                                     const int well_number) const;
+
         };
 
 

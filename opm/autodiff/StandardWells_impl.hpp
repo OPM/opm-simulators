@@ -1277,7 +1277,7 @@ namespace Opm
            }
            // for the moment, we only handle rate limits, not handling potential limits
            // the potential limits should not be difficult to add
-           const WellEcon::QuantityLimitEnum quantity_limit = econ_production_limits.quantityLimit();
+           const WellEcon::QuantityLimitEnum& quantity_limit = econ_production_limits.quantityLimit();
            if (quantity_limit == WellEcon::POTN) {
                OPM_THROW(std::logic_error, "Only RATE limit is supported for the moment");
            }
@@ -1395,6 +1395,57 @@ namespace Opm
 
        }
    }
+
+
+
+
+
+    template <class WellState>
+    bool
+    StandardWells::
+    checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                        const WellState& well_state,
+                        const int well_number) const
+    {
+        const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+        const int np = well_state.numPhases();
+
+        if (econ_production_limits.onMinOilRate()) {
+            assert((*active_)[Oil]);
+            const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
+            const double min_oil_rate = econ_production_limits.minOilRate();
+            if (std::abs(oil_rate) < min_oil_rate) {
+                return true;
+            }
+        }
+
+        if (econ_production_limits.onMinGasRate() ) {
+            assert((*active_)[Gas]);
+            const double gas_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Gas ] ];
+            const double min_gas_rate = econ_production_limits.minGasRate();
+            if (std::abs(gas_rate) < min_gas_rate) {
+                return true;
+            }
+        }
+
+        if (econ_production_limits.onMinLiquidRate() ) {
+            assert((*active_)[Oil]);
+            assert((*active_)[Water]);
+            const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
+            const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
+            const double liquid_rate = oil_rate + water_rate;
+            const double min_liquid_rate = econ_production_limits.minLiquidRate();
+            if (std::abs(liquid_rate) < min_liquid_rate) {
+                return true;
+            }
+        }
+
+        if (econ_production_limits.onMinReservoirFluidRate()) {
+            std::cerr << "WARNING: Minimum reservoir fluid production rate limit is not supported yet" << std::endl;
+        }
+
+        return false;
+    }
 
 
 } // namespace Opm
