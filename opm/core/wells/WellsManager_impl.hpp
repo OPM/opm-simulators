@@ -150,6 +150,11 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
             continue;
         }
 
+        std::vector<int> cells_connection_closed;
+        if (list_econ_limited.connectionClosedForWell(well->name())) {
+            cells_connection_closed = list_econ_limited.getClosedConnectionsForWell(well->name());
+        }
+
         {   // COMPDAT handling
             auto completionSet = well->getCompletions(timeStep);
             // shut completions and open ones stored in this process will have 1 others 0.
@@ -181,6 +186,15 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                     else
                     {
                         int cell = cgit->second;
+                        // check if the connection is closed due to economic limits
+                        if (!cells_connection_closed.empty()) {
+                            const bool connection_found = std::find(cells_connection_closed.begin(), cells_connection_closed.end(), cell)
+                                                          != cells_connection_closed.end();
+                            if (connection_found) {
+                                continue;
+                            }
+                        }
+
                         PerfData pd;
                         pd.cell = cell;
                         {

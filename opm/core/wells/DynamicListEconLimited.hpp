@@ -21,6 +21,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 #include <cassert>
 
@@ -31,6 +32,7 @@ namespace Opm
     class DynamicListEconLimited
     {
     public:
+
         bool anyWellEconLimited() const {
             return !(m_shut_wells.empty());
         };
@@ -48,8 +50,33 @@ namespace Opm
             m_shut_wells.push_back(well_name);
         };
 
+        // TODO: maybe completion better here
+        bool connectionClosedForWell(const std::string& well_name) const {
+            return (m_cells_closed_connections.find(well_name) != m_cells_closed_connections.end());
+        }
+
+        const std::vector<int>& getClosedConnectionsForWell(const std::string& well_name) const {
+            return (m_cells_closed_connections.find(well_name)->second);
+        }
+
+        std::vector<int>& closedConnectionsForWell(const std::string& well_name) {
+            return (m_cells_closed_connections.find(well_name)->second);
+        }
+
+        void addClosedConnectionsForWell(const std::string& well_name,
+                                         const int cell_closed_connection) {
+            if (connectionClosedForWell(well_name)) {
+                std::vector<int> vector_cells = {cell_closed_connection};
+                m_cells_closed_connections[well_name] = vector_cells;
+            } else {
+                closedConnectionsForWell(well_name).push_back(cell_closed_connection);
+            }
+        }
+
     private:
         std::vector <std::string> m_shut_wells;
+        // using grid cell number to indicate the location of the connections
+        std::map<std::string, std::vector<int>> m_cells_closed_connections;
     };
 
 } // namespace Opm
