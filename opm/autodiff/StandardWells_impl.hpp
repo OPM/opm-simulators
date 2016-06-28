@@ -1320,6 +1320,11 @@ namespace Opm
                              << std::endl
                              << "the program will keep running after " << well_name << " is closed " << std::endl;
                }
+
+               if (econ_production_limits.validFollowonWell()) {
+                   std::cerr << "WARNING: opening following on well after well closed is not supported yet" << std::endl;
+               }
+
                list_econ_limited.addShuttedWell(well_name);
            }
        }
