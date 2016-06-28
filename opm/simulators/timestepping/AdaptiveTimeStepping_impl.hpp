@@ -157,7 +157,7 @@ namespace Opm {
             if( timestep_verbose_ )
             {
                 std::ostringstream ss;
-                ss <<"Adaptive time step(" << substepTimer.currentStepNum() << "), stepsize "
+                ss <<"Adaptive time step (" << substepTimer.currentStepNum() << "), stepsize "
                    << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days.";
                 OpmLog::info(ss.str());
             }
