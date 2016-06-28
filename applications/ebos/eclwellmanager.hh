@@ -100,7 +100,7 @@ public:
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx)
         {
-            Opm::WellConstPtr deckWell = deckSchedule->getWells()[deckWellIdx];
+            const Opm::Well* deckWell = deckSchedule->getWells()[deckWellIdx];
             const std::string &wellName = deckWell->name();
 
             // set the name of the well but not much else. (i.e., if it is not completed,
@@ -134,10 +134,10 @@ public:
         // linearized system of equations
         updateWellParameters_(episodeIdx, wellCompMap);
 
-        const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(episodeIdx);
+        const std::vector<const Opm::Well*>& deckWells = deckSchedule->getWells(episodeIdx);
         // set the injection data for the respective wells.
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
-            Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
+            const Opm::Well* deckWell = deckWells[deckWellIdx];
 
             if (!hasWell(deckWell->name()))
                 continue;
@@ -674,9 +674,9 @@ protected:
 
         // compute the mapping from logically Cartesian indices to the well the
         // respective completion.
-        const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(reportStepIdx);
+        const std::vector<const Opm::Well*>& deckWells = deckSchedule->getWells(reportStepIdx);
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
-            Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
+            const Opm::Well* deckWell = deckWells[deckWellIdx];
             const std::string& wellName = deckWell->name();
 
             if (!hasWell(wellName))
@@ -716,11 +716,11 @@ protected:
     {
         auto eclStatePtr = simulator_.gridManager().eclState();
         auto deckSchedule = eclStatePtr->getSchedule();
-        const std::vector<Opm::WellConstPtr>& deckWells = deckSchedule->getWells(reportStepIdx);
+        const std::vector<const Opm::Well*>& deckWells = deckSchedule->getWells(reportStepIdx);
 
         // set the reference depth for all wells
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
-            Opm::WellConstPtr deckWell = deckWells[deckWellIdx];
+            const Opm::Well* deckWell = deckWells[deckWellIdx];
             const std::string& wellName = deckWell->name();
 
             if( hasWell( wellName ) )
