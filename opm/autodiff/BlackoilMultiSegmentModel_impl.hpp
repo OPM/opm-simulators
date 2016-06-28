@@ -126,12 +126,11 @@ namespace Opm {
 
 
     template <class Grid>
-    void
+    IterationReport
     BlackoilMultiSegmentModel<Grid>::
     assemble(const ReservoirState& reservoir_state,
              WellState& well_state,
-             const bool initial_assembly,
-             int& well_iters)
+             const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
 
@@ -183,9 +182,9 @@ namespace Opm {
         asImpl().assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
-
+        IterationReport iter_report;
         if ( ! wellsActive() ) {
-            return;
+            return iter_report;
         }
 
         wellModel().computeSegmentFluidProperties(state);
@@ -198,7 +197,7 @@ namespace Opm {
         wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state, well_iters);
+            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
         // the perforation flux here are different
@@ -210,6 +209,7 @@ namespace Opm {
         wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
+        return iter_report;
     }
 
 
@@ -217,15 +217,15 @@ namespace Opm {
 
 
     template <class Grid>
-    bool BlackoilMultiSegmentModel<Grid>::solveWellEq(const std::vector<ADB>& mob_perfcells,
-                                                      const std::vector<ADB>& b_perfcells,
-                                                      SolutionState& state,
-                                                      WellState& well_state,
-                                                      int& well_iters)
+    IterationReport
+    BlackoilMultiSegmentModel<Grid>::solveWellEq(const std::vector<ADB>& mob_perfcells,
+                                                 const std::vector<ADB>& b_perfcells,
+                                                 SolutionState& state,
+                                                 WellState& well_state)
     {
-        const bool converged = Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state, well_iters);
+        IterationReport iter_report = Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
 
-        if (converged) {
+        if (iter_report.converged) {
             // We must now update the state.segp and state.segqs members,
             // that the base version does not know about.
             const int np = numPhases();
@@ -254,7 +254,7 @@ namespace Opm {
             asImpl().computeWellConnectionPressures(state, well_state);
         }
 
-        return converged;
+        return iter_report;
     }
 
 

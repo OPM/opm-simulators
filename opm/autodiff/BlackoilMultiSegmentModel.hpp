@@ -105,10 +105,10 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        void assemble(const ReservoirState& reservoir_state,
-                      WellState& well_state,
-                      const bool initial_assembly,
-                      int& well_iters);
+        IterationReport
+        assemble(const ReservoirState& reservoir_state,
+                 WellState& well_state,
+                 const bool initial_assembly);
 
         using Base::numPhases;
         using Base::numMaterials;
@@ -165,12 +165,11 @@ namespace Opm {
 
         const MultisegmentWells::MultisegmentWellOps& msWellOps() const { return well_model_.wellOps(); }
 
-        bool
+        IterationReport
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     SolutionState& state,
-                    WellState& well_state,
-                    int& well_iters);
+                    WellState& well_state);
 
         void
         makeConstantState(SolutionState& state) const;

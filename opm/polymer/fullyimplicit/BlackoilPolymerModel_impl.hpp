@@ -489,11 +489,10 @@ namespace Opm {
 
 
     template <class Grid>
-    void
+    IterationReport
     BlackoilPolymerModel<Grid>::assemble(const ReservoirState& reservoir_state,
                                          WellState& well_state,
-                                         const bool initial_assembly,
-                                         int& well_iters)
+                                         const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
 
@@ -527,10 +526,10 @@ namespace Opm {
 
         // -------- Mass balance equations --------
         assembleMassBalanceEq(state);
-
+        IterationReport iter_report;
         // -------- Well equations ----------
         if ( ! wellsActive() ) {
-            return;
+            return iter_report;
         }
 
         std::vector<ADB> mob_perfcells;
@@ -538,7 +537,7 @@ namespace Opm {
         wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state, well_iters);
+            Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
 
         V aliveWells;
