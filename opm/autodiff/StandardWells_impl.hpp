@@ -1315,6 +1315,11 @@ namespace Opm
            }
 
            if (rate_limit_violated) {
+               if (econ_production_limits.endRun()) {
+                   std::cerr << "WARNING: ending run after well closed due to economic limits is not supported yet"
+                             << std::endl
+                             << "the program will keep running after " << well_name << " is closed " << std::endl;
+               }
                list_econ_limited.addShuttedWell(well_name);
            }
        }
