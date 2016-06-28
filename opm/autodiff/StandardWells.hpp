@@ -230,6 +230,12 @@ namespace Opm {
 
 
             template <class WellState>
+            bool checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                      const WellState& well_state,
+                                      const typename WellMapType::const_iterator& i_well,
+                                      int& worst_offending_connection) const;
+
+            template <class WellState>
             bool checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                        const WellState& well_state,
                                        const typename WellMapType::const_iterator& i_well,

@@ -1382,6 +1382,67 @@ namespace Opm
 
 
 
+    template <class WellState>
+    bool
+    StandardWells::
+    checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                         const WellState& well_state,
+                         const typename WellMapType::const_iterator& i_well,
+                         int& worst_offending_connection) const
+    {
+        // TODO: not sure how to define the worst-offending connection when more than one
+        //       ratio related limit is violated.
+        //       The defintion used here is that we define the violation extent based on the
+        //       ratio between the value and the corresopoding limit.
+        //       For each violated limit, we decide the worst-offending connection separately.
+        //       Among the worst-offending connections, we use the one has the biggest violation
+        //       extent.
+
+
+        bool any_limit_violated = false;
+        // should handle last_connection here instead of in any following check Function.
+        bool last_connection = false;
+        double violation_extent = 0.0;
+        worst_offending_connection = -1;
+
+        if (econ_production_limits.onMaxWaterCut()) {
+            int worst_offending_connection_water_cut = -1;
+            double violation_extent_water_cut = 0.0;
+            const bool water_cut_violated = checkMaxWaterCutLimit(econ_production_limits, well_state, i_well,
+                                                                  worst_offending_connection_water_cut,
+                                                                  violation_extent_water_cut,
+                                                                  last_connection);
+            if (water_cut_violated) {
+                any_limit_violated = true;
+                if (violation_extent_water_cut > violation_extent) {
+                    violation_extent = violation_extent_water_cut;
+                    worst_offending_connection = worst_offending_connection_water_cut;
+                }
+            }
+        }
+
+        if (econ_production_limits.onMaxGasOilRatio()) {
+            OPM_MESSAGE("WARNING: the support for max Gas-Oil ratio is not implemented yet!");
+        }
+
+        if (econ_production_limits.onMaxWaterGasRatio()) {
+            OPM_MESSAGE("WARNING: the support for max Water-Gas ratio is not implemented yet!");
+        }
+
+        if (econ_production_limits.onMaxGasLiquidRatio()) {
+            OPM_MESSAGE("WARNING: the support for max Gas-Liquid ratio is not implemented yet!");
+        }
+
+        if (any_limit_violated) {
+            assert(worst_offending_connection >=0);
+            assert(violation_extent > 1.);
+        }
+
+        return any_limit_violated;
+    }
+
+
+
 
 
     template <class WellState>
