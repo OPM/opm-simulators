@@ -145,8 +145,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
             continue;
         }
 
-        if (list_econ_limited.wellEconLimited(well->name())) {
-            // std::cout << " the well " << well->name() << " was closed " << std::endl;
+        if (list_econ_limited.wellShuttedEconLimited(well->name())) {
             continue;
         }
 

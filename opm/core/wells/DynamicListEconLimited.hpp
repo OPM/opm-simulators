@@ -33,22 +33,28 @@ namespace Opm
     {
     public:
 
-        bool anyWellEconLimited() const {
-            return !(m_shut_wells.empty());
-        };
-
-        bool wellEconLimited(const std::string& well_name) const {
-            return std::find(m_shut_wells.begin(), m_shut_wells.end(), well_name) != m_shut_wells.end();
+        bool wellShuttedEconLimited(const std::string& well_name) const {
+            return std::find(m_shutted_wells.begin(), m_shutted_wells.end(), well_name) != m_shutted_wells.end();
         };
 
         void addShuttedWell(const std::string& well_name) {
-            // the well should not be in the list
-            // TODO: not sure wheter a shutted well can
-            // still be running through some other mechanism.
-            assert( !wellEconLimited(well_name) );
+            assert( !wellShuttedEconLimited(well_name) );
+            assert( !wellStoppedEconLimited(well_name) );
 
-            m_shut_wells.push_back(well_name);
+            m_shutted_wells.push_back(well_name);
         };
+
+        bool wellStoppedEconLimited(const std::string& well_name) const {
+            return std::find(m_stopped_wells.begin(), m_stopped_wells.end(), well_name) != m_stopped_wells.end();
+        };
+
+        void addStoppedWell(const std::string& well_name) {
+            assert( !wellShuttedEconLimited(well_name) );
+            assert( !wellStoppedEconLimited(well_name) );
+
+            m_stopped_wells.push_back(well_name);
+        }
+
 
         // TODO: maybe completion better here
         bool connectionClosedForWell(const std::string& well_name) const {
@@ -65,7 +71,8 @@ namespace Opm
 
         void addClosedConnectionsForWell(const std::string& well_name,
                                          const int cell_closed_connection) {
-            if (connectionClosedForWell(well_name)) {
+            if (!connectionClosedForWell(well_name)) {
+                // first time adding a connection for the well
                 std::vector<int> vector_cells = {cell_closed_connection};
                 m_cells_closed_connections[well_name] = vector_cells;
             } else {
@@ -74,7 +81,8 @@ namespace Opm
         }
 
     private:
-        std::vector <std::string> m_shut_wells;
+        std::vector <std::string> m_shutted_wells;
+        std::vector <std::string> m_stopped_wells;
         // using grid cell number to indicate the location of the connections
         std::map<std::string, std::vector<int>> m_cells_closed_connections;
     };
