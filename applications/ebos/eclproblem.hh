@@ -401,6 +401,8 @@ public:
         if (nextEpisodeIdx < numReportSteps) {
             simulator.startNextEpisode(episodeLength);
             simulator.setTimeStepSize(dt);
+            if (updateHysteresis_())
+                this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
@@ -465,13 +467,6 @@ public:
             // write the summary information after each time step
             summaryWriter_.write(wellManager_);
         }
-
-        bool cachesInvalid = false;
-
-        cachesInvalid = cachesInvalid || updateHysteresis_();
-
-        if (cachesInvalid)
-            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
     }
 
     /*!
