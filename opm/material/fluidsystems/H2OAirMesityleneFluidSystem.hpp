@@ -212,7 +212,7 @@ public:
             const LhsEval& p =
                 H2O::liquidIsCompressible()
                 ? FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx))
-                : 1e100;
+                : 1e30;
 
             const LhsEval& rholH2O = H2O::liquidDensity(T, p);
             const LhsEval& clH2O = rholH2O/H2O::molarMass();
@@ -229,7 +229,7 @@ public:
             const LhsEval& p =
                 NAPL::liquidIsCompressible()
                 ? FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx))
-                : 1e100;
+                : 1e30;
             return NAPL::liquidDensity(T, p);
         }
 

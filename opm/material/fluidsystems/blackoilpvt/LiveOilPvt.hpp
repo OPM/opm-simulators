@@ -515,7 +515,7 @@ private:
         for (size_t i=0; i <= n; ++ i) {
             Scalar pSat = gasDissolutionFac.xMin() + i*delta;
             Rs = saturatedGasDissolutionFactor(regionIdx,
-                                               /*temperature=*/Scalar(1e100),
+                                               /*temperature=*/Scalar(1e30),
                                                pSat);
 
             std::pair<Scalar, Scalar> val(Rs, pSat);

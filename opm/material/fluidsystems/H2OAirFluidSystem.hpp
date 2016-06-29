@@ -163,7 +163,7 @@ public:
             ? H2O::molarMass()
             : (compIdx == AirIdx)
             ? Air::molarMass()
-            : 1e100;
+            : 1e30;
     }
 
 
@@ -179,7 +179,7 @@ public:
             ? H2O::criticalTemperature()
             : (compIdx == AirIdx)
             ? Air::criticalTemperature()
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -194,7 +194,7 @@ public:
             ? H2O::criticalPressure()
             : (compIdx == AirIdx)
             ? Air::criticalPressure()
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -209,7 +209,7 @@ public:
             ? H2O::acentricFactor()
             : (compIdx == AirIdx)
             ? Air::acentricFactor()
-            : 1e100;
+            : 1e30;
     }
 
     /****************************************
@@ -271,7 +271,7 @@ public:
         else {
             // random value which will hopefully cause things to blow
             // up if it is used in a calculation!
-            p = - 1e100;
+            p = - 1e30;
             Valgrind::SetUndefined(p);
         }
 

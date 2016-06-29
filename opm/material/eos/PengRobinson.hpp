@@ -317,10 +317,10 @@ protected:
         typedef MathToolbox<Evaluation> Toolbox;
 
         Evaluation minVm(0);
-        Evaluation maxVm(1e100);
+        Evaluation maxVm(1e30);
 
         Evaluation minP(0);
-        Evaluation maxP(1e100);
+        Evaluation maxP(1e30);
 
         // first, we need to find an isotherm where the EOS exhibits
         // a maximum and a minimum

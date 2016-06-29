@@ -356,8 +356,8 @@ public:
         Scalar x1 = xMax();
         int m = numX();
 
-        Scalar y0 = 1e100;
-        Scalar y1 = -1e100;
+        Scalar y0 = 1e30;
+        Scalar y1 = -1e30;
         int n = 0;
         for (int i = 0; i < m; ++ i) {
             y0 = std::min(y0, yMin(i));
