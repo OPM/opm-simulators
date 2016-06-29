@@ -1309,9 +1309,11 @@ namespace Opm
            // checking for ratio related limits, mostly all kinds of ratio.
            int worst_offending_connection = -1e4;
            bool ratio_limits_violated = false;
+           bool last_connection = false;
 
            if (econ_production_limits.onAnyRateLimit()) {
-               ratio_limits_violated = checkRatioEconLimits(econ_production_limits, well_state, i_well, worst_offending_connection);
+               ratio_limits_violated = checkRatioEconLimits(econ_production_limits, well_state, i_well,
+                                                            worst_offending_connection, last_connection);
            }
 
            // TODO: not decided to use local perf index or global perf index.
@@ -1322,6 +1324,9 @@ namespace Opm
                assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
                const int cell_worst_offending_connection = wells_struct->well_cells[perf_start + worst_offending_connection];
                list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
+               if (last_connection) {
+                   list_econ_limited.addShuttedWell(well_name);
+               }
            }
 
        }
@@ -1388,7 +1393,8 @@ namespace Opm
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
                          const typename WellMapType::const_iterator& i_well,
-                         int& worst_offending_connection) const
+                         int& worst_offending_connection,
+                         bool& last_connection) const
     {
         // TODO: not sure how to define the worst-offending connection when more than one
         //       ratio related limit is violated.
@@ -1400,10 +1406,9 @@ namespace Opm
 
 
         bool any_limit_violated = false;
-        // should handle last_connection here instead of in any following check Function.
-        bool last_connection = false;
         double violation_extent = 0.0;
         worst_offending_connection = -1;
+        last_connection = false;
 
         if (econ_production_limits.onMaxWaterCut()) {
             int worst_offending_connection_water_cut = -1;
@@ -1458,7 +1463,6 @@ namespace Opm
         bool water_cut_limit_violated = false;
         worst_offending_connection = -1;
         violation_extent = -1.0;
-        last_connection = false;
 
         const int np = well_state.numPhases();
         const Opm::PhaseUsage& pu = fluid_->phaseUsage();
