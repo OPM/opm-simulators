@@ -143,6 +143,8 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         Evaluation pressure = 1e5;
         Evaluation Rs = 0.0;
         Evaluation Rv = 0.0;
+        Evaluation So = 0.5;
+        Evaluation maxSo = 1.0;
         Evaluation tmp;
 
         /////
@@ -178,6 +180,11 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = oilPvt.saturatedGasDissolutionFactor(/*regionIdx=*/0,
                                                    temperature,
                                                    pressure);
+        tmp = oilPvt.saturatedGasDissolutionFactor(/*regionIdx=*/0,
+                                                   temperature,
+                                                   pressure,
+                                                   So,
+                                                   maxSo);
 
         /////
         // gas PVT API
@@ -202,6 +209,11 @@ void ensurePvtApi(const OilPvt& oilPvt, const GasPvt& gasPvt, const WaterPvt& wa
         tmp = gasPvt.saturatedOilVaporizationFactor(/*regionIdx=*/0,
                                                     temperature,
                                                     pressure);
+        tmp = gasPvt.saturatedOilVaporizationFactor(/*regionIdx=*/0,
+                                                    temperature,
+                                                    pressure,
+                                                    So,
+                                                    maxSo);
 
         // prevent GCC from producing a "variable assigned but unused" warning
         tmp = 2.0*tmp;

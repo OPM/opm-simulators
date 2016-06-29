@@ -258,6 +258,21 @@ public:
     { return isothermalPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure); }
 
     /*!
+     * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
+     *
+     * This method implements temperature dependence and requires the isothermal gas
+     * dissolution factor for gas saturated oil and temperature as inputs. Currently it
+     * is just a dummy method which passes through the isothermal gas dissolution factor.
+     */
+    template <class Evaluation>
+    Evaluation saturatedGasDissolutionFactor(unsigned regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& pressure,
+                                             const Evaluation& oilSaturation,
+                                             const Evaluation& maxOilSaturation) const
+    { return isothermalPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure, oilSaturation, maxOilSaturation); }
+
+    /*!
      * \brief Returns the saturation pressure of the oil phase [Pa]
      *
      * This method implements temperature dependence and requires isothermal satuation

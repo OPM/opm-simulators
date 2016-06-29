@@ -169,6 +169,12 @@ public:
             }
         }
 
+        vapPar1_ = 0.0;
+        if (deck->hasKeyword("VAPPARS")) {
+            const auto& vapParsKeyword = deck->getKeyword("VAPPARS");
+            vapPar1_ = vapParsKeyword.getRecord(0).getItem("OIL_VAP_PROPENSITY").template get<double>(0);
+        }
+
         initEnd();
     }
 
@@ -483,19 +489,54 @@ public:
     { return inverseSaturatedGasB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
-     * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
+     * \brief Returns the oil vaporization factor \f$R_v\f$ [m^3/m^3] of the gas phase.
      */
     template <class Evaluation>
     Evaluation saturatedOilVaporizationFactor(unsigned regionIdx,
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& pressure) const
-    { return saturatedOilVaporizationFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true); }
+    {
+        return saturatedOilVaporizationFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true);
+    }
+
+    /*!
+     * \brief Returns the oil vaporization factor \f$R_v\f$ [m^3/m^3] of the gas phase.
+     *
+     * This variant of the method prevents all the oil to be vaporized even if the gas
+     * phase is still not saturated. This is physically quite dubious but it corresponds
+     * to how the Eclipse 100 simulator handles this. (cf the VAPPARS keyword.)
+     */
+    template <class Evaluation>
+    Evaluation saturatedOilVaporizationFactor(unsigned regionIdx,
+                                              const Evaluation& /*temperature*/,
+                                              const Evaluation& pressure,
+                                              const Evaluation& oilSaturation,
+                                              const Evaluation& maxOilSaturation) const
+    {
+        typedef typename Opm::MathToolbox<Evaluation> Toolbox;
+        Evaluation tmp =
+            saturatedOilVaporizationFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true);
+
+        // apply the vaporization parameters for the gas phase (cf. the Eclipse VAPPARS
+        // keyword)
+        if (vapPar1_ > 0.0 && maxOilSaturation > 0.01) {
+            static const Scalar sqrtEps = std::sqrt(std::numeric_limits<Scalar>::epsilon());
+            const Evaluation& So = Toolbox::max(oilSaturation, sqrtEps);
+            tmp *= Toolbox::pow(So/maxOilSaturation, vapPar1_);
+        }
+
+        return tmp;
+    }
 
     /*!
      * \brief Returns the saturation pressure of the gas phase [Pa]
      *        depending on its mass fraction of the oil component
      *
-     * \param Rv The surface volume of oil component dissolved in what will yield one cubic meter of gas at the surface [-]
+     * This method uses the standard blackoil assumptions: This means that the Rv value
+     * does not depend on the saturation of oil. (cf. the Eclipse VAPPARS keyword.)
+     *
+     * \param Rv The surface volume of oil component dissolved in what will yield one
+     *           cubic meter of gas at the surface [-]
      */
     template <class Evaluation>
     Evaluation saturationPressure(unsigned regionIdx,
@@ -557,6 +598,8 @@ private:
     std::vector<TabulatedOneDFunction> inverseSaturatedGasBMu_;
     std::vector<TabulatedOneDFunction> saturatedOilVaporizationFactorTable_;
     std::vector<Spline> saturationPressureSpline_;
+
+    Scalar vapPar1_;
 };
 
 } // namespace Opm
