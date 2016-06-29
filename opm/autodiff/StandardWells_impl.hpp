@@ -1270,6 +1270,11 @@ namespace Opm
            const Well* well_ecl = schedule->getWell(well_name);
            const WellEconProductionLimits& econ_production_limits = well_ecl->getEconProductionLimits(current_step);
 
+           // economic limits only apply for production wells.
+           if (wells_struct->type[w] != PRODUCER) {
+               continue;
+           }
+
            // if no limit is effective here, then continue to the next well
            if ( !econ_production_limits.onAnyEffectiveLimit() ) {
                continue;
@@ -1301,7 +1306,15 @@ namespace Opm
                    OpmLog::warning("WARNING: opening following on well after well closed is not supported yet");
                }
 
-               list_econ_limited.addShuttedWell(well_name);
+               if (well_ecl->getAutomaticShutIn()) {
+                   list_econ_limited.addShuttedWell(well_name);
+                   const std::string msg = std::string("well ") + well_name + std::string(" will be shutted in due to economic limit");
+                   OpmLog::info(msg);
+               } else {
+                   list_econ_limited.addStoppedWell(well_name);
+                   const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to economic limit");
+                   OpmLog::info(msg);
+               }
                // the well is closed, not need to check other limits
                continue;
            }
@@ -1311,21 +1324,26 @@ namespace Opm
            bool ratio_limits_violated = false;
            bool last_connection = false;
 
-           if (econ_production_limits.onAnyRateLimit()) {
+           if (econ_production_limits.onAnyRatioLimit()) {
                ratio_limits_violated = checkRatioEconLimits(econ_production_limits, well_state, i_well,
                                                             worst_offending_connection, last_connection);
            }
 
-           // TODO: not decided to use local perf index or global perf index.
-           // UPDATE LATER.
            if (ratio_limits_violated) {
                const int perf_start = (i_well->second)[1];
                const int perf_number = (i_well->second)[2];
                assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
+
                const int cell_worst_offending_connection = wells_struct->well_cells[perf_start + worst_offending_connection];
                list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
+               const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
+                                     + well_name + std::string(" will be closed due to econic limit");
+               OpmLog::info(msg);
+
                if (last_connection) {
                    list_econ_limited.addShuttedWell(well_name);
+                   const std::string msg2 = well_name + std::string(" will be shutted due to the last connection closed");
+                   OpmLog::info(msg2);
                }
            }
 
@@ -1403,7 +1421,6 @@ namespace Opm
         //       For each violated limit, we decide the worst-offending connection separately.
         //       Among the worst-offending connections, we use the one has the biggest violation
         //       extent.
-
 
         bool any_limit_violated = false;
         double violation_extent = 0.0;
@@ -1520,7 +1537,7 @@ namespace Opm
             }
 
             assert(max_water_cut_perf != 0.);
-            assert(worst_offending_connection >= 0);
+            assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
 
             violation_extent = max_water_cut_perf / max_water_cut_limit;
         }
