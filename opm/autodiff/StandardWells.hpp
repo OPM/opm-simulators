@@ -22,6 +22,8 @@
 #ifndef OPM_STANDARDWELLS_HEADER_INCLUDED
 #define OPM_STANDARDWELLS_HEADER_INCLUDED
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>

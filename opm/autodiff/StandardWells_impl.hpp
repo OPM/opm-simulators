@@ -1292,13 +1292,13 @@ namespace Opm
 
            if (rate_limit_violated) {
                if (econ_production_limits.endRun()) {
-                   std::cerr << "WARNING: ending run after well closed due to economic limits is not supported yet"
-                             << std::endl
-                             << "the program will keep running after " << well_name << " is closed " << std::endl;
+                   const std::string warning_message = std::string("WARNING: ending run after well closed due to economic limits is not supported yet \n")
+                                                     + std::string("the program will keep running after ") + well_name + std::string(" is closed");
+                   OpmLog::warning(warning_message);
                }
 
                if (econ_production_limits.validFollowonWell()) {
-                   std::cerr << "WARNING: opening following on well after well closed is not supported yet" << std::endl;
+                   OpmLog::warning("WARNING: opening following on well after well closed is not supported yet");
                }
 
                list_econ_limited.addShuttedWell(well_name);
@@ -1372,7 +1372,7 @@ namespace Opm
         }
 
         if (econ_production_limits.onMinReservoirFluidRate()) {
-            std::cerr << "WARNING: Minimum reservoir fluid production rate limit is not supported yet" << std::endl;
+            OpmLog::warning("WARNING: Minimum reservoir fluid production rate limit is not supported yet");
         }
 
         return false;
@@ -1422,15 +1422,15 @@ namespace Opm
         }
 
         if (econ_production_limits.onMaxGasOilRatio()) {
-            OPM_MESSAGE("WARNING: the support for max Gas-Oil ratio is not implemented yet!");
+            OpmLog::warning("WARNING: the support for max Gas-Oil ratio is not implemented yet!");
         }
 
         if (econ_production_limits.onMaxWaterGasRatio()) {
-            OPM_MESSAGE("WARNING: the support for max Water-Gas ratio is not implemented yet!");
+            OpmLog::warning("WARNING: the support for max Water-Gas ratio is not implemented yet!");
         }
 
         if (econ_production_limits.onMaxGasLiquidRatio()) {
-            OPM_MESSAGE("WARNING: the support for max Gas-Liquid ratio is not implemented yet!");
+            OpmLog::warning("WARNING: the support for max Gas-Liquid ratio is not implemented yet!");
         }
 
         if (any_limit_violated) {
