@@ -120,7 +120,7 @@ public:
     /*!
      * \brief Returns true iff a fluid phase shall be assumed to be present.
      */
-    bool phaseIsPresent(int phaseIdx) const
+    bool phaseIsPresent(int /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "phaseIsPresent() is not provided by this fluid state"); }
 
     /*!
