@@ -401,7 +401,7 @@ namespace Opm
         //   eclipse_state_
         // May throw if errors are encountered, here configured to be somewhat tolerant.
         void readDeckInput()
-        {   
+        {
             std::string deck_filename = param_.get<std::string>("deck_filename");
 
             // Create Parser
@@ -427,6 +427,13 @@ namespace Opm
                 const int output_interval = param_.get<int>("output_interval");
                 IOConfigPtr ioConfig = eclipse_state_->getIOConfig();
                 ioConfig->overrideRestartWriteInterval(static_cast<size_t>(output_interval));
+            }
+
+            // Possible to force initialization only behavior (NOSIM).
+            if (param_.has("nosim")) {
+                const bool nosim = param_.get<bool>("nosim");
+                IOConfigPtr ioConfig = eclipse_state_->getIOConfig();
+                ioConfig->overrideNOSIM( true );
             }
         }
 
@@ -703,13 +710,14 @@ namespace Opm
         {
             Opm::ScheduleConstPtr schedule = eclipse_state_->getSchedule();
             Opm::TimeMapConstPtr timeMap(schedule->getTimeMap());
+            std::shared_ptr<IOConfig> ioConfig = eclipse_state_->getIOConfig();
             SimulatorTimer simtimer;
 
             // initialize variables
             const auto initConfig = eclipse_state_->getInitConfig();
             simtimer.init(timeMap, (size_t)initConfig->getRestartStep());
 
-            if (!schedule->initOnly()) {
+            if (!ioConfig->initOnly()) {
                 if (output_cout_) {
                     std::string msg;
                     msg = "\n\n================ Starting main simulation loop ===============\n";
