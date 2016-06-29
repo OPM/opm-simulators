@@ -567,6 +567,7 @@ namespace Opm {
         wellModel().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
         wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
+        return iter_report;
     }
 
 
