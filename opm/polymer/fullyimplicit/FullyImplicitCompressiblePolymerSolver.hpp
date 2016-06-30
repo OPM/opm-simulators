@@ -64,12 +64,12 @@ namespace Opm {
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
         FullyImplicitCompressiblePolymerSolver(const UnstructuredGrid&         grid ,
-        		                               const BlackoilPropsAdInterface& fluid,
-                   			                   const DerivedGeology&           geo  ,
-                              			       const RockCompressibility*      rock_comp_props,
-                                    		   const PolymerPropsAd&           polymer_props_ad,
-                                    		   const Wells&                    wells,
-                                    		   const NewtonIterationBlackoilInterface&    linsolver);
+        		                       const BlackoilPropsAdInterface& fluid,
+                   			       const DerivedGeology&           geo  ,
+                                               const RockCompressibility*      rock_comp_props,
+                                               const PolymerPropsAd&           polymer_props_ad,
+                                               const Wells&                    wells,
+                                               const NewtonIterationBlackoilInterface&    linsolver);
 
         /// Take a single forward step, modifiying
         ///   state.pressure()
@@ -88,6 +88,7 @@ namespace Opm {
 
         int nonlinearIterations() const;
         int linearIterations() const;
+        int wellIterations() const;
 
         /// Not used by this class except to satisfy interface requirements.
         typedef parameter::ParameterGroup SolverParameters;
@@ -159,6 +160,7 @@ namespace Opm {
 
         unsigned int newtonIterations_;
         unsigned int linearIterations_;
+        unsigned int wellIterations_;
 
         // Private methods.
         SolutionState

@@ -34,8 +34,10 @@ namespace Opm
           model_(std::move(model_arg)),
           nonlinearIterations_(0),
           linearIterations_(0),
+          wellIterations_(0),
           nonlinearIterationsLast_(0),
-          linearIterationsLast_(0)
+          linearIterationsLast_(0),
+          wellIterationsLast_(0)
     {
         if (!model_) {
             OPM_THROW(std::logic_error, "Must provide a non-null model argument for NonlinearSolver.");
@@ -52,6 +54,12 @@ namespace Opm
     unsigned int NonlinearSolver<PhysicalModel>::linearIterations() const
     {
         return linearIterations_;
+    }
+
+    template <class PhysicalModel>
+    unsigned int NonlinearSolver<PhysicalModel>::wellIterations() const
+    {
+        return wellIterations_;
     }
 
     template <class PhysicalModel>
@@ -76,6 +84,12 @@ namespace Opm
     unsigned int NonlinearSolver<PhysicalModel>::linearIterationsLastStep() const
     {
         return linearIterationsLast_;
+    }
+
+    template <class PhysicalModel>
+    unsigned int NonlinearSolver<PhysicalModel>::wellIterationsLastStep() const
+    {
+        return wellIterationsLast_;
     }
 
 
@@ -110,6 +124,7 @@ namespace Opm
         // Set up for main solver loop.
         int linIters = 0;
         bool converged = false;
+        int wellIters = 0;
 
         // ----------  Main nonlinear solver loop  ----------
         do {
@@ -122,6 +137,7 @@ namespace Opm
             }
             converged = report.converged;
             linIters += report.linear_iterations;
+            wellIters += report.well_iterations;
             ++iteration;
         } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
@@ -134,8 +150,10 @@ namespace Opm
 
         linearIterations_ += linIters;
         nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
+        wellIterations_ += wellIters; 
         linearIterationsLast_ = linIters;
         nonlinearIterationsLast_ = iteration;
+        wellIterationsLast_ = wellIters;
 
         // Do model-specific post-step actions.
         model_->afterStep(dt, reservoir_state, well_state);

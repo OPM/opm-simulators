@@ -20,7 +20,7 @@
 */
 
 #include <algorithm>
-
+#include <locale>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
@@ -137,7 +137,7 @@ namespace Opm
             {
                 std::ostringstream ss;
                 timer.report(ss);
-                OpmLog::info(ss.str());
+                OpmLog::note(ss.str());
             }
 
             // Create wells and well state.
@@ -176,6 +176,15 @@ namespace Opm
             const WellModel well_model(wells);
 
             auto solver = asImpl().createSolver(well_model);
+            std::ostringstream step_msg;
+            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+            step_msg.imbue(std::locale(std::locale::classic(), facet));
+            step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
+		     << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
+		     << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
+		     << ", date = " << timer.currentDateTime()
+		     << "\n";
+            OpmLog::info(step_msg.str());
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
@@ -188,6 +197,15 @@ namespace Opm
             else {
                 // solve for complete report step
                 solver->step(timer.currentStepLength(), state, well_state);
+                std::ostringstream iter_msg;
+                iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
+                if (solver->wellIterations() != std::numeric_limits<int>::min()) {
+                    iter_msg << " days well iterations = " << solver->wellIterations() << ", ";                    
+                }
+		iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
+			 << ", total linear iterations = " << solver->linearIterations() 
+			 << "\n";
+                OpmLog::info(iter_msg.str());
             }
 
             // update the derived geology (transmissibilities, pore volumes, etc) if the
@@ -221,7 +239,7 @@ namespace Opm
             {
                 std::string msg;
                 msg = "Fully implicit solver took: " + std::to_string(st) + " seconds. Total solver time taken: " + std::to_string(stime) + " seconds.";
-                OpmLog::info(msg);
+                OpmLog::note(msg);
             }
 
             if ( output_writer_.output() ) {

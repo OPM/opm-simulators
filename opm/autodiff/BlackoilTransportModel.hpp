@@ -82,10 +82,10 @@ namespace Opm {
             asImpl().makeConstantState(state0_);
         }
 
-
-        void assemble(const ReservoirState& reservoir_state,
-                      WellState& well_state,
-                      const bool initial_assembly)
+        IterationReport
+        assemble(const ReservoirState& reservoir_state,
+                 WellState& well_state,
+                 const bool initial_assembly)
         {
 
             using namespace Opm::AutoDiffGrid;
@@ -124,9 +124,9 @@ namespace Opm {
             asImpl().assembleMassBalanceEq(state);
 
             // -------- Well equations ----------
-
+            IterationReport iter_report = {false, false, 0, std::numeric_limits<int>::min()};
             if ( ! wellsActive() ) {
-                return;
+                return iter_report;
             }
 
             std::vector<ADB> mob_perfcells;
@@ -134,7 +134,7 @@ namespace Opm {
             asImpl().wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
             if (param_.solve_welleq_initially_ && initial_assembly) {
                 // solve the well equations as a pre-processing step
-                asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+                iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
             }
             V aliveWells;
             std::vector<ADB> cq_s;
@@ -153,6 +153,7 @@ namespace Opm {
                 asImpl().makeConstantState(state0);
                 asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
             }
+            return iter_report;
         }
 
 

@@ -288,7 +288,7 @@ namespace detail {
             current_relaxation_ = 1.0;
             dx_old_ = V::Zero(sizeNonLinear());
         }
-        asImpl().assemble(reservoir_state, well_state, iteration == 0);
+        IterationReport iter_report = asImpl().assemble(reservoir_state, well_state, iteration == 0);
         residual_norms_history_.push_back(asImpl().computeResidualNorms());
         const bool converged = asImpl().getConvergence(dt, iteration);
         const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
@@ -322,7 +322,7 @@ namespace detail {
         }
         const bool failed = false; // Not needed in this model.
         const int linear_iters = must_solve ? asImpl().linearIterationsLastSolve() : 0;
-        return IterationReport{ failed, converged, linear_iters };
+        return IterationReport{ failed, converged, linear_iters , iter_report.well_iterations};
     }
 
 
@@ -727,7 +727,7 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    void
+    IterationReport
     BlackoilModelBase<Grid, WellModel, Implementation>::
     assemble(const ReservoirState& reservoir_state,
              WellState& well_state,
@@ -775,9 +775,9 @@ namespace detail {
         asImpl().assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
-
+        IterationReport iter_report = {false, false, 0, std::numeric_limits<int>::min()};
         if ( ! wellsActive() ) {
-            return;
+            return iter_report;
         }
 
         std::vector<ADB> mob_perfcells;
@@ -785,7 +785,7 @@ namespace detail {
         asImpl().wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
         }
         V aliveWells;
         std::vector<ADB> cq_s;
@@ -800,7 +800,7 @@ namespace detail {
             asImpl().makeConstantState(state0);
             asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
         }
-
+        return iter_report;
     }
 
 
@@ -971,7 +971,7 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    bool
+    IterationReport
     BlackoilModelBase<Grid, WellModel, Implementation>::
     solveWellEq(const std::vector<ADB>& mob_perfcells,
                 const std::vector<ADB>& b_perfcells,
@@ -1041,9 +1041,7 @@ namespace detail {
         } while (it < 15);
 
         if (converged) {
-            if ( terminal_output_ ) {
-                OpmLog::info("well converged iter: " + std::to_string(it));
-            }
+            OpmLog::note("well converged iter: " + std::to_string(it));
             const int nw = wells().number_of_wells;
             {
                 // We will set the bhp primary variable to the new ones,
@@ -1069,8 +1067,9 @@ namespace detail {
         if (!converged) {
             well_state = well_state0;
         }
-
-        return converged;
+        const bool failed = false; // Not needed in this method.
+        const int linear_iters = 0; // Not needed in this method
+        return IterationReport{failed, converged, linear_iters, it};
     }
 
 
@@ -1863,7 +1862,7 @@ namespace detail {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
                 // std::cout << "  WELL-CONT ";
-                OpmLog::info(msg);
+                OpmLog::note(msg);
             }
             std::ostringstream ss;
             const std::streamsize oprec = ss.precision(3);
@@ -1881,7 +1880,7 @@ namespace detail {
             // std::cout << std::setw(11) << residualWell;
             ss.precision(oprec);
             ss.flags(oflags);
-            OpmLog::info(ss.str());
+            OpmLog::note(ss.str());
         }
 
         for (int idx = 0; idx < nm; ++idx) {
@@ -1969,7 +1968,7 @@ namespace detail {
                 for (int idx = 0; idx < np; ++idx) {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
-                OpmLog::info(msg);
+                OpmLog::note(msg);
             }
             std::ostringstream ss;
             const std::streamsize oprec = ss.precision(3);
@@ -1980,7 +1979,7 @@ namespace detail {
             }
             ss.precision(oprec);
             ss.flags(oflags);
-            OpmLog::info(ss.str());
+            OpmLog::note(ss.str());
         }
         return converged;
     }

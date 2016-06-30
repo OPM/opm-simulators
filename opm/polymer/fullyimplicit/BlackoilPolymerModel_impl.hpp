@@ -489,7 +489,7 @@ namespace Opm {
 
 
     template <class Grid>
-    void
+    IterationReport
     BlackoilPolymerModel<Grid>::assemble(const ReservoirState& reservoir_state,
                                          WellState& well_state,
                                          const bool initial_assembly)
@@ -526,10 +526,10 @@ namespace Opm {
 
         // -------- Mass balance equations --------
         assembleMassBalanceEq(state);
-
+        IterationReport iter_report = {false, false, 0, std::numeric_limits<int>::min()};
         // -------- Well equations ----------
         if ( ! wellsActive() ) {
-            return;
+            return iter_report;
         }
 
         std::vector<ADB> mob_perfcells;
@@ -567,6 +567,7 @@ namespace Opm {
         wellModel().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
         wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
+        return iter_report;
     }
 
 

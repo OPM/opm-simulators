@@ -150,7 +150,7 @@ namespace Opm {
                 }
 
                 // Report and return.
-                return IterationReport { false, true, pressure_liniter + transport_liniter };
+                return IterationReport { false, true, pressure_liniter + transport_liniter, 0 };
             } else {
                 // Iterate to fully implicit solution.
                 // This call is just for a single iteration (one pressure and one transport solve),
@@ -179,7 +179,7 @@ namespace Opm {
 
                 // Report and return.
                 const bool converged = iteration >= 3; // TODO: replace this with a proper convergence check
-                return IterationReport { false, converged, pressure_liniter + transport_liniter };
+                return IterationReport { false, converged, pressure_liniter + transport_liniter, 0 };
             }
         }
 
