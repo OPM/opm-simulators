@@ -179,7 +179,7 @@ namespace Opm
             std::ostringstream step_msg;
             boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
             step_msg.imbue(std::locale(std::locale::classic(), facet));
-            step_msg << "Time step " << std::setw(4) <<timer.currentStepNum()
+            step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
 		     << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
 		     << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
 		     << ", date = " << timer.currentDateTime()
@@ -198,9 +198,11 @@ namespace Opm
                 // solve for complete report step
                 solver->step(timer.currentStepLength(), state, well_state);
                 std::ostringstream iter_msg;
-                iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day) 
-			 << " days well iterations = " << solver->wellIterations()
-			 << ", non-linear iterations = " << solver->nonlinearIterations()
+                iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
+                if (solver->wellIterations() != std::numeric_limits<int>::min()) {
+                    iter_msg << " days well iterations = " << solver->wellIterations() << ", ";                    
+                }
+		iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
 			 << ", total linear iterations = " << solver->linearIterations() 
 			 << "\n";
                 OpmLog::info(iter_msg.str());

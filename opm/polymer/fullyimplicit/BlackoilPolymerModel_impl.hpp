@@ -526,7 +526,7 @@ namespace Opm {
 
         // -------- Mass balance equations --------
         assembleMassBalanceEq(state);
-        IterationReport iter_report = {false, false, 0, 0};
+        IterationReport iter_report = {false, false, 0, std::numeric_limits<int>::min()};
         // -------- Well equations ----------
         if ( ! wellsActive() ) {
             return iter_report;
