@@ -272,8 +272,8 @@ namespace Opm
                 asImpl().computeWellPotentials(wells, well_state, well_potentials);
             }
 
-            solver->model().wellModel().updateListEconLimited(eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
-                                                              well_state, dynamic_list_econ_limited);
+            asImpl().updateListEconLimited(solver, eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
+                                           well_state, dynamic_list_econ_limited);
         }
         // Write final simulation state.
         output_writer_.writeTimeStep( timer, state, prev_well_state );
@@ -618,4 +618,24 @@ namespace Opm
             }
         }
     }
+
+
+
+
+
+    template <class Implementation>
+    void
+    SimulatorBase<Implementation>::
+    updateListEconLimited(const std::unique_ptr<Solver>& solver,
+                          ScheduleConstPtr schedule,
+                          const int current_step,
+                          const Wells* wells,
+                          const WellState& well_state,
+                          DynamicListEconLimited& list_econ_limited) const
+    {
+
+        solver->model().wellModel().updateListEconLimited(schedule, current_step, wells,
+                                                          well_state, list_econ_limited);
+    }
+
 } // namespace Opm

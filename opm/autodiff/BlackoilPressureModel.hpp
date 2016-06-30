@@ -129,6 +129,7 @@ namespace Opm {
 
         using Base::numPhases;
         using Base::numMaterials;
+        using Base::wellModel;
 
     protected:
         using Base::asImpl;

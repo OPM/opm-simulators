@@ -98,6 +98,23 @@ handleAdditionalWellInflow(SimulatorTimer& timer,
 }
 
 
+
+
+
+template <class GridT>
+void
+SimulatorFullyImplicitCompressiblePolymer<GridT>::
+updateListEconLimited(const std::unique_ptr<Solver>& /*solver*/,
+                      ScheduleConstPtr /*schedule*/,
+                      const int /*current_step*/,
+                      const Wells* /*wells*/,
+                      const WellState& /*well_state*/,
+                      DynamicListEconLimited& /*list_econ_limited*/) const
+{
+
+}
+
+
 } // namespace Opm
 
 #endif // OPM_SIMULATORFULLYIMPLICITCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
