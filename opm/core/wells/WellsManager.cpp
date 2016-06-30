@@ -332,7 +332,7 @@ namespace Opm
                                const double* permeability)
         : w_(0), is_parallel_run_(false)
     {
-        std::vector<double> dummy_well_potentials;;
+        std::vector<double> dummy_well_potentials;
         // TODO: not sure about the usage of this WellsManager constructor
         // TODO: not sure whether this is the correct thing to do here.
         DynamicListEconLimited dummy_list_econ_limited;
@@ -438,7 +438,7 @@ namespace Opm
                 continue;
             }
 
-            if (list_econ_limited.wellShuttedEconLimited(well->name())) {
+            if (list_econ_limited.wellShutEconLimited(well->name())) {
                 continue;
             }
 

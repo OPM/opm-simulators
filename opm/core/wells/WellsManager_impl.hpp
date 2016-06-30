@@ -145,12 +145,12 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
             continue;
         }
 
-        if (list_econ_limited.wellShuttedEconLimited(well->name())) {
+        if (list_econ_limited.wellShutEconLimited(well->name())) {
             continue;
         }
 
         std::vector<int> cells_connection_closed;
-        if (list_econ_limited.connectionClosedForWell(well->name())) {
+        if (list_econ_limited.anyConnectionClosedForWell(well->name())) {
             cells_connection_closed = list_econ_limited.getClosedConnectionsForWell(well->name());
         }
 
@@ -187,7 +187,8 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                         int cell = cgit->second;
                         // check if the connection is closed due to economic limits
                         if (!cells_connection_closed.empty()) {
-                            const bool connection_found = std::find(cells_connection_closed.begin(), cells_connection_closed.end(), cell)
+                            const bool connection_found = std::find(cells_connection_closed.begin(),
+                                                                    cells_connection_closed.end(), cell)
                                                           != cells_connection_closed.end();
                             if (connection_found) {
                                 continue;
