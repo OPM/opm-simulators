@@ -433,7 +433,7 @@ namespace Opm
             if (param_.has("nosim")) {
                 const bool nosim = param_.get<bool>("nosim");
                 IOConfigPtr ioConfig = eclipse_state_->getIOConfig();
-                ioConfig->overrideNOSIM( true );
+                ioConfig->overrideNOSIM( nosim );
             }
         }
 

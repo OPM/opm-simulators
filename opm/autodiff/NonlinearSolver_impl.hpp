@@ -45,19 +45,19 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    unsigned int NonlinearSolver<PhysicalModel>::nonlinearIterations() const
+    int NonlinearSolver<PhysicalModel>::nonlinearIterations() const
     {
         return nonlinearIterations_;
     }
 
     template <class PhysicalModel>
-    unsigned int NonlinearSolver<PhysicalModel>::linearIterations() const
+    int NonlinearSolver<PhysicalModel>::linearIterations() const
     {
         return linearIterations_;
     }
 
     template <class PhysicalModel>
-    unsigned int NonlinearSolver<PhysicalModel>::wellIterations() const
+    int NonlinearSolver<PhysicalModel>::wellIterations() const
     {
         return wellIterations_;
     }
@@ -75,19 +75,19 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    unsigned int NonlinearSolver<PhysicalModel>::nonlinearIterationsLastStep() const
+    int NonlinearSolver<PhysicalModel>::nonlinearIterationsLastStep() const
     {
         return nonlinearIterationsLast_;
     }
 
     template <class PhysicalModel>
-    unsigned int NonlinearSolver<PhysicalModel>::linearIterationsLastStep() const
+    int NonlinearSolver<PhysicalModel>::linearIterationsLastStep() const
     {
         return linearIterationsLast_;
     }
 
     template <class PhysicalModel>
-    unsigned int NonlinearSolver<PhysicalModel>::wellIterationsLastStep() const
+    int NonlinearSolver<PhysicalModel>::wellIterationsLastStep() const
     {
         return wellIterationsLast_;
     }

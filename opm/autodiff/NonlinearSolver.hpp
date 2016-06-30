@@ -103,22 +103,22 @@ namespace Opm {
              WellState& well_state);
 
         /// Number of nonlinear solver iterations used in all calls to step().
-        unsigned int nonlinearIterations() const;
+        int nonlinearIterations() const;
 
         /// Number of linear solver iterations used in all calls to step().
-        unsigned int linearIterations() const;
+        int linearIterations() const;
 
         /// Number of well iterations used in all calls to step().
-        unsigned int wellIterations() const;
+        int wellIterations() const;
 
         /// Number of nonlinear solver iterations used in the last call to step().
-        unsigned int nonlinearIterationsLastStep() const;
+        int nonlinearIterationsLastStep() const;
 
         /// Number of linear solver iterations used in the last call to step().
-        unsigned int linearIterationsLastStep() const;
+        int linearIterationsLastStep() const;
 
         /// Number of well iterations used in the last call to step().
-        unsigned int wellIterationsLastStep() const;
+        int wellIterationsLastStep() const;
 
         /// Reference to physical model.
         const PhysicalModel& model() const;
@@ -155,12 +155,12 @@ namespace Opm {
         // ---------  Data members  ---------
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
-        unsigned int nonlinearIterations_;
-        unsigned int linearIterations_;
-        unsigned int wellIterations_;
-        unsigned int nonlinearIterationsLast_;
-        unsigned int linearIterationsLast_;
-        unsigned int wellIterationsLast_;
+        int nonlinearIterations_;
+        int linearIterations_;
+        int wellIterations_;
+        int nonlinearIterationsLast_;
+        int linearIterationsLast_;
+        int wellIterationsLast_;
     };
 } // namespace Opm
 
