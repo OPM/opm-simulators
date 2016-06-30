@@ -469,8 +469,6 @@ void
 clear_well_controls(int well_index, struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
-    // printf(" well_indx = %d \n", well_index);
-    // printf(" W->number_of_wells = %d \n", W->number_of_wells);
     assert (W != NULL);
     assert ((0 <= well_index) && (well_index < W->number_of_wells));
 
