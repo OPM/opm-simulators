@@ -1307,8 +1307,8 @@ namespace Opm
                }
 
                if (well_ecl->getAutomaticShutIn()) {
-                   list_econ_limited.addShuttedWell(well_name);
-                   const std::string msg = std::string("well ") + well_name + std::string(" will be shutted in due to economic limit");
+                   list_econ_limited.addShutWell(well_name);
+                   const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to economic limit");
                    OpmLog::info(msg);
                } else {
                    list_econ_limited.addStoppedWell(well_name);
@@ -1341,8 +1341,8 @@ namespace Opm
                OpmLog::info(msg);
 
                if (last_connection) {
-                   list_econ_limited.addShuttedWell(well_name);
-                   const std::string msg2 = well_name + std::string(" will be shutted due to the last connection closed");
+                   list_econ_limited.addShutWell(well_name);
+                   const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
                    OpmLog::info(msg2);
                }
            }
