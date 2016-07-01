@@ -173,6 +173,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilSolventModel_impl.hpp
   opm/autodiff/BlackoilMultiSegmentModel.hpp
   opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
+  opm/autodiff/BlackoilReorderingTransportModel.hpp
   opm/autodiff/BlackoilTransportModel.hpp
   opm/autodiff/fastSparseOperations.hpp
   opm/autodiff/DebugTimeReport.hpp
