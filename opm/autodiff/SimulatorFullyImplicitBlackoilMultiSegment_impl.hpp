@@ -73,7 +73,7 @@ namespace Opm
         }
 
         // init output writer
-        output_writer_.writeInit();
+        output_writer_.writeInit( geo_.simProps(grid_) , geo_.nonCartesianConnections( ) );
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
