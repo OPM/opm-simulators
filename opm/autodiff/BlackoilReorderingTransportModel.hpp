@@ -60,16 +60,16 @@ namespace Opm {
         /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilReorderingTransportModel(const typename Base::ModelParameters&   param,
-                               const Grid&                             grid,
-                               const BlackoilPropsAdInterface&         fluid,
-                               const DerivedGeology&                   geo,
-                               const RockCompressibility*              rock_comp_props,
-                               const StandardWells&                    std_wells,
-                               const NewtonIterationBlackoilInterface& linsolver,
-                               Opm::EclipseStateConstPtr               eclState,
-                               const bool                              has_disgas,
-                               const bool                              has_vapoil,
-                               const bool                              terminal_output)
+                                         const Grid&                             grid,
+                                         const BlackoilPropsAdInterface&         fluid,
+                                         const DerivedGeology&                   geo,
+                                         const RockCompressibility*              rock_comp_props,
+                                         const StandardWells&                    std_wells,
+                                         const NewtonIterationBlackoilInterface& linsolver,
+                                         Opm::EclipseStateConstPtr               eclState,
+                                         const bool                              has_disgas,
+                                         const bool                              has_vapoil,
+                                         const bool                              terminal_output)
             : Base(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
                    eclState, has_disgas, has_vapoil, terminal_output)
             , reservoir_state0_(0, 0, 0)
@@ -89,6 +89,10 @@ namespace Opm {
             Base::param_.solve_welleq_initially_ = false;
             reservoir_state0_ = reservoir_state;
             well_state0_ = well_state;
+            // Since pressure is constant, porosity and transmissibility multipliers can
+            // be computed just once.
+            const std::vector<double>& p = reservoir_state.pressure();
+            Base::pvdt_ *= Base::poroMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
         }
 
 
@@ -102,10 +106,11 @@ namespace Opm {
                                            ReservoirState& reservoir_state,
                                            const WellState& well_state)
         {
-            // Extract reservoir and well fluxes.
+            // Extract reservoir and well fluxes and fields.
             {
                 DebugTimeReport tr("Extracting fluxes");
                 extractFluxes(reservoir_state, well_state);
+                extractFields(reservoir_state);
             }
 
             // Compute cell ordering based on total flux.
@@ -153,6 +158,8 @@ namespace Opm {
         // ============  Data members  ============
         using Base::grid_;
         using Base::ops_;
+        using Vec2 = Dune::FieldVector<double, 2>;
+        using Mat22 = Dune::FieldMatrix<double, 2, 2>;
 
         ReservoirState reservoir_state0_;
         WellState well_state0_;
@@ -161,6 +168,10 @@ namespace Opm {
         DataBlock comp_wellperf_flux_;
         std::vector<int> sequence_;
         std::vector<int> components_;
+        V sw_;
+        V sg_;
+        V rs_;
+        V rv_;
 
 
         // ============  Member functions  ============
@@ -182,6 +193,20 @@ namespace Opm {
                                                               well_state.perfRates().size(),
                                                               numPhases());
             assert(numPhases() * well_state.perfRates().size() == well_state.perfPhaseRates().size());
+        }
+
+
+
+
+
+        void extractFields(const ReservoirState& reservoir_state)
+        {
+            assert(numPhases() == 3);
+            const int n = reservoir_state.pressure().size();
+            sw_ = Eigen::Map<const DataBlock>(reservoir_state.saturation().data(), n, numPhases()).col(0);
+            sg_ = Eigen::Map<const DataBlock>(reservoir_state.saturation().data(), n, numPhases()).col(2);
+            rs_ = Eigen::Map<const V>(reservoir_state.gasoilratio().data(), n);
+            rv_ = Eigen::Map<const V>(reservoir_state.rv().data(), n);
         }
 
 
@@ -225,6 +250,19 @@ namespace Opm {
 
         void solveSingleCell(const int cell)
         {
+
+            Vec2 x = getInitialGuess(cell);
+            Vec2 res;
+            Mat22 jac;
+            assembleSingleCell(cell, x, res, jac);
+
+            // Newton loop.
+            while (!getConvergence(res)) {
+                Vec2 dx;
+                jac.solve(dx, res);
+                x = x - dx;
+                assembleSingleCell(cell, x, res, jac);
+            }
         }
 
 
@@ -233,6 +271,49 @@ namespace Opm {
 
         void solveMultiCell(const int comp_size, const int* cell_array)
         {
+            OpmLog::warning("solveMultiCell", "solveMultiCell() called with component size " + std::to_string(comp_size));
+            for (int ii = 0; ii < comp_size; ++ii) {
+                solveSingleCell(cell_array[ii]);
+            }
+        }
+
+
+
+
+
+        void assembleSingleCell(const int cell, const Vec2& x, Vec2& res, Mat22& jac)
+        {
+            // Assemble oil and gas component material balance equations.
+            const double sw = x[0];
+            const double sg = Base::isSg_[cell] ? x[1] : sg_[cell];
+            const double so = 1.0 - sw - sg;
+            const double rs = Base::isRs_[cell] ? x[1] : rs_[cell];
+            const double rv = Base::isRv_[cell] ? x[1] : rv_[cell];
+            const double bo = 0.0;
+            const double bg = 0.0;
+            double mo = (bo*so);
+            res[0] = Base::pvdt_[cell]*(0.0);
+        }
+
+
+
+
+
+        Vec2 getInitialGuess(const int cell)
+        {
+            double xvar = (Base::isSg_[cell]) ? sg_[cell]
+                : ((Base::isRs_[cell]) ? rs_[cell] : rv_[cell]);
+            return Vec2{sw_[cell], xvar};
+        }
+
+
+
+
+
+        bool getConvergence(const Vec2& res)
+        {
+            const double tol = 1e-6;
+            return res[0] < tol && res[1] < tol;
         }
     };
 
