@@ -88,11 +88,18 @@ namespace Opm {
                                             linsolver, eclState, has_disgas, has_vapoil, terminal_output)),
           transport_model_(new TransportModel(param, grid, fluid, geo, rock_comp_props, well_model,
                                               linsolver, eclState, has_disgas, has_vapoil, terminal_output)),
+          // TODO: fix solver parameters for pressure and transport solver.
           pressure_solver_(typename PressureSolver::SolverParameters(), std::move(pressure_model_)),
           transport_solver_(typename TransportSolver::SolverParameters(), std::move(transport_model_)),
           initial_reservoir_state_(0, 0, 0), // will be overwritten
           iterate_to_fully_implicit_(param.iterate_to_fully_implicit)
         {
+            typename PressureSolver::SolverParameters pp;
+            pp.min_iter_ = 0;
+            pressure_solver_.setParameters(pp);
+            typename TransportSolver::SolverParameters tp;
+            tp.min_iter_ = 0;
+            transport_solver_.setParameters(tp);
         }
 
 
