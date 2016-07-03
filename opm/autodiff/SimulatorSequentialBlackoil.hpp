@@ -24,32 +24,36 @@
 #include <opm/autodiff/SimulatorBase.hpp>
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilSequentialModel.hpp>
-#include <opm/autodiff/StandardWells.hpp>
 
 namespace Opm {
 
-template <class GridT>
+template <class GridT, class WellModelT,
+          template <class G, class W> class PressureModel,
+          template <class G, class W> class TransportModel>
 class SimulatorSequentialBlackoil;
-class StandardWells;
 
-template <class GridT>
-struct SimulatorTraits<SimulatorSequentialBlackoil<GridT> >
+template <class GridT, class WellModelT,
+          template <class G, class W> class PressureModel,
+          template <class G, class W> class TransportModel>
+struct SimulatorTraits<SimulatorSequentialBlackoil<GridT, WellModelT, PressureModel, TransportModel> >
 {
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriter OutputWriter;
     typedef GridT Grid;
-    typedef BlackoilSequentialModel<Grid, StandardWells> Model;
+    typedef BlackoilSequentialModel<Grid, StandardWells, PressureModel, TransportModel> Model;
     typedef NonlinearSolver<Model> Solver;
-    typedef StandardWells WellModel;
+    typedef WellModelT WellModel;
 };
 
 /// a simulator for the blackoil model
-template <class GridT>
+template <class GridT, class WellModelT,
+          template <class G, class W> class PressureModel,
+          template <class G, class W> class TransportModel>
 class SimulatorSequentialBlackoil
-    : public SimulatorBase<SimulatorSequentialBlackoil<GridT> >
+    : public SimulatorBase<SimulatorSequentialBlackoil<GridT, WellModelT, PressureModel, TransportModel> >
 {
-    typedef SimulatorBase<SimulatorSequentialBlackoil<GridT> > Base;
+    typedef SimulatorBase<SimulatorSequentialBlackoil<GridT, WellModelT, PressureModel, TransportModel> > Base;
 public:
     // forward the constructor to the base class
     SimulatorSequentialBlackoil(const ParameterGroup& param,

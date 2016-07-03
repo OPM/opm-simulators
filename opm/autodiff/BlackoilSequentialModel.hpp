@@ -23,8 +23,6 @@
 
 
 #include <opm/autodiff/BlackoilModelBase.hpp>
-#include <opm/autodiff/BlackoilPressureModel.hpp>
-#include <opm/autodiff/BlackoilTransportModel.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
@@ -44,7 +42,9 @@ namespace Opm {
 
 
     /// A sequential splitting model implementation for three-phase black oil.
-    template<class Grid, class WellModel>
+    template<class Grid, class WellModel,
+             template <class G, class W> class PressureModelT,
+             template <class G, class W> class TransportModelT>
     class BlackoilSequentialModel
     {
     public:
@@ -297,6 +297,8 @@ namespace Opm {
         { return failureReport_; }
 
     protected:
+        typedef PressureModelT<Grid, WellModel> PressureModel;
+        typedef TransportModelT<Grid, WellModel> TransportModel;
         typedef NonlinearSolver<PressureModel> PressureSolver;
         typedef NonlinearSolver<TransportModel> TransportSolver;
 
