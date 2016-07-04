@@ -165,9 +165,10 @@ namespace Opm
             // give the polymer and surfactant simulators the chance to do their stuff
             asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
-            // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
-
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+                output_writer_.writeTimeStep( timer, state, well_state );
+            }
 
             // Max oil saturation (for VPPARS), hysteresis update.
             props_.updateSatOilMax(state.saturation());
@@ -265,6 +266,10 @@ namespace Opm
 
             // Increment timer, remember well state.
             ++timer;
+
+            // write simulation state at the report stage
+            output_writer_.writeTimeStep( timer, state, well_state );
+
             prev_well_state = well_state;
             // The well potentials are only computed if they are needed
             // For now thay are only used to determine default guide rates for group controlled wells
@@ -275,8 +280,6 @@ namespace Opm
             asImpl().updateListEconLimited(solver, eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
                                            well_state, dynamic_list_econ_limited);
         }
-        // Write final simulation state.
-        output_writer_.writeTimeStep( timer, state, prev_well_state );
 
         // Stop timer and create timing report
         total_timer.stop();
