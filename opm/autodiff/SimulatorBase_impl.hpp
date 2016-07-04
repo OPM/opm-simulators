@@ -180,14 +180,18 @@ namespace Opm
 
             auto solver = asImpl().createSolver(well_model);
             std::ostringstream step_msg;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            step_msg.imbue(std::locale(std::locale::classic(), facet));
-            step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
-		     << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
-		     << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-		     << ", date = " << timer.currentDateTime()
-		     << "\n";
-            OpmLog::info(step_msg.str());
+
+            if( terminal_output_ )
+            {
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                step_msg.imbue(std::locale(std::locale::classic(), facet));
+                step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
+                         << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
+                         << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
+                         << ", date = " << timer.currentDateTime()
+                         << "\n";
+                OpmLog::info(step_msg.str());
+            }
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
@@ -200,15 +204,19 @@ namespace Opm
             else {
                 // solve for complete report step
                 solver->step(timer.currentStepLength(), state, well_state);
-                std::ostringstream iter_msg;
-                iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
-                if (solver->wellIterations() != std::numeric_limits<int>::min()) {
-                    iter_msg << " days well iterations = " << solver->wellIterations() << ", ";                    
+
+                if( terminal_output_ )
+                {
+                    std::ostringstream iter_msg;
+                    iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
+                    if (solver->wellIterations() != std::numeric_limits<int>::min()) {
+                        iter_msg << " days well iterations = " << solver->wellIterations() << ", ";
+                    }
+                    iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
+                             << ", total linear iterations = " << solver->linearIterations()
+                             << "\n";
+                    OpmLog::info(iter_msg.str());
                 }
-		iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
-			 << ", total linear iterations = " << solver->linearIterations() 
-			 << "\n";
-                OpmLog::info(iter_msg.str());
             }
 
             // update the derived geology (transmissibilities, pore volumes, etc) if the
