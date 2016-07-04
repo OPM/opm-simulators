@@ -33,20 +33,23 @@ namespace Opm
     {
     public:
 
+        DynamicListEconLimited() {
+        }
+
         bool wellShutEconLimited(const std::string& well_name) const {
             return std::find(m_shut_wells.begin(), m_shut_wells.end(), well_name) != m_shut_wells.end();
-        };
+        }
 
         void addShutWell(const std::string& well_name) {
             assert( !wellShutEconLimited(well_name) );
             assert( !wellStoppedEconLimited(well_name) );
 
             m_shut_wells.push_back(well_name);
-        };
+        }
 
         bool wellStoppedEconLimited(const std::string& well_name) const {
             return std::find(m_stopped_wells.begin(), m_stopped_wells.end(), well_name) != m_stopped_wells.end();
-        };
+        }
 
         void addStoppedWell(const std::string& well_name) {
             assert( !wellShutEconLimited(well_name) );
