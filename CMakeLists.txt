@@ -132,7 +132,7 @@ if (HAVE_OPM_DATA)
     add_test( NAME flow_SPE1CASE2 COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE2.DATA )
     add_test( NAME flow_SPE1CASE2_restart COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE2_RESTART.DATA )
 
-    add_test( NAME flow_MSW2DH__ COMMAND flow_multisegment ${OPM_DATA_ROOT}/multisegment_wells_test_suite/2D_H__/2D_H__.DATA)
+    add_test( NAME flow_MSW2DH__ COMMAND flow_multisegment ${OPM_DATA_ROOT}/wells_test_suite/MSW/2D_H__/2D_H__.DATA)
 
     set_tests_properties(flow_SPE1CASE2_restart PROPERTIES DEPENDS flow_SPE1CASE2) # Dependes on the restart file from test flow_SPE1CASE2
 
