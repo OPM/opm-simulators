@@ -63,6 +63,12 @@ namespace Opm
         start_date_ = start_time.date();
     }
 
+    /// Whether the current step is the first step.
+    bool SimulatorTimer::initialStep() const
+    {
+        return (current_step_ == 0);
+    }
+
     /// Total number of steps.
     int SimulatorTimer::numSteps() const
     {
