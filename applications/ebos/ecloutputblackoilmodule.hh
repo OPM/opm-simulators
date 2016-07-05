@@ -187,8 +187,9 @@ public:
                 }
             }
             if (gasDissolutionFactorOutput_()) {
+                Scalar SoMax = elemCtx.model().maxOilSaturation(globalDofIdx);
                 gasDissolutionFactor_[globalDofIdx] =
-                    FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
+                    FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx, SoMax);
                 Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
             }
             if (gasFormationVolumeFactorOutput_()) {

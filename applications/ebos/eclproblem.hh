@@ -401,8 +401,12 @@ public:
         if (nextEpisodeIdx < numReportSteps) {
             simulator.startNextEpisode(episodeLength);
             simulator.setTimeStepSize(dt);
+        }
+
+        if (this->simulator().episodeIndex() > 1) {
             if (updateHysteresis_())
                 this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            this->model().updateMaxOilSaturations();
         }
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
@@ -726,7 +730,9 @@ public:
         }
 
         // update the data required for capillary pressure hysteresis
-        updateHysteresis_();
+        if (updateHysteresis_())
+            this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+        this->model().updateMaxOilSaturations();
 
         // let the object for threshold pressures initialize itself. this is done only at
         // this point, because determining the threshold pressures may require to access
