@@ -1285,7 +1285,7 @@ namespace Opm
            if (quantity_limit == WellEcon::POTN) {
                const std::string msg = std::string("POTN limit for well ") + well_name + std::string(" is not supported for the moment. \n")
                                      + std::string("All the limits will be evaluated based on RATE. ");
-               OpmLog::warning(msg);
+               OpmLog::warning("NOT_SUPPORTING_POTN", msg);
            }
 
            const WellMapType& well_map = well_state.wellMap();
@@ -1301,11 +1301,11 @@ namespace Opm
                if (econ_production_limits.endRun()) {
                    const std::string warning_message = std::string("ending run after well closed due to economic limits is not supported yet \n")
                                                      + std::string("the program will keep running after ") + well_name + std::string(" is closed");
-                   OpmLog::warning(warning_message);
+                   OpmLog::warning("NOT_SUPPORTING_ENDRUN", warning_message);
                }
 
                if (econ_production_limits.validFollowonWell()) {
-                   OpmLog::warning("opening following on well after well closed is not supported yet");
+                   OpmLog::warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
                }
 
                if (well_ecl->getAutomaticShutIn()) {
@@ -1397,7 +1397,7 @@ namespace Opm
         }
 
         if (econ_production_limits.onMinReservoirFluidRate()) {
-            OpmLog::warning("Minimum reservoir fluid production rate limit is not supported yet");
+            OpmLog::warning("NOT_SUPPORTING_MIN_RESERVOIR_FLUID_RATE", "Minimum reservoir fluid production rate limit is not supported yet");
         }
 
         return false;
@@ -1446,15 +1446,15 @@ namespace Opm
         }
 
         if (econ_production_limits.onMaxGasOilRatio()) {
-            OpmLog::warning("the support for max Gas-Oil ratio is not implemented yet!");
+            OpmLog::warning("NOT_SUPPORTING_MAX_GOR", "the support for max Gas-Oil ratio is not implemented yet!");
         }
 
         if (econ_production_limits.onMaxWaterGasRatio()) {
-            OpmLog::warning("the support for max Water-Gas ratio is not implemented yet!");
+            OpmLog::warning("NOT_SUPPORTING_MAX_WGR", "the support for max Water-Gas ratio is not implemented yet!");
         }
 
         if (econ_production_limits.onMaxGasLiquidRatio()) {
-            OpmLog::warning("the support for max Gas-Liquid ratio is not implemented yet!");
+            OpmLog::warning("NOT_SUPPORTING_MAX_GLR", "the support for max Gas-Liquid ratio is not implemented yet!");
         }
 
         if (any_limit_violated) {
