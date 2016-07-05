@@ -1289,9 +1289,10 @@ namespace Opm
            }
 
            const WellMapType& well_map = well_state.wellMap();
-           typename WellMapType::const_iterator i_well = well_map.find(well_name);
+           const typename WellMapType::const_iterator i_well = well_map.find(well_name);
            assert(i_well != well_map.end()); // should always be found?
-           const int well_number = (i_well->second)[0];
+           const WellMapEntryType& map_entry = i_well->second;
+           const int well_number = map_entry[0];
 
            if (econ_production_limits.onAnyRateLimit()) {
                rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state, well_number);
@@ -1326,7 +1327,7 @@ namespace Opm
            RatioCheckTuple ratio_check_return;
 
            if (econ_production_limits.onAnyRatioLimit()) {
-               ratio_check_return = checkRatioEconLimits(econ_production_limits, well_state, i_well);
+               ratio_check_return = checkRatioEconLimits(econ_production_limits, well_state, map_entry);
                ratio_limits_violated = std::get<0>(ratio_check_return);
            }
 
@@ -1334,9 +1335,9 @@ namespace Opm
                const bool last_connection = std::get<1>(ratio_check_return);
                const int worst_offending_connection = std::get<2>(ratio_check_return);
 
-               const int perf_start = (i_well->second)[1];
+               const int perf_start = map_entry[1];
 
-               assert((worst_offending_connection >= 0) && (worst_offending_connection <  (i_well->second)[2]));
+               assert((worst_offending_connection >= 0) && (worst_offending_connection <  map_entry[2]));
 
                const int cell_worst_offending_connection = wells_struct->well_cells[perf_start + worst_offending_connection];
                list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
@@ -1414,7 +1415,7 @@ namespace Opm
     StandardWells::
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
-                         const typename WellMapType::const_iterator& i_well) const
+                         const WellMapEntryType& map_entry) const
     {
         // TODO: not sure how to define the worst-offending connection when more than one
         //       ratio related limit is violated.
@@ -1430,7 +1431,7 @@ namespace Opm
         double violation_extent = -1.0;
 
         if (econ_production_limits.onMaxWaterCut()) {
-            const RatioCheckTuple water_cut_return = checkMaxWaterCutLimit(econ_production_limits, well_state, i_well);
+            const RatioCheckTuple water_cut_return = checkMaxWaterCutLimit(econ_production_limits, well_state, map_entry);
             bool water_cut_violated = std::get<0>(water_cut_return);
             if (water_cut_violated) {
                 any_limit_violated = true;
@@ -1472,7 +1473,7 @@ namespace Opm
     StandardWells::
     checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                           const WellState& well_state,
-                          const typename WellMapType::const_iterator& i_well) const
+                          const WellMapEntryType& map_entry) const
     {
         bool water_cut_limit_violated = false;
         int worst_offending_connection = INVALIDCONNECTION;
@@ -1481,7 +1482,7 @@ namespace Opm
 
         const int np = well_state.numPhases();
         const Opm::PhaseUsage& pu = fluid_->phaseUsage();
-        const int well_number = (i_well->second)[0];
+        const int well_number = map_entry[0];
 
         assert((*active_)[Oil]);
         assert((*active_)[Water]);
@@ -1503,8 +1504,8 @@ namespace Opm
 
         if (water_cut_limit_violated) {
             // need to handle the worst_offending_connection
-            const int perf_start = (i_well->second)[1];
-            const int perf_number = (i_well->second)[2];
+            const int perf_start = map_entry[1];
+            const int perf_number = map_entry[2];
 
             std::vector<double> water_cut_perf(perf_number);
             for (int perf = 0; perf < perf_number; ++perf) {

@@ -230,6 +230,7 @@ namespace Opm {
                                      const int well_number) const;
 
             using WellMapType = typename WellState::WellMapType;
+            using WellMapEntryType = typename WellState::mapentry_t;
 
             // a tuple type for ratio limit check.
             // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
@@ -248,12 +249,12 @@ namespace Opm {
             template <class WellState>
             RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                                  const WellState& well_state,
-                                                 const typename WellMapType::const_iterator& i_well) const;
+                                                 const WellMapEntryType& map_entry) const;
 
             template <class WellState>
             RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                                   const WellState& well_state,
-                                                  const typename WellMapType::const_iterator& i_well) const;
+                                                  const WellMapEntryType& map_entry) const;
 
         };
 
