@@ -427,6 +427,30 @@ namespace Opm
         /// \return Array of scaled critical gas saturaion values.
         V scaledCriticalGasSaturations(const Cells& cells) const;
 
+        /// Direct access to lower-level water pvt props.
+        const WaterPvt& waterProps() const
+        {
+            return *waterPvt_;
+        }
+
+        /// Direct access to lower-level oil pvt props.
+        const OilPvt& oilProps() const
+        {
+            return *oilPvt_;
+        }
+
+        /// Direct access to lower-level gas pvt props.
+        const GasPvt& gasProps() const
+        {
+            return *gasPvt_;
+        }
+
+        /// Direct access to lower-level saturation functions.
+        const MaterialLawManager& materialLaws() const
+        {
+            return *materialLawManager_;
+        }
+
 
     private:
         /// Initializes the properties.
