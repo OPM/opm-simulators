@@ -26,6 +26,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
 #include <opm/core/simulator/TimeStepControl.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <dune/istl/istlexception.hh>
 #include <dune/istl/ilu.hh> // For MatrixBlockException
@@ -165,7 +166,7 @@ namespace Opm {
             int linearIterations = -1;
             try {
                 // (linearIterations < 0 means on convergence in solver)
-                linearIterations = solver.step( dt, state, well_state);
+                linearIterations = solver.step( substepTimer, state, well_state);
 
                 if( solver_verbose_ ) {
                     // report number of linear iterations
