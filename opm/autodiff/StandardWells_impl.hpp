@@ -1322,24 +1322,26 @@ namespace Opm
            }
 
            // checking for ratio related limits, mostly all kinds of ratio.
-           int worst_offending_connection = -1e4;
            bool ratio_limits_violated = false;
-           bool last_connection = false;
+           RatioCheckTuple ratio_check_return;
 
            if (econ_production_limits.onAnyRatioLimit()) {
-               ratio_limits_violated = checkRatioEconLimits(econ_production_limits, well_state, i_well,
-                                                            worst_offending_connection, last_connection);
+               ratio_check_return = checkRatioEconLimits(econ_production_limits, well_state, i_well);
+               ratio_limits_violated = std::get<0>(ratio_check_return);
            }
 
            if (ratio_limits_violated) {
+               const bool last_connection = std::get<1>(ratio_check_return);
+               const int worst_offending_connection = std::get<2>(ratio_check_return);
+
                const int perf_start = (i_well->second)[1];
-               const int perf_number = (i_well->second)[2];
-               assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
+
+               assert((worst_offending_connection >= 0) && (worst_offending_connection <  (i_well->second)[2]));
 
                const int cell_worst_offending_connection = wells_struct->well_cells[perf_start + worst_offending_connection];
                list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
                const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
-                                     + well_name + std::string(" will be closed due to econic limit");
+                                     + well_name + std::string(" will be closed due to economic limit");
                OpmLog::info(msg);
 
                if (last_connection) {
@@ -1408,39 +1410,35 @@ namespace Opm
 
 
     template <class WellState>
-    bool
+    StandardWells::RatioCheckTuple
     StandardWells::
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
-                         const typename WellMapType::const_iterator& i_well,
-                         int& worst_offending_connection,
-                         bool& last_connection) const
+                         const typename WellMapType::const_iterator& i_well) const
     {
         // TODO: not sure how to define the worst-offending connection when more than one
         //       ratio related limit is violated.
         //       The defintion used here is that we define the violation extent based on the
-        //       ratio between the value and the corresopoding limit.
+        //       ratio between the value and the corresponding limit.
         //       For each violated limit, we decide the worst-offending connection separately.
         //       Among the worst-offending connections, we use the one has the biggest violation
         //       extent.
 
         bool any_limit_violated = false;
-        double violation_extent = 0.0;
-        worst_offending_connection = -1;
-        last_connection = false;
+        bool last_connection = false;
+        int worst_offending_connection = INVALIDCONNECTION;
+        double violation_extent = -1.0;
 
         if (econ_production_limits.onMaxWaterCut()) {
-            int worst_offending_connection_water_cut = -1;
-            double violation_extent_water_cut = 0.0;
-            const bool water_cut_violated = checkMaxWaterCutLimit(econ_production_limits, well_state, i_well,
-                                                                  worst_offending_connection_water_cut,
-                                                                  violation_extent_water_cut,
-                                                                  last_connection);
+            const RatioCheckTuple water_cut_return = checkMaxWaterCutLimit(econ_production_limits, well_state, i_well);
+            bool water_cut_violated = std::get<0>(water_cut_return);
             if (water_cut_violated) {
                 any_limit_violated = true;
+                const double violation_extent_water_cut = std::get<3>(water_cut_return);
                 if (violation_extent_water_cut > violation_extent) {
                     violation_extent = violation_extent_water_cut;
-                    worst_offending_connection = worst_offending_connection_water_cut;
+                    worst_offending_connection = std::get<2>(water_cut_return);
+                    last_connection = std::get<1>(water_cut_return);
                 }
             }
         }
@@ -1462,7 +1460,7 @@ namespace Opm
             assert(violation_extent > 1.);
         }
 
-        return any_limit_violated;
+        return std::make_tuple(any_limit_violated, last_connection, worst_offending_connection, violation_extent);
     }
 
 
@@ -1470,18 +1468,16 @@ namespace Opm
 
 
     template <class WellState>
-    bool
+    StandardWells::RatioCheckTuple
     StandardWells::
     checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                           const WellState& well_state,
-                          const typename WellMapType::const_iterator& i_well,
-                          int& worst_offending_connection,
-                          double& violation_extent,
-                          bool& last_connection) const
+                          const typename WellMapType::const_iterator& i_well) const
     {
         bool water_cut_limit_violated = false;
-        worst_offending_connection = -1;
-        violation_extent = -1.0;
+        int worst_offending_connection = INVALIDCONNECTION;
+        bool last_connection = false;
+        double violation_extent = -1.0;
 
         const int np = well_state.numPhases();
         const Opm::PhaseUsage& pu = fluid_->phaseUsage();
@@ -1523,11 +1519,11 @@ namespace Opm
                 }
             }
 
-            if (perf_number == 1) {
-                last_connection = true;
+            last_connection = (perf_number == 1);
+            if (last_connection) {
                 worst_offending_connection = 0;
                 violation_extent = water_cut_perf[0] / max_water_cut_limit;
-                return water_cut_limit_violated;
+                return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
             }
 
             double max_water_cut_perf = 0.;
@@ -1544,7 +1540,7 @@ namespace Opm
             violation_extent = max_water_cut_perf / max_water_cut_limit;
         }
 
-        return water_cut_limit_violated;
+        return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
     }
 
 

@@ -30,6 +30,7 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <cassert>
+#include <tuple>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
@@ -230,21 +231,29 @@ namespace Opm {
 
             using WellMapType = typename WellState::WellMapType;
 
+            // a tuple type for ratio limit check.
+            // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
+            // values should not be used.
+            // second value indicates whehter there is only one connection left.
+            // third value indicates the indx of the worst-offending connection.
+            // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
+            // the ratio of the actual value to the value of the violated limit.
+            using RatioCheckTuple = std::tuple<bool, bool, int, double>;
+
+            enum ConnectionIndex {
+                INVALIDCONNECTION = -10000
+            };
+
 
             template <class WellState>
-            bool checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                      const WellState& well_state,
-                                      const typename WellMapType::const_iterator& i_well,
-                                      int& worst_offending_connection,
-                                      bool& last_connection) const;
+            RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                                 const WellState& well_state,
+                                                 const typename WellMapType::const_iterator& i_well) const;
 
             template <class WellState>
-            bool checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                                       const WellState& well_state,
-                                       const typename WellMapType::const_iterator& i_well,
-                                       int& worst_offending_connection,
-                                       double& violation_extent,
-                                       bool& last_connection) const;
+            RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                                                  const WellState& well_state,
+                                                  const typename WellMapType::const_iterator& i_well) const;
 
         };
 
