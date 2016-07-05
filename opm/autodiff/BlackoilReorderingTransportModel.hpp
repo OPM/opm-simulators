@@ -73,8 +73,16 @@ namespace Opm {
             : Base(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
                    eclState, has_disgas, has_vapoil, terminal_output)
             , reservoir_state0_(0, 0, 0)
+            , props_(dynamic_cast<const BlackoilPropsAdFromDeck&>(fluid)) // TODO: remove the need for this cast.
             , well_state0_()
         {
+            // Set up the common parts of the mass balance equations
+            // for each active phase.
+            const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
+            const V trans_nnc = ops_.nnc_trans;
+            trans_all_ = V::Zero(transi.size() + trans_nnc.size());
+            trans_all_ << transi, trans_nnc;
+            gdz_ = geo_.gravity()[2] * (ops_.grad * geo_.z().matrix());
         }
 
 
@@ -93,6 +101,7 @@ namespace Opm {
             // be computed just once.
             const std::vector<double>& p = reservoir_state.pressure();
             Base::pvdt_ *= Base::poroMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
+            tr_mult0_ = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
         }
 
 
@@ -106,6 +115,8 @@ namespace Opm {
                                            ReservoirState& reservoir_state,
                                            const WellState& well_state)
         {
+            const std::vector<double>& p = reservoir_state.pressure();
+            tr_mult_ = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
             // Extract reservoir and well fluxes and fields.
             {
                 DebugTimeReport tr("Extracting fluxes");
@@ -157,9 +168,12 @@ namespace Opm {
 
         // ============  Data members  ============
         using Base::grid_;
+        using Base::geo_;
         using Base::ops_;
         using Vec2 = Dune::FieldVector<double, 2>;
         using Mat22 = Dune::FieldMatrix<double, 2, 2>;
+
+        const BlackoilPropsAdFromDeck& props_;
 
         ReservoirState reservoir_state0_;
         WellState well_state0_;
@@ -168,6 +182,10 @@ namespace Opm {
         DataBlock comp_wellperf_flux_;
         std::vector<int> sequence_;
         std::vector<int> components_;
+        V trans_all_;
+        V tr_mult0_;
+        V tr_mult_;
+        V gdz_;
         V sw_;
         V sg_;
         V rs_;
@@ -284,15 +302,38 @@ namespace Opm {
         void assembleSingleCell(const int cell, const Vec2& x, Vec2& res, Mat22& jac)
         {
             // Assemble oil and gas component material balance equations.
-            const double sw = x[0];
-            const double sg = Base::isSg_[cell] ? x[1] : sg_[cell];
-            const double so = 1.0 - sw - sg;
-            const double rs = Base::isRs_[cell] ? x[1] : rs_[cell];
-            const double rv = Base::isRv_[cell] ? x[1] : rv_[cell];
-            const double bo = 0.0;
-            const double bg = 0.0;
-            double mo = (bo*so);
+            const auto& gaspvt = props_.gasProps();
+            const auto& oilpvt = props_.oilProps();
+            const auto& satfunc = props_.materialLaws();
+
+            // Set variables.
+            typedef DenseAd::Evaluation<double, 2> Eval;
+            Eval sw = x[0];
+            Eval sg = Base::isSg_[cell] ? x[1] : sg_[cell];
+            Eval rs = Base::isRs_[cell] ? x[1] : rs_[cell];
+            Eval rv = Base::isRv_[cell] ? x[1] : rv_[cell];
+            const Eval temp = 0.0; // Temperature not used.
+
+            // Set derivative to one for primary variables.
+            sw.derivatives[0] = 1.0;
+            if (Base::isSg_[cell]) {
+                sg.derivatives[1] = 1.0;
+            } else if (Base::isRs_[cell]) {
+                rs.derivatives[1] = 1.0;
+            } else {
+                assert(Base::isRv_[cell]);
+                rv.derivatives[1] = 1.0;
+            }
+            const Eval so = 1.0 - sw - sg;
+
+            // Compute fluid properties.
+            Eval mu[3];
+            // mu[Oil] = oilpvt.viscosity(pvt_region, temp, p);
+            Eval b[3];
+            Eval lambda[3];
+
             res[0] = Base::pvdt_[cell]*(0.0);
+            jac[0][0] = 0.0;
         }
 
 
