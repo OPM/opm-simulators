@@ -32,6 +32,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
@@ -199,11 +200,12 @@ namespace {
 
     int
     FullyImplicitCompressiblePolymerSolver::
-    step(const double          dt,
+    step(const SimulatorTimerInterface& timer,
          PolymerBlackoilState& x ,
          WellStateFullyImplicitBlackoilPolymer& xw)
     {
         const std::vector<double>& polymer_inflow = xw.polymerInflow();
+        const double dt = timer.currentStepLength();
 
         // Initial max concentration of this time step from PolymerBlackoilState.
         cmax_ = Eigen::Map<V>(&x.getCellData( x.CMAX )[0], Opm::AutoDiffGrid::numCells(grid_));

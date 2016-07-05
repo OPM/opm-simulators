@@ -153,7 +153,7 @@ namespace Opm
             }
             else {
                 // solve for complete report step
-                solver->step(timer.currentStepLength(), state, well_state);
+                solver->step(timer, state, well_state);
             }
 
             // take time that was used to solve system for this reportStep

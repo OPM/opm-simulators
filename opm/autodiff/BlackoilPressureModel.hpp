@@ -26,6 +26,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 #include <algorithm>
 
@@ -83,12 +84,12 @@ namespace Opm {
         }
 
         /// Called once per timestep.
-        void prepareStep(const double dt,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state)
         {
             asImpl().wellModel().setStoreWellPerforationFluxesFlag(true);
-            Base::prepareStep(dt, reservoir_state, well_state);
+            Base::prepareStep(timer, reservoir_state, well_state);
             max_dp_rel_ = std::numeric_limits<double>::infinity();
             state0_ = asImpl().variableState(reservoir_state, well_state);
             asImpl().makeConstantState(state0_);
@@ -289,7 +290,7 @@ namespace Opm {
 
 
 
-        bool getConvergence(const double /* dt */, const int iteration)
+        bool getConvergence(const SimulatorTimerInterface& /* timer */, const int iteration)
         {
             const double tol_p = 1e-11;
             const double resmax = residual_.material_balance_eq[0].value().abs().maxCoeff();

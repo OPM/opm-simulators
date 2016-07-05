@@ -257,10 +257,12 @@ namespace detail {
     template <class Grid, class WellModel, class Implementation>
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
-    prepareStep(const double dt,
+    prepareStep(const SimulatorTimerInterface& timer,
                 const ReservoirState& reservoir_state,
                 const WellState& /* well_state */)
     {
+        const double dt = timer.currentStepLength();
+
         pvdt_ = geo_.poreVolume() / dt;
         if (active_[Gas]) {
             updatePrimalVariableFromState(reservoir_state);
@@ -276,11 +278,13 @@ namespace detail {
     IterationReport
     BlackoilModelBase<Grid, WellModel, Implementation>::
     nonlinearIteration(const int iteration,
-                       const double dt,
+                       const SimulatorTimerInterface& timer,
                        NonlinearSolverType& nonlinear_solver,
                        ReservoirState& reservoir_state,
                        WellState& well_state)
     {
+        const double dt = timer.currentStepLength();
+
         if (iteration == 0) {
             // For each iteration we store in a vector the norms of the residual of
             // the mass balance for each active phase, the well flux and the well equations.
@@ -290,7 +294,7 @@ namespace detail {
         }
         IterationReport iter_report = asImpl().assemble(reservoir_state, well_state, iteration == 0);
         residual_norms_history_.push_back(asImpl().computeResidualNorms());
-        const bool converged = asImpl().getConvergence(dt, iteration);
+        const bool converged = asImpl().getConvergence(timer, iteration);
         const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
         if (must_solve) {
             // enable single precision for solvers when dt is smaller then 20 days
@@ -332,7 +336,7 @@ namespace detail {
     template <class Grid, class WellModel, class Implementation>
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
-    afterStep(const double /* dt */,
+    afterStep(const SimulatorTimerInterface& /*timer*/,
               ReservoirState& /* reservoir_state */,
               WellState& /* well_state */)
     {
@@ -1783,8 +1787,9 @@ namespace detail {
     template <class Grid, class WellModel, class Implementation>
     bool
     BlackoilModelBase<Grid, WellModel, Implementation>::
-    getConvergence(const double dt, const int iteration)
+    getConvergence(const SimulatorTimerInterface& timer, const int iteration)
     {
+        const double dt = timer.currentStepLength();
         const double tol_mb    = param_.tolerance_mb_;
         const double tol_cnv   = param_.tolerance_cnv_;
         const double tol_wells = param_.tolerance_wells_;

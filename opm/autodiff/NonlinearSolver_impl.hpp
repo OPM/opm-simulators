@@ -96,11 +96,11 @@ namespace Opm
     template <class PhysicalModel>
     int
     NonlinearSolver<PhysicalModel>::
-    step(const double dt,
+    step(const SimulatorTimerInterface& timer,
          ReservoirState& reservoir_state,
          WellState& well_state)
     {
-        return step(dt, reservoir_state, well_state, reservoir_state, well_state);
+        return step(timer, reservoir_state, well_state, reservoir_state, well_state);
     }
 
 
@@ -108,14 +108,14 @@ namespace Opm
     template <class PhysicalModel>
     int
     NonlinearSolver<PhysicalModel>::
-    step(const double dt,
+    step(const SimulatorTimerInterface& timer,
          const ReservoirState& initial_reservoir_state,
          const WellState& initial_well_state,
          ReservoirState& reservoir_state,
          WellState& well_state)
     {
         // Do model-specific once-per-step calculations.
-        model_->prepareStep(dt, initial_reservoir_state, initial_well_state);
+        model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
 
         int iteration = 0;
 
@@ -131,7 +131,7 @@ namespace Opm
             // Do the nonlinear step. If we are in a converged state, the
             // model will usually do an early return without an expensive
             // solve, unless the minIter() count has not been reached yet.
-            IterationReport report = model_->nonlinearIteration(iteration, dt, *this, reservoir_state, well_state);
+            IterationReport report = model_->nonlinearIteration(iteration, timer, *this, reservoir_state, well_state);
             if (report.failed) {
                 OPM_THROW(Opm::NumericalProblem, "Failed to complete a nonlinear iteration.");
             }
@@ -156,7 +156,7 @@ namespace Opm
         wellIterationsLast_ = wellIters;
 
         // Do model-specific post-step actions.
-        model_->afterStep(dt, reservoir_state, well_state);
+        model_->afterStep(timer, reservoir_state, well_state);
 
         return linIters;
     }

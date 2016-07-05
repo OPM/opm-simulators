@@ -80,10 +80,11 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilMultiSegmentModel<Grid>::
-    prepareStep(const double dt,
+    prepareStep(const SimulatorTimerInterface& timer,
                 const ReservoirState& reservoir_state,
                 const WellState& well_state)
     {
+        const double dt = timer.currentStepLength();
         pvdt_ = geo_.poreVolume() / dt;
         if (active_[Gas]) {
             updatePrimalVariableFromState(reservoir_state);

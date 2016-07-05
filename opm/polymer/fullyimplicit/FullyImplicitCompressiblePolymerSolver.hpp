@@ -30,6 +30,7 @@
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -82,7 +83,7 @@ namespace Opm {
         /// \param[in] wstate    well state
         /// \param[in] polymer_inflow	polymer influx
         int
-        step(const double   			dt,
+        step(const SimulatorTimerInterface& timer,
              PolymerBlackoilState& 		state ,
              WellStateFullyImplicitBlackoilPolymer& wstate);
 

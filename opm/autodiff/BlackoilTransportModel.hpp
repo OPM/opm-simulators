@@ -25,6 +25,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 namespace Opm {
 
@@ -72,11 +73,11 @@ namespace Opm {
         {
         }
 
-        void prepareStep(const double dt,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state)
         {
-            Base::prepareStep(dt, reservoir_state, well_state);
+            Base::prepareStep(timer, reservoir_state, well_state);
             Base::param_.solve_welleq_initially_ = false;
             state0_ = variableState(reservoir_state, well_state);
             asImpl().makeConstantState(state0_);
@@ -530,8 +531,9 @@ namespace Opm {
 
 
 
-        bool getConvergence(const double dt, const int iteration)
+        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration)
         {
+            const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
             const double tol_cnv   = param_.tolerance_cnv_;
 
