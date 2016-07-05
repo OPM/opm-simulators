@@ -28,6 +28,7 @@
 #include <opm/output/eclipse/EclipseReader.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/output/Cells.hpp>
 #include <opm/output/OutputWriter.hpp>
@@ -352,6 +353,8 @@ namespace Opm
                          SimulationDataContainer& simulatorstate,
                          WellStateFullyImplicitBlackoil& wellstate)
     {
+        // gives a dummy dynamic_list_econ_limited
+        DynamicListEconLimited dummy_list_econ_limited;
         WellsManager wellsmanager(eclipseState_,
                                   eclipseState_->getInitConfig()->getRestartStep(),
                                   Opm::UgGridHelpers::numCells(grid),
@@ -360,7 +363,8 @@ namespace Opm
                                   Opm::UgGridHelpers::dimensions(grid),
                                   Opm::UgGridHelpers::cell2Faces(grid),
                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                  permeability);
+                                  permeability,
+                                  dummy_list_econ_limited);
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate); //Resize for restart step

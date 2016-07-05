@@ -28,6 +28,7 @@
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #if HAVE_OPM_GRID
 #include <dune/grid/common/p2pcommunicator.hh>
@@ -523,6 +524,10 @@ namespace Opm
             if( isIORank() )
             {
                 Dune::CpGrid& globalGrid = *grid_;
+                // TODO: make a dummy DynamicListEconLimited here for NOW for compilation and development
+                // TODO: NOT SURE whether it will cause problem for parallel running
+                // TODO: TO BE TESTED AND IMPROVED
+                const DynamicListEconLimited dynamic_list_econ_limited;
                 // Create wells and well state.
                 WellsManager wells_manager(eclipseState_,
                                            reportStep,
@@ -533,6 +538,7 @@ namespace Opm
                                            Opm::UgGridHelpers::cell2Faces( globalGrid ),
                                            Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
                                            permeability_,
+                                           dynamic_list_econ_limited,
                                            false);
 
                 const Wells* wells = wells_manager.c_wells();

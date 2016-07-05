@@ -125,6 +125,7 @@ namespace Opm {
                  WellState& well_state,
                  const bool initial_assembly);
 
+        using Base::wellModel;
 
     protected:
 
@@ -180,7 +181,6 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        using Base::wellModel;
         using Base::wells;
         using Base::wellsActive;
         using Base::variableState;

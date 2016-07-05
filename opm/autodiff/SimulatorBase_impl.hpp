@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 namespace Opm
 {
@@ -131,6 +132,7 @@ namespace Opm
         unsigned int totalLinearIterations = 0;
         bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
         std::vector<double> well_potentials;
+        DynamicListEconLimited dynamic_list_econ_limited;
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -153,6 +155,7 @@ namespace Opm
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability(),
+                                       dynamic_list_econ_limited,
                                        is_parallel_run_,
                                        well_potentials);
             const Wells* wells = wells_manager.c_wells();
@@ -162,9 +165,10 @@ namespace Opm
             // give the polymer and surfactant simulators the chance to do their stuff
             asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
-            // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
-
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+                output_writer_.writeTimeStep( timer, state, well_state );
+            }
 
             // Max oil saturation (for VPPARS), hysteresis update.
             props_.updateSatOilMax(state.saturation());
@@ -262,6 +266,10 @@ namespace Opm
 
             // Increment timer, remember well state.
             ++timer;
+
+            // write simulation state at the report stage
+            output_writer_.writeTimeStep( timer, state, well_state );
+
             prev_well_state = well_state;
             // The well potentials are only computed if they are needed
             // For now thay are only used to determine default guide rates for group controlled wells
@@ -269,9 +277,9 @@ namespace Opm
                 asImpl().computeWellPotentials(wells, well_state, well_potentials);
             }
 
+            asImpl().updateListEconLimited(solver, eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
+                                           well_state, dynamic_list_econ_limited);
         }
-        // Write final simulation state.
-        output_writer_.writeTimeStep( timer, state, prev_well_state );
 
         // Stop timer and create timing report
         total_timer.stop();
@@ -613,4 +621,24 @@ namespace Opm
             }
         }
     }
+
+
+
+
+
+    template <class Implementation>
+    void
+    SimulatorBase<Implementation>::
+    updateListEconLimited(const std::unique_ptr<Solver>& solver,
+                          ScheduleConstPtr schedule,
+                          const int current_step,
+                          const Wells* wells,
+                          const WellState& well_state,
+                          DynamicListEconLimited& list_econ_limited) const
+    {
+
+        solver->model().wellModel().updateListEconLimited(schedule, current_step, wells,
+                                                          well_state, list_econ_limited);
+    }
+
 } // namespace Opm

@@ -48,6 +48,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
@@ -91,6 +92,9 @@ struct SetupMSW {
 
         const size_t current_timestep = 0;
 
+        // dummy_dynamic_list_econ_lmited
+        const Opm::DynamicListEconLimited dummy_dynamic_list;
+
         // Create wells.
         Opm::WellsManager wells_manager(ecl_state,
                                         current_timestep,
@@ -101,6 +105,7 @@ struct SetupMSW {
                                         Opm::UgGridHelpers::cell2Faces(grid),
                                         Opm::UgGridHelpers::beginFaceCentroids(grid),
                                         fluidprops->permeability(),
+                                        dummy_dynamic_list,
                                         false);
 
         const Wells* wells = wells_manager.c_wells();
