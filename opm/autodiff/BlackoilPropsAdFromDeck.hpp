@@ -451,6 +451,12 @@ namespace Opm
             return *materialLawManager_;
         }
 
+        // Direct access to pvt region indices.
+        const std::vector<int>& pvtRegions() const
+        {
+            return cellPvtRegionIdx_;
+        }
+
 
     private:
         /// Initializes the properties.
