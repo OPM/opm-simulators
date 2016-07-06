@@ -443,11 +443,11 @@ void distributeGridAndData( Dune::CpGrid& grid,
     const IndexSet& local_indices  = grid.getCellIndexSet();
     for ( auto index : local_indices )
     {
-        distributed_material_law_manager->materialLawParamsPointer(index.local()) =
-            material_law_manager->materialLawParamsPointer(index.global());
+        distributed_material_law_manager->materialLawParamsPointerReferenceHack(index.local()) =
+            material_law_manager->materialLawParamsPointerReferenceHack(index.global());
 
-        distributed_material_law_manager->oilWaterScaledEpsInfoDrainagePointer(index.local()) =
-            material_law_manager->oilWaterScaledEpsInfoDrainagePointer(index.global());
+        distributed_material_law_manager->oilWaterScaledEpsInfoDrainagePointerReferenceHack(index.local()) =
+            material_law_manager->oilWaterScaledEpsInfoDrainagePointerReferenceHack(index.global());
     }
     BlackoilPropsAdFromDeck distributed_props(properties,
                                               distributed_material_law_manager,
