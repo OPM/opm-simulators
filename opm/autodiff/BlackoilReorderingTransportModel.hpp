@@ -30,6 +30,60 @@
 
 namespace Opm {
 
+
+    namespace detail
+    {
+
+        template <typename Scalar>
+        struct CreateVariable
+        {
+            Scalar operator()(double value, int index)
+            {
+                return Scalar::createVariable(value, index);
+            }
+        };
+
+
+
+        template <>
+        struct CreateVariable<double>
+        {
+            double operator()(double value, int)
+            {
+                return value;
+            }
+        };
+
+
+
+        template <typename Scalar>
+        struct CreateConstant
+        {
+            Scalar operator()(double value)
+            {
+                return Scalar::createConstant(value);
+            }
+        };
+
+
+
+        template <>
+        struct CreateConstant<double>
+        {
+            double operator()(double value)
+            {
+                return value;
+            }
+        };
+
+    } // namespace detail
+
+
+
+
+
+
+
     /// A model implementation for the transport equation in three-phase black oil.
     template<class Grid, class WellModel>
     class BlackoilReorderingTransportModel
@@ -72,9 +126,9 @@ namespace Opm {
                                          const bool                              terminal_output)
             : Base(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
                    eclState, has_disgas, has_vapoil, terminal_output)
-            , reservoir_state0_(0, 0, 0)
             , props_(dynamic_cast<const BlackoilPropsAdFromDeck&>(fluid)) // TODO: remove the need for this cast.
-            , well_state0_()
+            , state0_{ ReservoirState(0, 0, 0), WellState(), V() }
+            , state_{ ReservoirState(0, 0, 0), WellState(), V() }
         {
             // Set up the common parts of the mass balance equations
             // for each active phase.
@@ -95,13 +149,13 @@ namespace Opm {
         {
             Base::prepareStep(dt, reservoir_state, well_state);
             Base::param_.solve_welleq_initially_ = false;
-            reservoir_state0_ = reservoir_state;
-            well_state0_ = well_state;
-            // Since pressure is constant, porosity and transmissibility multipliers can
+            state0_.reservoir_state = reservoir_state;
+            state0_.well_state = well_state;
+            // Since (reference) pressure is constant, porosity and transmissibility multipliers can
             // be computed just once.
             const std::vector<double>& p = reservoir_state.pressure();
             Base::pvdt_ *= Base::poroMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
-            tr_mult0_ = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
+            state0_.tr_mult = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
         }
 
 
@@ -115,13 +169,11 @@ namespace Opm {
                                            ReservoirState& reservoir_state,
                                            const WellState& well_state)
         {
-            const std::vector<double>& p = reservoir_state.pressure();
-            tr_mult_ = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
-            // Extract reservoir and well fluxes and fields.
+            // Extract reservoir and well fluxes and state.
             {
                 DebugTimeReport tr("Extracting fluxes");
                 extractFluxes(reservoir_state, well_state);
-                extractFields(reservoir_state);
+                extractState(reservoir_state, well_state);
             }
 
             // Compute cell ordering based on total flux.
@@ -175,21 +227,24 @@ namespace Opm {
 
         const BlackoilPropsAdFromDeck& props_;
 
-        ReservoirState reservoir_state0_;
-        WellState well_state0_;
+        struct State
+        {
+            ReservoirState reservoir_state;
+            WellState well_state;
+            V tr_mult;
+        };
+
+        State state0_;
+        State state_;
+
         V total_flux_;
         V total_wellperf_flux_;
         DataBlock comp_wellperf_flux_;
         std::vector<int> sequence_;
         std::vector<int> components_;
         V trans_all_;
-        V tr_mult0_;
-        V tr_mult_;
         V gdz_;
-        V sw_;
-        V sg_;
-        V rs_;
-        V rv_;
+
 
 
         // ============  Member functions  ============
@@ -217,14 +272,13 @@ namespace Opm {
 
 
 
-        void extractFields(const ReservoirState& reservoir_state)
+        void extractState(const ReservoirState& reservoir_state,
+                          const WellState& well_state)
         {
-            assert(numPhases() == 3);
-            const int n = reservoir_state.pressure().size();
-            sw_ = Eigen::Map<const DataBlock>(reservoir_state.saturation().data(), n, numPhases()).col(0);
-            sg_ = Eigen::Map<const DataBlock>(reservoir_state.saturation().data(), n, numPhases()).col(2);
-            rs_ = Eigen::Map<const V>(reservoir_state.gasoilratio().data(), n);
-            rv_ = Eigen::Map<const V>(reservoir_state.rv().data(), n);
+            state_.reservoir_state = reservoir_state;
+            state_.well_state = well_state;
+            const std::vector<double>& p = reservoir_state.pressure();
+            state_.tr_mult = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
         }
 
 
@@ -269,7 +323,8 @@ namespace Opm {
         void solveSingleCell(const int cell)
         {
 
-            Vec2 x = getInitialGuess(cell);
+            // Vec2 x = getInitialGuess(cell);
+            Vec2 x;
             Vec2 res;
             Mat22 jac;
             assembleSingleCell(cell, x, res, jac);
@@ -298,54 +353,131 @@ namespace Opm {
 
 
 
+        template <typename ScalarT>
+        struct CellState
+        {
+            using Scalar = ScalarT;
+
+            Scalar s[3];
+            Scalar rs;
+            Scalar rv;
+            Scalar p[3];
+            Scalar kr[3];
+            Scalar pc[3];
+            Scalar temperature;
+            Scalar mu[3];
+            Scalar b[3];
+            Scalar lambda[3];
+
+            // Implement interface used for opm-material properties.
+            const Scalar& saturation(int phaseIdx) const
+            {
+                return s[phaseIdx];
+            }
+        };
+
+
+
+
+        template <typename Scalar>
+        void computeCellState(const int cell, const State& state, CellState<Scalar>& cstate)
+        {
+            assert(numPhases() == 3); // I apologize for this to my future self, that will have to fix it.
+
+            // Extract from state and props.
+            const auto hcstate = state.reservoir_state.hydroCarbonState()[cell];
+            const bool is_sg = (hcstate == HydroCarbonState::GasAndOil);
+            const bool is_rs = (hcstate == HydroCarbonState::OilOnly);
+            const bool is_rv = (hcstate == HydroCarbonState::GasOnly);
+            const double swval = state.reservoir_state.saturation()[3*cell + Water];
+            const double sgval = state.reservoir_state.saturation()[3*cell + Gas];
+            const double rsval = state.reservoir_state.gasoilratio()[cell];
+            const double rvval = state.reservoir_state.rv()[cell];
+            const double poval = state.reservoir_state.pressure()[cell];
+            const int pvt_region = props_.pvtRegions()[cell];
+
+            // Property functions.
+            const auto& waterpvt = props_.waterProps();
+            const auto& oilpvt = props_.oilProps();
+            const auto& gaspvt = props_.gasProps();
+            const auto& satfunc = props_.materialLaws();
+
+            // Create saturation and composition variables.
+            detail::CreateVariable<Scalar> variable;
+            detail::CreateConstant<Scalar> constant;
+            cstate.s[Water] = variable(swval, 0);
+            cstate.s[Gas] = is_sg ? variable(sgval, 1) : constant(sgval);
+            cstate.s[Oil] = 1.0 - cstate.s[Water] - cstate.s[Gas];
+            cstate.rs = is_rs ? variable(rsval, 1) : constant(rsval);
+            cstate.rv = is_rv ? variable(rvval, 1) : constant(rvval);
+
+            // Compute relative permeabilities amd capillary pressures.
+            const auto& params = satfunc.materialLawParams(cell);
+            typedef BlackoilPropsAdFromDeck::MaterialLawManager::MaterialLaw MaterialLaw;
+            MaterialLaw::relativePermeabilities(cstate.kr, params, cstate);
+            MaterialLaw::capillaryPressures(cstate.pc, params, cstate);
+
+            // Compute phase pressures.
+            cstate.p[Oil] = constant(poval);
+            cstate.p[Water] = cstate.p[Oil] - cstate.pc[Water]; // pcow = po - pw
+            cstate.p[Gas] =   cstate.p[Oil] + cstate.pc[Gas];   // pcog = pg - po (!)
+
+            // Compute PVT properties.
+            cstate.temperature = constant(0.0); // Temperature is not used.
+            cstate.mu[Water] = waterpvt.viscosity(pvt_region, cstate.temperature, cstate.p[Water]);
+            cstate.mu[Oil] = is_sg
+                ? oilpvt.saturatedViscosity(pvt_region, cstate.temperature, cstate.p[Oil])
+                : oilpvt.viscosity(pvt_region, cstate.temperature, cstate.p[Oil], cstate.rs);
+            cstate.mu[Gas] = is_sg
+                ? gaspvt.saturatedViscosity(pvt_region, cstate.temperature, cstate.p[Gas])
+                : gaspvt.viscosity(pvt_region, cstate.temperature, cstate.p[Gas], cstate.rv);
+            cstate.b[Water] = waterpvt.inverseFormationVolumeFactor(pvt_region, cstate.temperature, cstate.p[Water]);
+            cstate.b[Oil] = is_sg
+                ? oilpvt.saturatedInverseFormationVolumeFactor(pvt_region, cstate.temperature, cstate.p[Oil])
+                : oilpvt.inverseFormationVolumeFactor(pvt_region, cstate.temperature, cstate.p[Oil], cstate.rs);
+            cstate.b[Gas] = is_sg
+                ? gaspvt.saturatedInverseFormationVolumeFactor(pvt_region, cstate.temperature, cstate.p[Gas])
+                : gaspvt.inverseFormationVolumeFactor(pvt_region, cstate.temperature, cstate.p[Gas], cstate.rv);
+
+            // Compute mobilities.
+            for (int phase = 0; phase < 3; ++phase) {
+                cstate.lambda[phase] = cstate.kr[phase] / cstate.mu[phase];
+            }
+        }
+
+
+
 
         void assembleSingleCell(const int cell, const Vec2& x, Vec2& res, Mat22& jac)
         {
-            // Assemble oil and gas component material balance equations.
-            const auto& gaspvt = props_.gasProps();
-            const auto& oilpvt = props_.oilProps();
-            const auto& satfunc = props_.materialLaws();
+            assert(numPhases() == 3); // I apologize for this to my future self, that will have to fix it.
 
-            // Set variables.
+            CellState<double> cstate0;
+            computeCellState(cell, state0_, cstate0);
             typedef DenseAd::Evaluation<double, 2> Eval;
-            Eval sw = x[0];
-            Eval sg = Base::isSg_[cell] ? x[1] : sg_[cell];
-            Eval rs = Base::isRs_[cell] ? x[1] : rs_[cell];
-            Eval rv = Base::isRv_[cell] ? x[1] : rv_[cell];
-            const Eval temp = 0.0; // Temperature not used.
+            CellState<Eval> cstate;
+            computeCellState(cell, state_, cstate);
 
-            // Set derivative to one for primary variables.
-            sw.derivatives[0] = 1.0;
-            if (Base::isSg_[cell]) {
-                sg.derivatives[1] = 1.0;
-            } else if (Base::isRs_[cell]) {
-                rs.derivatives[1] = 1.0;
-            } else {
-                assert(Base::isRv_[cell]);
-                rv.derivatives[1] = 1.0;
-            }
-            const Eval so = 1.0 - sw - sg;
 
-            // Compute fluid properties.
-            Eval mu[3];
-            // mu[Oil] = oilpvt.viscosity(pvt_region, temp, p);
-            Eval b[3];
-            Eval lambda[3];
+            // const Eval ao0 = 0.0;
+            // const Eval oileq = Base::pvdt_[cell];
 
             res[0] = Base::pvdt_[cell]*(0.0);
             jac[0][0] = 0.0;
+
         }
 
 
 
 
 
-        Vec2 getInitialGuess(const int cell)
-        {
-            double xvar = (Base::isSg_[cell]) ? sg_[cell]
-                : ((Base::isRs_[cell]) ? rs_[cell] : rv_[cell]);
-            return Vec2{sw_[cell], xvar};
-        }
+        // Vec2 getInitialGuess(const State& state, const int cell)
+        // {
+        //     const auto& hcs = state.hydroCarbonState();
+        //     double xvar = (hcs[cell] == GasAndOil) ? sg_[cell]
+        //         : ((hcs[cell] == OilOnly) ? rs_[cell] : rv_[cell]);
+        //     return Vec2{sw_[cell], xvar};
+        // }
 
 
 
