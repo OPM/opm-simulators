@@ -161,7 +161,7 @@ public:
             // the NAPL component decides for the napl comp...
             : (compIdx == NAPLIdx)
             ? NAPL::molarMass()
-            : 1e100;
+            : 1e30;
     }
 
     //! \copydoc BaseFluidSystem::density
@@ -191,7 +191,7 @@ public:
         else if (phaseIdx == naplPhaseIdx) {
             // assume pure NAPL for the NAPL phase
             const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-            return NAPL::liquidDensity(T, LhsEval(1e100));
+            return NAPL::liquidDensity(T, LhsEval(1e30));
         }
 
         assert (phaseIdx == gasPhaseIdx);

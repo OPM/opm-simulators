@@ -165,6 +165,12 @@ public:
             }
         }
 
+        vapPar2_ = 0.0;
+        if (deck->hasKeyword("VAPPARS")) {
+            const auto& vapParsKeyword = deck->getKeyword("VAPPARS");
+            vapPar2_ = vapParsKeyword.getRecord(0).getItem("OIL_DENSITY_PROPENSITY").template get<double>(0);
+        }
+
         initEnd();
     }
 
@@ -466,6 +472,35 @@ public:
     { return saturatedGasDissolutionFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 
     /*!
+     * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of the oil phase.
+     *
+     * This variant of the method prevents all the oil to be vaporized even if the gas
+     * phase is still not saturated. This is physically quite dubious but it corresponds
+     * to how the Eclipse 100 simulator handles this. (cf the VAPPARS keyword.)
+     */
+    template <class Evaluation>
+    Evaluation saturatedGasDissolutionFactor(unsigned regionIdx,
+                                              const Evaluation& /*temperature*/,
+                                              const Evaluation& pressure,
+                                              const Evaluation& oilSaturation,
+                                              const Evaluation& maxOilSaturation) const
+    {
+        typedef typename Opm::MathToolbox<Evaluation> Toolbox;
+        Evaluation tmp =
+            saturatedGasDissolutionFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true);
+
+        // apply the vaporization parameters for the gas phase (cf. the Eclipse VAPPARS
+        // keyword)
+        if (vapPar2_ > 0.0 && maxOilSaturation > 0.01) {
+            static const Scalar sqrtEps = std::sqrt(std::numeric_limits<Scalar>::epsilon());
+            const Evaluation& So = Toolbox::max(oilSaturation, sqrtEps);
+            tmp *= Toolbox::pow(So/maxOilSaturation, vapPar2_);
+        }
+
+        return tmp;
+    }
+
+    /*!
      * \brief Returns the saturation pressure of the oil phase [Pa]
      *        depending on its mass fraction of the gas component
      *
@@ -515,7 +550,7 @@ private:
         for (size_t i=0; i <= n; ++ i) {
             Scalar pSat = gasDissolutionFac.xMin() + i*delta;
             Rs = saturatedGasDissolutionFactor(regionIdx,
-                                               /*temperature=*/Scalar(1e100),
+                                               /*temperature=*/Scalar(1e30),
                                                pSat);
 
             std::pair<Scalar, Scalar> val(Rs, pSat);
@@ -535,6 +570,8 @@ private:
     std::vector<TabulatedOneDFunction> inverseSaturatedOilBMuTable_;
     std::vector<TabulatedOneDFunction> saturatedGasDissolutionFactorTable_;
     std::vector<Spline> saturationPressureSpline_;
+
+    Scalar vapPar2_;
 };
 
 } // namespace Opm

@@ -143,10 +143,10 @@ void ensureBlackoilApi()
             dummy = FluidSystem::saturatedInverseFormationVolumeFactor(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::viscosity(fluidState, phaseIdx, /*regionIdx=*/0);
             dummy = FluidSystem::saturatedDissolutionFactor(fluidState, phaseIdx, /*regionIdx=*/0);
+            dummy = FluidSystem::saturatedDissolutionFactor(fluidState, phaseIdx, /*regionIdx=*/0, /*maxSo=*/1.0);
             dummy = FluidSystem::saturationPressure(fluidState, phaseIdx, /*regionIdx=*/0);
-            for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++ compIdx) {
+            for (unsigned compIdx = 0; compIdx < FluidSystem::numComponents; ++ compIdx)
                 dummy = FluidSystem::fugacityCoefficient(fluidState, phaseIdx, compIdx,  /*regionIdx=*/0);
-            }
         }
 
         // prevent GCC from producing a "variable assigned but unused" warning

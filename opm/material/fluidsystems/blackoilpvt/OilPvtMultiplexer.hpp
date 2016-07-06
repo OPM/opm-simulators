@@ -199,6 +199,18 @@ public:
                                              const Evaluation& pressure) const
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedGasDissolutionFactor(regionIdx, temperature, pressure)); return 0; }
 
+
+    /*!
+     * \brief Returns the gas dissolution factor \f$R_s\f$ [m^3/m^3] of saturated oil.
+     */
+    template <class Evaluation>
+    Evaluation saturatedGasDissolutionFactor(unsigned regionIdx,
+                                             const Evaluation& temperature,
+                                             const Evaluation& pressure,
+                                             const Evaluation& oilSaturation,
+                                             const Evaluation& maxOilSaturation) const
+    { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedGasDissolutionFactor(regionIdx, temperature, pressure, oilSaturation, maxOilSaturation)); return 0; }
+
     /*!
      * \brief Returns the saturation pressure [Pa] of oil given the mass fraction of the
      *        gas component in the oil phase.

@@ -211,16 +211,30 @@ public:
     /*!
      * \brief Returns the oil vaporization factor \f$R_v\f$ [m^3/m^3] of the gas phase.
      *
-     * This method implements temperature dependence and requires the isothermal oil
-     * vaporization factor for oil saturated gas and temperature as inputs. Currently it
-     * is just a dummy method which passes through the isothermal oil vaporization
-     * factor.
+     * This method implements temperature dependence and requires the gas pressure,
+     * temperature and the oil saturation as inputs. Currently it is just a dummy method
+     * which passes through the isothermal oil vaporization factor.
      */
     template <class Evaluation>
     Evaluation saturatedOilVaporizationFactor(unsigned regionIdx,
                                               const Evaluation& temperature,
                                               const Evaluation& pressure) const
     { return isothermalPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure); }
+
+    /*!
+     * \brief Returns the oil vaporization factor \f$R_v\f$ [m^3/m^3] of the gas phase.
+     *
+     * This method implements temperature dependence and requires the gas pressure,
+     * temperature and the oil saturation as inputs. Currently it is just a dummy method
+     * which passes through the isothermal oil vaporization factor.
+     */
+    template <class Evaluation>
+    Evaluation saturatedOilVaporizationFactor(unsigned regionIdx,
+                                              const Evaluation& temperature,
+                                              const Evaluation& pressure,
+                                              const Evaluation& oilSaturation,
+                                              const Evaluation& maxOilSaturation) const
+    { return isothermalPvt_->saturatedOilVaporizationFactor(regionIdx, temperature, pressure, oilSaturation, maxOilSaturation); }
 
     /*!
      * \brief Returns the saturation pressure of the gas phase [Pa]

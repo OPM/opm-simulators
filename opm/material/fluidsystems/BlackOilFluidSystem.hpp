@@ -113,12 +113,17 @@ public:
     typedef Opm::WaterPvtMultiplexer<Scalar> WaterPvt;
 
     //! \copydoc BaseFluidSystem::ParameterCache
-    template <class Evaluation>
-    struct ParameterCache : public Opm::NullParameterCache<Evaluation>
+    template <class EvaluationT>
+    struct ParameterCache : public Opm::NullParameterCache<EvaluationT>
     {
+        typedef EvaluationT Evaluation;
+
     public:
-        ParameterCache(int /*regionIdx*/=0)
-        { regionIdx_ = 0; }
+        ParameterCache(const Evaluation& maxOilSat = 1.0, int regionIdx=0)
+        {
+            maxOilSat_ = maxOilSat;
+            regionIdx_ = regionIdx;
+        }
 
         /*!
          * \brief Copy the data which is not dependent on the type of the Scalars from
@@ -129,7 +134,11 @@ public:
          */
         template <class OtherCache>
         void assignPersistentData(const OtherCache& other)
-        { regionIdx_ = other.regionIndex(); }
+        {
+            typedef Opm::MathToolbox<typename OtherCache::Evaluation> OtherToolbox;
+            regionIdx_ = other.regionIndex();
+            maxOilSat_ = OtherToolbox::value(other.maxOilSat());
+        }
 
         /*!
          * \brief Return the index of the region which should be used to determine the
@@ -151,7 +160,14 @@ public:
         void setRegionIndex(unsigned val)
         { regionIdx_ = val; }
 
+        const Evaluation& maxOilSat() const
+        { return maxOilSat_; }
+
+        void setMaxOilSat(const Evaluation& val)
+        { maxOilSat_ = val; }
+
     private:
+        Evaluation maxOilSat_;
         unsigned regionIdx_;
     };
 
@@ -433,7 +449,12 @@ public:
                                        const ParameterCache<ParamCacheEval> &paramCache,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
-    { return fugacityCoefficient<FluidState, LhsEval>(fluidState, phaseIdx, compIdx, paramCache.regionIndex()); }
+    {
+        return fugacityCoefficient<FluidState, LhsEval>(fluidState,
+                                                        phaseIdx,
+                                                        compIdx,
+                                                        paramCache.regionIndex());
+    }
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
@@ -864,8 +885,39 @@ public:
     /*!
      * \brief Returns the dissolution factor \f$R_\alpha\f$ of a saturated fluid phase
      *
-     * For the oil (gas) phase, this means the R_S and R_V factors, for the water phase,
+     * For the oil (gas) phase, this means the R_s and R_v factors, for the water phase,
      * it is always 0.
+     */
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval saturatedDissolutionFactor(const FluidState& fluidState,
+                                              unsigned phaseIdx,
+                                              unsigned regionIdx,
+                                              const LhsEval& maxOilSaturation)
+    {
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= regionIdx && regionIdx <= numRegions());
+
+        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
+
+        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& So = FsToolbox::template decay<LhsEval>(fluidState.saturation(oilPhaseIdx));
+
+        switch (phaseIdx) {
+        case oilPhaseIdx: return oilPvt_->saturatedGasDissolutionFactor(regionIdx, T, p, So, maxOilSaturation);
+        case gasPhaseIdx: return gasPvt_->saturatedOilVaporizationFactor(regionIdx, T, p, So, maxOilSaturation);
+        case waterPhaseIdx: return 0.0;
+        default: OPM_THROW(std::logic_error, "Unhandled phase index " << phaseIdx);
+        }
+    }
+
+    /*!
+     * \brief Returns the dissolution factor \f$R_\alpha\f$ of a saturated fluid phase
+     *
+     * For the oil (gas) phase, this means the R_s and R_v factors, for the water phase,
+     * it is always 0. The difference of this method compared to the previous one is that
+     * this method does not prevent dissolving a given component if the corresponding
+     * phase's saturation is small-
      */
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
     static LhsEval saturatedDissolutionFactor(const FluidState& fluidState,

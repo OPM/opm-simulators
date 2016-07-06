@@ -182,7 +182,7 @@ public:
             ? 206.00e-3
             : (compIdx == C20Idx)
             ? 282.00e-3
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -205,7 +205,7 @@ public:
             ? 1270.0*5/9
             : (compIdx == C20Idx)
             ? 1380.0*5/9
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -228,7 +228,7 @@ public:
             ? 200.0 * 6894.7573
             : (compIdx == C20Idx)
             ? 162.0 * 6894.7573
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -251,7 +251,7 @@ public:
             ? 0.245*R*criticalTemperature(C15Idx)/criticalPressure(C15Idx)
             : (compIdx == C20Idx)
             ? 0.235*R*criticalTemperature(C20Idx)/criticalPressure(C20Idx)
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -274,7 +274,7 @@ public:
             ? 0.6500
             : (compIdx == C20Idx)
             ? 0.8500
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -318,8 +318,8 @@ public:
         // mixtures is just a convex combination of the attractive and
         // repulsive parameters of the pure components
 
-        Scalar minA = 1e100, maxA = -1e100;
-        Scalar minB = 1e100, maxB = -1e100;
+        Scalar minA = 1e30, maxA = -1e30;
+        Scalar minB = 1e30, maxB = -1e30;
 
         prParams.updatePure(minT, minP);
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {

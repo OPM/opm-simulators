@@ -1706,7 +1706,7 @@ protected:
                              const Evaluation& b,
                              const Evaluation& c,
                              const Evaluation& d,
-                             Scalar x0 = -1e100, Scalar x1 = 1e100) const
+                             Scalar x0 = -1e30, Scalar x1 = 1e30) const
     {
         int n = Opm::invertCubicPolynomial(sol,
                                            a_(segIdx) - a,

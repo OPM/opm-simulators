@@ -161,7 +161,7 @@ public:
             ? H2O::molarMass()
             : (compIdx == N2Idx)
             ? N2::molarMass()
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -176,7 +176,7 @@ public:
             ? H2O::criticalTemperature()
             : (compIdx == N2Idx)
             ? N2::criticalTemperature()
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -191,7 +191,7 @@ public:
             ? H2O::criticalPressure()
             : (compIdx == N2Idx)
             ? N2::criticalPressure()
-            : 1e100;
+            : 1e30;
     }
 
     /*!
@@ -206,7 +206,7 @@ public:
             ? H2O::acentricFactor()
             : (compIdx == N2Idx)
             ? N2::acentricFactor()
-            : 1e100;
+            : 1e30;
     }
 
     /****************************************
