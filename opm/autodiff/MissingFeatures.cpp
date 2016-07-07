@@ -34,26 +34,26 @@ namespace MissingFeatures {
         // by flow. For some of them, only part of the options are supported.
         // The list is used to output messages only.
         std::unordered_set<std::string> unsupported_keywords = {
-            "ACTDIMS", "ADSALNOD", "API", "AQUCON", "AQUDIMS", "AQUNUM"
+            "ADSALNOD", "API", "AQUCON", "AQUNUM"
             "COMPLUMP", "COMPSEGS", "CONNECTION", "CPR", 
             "DATE", "ECHO", "EDITNNC", "ENDNUM",
             "ENDSKIP", "ENKSRVD", "ENPTVD", "EQLNUM", "EQUALREG",
-            "EXCEL", "EXTRAPMS", "FILLEPS", "FIPNUM", "FMTIN",
-            "FMTOUT", "FULLIMP", "GDORIENT", "GECON", "GEFAC", "GRIDUNIT", 
+            "EXCEL", "EXTRAPMS", "FILLEPS", "FIPNUM",
+            "FULLIMP", "GDORIENT", "GECON", "GEFAC", "GRIDUNIT", 
             "GRUPNET", "IMKRVD", "IMPES", "IMPTVD", "MAPUNITS",
             "MAXVALUE", "MESSAGES", "MINVALUE", "MONITOR", "MSGFILE",
             "MULT_XYZ", "NETBALAN", "NEXTSTEP", "NOCASC", "NOECHO",
             "NOGGF", "NOINSPEC", "NOMONITO", "NONNC", "NORSSPEC", "NOSIM",
             "NSTACK", "NUMRES", "NUPCOL", "OILVISCT", "OLDTRAN", "OPTIONS", 
             "PARALLEL", "PBVD", "PCG", "PERMXY", "PERMYZ", 
-            "PERMZX", "PIMTDIMS", "PIMULTAB", "PLMIXPAR", "PLYADSS", "PLYDHFLF",
-            "RADFIN4", "REGDIMS", "RKTRMDIR", "ROCKCOMP", "ROCKOPTS",
+            "PERMZX", "PIMULTAB", "PLMIXPAR", "PLYADSS", "PLYDHFLF",
+            "RADFIN4", "RKTRMDIR", "ROCKCOMP", "ROCKOPTS",
             "ROCKTAB", "RPTGRID", "RPTONLY", "RPTONLYO", "RPTPROS", "PRTRST", "RPTRUNSP",
             "RPTSCHED", "RPTSOL", "RTEMPVD", "RUNSUM", "SATOPTS", "SAVE", "SEPARATE",
-            "SKIP", "SKIP100", "SKIP300", "SKIPREST", "SMRYDIMS", "SPECGRID", "SSOL",
-            "SUMTHIN", "TEMP", "THCONR", "TRACER", "TRACERS", "UDADIMS", "UDQDIMS",
+            "SKIP", "SKIP100", "SKIP300", "SKIPREST", "SPECGRID", "SSOL",
+            "SUMTHIN", "TEMP", "THCONR", "TRACER", "TRACERS",
             "VAPPARS", "VISCREF", "WATVISCT",
-            "WPAVE", "WPIMULT", "WPITAB", "WSEGDIMS", "WTEMP",
+            "WPAVE", "WPIMULT", "WPITAB", "WTEMP",
             "WTEST", "WTRACER", "ZIPPY2" };
         
         // check deck and keyword for flow and parser.
