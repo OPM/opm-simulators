@@ -629,14 +629,6 @@ namespace Opm {
             const Eval ag0 = gasAccumulation(cstate0_[cell]);
             const Eval ag  = gasAccumulation(cstate_[cell]);
 
-
-
-
-
-            // TODO: avoid getting derivatives from 'other' cell!
-
-
-
             // Flux terms.
             Eval div_oilflux = Eval::createConstant(0.0);
             Eval div_gasflux = Eval::createConstant(0.0);
@@ -652,12 +644,14 @@ namespace Opm {
                 const double vt = (from == cell) ? total_flux_[conn.index] : -total_flux_[conn.index];
 
                 // From this point, we treat everything about this connection as going
-                // from 'cell' to 'other'.
+                // from 'cell' to 'other'. Since we don't want derivatives from the 'other'
+                // cell to participate in the solution, we must be careful to use .value
+                // to avoid creating trouble.
                 Eval dh[3];
                 Eval dh_sat[3];
                 for (int phase : { Water, Oil, Gas }) {
-                    const Eval gradp = cstate_[other].p[phase] - cstate_[cell].p[phase];
-                    const Eval rhoavg = 0.5 * (cstate_[cell].rho[phase] + cstate_[other].rho[phase]);
+                    const Eval gradp = cstate_[other].p[phase].value - cstate_[cell].p[phase];
+                    const Eval rhoavg = 0.5 * (cstate_[cell].rho[phase] + cstate_[other].rho[phase].value);
                     dh[phase] = gradp - rhoavg * gdz_[conn.index];
                     dh_sat[phase] = rhoavg * gdz_[conn.index];
                     if (Base::use_threshold_pressure_) {
@@ -675,12 +669,12 @@ namespace Opm {
                 Eval mob[3];
                 Eval tot_mob = Eval::createConstant(0.0);
                 for (int phase : { Water, Oil, Gas }) {
-                    b[phase] = upw[phase] > 0.0 ? cstate_[cell].b[phase] : cstate_[other].b[phase];
-                    mob[phase] = upw[phase] > 0.0 ? m1[phase] : m2[phase];
+                    b[phase] = upw[phase] > 0.0 ? cstate_[cell].b[phase] : cstate_[other].b[phase].value;
+                    mob[phase] = upw[phase] > 0.0 ? m1[phase] : m2[phase].value;
                     tot_mob += mob[phase];
                 }
-                Eval rs = upw[Oil] > 0.0 ? cstate_[cell].rs : cstate_[other].rs;
-                Eval rv = upw[Gas] > 0.0 ? cstate_[cell].rv : cstate_[other].rv;
+                Eval rs = upw[Oil] > 0.0 ? cstate_[cell].rs : cstate_[other].rs.value;
+                Eval rv = upw[Gas] > 0.0 ? cstate_[cell].rv : cstate_[other].rv.value;
 
                 Eval flux[3];
                 for (int phase : { Oil, Gas }) {
