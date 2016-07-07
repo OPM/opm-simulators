@@ -80,6 +80,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -411,7 +412,8 @@ namespace Opm
             try {
                 ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
                 deck_ = parser->parseFile(deck_filename, parseContext);
-                checkKeywords(deck_, parser);
+                checkDeck(deck_, parser);
+                MissingFeatures::checkKeywords(deck_, parser);
                 eclipse_state_.reset(new EclipseState(deck_, parseContext));
                 auto ioConfig = eclipse_state_->getIOConfig();
                 ioConfig->setOutputDir(output_dir_);

@@ -21,7 +21,13 @@
 #define OPM_MISSINGFEATURES_HEADER_INCLUDED
 
 namespace Opm {
+
+namespace MissingFeatures {
+
     void checkKeywords(std::shared_ptr<const Deck> deck, std::shared_ptr<const Parser> parser);
+
+}
+
 }
 
 

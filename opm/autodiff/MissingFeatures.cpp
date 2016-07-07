@@ -19,7 +19,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <unordered_set>
 #include <string>
@@ -27,7 +26,8 @@
 
 namespace Opm {
 
-    
+namespace MissingFeatures {
+
     void checkKeywords(DeckConstPtr deck, ParserConstPtr parser)
     {
         // These keywords are supported by opm-parser, but are not supported
@@ -35,39 +35,38 @@ namespace Opm {
         // The list is used to output messages only.
         std::unordered_set<std::string> unsupported_keywords = {
             "ACTDIMS", "ADSALNOD", "API", "AQUCON", "AQUDIMS", "AQUNUM"
-            "BLOCK_PROBE", "COMPLUMP", "COMPSEGS", "CONNECTION", "CPR", 
-            "DATE", "ECHO", "EDITNNC", "ENDINC", "ENDNUM", "ENDPOINT_SPECIFIERS",
+            "COMPLUMP", "COMPSEGS", "CONNECTION", "CPR", 
+            "DATE", "ECHO", "EDITNNC", "ENDNUM",
             "ENDSKIP", "ENKSRVD", "ENPTVD", "EQLNUM", "EQUALREG",
-            "EXCEL", "EXTRAPMS", "FILED_PROBE", "FILLEPS", "FIPNUM", "FMTIN",
+            "EXCEL", "EXTRAPMS", "FILLEPS", "FIPNUM", "FMTIN",
             "FMTOUT", "FULLIMP", "GDORIENT", "GECON", "GEFAC", "GRIDUNIT", 
-            "GROUP_PROBE", "GRUPNET", "IMKRVD", "IMPES", "IMPTVD", "MAPUNITS",
-            "MAXVALUE", "MEMORY", "MESSAGES", "MINVALUE", "MONITOR", "MSGFILE",
+            "GRUPNET", "IMKRVD", "IMPES", "IMPTVD", "MAPUNITS",
+            "MAXVALUE", "MESSAGES", "MINVALUE", "MONITOR", "MSGFILE",
             "MULT_XYZ", "NETBALAN", "NEXTSTEP", "NOCASC", "NOECHO",
             "NOGGF", "NOINSPEC", "NOMONITO", "NONNC", "NORSSPEC", "NOSIM",
             "NSTACK", "NUMRES", "NUPCOL", "OILVISCT", "OLDTRAN", "OPTIONS", 
-            "PARALLEL", "PBVD", "PCG", "PERFORMACE_PROBE", "PERMXY", "PERMYZ", 
+            "PARALLEL", "PBVD", "PCG", "PERMXY", "PERMYZ", 
             "PERMZX", "PIMTDIMS", "PIMULTAB", "PLMIXPAR", "PLYADSS", "PLYDHFLF",
-            "RADFIN4", "REGDIMS", "REGION_PROBE", "RKTRMDIR", "ROCKCOMP", "ROCKOPTS",
+            "RADFIN4", "REGDIMS", "RKTRMDIR", "ROCKCOMP", "ROCKOPTS",
             "ROCKTAB", "RPTGRID", "RPTONLY", "RPTONLYO", "RPTPROS", "PRTRST", "RPTRUNSP",
             "RPTSCHED", "RPTSOL", "RTEMPVD", "RUNSUM", "SATOPTS", "SAVE", "SEPARATE",
             "SKIP", "SKIP100", "SKIP300", "SKIPREST", "SMRYDIMS", "SPECGRID", "SSOL",
             "SUMTHIN", "TEMP", "THCONR", "TRACER", "TRACERS", "UDADIMS", "UDQDIMS",
-            "UNIFIN", "UNIFOUT", "VAPPARS", "VISCREF", "WATVISCT", "WELL_PROBE",
-            "WPAVE", "WPIMULT", "WPITAB", "WRFT", "WRFTPLT", "WSEGDIMS", "WTEMP",
+            "VAPPARS", "VISCREF", "WATVISCT",
+            "WPAVE", "WPIMULT", "WPITAB", "WSEGDIMS", "WTEMP",
             "WTEST", "WTRACER", "ZIPPY2" };
         
         // check deck and keyword for flow and parser.
-        if (checkDeck(deck, parser)) {
-            for (size_t idx = 0; idx < deck->size(); ++idx) {
-                const auto& keyword = deck->getKeyword(idx);
-                std::unordered_set<std::string>::const_iterator it;
-                it = unsupported_keywords.find(keyword.name());
-                if (it != unsupported_keywords.end()) {
-                    std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
-                        + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n"; 
+        for (size_t idx = 0; idx < deck->size(); ++idx) {
+            const auto& keyword = deck->getKeyword(idx);
+            std::unordered_set<std::string>::const_iterator it;
+            it = unsupported_keywords.find(keyword.name());
+            if (it != unsupported_keywords.end()) {
+                std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
+                    + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n"; 
                     OpmLog::error(msg);
-                }
             }
         }
     }
+} // namespace MissingFeatures
 } // namespace Opm
