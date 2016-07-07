@@ -35,6 +35,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/GridHelpers.cpp
   opm/autodiff/ImpesTPFAAD.cpp
   opm/autodiff/moduleVersion.cpp
+  opm/autodiff/multiPhaseUpwind.cpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
   opm/autodiff/SimulatorIncompTwophaseAd.cpp
   opm/autodiff/TransportSolverTwophaseAd.cpp
@@ -188,6 +189,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/ISTLSolver.hpp
   opm/autodiff/IterationReport.hpp
   opm/autodiff/moduleVersion.hpp
+  opm/autodiff/multiPhaseUpwind.hpp
   opm/autodiff/NewtonIterationBlackoilCPR.hpp
   opm/autodiff/NewtonIterationBlackoilInterface.hpp
   opm/autodiff/NewtonIterationBlackoilInterleaved.hpp
