@@ -50,6 +50,7 @@ list (APPEND MAIN_SOURCE_FILES
 	opm/autodiff/MultisegmentWells.cpp
   opm/autodiff/BlackoilSolventState.cpp
   opm/autodiff/ThreadHandle.hpp
+	opm/autodiff/MissingFeatures.cpp
   opm/polymer/PolymerState.cpp
   opm/polymer/PolymerBlackoilState.cpp
   opm/polymer/CompressibleTpfaPolymer.cpp
@@ -210,6 +211,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/StandardWells_impl.hpp
   opm/autodiff/StandardWellsSolvent.hpp
   opm/autodiff/StandardWellsSolvent_impl.hpp
+	opm/autodiff/MissingFeatures.hpp
   opm/polymer/CompressibleTpfaPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer_impl.hpp
