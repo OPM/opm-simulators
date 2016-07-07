@@ -137,6 +137,10 @@ namespace Opm {
             trans_all_ = V::Zero(transi.size() + trans_nnc.size());
             trans_all_ << transi, trans_nnc;
             gdz_ = geo_.gravity()[2] * (ops_.grad * geo_.z().matrix());
+            rhos_ = DataBlock::Zero(ops_.div.rows(), 3);
+            rhos_.col(Water) = props_.surfaceDensity(Water, Base::cells_);
+            rhos_.col(Oil) = props_.surfaceDensity(Oil, Base::cells_);
+            rhos_.col(Gas) = props_.surfaceDensity(Gas, Base::cells_);
         }
 
 
@@ -244,6 +248,7 @@ namespace Opm {
         std::vector<int> components_;
         V trans_all_;
         V gdz_;
+        DataBlock rhos_;
 
 
 
@@ -368,6 +373,7 @@ namespace Opm {
             Scalar mu[3];
             Scalar b[3];
             Scalar lambda[3];
+            Scalar rho[3];
 
             // Implement interface used for opm-material properties.
             const Scalar& saturation(int phaseIdx) const
@@ -443,6 +449,38 @@ namespace Opm {
             for (int phase = 0; phase < 3; ++phase) {
                 cstate.lambda[phase] = cstate.kr[phase] / cstate.mu[phase];
             }
+
+            // Compute densities.
+            cstate.rho[Water] = rhos_(cell, Water) * cstate.b[Water];
+            cstate.rho[Oil] = (rhos_(cell, Oil) + cstate.rs*rhos_(cell, Gas)) * cstate.b[Oil]; // TODO: check that this is correct
+            cstate.rho[Gas] = (rhos_(cell, Gas) + cstate.rv*rhos_(cell, Oil)) * cstate.b[Gas];
+        }
+
+
+
+
+        template <typename Scalar>
+        Scalar oilAccumulation(const CellState<Scalar>& cs)
+        {
+            return cs.b[Oil]*cs.s[Oil] + cs.rv*cs.b[Gas]*cs.s[Gas];
+        }
+
+
+
+
+        template <typename Scalar>
+        Scalar gasAccumulation(const CellState<Scalar>& cs)
+        {
+            return cs.b[Gas]*cs.s[Gas] + cs.rs*cs.b[Oil]*cs.s[Oil];
+        }
+
+
+
+
+        template <typename Scalar>
+        Scalar flux(const CellState<Scalar>& cs)
+        {
+            return cs.b[Gas]*cs.s[Gas] + cs.rs*cs.b[Oil]*cs.s[Oil];
         }
 
 
@@ -459,12 +497,16 @@ namespace Opm {
             computeCellState(cell, state_, cstate);
 
 
-            // const Eval ao0 = 0.0;
-            // const Eval oileq = Base::pvdt_[cell];
+            const Eval ao0 = oilAccumulation(cstate0);
+            const Eval ao  = oilAccumulation(cstate);
+            const Eval ag0 = gasAccumulation(cstate0);
+            const Eval ag  = gasAccumulation(cstate);
+            const Eval oileq = Base::pvdt_[cell]*(ao - ao0);// + oildiv;
+            const Eval gaseq = Base::pvdt_[cell]*(ag - ag0);// + gasdiv;
 
+            static_cast<void>(x);
             res[0] = Base::pvdt_[cell]*(0.0);
             jac[0][0] = 0.0;
-
         }
 
 
