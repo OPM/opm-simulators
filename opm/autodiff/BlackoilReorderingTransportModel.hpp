@@ -21,12 +21,13 @@
 #define OPM_BLACKOILREORDERINGTRANSPORTMODEL_HEADER_INCLUDED
 
 #include <opm/autodiff/BlackoilModelBase.hpp>
-#include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/core/grid.h>
 #include <opm/autodiff/DebugTimeReport.hpp>
+#include <opm/autodiff/multiPhaseUpwind.hpp>
+#include <opm/core/grid.h>
 #include <opm/core/transport/reorder/reordersequence.h>
+#include <opm/core/simulator/BlackoilState.hpp>
 
 namespace Opm {
 
@@ -75,6 +76,115 @@ namespace Opm {
                 return value;
             }
         };
+
+
+
+
+        struct Connection
+        {
+            Connection(const int ind, const double s) : index(ind), sign(s) {}
+            int index;
+            double sign;
+        };
+
+
+
+
+        class Connections;
+
+
+
+        class ConnectivityGraph
+        {
+        public:
+            explicit ConnectivityGraph(const HelperOps& ops)
+                : grad_(ops.grad)
+                , div_(ops.div)
+            {
+                grad_ia_ = grad_.outerIndexPtr();
+                grad_ja_ = grad_.innerIndexPtr();
+                grad_sign_ = grad_.valuePtr();
+                div_ia_ = div_.outerIndexPtr();
+                div_ja_ = div_.innerIndexPtr();
+                div_sign_ = div_.valuePtr();
+            }
+
+            Connections cellConnections(const int cell) const;
+
+            std::array<int, 2> connectionCells(const int connection) const
+            {
+                const int pos = div_ia_[connection];
+                assert(div_ia_[connection + 1] == pos + 2);
+                const double sign1 = div_sign_[pos];
+                assert(div_sign_[pos + 1] == -sign1);
+                if (sign1 > 0.0) {
+                    return {{ div_ja_[pos], div_ja_[pos + 1] }};
+                } else {
+                    return {{ div_ja_[pos + 1], div_ja_[pos] }};
+                 }
+            }
+
+        private:
+            friend class Connections;
+            typedef HelperOps::M M;
+            const M& grad_;
+            const M& div_;
+            const int* grad_ia_;
+            const int* grad_ja_;
+            const double* grad_sign_;
+            const int* div_ia_;
+            const int* div_ja_;
+            const double* div_sign_;
+        };
+
+
+        class Connections
+        {
+        public:
+            Connections(const ConnectivityGraph& cg, const int cell) : cg_(cg), cell_(cell) {}
+            int size() const
+            {
+                return cg_.grad_ia_[cell_ + 1] - cg_.grad_ia_[cell_];
+            }
+            class Iterator
+            {
+            public:
+                Iterator(const Connections& c, const int index) : c_(c), index_(index) {}
+                Iterator& operator++()
+                {
+                    ++index_;
+                    return *this;
+                }
+                bool operator!=(const Iterator& other)
+                {
+                    assert(&c_ == &other.c_);
+                    return index_ != other.index_;
+                }
+                Connection operator*()
+                {
+                    assert(index_ >= 0 && index_ < c_.size());
+                    const int pos = c_.cg_.grad_ia_[c_.cell_] + index_;
+                    return Connection(c_.cg_.grad_ja_[pos], c_.cg_.grad_sign_[pos]);
+                }
+            private:
+                const Connections& c_;
+                int index_;
+            };
+            Iterator begin() const { return Iterator(*this, 0); }
+            Iterator end() const { return Iterator(*this, size()); }
+        private:
+            friend class Iterator;
+            const ConnectivityGraph& cg_;
+            const int cell_;
+        };
+
+
+        inline Connections ConnectivityGraph::cellConnections(const int cell) const
+        {
+            return Connections(*this, cell);
+        }
+
+
 
     } // namespace detail
 
@@ -126,6 +236,7 @@ namespace Opm {
                                          const bool                              terminal_output)
             : Base(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
                    eclState, has_disgas, has_vapoil, terminal_output)
+            , graph_(Base::ops_)
             , props_(dynamic_cast<const BlackoilPropsAdFromDeck&>(fluid)) // TODO: remove the need for this cast.
             , state0_{ ReservoirState(0, 0, 0), WellState(), V() }
             , state_{ ReservoirState(0, 0, 0), WellState(), V() }
@@ -219,10 +330,6 @@ namespace Opm {
             // Does nothing in this model.
         }
 
-
-
-
-
         using Base::numPhases;
 
 
@@ -279,6 +386,8 @@ namespace Opm {
         using Base::grid_;
         using Base::geo_;
         using Base::ops_;
+
+        const detail::ConnectivityGraph graph_;
 
         const BlackoilPropsAdFromDeck& props_;
 
@@ -382,13 +491,9 @@ namespace Opm {
         void extractFluxes(const ReservoirState& reservoir_state,
                            const WellState& well_state)
         {
-            // Input face fluxes are for interior faces only, while rest of code deals with all faces.
-            const V face_flux = Eigen::Map<const V>(reservoir_state.faceflux().data(),
-                                                    reservoir_state.faceflux().size());
-            using namespace Opm::AutoDiffGrid;
-            const int num_faces = numFaces(grid_);
-            assert(face_flux.size() < num_faces); // Expected to be internal only.
-            total_flux_ = superset(face_flux, ops_.internal_faces, num_faces);
+            // Input face fluxes are for interior faces + nncs.
+            total_flux_ = Eigen::Map<const V>(reservoir_state.faceflux().data(),
+                                              reservoir_state.faceflux().size());
             total_wellperf_flux_ = Eigen::Map<const V>(well_state.perfRates().data(),
                                                        well_state.perfRates().size());
             comp_wellperf_flux_ = Eigen::Map<const DataBlock>(well_state.perfPhaseRates().data(),
@@ -416,6 +521,7 @@ namespace Opm {
 
         void computeOrdering()
         {
+            assert(!geo_.nnc().hasNNC()); // TODO: support compute_sequence() with grid + nnc.
             static_assert(std::is_same<Grid, UnstructuredGrid>::value,
                           "compute_sequence() is written in C and therefore requires an UnstructuredGrid, "
                           "it must be rewritten to use other grid classes such as CpGrid");
@@ -452,18 +558,16 @@ namespace Opm {
         void solveSingleCell(const int cell)
         {
 
-            // Vec2 x = getInitialGuess(cell);
-            Vec2 x;
             Vec2 res;
             Mat22 jac;
-            assembleSingleCell(cell, x, res, jac);
+            assembleSingleCell(cell, res, jac);
 
             // Newton loop.
             while (!getConvergence(res)) {
                 Vec2 dx;
                 jac.solve(dx, res);
-                x = x - dx;
-                assembleSingleCell(cell, x, res, jac);
+                updateState(dx);
+                assembleSingleCell(cell, res, jac);
             }
         }
 
@@ -500,36 +604,108 @@ namespace Opm {
 
 
 
-        void assembleSingleCell(const int cell, const Vec2& x, Vec2& res, Mat22& jac)
+        void applyThresholdPressure(const int connection, Eval& dp)
         {
-            assert(numPhases() == 3); // I apologize for this to my future self, that will have to fix it.
-
-            computeCellState(cell, state_, cstate_[cell]);
-
-
-            const Eval ao0 = oilAccumulation(cstate0_[cell]);
-            const Eval ao  = oilAccumulation(cstate_[cell]);
-            const Eval ag0 = gasAccumulation(cstate0_[cell]);
-            const Eval ag  = gasAccumulation(cstate_[cell]);
-            const Eval oileq = Base::pvdt_[cell]*(ao - ao0);// + oildiv;
-            const Eval gaseq = Base::pvdt_[cell]*(ag - ag0);// + gasdiv;
-
-            static_cast<void>(x);
-            res[0] = Base::pvdt_[cell]*(0.0);
-            jac[0][0] = 0.0;
+            const double thres_press = Base::threshold_pressures_by_connection_[connection];
+            if (std::fabs(dp.value) < thres_press) {
+                dp.value = 0.0;
+            } else {
+                dp.value -= dp.value > 0.0 ? thres_press : -thres_press;
+            }
         }
 
 
 
 
+        void assembleSingleCell(const int cell, Vec2& res, Mat22& jac)
+        {
+            assert(numPhases() == 3); // I apologize for this to my future self, that will have to fix it.
 
-        // Vec2 getInitialGuess(const State& state, const int cell)
-        // {
-        //     const auto& hcs = state.hydroCarbonState();
-        //     double xvar = (hcs[cell] == GasAndOil) ? sg_[cell]
-        //         : ((hcs[cell] == OilOnly) ? rs_[cell] : rv_[cell]);
-        //     return Vec2{sw_[cell], xvar};
-        // }
+            computeCellState(cell, state_, cstate_[cell]);
+
+            // Accumulation terms.
+            const Eval ao0 = oilAccumulation(cstate0_[cell]);
+            const Eval ao  = oilAccumulation(cstate_[cell]);
+            const Eval ag0 = gasAccumulation(cstate0_[cell]);
+            const Eval ag  = gasAccumulation(cstate_[cell]);
+
+
+
+
+
+            // TODO: avoid getting derivatives from 'other' cell!
+
+
+
+            // Flux terms.
+            Eval div_oilflux = Eval::createConstant(0.0);
+            Eval div_gasflux = Eval::createConstant(0.0);
+            for (auto conn : graph_.cellConnections(cell)) {
+                auto conn_cells = graph_.connectionCells(conn.index);
+                const int from = conn_cells[0];
+                const int to = conn_cells[1];
+                if (from < 0 || to < 0) {
+                    continue; // Boundary.
+                }
+                assert((from == cell) == (conn.sign > 0.0));
+                const int other = from == cell ? to : from;
+                const double vt = (from == cell) ? total_flux_[conn.index] : -total_flux_[conn.index];
+
+                // From this point, we treat everything about this connection as going
+                // from 'cell' to 'other'.
+                Eval dh[3];
+                Eval dh_sat[3];
+                for (int phase : { Water, Oil, Gas }) {
+                    const Eval gradp = cstate_[other].p[phase] - cstate_[cell].p[phase];
+                    const Eval rhoavg = 0.5 * (cstate_[cell].rho[phase] + cstate_[other].rho[phase]);
+                    dh[phase] = gradp - rhoavg * gdz_[conn.index];
+                    dh_sat[phase] = rhoavg * gdz_[conn.index];
+                    if (Base::use_threshold_pressure_) {
+                        applyThresholdPressure(conn.index, dh[phase]); // Should also dh_sat be treated here?
+                    }
+                }
+                const double tran = trans_all_[conn.index];
+                const auto& m1 = cstate_[cell].lambda;
+                const auto& m2 = cstate_[other].lambda;
+                const auto upw = connectionMultiPhaseUpwind({{ dh_sat[Water].value, dh_sat[Oil].value, dh_sat[Gas].value }},
+                                                            {{ m1[Water].value, m1[Oil].value, m1[Gas].value }},
+                                                            {{ m2[Water].value, m2[Oil].value, m2[Gas].value }},
+                                                            tran, vt);
+                Eval b[3];
+                Eval mob[3];
+                Eval tot_mob = Eval::createConstant(0.0);
+                for (int phase : { Water, Oil, Gas }) {
+                    b[phase] = upw[phase] > 0.0 ? cstate_[cell].b[phase] : cstate_[other].b[phase];
+                    mob[phase] = upw[phase] > 0.0 ? m1[phase] : m2[phase];
+                    tot_mob += mob[phase];
+                }
+                Eval rs = upw[Oil] > 0.0 ? cstate_[cell].rs : cstate_[other].rs;
+                Eval rv = upw[Gas] > 0.0 ? cstate_[cell].rv : cstate_[other].rv;
+
+                Eval flux[3];
+                for (int phase : { Oil, Gas }) {
+                    Eval gflux = Eval::createConstant(0.0);
+                    for (int other_phase : { Water, Oil, Gas }) {
+                        if (phase != other_phase) {
+                            gflux += mob[other_phase] * (dh_sat[phase] - dh_sat[other_phase]);
+                        }
+                    }
+                    flux[phase] = b[phase] * (mob[phase] / tot_mob) * (vt + tran*gflux);
+                }
+                div_oilflux += flux[Oil] + rv*flux[Gas];
+                div_gasflux += flux[Gas] + rs*flux[Oil];
+            }
+
+            const Eval oileq = Base::pvdt_[cell]*(ao - ao0) + div_oilflux;
+            const Eval gaseq = Base::pvdt_[cell]*(ag - ag0) + div_gasflux;
+
+            res[0] = oileq.value;
+            res[1] = gaseq.value;
+            jac[0][0] = oileq.derivatives[0];
+            jac[0][1] = oileq.derivatives[1];
+            jac[1][0] = gaseq.derivatives[0];
+            jac[1][1] = gaseq.derivatives[1];
+        }
 
 
 
@@ -539,6 +715,14 @@ namespace Opm {
         {
             const double tol = 1e-6;
             return res[0] < tol && res[1] < tol;
+        }
+
+
+
+
+        void updateState(const Vec2& dx)
+        {
+            // TODO: update...
         }
     };
 
