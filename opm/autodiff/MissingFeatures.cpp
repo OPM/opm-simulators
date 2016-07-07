@@ -21,7 +21,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
-#include <vector>
+#include <unordered_set>
 #include <string>
 
 
@@ -33,7 +33,7 @@ namespace Opm {
         // These keywords are supported by opm-parser, but are not supported
         // by flow. For some of them, only part of the options are supported.
         // The list is used to output messages only.
-        std::vector<std::string> unsupported_keywords = {
+        std::unordered_set<std::string> unsupported_keywords = {
             "ACTDIMS", "ADSALNOD", "API", "AQUCON", "AQUDIMS", "AQUNUM"
             "BLOCK_PROBE", "COMPLUMP", "COMPSEGS", "CONNECTION", "CPR", 
             "DATE", "ECHO", "EDITNNC", "ENDINC", "ENDNUM", "ENDPOINT_SPECIFIERS",
@@ -60,10 +60,8 @@ namespace Opm {
         if (checkDeck(deck, parser)) {
             for (size_t idx = 0; idx < deck->size(); ++idx) {
                 const auto& keyword = deck->getKeyword(idx);
-                std::vector<std::string>::const_iterator it;
-                it = std::find(unsupported_keywords.begin(),
-                               unsupported_keywords.end(), 
-                               keyword.name());
+                std::unordered_set<std::string>::const_iterator it;
+                it = unsupported_keywords.find(keyword.name());
                 if (it != unsupported_keywords.end()) {
                     std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
                         + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n"; 
