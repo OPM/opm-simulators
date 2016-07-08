@@ -28,7 +28,7 @@ namespace Opm {
 
 namespace MissingFeatures {
 
-    void checkKeywords(DeckConstPtr deck)
+    void checkKeywords(const Deck& deck)
     {
         // These keywords are supported by opm-parser, but are not supported
         // by flow. For some of them, only part of the options are supported.
@@ -57,8 +57,8 @@ namespace MissingFeatures {
             "WTEST", "WTRACER", "ZIPPY2" };
         
         // check deck and keyword for flow and parser.
-        for (size_t idx = 0; idx < deck->size(); ++idx) {
-            const auto& keyword = deck->getKeyword(idx);
+        for (size_t idx = 0; idx < deck.size(); ++idx) {
+            const auto& keyword = deck.getKeyword(idx);
             std::unordered_set<std::string>::const_iterator it;
             it = unsupported_keywords.find(keyword.name());
             if (it != unsupported_keywords.end()) {

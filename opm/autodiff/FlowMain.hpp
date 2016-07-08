@@ -413,7 +413,7 @@ namespace Opm
                 ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
                 deck_ = parser->parseFile(deck_filename, parseContext);
                 checkDeck(deck_, parser);
-                MissingFeatures::checkKeywords(deck_);
+                MissingFeatures::checkKeywords(*deck_);
                 eclipse_state_.reset(new EclipseState(deck_, parseContext));
                 auto ioConfig = eclipse_state_->getIOConfig();
                 ioConfig->setOutputDir(output_dir_);
