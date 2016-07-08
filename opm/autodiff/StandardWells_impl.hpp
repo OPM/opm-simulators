@@ -1248,4 +1248,301 @@ namespace Opm
     }
 
 
+
+
+
+
+   template<class WellState>
+   void
+   StandardWells::
+   updateListEconLimited(ScheduleConstPtr schedule,
+                         const int current_step,
+                         const Wells* wells_struct,
+                         const WellState& well_state,
+                         DynamicListEconLimited& list_econ_limited) const
+   {
+       const int nw = wells_struct->number_of_wells;
+
+       for (int w = 0; w < nw; ++w) {
+           // flag to check if the mim oil/gas rate limit is violated
+           bool rate_limit_violated = false;
+           const std::string& well_name = wells_struct->name[w];
+           const Well* well_ecl = schedule->getWell(well_name);
+           const WellEconProductionLimits& econ_production_limits = well_ecl->getEconProductionLimits(current_step);
+
+           // economic limits only apply for production wells.
+           if (wells_struct->type[w] != PRODUCER) {
+               continue;
+           }
+
+           // if no limit is effective here, then continue to the next well
+           if ( !econ_production_limits.onAnyEffectiveLimit() ) {
+               continue;
+           }
+           // for the moment, we only handle rate limits, not handling potential limits
+           // the potential limits should not be difficult to add
+           const WellEcon::QuantityLimitEnum& quantity_limit = econ_production_limits.quantityLimit();
+           if (quantity_limit == WellEcon::POTN) {
+               const std::string msg = std::string("POTN limit for well ") + well_name + std::string(" is not supported for the moment. \n")
+                                     + std::string("All the limits will be evaluated based on RATE. ");
+               OpmLog::warning("NOT_SUPPORTING_POTN", msg);
+           }
+
+           const WellMapType& well_map = well_state.wellMap();
+           const typename WellMapType::const_iterator i_well = well_map.find(well_name);
+           assert(i_well != well_map.end()); // should always be found?
+           const WellMapEntryType& map_entry = i_well->second;
+           const int well_number = map_entry[0];
+
+           if (econ_production_limits.onAnyRateLimit()) {
+               rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state, well_number);
+           }
+
+           if (rate_limit_violated) {
+               if (econ_production_limits.endRun()) {
+                   const std::string warning_message = std::string("ending run after well closed due to economic limits is not supported yet \n")
+                                                     + std::string("the program will keep running after ") + well_name + std::string(" is closed");
+                   OpmLog::warning("NOT_SUPPORTING_ENDRUN", warning_message);
+               }
+
+               if (econ_production_limits.validFollowonWell()) {
+                   OpmLog::warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
+               }
+
+               if (well_ecl->getAutomaticShutIn()) {
+                   list_econ_limited.addShutWell(well_name);
+                   const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to economic limit");
+                   OpmLog::info(msg);
+               } else {
+                   list_econ_limited.addStoppedWell(well_name);
+                   const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to economic limit");
+                   OpmLog::info(msg);
+               }
+               // the well is closed, not need to check other limits
+               continue;
+           }
+
+           // checking for ratio related limits, mostly all kinds of ratio.
+           bool ratio_limits_violated = false;
+           RatioCheckTuple ratio_check_return;
+
+           if (econ_production_limits.onAnyRatioLimit()) {
+               ratio_check_return = checkRatioEconLimits(econ_production_limits, well_state, map_entry);
+               ratio_limits_violated = std::get<0>(ratio_check_return);
+           }
+
+           if (ratio_limits_violated) {
+               const bool last_connection = std::get<1>(ratio_check_return);
+               const int worst_offending_connection = std::get<2>(ratio_check_return);
+
+               const int perf_start = map_entry[1];
+
+               assert((worst_offending_connection >= 0) && (worst_offending_connection <  map_entry[2]));
+
+               const int cell_worst_offending_connection = wells_struct->well_cells[perf_start + worst_offending_connection];
+               list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
+               const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
+                                     + well_name + std::string(" will be closed due to economic limit");
+               OpmLog::info(msg);
+
+               if (last_connection) {
+                   list_econ_limited.addShutWell(well_name);
+                   const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
+                   OpmLog::info(msg2);
+               }
+           }
+
+       }
+   }
+
+
+
+
+
+    template <class WellState>
+    bool
+    StandardWells::
+    checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                        const WellState& well_state,
+                        const int well_number) const
+    {
+        const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+        const int np = well_state.numPhases();
+
+        if (econ_production_limits.onMinOilRate()) {
+            assert((*active_)[Oil]);
+            const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
+            const double min_oil_rate = econ_production_limits.minOilRate();
+            if (std::abs(oil_rate) < min_oil_rate) {
+                return true;
+            }
+        }
+
+        if (econ_production_limits.onMinGasRate() ) {
+            assert((*active_)[Gas]);
+            const double gas_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Gas ] ];
+            const double min_gas_rate = econ_production_limits.minGasRate();
+            if (std::abs(gas_rate) < min_gas_rate) {
+                return true;
+            }
+        }
+
+        if (econ_production_limits.onMinLiquidRate() ) {
+            assert((*active_)[Oil]);
+            assert((*active_)[Water]);
+            const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
+            const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
+            const double liquid_rate = oil_rate + water_rate;
+            const double min_liquid_rate = econ_production_limits.minLiquidRate();
+            if (std::abs(liquid_rate) < min_liquid_rate) {
+                return true;
+            }
+        }
+
+        if (econ_production_limits.onMinReservoirFluidRate()) {
+            OpmLog::warning("NOT_SUPPORTING_MIN_RESERVOIR_FLUID_RATE", "Minimum reservoir fluid production rate limit is not supported yet");
+        }
+
+        return false;
+    }
+
+
+
+
+
+    template <class WellState>
+    StandardWells::RatioCheckTuple
+    StandardWells::
+    checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                         const WellState& well_state,
+                         const WellMapEntryType& map_entry) const
+    {
+        // TODO: not sure how to define the worst-offending connection when more than one
+        //       ratio related limit is violated.
+        //       The defintion used here is that we define the violation extent based on the
+        //       ratio between the value and the corresponding limit.
+        //       For each violated limit, we decide the worst-offending connection separately.
+        //       Among the worst-offending connections, we use the one has the biggest violation
+        //       extent.
+
+        bool any_limit_violated = false;
+        bool last_connection = false;
+        int worst_offending_connection = INVALIDCONNECTION;
+        double violation_extent = -1.0;
+
+        if (econ_production_limits.onMaxWaterCut()) {
+            const RatioCheckTuple water_cut_return = checkMaxWaterCutLimit(econ_production_limits, well_state, map_entry);
+            bool water_cut_violated = std::get<0>(water_cut_return);
+            if (water_cut_violated) {
+                any_limit_violated = true;
+                const double violation_extent_water_cut = std::get<3>(water_cut_return);
+                if (violation_extent_water_cut > violation_extent) {
+                    violation_extent = violation_extent_water_cut;
+                    worst_offending_connection = std::get<2>(water_cut_return);
+                    last_connection = std::get<1>(water_cut_return);
+                }
+            }
+        }
+
+        if (econ_production_limits.onMaxGasOilRatio()) {
+            OpmLog::warning("NOT_SUPPORTING_MAX_GOR", "the support for max Gas-Oil ratio is not implemented yet!");
+        }
+
+        if (econ_production_limits.onMaxWaterGasRatio()) {
+            OpmLog::warning("NOT_SUPPORTING_MAX_WGR", "the support for max Water-Gas ratio is not implemented yet!");
+        }
+
+        if (econ_production_limits.onMaxGasLiquidRatio()) {
+            OpmLog::warning("NOT_SUPPORTING_MAX_GLR", "the support for max Gas-Liquid ratio is not implemented yet!");
+        }
+
+        if (any_limit_violated) {
+            assert(worst_offending_connection >=0);
+            assert(violation_extent > 1.);
+        }
+
+        return std::make_tuple(any_limit_violated, last_connection, worst_offending_connection, violation_extent);
+    }
+
+
+
+
+
+    template <class WellState>
+    StandardWells::RatioCheckTuple
+    StandardWells::
+    checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                          const WellState& well_state,
+                          const WellMapEntryType& map_entry) const
+    {
+        bool water_cut_limit_violated = false;
+        int worst_offending_connection = INVALIDCONNECTION;
+        bool last_connection = false;
+        double violation_extent = -1.0;
+
+        const int np = well_state.numPhases();
+        const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+        const int well_number = map_entry[0];
+
+        assert((*active_)[Oil]);
+        assert((*active_)[Water]);
+
+        const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
+        const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
+        const double liquid_rate = oil_rate + water_rate;
+        double water_cut;
+        if (std::abs(liquid_rate) != 0.) {
+            water_cut = water_rate / liquid_rate;
+        } else {
+            water_cut = 0.0;
+        }
+
+        const double max_water_cut_limit = econ_production_limits.maxWaterCut();
+        if (water_cut > max_water_cut_limit) {
+            water_cut_limit_violated = true;
+        }
+
+        if (water_cut_limit_violated) {
+            // need to handle the worst_offending_connection
+            const int perf_start = map_entry[1];
+            const int perf_number = map_entry[2];
+
+            std::vector<double> water_cut_perf(perf_number);
+            for (int perf = 0; perf < perf_number; ++perf) {
+                const int i_perf = perf_start + perf;
+                const double oil_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Oil ] ];
+                const double water_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Water ] ];
+                const double liquid_perf_rate = oil_perf_rate + water_perf_rate;
+                if (std::abs(liquid_perf_rate) != 0.) {
+                    water_cut_perf[perf] = water_perf_rate / liquid_perf_rate;
+                } else {
+                    water_cut_perf[perf] = 0.;
+                }
+            }
+
+            last_connection = (perf_number == 1);
+            if (last_connection) {
+                worst_offending_connection = 0;
+                violation_extent = water_cut_perf[0] / max_water_cut_limit;
+                return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
+            }
+
+            double max_water_cut_perf = 0.;
+            for (int perf = 0; perf < perf_number; ++perf) {
+                if (water_cut_perf[perf] > max_water_cut_perf) {
+                    worst_offending_connection = perf;
+                    max_water_cut_perf = water_cut_perf[perf];
+                }
+            }
+
+            assert(max_water_cut_perf != 0.);
+            assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
+
+            violation_extent = max_water_cut_perf / max_water_cut_limit;
+        }
+
+        return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
+    }
+
+
 } // namespace Opm

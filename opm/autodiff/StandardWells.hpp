@@ -22,14 +22,20 @@
 #ifndef OPM_STANDARDWELLS_HEADER_INCLUDED
 #define OPM_STANDARDWELLS_HEADER_INCLUDED
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <cassert>
+#include <tuple>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <opm/core/wells.h>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
@@ -170,6 +176,15 @@ namespace Opm {
             /// called.
             const Vector& getStoredWellPerforationFluxes() const;
 
+            /// upate the dynamic lists related to economic limits
+            template<class WellState>
+            void
+            updateListEconLimited(ScheduleConstPtr schedule,
+                                  const int current_step,
+                                  const Wells* wells,
+                                  const WellState& well_state,
+                                  DynamicListEconLimited& list_econ_limited) const;
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
@@ -207,6 +222,39 @@ namespace Opm {
                                                         const std::vector<double>& surf_dens_perf,
                                                         const std::vector<double>& depth_perf,
                                                         const double grav);
+
+
+            template <class WellState>
+            bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                     const WellState& well_state,
+                                     const int well_number) const;
+
+            using WellMapType = typename WellState::WellMapType;
+            using WellMapEntryType = typename WellState::mapentry_t;
+
+            // a tuple type for ratio limit check.
+            // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
+            // values should not be used.
+            // second value indicates whehter there is only one connection left.
+            // third value indicates the indx of the worst-offending connection.
+            // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
+            // the ratio of the actual value to the value of the violated limit.
+            using RatioCheckTuple = std::tuple<bool, bool, int, double>;
+
+            enum ConnectionIndex {
+                INVALIDCONNECTION = -10000
+            };
+
+
+            template <class WellState>
+            RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                                 const WellState& well_state,
+                                                 const WellMapEntryType& map_entry) const;
+
+            template <class WellState>
+            RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                                                  const WellState& well_state,
+                                                  const WellMapEntryType& map_entry) const;
 
         };
 

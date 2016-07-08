@@ -239,6 +239,13 @@ namespace Opm {
                             transport_solver_.model().relativeChange(previous, current));
         }
 
+        /// Return the well model
+        const WellModel& wellModel() const
+        {
+            return pressure_model_->wellModel();
+        }
+
+
 
 
 

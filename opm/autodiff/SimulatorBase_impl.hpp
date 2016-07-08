@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 
 namespace Opm
 {
@@ -131,6 +132,7 @@ namespace Opm
         unsigned int totalLinearIterations = 0;
         bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
         std::vector<double> well_potentials;
+        DynamicListEconLimited dynamic_list_econ_limited;
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -153,6 +155,7 @@ namespace Opm
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability(),
+                                       dynamic_list_econ_limited,
                                        is_parallel_run_,
                                        well_potentials);
             const Wells* wells = wells_manager.c_wells();
@@ -162,9 +165,10 @@ namespace Opm
             // give the polymer and surfactant simulators the chance to do their stuff
             asImpl().handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
-            // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
-
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+                output_writer_.writeTimeStep( timer, state, well_state );
+            }
 
             // Max oil saturation (for VPPARS), hysteresis update.
             props_.updateSatOilMax(state.saturation());
@@ -179,15 +183,19 @@ namespace Opm
             const WellModel well_model(wells);
 
             auto solver = asImpl().createSolver(well_model);
-            std::ostringstream step_msg;
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
-            step_msg.imbue(std::locale(std::locale::classic(), facet));
-            step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
-		     << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
-		     << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-		     << ", date = " << timer.currentDateTime()
-		     << "\n";
-            OpmLog::info(step_msg.str());
+
+            if( terminal_output_ )
+            {
+                std::ostringstream step_msg;
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
+                step_msg.imbue(std::locale(std::locale::classic(), facet));
+                step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
+                         << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
+                         << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
+                         << ", date = " << timer.currentDateTime()
+                         << "\n";
+                OpmLog::info(step_msg.str());
+            }
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
@@ -200,15 +208,19 @@ namespace Opm
             else {
                 // solve for complete report step
                 solver->step(timer.currentStepLength(), state, well_state);
-                std::ostringstream iter_msg;
-                iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
-                if (solver->wellIterations() != std::numeric_limits<int>::min()) {
-                    iter_msg << " days well iterations = " << solver->wellIterations() << ", ";                    
+
+                if( terminal_output_ )
+                {
+                    std::ostringstream iter_msg;
+                    iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
+                    if (solver->wellIterations() != std::numeric_limits<int>::min()) {
+                        iter_msg << " days well iterations = " << solver->wellIterations() << ", ";
+                    }
+                    iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
+                             << ", total linear iterations = " << solver->linearIterations()
+                             << "\n";
+                    OpmLog::info(iter_msg.str());
                 }
-		iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
-			 << ", total linear iterations = " << solver->linearIterations() 
-			 << "\n";
-                OpmLog::info(iter_msg.str());
             }
 
             // update the derived geology (transmissibilities, pore volumes, etc) if the
@@ -254,6 +266,10 @@ namespace Opm
 
             // Increment timer, remember well state.
             ++timer;
+
+            // write simulation state at the report stage
+            output_writer_.writeTimeStep( timer, state, well_state );
+
             prev_well_state = well_state;
             // The well potentials are only computed if they are needed
             // For now thay are only used to determine default guide rates for group controlled wells
@@ -261,9 +277,9 @@ namespace Opm
                 asImpl().computeWellPotentials(wells, well_state, well_potentials);
             }
 
+            asImpl().updateListEconLimited(solver, eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
+                                           well_state, dynamic_list_econ_limited);
         }
-        // Write final simulation state.
-        output_writer_.writeTimeStep( timer, state, prev_well_state );
 
         // Stop timer and create timing report
         total_timer.stop();
@@ -605,4 +621,24 @@ namespace Opm
             }
         }
     }
+
+
+
+
+
+    template <class Implementation>
+    void
+    SimulatorBase<Implementation>::
+    updateListEconLimited(const std::unique_ptr<Solver>& solver,
+                          ScheduleConstPtr schedule,
+                          const int current_step,
+                          const Wells* wells,
+                          const WellState& well_state,
+                          DynamicListEconLimited& list_econ_limited) const
+    {
+
+        solver->model().wellModel().updateListEconLimited(schedule, current_step, wells,
+                                                          well_state, list_econ_limited);
+    }
+
 } // namespace Opm

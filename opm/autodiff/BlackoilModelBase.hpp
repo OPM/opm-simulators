@@ -255,6 +255,10 @@ namespace Opm {
         /// Update the scaling factors for mass balance equations
         void updateEquationsScaling();
 
+        /// return the WellModel object
+        WellModel& wellModel() { return well_model_; }
+        const WellModel& wellModel() const { return well_model_; }
+
     protected:
 
         // ---------  Types and enums  ---------
@@ -332,10 +336,6 @@ namespace Opm {
         {
             return static_cast<const Implementation&>(*this);
         }
-
-        /// return the WellModel object
-        WellModel& wellModel() { return well_model_; }
-        const WellModel& wellModel() const { return well_model_; }
 
         /// return the Well struct in the WellModel
         const Wells& wells() const { return well_model_.wells(); }

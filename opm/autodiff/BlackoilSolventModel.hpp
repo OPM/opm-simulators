@@ -88,6 +88,8 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
+        using Base::wellModel;
+
 
     protected:
 
@@ -129,7 +131,6 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
         // Need to declare Base members we want to use here.
-        using Base::wellModel;
         using Base::wells;
         using Base::variableState;
         using Base::computeGasPressure;
