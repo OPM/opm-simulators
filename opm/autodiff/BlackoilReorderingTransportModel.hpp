@@ -164,7 +164,7 @@ namespace Opm {
                 {
                     assert(index_ >= 0 && index_ < c_.size());
                     const int pos = c_.cg_.grad_ia_[c_.cell_] + index_;
-                    return Connection(c_.cg_.grad_ja_[pos], c_.cg_.grad_sign_[pos]);
+                    return Connection(c_.cg_.grad_ja_[pos], -c_.cg_.grad_sign_[pos]); // Note the minus sign!
                 }
             private:
                 const Connections& c_;
@@ -557,7 +557,12 @@ namespace Opm {
             sequence_.resize(num_cells);
             components_.resize(num_cells + 1); // max possible size
             int num_components = -1;
-            compute_sequence(&grid_, total_flux_.data(), sequence_.data(), components_.data(), &num_components);
+
+
+            using namespace Opm::AutoDiffGrid;
+            const int num_faces = numFaces(grid_);
+            V flux_on_all_faces = superset(total_flux_, ops_.internal_faces, num_faces);
+            compute_sequence(&grid_, flux_on_all_faces.data(), sequence_.data(), components_.data(), &num_components);
             OpmLog::debug(std::string("Number of components: ") + std::to_string(num_components));
             components_.resize(num_components + 1); // resize to fit actually used part
         }
@@ -590,11 +595,18 @@ namespace Opm {
             assembleSingleCell(cell, res, jac);
 
             // Newton loop.
-            while (!getConvergence(res)) {
+            int iter = 0;
+            const int max_iter = 25;
+            while (!getConvergence(res) && iter < max_iter) {
                 Vec2 dx;
                 jac.solve(dx, res);
                 updateState(cell, -dx);
                 assembleSingleCell(cell, res, jac);
+                ++iter;
+            }
+            if (iter == max_iter) {
+                OpmLog::debug("Failed to converge in cell " + std::to_string(cell)
+                              + ", residual = (" + std::to_string(res[0]) + ", " + std::to_string(res[0]) + ")");
             }
         }
 
