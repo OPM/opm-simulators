@@ -276,7 +276,7 @@ namespace Opm {
             for (int cell = 0; cell < num_cells; ++cell) {
                 computeCellState(cell, state0_, cstate0_[cell]);
             }
-            cstate_.resize(num_cells);
+            cstate_ = cstate0_;
         }
 
 
@@ -377,6 +377,24 @@ namespace Opm {
             {
                 return s[phaseIdx];
             }
+
+            template <typename T>
+            CellState<T> flatten() const
+            {
+                return CellState<T>{
+                    { s[0].value, s[1].value, s[2].value },
+                    rs.value,
+                    rv.value,
+                    { p[0].value, p[1].value, p[2].value },
+                    { kr[0].value, kr[1].value, kr[2].value },
+                    { pc[0].value, pc[1].value, pc[2].value },
+                    temperature.value,
+                    { mu[0].value, mu[1].value, mu[2].value },
+                    { b[0].value, b[1].value, b[2].value },
+                    { lambda[0].value, lambda[1].value, lambda[2].value },
+                    { rho[0].value, rho[1].value, rho[2].value }
+                };
+            }
         };
 
 
@@ -395,7 +413,7 @@ namespace Opm {
         State state_;
 
         std::vector<CellState<double>> cstate0_;
-        std::vector<CellState<Eval>> cstate_;
+        std::vector<CellState<double>> cstate_;
 
         V total_flux_;
         V total_wellperf_flux_;
@@ -566,7 +584,7 @@ namespace Opm {
             while (!getConvergence(res)) {
                 Vec2 dx;
                 jac.solve(dx, res);
-                updateState(dx);
+                updateState(cell, dx);
                 assembleSingleCell(cell, res, jac);
             }
         }
@@ -621,13 +639,15 @@ namespace Opm {
         {
             assert(numPhases() == 3); // I apologize for this to my future self, that will have to fix it.
 
-            computeCellState(cell, state_, cstate_[cell]);
+            CellState<Eval> st;
+            computeCellState(cell, state_, st);
+            cstate_[cell] = st.template flatten<double>();
 
             // Accumulation terms.
-            const Eval ao0 = oilAccumulation(cstate0_[cell]);
-            const Eval ao  = oilAccumulation(cstate_[cell]);
-            const Eval ag0 = gasAccumulation(cstate0_[cell]);
-            const Eval ag  = gasAccumulation(cstate_[cell]);
+            const double ao0 = oilAccumulation(cstate0_[cell]);
+            const Eval ao  = oilAccumulation(st);
+            const double ag0 = gasAccumulation(cstate0_[cell]);
+            const Eval ag  = gasAccumulation(st);
 
             // Flux terms.
             Eval div_oilflux = Eval::createConstant(0.0);
@@ -650,8 +670,8 @@ namespace Opm {
                 Eval dh[3];
                 Eval dh_sat[3];
                 for (int phase : { Water, Oil, Gas }) {
-                    const Eval gradp = cstate_[other].p[phase].value - cstate_[cell].p[phase];
-                    const Eval rhoavg = 0.5 * (cstate_[cell].rho[phase] + cstate_[other].rho[phase].value);
+                    const Eval gradp = cstate_[other].p[phase] - st.p[phase];
+                    const Eval rhoavg = 0.5 * (st.rho[phase] + cstate_[other].rho[phase]);
                     dh[phase] = gradp - rhoavg * gdz_[conn.index];
                     dh_sat[phase] = rhoavg * gdz_[conn.index];
                     if (Base::use_threshold_pressure_) {
@@ -659,22 +679,22 @@ namespace Opm {
                     }
                 }
                 const double tran = trans_all_[conn.index];
-                const auto& m1 = cstate_[cell].lambda;
+                const auto& m1 = st.lambda;
                 const auto& m2 = cstate_[other].lambda;
                 const auto upw = connectionMultiPhaseUpwind({{ dh_sat[Water].value, dh_sat[Oil].value, dh_sat[Gas].value }},
                                                             {{ m1[Water].value, m1[Oil].value, m1[Gas].value }},
-                                                            {{ m2[Water].value, m2[Oil].value, m2[Gas].value }},
+                                                            {{ m2[Water], m2[Oil], m2[Gas] }},
                                                             tran, vt);
                 Eval b[3];
                 Eval mob[3];
                 Eval tot_mob = Eval::createConstant(0.0);
                 for (int phase : { Water, Oil, Gas }) {
-                    b[phase] = upw[phase] > 0.0 ? cstate_[cell].b[phase] : cstate_[other].b[phase].value;
-                    mob[phase] = upw[phase] > 0.0 ? m1[phase] : m2[phase].value;
+                    b[phase] = upw[phase] > 0.0 ? st.b[phase] : cstate_[other].b[phase];
+                    mob[phase] = upw[phase] > 0.0 ? m1[phase] : m2[phase];
                     tot_mob += mob[phase];
                 }
-                Eval rs = upw[Oil] > 0.0 ? cstate_[cell].rs : cstate_[other].rs.value;
-                Eval rv = upw[Gas] > 0.0 ? cstate_[cell].rv : cstate_[other].rv.value;
+                Eval rs = upw[Oil] > 0.0 ? st.rs : cstate_[other].rs;
+                Eval rv = upw[Gas] > 0.0 ? st.rv : cstate_[other].rv;
 
                 Eval flux[3];
                 for (int phase : { Oil, Gas }) {
@@ -714,9 +734,67 @@ namespace Opm {
 
 
 
-        void updateState(const Vec2& dx)
+        void updateState(const int cell,
+                         const Vec2& dx)
         {
-            // TODO: update...
+            // Get saturation updates.
+            const double dsw = dx[0];
+            double dso = -dsw;
+            double dsg = 0.0;
+            auto& hcstate = state_.reservoir_state.hydroCarbonState()[cell];
+            if (hcstate == HydroCarbonState::GasAndOil) {
+                dsg = dx[1];
+                dso -= dsg;
+            }
+
+            // Handle too large saturation changes.
+            const double maxval = std::max(std::fabs(dsw), std::max(std::fabs(dso), std::fabs(dsg)));
+            const double sfactor = std::min(1.0, Base::dsMax() / maxval);
+            double* s = state_.reservoir_state.saturation().data() + 3*cell;
+            s[Water] -= sfactor*dsw;
+            s[Gas] -= sfactor*dsg;
+            s[Oil] = 1.0 - s[Water] - s[Oil];
+
+            // Handle < 0 saturations.
+            for (int phase : { Gas, Oil, Water }) { // TODO: check if ordering here is significant
+                if (s[phase] < 0.0) {
+                    for (int other_phase : { Water, Oil, Gas }) {
+                        if (phase != other_phase) {
+                            s[other_phase] /= (1.0 - s[phase]);
+                        }
+                    }
+                    s[phase] = 0.0;
+                }
+            }
+
+            // Update rs.
+            double& rs = state_.reservoir_state.gasoilratio()[cell];
+            if (hcstate == HydroCarbonState::OilOnly) {
+                const double rs_old = rs;
+                const double max_allowed_change = std::fabs(rs_old) * Base::drMaxRel();
+                const double drs = dx[1];
+                const double factor = std::min(1.0, max_allowed_change / std::fabs(drs));
+                rs -= factor*drs;
+            }
+
+            // Update rv.
+            double& rv = state_.reservoir_state.rv()[cell];
+            if (hcstate == HydroCarbonState::GasOnly) {
+                const double rv_old = rv;
+                const double max_allowed_change = std::fabs(rv_old) * Base::drMaxRel();
+                const double drv = dx[1];
+                const double factor = std::min(1.0, max_allowed_change / std::fabs(drv));
+                rv -= factor*drv;
+            }
+
+            const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
+            const bool water_only = s[Water] > (1 - epsilon);
+
+            // hcstate = HydroCarbonState::GasAndOil;
+
+            // rssat0 = ;
+            // rssat = 
+
         }
     };
 
