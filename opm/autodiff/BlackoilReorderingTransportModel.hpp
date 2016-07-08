@@ -371,6 +371,8 @@ namespace Opm {
             Scalar b[3];
             Scalar lambda[3];
             Scalar rho[3];
+            Scalar rssat;
+            Scalar rvsat;
 
             // Implement interface used for opm-material properties.
             const Scalar& saturation(int phaseIdx) const
@@ -392,7 +394,9 @@ namespace Opm {
                     { mu[0].value, mu[1].value, mu[2].value },
                     { b[0].value, b[1].value, b[2].value },
                     { lambda[0].value, lambda[1].value, lambda[2].value },
-                    { rho[0].value, rho[1].value, rho[2].value }
+                    { rho[0].value, rho[1].value, rho[2].value },
+                    rssat.value,
+                    rvsat.value
                 };
             }
         };
@@ -501,6 +505,11 @@ namespace Opm {
             cstate.rho[Water] = rhos_(cell, Water) * cstate.b[Water];
             cstate.rho[Oil] = (rhos_(cell, Oil) + cstate.rs*rhos_(cell, Gas)) * cstate.b[Oil]; // TODO: check that this is correct
             cstate.rho[Gas] = (rhos_(cell, Gas) + cstate.rv*rhos_(cell, Oil)) * cstate.b[Gas];
+
+            // Compute saturated rs and rv factors.
+            cstate.rssat = oilpvt.saturatedGasDissolutionFactor(pvt_region, cstate.temperature, cstate.p[Oil]);
+            cstate.rvsat = gaspvt.saturatedOilVaporizationFactor(pvt_region, cstate.temperature, cstate.p[Gas]);
+            // TODO: add vaporization controls such as in BlackoilPropsAdFromDeck::applyVap().
         }
 
 
@@ -584,7 +593,7 @@ namespace Opm {
             while (!getConvergence(res)) {
                 Vec2 dx;
                 jac.solve(dx, res);
-                updateState(cell, dx);
+                updateState(cell, -dx);
                 assembleSingleCell(cell, res, jac);
             }
         }
@@ -751,8 +760,8 @@ namespace Opm {
             const double maxval = std::max(std::fabs(dsw), std::max(std::fabs(dso), std::fabs(dsg)));
             const double sfactor = std::min(1.0, Base::dsMax() / maxval);
             double* s = state_.reservoir_state.saturation().data() + 3*cell;
-            s[Water] -= sfactor*dsw;
-            s[Gas] -= sfactor*dsg;
+            s[Water] += sfactor*dsw;
+            s[Gas] += sfactor*dsg;
             s[Oil] = 1.0 - s[Water] - s[Oil];
 
             // Handle < 0 saturations.
@@ -769,32 +778,55 @@ namespace Opm {
 
             // Update rs.
             double& rs = state_.reservoir_state.gasoilratio()[cell];
+            const double rs_old = rs;
             if (hcstate == HydroCarbonState::OilOnly) {
-                const double rs_old = rs;
                 const double max_allowed_change = std::fabs(rs_old) * Base::drMaxRel();
                 const double drs = dx[1];
                 const double factor = std::min(1.0, max_allowed_change / std::fabs(drs));
-                rs -= factor*drs;
+                rs += factor*drs;
             }
 
             // Update rv.
             double& rv = state_.reservoir_state.rv()[cell];
+            const double rv_old = rv;
             if (hcstate == HydroCarbonState::GasOnly) {
-                const double rv_old = rv;
                 const double max_allowed_change = std::fabs(rv_old) * Base::drMaxRel();
                 const double drv = dx[1];
                 const double factor = std::min(1.0, max_allowed_change / std::fabs(drv));
-                rv -= factor*drv;
+                rv += factor*drv;
             }
 
             const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
             const bool water_only = s[Water] > (1 - epsilon);
+            const auto old_hcstate = hcstate;
+            hcstate = HydroCarbonState::GasAndOil;
+            // sg <-> rs transition.
+            {
+                const double rssat_old = cstate_[cell].rssat;
+                const double rssat = rssat_old; // TODO: This is no longer true with vaporization controls
+                const bool is_rs = old_hcstate == HydroCarbonState::OilOnly;
+                const bool has_gas = (s[Gas] > 0.0 && !is_rs);
+                const bool gas_vaporized = ( (rs > rssat * (1+epsilon) && is_rs ) && (rs_old > rssat_old * (1-epsilon)) );
+                if (water_only || has_gas || gas_vaporized) {
+                    rs = rssat;
+                } else {
+                    hcstate = HydroCarbonState::OilOnly;
+                }
+            }
 
-            // hcstate = HydroCarbonState::GasAndOil;
-
-            // rssat0 = ;
-            // rssat = 
-
+            // sg <-> rv transition.
+            {
+                const double rvsat_old = cstate_[cell].rvsat;
+                const double rvsat = rvsat_old; // TODO: This is no longer true with vaporization controls
+                const bool is_rv = old_hcstate == HydroCarbonState::GasOnly;
+                const bool has_oil = (s[Oil] > 0.0 && !is_rv);
+                const bool oil_condensed = ( (rv > rvsat * (1+epsilon) && is_rv) && (rv_old > rvsat_old * (1-epsilon)) );
+                if (water_only || has_oil || oil_condensed) {
+                    rv = rvsat;
+                } else {
+                    hcstate = HydroCarbonState::GasOnly;
+                }
+            }
         }
     };
 
