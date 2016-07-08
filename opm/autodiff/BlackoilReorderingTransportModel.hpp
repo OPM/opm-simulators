@@ -774,7 +774,7 @@ namespace Opm {
             double* s = state_.reservoir_state.saturation().data() + 3*cell;
             s[Water] += sfactor*dsw;
             s[Gas] += sfactor*dsg;
-            s[Oil] = 1.0 - s[Water] - s[Oil];
+            s[Oil] = 1.0 - s[Water] - s[Gas];
 
             // Handle < 0 saturations.
             for (int phase : { Gas, Oil, Water }) { // TODO: check if ordering here is significant
