@@ -178,6 +178,12 @@ namespace Opm
             // Compute reservoir volumes for RESV controls.
             asImpl().computeRESV(timer.currentStepNum(), wells, state, well_state);
 
+            // Comput original FIP.
+            OpmLog::info("PORV:  " + std::to_string(unit::convert::to(geo_.poreVolume().sum(), unit::stb)));
+            const V OOIP = asImpl().computeFIP(state);
+            OpmLog::info("Original Fluid oil in place: " + std::to_string(unit::convert::to(original_fip, unit::stb)));
+
+            //OpmLog::info("Original Fluid oil in place: " + std::to_string(original_fip));
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
@@ -249,9 +255,12 @@ namespace Opm
             // Report timing.
             const double st = solver_timer.secsSinceStart();
 
+            const double current_fip = asImpl().computeFIP(state);
+            OpmLog::info("Currnet Fluid oil in place: " + std::to_string(unit::convert::to(current_fip, unit::stb)));
+            //OpmLog::info("Currnet Fluid oil in place: " + std::to_string(current_fip));
             // accumulate total time
             stime += st;
-
+            
             if ( terminal_output_ )
             {
                 std::string msg;
@@ -626,7 +635,27 @@ namespace Opm
     }
 
 
-
+    template <class Implementation>
+    V SimulatorBase<Implementation>::computeFIP(const ReservoirState& state)
+    {
+        using namespace Opm::AutoDiffGrid;
+        const int np = state.numPhases();
+        const int nc = numCells(grid_);
+        const Opm::PhaseUsage& pu = props_.phaseUsage();
+        V so = V::Zero(nc);
+        V sw = V::Zero(nc);
+        V sg = V::Zero(nc);
+        for (int c = 0; c < nc; ++c) {
+            so[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Liquid]];
+            sw[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Aqua]];
+            sg[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Vapour]];
+        }
+        V fip(V::Zero(np));
+        fip[0] = (geo_.poreVolume() * so).sum();
+        fip[1] = (geo_.poreVolume() * sw).sum();
+        fip[2] = (geo_.poreVolume() * sg).sum();
+        return fip;
+    }
 
 
     template <class Implementation>
