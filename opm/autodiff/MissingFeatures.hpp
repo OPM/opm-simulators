@@ -24,7 +24,7 @@ namespace Opm {
 
 namespace MissingFeatures {
 
-    void checkKeywords(std::shared_ptr<const Deck> deck, std::shared_ptr<const Parser> parser);
+    void checkKeywords(std::shared_ptr<const Deck> deck);
 
 }
 

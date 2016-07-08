@@ -28,7 +28,7 @@ namespace Opm {
 
 namespace MissingFeatures {
 
-    void checkKeywords(DeckConstPtr deck, ParserConstPtr parser)
+    void checkKeywords(DeckConstPtr deck)
     {
         // These keywords are supported by opm-parser, but are not supported
         // by flow. For some of them, only part of the options are supported.
