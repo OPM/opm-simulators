@@ -67,6 +67,7 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
+#include <opm/autodiff/MissingFeatures.hpp>
 
 #include <opm/core/utility/share_obj.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
@@ -76,10 +77,10 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -412,6 +413,7 @@ namespace Opm
                 ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
                 deck_ = parser->parseFile(deck_filename, parseContext);
                 checkDeck(deck_, parser);
+                MissingFeatures::checkKeywords(*deck_);
                 eclipse_state_.reset(new EclipseState(deck_, parseContext));
                 auto ioConfig = eclipse_state_->getIOConfig();
                 ioConfig->setOutputDir(output_dir_);
