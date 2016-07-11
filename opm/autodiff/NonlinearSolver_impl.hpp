@@ -137,7 +137,11 @@ namespace Opm
             }
             converged = report.converged;
             linIters += report.linear_iterations;
-            wellIters += report.well_iterations;
+            if (report.well_iterations != std::numeric_limits<int>::min()) {
+                wellIters += report.well_iterations;
+            } else {
+                wellIters = report.well_iterations;
+            }
             ++iteration;
         } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
