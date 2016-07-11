@@ -157,7 +157,7 @@ namespace Opm
                     const Wells*                    wells,
                     const BlackoilState&            x,
                     WellState& xw);
-        double computeFIP(const ReservoirState& state);
+        V computeFIP(const ReservoirState& state);
 
 
         void computeWellPotentials(const Wells*                    wells,

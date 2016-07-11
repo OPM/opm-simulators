@@ -135,6 +135,12 @@ namespace Opm
         std::vector<double> well_potentials;
         DynamicListEconLimited dynamic_list_econ_limited;
 
+        OpmLog::info("PORV:  " + std::to_string(unit::convert::to(geo_.poreVolume().sum(), unit::stb)));
+        V OOIP = asImpl().computeFIP(state);
+        OOIP[0] = unit::convert::to(OOIP[0], unit::stb);
+        OOIP[1] = unit::convert::to(OOIP[1], unit::stb); 
+        OOIP[2] = unit::convert::to(OOIP[2], 1000*unit::cubic(unit::feet));
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -178,12 +184,6 @@ namespace Opm
             // Compute reservoir volumes for RESV controls.
             asImpl().computeRESV(timer.currentStepNum(), wells, state, well_state);
 
-            // Comput original FIP.
-            OpmLog::info("PORV:  " + std::to_string(unit::convert::to(geo_.poreVolume().sum(), unit::stb)));
-            const V OOIP = asImpl().computeFIP(state);
-            OpmLog::info("Original Fluid oil in place: " + std::to_string(unit::convert::to(original_fip, unit::stb)));
-
-            //OpmLog::info("Original Fluid oil in place: " + std::to_string(original_fip));
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
@@ -255,9 +255,14 @@ namespace Opm
             // Report timing.
             const double st = solver_timer.secsSinceStart();
 
-            const double current_fip = asImpl().computeFIP(state);
-            OpmLog::info("Currnet Fluid oil in place: " + std::to_string(unit::convert::to(current_fip, unit::stb)));
-            //OpmLog::info("Currnet Fluid oil in place: " + std::to_string(current_fip));
+            V COIP = asImpl().computeFIP(state);
+            COIP[0] = unit::convert::to(COIP[0], unit::stb);
+            COIP[1] = unit::convert::to(COIP[1], unit::stb); 
+            COIP[2] = unit::convert::to(COIP[2], 1000*unit::cubic(unit::feet));
+            OpmLog::info("*********************Fluid in Place******************");
+            OpmLog::info("----------Oil--------Wat---------Gas");
+            OpmLog::info("Currently : " + std::to_string(COIP[0]) + "       " + std::to_string(COIP[1]) + "       " + std::to_string(COIP[2]));
+            OpmLog::info("Originally: " + std::to_string(OOIP[0]) + "       " + std::to_string(OOIP[1]) + "       " + std::to_string(OOIP[2]));
             // accumulate total time
             stime += st;
             
