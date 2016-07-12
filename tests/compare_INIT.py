@@ -8,6 +8,8 @@ from ert.test import TestAreaContext
 
 
 def compare_files( flow_file , ref_file , kw_list):
+    abs_epsilon = 0
+    rel_epsilon = 1e-2
     flow = EclFile( flow_file )
     ref = EclFile( ref_file )
 
@@ -15,8 +17,10 @@ def compare_files( flow_file , ref_file , kw_list):
         flow_kw = flow[kw][0]
         ref_kw = ref[kw][0]
 
-        if not flow_kw.equal_numeric( ref_kw , abs_epsilon = 0 , rel_epsilon = 1e-2):
-            sys.exit("Keyword:%s was different in flow simulation and reference" % kw)
+        if not flow_kw.equal_numeric( ref_kw , abs_epsilon = abs_epsilon , rel_epsilon = rel_epsilon):
+            first_different = ref_kw.firstDifferent( flow_kw , abs_epsilon = abs_epsilon , rel_epsilon = rel_epsilon)
+            sys.exit("Keyword:%s was different in flow simulation and reference. Index of first difference: %d" % (kw , first_different))
+
             
 
         
