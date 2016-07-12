@@ -27,16 +27,12 @@
 
 #include <dune/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/autodiff/FlowMain.hpp>
+#include <opm/autodiff/FlowMainEbos.hpp>
 
 
 // ----------------- Main program -----------------
-int
-main(int argc, char** argv)
+int main(int argc, char** argv)
 {
-    typedef Dune::CpGrid Grid;
-    typedef Opm::SimulatorFullyImplicitBlackoilEbos<Grid> Simulator;
-
-    Opm::FlowMain<Grid, Simulator> mainfunc;
+    Opm::FlowMainEbos mainfunc;
     return mainfunc.execute(argc, argv);
 }
