@@ -152,7 +152,8 @@ if (HAVE_OPM_DATA)
     if (ERT_PYTHON_PATH)
         include(OpmPythonTest)
 
-        opm_add_python_test( check_INIT_SPE1 ${PROJECT_SOURCE_DIR}/tests/compare_INIT.py $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA ${OPM_DATA_ROOT}/spe1/eclipse-simulation/SPE1CASE1.INIT TRANX TRANY TRANZ PORO PORV PERMX )
+        opm_add_python_test( check_INIT_SPE1 ${PROJECT_SOURCE_DIR}/tests/compare_INIT.py $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA ${OPM_DATA_ROOT}/spe1/eclipse-simulation/SPE1CASE1.INIT
+                             TRANX TRANY TRANZ PORO PORV PERMX DX DY DZ DEPTH PVTNUM SATNUM EQLNUM FIPNUM )
         opm_add_python_test( check_INIT_NORNE ${PROJECT_SOURCE_DIR}/tests/compare_INIT.py $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/norne/NORNE_ATW2013.DATA ${OPM_DATA_ROOT}/norne/ECL.2014.2/NORNE_ATW2013.INIT PORO PORV PERMX )
     endif()
 
