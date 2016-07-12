@@ -178,6 +178,7 @@ class ReservoirProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     typedef typename GET_PROP_TYPE(TypeTag, Model) Model;
+    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables) PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
@@ -344,6 +345,24 @@ public:
         fineMaterialParams_.finalize();
         coarseMaterialParams_.finalize();
 
+        materialParams_.resize(this->model().numGridDof());
+        ElementContext elemCtx(this->simulator());
+        auto eIt = this->simulator().gridView().template begin<0>();
+        const auto& eEndIt = this->simulator().gridView().template end<0>();
+        for (; eIt != eEndIt; ++eIt) {
+            elemCtx.updateStencil(*eIt);
+            int nDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+            for (int dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
+                int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const GlobalPosition &pos = elemCtx.pos(dofIdx, /*timeIdx=*/0);
+
+                if (isFineMaterial_(pos))
+                    materialParams_[globalDofIdx] = &fineMaterialParams_;
+                else
+                    materialParams_[globalDofIdx] = &coarseMaterialParams_;
+            }
+        }
+
         initFluidState_();
 
         // start the first ("settle down") episode for 100 days
@@ -440,11 +459,12 @@ public:
     const MaterialLawParams &materialLawParams(const Context &context,
                                                unsigned spaceIdx, unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
-        if (isFineMaterial_(pos))
-            return fineMaterialParams_;
-        return coarseMaterialParams_;
+        unsigned globalIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return *materialParams_[globalIdx];
     }
+
+    const MaterialLawParams &materialLawParams(unsigned globalIdx) const
+    { return *materialParams_[globalIdx]; }
 
     /*!
      * \name Problem parameters
@@ -699,6 +719,7 @@ private:
 
     MaterialLawParams fineMaterialParams_;
     MaterialLawParams coarseMaterialParams_;
+    std::vector<const MaterialLawParams*> materialParams_;
 
     InitialFluidState initialFluidState_;
     InitialFluidState injectorFluidState_;
