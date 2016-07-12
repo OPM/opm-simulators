@@ -35,7 +35,7 @@ namespace MissingFeatures {
         // The list is used to output messages only.
         std::unordered_set<std::string> unsupported_keywords = {
             "ADSALNOD", "API", "AQUCON", "AQUNUM"
-            "COMPLUMP", "COMPSEGS", "CONNECTION", "CPR", 
+            "COMPLUMP", "CONNECTION", "CPR", 
             "DATE", "ECHO", "EDITNNC", "ENDNUM",
             "ENDSKIP", "ENKSRVD", "ENPTVD", "EQLNUM", "EQUALREG",
             "EXCEL", "EXTRAPMS", "FILLEPS", "FIPNUM",
@@ -46,7 +46,7 @@ namespace MissingFeatures {
             "NOGGF", "NOINSPEC", "NOMONITO", "NONNC", "NORSSPEC", "NOSIM",
             "NSTACK", "NUMRES", "NUPCOL", "OILVISCT", "OLDTRAN", "OPTIONS", 
             "PARALLEL", "PBVD", "PCG", "PERMXY", "PERMYZ", 
-            "PERMZX", "PIMULTAB", "PLMIXPAR", "PLYADSS", "PLYDHFLF",
+            "PERMZX", "PIMULTAB", "PLYADSS", "PLYDHFLF",
             "RADFIN4", "RKTRMDIR", "ROCKCOMP", "ROCKOPTS",
             "ROCKTAB", "RPTGRID", "RPTONLY", "RPTONLYO", "RPTPROS", "PRTRST", "RPTRUNSP",
             "RPTSCHED", "RPTSOL", "RTEMPVD", "RUNSUM", "SATOPTS", "SAVE", "SEPARATE",
