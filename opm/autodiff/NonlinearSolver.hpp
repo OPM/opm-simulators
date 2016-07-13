@@ -103,7 +103,11 @@ namespace Opm {
              ReservoirState& reservoir_state,
              WellState& well_state);
 
-        /// Number of nonlinear solver iterations used in all calls to step().
+
+        /// Number of linearizations used in all calls to step().
+        int linearizations() const;
+
+        /// Number of full nonlinear solver iterations used in all calls to step().
         int nonlinearIterations() const;
 
         /// Number of linear solver iterations used in all calls to step().
@@ -156,6 +160,7 @@ namespace Opm {
         // ---------  Data members  ---------
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
+        int linearizations_;
         int nonlinearIterations_;
         int linearIterations_;
         int wellIterations_;

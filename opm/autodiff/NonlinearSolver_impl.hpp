@@ -32,6 +32,7 @@ namespace Opm
                                                     std::unique_ptr<PhysicalModel> model_arg)
         : param_(param),
           model_(std::move(model_arg)),
+          linearizations_(0),
           nonlinearIterations_(0),
           linearIterations_(0),
           wellIterations_(0),
@@ -42,6 +43,12 @@ namespace Opm
         if (!model_) {
             OPM_THROW(std::logic_error, "Must provide a non-null model argument for NonlinearSolver.");
         }
+    }
+
+    template <class PhysicalModel>
+    int NonlinearSolver<PhysicalModel>::linearizations() const
+    {
+        return linearizations_;
     }
 
     template <class PhysicalModel>
@@ -149,6 +156,7 @@ namespace Opm
 
         linearIterations_ += linIters;
         nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
+        linearizations_ += iteration;
         wellIterations_ += wellIters;
         linearIterationsLast_ = linIters;
         nonlinearIterationsLast_ = iteration;

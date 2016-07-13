@@ -87,6 +87,7 @@ namespace Opm {
              PolymerBlackoilState& 		state ,
              WellStateFullyImplicitBlackoilPolymer& wstate);
 
+        int linearizations() const;
         int nonlinearIterations() const;
         int linearIterations() const;
         int wellIterations() const;
@@ -159,6 +160,7 @@ namespace Opm {
         // The well_eq has size equal to the number of wells.
         LinearisedBlackoilResidual  residual_;
 
+        unsigned int linearizations_;
         unsigned int newtonIterations_;
         unsigned int linearIterations_;
         unsigned int wellIterations_;
