@@ -139,8 +139,6 @@ namespace Opm
             linIters += report.linear_iterations;
             if (report.well_iterations != std::numeric_limits<int>::min()) {
                 wellIters += report.well_iterations;
-            } else {
-                wellIters = report.well_iterations;
             }
             ++iteration;
         } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
@@ -154,10 +152,16 @@ namespace Opm
 
         linearIterations_ += linIters;
         nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
-        wellIterations_ += wellIters; 
+        if (wellIters != 0) {
+            wellIterations_ += wellIters;
+            wellIterationsLast_ = wellIters;
+        }
+        if (wellIters == 0) {
+            wellIterations_ = std::numeric_limits<int>::min();
+            wellIterationsLast_ = std::numeric_limits<int>::min();
+        }
         linearIterationsLast_ = linIters;
         nonlinearIterationsLast_ = iteration;
-        wellIterationsLast_ = wellIters;
 
         // Do model-specific post-step actions.
         model_->afterStep(dt, reservoir_state, well_state);
