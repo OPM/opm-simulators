@@ -35,18 +35,18 @@ namespace MissingFeatures {
         // The list is used to output messages only.
         std::unordered_set<std::string> unsupported_keywords = {
             "ADSALNOD", "API", "AQUCON", "AQUNUM"
-            "COMPLUMP", "COMPSEGS", "CONNECTION", "CPR", 
+            "COMPLUMP", "CONNECTION", "CPR",
             "DATE", "ECHO", "EDITNNC", "ENDNUM",
             "ENDSKIP", "ENKSRVD", "ENPTVD", "EQLNUM", "EQUALREG",
             "EXCEL", "EXTRAPMS", "FILLEPS", "FIPNUM",
-            "FULLIMP", "GDORIENT", "GECON", "GEFAC", "GRIDUNIT", 
+            "FULLIMP", "GDORIENT", "GECON", "GEFAC", "GRIDUNIT",
             "GRUPNET", "IMKRVD", "IMPES", "IMPTVD", "MAPUNITS",
             "MAXVALUE", "MESSAGES", "MINVALUE", "MONITOR", "MSGFILE",
             "MULT_XYZ", "NETBALAN", "NEXTSTEP", "NOCASC", "NOECHO",
             "NOGGF", "NOINSPEC", "NOMONITO", "NONNC", "NORSSPEC", "NOSIM",
-            "NSTACK", "NUMRES", "NUPCOL", "OILVISCT", "OLDTRAN", "OPTIONS", 
-            "PARALLEL", "PBVD", "PCG", "PERMXY", "PERMYZ", 
-            "PERMZX", "PIMULTAB", "PLMIXPAR", "PLYADSS", "PLYDHFLF",
+            "NSTACK", "NUMRES", "NUPCOL", "OILVISCT", "OLDTRAN", "OPTIONS",
+            "PARALLEL", "PBVD", "PCG", "PERMXY", "PERMYZ",
+            "PERMZX", "PIMULTAB", "PLYADSS", "PLYDHFLF",
             "RADFIN4", "RKTRMDIR", "ROCKCOMP", "ROCKOPTS",
             "ROCKTAB", "RPTGRID", "RPTONLY", "RPTONLYO", "RPTPROS", "PRTRST", "RPTRUNSP",
             "RPTSCHED", "RPTSOL", "RTEMPVD", "RUNSUM", "SATOPTS", "SAVE", "SEPARATE",
@@ -55,7 +55,7 @@ namespace MissingFeatures {
             "VAPPARS", "VISCREF", "WATVISCT",
             "WPAVE", "WPIMULT", "WPITAB", "WTEMP",
             "WTEST", "WTRACER", "ZIPPY2" };
-        
+
         // check deck and keyword for flow and parser.
         for (size_t idx = 0; idx < deck.size(); ++idx) {
             const auto& keyword = deck.getKeyword(idx);
@@ -63,8 +63,8 @@ namespace MissingFeatures {
             it = unsupported_keywords.find(keyword.name());
             if (it != unsupported_keywords.end()) {
                 std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
-                    + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n"; 
-                    OpmLog::error(msg);
+                    + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                OpmLog::error(msg);
             }
         }
     }
