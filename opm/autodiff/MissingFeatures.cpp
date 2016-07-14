@@ -66,6 +66,61 @@ namespace MissingFeatures {
                     + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
                 OpmLog::error(msg);
             }
+
+            // check for partially supported options.
+            if (keyword.name() == "COMPORD") {
+                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
+                    const auto& record = keyword.getRecord(recordIdx);
+                    if (record.getItem("ORDER_TYPE").getTrimmedString(0) != "TRACK") {
+                        std::string msg = std::string("For keyword 'COMPORD' only 'TRACK' in second item is supported by flow.\n")
+                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                        OpmLog::error(msg);
+                    }
+                }
+            }
+
+            if (keyword.name() == "EHYSTR") {
+                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
+                    const auto& record = keyword.getRecord(recordIdx);
+                    if (record.getItem(1).get<int>(0) != 0) {
+                        std::string msg = std::string("For keyword 'EHYSTR' only Carlson kr hystersis model is supported by flow.\n")
+                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                        OpmLog::error(msg);
+                    }
+                }
+            }
+
+            if (keyword.name() == "ENDSCALE") {
+                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
+                    const auto& record = keyword.getRecord(recordIdx);
+                    if (record.getItem(0).getTrimmedString(0) == "DIRECT") {
+                        std::string msg = std::string("For keyword 'ENDSCALE', 'DIRECT' in first item is not supported by flow.\n")
+                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                        OpmLog::error(msg);
+                    }
+                    if (record.getItem(1).getTrimmedString(0) == "IRREVERS") {
+                        std::string msg = std::string("For keyword 'ENDSCALE', 'IRREVERS' in second item is not supported by flow.\n")
+                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                        OpmLog::error(msg);
+                    }
+                }
+            }
+
+            if (keyword.name() == "PINCH") {
+                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
+                    const auto& record = keyword.getRecord(recordIdx);
+                    if (record.getItem(1).getTrimmedString(0) != "GAP") {
+                        std::string msg = std::string("For keyword 'PINCH' only 'GAP' in second item is supported by flow.\n")
+                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                        OpmLog::error(msg);
+                    }
+                    if (record.getItem(3).getTrimmedString(0) != "TOPBOT") {
+                        std::string msg = std::string("For keyword 'PINCH' only 'TOPBOT' in fourth item is supported by flow.\n")
+                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                        OpmLog::error(msg);
+                    }
+                }
+            }
         }
     }
 } // namespace MissingFeatures
