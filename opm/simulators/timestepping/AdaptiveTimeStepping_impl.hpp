@@ -219,7 +219,7 @@ namespace Opm {
                     if (solver.wellIterations() != 0) {
                         ss << "well iterations = " << solver.wellIterations() << ", ";
                     }
-		    ss << "non-linear iterations = " << solver.nonlinearIterations()
+                    ss << "non-linear iterations = " << solver.nonlinearIterations()
 		       << ", total linear iterations = " << solver.linearIterations();
                     OpmLog::info(ss.str());
                 }
