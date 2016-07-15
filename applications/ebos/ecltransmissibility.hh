@@ -91,9 +91,17 @@ public:
      */
     void finishInit()
     {
-        const auto& elementMapper = simulator_.model().elementMapper();
-        const auto& gridView = simulator_.gridView();
         const auto& problem = simulator_.problem();
+        const auto& gridManager = simulator_.gridManager();
+        const auto& gridView = simulator_.gridView();
+        const auto& elementMapper = simulator_.model().elementMapper();
+        const auto& cartMapper = gridManager.cartesianIndexMapper();
+        const auto eclState = gridManager.eclState();
+        const auto eclGrid = eclState->getInputGrid();
+        const auto transMult = eclState->getTransMult();
+
+        const std::vector<double>& ntg =
+            eclState->get3DProperties().getDoubleGridProperty("NTG").getData();
 
         unsigned numElements = elementMapper.size();
 
@@ -119,31 +127,15 @@ public:
             unsigned elemIdx = elementMapper.map(elem);
 #endif
 
-            // get the geometry of the current element
-            const auto& geom = elem.geometry();
-
-            // compute the axis specific "centroids" used for the
-            // transmissibilities
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx) {
-                DimVector x0Local(0.5);
-                DimVector x1Local(0.5);
-
-                x0Local[dimIdx] = 0.0;
-                x1Local[dimIdx] = 1.0;
-
-                DimVector x = geom.global(x0Local);
-                x += geom.global(x1Local);
-                x /= 2;
-
-                axisCentroids[dimIdx][elemIdx] = x;
-            }
+            // compute the axis specific "centroids" used for the transmissibilities. for
+            // consistency with the flow simulator, we use the element centers as
+            // computed by opm-parser's Opm::EclipseGrid class for all axes.
+            unsigned cartesianCellIdx = cartMapper.cartesianIndex(elemIdx);
+            const auto& centroid = eclGrid->getCellCenter(cartesianCellIdx);
+            for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
+                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+                    axisCentroids[axisIdx][elemIdx][dimIdx] = centroid[dimIdx];
         }
-
-        const auto& gridManager = simulator_.gridManager();
-        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
-        std::shared_ptr<const Opm::TransMult> transMult = eclState->getTransMult();
-        const std::vector<double>& ntg =
-            eclState->get3DProperties().getDoubleGridProperty("NTG").getData();
 
         // reserving some space in the hashmap upfront saves quite a bit of time because
         // resizes are costly for hashmaps and there would be quite a few of them if we
@@ -184,8 +176,8 @@ public:
                 if (insideElemIdx > outsideElemIdx)
                     continue;
 
-                unsigned insideCartElemIdx = gridManager.cartesianIndex(insideElemIdx);
-                unsigned outsideCartElemIdx = gridManager.cartesianIndex(outsideElemIdx);
+                unsigned insideCartElemIdx = cartMapper.cartesianIndex(insideElemIdx);
+                unsigned outsideCartElemIdx = cartMapper.cartesianIndex(outsideElemIdx);
 
                 // local indices of the faces of the inside and
                 // outside elements which contain the intersection
@@ -283,11 +275,12 @@ private:
     {
         Scalar isArea = is.geometry().volume();
         DimVector n = is.centerUnitOuterNormal();
+        n *= isArea;
 
         unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
         halfTrans = perm[dimIdx][dimIdx];
-        halfTrans *= isArea;
+        //halfTrans *= isArea;
 
         Scalar val = 0;
         for (unsigned i = 0; i < n.size(); ++i)
