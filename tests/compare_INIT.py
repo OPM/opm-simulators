@@ -15,8 +15,8 @@ def compare_files( flow_file , ref_file , kw_list):
         flow_kw = flow[kw][0]
         ref_kw = ref[kw][0]
 
-        if not flow_kw.equal_numeric( ref_kw , epsilon = 1e-3 ):
-            sys.exit("Keyword:%s was different in flow simulation and reference")
+        if not flow_kw.equal_numeric( ref_kw , abs_epsilon = 0 , rel_epsilon = 1e-2):
+            sys.exit("Keyword:%s was different in flow simulation and reference" % kw)
             
 
         
