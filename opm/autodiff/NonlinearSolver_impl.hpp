@@ -36,8 +36,7 @@ namespace Opm
           linearIterations_(0),
           wellIterations_(0),
           nonlinearIterationsLast_(0),
-          linearIterationsLast_(0),
-          wellIterationsLast_(0)
+          linearIterationsLast_(0)
     {
         if (!model_) {
             OPM_THROW(std::logic_error, "Must provide a non-null model argument for NonlinearSolver.");
@@ -84,12 +83,6 @@ namespace Opm
     int NonlinearSolver<PhysicalModel>::linearIterationsLastStep() const
     {
         return linearIterationsLast_;
-    }
-
-    template <class PhysicalModel>
-    int NonlinearSolver<PhysicalModel>::wellIterationsLastStep() const
-    {
-        return wellIterationsLast_;
     }
 
 
@@ -151,7 +144,6 @@ namespace Opm
         linearIterations_ += linIters;
         nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
         wellIterations_ = wellIters;
-        wellIterationsLast_ = wellIters;
         linearIterationsLast_ = linIters;
         nonlinearIterationsLast_ = iteration;
 
