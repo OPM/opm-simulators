@@ -92,6 +92,13 @@ namespace Opm
         return wellIterationsLast_;
     }
 
+    template <class PhysicalModel>
+    V NonlinearSolver<PhysicalModel>::computeFluidInPlace(const ReservoirState& x,
+                                                          const WellState& xw) const
+    {
+        return model_->computeFluidInPlace(x, xw);
+    }
+
 
     template <class PhysicalModel>
     int

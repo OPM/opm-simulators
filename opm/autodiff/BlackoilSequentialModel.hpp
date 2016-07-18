@@ -246,7 +246,12 @@ namespace Opm {
         }
 
 
-
+        /// Compute fluid in place.
+        V computeFluidInPlace(const ReservoirState& x,
+                              const WellState& xw) const
+        {
+            return transport_solver_.computeFluidInPlace(x, xw);
+        }
 
 
 
