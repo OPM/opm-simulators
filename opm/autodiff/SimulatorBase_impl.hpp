@@ -135,12 +135,10 @@ namespace Opm
         std::vector<double> well_potentials;
         DynamicListEconLimited dynamic_list_econ_limited;
 
-        OpmLog::info("PORV:  " + std::to_string(unit::convert::to(geo_.poreVolume().sum(), unit::stb)));
-        V OOIP = asImpl().computeFIP(state);
-        OOIP[0] = unit::convert::to(OOIP[0], unit::stb);
-        OOIP[1] = unit::convert::to(OOIP[1], unit::stb); 
-        OOIP[2] = unit::convert::to(OOIP[2], 1000*unit::cubic(unit::feet));
-
+        const auto& units = eclipse_state_->getUnits();
+        bool ooip_computed = false;
+        V OOIP;
+        double pv = geo_.poreVolume().sum();
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -190,6 +188,20 @@ namespace Opm
             const WellModel well_model(wells);
 
             auto solver = asImpl().createSolver(well_model);
+
+            // Compute FIP;
+            if (!ooip_computed) {
+                OOIP = solver->computeFluidInPlace(state, well_state);
+                if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+                    pv = unit::convert::to(pv, unit::stb);
+                    OOIP[0] = unit::convert::to(OOIP[0], unit::stb);
+                    OOIP[1] = unit::convert::to(OOIP[1], unit::stb); 
+                    OOIP[2] = unit::convert::to(OOIP[2], 1000*unit::cubic(unit::feet));
+                    OOIP[3] = unit::convert::to(OOIP[3], 1000*unit::cubic(unit::feet));
+                    OOIP[4] = unit::convert::to(OOIP[4], unit::stb);
+                    ooip_computed = true;
+                }
+            }
 
             if( terminal_output_ )
             {
@@ -254,15 +266,19 @@ namespace Opm
 
             // Report timing.
             const double st = solver_timer.secsSinceStart();
-
-            V COIP = asImpl().computeFIP(state);
-            COIP[0] = unit::convert::to(COIP[0], unit::stb);
-            COIP[1] = unit::convert::to(COIP[1], unit::stb); 
-            COIP[2] = unit::convert::to(COIP[2], 1000*unit::cubic(unit::feet));
+            V COIP = solver->computeFluidInPlace(state, well_state);
+            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+                COIP[0] = unit::convert::to(COIP[0], unit::stb);
+                COIP[1] = unit::convert::to(COIP[1], unit::stb); 
+                COIP[2] = unit::convert::to(COIP[2], 1000*unit::cubic(unit::feet));
+                COIP[3] = unit::convert::to(COIP[3], 1000*unit::cubic(unit::feet));
+                COIP[4] = unit::convert::to(COIP[4], unit::stb); 
+            }
             OpmLog::info("*********************Fluid in Place******************");
-            OpmLog::info("----------Oil--------Wat---------Gas");
-            OpmLog::info("Currently : " + std::to_string(COIP[0]) + "       " + std::to_string(COIP[1]) + "       " + std::to_string(COIP[2]));
-            OpmLog::info("Originally: " + std::to_string(OOIP[0]) + "       " + std::to_string(OOIP[1]) + "       " + std::to_string(OOIP[2]));
+            OpmLog::info("PORV : " + std::to_string(pv));
+            OpmLog::info("----------Oil--------VapOil-------Wat---------Gas--------DisGas");
+            OpmLog::info("Currently : " + std::to_string(COIP[1]) + "       " + std::to_string(COIP[4]) + "       " + std::to_string(COIP[0]) + "       " + std::to_string(COIP[2]) + "       " + std::to_string(COIP[3]));
+            OpmLog::info("Originally: " + std::to_string(OOIP[1]) + "       " + std::to_string(OOIP[4]) + "       " + std::to_string(OOIP[0]) + "       " + std::to_string(OOIP[2]) + "       " + std::to_string(OOIP[3]));
             // accumulate total time
             stime += st;
             
@@ -655,6 +671,7 @@ namespace Opm
             sw[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Aqua]];
             sg[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Vapour]];
         }
+        // Get Bo, Bw, Bg.
         V fip(V::Zero(np));
         fip[0] = (geo_.poreVolume() * so).sum();
         fip[1] = (geo_.poreVolume() * sw).sum();

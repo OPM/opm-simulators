@@ -260,6 +260,10 @@ namespace Opm {
         WellModel& wellModel() { return well_model_; }
         const WellModel& wellModel() const { return well_model_; }
 
+        /// Calculate FIP
+        V computeFluidInPlace(const ReservoirState& x,
+                              const WellState& xw);
+
     protected:
 
         // ---------  Types and enums  ---------

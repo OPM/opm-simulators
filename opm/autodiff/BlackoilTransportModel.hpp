@@ -159,6 +159,11 @@ namespace Opm {
 
 
 
+        V computeFluidInPlace(const ReservoirState& x,
+                              const WellState& xw)
+        {
+            return asImpl().computeFluidInPlace(x, xw);
+        }
 
 
 
@@ -270,6 +275,10 @@ namespace Opm {
                 Base::computeAccum(state, aix);
             }
         }
+
+
+
+
 
 
 

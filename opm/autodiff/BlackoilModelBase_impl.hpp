@@ -2295,6 +2295,57 @@ namespace detail {
 
 
 
+
+    template <class Grid, class WellModel, class Implementation>
+    V
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    computeFluidInPlace(const ReservoirState& x,
+                        const WellState& xw)
+    {
+        SolutionState state = asImpl().variableState(x, xw);
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
+        const ADB&              press = state.pressure;
+        const ADB&              temp  = state.temperature;
+        const std::vector<ADB>& sat   = state.saturation;
+        const ADB&              rs    = state.rs;
+        const ADB&              rv    = state.rv;
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+
+        const ADB pv_mult = poroMult(press);
+        const V& pv = geo_.poreVolume();
+        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
+        std::vector<V> fip(5, V::Zero(nc));
+        // std::cout << "Oil sat: \n";
+        //std::cout << sat[pu.phase_pos[Oil]].value() << std::endl;
+        //std::cout << "Gas sat: \n";
+        //std::cout << sat[pu.phase_pos[Gas]].value() << std::endl;
+        for (int phase = 0; phase < maxnp; ++phase) {
+            if (active_[ phase ]) {
+                const int pos = pu.phase_pos[ phase ];
+                const auto& b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
+                fip[phase] = ((pv_mult * b * sat[pos] * pv).value());
+            }
+        }
+
+        if (active_[ Oil ] && active_[ Gas ]) {
+            // Account for gas dissolved in oil and vaporized oil
+            const int po = pu.phase_pos[Oil];
+            const int pg = pu.phase_pos[Gas];
+            fip[3] = state.rs.value() * fip[po];
+            fip[4] = state.rv.value() * fip[pg];
+        }
+
+        V values(5);
+        for (int i = 0; i < 5; ++i) {
+            values[i] = int(fip[i].sum());
+        }
+        return values;
+        
+    }
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILMODELBASE_IMPL_HEADER_INCLUDED

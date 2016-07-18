@@ -125,6 +125,10 @@ namespace Opm {
         /// Number of well iterations used in all calls to step().
         int wellIterationsLastStep() const;
 
+        /// Compute fluid in place.
+        V computeFluidInPlace(const ReservoirState& x,
+                              const WellState& xw) const;
+
         /// Reference to physical model.
         const PhysicalModel& model() const;
 
