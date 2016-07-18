@@ -22,11 +22,29 @@
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <unordered_set>
 #include <string>
+#include <map>
 
 
 namespace Opm {
 
 namespace MissingFeatures {
+
+    template<typename T>
+    struct PartiallySupported {
+        int item;
+        T item_value;
+    };
+
+    std::multimap<std::string, PartiallySupported<std::string> >
+    string_options = { {"COMPORD", PartiallySupported<std::string>{1, "TRACK"}},
+                       {"ENDSCALE",PartiallySupported<std::string>{0, "NODIR"}},
+                       {"ENDSCALE",PartiallySupported<std::string>{1, "REVER"}},
+                       {"PINCH",   PartiallySupported<std::string>{1, "GAP"}},
+                       {"PINCH",   PartiallySupported<std::string>{3, "TOPBOT"}}
+    };
+
+    std::multimap<std::string, PartiallySupported<int> >
+    int_options = { {"EHYSTR", PartiallySupported<int>{1, 0}}};
 
     void checkKeywords(const Deck& deck)
     {
@@ -67,58 +85,30 @@ namespace MissingFeatures {
                 OpmLog::error(msg);
             }
 
-            // check for partially supported options.
-            if (keyword.name() == "COMPORD") {
-                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
-                    const auto& record = keyword.getRecord(recordIdx);
-                    if (record.getItem("ORDER_TYPE").getTrimmedString(0) != "TRACK") {
-                        std::string msg = std::string("For keyword 'COMPORD' only 'TRACK' in second item is supported by flow.\n")
-                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                        OpmLog::error(msg);
-                    }
+            // check for partially supported keywords.
+            std::multimap<std::string, PartiallySupported<std::string>>::iterator string_it, string_low, string_up;
+            string_low = string_options.lower_bound(keyword.name());
+            string_up  = string_options.upper_bound(keyword.name());
+            for (string_it = string_low; string_it != string_up; ++string_it) {
+                const auto& record = keyword.getRecord(0);
+                if (record.getItem(string_it->second.item).get<std::string>(0) != string_it->second.item_value) {
+                    std::string msg = "For keyword '" + string_it->first + "' only value " + string_it->second.item_value + " in item " +
+                        std::to_string(string_it->second.item + 1) + " is supported by flow.\n"
+                        + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                    OpmLog::error(msg);
                 }
             }
 
-            if (keyword.name() == "EHYSTR") {
-                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
-                    const auto& record = keyword.getRecord(recordIdx);
-                    if (record.getItem(1).get<int>(0) != 0) {
-                        std::string msg = std::string("For keyword 'EHYSTR' only Carlson kr hystersis model is supported by flow.\n")
-                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                        OpmLog::error(msg);
-                    }
-                }
-            }
-
-            if (keyword.name() == "ENDSCALE") {
-                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
-                    const auto& record = keyword.getRecord(recordIdx);
-                    if (record.getItem(0).getTrimmedString(0) == "DIRECT") {
-                        std::string msg = std::string("For keyword 'ENDSCALE', 'DIRECT' in first item is not supported by flow.\n")
-                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                        OpmLog::error(msg);
-                    }
-                    if (record.getItem(1).getTrimmedString(0) == "IRREVERS") {
-                        std::string msg = std::string("For keyword 'ENDSCALE', 'IRREVERS' in second item is not supported by flow.\n")
-                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                        OpmLog::error(msg);
-                    }
-                }
-            }
-
-            if (keyword.name() == "PINCH") {
-                for (unsigned recordIdx = 0; recordIdx < keyword.size(); ++recordIdx) {
-                    const auto& record = keyword.getRecord(recordIdx);
-                    if (record.getItem(1).getTrimmedString(0) != "GAP") {
-                        std::string msg = std::string("For keyword 'PINCH' only 'GAP' in second item is supported by flow.\n")
-                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                        OpmLog::error(msg);
-                    }
-                    if (record.getItem(3).getTrimmedString(0) != "TOPBOT") {
-                        std::string msg = std::string("For keyword 'PINCH' only 'TOPBOT' in fourth item is supported by flow.\n")
-                            + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                        OpmLog::error(msg);
-                    }
+            std::multimap<std::string, PartiallySupported<int>>::iterator int_it, int_low, int_up;
+            int_low = int_options.lower_bound(keyword.name());
+            int_up  = int_options.upper_bound(keyword.name());
+            for (int_it = int_low; int_it != int_up; ++int_it) {
+                const auto& record = keyword.getRecord(0);
+                if (record.getItem(int_it->second.item).get<int>(0) != int_it->second.item_value) {
+                    std::string msg = "For keyword '" + int_it->first + "' only value " + std::to_string(int_it->second.item_value) + " in item " +
+                        std::to_string(int_it->second.item + 1) + " is supported by flow.\n"
+                        + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                    OpmLog::error(msg);
                 }
             }
         }
