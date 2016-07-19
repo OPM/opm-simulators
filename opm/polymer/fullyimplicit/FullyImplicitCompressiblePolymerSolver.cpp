@@ -523,11 +523,12 @@ namespace {
 
 
 
-    V
+    std::vector<V>
     FullyImplicitCompressiblePolymerSolver::computeFluidInPlace(const PolymerBlackoilState& x,
-                                                               const WellStateFullyImplicitBlackoilPolymer& xw)
+                                                                const WellStateFullyImplicitBlackoilPolymer& xw,
+                                                                const std::vector<int>& fipnum)
     {
-        const SolutionState state = variableState(x, xw);
+        const SolutionState state = constantState(x, xw);
         const int nc = grid_.number_of_cells;
 
         const ADB&              press = state.pressure;
@@ -545,12 +546,21 @@ namespace {
             fip[phase] = (pv_mult * b * sat[phase] * pv).value();
         }
 
-        V values(5);
-        for (int i = 0; i < 5; ++i) {
-            values[i] = fip[i].sum();
+
+        const int dims = *std::max_element(fipnum.begin(), fipnum.end());
+        std::vector<V> values(dims, V::Zero(5));
+
+        for (int d = 0; d < dims; ++d) {
+            for (int c = 0; c < nc; ++c) {
+                for (int i = 0; i < 5; ++i) {
+                    if (fipnum[c] == d) {
+                        values[d][i] += fip[c][i];
+                    }
+                }
+            }
         }
 
-        return values;        
+        return values;
     }
 
 

@@ -108,8 +108,10 @@ namespace Opm {
                               const PolymerBlackoilState& current ) const;
 
         /// Compute fluid in place.
-        V computeFluidInPlace(const PolymerBlackoilState& x,
-                              const WellStateFullyImplicitBlackoilPolymer& xw);
+        std::vector<V> 
+        computeFluidInPlace(const PolymerBlackoilState& x,
+                            const WellStateFullyImplicitBlackoilPolymer& xw,
+                            const std::vector<int>& fipnum);
 
     private:
 

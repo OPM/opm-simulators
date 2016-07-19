@@ -260,8 +260,10 @@ namespace Opm {
         const WellModel& wellModel() const { return well_model_; }
 
         /// Calculate FIP
-        V computeFluidInPlace(const ReservoirState& x,
-                              const WellState& xw);
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const WellState& xw,
+                            const std::vector<int>& fipnum);
 
     protected:
 
