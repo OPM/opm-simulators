@@ -100,10 +100,12 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    V NonlinearSolver<PhysicalModel>::computeFluidInPlace(const ReservoirState& x,
-                                                          const WellState& xw) const
+    std::vector<V> 
+    NonlinearSolver<PhysicalModel>::computeFluidInPlace(const ReservoirState& x,
+                                                        const WellState& xw,
+                                                        const std::vector<int>& fipnum) const
     {
-        return model_->computeFluidInPlace(x, xw);
+        return model_->computeFluidInPlace(x, xw, fipnum);
     }
 
 

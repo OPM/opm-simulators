@@ -159,10 +159,12 @@ namespace Opm {
 
 
 
-        V computeFluidInPlace(const ReservoirState& x,
-                              const WellState& xw)
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const WellState& xw,
+                            const std::vector<int>& fipnum)
         {
-            return asImpl().computeFluidInPlace(x, xw);
+            return asImpl().computeFluidInPlace(x, xw, fipnum);
         }
 
 

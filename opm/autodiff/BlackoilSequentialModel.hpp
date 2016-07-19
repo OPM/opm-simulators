@@ -248,10 +248,12 @@ namespace Opm {
 
 
         /// Compute fluid in place.
-        V computeFluidInPlace(const ReservoirState& x,
-                              const WellState& xw) const
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const WellState& xw,
+                            const std::vector<int>& fipnum) const
         {
-            return transport_solver_.computeFluidInPlace(x, xw);
+            return transport_solver_.computeFluidInPlace(x, xw, fipnum);
         }
 
 

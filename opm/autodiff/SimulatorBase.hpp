@@ -157,7 +157,13 @@ namespace Opm
                     const Wells*                    wells,
                     const BlackoilState&            x,
                     WellState& xw);
-        V computeFIP(const ReservoirState& state);
+
+        void
+        FIPUnitConvert(const UnitSystem& units,
+                       std::vector<V>& fip);
+        
+        V
+        FIPTotals(const std::vector<V>& fip);
 
 
         void computeWellPotentials(const Wells*                    wells,

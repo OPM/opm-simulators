@@ -135,10 +135,13 @@ namespace Opm
         std::vector<double> well_potentials;
         DynamicListEconLimited dynamic_list_econ_limited;
 
-        const auto& units = eclipse_state_->getUnits();
         bool ooip_computed = false;
-        V OOIP;
-        double pv = geo_.poreVolume().sum();
+        std::vector<int> fipnum = eclipse_state_->get3DProperties().getRegions("FIPNUM");
+        if (fipnum.empty()) {
+            fipnum.resize(AutoDiffGrid::numCells(grid_));
+            std::fill(fipnum.begin(), fipnum.end(), 0);
+        }
+        std::vector<V> OOIP;
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -189,18 +192,11 @@ namespace Opm
 
             auto solver = asImpl().createSolver(well_model);
 
-            // Compute FIP;
+            // Compute orignal FIP;
             if (!ooip_computed) {
-                OOIP = solver->computeFluidInPlace(state, well_state);
-                if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-                    pv = unit::convert::to(pv, unit::stb);
-                    OOIP[0] = unit::convert::to(OOIP[0], unit::stb);
-                    OOIP[1] = unit::convert::to(OOIP[1], unit::stb); 
-                    OOIP[2] = unit::convert::to(OOIP[2], 1000*unit::cubic(unit::feet));
-                    OOIP[3] = unit::convert::to(OOIP[3], 1000*unit::cubic(unit::feet));
-                    OOIP[4] = unit::convert::to(OOIP[4], unit::stb);
-                    ooip_computed = true;
-                }
+                OOIP = solver->computeFluidInPlace(state, well_state, fipnum);
+                FIPUnitConvert(eclipse_state_->getUnits(), OOIP);
+                ooip_computed = true;
             }
 
             if( terminal_output_ )
@@ -266,19 +262,17 @@ namespace Opm
 
             // Report timing.
             const double st = solver_timer.secsSinceStart();
-            V COIP = solver->computeFluidInPlace(state, well_state);
-            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-                COIP[0] = unit::convert::to(COIP[0], unit::stb);
-                COIP[1] = unit::convert::to(COIP[1], unit::stb); 
-                COIP[2] = unit::convert::to(COIP[2], 1000*unit::cubic(unit::feet));
-                COIP[3] = unit::convert::to(COIP[3], 1000*unit::cubic(unit::feet));
-                COIP[4] = unit::convert::to(COIP[4], unit::stb); 
-            }
-            OpmLog::info("*********************Fluid in Place******************");
-            OpmLog::info("PORV : " + std::to_string(pv));
-            OpmLog::info("----------Oil--------VapOil-------Wat---------Gas--------DisGas");
-            OpmLog::info("Currently : " + std::to_string(COIP[1]) + "       " + std::to_string(COIP[4]) + "       " + std::to_string(COIP[0]) + "       " + std::to_string(COIP[2]) + "       " + std::to_string(COIP[3]));
-            OpmLog::info("Originally: " + std::to_string(OOIP[1]) + "       " + std::to_string(OOIP[4]) + "       " + std::to_string(OOIP[0]) + "       " + std::to_string(OOIP[2]) + "       " + std::to_string(OOIP[3]));
+            // Compute current FIP.
+            std::vector<V> COIP;
+            COIP = solver->computeFluidInPlace(state, well_state, fipnum);
+            FIPUnitConvert(eclipse_state_->getUnits(), COIP);
+            V OOIP_totals = FIPTotals(OOIP);
+            V COIP_totals = FIPTotals(COIP);
+            OpmLog::info("*****************************Field Totals**************************");
+            OpmLog::info("                     Liquid               VAPOUR              Water              Free Gas             Dissolved Gas");
+            OpmLog::info("Currently  in place: " + std::to_string(COIP_totals[1]) + "       " + std::to_string(COIP_totals[4]) + "       " + std::to_string(COIP_totals[0]) + "       " + std::to_string(COIP_totals[2]) + "       " + std::to_string(COIP_totals[3]));
+            OpmLog::info("Originally in place: " + std::to_string(OOIP_totals[1]) + "       " + std::to_string(OOIP_totals[4]) + "       " + std::to_string(OOIP_totals[0]) + "       " + std::to_string(OOIP_totals[2]) + "       " + std::to_string(OOIP_totals[3]) + "\n");
+
             // accumulate total time
             stime += st;
             
@@ -657,27 +651,36 @@ namespace Opm
 
 
     template <class Implementation>
-    V SimulatorBase<Implementation>::computeFIP(const ReservoirState& state)
+    void
+    SimulatorBase<Implementation>::FIPUnitConvert(const UnitSystem& units,
+                                                  std::vector<V>& fip)
     {
-        using namespace Opm::AutoDiffGrid;
-        const int np = state.numPhases();
-        const int nc = numCells(grid_);
-        const Opm::PhaseUsage& pu = props_.phaseUsage();
-        V so = V::Zero(nc);
-        V sw = V::Zero(nc);
-        V sg = V::Zero(nc);
-        for (int c = 0; c < nc; ++c) {
-            so[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Liquid]];
-            sw[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Aqua]];
-            sg[c] = state.saturation()[c*np + pu.phase_pos[BlackoilPhases::Vapour]];
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+            for (int i = 0; i < fip.size(); ++i) {
+                fip[i][0] = unit::convert::to(fip[i][0], unit::stb);
+                fip[i][1] = unit::convert::to(fip[i][1], unit::stb); 
+                fip[i][2] = unit::convert::to(fip[i][2], 1000*unit::cubic(unit::feet));
+                fip[i][3] = unit::convert::to(fip[i][3], 1000*unit::cubic(unit::feet));
+                fip[i][4] = unit::convert::to(fip[i][4], unit::stb);
+            }
         }
-        // Get Bo, Bw, Bg.
-        V fip(V::Zero(np));
-        fip[0] = (geo_.poreVolume() * so).sum();
-        fip[1] = (geo_.poreVolume() * sw).sum();
-        fip[2] = (geo_.poreVolume() * sg).sum();
-        return fip;
     }
+
+
+    template <class Implementation>
+    V
+    SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip)
+    {
+        V totals(V::Zero(5));
+        for (int i = 0; i < 5; ++i) {
+            for (size_t reg = 0; reg < fip.size(); ++reg) {
+                totals[i] += fip[reg][i];
+            }
+        }
+        
+        return totals;
+    }
+    
 
 
     template <class Implementation>

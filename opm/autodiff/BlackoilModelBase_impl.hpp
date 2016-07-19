@@ -2297,36 +2297,45 @@ namespace detail {
 
 
     template <class Grid, class WellModel, class Implementation>
-    V
+    std::vector<V>
     BlackoilModelBase<Grid, WellModel, Implementation>::
     computeFluidInPlace(const ReservoirState& x,
-                        const WellState& xw)
+                        const WellState& xw,
+                        const std::vector<int>& fipnum)
     {
-        SolutionState state = asImpl().variableState(x, xw);
-        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
-        const ADB&              press = state.pressure;
-        const ADB&              temp  = state.temperature;
-        const std::vector<ADB>& sat   = state.saturation;
-        const ADB&              rs    = state.rs;
-        const ADB&              rv    = state.rv;
+        const int np = x.numPhases();
+
+        SolutionState state(np);
+        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
+        state.pressure    = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
+        state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
+        state.saturation[Water] = ADB::constant(s.col(Water));
+        state.saturation[Oil] = ADB::constant(s.col(Oil));
+        state.saturation[Gas] = ADB::constant(s.col(Gas));
+        state.rs =  ADB::constant(Eigen::Map<const V>(& x.gasoilratio()[0], nc, 1));
+        state.rv = ADB::constant(Eigen::Map<const V>(& x.rv()[0], nc, 1));
+        state.canonical_phase_pressures = computePressures(state.pressure, 
+                                                           state.saturation[Water], 
+                                                           state.saturation[Oil], 
+                                                           state.saturation[Gas]);
+
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
-        const ADB pv_mult = poroMult(press);
+
+
+        const ADB pv_mult = poroMult(state.pressure);
         const V& pv = geo_.poreVolume();
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         std::vector<V> fip(5, V::Zero(nc));
-        // std::cout << "Oil sat: \n";
-        //std::cout << sat[pu.phase_pos[Oil]].value() << std::endl;
-        //std::cout << "Gas sat: \n";
-        //std::cout << sat[pu.phase_pos[Gas]].value() << std::endl;
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                const auto& b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
-                fip[phase] = ((pv_mult * b * sat[pos] * pv).value());
+                const auto& b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], state.temperature, state.rs, state.rv, cond);
+                fip[phase] = ((pv_mult * b * state.saturation[pos] * pv).value());
             }
         }
 
@@ -2338,10 +2347,19 @@ namespace detail {
             fip[4] = state.rv.value() * fip[pg];
         }
 
-        V values(5);
-        for (int i = 0; i < 5; ++i) {
-            values[i] = int(fip[i].sum());
+        const int dims = *std::max_element(fipnum.begin(), fipnum.end()) + 1;
+        std::vector<V> values(dims, V::Zero(5));
+
+        for (int d = 0; d < dims; ++d) {
+            for (int c = 0; c < nc; ++c) {
+                if (fipnum[c] == d) {
+                    for (int i = 0; i < 5; ++i) {
+                        values[d][i] += fip[i][c];
+                    }
+                }
+            }
         }
+
         return values;
         
     }

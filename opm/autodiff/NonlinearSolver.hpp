@@ -126,8 +126,10 @@ namespace Opm {
         int wellIterationsLastStep() const;
 
         /// Compute fluid in place.
-        V computeFluidInPlace(const ReservoirState& x,
-                              const WellState& xw) const;
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const WellState& xw,
+                            const std::vector<int>& fipnum) const;
 
         /// Reference to physical model.
         const PhysicalModel& model() const;
