@@ -101,7 +101,8 @@ namespace Opm
         if (p_.empty()) {
             // Approximating poro multiplier with a quadratic curve,
             // we must use its derivative.
-            return rock_comp_ + 2 * rock_comp_ * rock_comp_ * (pressure - pref_);
+            const double cpnorm = rock_comp_*(pressure - pref_);
+            return rock_comp_ + cpnorm*rock_comp_;
         } else {
             return Opm::linearInterpolationDerivative(p_, poromult_, pressure);
         }
