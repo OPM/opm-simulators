@@ -213,7 +213,7 @@ namespace Opm
                 {
                     std::ostringstream iter_msg;
                     iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
-                    if (solver->wellIterations() != std::numeric_limits<int>::min()) {
+                    if (solver->wellIterations() != 0) {
                         iter_msg << " days well iterations = " << solver->wellIterations() << ", ";
                     }
                     iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
