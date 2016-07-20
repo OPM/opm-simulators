@@ -117,6 +117,9 @@ namespace Opm {
         /// Number of linear solver iterations used in the last call to step().
         int linearIterationsLastStep() const;
 
+        /// Number of well iterations used in all calls to step().
+        int wellIterationsLastStep() const;
+
         /// Reference to physical model.
         const PhysicalModel& model() const;
 
@@ -157,6 +160,7 @@ namespace Opm {
         int wellIterations_;
         int nonlinearIterationsLast_;
         int linearIterationsLast_;
+        int wellIterationsLast_;
     };
 } // namespace Opm
 
