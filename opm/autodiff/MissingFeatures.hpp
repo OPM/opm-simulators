@@ -24,6 +24,18 @@ namespace Opm {
 
 namespace MissingFeatures {
 
+    template <typename T>
+    struct PartiallySupported {
+        std::string item;
+        T item_value;
+    };
+
+    template <typename Keyword, typename Item, typename T>
+    void addUnsupported(std::multimap<std::string, PartiallySupported<T> >& map, T itemValue);
+
+    template <typename T>
+    void checkOptions(const DeckKeyword& keyword, std::multimap<std::string , PartiallySupported<T> >& map);
+
     void checkKeywords(const Deck& deck);
 
 }

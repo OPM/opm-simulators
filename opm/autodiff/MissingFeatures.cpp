@@ -17,34 +17,50 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
+#include <opm/parser/eclipse/Parser/ParserKeywords/C.hpp>
+#include <opm/parser/eclipse/Parser/ParserKeywords/E.hpp>
+#include <opm/parser/eclipse/Parser/ParserKeywords/P.hpp>
+
 #include <opm/autodiff/MissingFeatures.hpp>
+
 #include <unordered_set>
 #include <string>
 #include <map>
-
+#include <boost/lexical_cast.hpp>
 
 namespace Opm {
 
 namespace MissingFeatures {
 
-    template<typename T>
-    struct PartiallySupported {
-        int item;
-        T item_value;
-    };
 
-    std::multimap<std::string, PartiallySupported<std::string> >
-    string_options = { {"COMPORD", PartiallySupported<std::string>{1, "TRACK"}},
-                       {"ENDSCALE",PartiallySupported<std::string>{0, "NODIR"}},
-                       {"ENDSCALE",PartiallySupported<std::string>{1, "REVER"}},
-                       {"PINCH",   PartiallySupported<std::string>{1, "GAP"}},
-                       {"PINCH",   PartiallySupported<std::string>{3, "TOPBOT"}}
-    };
+    template <typename Keyword, typename Item, typename T>
+    void addUnsupported(std::multimap<std::string, PartiallySupported<T> >& map, T itemValue)
+    {
+        std::pair<std::string,PartiallySupported<T> > pair({Keyword::keywordName, PartiallySupported<T>{Item::itemName , itemValue}});
+        map.insert(pair);
+    }
 
-    std::multimap<std::string, PartiallySupported<int> >
-    int_options = { {"EHYSTR", PartiallySupported<int>{1, 0}}};
+
+    template <typename T>
+    void checkOptions(const DeckKeyword& keyword, std::multimap<std::string , PartiallySupported<T> >& map)
+    {
+        // check for partially supported keywords.
+        typename std::multimap<std::string, PartiallySupported<T> >::iterator it, itlow, itup;
+        itlow = map.lower_bound(keyword.name());
+        itup  = map.upper_bound(keyword.name());
+        for (it = itlow; it != itup; ++it) {
+            const auto& record = keyword.getRecord(0);
+            if (record.getItem(it->second.item).template get<T>(0) != it->second.item_value) {
+                std::string msg = "For keyword '" + it->first + "' only value " + boost::lexical_cast<std::string>(it->second.item_value)
+                    + " in item " + it->second.item + " is supported by flow.\n"
+                    + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
+                OpmLog::error(msg);
+            }
+        }
+    }
 
     void checkKeywords(const Deck& deck)
     {
@@ -73,6 +89,14 @@ namespace MissingFeatures {
             "VAPPARS", "VISCREF", "WATVISCT",
             "WPAVE", "WPIMULT", "WPITAB", "WTEMP",
             "WTEST", "WTRACER", "ZIPPY2" };
+        std::multimap<std::string, PartiallySupported<std::string> > string_options;
+        std::multimap<std::string, PartiallySupported<int> > int_options;
+        addUnsupported<ParserKeywords::COMPORD, ParserKeywords::COMPORD::ORDER_TYPE, std::string>(string_options , "TRACK");
+        addUnsupported<ParserKeywords::ENDSCALE, ParserKeywords::ENDSCALE::DIRECT, std::string>(string_options, "NODIR");
+        addUnsupported<ParserKeywords::ENDSCALE, ParserKeywords::ENDSCALE::IRREVERS, std::string>(string_options, "REVER");
+        addUnsupported<ParserKeywords::PINCH, ParserKeywords::PINCH::CONTROL_OPTION, std::string>(string_options, "GAP");
+        addUnsupported<ParserKeywords::PINCH, ParserKeywords::PINCH::PINCHOUT_OPTION, std::string>(string_options, "TOPBOT");
+        addUnsupported<ParserKeywords::EHYSTR, ParserKeywords::EHYSTR::relative_perm_hyst, int>(int_options , 0);
 
         // check deck and keyword for flow and parser.
         for (size_t idx = 0; idx < deck.size(); ++idx) {
@@ -84,33 +108,8 @@ namespace MissingFeatures {
                     + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
                 OpmLog::error(msg);
             }
-
-            // check for partially supported keywords.
-            std::multimap<std::string, PartiallySupported<std::string>>::iterator string_it, string_low, string_up;
-            string_low = string_options.lower_bound(keyword.name());
-            string_up  = string_options.upper_bound(keyword.name());
-            for (string_it = string_low; string_it != string_up; ++string_it) {
-                const auto& record = keyword.getRecord(0);
-                if (record.getItem(string_it->second.item).get<std::string>(0) != string_it->second.item_value) {
-                    std::string msg = "For keyword '" + string_it->first + "' only value " + string_it->second.item_value + " in item " +
-                        std::to_string(string_it->second.item + 1) + " is supported by flow.\n"
-                        + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                    OpmLog::error(msg);
-                }
-            }
-
-            std::multimap<std::string, PartiallySupported<int>>::iterator int_it, int_low, int_up;
-            int_low = int_options.lower_bound(keyword.name());
-            int_up  = int_options.upper_bound(keyword.name());
-            for (int_it = int_low; int_it != int_up; ++int_it) {
-                const auto& record = keyword.getRecord(0);
-                if (record.getItem(int_it->second.item).get<int>(0) != int_it->second.item_value) {
-                    std::string msg = "For keyword '" + int_it->first + "' only value " + std::to_string(int_it->second.item_value) + " in item " +
-                        std::to_string(int_it->second.item + 1) + " is supported by flow.\n"
-                        + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                    OpmLog::error(msg);
-                }
-            }
+            checkOptions<std::string>(keyword, string_options);
+            checkOptions<int>(keyword, int_options);
         }
     }
 } // namespace MissingFeatures
