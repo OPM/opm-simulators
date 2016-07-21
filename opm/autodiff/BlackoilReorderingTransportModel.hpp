@@ -310,6 +310,7 @@ namespace Opm {
             }
 
             // Update states for output.
+            reservoir_state = state_.reservoir_state;
 
             // Create report and exit.
             const bool failed = false;
