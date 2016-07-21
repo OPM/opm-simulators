@@ -685,10 +685,11 @@ namespace Opm {
                 const int other = from == cell ? to : from;
                 const double vt = (from == cell) ? total_flux_[conn.index] : -total_flux_[conn.index];
 
-                // From this point, we treat everything about this connection as going
-                // from 'cell' to 'other'. Since we don't want derivatives from the 'other'
-                // cell to participate in the solution, we must be careful to use .value
-                // to avoid creating trouble.
+                // From this point, we treat everything about this
+                // connection as going from 'cell' to 'other'. Since
+                // we don't want derivatives from the 'other' cell to
+                // participate in the solution, we use the constant
+                // values from cstate_[other].
                 Eval dh[3];
                 Eval dh_sat[3];
                 for (int phase : { Water, Oil, Gas }) {
@@ -707,6 +708,9 @@ namespace Opm {
                                                             {{ m1[Water].value, m1[Oil].value, m1[Gas].value }},
                                                             {{ m2[Water], m2[Oil], m2[Gas] }},
                                                             tran, vt);
+                if (upw[0] != upw[1] || upw[1] != upw[2]) {
+                    OpmLog::debug("Detected countercurrent flow between cells " + std::to_string(from) + " and " + std::to_string(to));
+                }
                 Eval b[3];
                 Eval mob[3];
                 Eval tot_mob = Eval::createConstant(0.0);
@@ -749,8 +753,8 @@ namespace Opm {
 
         bool getConvergence(const Vec2& res)
         {
-            const double tol = 1e-6;
-            return res[0] < tol && res[1] < tol;
+            const double tol = 1e-9;
+            return std::fabs(res[0]) < tol && std::fabs(res[1] < tol);
         }
 
 
