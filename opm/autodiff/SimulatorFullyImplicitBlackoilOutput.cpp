@@ -370,7 +370,7 @@ namespace Opm
 
                 */
 
-                eclWriter_->writeTimeStep(timer.currentStepNum(),
+                eclWriter_->writeTimeStep(timer.reportStepNum(),
                                           substep,
                                           timer.simulationTimeElapsed(),
                                           simToSolution( state, phaseUsage_ ),
