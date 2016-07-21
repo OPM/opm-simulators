@@ -304,8 +304,15 @@ namespace Opm
         bool isIORank = output_ ;
         if( parallelOutput_ && parallelOutput_->isParallel() )
         {
+            // If this is not the initial write and no substep, then the well
+            // state used in the computation is actually the one of the last
+            // step. We need that well state for the gathering. Otherwise
+            // It an exception with a message like "global state does not
+            // contain well ..." might be thrown.
+            int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
+                (timer.reportStepNum() - 1) : timer.reportStepNum();
             // collect all solutions to I/O rank
-            isIORank = parallelOutput_->collectToIORank( localState, localWellState, timer.reportStepNum() );
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
         }
 
         const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
