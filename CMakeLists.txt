@@ -156,4 +156,7 @@ if (HAVE_OPM_DATA)
         opm_add_python_test( check_INIT_NORNE ${PROJECT_SOURCE_DIR}/tests/compare_INIT.py $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/norne/NORNE_ATW2013.DATA ${OPM_DATA_ROOT}/norne/ECL.2014.2/NORNE_ATW2013.INIT PORO PORV PERMX )
     endif()
 
+    include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
+    
+
 endif()
