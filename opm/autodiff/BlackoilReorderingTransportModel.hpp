@@ -423,6 +423,9 @@ namespace Opm {
         V total_flux_;
         V total_wellperf_flux_;
         DataBlock comp_wellperf_flux_;
+        V total_wellflux_cell_;
+        V oil_wellflux_cell_;
+        V gas_wellflux_cell_;
         std::vector<int> sequence_;
         std::vector<int> components_;
         V trans_all_;
@@ -527,6 +530,13 @@ namespace Opm {
             comp_wellperf_flux_ = Eigen::Map<const DataBlock>(well_state.perfPhaseRates().data(),
                                                               well_state.perfRates().size(),
                                                               numPhases());
+            const int num_cells = reservoir_state.pressure().size();
+            total_wellflux_cell_ = superset(total_wellperf_flux_, Base::wellModel().wellOps().well_cells, num_cells);
+            assert(Base::numPhases() == 3);
+            V oilflux = comp_wellperf_flux_.col(1);
+            V gasflux = comp_wellperf_flux_.col(2);
+            oil_wellflux_cell_ = superset(oilflux, Base::wellModel().wellOps().well_cells, num_cells);
+            gas_wellflux_cell_ = superset(gasflux, Base::wellModel().wellOps().well_cells, num_cells);
             assert(numPhases() * well_state.perfRates().size() == well_state.perfPhaseRates().size());
         }
 
@@ -734,6 +744,22 @@ namespace Opm {
                 }
                 div_oilflux += flux[Oil] + rv*flux[Gas];
                 div_gasflux += flux[Gas] + rs*flux[Oil];
+            }
+
+            // Well fluxes.
+            if (total_wellflux_cell_[cell] > 0.0) {
+                // Injecting perforation. Use given phase rates.
+                assert(oil_wellflux_cell_[cell] >= 0.0);
+                assert(gas_wellflux_cell_[cell] >= 0.0);
+                div_oilflux -= oil_wellflux_cell_[cell];
+                div_gasflux -= gas_wellflux_cell_[cell];
+            } else if (total_wellflux_cell_[cell] < 0.0) {
+                // Producing perforation. Use total rate and fractional flow.
+                Eval totmob = st.lambda[Water] + st.lambda[Oil] + st.lambda[Gas];
+                Eval oilflux = st.b[Oil] * (st.lambda[Oil]/totmob) *  total_wellflux_cell_[cell];
+                Eval gasflux = st.b[Gas] * (st.lambda[Gas]/totmob) *  total_wellflux_cell_[cell];
+                div_oilflux -= (oilflux + st.rv * gasflux);
+                div_gasflux -= (gasflux + st.rs * oilflux);
             }
 
             const Eval oileq = Base::pvdt_[cell]*(ao - ao0) + div_oilflux;
