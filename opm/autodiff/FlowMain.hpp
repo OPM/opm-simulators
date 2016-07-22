@@ -145,6 +145,7 @@ namespace Opm
             asImpl().extractMessages();
             asImpl().runDiagnostics();
             asImpl().setupState();
+            asImpl().writeInit();
             asImpl().distributeData();
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
@@ -650,7 +651,20 @@ namespace Opm
         }
 
 
-
+        void writeInit()
+        {
+            bool output      = param_.getDefault("output", true);
+            bool output_ecl  = param_.getDefault("output_ecl", true);
+            const Grid& grid = grid_init_->grid();
+            if( output && output_ecl && output_cout_)
+            {
+                EclipseWriter writer(eclipse_state_,
+                                     Opm::UgGridHelpers::numCells(grid),
+                                     Opm::UgGridHelpers::globalCell(grid));
+                writer.writeInitAndEgrid(geoprops_->simProps(grid),
+                                         geoprops_->nonCartesianConnections());
+            }
+        }
 
 
         // Setup output writer.
@@ -748,7 +762,6 @@ namespace Opm
                     fullReport.reportParam(tot_os);
                 }
             } else {
-                output_writer_->writeInit(geoprops_->simProps(grid_init_->grid()) , geoprops_->nonCartesianConnections( ));
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
