@@ -382,9 +382,11 @@ namespace Opm
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
             {
                 // write all cell data registered in local state
-	        for (auto& pair : globalState_.cellData()) {
+                // we loop over the data of the local state as
+                // its order governs the order the data got received.
+                for (auto& pair : localState_.cellData()) {
                     const std::string& key = pair.first;
-		    auto& data = pair.second;
+                    auto& data = globalState_.getCellData(key);
                     const size_t stride = globalState_.numCellDataComponents( key );
 
                     for( size_t i=0; i<stride; ++i )
