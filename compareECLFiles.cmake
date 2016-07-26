@@ -24,6 +24,7 @@ macro (add_test_compareECLFiles casename filename)
 			   ${SUMMARY_REGRESSION_TEST_COMMAND} 
 			   ${RESTART_REGRESSION_TEST_COMMAND} 
 			   ${INIT_REGRESSION_TEST_COMMAND} 
+               ${RFT_REGRESSION_TEST_COMMAND}
                TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename}.DATA )
 endmacro (add_test_compareECLFiles)
 
