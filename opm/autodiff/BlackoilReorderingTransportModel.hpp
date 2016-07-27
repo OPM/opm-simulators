@@ -238,8 +238,8 @@ namespace Opm {
                    eclState, has_disgas, has_vapoil, terminal_output)
             , graph_(Base::ops_)
             , props_(dynamic_cast<const BlackoilPropsAdFromDeck&>(fluid)) // TODO: remove the need for this cast.
-            , state0_{ ReservoirState(0, 0, 0), WellState(), V() }
-            , state_{ ReservoirState(0, 0, 0), WellState(), V() }
+            , state0_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
+            , state_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
         {
             // Set up the common parts of the mass balance equations
             // for each active phase.
@@ -270,7 +270,7 @@ namespace Opm {
             // be computed just once.
             const std::vector<double>& p = reservoir_state.pressure();
             state0_.tr_mult = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
-            Base::pvdt_ *= Base::poroMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
+            state0_.pv_mult = Base::poroMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
             const int num_cells = p.size();
             cstate0_.resize(num_cells);
             for (int cell = 0; cell < num_cells; ++cell) {
@@ -350,6 +350,7 @@ namespace Opm {
             ReservoirState reservoir_state;
             WellState well_state;
             V tr_mult;
+            V pv_mult;
         };
 
 
@@ -551,6 +552,7 @@ namespace Opm {
             state_.well_state = well_state;
             const std::vector<double>& p = reservoir_state.pressure();
             state_.tr_mult = Base::transMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
+            state_.pv_mult = Base::poroMult(ADB::constant(Eigen::Map<const V>(p.data(), p.size()))).value();
         }
 
 
@@ -676,10 +678,12 @@ namespace Opm {
             cstate_[cell] = st.template flatten<double>();
 
             // Accumulation terms.
-            const double ao0 = oilAccumulation(cstate0_[cell]);
-            const Eval ao  = oilAccumulation(st);
-            const double ag0 = gasAccumulation(cstate0_[cell]);
-            const Eval ag  = gasAccumulation(st);
+            const double pvm0 = state0_.pv_mult[cell];
+            const double pvm = state_.pv_mult[cell];
+            const double ao0 = oilAccumulation(cstate0_[cell]) * pvm0;
+            const Eval ao  = oilAccumulation(st) * pvm;
+            const double ag0 = gasAccumulation(cstate0_[cell]) * pvm0;
+            const Eval ag  = gasAccumulation(st) * pvm;
 
             // Flux terms.
             Eval div_oilflux = Eval::createConstant(0.0);
@@ -711,7 +715,7 @@ namespace Opm {
                         applyThresholdPressure(conn.index, dh[phase]); // Should also dh_sat be treated here?
                     }
                 }
-                const double tran = trans_all_[conn.index];
+                const double tran = trans_all_[conn.index]; // TODO: include tr_mult effect.
                 const auto& m1 = st.lambda;
                 const auto& m2 = cstate_[other].lambda;
                 const auto upw = connectionMultiPhaseUpwind({{ dh_sat[Water].value, dh_sat[Oil].value, dh_sat[Gas].value }},
