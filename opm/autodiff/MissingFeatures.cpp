@@ -57,7 +57,7 @@ namespace MissingFeatures {
                 std::string msg = "For keyword '" + it->first + "' only value " + boost::lexical_cast<std::string>(it->second.item_value)
                     + " in item " + it->second.item + " is supported by flow.\n"
                     + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                OpmLog::error(msg);
+                OpmLog::warning(msg);
             }
         }
     }
@@ -106,7 +106,7 @@ namespace MissingFeatures {
             if (it != unsupported_keywords.end()) {
                 std::string msg = "Keyword '" + keyword.name() + "' is not supported by flow.\n"
                     + "In file " + keyword.getFileName() + ", line " + std::to_string(keyword.getLineNumber()) + "\n";
-                OpmLog::error(msg);
+                OpmLog::warning(msg);
             }
             checkOptions<std::string>(keyword, string_options);
             checkOptions<int>(keyword, int_options);
