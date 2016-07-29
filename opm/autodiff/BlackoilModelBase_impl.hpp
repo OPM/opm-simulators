@@ -775,7 +775,7 @@ namespace detail {
         asImpl().assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
-        IterationReport iter_report = {false, false, 0, std::numeric_limits<int>::min()};
+        IterationReport iter_report = {false, false, 0, 0};
         if ( ! wellsActive() ) {
             return iter_report;
         }

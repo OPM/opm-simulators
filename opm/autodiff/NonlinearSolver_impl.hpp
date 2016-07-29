@@ -159,7 +159,7 @@ namespace Opm
 
         linearIterations_ += linIters;
         nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
-        wellIterations_ += wellIters; 
+        wellIterations_ += wellIters;
         linearIterationsLast_ = linIters;
         nonlinearIterationsLast_ = iteration;
         wellIterationsLast_ = wellIters;

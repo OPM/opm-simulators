@@ -117,7 +117,7 @@ namespace Opm {
         /// Number of linear solver iterations used in the last call to step().
         int linearIterationsLastStep() const;
 
-        /// Number of well iterations used in the last call to step().
+        /// Number of well iterations used in all calls to step().
         int wellIterationsLastStep() const;
 
         /// Compute fluid in place.
