@@ -269,7 +269,7 @@ public:
                                              const Evaluation& temperature,
                                              const Evaluation& pressure,
                                              const Evaluation& oilSaturation,
-                                             const Evaluation& maxOilSaturation) const
+                                             Scalar maxOilSaturation) const
     { return isothermalPvt_->saturatedGasDissolutionFactor(regionIdx, temperature, pressure, oilSaturation, maxOilSaturation); }
 
     /*!

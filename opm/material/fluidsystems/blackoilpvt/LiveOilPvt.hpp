@@ -483,7 +483,7 @@ public:
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& pressure,
                                               const Evaluation& oilSaturation,
-                                              const Evaluation& maxOilSaturation) const
+                                              Scalar maxOilSaturation) const
     {
         typedef typename Opm::MathToolbox<Evaluation> Toolbox;
         Evaluation tmp =
@@ -491,7 +491,7 @@ public:
 
         // apply the vaporization parameters for the gas phase (cf. the Eclipse VAPPARS
         // keyword)
-        if (vapPar2_ > 0.0 && maxOilSaturation > 0.01) {
+        if (vapPar2_ > 0.0 && maxOilSaturation > 0.01 && oilSaturation < maxOilSaturation) {
             static const Scalar sqrtEps = std::sqrt(std::numeric_limits<Scalar>::epsilon());
             const Evaluation& So = Toolbox::max(oilSaturation, sqrtEps);
             tmp *= Toolbox::pow(So/maxOilSaturation, vapPar2_);

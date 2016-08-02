@@ -220,7 +220,7 @@ public:
                                               const Evaluation& temperature,
                                               const Evaluation& pressure,
                                               const Evaluation& oilSaturation,
-                                              const Evaluation& maxOilSaturation) const
+                                              Scalar maxOilSaturation) const
     { OPM_GAS_PVT_MULTIPLEXER_CALL(return pvtImpl.saturatedOilVaporizationFactor(regionIdx, temperature, pressure, oilSaturation, maxOilSaturation)); return 0; }
 
     /*!

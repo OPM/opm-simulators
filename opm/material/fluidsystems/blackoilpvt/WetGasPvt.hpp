@@ -511,7 +511,7 @@ public:
                                               const Evaluation& /*temperature*/,
                                               const Evaluation& pressure,
                                               const Evaluation& oilSaturation,
-                                              const Evaluation& maxOilSaturation) const
+                                              Scalar maxOilSaturation) const
     {
         typedef typename Opm::MathToolbox<Evaluation> Toolbox;
         Evaluation tmp =

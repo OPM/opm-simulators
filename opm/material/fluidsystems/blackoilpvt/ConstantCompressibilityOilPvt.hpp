@@ -238,7 +238,7 @@ public:
                                              const Evaluation& /*temperature*/,
                                              const Evaluation& /*pressure*/,
                                              const Evaluation& /*oilSaturation*/,
-                                             const Evaluation& /*maxOilSaturation*/) const
+                                             Scalar /*maxOilSaturation*/) const
     { return 0.0; /* this is dead oil! */ }
 
     /*!
