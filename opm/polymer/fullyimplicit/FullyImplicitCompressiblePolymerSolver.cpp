@@ -191,6 +191,7 @@ namespace {
                         ADB::null(),
                         { 1.1169, 1.0031, 0.0031, 1.0 },
                         false } ) // default scaling
+        , linearizations_(0)
     {
     }
 
@@ -243,6 +244,7 @@ namespace {
             resTooLarge = (r > atol) && (r > rtol*r0);
 
             it += 1;
+            linearizations_ += 1;
             newtonIterations_ += 1;
             std::cout << std::setw(9) << it << std::setprecision(9)
                       << std::setw(18) << r << std::setprecision(9)
@@ -259,6 +261,11 @@ namespace {
         computeCmax(x);
 
         return it;
+    }
+
+    int FullyImplicitCompressiblePolymerSolver::linearizations() const
+    {
+        return linearizations_;
     }
 
     int FullyImplicitCompressiblePolymerSolver::nonlinearIterations() const

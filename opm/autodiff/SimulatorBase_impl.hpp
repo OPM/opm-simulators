@@ -128,6 +128,7 @@ namespace Opm
                                     desiredRestoreStep );
         }
 
+        unsigned int totalLinearizations = 0;
         unsigned int totalNonlinearIterations = 0;
         unsigned int totalLinearIterations = 0;
         bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
@@ -241,6 +242,7 @@ namespace Opm
             solver_timer.stop();
 
             // accumulate the number of nonlinear and linear Iterations
+            totalLinearizations += solver->linearizations();
             totalNonlinearIterations += solver->nonlinearIterations();
             totalLinearIterations += solver->linearIterations();
 
@@ -287,6 +289,7 @@ namespace Opm
         report.pressure_time = stime;
         report.transport_time = 0.0;
         report.total_time = total_timer.secsSinceStart();
+        report.total_linearizations = totalLinearizations;
         report.total_newton_iterations = totalNonlinearIterations;
         report.total_linear_iterations = totalLinearIterations;
         return report;
