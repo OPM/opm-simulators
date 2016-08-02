@@ -119,7 +119,7 @@ public:
         typedef EvaluationT Evaluation;
 
     public:
-        ParameterCache(const Evaluation& maxOilSat = 1.0, int regionIdx=0)
+        ParameterCache(Scalar maxOilSat = 1.0, int regionIdx=0)
         {
             maxOilSat_ = maxOilSat;
             regionIdx_ = regionIdx;
@@ -160,14 +160,14 @@ public:
         void setRegionIndex(unsigned val)
         { regionIdx_ = val; }
 
-        const Evaluation& maxOilSat() const
+        const Scalar maxOilSat() const
         { return maxOilSat_; }
 
-        void setMaxOilSat(const Evaluation& val)
+        void setMaxOilSat(Scalar val)
         { maxOilSat_ = val; }
 
     private:
-        Evaluation maxOilSat_;
+        Scalar maxOilSat_;
         unsigned regionIdx_;
     };
 
@@ -892,7 +892,7 @@ public:
     static LhsEval saturatedDissolutionFactor(const FluidState& fluidState,
                                               unsigned phaseIdx,
                                               unsigned regionIdx,
-                                              const LhsEval& maxOilSaturation)
+                                              Scalar maxOilSaturation)
     {
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
