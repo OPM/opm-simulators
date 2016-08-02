@@ -127,34 +127,21 @@ endif (NOT EIGEN3_FOUND)
 
 
 if (HAVE_OPM_DATA)
-    add_test( NAME flow_SPE1 COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
-
     add_test( NAME flow_SPE1CASE2 COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE2.DATA )
-    add_test( NAME flow_SPE1CASE2_restart COMMAND flow ${OPM_DATA_ROOT}/spe1/SPE1CASE2_RESTART.DATA )
+    add_test( NAME flow_sequential_SPE1 COMMAND flow_sequential ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
 
     add_test( NAME flow_MSW2DH__ COMMAND flow_multisegment ${OPM_DATA_ROOT}/wells_test_suite/MSW/2D_H__/2D_H__.DATA)
 
-    set_tests_properties(flow_SPE1CASE2_restart PROPERTIES DEPENDS flow_SPE1CASE2) # Dependes on the restart file from test flow_SPE1CASE2
-
-    add_executable( test_restart tests/test_restart.cpp )
-    target_link_libraries( test_restart opmsimulators ${Boost_LIBRARIES})
-
-    add_test( compare_restart_files
-            ${CMAKE_BINARY_DIR}/bin/test_restart
-             SPE1CASE2.UNRST
-             SPE1CASE2_RESTART.UNRST # Restart from step 60
-             120
-            )
-
-    set_tests_properties(compare_restart_files PROPERTIES DEPENDS flow_SPE1CASE2_restart) # Compares the restart files from tests flow_SPE1CASE2_restart and flow_SPE1CASE2
-
-    add_test( NAME flow_sequential_SPE1 COMMAND flow_sequential ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
     if (ERT_PYTHON_PATH)
         include(OpmPythonTest)
 
         opm_add_python_test( check_INIT_SPE1 ${PROJECT_SOURCE_DIR}/tests/compare_INIT.py $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA ${OPM_DATA_ROOT}/spe1/eclipse-simulation/SPE1CASE1.INIT
                              TRANX TRANY TRANZ PORO PORV PERMX DX DY DZ DEPTH PVTNUM SATNUM EQLNUM FIPNUM )
         opm_add_python_test( check_INIT_NORNE ${PROJECT_SOURCE_DIR}/tests/compare_INIT.py $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/norne/NORNE_ATW2013.DATA ${OPM_DATA_ROOT}/norne/ECL.2014.2/NORNE_ATW2013.INIT PORO PORV PERMX )
+
+        opm_add_python_test( check_RESTART_SPE1CASE2
+                             ${PROJECT_SOURCE_DIR}/tests/check_RESTART.py
+                             $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/spe1/SPE1CASE2.DATA ${OPM_DATA_ROOT}/spe1/SPE1CASE2_RESTART.DATA )
     endif()
 
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
