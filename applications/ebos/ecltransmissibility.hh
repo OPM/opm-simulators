@@ -206,7 +206,7 @@ public:
                 // convert half transmissibilities to full face
                 // transmissibilities using the harmonic mean
                 Scalar trans;
-                if (std::abs(halfTrans1) < 1e-20 || std::abs(halfTrans2) < 1e-20)
+                if (std::abs(halfTrans1) < 1e-30 || std::abs(halfTrans2) < 1e-30)
                     // avoid division by zero
                     trans = 0.0;
                 else
