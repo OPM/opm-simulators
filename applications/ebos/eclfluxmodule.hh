@@ -146,8 +146,8 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const Evaluation& pressureDifferential(unsigned phaseIdx) const
-    { return pressureDifferential_[phaseIdx]; }
+    const Evaluation& pressureDifference(unsigned phaseIdx) const
+    { return pressureDifference_[phaseIdx]; }
 
     /*!
      * \brief Return the filter velocity of a fluid phase at the face's integration point
@@ -249,40 +249,57 @@ protected:
             Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
             pressureExterior += rhoAvg*(distZ*g);
 
-            pressureDifferential_[phaseIdx] = pressureExterior - pressureInterior;
+            pressureDifference_[phaseIdx] = pressureExterior - pressureInterior;
 
             // decide the upstream index for the phase. for this we make sure that the
             // degree of freedom which is regarded upstream if both pressures are equal
             // is always the same: if the pressure is equal, the DOF with the lower
             // global index is regarded to be the upstream one.
-            if (pressureDifferential_[phaseIdx] == 0) {
-                if (I > J) {
+            if (pressureDifference_[phaseIdx] > 0.0) {
+                upIdx_[phaseIdx] = exteriorDofIdx_;
+                dnIdx_[phaseIdx] = interiorDofIdx_;
+            }
+            else if (pressureDifference_[phaseIdx] < 0.0) {
+                upIdx_[phaseIdx] = interiorDofIdx_;
+                dnIdx_[phaseIdx] = exteriorDofIdx_;
+            }
+            else {
+                // if the pressure difference is zero, we chose the DOF which has the
+                // larger volume associated to it as upstream DOF
+                Scalar Vin = elemCtx.dofVolume(interiorDofIdx_, /*timeIdx=*/0);
+                Scalar Vex = elemCtx.dofVolume(exteriorDofIdx_, /*timeIdx=*/0);
+                if (Vin > Vex) {
+                    upIdx_[phaseIdx] = interiorDofIdx_;
+                    dnIdx_[phaseIdx] = exteriorDofIdx_;
+                }
+                else if (Vin < Vex) {
                     upIdx_[phaseIdx] = exteriorDofIdx_;
                     dnIdx_[phaseIdx] = interiorDofIdx_;
                 }
                 else {
-                    upIdx_[phaseIdx] = interiorDofIdx_;
-                    dnIdx_[phaseIdx] = exteriorDofIdx_;
+                    assert(Vin == Vex);
+                    // if the volumes are also equal, we pick the DOF which exhibits the
+                    // smaller global index
+                    if (I < J) {
+                        upIdx_[phaseIdx] = interiorDofIdx_;
+                        dnIdx_[phaseIdx] = exteriorDofIdx_;
+                    }
+                    else {
+                        upIdx_[phaseIdx] = exteriorDofIdx_;
+                        dnIdx_[phaseIdx] = interiorDofIdx_;
+                    }
                 }
-            }
-            else if (pressureDifferential_[phaseIdx] > 0) {
-                upIdx_[phaseIdx] = exteriorDofIdx_;
-                dnIdx_[phaseIdx] = interiorDofIdx_;
-            }
-            else {
-                upIdx_[phaseIdx] = interiorDofIdx_;
-                dnIdx_[phaseIdx] = exteriorDofIdx_;
             }
 
             // apply the threshold pressure for the intersection. note that the concept
             // of threshold pressure is a quite big hack that only makes sense for ECL
             // datasets. (and even there its physical justification is quite
             // questionable IMO.)
-            if (std::abs(Toolbox::value(pressureDifferential_[phaseIdx])) > thpres_)
-                pressureDifferential_[phaseIdx] -=
-                    Ewoms::signum(pressureDifferential_[phaseIdx])*thpres_;
+            if (std::abs(Toolbox::value(pressureDifference_[phaseIdx])) > thpres_)
+                pressureDifference_[phaseIdx] -=
+                    Ewoms::signum(pressureDifference_[phaseIdx])*thpres_;
             else {
-                pressureDifferential_[phaseIdx] = 0.0;
+                pressureDifference_[phaseIdx] = 0.0;
                 volumeFlux_[phaseIdx] = 0.0;
                 continue;
             }
@@ -294,10 +311,10 @@ protected:
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
             if (upstreamIdx == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
-                    pressureDifferential_[phaseIdx]*up.mobility(phaseIdx)*(-trans_/faceArea_);
+                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans_/faceArea_);
             else
                 volumeFlux_[phaseIdx] =
-                    pressureDifferential_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans_/faceArea_));
+                    pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans_/faceArea_));
 
         }
     }
@@ -320,9 +337,9 @@ protected:
     // the volumetric flux of all phases [m^3/s]
     Evaluation volumeFlux_[numPhases];
 
-    // the difference in effective pressure between the two degrees of
-    // freedom [Pa]
-    Evaluation pressureDifferential_[numPhases];
+    // the difference in effective pressure between the exterior and the interior degree
+    // of freedom [Pa]
+    Evaluation pressureDifference_[numPhases];
 
     // the local indices of the interior and exterior degrees of freedom
     unsigned short interiorDofIdx_;

@@ -194,12 +194,12 @@ private:
                 if (equilRegionInside == equilRegionOutside)
                     continue;
 
-                // determine the maximum difference of the pressure of any phase over the
-                // intersection
+                // determine the maximum difference of the pressure of all phases over
+                // the intersection
                 Scalar pth = 0;
                 const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
                 for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                    pth = std::max(pth, std::abs(Toolbox::value(extQuants.pressureDifferential(phaseIdx))));
+                    pth = std::max(pth, std::abs(Toolbox::value(extQuants.pressureDifference(phaseIdx))));
 
                 int offset1 = equilRegionInside*numEquilRegions_ + equilRegionOutside;
                 int offset2 = equilRegionOutside*numEquilRegions_ + equilRegionInside;
