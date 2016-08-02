@@ -136,7 +136,7 @@ namespace Opm
         DynamicListEconLimited dynamic_list_econ_limited;
 
         bool ooip_computed = false;
-        std::vector<int> fipnum = eclipse_state_->get3DProperties().getRegions("FIPNUM");
+        std::vector<int> fipnum = eclipse_state_->get3DProperties().getIntGridProperty("FIPNUM").getData();
         if (fipnum.empty()) {
             fipnum.resize(AutoDiffGrid::numCells(grid_));
             std::fill(fipnum.begin(), fipnum.end(), 0);
