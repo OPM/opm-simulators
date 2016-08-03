@@ -72,12 +72,14 @@ namespace Opm
     {
         ScheduleConstPtr schedule = eclipseState->getSchedule();
         for (const auto& well : schedule->getWells(currentStep)) {
-            WellInjectionProperties injection = well->getInjectionProperties(currentStep);
-            if (injection.injectorType == WellInjector::WATER) {
-                WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
-                wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
-            } else {
-                OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
+            if (well->isInjector(currentStep)) {
+                WellInjectionProperties injection = well->getInjectionProperties(currentStep);
+                if (injection.injectorType == WellInjector::WATER) {
+                    WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
+                    wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
+                } else {
+                    OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
+                }
             }
         }
     }
