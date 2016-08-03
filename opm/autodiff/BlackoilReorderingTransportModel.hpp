@@ -258,11 +258,11 @@ namespace Opm {
 
 
 
-        void prepareStep(const double dt,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state)
         {
-            Base::prepareStep(dt, reservoir_state, well_state);
+            Base::prepareStep(timer, reservoir_state, well_state);
             Base::param_.solve_welleq_initially_ = false;
             state0_.reservoir_state = reservoir_state;
             state0_.well_state = well_state;
@@ -285,7 +285,7 @@ namespace Opm {
 
         template <class NonlinearSolverType>
         IterationReport nonlinearIteration(const int /* iteration */,
-                                           const double /* dt */,
+                                           const SimulatorTimerInterface& /* timer */,
                                            NonlinearSolverType& /* nonlinear_solver */,
                                            ReservoirState& reservoir_state,
                                            const WellState& well_state)
@@ -324,7 +324,7 @@ namespace Opm {
 
 
 
-        void afterStep(const double /* dt */,
+        void afterStep(const SimulatorTimerInterface& /* timer */,
                        const ReservoirState& /* reservoir_state */,
                        const WellState& /* well_state */)
         {
