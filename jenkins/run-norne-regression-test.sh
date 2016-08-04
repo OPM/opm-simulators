@@ -28,3 +28,4 @@ ${BINPATH}/${EXE_NAME} ${TEST_ARG}
 cd ..
 
 ${DIR}/../../opm-output/build/bin/compareSummary -r ${RESULT_PATH}/NORNE_ATW2013 ${OPM_DATA_PATH}/OPM/opm-solution-reference/NORNE_ATW2013 1e-6 1e-4
+${DIR}/../../opm-output/build/bin/compareECL -t INIT ${RESULT_PATH}/NORNE_ATW2013 ${OPM_DATA_PATH}/OPM/opm-solution-reference/NORNE_ATW2013 1e-6 1e-4
