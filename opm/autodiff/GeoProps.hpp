@@ -144,22 +144,6 @@ namespace Opm
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
 
-            // Use volume weighted arithmetic average of the NTG values for
-            // the cells effected by the current OPM cpgrid process algorithm
-            // for MINPV. Note that the change does not effect the pore volume calculations
-            // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
-            // only the transmissibility calculations.
-            bool opmfil = eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
-            // opmfil is hardcoded to be true. i.e the volume weighting is always used
-            opmfil = true;
-            if (opmfil) {
-                minPvFillProps_(grid, eclState, ntg);
-            } else if (eclgrid->isPinchActive()) {
-                // opmfil is hardcoded to be true. i.e the pinch processor is never used
-                pinchProcess_(grid, *eclState, htrans, numCells);
-            }
-
-
             // combine the half-face transmissibilites into the final face
             // transmissibilites.
             tpfa_trans_compute(ug, htrans.data(), trans_.data());
@@ -298,18 +282,6 @@ namespace Opm
                                      const double* perm,
                                      Vector &hTrans);
 
-        template <class Grid>
-        void minPvFillProps_(const Grid &grid,
-                             Opm::EclipseStateConstPtr eclState,
-                             std::vector<double> &ntg);
-
-        template <class Grid>
-        void pinchProcess_(const Grid& grid,
-                           const Opm::EclipseState& eclState,
-                           const Vector& htrans,
-                                 int numCells);
-
-
         /// checks cartesian adjacency of global indices g1 and g2
         template <typename Grid>
         bool cartesianAdjacent(const Grid& grid, int g1, int g2) {
@@ -369,84 +341,6 @@ namespace Opm
         // Non-cartesian connections
         NNC noncartesian_;
     };
-
-    template <class GridType>
-    inline void DerivedGeology::minPvFillProps_(const GridType &grid,
-                                                Opm::EclipseStateConstPtr eclState,
-                                                std::vector<double> &ntg)
-    {
-
-        int numCells = Opm::AutoDiffGrid::numCells(grid);
-        const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
-        const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
-        EclipseGridConstPtr eclgrid = eclState->getInputGrid();
-        const auto& porv = eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
-        for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            const int nx = cartdims[0];
-            const int ny = cartdims[1];
-            const int cartesianCellIdx = global_cell[cellIdx];
-
-            const double cellVolume = eclgrid->getCellVolume(cartesianCellIdx);
-            ntg[cartesianCellIdx] *= cellVolume;
-            double totalCellVolume = cellVolume;
-
-            // Average properties as long as there exist cells above
-            // that has pore volume less than the MINPV threshold
-            int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
-            while ( cartesianCellIdxAbove >= 0 &&
-                 porv[cartesianCellIdxAbove] > 0 &&
-                 porv[cartesianCellIdxAbove] < eclgrid->getMinpvValue() ) {
-
-                // Volume weighted arithmetic average of NTG
-                const double cellAboveVolume = eclgrid->getCellVolume(cartesianCellIdxAbove);
-                totalCellVolume += cellAboveVolume;
-                ntg[cartesianCellIdx] += ntg[cartesianCellIdxAbove]*cellAboveVolume;
-                cartesianCellIdxAbove -= nx*ny;
-            }
-            ntg[cartesianCellIdx] /= totalCellVolume;
-        }
-    }
-
-
-
-
-    template <class GridType>
-       inline void DerivedGeology::pinchProcess_(const GridType& grid,
-                                                 const Opm::EclipseState& eclState,
-                                                 const Vector& htrans,
-                                                       int numCells)
-       {
-        // NOTE that this function is currently never invoked due to
-        // opmfil being hardcoded to be true.
-        auto  eclgrid = eclState.getInputGrid();
-        auto& eclProps = eclState.get3DProperties();
-        const double minpv = eclgrid->getMinpvValue();
-        const double thickness = eclgrid->getPinchThresholdThickness();
-        auto transMode = eclgrid->getPinchOption();
-        auto multzMode = eclgrid->getMultzOption();
-        PinchProcessor<GridType> pinch(minpv, thickness, transMode, multzMode);
-
-        std::vector<double> htrans_copy(htrans.size());
-        std::copy_n(htrans.data(), htrans.size(), htrans_copy.begin());
-
-        std::vector<int> actnum;
-        eclgrid->exportACTNUM(actnum);
-
-        auto transMult = eclState.getTransMult();
-        std::vector<double> multz(numCells, 0.0);
-        const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
-
-        for (int i = 0; i < numCells; ++i) {
-            multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
-        }
-
-        // Note the pore volume from eclState is used and not the pvol_ calculated above
-        const auto& porv = eclProps.getDoubleGridProperty("PORV").getData();
-        pinch.process(grid, htrans_copy, actnum, multz, porv, nnc_);
-    }
-
-
-
 
     template <class GridType>
     inline void DerivedGeology::multiplyHalfIntersections_(const GridType &grid,
