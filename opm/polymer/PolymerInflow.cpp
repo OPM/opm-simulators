@@ -103,7 +103,7 @@ namespace Opm
             // names.
             int wix = 0;
             for (; wix < wells.number_of_wells; ++wix) {
-                if (wellPolymerRate_.count(wells.name[wix]) > 0) {
+                if (map_it->first == wells.name[wix]) {
                     break;
                 }
             }
