@@ -210,6 +210,7 @@ protected:
         Valgrind::SetUndefined(*this);
 
         const auto& problem = elemCtx.problem();
+        const auto& grid = elemCtx.simulator().gridManager().grid();
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
 
@@ -231,8 +232,13 @@ protected:
         const auto &intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
         const auto &intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx_, timeIdx);
 
-        Scalar zIn = elemCtx.pos(interiorDofIdx_, timeIdx)[dimWorld - 1];
-        Scalar zEx = elemCtx.pos(exteriorDofIdx_, timeIdx)[dimWorld - 1];
+        // this is quite hacky because the dune grid interface does not provide a
+        // cellCenterDepth() method (so this code is specific to the OPM derived
+        // grids). The "good" solution would be to take the Z coordinate of the element
+        // centers, but since ECL seems to like to be inconsistent on that front, it
+        // needs to be done like here...
+        Scalar zIn = grid.cellCenterDepth(I);
+        Scalar zEx = grid.cellCenterDepth(J);
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)
