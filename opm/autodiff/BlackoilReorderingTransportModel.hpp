@@ -697,7 +697,8 @@ namespace Opm {
                 }
                 assert((from == cell) == (conn.sign > 0.0));
                 const int other = from == cell ? to : from;
-                const double vt = (from == cell) ? total_flux_[conn.index] : -total_flux_[conn.index];
+                const double vt = conn.sign * total_flux_[conn.index];
+                const double gdz = conn.sign * gdz_[conn.index];
 
                 // From this point, we treat everything about this
                 // connection as going from 'cell' to 'other'. Since
@@ -709,10 +710,10 @@ namespace Opm {
                 for (int phase : { Water, Oil, Gas }) {
                     const Eval gradp = cstate_[other].p[phase] - st.p[phase];
                     const Eval rhoavg = 0.5 * (st.rho[phase] + cstate_[other].rho[phase]);
-                    dh[phase] = gradp - rhoavg * gdz_[conn.index];
-                    dh_sat[phase] = rhoavg * gdz_[conn.index];
+                    dh[phase] = gradp - rhoavg * gdz;
+                    dh_sat[phase] = rhoavg * gdz; // TODO: not equivalent to formulation in BlackoilTransportModel for cap. press.
                     if (Base::use_threshold_pressure_) {
-                        applyThresholdPressure(conn.index, dh[phase]); // Should also dh_sat be treated here?
+                        applyThresholdPressure(conn.index, dh[phase]); // TODO: Should also dh_sat be treated here? Also: dh is unused, this has no effect!
                     }
                 }
                 const double tran = trans_all_[conn.index]; // TODO: include tr_mult effect.
