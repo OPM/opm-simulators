@@ -29,6 +29,8 @@
 #include <opm/core/transport/reorder/reordersequence.h>
 #include <opm/core/simulator/BlackoilState.hpp>
 
+#include <opm/autodiff/BlackoilTransportModel.hpp>
+
 namespace Opm {
 
 
@@ -240,6 +242,8 @@ namespace Opm {
             , props_(dynamic_cast<const BlackoilPropsAdFromDeck&>(fluid)) // TODO: remove the need for this cast.
             , state0_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
             , state_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
+            , tr_model_(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
+                        eclState, has_disgas, has_vapoil, terminal_output)
         {
             // Set up the common parts of the mass balance equations
             // for each active phase.
@@ -262,6 +266,7 @@ namespace Opm {
                          const ReservoirState& reservoir_state,
                          const WellState& well_state)
         {
+            tr_model_.prepareStep(timer, reservoir_state, well_state);
             Base::prepareStep(timer, reservoir_state, well_state);
             Base::param_.solve_welleq_initially_ = false;
             state0_.reservoir_state = reservoir_state;
@@ -284,9 +289,12 @@ namespace Opm {
 
 
         template <class NonlinearSolverType>
-        IterationReport nonlinearIteration(const int /* iteration */,
-                                           const SimulatorTimerInterface& /* timer */,
-                                           NonlinearSolverType& /* nonlinear_solver */,
+        IterationReport nonlinearIteration(const int iteration,
+                                           const SimulatorTimerInterface& timer,
+                                           NonlinearSolverType& nonlinear_solver,
+        // IterationReport nonlinearIteration(const int /* iteration */,
+        //                                    const SimulatorTimerInterface& /* timer */,
+        //                                    NonlinearSolverType& /* nonlinear_solver */,
                                            ReservoirState& reservoir_state,
                                            const WellState& well_state)
         {
@@ -311,6 +319,13 @@ namespace Opm {
 
             // Update states for output.
             reservoir_state = state_.reservoir_state;
+
+            // Assemble with other model,
+            {
+                auto rs = reservoir_state;
+                auto ws = well_state;
+                tr_model_.nonlinearIteration(iteration, timer, nonlinear_solver, rs, ws);
+            }
 
             // Create report and exit.
             const bool failed = false;
@@ -433,6 +448,8 @@ namespace Opm {
         V gdz_;
         DataBlock rhos_;
 
+        // TODO: remove this, for debug only.
+        BlackoilTransportModel<Grid, WellModel> tr_model_;
 
 
         // ============  Member functions  ============
