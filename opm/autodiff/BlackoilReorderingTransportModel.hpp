@@ -314,7 +314,10 @@ namespace Opm {
             // Solve in every component (cell or block of cells), in order.
             {
                 DebugTimeReport tr("Solving all components");
-                solveComponents();
+                for (int ii = 0; ii < 10; ++ii) {
+                    DebugTimeReport tr2("Solving components single sweep.");
+                    solveComponents();
+                }
             }
 
             // Update states for output.
@@ -447,6 +450,8 @@ namespace Opm {
         V trans_all_;
         V gdz_;
         DataBlock rhos_;
+
+        std::array<double, 2> max_abs_dx_;
 
         // TODO: remove this, for debug only.
         BlackoilTransportModel<Grid, WellModel> tr_model_;
@@ -602,6 +607,11 @@ namespace Opm {
 
         void solveComponents()
         {
+            // Zero the max changed.
+            max_abs_dx_[0] = 0.0;
+            max_abs_dx_[1] = 0.0;
+
+            // Solve the equations.
             const int num_components = components_.size() - 1;
             for (int comp = 0; comp < num_components; ++comp) {
                 const int comp_size = components_[comp + 1] - components_[comp];
@@ -610,6 +620,13 @@ namespace Opm {
                 } else {
                     solveMultiCell(comp_size, &sequence_[components_[comp]]);
                 }
+            }
+
+            // Log the max change.
+            {
+                std::ostringstream os;
+                os << "===  Max abs dx[0]: " << max_abs_dx_[0] << " dx[1]: " << max_abs_dx_[1];
+                OpmLog::debug(os.str());
             }
         }
 
@@ -635,8 +652,11 @@ namespace Opm {
                 ++iter;
             }
             if (iter == max_iter) {
-                OpmLog::debug("Failed to converge in cell " + std::to_string(cell)
-                              + ", residual = (" + std::to_string(res[0]) + ", " + std::to_string(res[0]) + ")");
+                std::ostringstream os;
+                os << "Failed to converge in cell " << cell << ", residual = " << res
+                   << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
+                   << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}";
+                OpmLog::debug(os.str());
             }
         }
 
@@ -646,7 +666,7 @@ namespace Opm {
 
         void solveMultiCell(const int comp_size, const int* cell_array)
         {
-            OpmLog::warning("solveMultiCell", "solveMultiCell() called with component size " + std::to_string(comp_size));
+            // OpmLog::warning("solveMultiCell", "solveMultiCell() called with component size " + std::to_string(comp_size));
             for (int ii = 0; ii < comp_size; ++ii) {
                 solveSingleCell(cell_array[ii]);
             }
@@ -740,9 +760,9 @@ namespace Opm {
                                                             {{ m1[Water].value, m1[Oil].value, m1[Gas].value }},
                                                             {{ m2[Water], m2[Oil], m2[Gas] }},
                                                             tran, vt);
-                if (upw[0] != upw[1] || upw[1] != upw[2]) {
-                    OpmLog::debug("Detected countercurrent flow between cells " + std::to_string(from) + " and " + std::to_string(to));
-                }
+                // if (upw[0] != upw[1] || upw[1] != upw[2]) {
+                //     OpmLog::debug("Detected countercurrent flow between cells " + std::to_string(from) + " and " + std::to_string(to));
+                // }
                 Eval b[3];
                 Eval mob[3];
                 Eval tot_mob = Eval::createConstant(0.0);
@@ -811,6 +831,9 @@ namespace Opm {
         void updateState(const int cell,
                          const Vec2& dx)
         {
+            max_abs_dx_[0] = std::max(max_abs_dx_[0], std::fabs(dx[0]));
+            max_abs_dx_[1] = std::max(max_abs_dx_[1], std::fabs(dx[1]));
+
             // Get saturation updates.
             const double dsw = dx[0];
             double dso = -dsw;
