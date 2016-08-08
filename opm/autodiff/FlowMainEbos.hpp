@@ -30,10 +30,10 @@
 namespace Opm
 {
     // The FlowMain class is the ebos based black-oil simulator.
-    class FlowMainEbos : public FlowMainBase<FlowMainEbos, Dune::CpGrid, Opm::SimulatorFullyImplicitBlackoilEbos<Dune::CpGrid> >
+    class FlowMainEbos : public FlowMainBase<FlowMainEbos, Dune::CpGrid, Opm::SimulatorFullyImplicitBlackoilEbos>
     {
     protected:
-        typedef Opm::SimulatorFullyImplicitBlackoilEbos<Dune::CpGrid> Simulator;
+        typedef Opm::SimulatorFullyImplicitBlackoilEbos Simulator;
         typedef FlowMainBase<FlowMainEbos, Dune::CpGrid, Simulator> Base;
         friend Base;
 
@@ -44,7 +44,6 @@ namespace Opm
         {
             // Create the simulator instance.
             Base::simulator_.reset(new Simulator(Base::param_,
-                                                 Base::grid_init_->grid(),
                                                  *Base::geoprops_,
                                                  *Base::fluidprops_,
                                                  Base::rock_comp_->isActive() ? Base::rock_comp_.get() : nullptr,

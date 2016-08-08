@@ -28,21 +28,19 @@
 
 namespace Opm {
 
-template <class GridT>
 class SimulatorFullyImplicitBlackoilEbos;
 class StandardWells;
 
 /// a simulator for the blackoil model
-template <class GridT>
 class SimulatorFullyImplicitBlackoilEbos
 {
 public:
     typedef typename TTAG(EclFlowProblem) TypeTag;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator ;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriter OutputWriter;
-    typedef GridT Grid;
     typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
@@ -65,7 +63,6 @@ public:
     ///     use_segregation_split (false)  solve for gravity segregation (if false,
     ///                                    segregation is ignored).
     ///
-    /// \param[in] grid          grid data structure
     /// \param[in] geo           derived geological properties
     /// \param[in] props         fluid and rock properties
     /// \param[in] rock_comp_props     if non-null, rock compressibility properties
@@ -77,7 +74,6 @@ public:
     /// \param[in] output_writer
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     SimulatorFullyImplicitBlackoilEbos(const parameter::ParameterGroup& param,
-                                       const Grid& grid,
                                        DerivedGeology& geo,
                                        BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
@@ -91,7 +87,6 @@ public:
         : param_(param),
           model_param_(param),
           solver_param_(param),
-          grid_(grid),
           props_(props),
           rock_comp_props_(rock_comp_props),
           gravity_(gravity),
@@ -102,17 +97,9 @@ public:
           terminal_output_(param.getDefault("output_terminal", true)),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
-          rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
           is_parallel_run_( false )
     {
-        // Misc init.
-        const int num_cells = AutoDiffGrid::numCells(grid);
-        allcells_.resize(num_cells);
-        for (int cell = 0; cell < num_cells; ++cell) {
-            allcells_[cell] = cell;
-        }
-
         std::string progName("flow_ebos");
         std::string deckFile("--ecl-deck-file-name=");
         deckFile += model_param_.deck_file_name_;
@@ -123,6 +110,15 @@ public:
         Ewoms::setupParameters_< TypeTag > ( 2, ptr );
         ebosSimulator_ = new Simulator();
         ebosSimulator_->model().applyInitialSolution();
+
+        // Misc init.
+        const int num_cells = AutoDiffGrid::numCells(grid());
+        allcells_.resize(num_cells);
+        for (int cell = 0; cell < num_cells; ++cell) {
+            allcells_[cell] = cell;
+        }
+
+        rateConverter_.reset(new RateConverterType(props_, std::vector<int>(AutoDiffGrid::numCells(grid()), 0)));
 
 #if HAVE_MPI
         if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
@@ -149,8 +145,8 @@ public:
 
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
-            output_writer_.initFromRestartFile(props_.phaseUsage(), props_.permeability(), grid_, state, prev_well_state);
-            initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid_), has_disgas_, has_vapoil_);
+            output_writer_.initFromRestartFile(props_.phaseUsage(), props_.permeability(), grid(), state, prev_well_state);
+            initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
         }
 
         // Create timers and file for writing timing info.
@@ -174,7 +170,7 @@ public:
 
 
 
-        output_writer_.writeInit( geo_.simProps(grid_) , geo_.nonCartesianConnections( ) );
+        output_writer_.writeInit( geo_.simProps(grid()) , geo_.nonCartesianConnections( ) );
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
@@ -210,12 +206,12 @@ public:
             // Create wells and well state.
             WellsManager wells_manager(eclipse_state_,
                                        timer.currentStepNum(),
-                                       Opm::UgGridHelpers::numCells(grid_),
-                                       Opm::UgGridHelpers::globalCell(grid_),
-                                       Opm::UgGridHelpers::cartDims(grid_),
-                                       Opm::UgGridHelpers::dimensions(grid_),
-                                       Opm::UgGridHelpers::cell2Faces(grid_),
-                                       Opm::UgGridHelpers::beginFaceCentroids(grid_),
+                                       Opm::UgGridHelpers::numCells(grid()),
+                                       Opm::UgGridHelpers::globalCell(grid()),
+                                       Opm::UgGridHelpers::cartDims(grid()),
+                                       Opm::UgGridHelpers::dimensions(grid()),
+                                       Opm::UgGridHelpers::cell2Faces(grid()),
+                                       Opm::UgGridHelpers::beginFaceCentroids(grid()),
                                        props_.permeability(),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
@@ -287,7 +283,7 @@ public:
                 // TODO (?): handle the parallel case (maybe this works out of the box)
                 DeckConstPtr miniDeck = schedule->getModifierDeck(nextTimeStepIdx);
                 eclState()->applyModifierDeck(*miniDeck);
-                geo_.update(grid_, props_, eclipse_state_, gravity_);
+                geo_.update(grid(), props_, eclipse_state_, gravity_);
             }
 
             // take time that was used to solve system for this reportStep
@@ -347,6 +343,9 @@ public:
         return report;
     }
 
+    const Grid& grid() const
+    { return ebosSimulator_->gridManager().grid(); }
+
 protected:
     void handleAdditionalWellInflow(SimulatorTimer& timer,
                                     WellsManager& wells_manager,
@@ -397,7 +396,7 @@ protected:
                 // to calculate averages over regions that might cross process
                 // borders. This needs to be done by all processes and therefore
                 // outside of the next if statement.
-                rateConverter_.defineState(x, boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()));
+                rateConverter_->defineState(x, boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()));
             }
         }
         else
@@ -405,7 +404,7 @@ protected:
         {
             if ( global_number_resv_wells )
             {
-                rateConverter_.defineState(x);
+                rateConverter_->defineState(x);
             }
         }
 
@@ -444,7 +443,7 @@ protected:
                         }
 
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
-                        rateConverter_.calcCoeff(prates, fipreg, distr);
+                        rateConverter_->calcCoeff(prates, fipreg, distr);
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
                     }
@@ -466,7 +465,7 @@ protected:
                             SimFIBODetails::historyRates(pu, p, hrates);
 
                             const int fipreg = 0; // Hack.  Ignore FIP regions.
-                            rateConverter_.calcCoeff(hrates, fipreg, distr);
+                            rateConverter_->calcCoeff(hrates, fipreg, distr);
 
                             // WCONHIST/RESV target is sum of all
                             // observed phase rates translated to
@@ -581,7 +580,6 @@ protected:
     SolverParameters solver_param_;
 
     // Observed objects.
-    const Grid& grid_;
     BlackoilPropsAdInterface& props_;
     const RockCompressibility* rock_comp_props_;
     const double* gravity_;
@@ -597,7 +595,7 @@ protected:
     std::shared_ptr<EclipseState> eclipse_state_;
     // output_writer
     OutputWriter& output_writer_;
-    RateConverterType rateConverter_;
+    std::unique_ptr<RateConverterType> rateConverter_;
     // Threshold pressures.
     std::vector<double> threshold_pressures_by_face_;
     // Whether this a parallel simulation or not
