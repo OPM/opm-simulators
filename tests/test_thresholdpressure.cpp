@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(CreateSimulationConfig) {
     ParseContext parseContext;
     typedef UnstructuredGrid  Grid;
     DeckPtr deck = createDeckSimConfig();
-    EclipseState state(deck, parseContext);
+    EclipseState state(*deck, parseContext);
     EclipseGridConstPtr eclipseGrid = state.getInputGrid();
     std::vector<double> porv = eclipseState->getDoubleGridProperty("PORV")->getData();
     GridManager gridManager( eclipseState->getInputGrid(), porv );

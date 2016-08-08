@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(Construction)
         Opm::ParserPtr parser(new Opm::Parser());
         Opm::DeckPtr deck =  parser->parseString(deckData + solventData, parseContext);
         Opm::EclipseStateConstPtr eclState;
-        eclState.reset(new Opm::EclipseState(deck , parseContext));
+        eclState.reset(new Opm::EclipseState(*deck , parseContext));
         std::vector<int> global_ind = {0 , 1 , 2};
         Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind.data());
 }
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(SolventData)
         Opm::ParserPtr parser(new Opm::Parser());
         Opm::DeckPtr deck =  parser->parseString(deckData + solventData, parseContext);
         Opm::EclipseStateConstPtr eclState;
-        eclState.reset(new Opm::EclipseState(deck , parseContext));
+        eclState.reset(new Opm::EclipseState(*deck , parseContext));
         std::vector<int> global_ind = {0 , 1 , 2};
         Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind.data());
 
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(PMISC)
         Opm::ParserPtr parser(new Opm::Parser());
         Opm::DeckPtr deck =  parser->parseString(deckData + solventData + pmiscData, parseContext);
         Opm::EclipseStateConstPtr eclState;
-        eclState.reset(new Opm::EclipseState(deck , parseContext));
+        eclState.reset(new Opm::EclipseState(*deck , parseContext));
         const Opm::SolventPropsAdFromDeck::Cells cells(3, 0);
         typedef Opm::SolventPropsAdFromDeck::V V;
         std::vector<int> global_ind = {0 , 1 , 2};
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(TLPMIXPA)
         Opm::ParserPtr parser(new Opm::Parser());
         Opm::DeckPtr deck =  parser->parseString(deckData + solventData + tlpmixpaData, parseContext);
         Opm::EclipseStateConstPtr eclState;
-        eclState.reset(new Opm::EclipseState(deck , parseContext));
+        eclState.reset(new Opm::EclipseState(*deck , parseContext));
         const Opm::SolventPropsAdFromDeck::Cells cells(3, 0);
         typedef Opm::SolventPropsAdFromDeck::V V;
         const int* global_ind = new int[3] {0 , 1 , 2};
@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE(TLPMIXPA_NOT_SPECIFIED)
     // no pmisc data and default tlpmixdata i.e it should throw
     Opm::DeckPtr deck =  parser->parseString(deckData + solventData, parseContext);
     Opm::EclipseStateConstPtr eclState;
-    eclState.reset(new Opm::EclipseState(deck , parseContext));
+    eclState.reset(new Opm::EclipseState(*deck , parseContext));
     const Opm::SolventPropsAdFromDeck::Cells cells(3, 0);
     const int* global_ind = new int[3] {0 , 1 , 2};
     Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind);
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(TLPMIXPA_DEFAULT)
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::DeckPtr deck =  parser->parseString(deckData + solventData + pmiscData + tlpmixpaDataDefault, parseContext);
     Opm::EclipseStateConstPtr eclState;
-    eclState.reset(new Opm::EclipseState(deck , parseContext));
+    eclState.reset(new Opm::EclipseState(*deck , parseContext));
     const Opm::SolventPropsAdFromDeck::Cells cells(3, 0);
     typedef Opm::SolventPropsAdFromDeck::V V;
     const int* global_ind = new int[3] {0 , 1 , 2};
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(TLPMIXPA_DEFAULT_NOPMISC)
     // no pmisc data and default tlpmixdata i.e it should throw
     Opm::DeckPtr deck =  parser->parseString(deckData + solventData + tlpmixpaDataDefault, parseContext);
     Opm::EclipseStateConstPtr eclState;
-    eclState.reset(new Opm::EclipseState(deck , parseContext));
+    eclState.reset(new Opm::EclipseState(*deck , parseContext));
     const Opm::SolventPropsAdFromDeck::Cells cells(3, 0);
     const int* global_ind = new int[3] {0 , 1 , 2};
     BOOST_CHECK_THROW(Opm::SolventPropsAdFromDeck solventprops(deck, eclState, 3, global_ind), std::invalid_argument);

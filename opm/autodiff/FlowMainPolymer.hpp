@@ -104,13 +104,13 @@ namespace Opm
             const std::string directSolver = "direct";
             const std::string flowDefaultSolver = interleavedSolver;
 
-            std::shared_ptr<const Opm::SimulationConfig> simCfg = eclipse_state_->getSimulationConfig();
+            const Opm::SimulationConfig& simCfg = eclipse_state_->getSimulationConfig();
             std::string solver_approach = flowDefaultSolver;
 
             if (param_.has("solver_approach")) {
                 solver_approach = param_.template get<std::string>("solver_approach");
             }  else {
-                if (simCfg->useCPR()) {
+                if (simCfg.useCPR()) {
                     solver_approach = cprSolver;
                 }
             }

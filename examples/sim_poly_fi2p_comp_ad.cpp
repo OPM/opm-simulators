@@ -156,7 +156,7 @@ try
     try {
         deck = parser->parseFile(deck_filename , parseContext);
         Opm::checkDeck(deck, parser);
-        eclipseState.reset(new Opm::EclipseState(deck , parseContext));
+        eclipseState.reset(new Opm::EclipseState(*deck , parseContext));
     }
     catch (const std::invalid_argument& e) {
         std::cerr << "Failed to create valid ECLIPSESTATE object. See logfile: " << logFile << std::endl;

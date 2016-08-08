@@ -51,7 +51,7 @@ struct SetupSimple {
         Opm::ParserPtr parser(new Opm::Parser());
         Opm::ParseContext parseContext;
         deck = parser->parseFile("fluid.data" , parseContext);
-        eclState.reset(new Opm::EclipseState(deck , parseContext));
+        eclState.reset(new Opm::EclipseState(*deck , parseContext));
 
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
