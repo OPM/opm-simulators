@@ -37,13 +37,54 @@ namespace Opm
         typedef FlowMainBase<FlowMainEbos, Dune::CpGrid, Simulator> Base;
         friend Base;
 
+        typedef typename TTAG(EclFlowProblem) TypeTag;
+        typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
+
+        // Parser the input and creates the Deck and EclipseState objects.
+        // Writes to:
+        //   deck_
+        //   eclipse_state_
+        // May throw if errors are encountered, here configured to be somewhat tolerant.
+        void readDeckInput()
+        {
+            std::string progName("flow_ebos");
+            std::string deckFile("--ecl-deck-file-name=");
+            deckFile += param_.get<std::string>("deck_filename");
+            char* ptr[2];
+            ptr[ 0 ] = const_cast< char * > (progName.c_str());
+            ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
+            EbosSimulator::registerParameters();
+            Ewoms::setupParameters_< TypeTag > ( 2, ptr );
+            ebosSimulator_.reset(new EbosSimulator());
+            ebosSimulator_->model().applyInitialSolution();
+
+            Base::deck_ = ebosSimulator_->gridManager().deck();
+            Base::eclipse_state_ = ebosSimulator_->gridManager().eclState();
+
+            // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
+            if (Base::param_.has("output_interval")) {
+                const int output_interval = Base::param_.get<int>("output_interval");
+                IOConfigPtr ioConfig = Base::eclipse_state_->getIOConfig();
+                ioConfig->overrideRestartWriteInterval(static_cast<size_t>(output_interval));
+            }
+
+            // Possible to force initialization only behavior (NOSIM).
+            if (Base::param_.has("nosim")) {
+                const bool nosim = Base::param_.get<bool>("nosim");
+                IOConfigPtr ioConfig = Base::eclipse_state_->getIOConfig();
+                ioConfig->overrideNOSIM( nosim );
+            }
+        }
+
+        /// This is the main function of Flow.
         // Create simulator instance.
         // Writes to:
         //   simulator_
         void createSimulator()
         {
             // Create the simulator instance.
-            Base::simulator_.reset(new Simulator(Base::param_,
+            Base::simulator_.reset(new Simulator(*ebosSimulator_,
+                                                 Base::param_,
                                                  *Base::geoprops_,
                                                  *Base::fluidprops_,
                                                  Base::rock_comp_->isActive() ? Base::rock_comp_.get() : nullptr,
@@ -55,6 +96,9 @@ namespace Opm
                                                  *Base::output_writer_,
                                                  Base::threshold_pressures_));
         }
+
+    private:
+        std::unique_ptr<EbosSimulator> ebosSimulator_;
     };
 } // namespace Opm
 

@@ -139,7 +139,6 @@ namespace Opm {
                           const RockCompressibility*      rock_comp_props,
                           const StandardWells&                well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
-                          Opm::EclipseStateConstPtr eclState,
                           const bool has_disgas,
                           const bool has_vapoil,
                           const bool terminal_output)
@@ -149,8 +148,8 @@ namespace Opm {
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
         , vfp_properties_(
-            eclState->getTableManager().getVFPInjTables(),
-            eclState->getTableManager().getVFPProdTables())
+            eclState().getTableManager().getVFPInjTables(),
+            eclState().getTableManager().getVFPProdTables())
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
@@ -183,6 +182,9 @@ namespace Opm {
             wellModel().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
+
+        const EclipseState& eclState() const
+        { return *ebosSimulator_.gridManager().eclState(); }
 
         /// Called once before each time step.
         /// \param[in] timer                  simulation timer

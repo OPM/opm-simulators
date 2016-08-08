@@ -73,7 +73,8 @@ public:
     /// \param[in] eclipse_state the object which represents an internalized ECL deck
     /// \param[in] output_writer
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
-    SimulatorFullyImplicitBlackoilEbos(const parameter::ParameterGroup& param,
+    SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
+                                       const parameter::ParameterGroup& param,
                                        DerivedGeology& geo,
                                        BlackoilPropsAdInterface& props,
                                        const RockCompressibility* rock_comp_props,
@@ -84,7 +85,8 @@ public:
                                        std::shared_ptr<EclipseState> eclipse_state,
                                        BlackoilOutputWriter& output_writer,
                                        const std::vector<double>& threshold_pressures_by_face)
-        : param_(param),
+        : ebosSimulator_(ebosSimulator),
+          param_(param),
           model_param_(param),
           solver_param_(param),
           props_(props),
@@ -95,21 +97,10 @@ public:
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
           terminal_output_(param.getDefault("output_terminal", true)),
-          eclipse_state_(eclipse_state),
           output_writer_(output_writer),
           threshold_pressures_by_face_(threshold_pressures_by_face),
           is_parallel_run_( false )
     {
-        std::string progName("flow_ebos");
-        std::string deckFile("--ecl-deck-file-name=");
-        deckFile += model_param_.deck_file_name_;
-        char* ptr[2];
-        ptr[ 0 ] = const_cast< char * > (progName.c_str());
-        ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
-        Simulator::registerParameters();
-        Ewoms::setupParameters_< TypeTag > ( 2, ptr );
-        ebosSimulator_ = new Simulator();
-        ebosSimulator_->model().applyInitialSolution();
 
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid());
@@ -158,7 +149,7 @@ public:
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        const auto& schedule = eclipse_state_->getSchedule();
+        const auto& schedule = eclState()->getSchedule();
         const auto& events = schedule->getEvents();
 
         // adaptive time stepping
@@ -204,7 +195,7 @@ public:
             }
 
             // Create wells and well state.
-            WellsManager wells_manager(eclipse_state_,
+            WellsManager wells_manager(eclState(),
                                        timer.currentStepNum(),
                                        Opm::UgGridHelpers::numCells(grid()),
                                        Opm::UgGridHelpers::globalCell(grid()),
@@ -283,7 +274,7 @@ public:
                 // TODO (?): handle the parallel case (maybe this works out of the box)
                 DeckConstPtr miniDeck = schedule->getModifierDeck(nextTimeStepIdx);
                 eclState()->applyModifierDeck(*miniDeck);
-                geo_.update(grid(), props_, eclipse_state_, gravity_);
+                geo_.update(grid(), props_, eclState(), gravity_);
             }
 
             // take time that was used to solve system for this reportStep
@@ -327,7 +318,7 @@ public:
                 computeWellPotentials(wells, well_state, well_potentials);
             }
 
-            updateListEconLimited(solver, eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
+            updateListEconLimited(solver, eclState()->getSchedule(), timer.currentStepNum(), wells,
                                   well_state, dynamic_list_econ_limited);
         }
 
@@ -344,7 +335,7 @@ public:
     }
 
     const Grid& grid() const
-    { return ebosSimulator_->gridManager().grid(); }
+    { return ebosSimulator_.gridManager().grid(); }
 
 protected:
     void handleAdditionalWellInflow(SimulatorTimer& timer,
@@ -355,14 +346,13 @@ protected:
 
     std::unique_ptr<Solver> createSolver(const WellModel& well_model)
     {
-        auto model = std::unique_ptr<Model>(new Model(*ebosSimulator_,
+        auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       model_param_,
                                                       props_,
                                                       geo_,
                                                       rock_comp_props_,
                                                       well_model,
                                                       solver_,
-                                                      eclipse_state_,
                                                       has_disgas_,
                                                       has_vapoil_,
                                                       terminal_output_));
@@ -377,7 +367,7 @@ protected:
     {
         typedef SimFIBODetails::WellMap WellMap;
 
-        const auto w_ecl = eclipse_state_->getSchedule()->getWells(step);
+        const auto w_ecl = eclState()->getSchedule()->getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
@@ -565,10 +555,14 @@ protected:
                                                           well_state, list_econ_limited);
     }
 
+    EclipseStateConstPtr eclState() const
+    { return ebosSimulator_.gridManager().eclState(); }
 
+    EclipseStatePtr eclState()
+    { return ebosSimulator_.gridManager().eclState(); }
 
     // Data.
-    Simulator* ebosSimulator_;
+    Simulator& ebosSimulator_;
 
     typedef RateConverter::
     SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
@@ -591,8 +585,6 @@ protected:
     const bool has_disgas_;
     const bool has_vapoil_;
     bool       terminal_output_;
-    // eclipse_state
-    std::shared_ptr<EclipseState> eclipse_state_;
     // output_writer
     OutputWriter& output_writer_;
     std::unique_ptr<RateConverterType> rateConverter_;
