@@ -246,7 +246,7 @@ inline void testAll()
         typedef typename MaterialLawManager::MaterialLaw MaterialLaw;
 
         const auto deck = parser.parseString(fam1DeckString, parseContext);
-        const auto eclState = std::make_shared<Opm::EclipseState>(deck, parseContext);
+        const auto eclState = std::make_shared<Opm::EclipseState>(*deck, parseContext);
         const auto eclGrid = eclState->getInputGrid();
 
         size_t n = eclGrid->getCartesianSize();
@@ -267,7 +267,7 @@ inline void testAll()
                       "Discrepancy between the deck and the EclMaterialLawManager");
 
         const auto fam2Deck = parser.parseString(fam2DeckString, parseContext);
-        const auto fam2EclState = std::make_shared<Opm::EclipseState>(fam2Deck, parseContext);
+        const auto fam2EclState = std::make_shared<Opm::EclipseState>(*fam2Deck, parseContext);
 
         Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
         fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
