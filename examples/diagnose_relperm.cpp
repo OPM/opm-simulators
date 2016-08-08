@@ -76,7 +76,7 @@ try
                               { ParseContext::INTERNAL_ERROR_UNINITIALIZED_THPRES, InputError::IGNORE}
                              });
     Opm::DeckConstPtr deck(parser->parseFile(eclipseFilename, parseContext));
-    eclState.reset(new EclipseState(deck, parseContext));
+    eclState.reset(new EclipseState(*deck, parseContext));
 
     GridManager gm(eclState->getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();

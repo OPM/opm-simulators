@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     std::string scheduleFile("wells_group.data");
     ParseContext parseContext;
     DeckConstPtr deck =  parser->parseFile(scheduleFile, parseContext);
-    EclipseStateConstPtr eclipseState(new EclipseState(deck, parseContext));
+    EclipseStateConstPtr eclipseState(new EclipseState(*deck, parseContext));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
     GroupTreeNodePtr field=eclipseState->getSchedule()->getGroupTree(2)->getNode("FIELD");

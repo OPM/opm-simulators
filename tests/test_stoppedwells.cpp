@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
     Opm::ParseContext parseContext;
     Opm::DeckConstPtr deck(parser->parseFile(filename , parseContext));
 
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
     Opm::GridManager gridManager(eclipseState->getInputGrid());
 
     double target_surfacerate_inj;

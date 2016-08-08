@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     std::string scheduleFile("wells_group.data");
     ParseContext parseContext;
     DeckConstPtr deck =  parser->parseFile(scheduleFile, parseContext);
-    EclipseStateConstPtr eclipseState(new EclipseState(deck , parseContext));
+    EclipseStateConstPtr eclipseState(new EclipseState(*deck , parseContext));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
     auto wells = eclipseState->getSchedule()->getWells();
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     ParseContext parseContext;
     std::string scheduleFile("wells_group.data");
     DeckConstPtr deck =  parser->parseFile(scheduleFile, parseContext);
-    EclipseStateConstPtr eclipseState(new EclipseState(deck , parseContext));
+    EclipseStateConstPtr eclipseState(new EclipseState(*deck , parseContext));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
     std::vector<GroupTreeNodeConstPtr> nodes = eclipseState->getSchedule()->getGroupTree(2)->getNodes();
