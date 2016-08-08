@@ -138,7 +138,8 @@ namespace Opm {
         /// \param[in] has_disgas       turn on dissolved gas
         /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] terminal_output  request output to cout/cerr
-        BlackoilModelEbos(const ModelParameters&          param,
+        BlackoilModelEbos(Simulator& ebosSimulator,
+                          const ModelParameters&          param,
                           const Grid&                     grid ,
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
@@ -149,7 +150,8 @@ namespace Opm {
                           const bool has_disgas,
                           const bool has_vapoil,
                           const bool terminal_output)
-        : grid_  (grid)
+        : ebosSimulator_(ebosSimulator)
+        , grid_  (grid)
         , fluid_ (fluid)
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
@@ -178,7 +180,6 @@ namespace Opm {
                     false } )
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
-        , ebosSimulator_( 0 )
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
@@ -187,22 +188,6 @@ namespace Opm {
 
             wellModel().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
-
-            static Simulator* ebosPtr = 0;
-            if( ! ebosPtr )
-            {
-                std::string progName("./ebos");
-                std::string deckFile("--ecl-deck-file-name=");
-                deckFile += param.deck_file_name_;
-                char* ptr[2];
-                ptr[ 0 ] = const_cast< char * > (progName.c_str());
-                ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
-                Simulator::registerParameters();
-                Ewoms::setupParameters_< TypeTag > ( 2, ptr );
-                ebosPtr = new Simulator();
-                ebosPtr->model().applyInitialSolution();
-            }
-            ebosSimulator_ = ebosPtr;
         }
 
         /// Called once before each time step.
@@ -891,6 +876,7 @@ namespace Opm {
 
         // ---------  Data members  ---------
 
+        Simulator& ebosSimulator_;
         const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
@@ -930,8 +916,6 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         V dx_old_;
-
-        Simulator* ebosSimulator_;
 
         // ---------  Protected methods  ---------
 
@@ -1328,7 +1312,7 @@ namespace Opm {
             ///////
             for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
             {
-                const auto& intQuants = *(ebosSimulator_->model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0));
+                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0));
                 const auto& fs = intQuants.fluidState();
 
                 poVal[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value;
@@ -1460,15 +1444,13 @@ namespace Opm {
                                    const ReservoirState& reservoirState,
                                    SolutionState& state)
         {
-            assert( ebosSimulator_ );
+            convertInput( iterationIdx, reservoirState, ebosSimulator_ );
 
-            convertInput( iterationIdx, reservoirState, *ebosSimulator_ );
-
-            ebosSimulator_->startNextEpisode( timer.currentStepLength() );
-            ebosSimulator_->setEpisodeIndex( timer.reportStepNum() );
-            ebosSimulator_->setTimeStepIndex( timer.reportStepNum() );
-            ebosSimulator_->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-            ebosSimulator_->model().newtonMethod().setIterationIndex(iterationIdx);
+            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
 
             static int prevEpisodeIdx = 10000;
 
@@ -1477,24 +1459,24 @@ namespace Opm {
             // doing the notifactions here is conceptually wrong and also causes the
             // endTimeStep() and endEpisode() methods to be not called for the
             // simulation's last time step and episode.
-            if (ebosSimulator_->model().newtonMethod().numIterations() == 0 && prevEpisodeIdx >= 0)
-                ebosSimulator_->problem().endTimeStep();
-            if (ebosSimulator_->episodeIndex() != prevEpisodeIdx && prevEpisodeIdx >= 0)
-                ebosSimulator_->problem().endEpisode();
+            if (ebosSimulator_.model().newtonMethod().numIterations() == 0 && prevEpisodeIdx >= 0)
+                ebosSimulator_.problem().endTimeStep();
+            if (ebosSimulator_.episodeIndex() != prevEpisodeIdx && prevEpisodeIdx >= 0)
+                ebosSimulator_.problem().endEpisode();
 
-            if (ebosSimulator_->episodeIndex() != prevEpisodeIdx)
-                ebosSimulator_->problem().beginEpisode();
-            ebosSimulator_->setTimeStepSize( timer.currentStepLength() );
-            if (ebosSimulator_->model().newtonMethod().numIterations() == 0)
-                ebosSimulator_->problem().beginTimeStep();
-            ebosSimulator_->problem().beginIteration();
+            if (ebosSimulator_.episodeIndex() != prevEpisodeIdx)
+                ebosSimulator_.problem().beginEpisode();
+            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
+            if (ebosSimulator_.model().newtonMethod().numIterations() == 0)
+                ebosSimulator_.problem().beginTimeStep();
+            ebosSimulator_.problem().beginIteration();
 
-            ebosSimulator_->model().linearizer().linearize();
+            ebosSimulator_.model().linearizer().linearize();
 
-            ebosSimulator_->problem().endIteration();
-            prevEpisodeIdx = ebosSimulator_->episodeIndex();
-            convertResults(*ebosSimulator_, /*sparsityPattern=*/state.saturation[0]);
-            updateLegacyState(*ebosSimulator_, state);
+            ebosSimulator_.problem().endIteration();
+            prevEpisodeIdx = ebosSimulator_.episodeIndex();
+            convertResults(ebosSimulator_, /*sparsityPattern=*/state.saturation[0]);
+            updateLegacyState(ebosSimulator_, state);
 
             if (param_.update_equations_scaling_) {
                 updateEquationsScaling();

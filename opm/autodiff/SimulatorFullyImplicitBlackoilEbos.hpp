@@ -37,6 +37,8 @@ template <class GridT>
 class SimulatorFullyImplicitBlackoilEbos
 {
 public:
+    typedef typename TTAG(EclFlowProblem) TypeTag;
+    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator ;
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriter OutputWriter;
@@ -110,6 +112,18 @@ public:
         for (int cell = 0; cell < num_cells; ++cell) {
             allcells_[cell] = cell;
         }
+
+        std::string progName("flow_ebos");
+        std::string deckFile("--ecl-deck-file-name=");
+        deckFile += model_param_.deck_file_name_;
+        char* ptr[2];
+        ptr[ 0 ] = const_cast< char * > (progName.c_str());
+        ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
+        Simulator::registerParameters();
+        Ewoms::setupParameters_< TypeTag > ( 2, ptr );
+        ebosSimulator_ = new Simulator();
+        ebosSimulator_->model().applyInitialSolution();
+
 #if HAVE_MPI
         if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
@@ -338,7 +352,8 @@ protected:
 
     std::unique_ptr<Solver> createSolver(const WellModel& well_model)
     {
-        auto model = std::unique_ptr<Model>(new Model(model_param_,
+        auto model = std::unique_ptr<Model>(new Model(*ebosSimulator_,
+                                                      model_param_,
                                                       grid_,
                                                       props_,
                                                       geo_,
@@ -551,6 +566,8 @@ protected:
 
 
     // Data.
+    Simulator* ebosSimulator_;
+
     typedef RateConverter::
     SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
                                std::vector<int> > RateConverterType;
