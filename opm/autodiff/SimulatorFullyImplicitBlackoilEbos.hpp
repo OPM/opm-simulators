@@ -259,6 +259,8 @@ public:
                 OpmLog::info(step_msg.str());
             }
 
+            solver->model().beginReportStep();
+
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
             //
@@ -271,6 +273,8 @@ public:
                 // solve for complete report step
                 solver->step(timer, state, well_state);
             }
+
+            solver->model().endReportStep();
 
             // update the derived geology (transmissibilities, pore volumes, etc) if the
             // has geology changed for the next report step

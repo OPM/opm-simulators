@@ -173,6 +173,7 @@ namespace Opm {
                     false } )
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
+        , isBeginReportStep_(false)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
@@ -1432,6 +1433,18 @@ namespace Opm {
             }
         }
 
+    public:
+        void beginReportStep()
+        {
+            isBeginReportStep_ = true;
+        }
+
+        void endReportStep()
+        {
+            ebosSimulator_.problem().endEpisode();
+        }
+
+    private:
         void assembleMassBalanceEq(const SimulatorTimerInterface& timer,
                                    const int iterationIdx,
                                    const ReservoirState& reservoirState,
@@ -1448,26 +1461,32 @@ namespace Opm {
             static int prevEpisodeIdx = 10000;
 
             // notify ebos about the end of the previous episode and time step if applicable
-            #warning "TODO: move this to the  SimulatorFullyImplicitBlackoilEbos class"
+            if (isBeginReportStep_) {
+                isBeginReportStep_ = false;
+                ebosSimulator_.problem().beginEpisode();
+            }
+
             // doing the notifactions here is conceptually wrong and also causes the
             // endTimeStep() and endEpisode() methods to be not called for the
             // simulation's last time step and episode.
-            if (ebosSimulator_.model().newtonMethod().numIterations() == 0 && prevEpisodeIdx >= 0)
+            if (ebosSimulator_.model().newtonMethod().numIterations() == 0
+                && prevEpisodeIdx < timer.reportStepNum())
+            {
                 ebosSimulator_.problem().endTimeStep();
-            if (ebosSimulator_.episodeIndex() != prevEpisodeIdx && prevEpisodeIdx >= 0)
-                ebosSimulator_.problem().endEpisode();
+            }
 
-            if (ebosSimulator_.episodeIndex() != prevEpisodeIdx)
-                ebosSimulator_.problem().beginEpisode();
             ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
             if (ebosSimulator_.model().newtonMethod().numIterations() == 0)
+            {
                 ebosSimulator_.problem().beginTimeStep();
+            }
+
             ebosSimulator_.problem().beginIteration();
-
             ebosSimulator_.model().linearizer().linearize();
-
             ebosSimulator_.problem().endIteration();
+
             prevEpisodeIdx = ebosSimulator_.episodeIndex();
+
             convertResults(ebosSimulator_, /*sparsityPattern=*/state.saturation[0]);
             updateLegacyState(ebosSimulator_, state);
 
@@ -1890,6 +1909,9 @@ namespace Opm {
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
+
+    public:
+        bool isBeginReportStep_;
 
     };
 } // namespace Opm
