@@ -93,13 +93,6 @@ namespace Opm {
     /// where gas can be dissolved in oil and vice versa. It
     /// uses an industry-standard TPFA discretization with per-phase
     /// upwind weighting of mobilities.
-    ///
-    /// It uses automatic differentiation via the class AutoDiffBlock
-    /// to simplify assembly of the jacobian matrix.
-    /// \tparam  Grid            UnstructuredGrid or CpGrid.
-    /// \tparam  WellModel       WellModel employed.
-    /// \tparam  Implementation  Provides concrete state types.
-    template<class Grid>
     class BlackoilModelEbos
     {
     public:
@@ -115,6 +108,7 @@ namespace Opm {
 
         typedef typename TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator ;
+        typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
         typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
         typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
@@ -140,7 +134,6 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters&          param,
-                          const Grid&                     grid ,
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
@@ -151,7 +144,7 @@ namespace Opm {
                           const bool has_vapoil,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
-        , grid_  (grid)
+        , grid_(ebosSimulator_.gridManager().grid())
         , fluid_ (fluid)
         , geo_   (geo)
         , rock_comp_props_(rock_comp_props)
@@ -161,18 +154,18 @@ namespace Opm {
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
-        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid)))
-        , ops_   (grid, geo.nnc())
+        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid_)))
+        , ops_   (grid_, geo.nnc())
         , has_disgas_(has_disgas)
         , has_vapoil_(has_vapoil)
         , param_( param )
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
-        , phaseCondition_(AutoDiffGrid::numCells(grid))
+        , phaseCondition_(AutoDiffGrid::numCells(grid_))
         , well_model_ (well_model)
-        , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
-        , isRv_(V::Zero(AutoDiffGrid::numCells(grid)))
-        , isSg_(V::Zero(AutoDiffGrid::numCells(grid)))
+        , isRs_(V::Zero(AutoDiffGrid::numCells(grid_)))
+        , isRv_(V::Zero(AutoDiffGrid::numCells(grid_)))
+        , isSg_(V::Zero(AutoDiffGrid::numCells(grid_)))
         , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
                     ADB::null(),
                     ADB::null(),

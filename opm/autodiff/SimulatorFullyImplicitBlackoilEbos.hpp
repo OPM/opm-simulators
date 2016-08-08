@@ -43,7 +43,7 @@ public:
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriter OutputWriter;
     typedef GridT Grid;
-    typedef BlackoilModelEbos<Grid> Model;
+    typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
     typedef StandardWells WellModel;
@@ -354,7 +354,6 @@ protected:
     {
         auto model = std::unique_ptr<Model>(new Model(*ebosSimulator_,
                                                       model_param_,
-                                                      grid_,
                                                       props_,
                                                       geo_,
                                                       rock_comp_props_,
