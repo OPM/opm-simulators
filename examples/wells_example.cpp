@@ -38,7 +38,7 @@ try
     ParseContext parseContext;
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::DeckConstPtr deck = parser->parseFile(file_name , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
     std::cout << "Done!" << std::endl;
 
     // Setup grid
