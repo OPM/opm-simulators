@@ -151,10 +151,16 @@ public:
     Opm::DeckConstPtr deck() const
     { return deck_; }
 
+    Opm::DeckPtr deck()
+    { return deck_; }
+
     /*!
      * \brief Return a pointer to the internalized ECL deck
      */
     Opm::EclipseStateConstPtr eclState() const
+    { return eclState_; }
+
+    Opm::EclipseStatePtr eclState()
     { return eclState_; }
 
     /*!
@@ -247,9 +253,8 @@ private:
     { return *static_cast<const Implementation*>(this); }
 
     std::string caseName_;
-    Opm::DeckConstPtr deck_;
-    Opm::EclipseStateConstPtr eclState_;
-
+    Opm::DeckPtr deck_;
+    Opm::EclipseStatePtr eclState_;
 };
 
 } // namespace Ewoms
