@@ -37,20 +37,16 @@ std::vector<int> get_testBlackoilStateActnum() {
 }
 
 BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
-
-    ParseContext parseContext;
     const string filename1 = "testBlackoilState1.DATA";
     const string filename2 = "testBlackoilState2.DATA";
-    Opm::ParserPtr parser(new Opm::Parser());
 
-    Opm::DeckConstPtr deck1(parser->parseFile(filename1, parseContext));
-    auto eg1 = std::make_shared<Opm::EclipseGrid>(deck1);
+    const auto es1 = Opm::Parser::parse(filename1);
+    auto eg1 = es1.getInputGridCopy();
     std::vector<int> actnum = get_testBlackoilStateActnum();
     eg1->resetACTNUM(actnum.data());
 
-
-    Opm::DeckConstPtr deck2(parser->parseFile(filename2, parseContext));
-    auto eg2 = std::make_shared<Opm::EclipseGrid>(deck2);
+    const auto es2 = Opm::Parser::parse(filename2);
+    auto eg2 = es2.getInputGrid();
 
     GridManager gridManager1(eg1);
     const UnstructuredGrid& grid1 = *gridManager1.c_grid();
@@ -61,7 +57,7 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
     BlackoilState state1( UgGridHelpers::numCells( grid1 ) , UgGridHelpers::numFaces( grid1 ) , 3);
     BlackoilState state2( UgGridHelpers::numCells( grid2 ) , UgGridHelpers::numFaces( grid2 ) , 3);
 
-    BOOST_CHECK_EQUAL( false , state1.equal(state2) );
+    BOOST_CHECK( ! state1.equal(state2) );
 }
 
 
@@ -70,10 +66,10 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
 BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
 
     const string filename = "testBlackoilState1.DATA";
-    Opm::ParseContext parseContext;
-    Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename , parseContext));
-    auto eg = std::make_shared<Opm::EclipseGrid>(deck);
+
+    const auto es = Opm::Parser::parse(filename);
+    auto eg = es.getInputGridCopy();
+
     std::vector<int> actnum = get_testBlackoilStateActnum();
     eg->resetACTNUM(actnum.data());
 
@@ -84,33 +80,33 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
     BlackoilState state2( UgGridHelpers::numCells( grid ) , UgGridHelpers::numFaces( grid ) , 3);
 
 
-    BOOST_CHECK_EQUAL( true , state1.equal(state2) );
+    BOOST_CHECK( state1.equal(state2) );
     {
         std::vector<double>& p1 = state1.pressure();
         std::vector<double>& p2 = state2.pressure();
         p1[0] = p1[0] * 2 + 1;
 
-        BOOST_CHECK_EQUAL( false , state1.equal(state2) );
+        BOOST_CHECK( ! state1.equal(state2) );
         p1[0] = p2[0];
-        BOOST_CHECK_EQUAL( true , state1.equal(state2) );
+        BOOST_CHECK(   state1.equal(state2) );
     }
     {
         std::vector<double>& gor1 = state1.gasoilratio();
         std::vector<double>& gor2 = state2.gasoilratio();
         gor1[0] = gor1[0] * 2 + 1;
 
-        BOOST_CHECK_EQUAL( false , state1.equal(state2) );
+        BOOST_CHECK( ! state1.equal(state2) );
         gor1[0] = gor2[0];
-        BOOST_CHECK_EQUAL( true , state1.equal(state2) );
+        BOOST_CHECK(   state1.equal(state2) );
     }
     {
         std::vector<double>& p1 = state1.facepressure();
         std::vector<double>& p2 = state2.facepressure();
         p1[0] = p1[0] * 2 + 1;
 
-        BOOST_CHECK_EQUAL( false , state1.equal(state2) );
+        BOOST_CHECK( ! state1.equal(state2) );
         p1[0] = p2[0];
-        BOOST_CHECK_EQUAL( true , state1.equal(state2) );
+        BOOST_CHECK(   state1.equal(state2) );
     }
 
     {
@@ -119,9 +115,9 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
         if (f1.size() > 0 ) {
             f1[0] = f1[0] * 2 + 1;
 
-            BOOST_CHECK_EQUAL( false , state1.equal(state2) );
+            BOOST_CHECK( ! state1.equal(state2) );
             f1[0] = f2[0];
-            BOOST_CHECK_EQUAL( true , state1.equal(state2) );
+            BOOST_CHECK(   state1.equal(state2) );
         }
     }
     {
@@ -130,9 +126,9 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
         if (sv1.size() > 0) {
             sv1[0] = sv1[0] * 2 + 1;
 
-            BOOST_CHECK_EQUAL( false , state1.equal(state2) );
+            BOOST_CHECK( ! state1.equal(state2) );
             sv1[0] = sv2[0];
-            BOOST_CHECK_EQUAL( true , state1.equal(state2) );
+            BOOST_CHECK(   state1.equal(state2) );
         }
     }
     {
@@ -140,8 +136,8 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
         std::vector<double>& sat2 = state2.saturation();
         sat1[0] = sat1[0] * 2 + 1;
 
-        BOOST_CHECK_EQUAL( false , state1.equal(state2) );
+        BOOST_CHECK( ! state1.equal(state2) );
         sat1[0] = sat2[0];
-        BOOST_CHECK_EQUAL( true , state1.equal(state2) );
+        BOOST_CHECK(   state1.equal(state2) );
     }
 }
