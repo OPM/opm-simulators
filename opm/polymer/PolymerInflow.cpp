@@ -19,6 +19,7 @@
 
 #include <config.h>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/polymer/PolymerInflow.hpp>
 #include <opm/core/wells.h>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -55,7 +56,7 @@ namespace Opm
         if (step_start + eps >= stime_ && step_end - eps <= etime_) {
             std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
         } else if (step_start + eps <= etime_ && step_end - eps >= stime_) {
-            OPM_MESSAGE("Warning: polymer injection set to change inside timestep. Using value at start of step.");
+            OpmLog::warning("polymer injection set to change inside timestep. Using value at start of step.");
             std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), amount_);
         } else {
             std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), 0.0);
@@ -72,12 +73,14 @@ namespace Opm
     {
         ScheduleConstPtr schedule = eclipseState->getSchedule();
         for (const auto& well : schedule->getWells(currentStep)) {
-            WellInjectionProperties injection = well->getInjectionProperties(currentStep);
-            if (injection.injectorType == WellInjector::WATER) {
-                WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
-                wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
-            } else {
-                OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
+            if (well->isInjector(currentStep)) {
+                WellInjectionProperties injection = well->getInjectionProperties(currentStep);
+                if (injection.injectorType == WellInjector::WATER) {
+                    WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
+                    wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
+                } else {
+                    OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
+                }
             }
         }
     }
@@ -101,7 +104,7 @@ namespace Opm
             // names.
             int wix = 0;
             for (; wix < wells.number_of_wells; ++wix) {
-                if (wellPolymerRate_.count(wells.name[wix]) > 0) {
+                if (map_it->first == wells.name[wix]) {
                     break;
                 }
             }

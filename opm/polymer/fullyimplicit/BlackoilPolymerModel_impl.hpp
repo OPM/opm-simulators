@@ -121,11 +121,11 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::
-    prepareStep(const double dt,
+    prepareStep(const SimulatorTimerInterface& timer,
                 const ReservoirState& reservoir_state,
                 const WellState& well_state)
     {
-        Base::prepareStep(dt, reservoir_state, well_state);
+        Base::prepareStep(timer, reservoir_state, well_state);
         auto& max_concentration = reservoir_state.getCellData( reservoir_state.CMAX );
         // Initial max concentration of this time step from PolymerBlackoilState.
 
@@ -138,7 +138,7 @@ namespace Opm {
     template <class Grid>
     void
     BlackoilPolymerModel<Grid>::
-    afterStep(const double /* dt */,
+    afterStep(const SimulatorTimerInterface& /* timer */,
               ReservoirState& reservoir_state,
               WellState& /* well_state */)
     {
@@ -526,7 +526,7 @@ namespace Opm {
 
         // -------- Mass balance equations --------
         assembleMassBalanceEq(state);
-        IterationReport iter_report = {false, false, 0, std::numeric_limits<int>::min()};
+        IterationReport iter_report = {false, false, 0, 0};
         // -------- Well equations ----------
         if ( ! wellsActive() ) {
             return iter_report;

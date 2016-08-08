@@ -30,6 +30,7 @@
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -89,10 +90,11 @@ namespace Opm {
         /// \param[in] wstate    well state
         /// \param[in] polymer_inflow	polymer influx
         int
-        step(const double   			dt,
+        step(const SimulatorTimerInterface& timer,
              PolymerBlackoilState& 		state ,
              WellStateFullyImplicitBlackoilPolymer& wstate);
 
+        int linearizations() const;
         int nonlinearIterations() const;
         int linearIterations() const;
         int wellIterations() const;
@@ -165,6 +167,7 @@ namespace Opm {
         // The well_eq has size equal to the number of wells.
         LinearisedBlackoilResidual  residual_;
 
+        unsigned int linearizations_;
         unsigned int newtonIterations_;
         unsigned int linearIterations_;
         unsigned int wellIterations_;

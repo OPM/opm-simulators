@@ -28,6 +28,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 namespace Opm {
 
@@ -94,10 +95,10 @@ namespace Opm {
 
 
         /// Called once before each time step.
-        /// \param[in] dt                time step size
+        /// \param[in] timer             simulation timer
         /// \param[in] reservoir_state   reservoir state variables
         /// \param[in] well_state        well state variables
-        void prepareStep(const double /* dt */,
+        void prepareStep(const SimulatorTimerInterface& /*timer*/,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state)
         {
@@ -113,13 +114,13 @@ namespace Opm {
         /// This model will first solve the pressure model to convergence, then the
         /// transport model.
         /// \param[in] iteration              should be 0 for the first call of a new timestep
-        /// \param[in] dt                     time step size
+        /// \param[in] timer             simulation timer
         /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
         IterationReport nonlinearIteration(const int iteration,
-                                           const double dt,
+                                           const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& /* nonlinear_solver */,
                                            ReservoirState& reservoir_state,
                                            WellState& well_state)
@@ -135,7 +136,7 @@ namespace Opm {
                     OpmLog::info("Solving the pressure equation.");
                 }
                 ReservoirState initial_state = reservoir_state;
-                const int pressure_liniter = pressure_solver_.step(dt, reservoir_state, well_state);
+                const int pressure_liniter = pressure_solver_.step(timer, reservoir_state, well_state);
                 if (pressure_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Pressure solver failed to converge.");
                 }
@@ -144,7 +145,7 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the transport equations.");
                 }
-                const int transport_liniter = transport_solver_.step(dt, initial_state, well_state, reservoir_state, well_state);
+                const int transport_liniter = transport_solver_.step(timer, initial_state, well_state, reservoir_state, well_state);
                 if (transport_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Transport solver failed to converge.");
                 }
@@ -163,7 +164,7 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the pressure equation.");
                 }
-                const int pressure_liniter = pressure_solver_.step(dt, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+                const int pressure_liniter = pressure_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
                 if (pressure_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Pressure solver failed to converge.");
                 }
@@ -172,7 +173,7 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the transport equations.");
                 }
-                const int transport_liniter = transport_solver_.step(dt, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+                const int transport_liniter = transport_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
                 if (transport_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Transport solver failed to converge.");
                 }
@@ -189,10 +190,10 @@ namespace Opm {
 
         /// Called once after each time step.
         /// In this class, this function does nothing.
-        /// \param[in] dt                     time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void afterStep(const double /* dt */,
+        void afterStep(const SimulatorTimerInterface& /* timer */,
                        ReservoirState& /* reservoir_state */,
                        WellState& /* well_state */)
         {

@@ -33,6 +33,7 @@
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 #include <array>
 
@@ -161,10 +162,10 @@ namespace Opm {
         void setThresholdPressures(const std::vector<double>& threshold_pressures_by_face);
 
         /// Called once before each time step.
-        /// \param[in] dt                     time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const double dt,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state);
 
@@ -173,23 +174,23 @@ namespace Opm {
         /// and well_state. It will also use the nonlinear_solver to do relaxation of
         /// updates if necessary.
         /// \param[in] iteration              should be 0 for the first call of a new timestep
-        /// \param[in] dt                     time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
         IterationReport nonlinearIteration(const int iteration,
-                                           const double dt,
+                                           const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& nonlinear_solver,
                                            ReservoirState& reservoir_state,
                                            WellState& well_state);
 
         /// Called once after each time step.
         /// In this class, this function does nothing.
-        /// \param[in] dt                     time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void afterStep(const double dt,
+        void afterStep(const SimulatorTimerInterface& timer,
                        ReservoirState& reservoir_state,
                        WellState& well_state);
 
@@ -236,9 +237,9 @@ namespace Opm {
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
-        /// \param[in]   dt          timestep length
+        /// \param[in]   timer       simulation timer
         /// \param[in]   iteration   current iteration number
-        bool getConvergence(const double dt, const int iteration);
+        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration);
 
         /// The number of active fluid phases in the model.
         int numPhases() const;
