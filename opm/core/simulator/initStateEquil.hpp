@@ -200,7 +200,7 @@ namespace Opm
             std::vector<EquilRecord>
             getEquil(const Opm::EclipseState& state)
             {
-                const auto& init = *state.getInitConfig();
+                const auto& init = state.getInitConfig();
 
                 if( !init.hasEquil() ) {
                     OPM_THROW(std::domain_error, "Deck does not provide equilibration data.");
