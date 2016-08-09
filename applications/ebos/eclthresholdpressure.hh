@@ -222,8 +222,8 @@ private:
         const auto& gridView = gridManager.gridView();
         const auto& elementMapper = simulator_.model().elementMapper();
         const auto& eclState = simulator_.gridManager().eclState();
-        Opm::SimulationConfigConstPtr simConfig = eclState->getSimulationConfig();
-        Opm::ThresholdPressureConstPtr thpres = simConfig->getThresholdPressure();
+        const Opm::SimulationConfig& simConfig = eclState->getSimulationConfig();
+        Opm::ThresholdPressureConstPtr thpres = simConfig.getThresholdPressure();
 
         // set the threshold pressures for all EQUIL region boundaries which have a
         // intersection in the grid
