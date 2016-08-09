@@ -111,6 +111,18 @@ namespace Opm
             // Get grid from parser.
             EclipseGridConstPtr eclgrid = eclState->getInputGrid();
 
+            // Use volume weighted arithmetic average of the NTG values for
+            // the cells effected by the current OPM cpgrid process algorithm
+            // for MINPV. Note that the change does not effect the pore volume calculations
+            // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
+            // only the transmissibility calculations.
+            bool opmfil = eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
+            // opmfil is hardcoded to be true. i.e the volume weighting is always used
+            opmfil = true;
+            if (opmfil) {
+                minPvFillProps_(grid, eclState, ntg);
+            }
+
             // Pore volume.
             // New keywords MINPVF will add some PV due to OPM cpgrid process algorithm.
             // But the default behavior is to get the comparable pore volume with ECLIPSE.
@@ -139,18 +151,6 @@ namespace Opm
             }
             else {
                 tpfa_loc_trans_compute_(grid,eclgrid, props.permeability(),htrans);
-            }
-
-            // Use volume weighted arithmetic average of the NTG values for
-            // the cells effected by the current OPM cpgrid process algorithm
-            // for MINPV. Note that the change does not effect the pore volume calculations
-            // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
-            // only the transmissibility calculations.
-            bool opmfil = eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
-            // opmfil is hardcoded to be true. i.e the volume weighting is always used
-            opmfil = true;
-            if (opmfil) {
-                minPvFillProps_(grid, eclState, ntg);
             }
 
             std::vector<double> mult;
