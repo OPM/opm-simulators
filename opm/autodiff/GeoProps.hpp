@@ -141,9 +141,6 @@ namespace Opm
                 tpfa_loc_trans_compute_(grid,eclgrid, props.permeability(),htrans);
             }
 
-            std::vector<double> mult;
-            multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
-
             // Use volume weighted arithmetic average of the NTG values for
             // the cells effected by the current OPM cpgrid process algorithm
             // for MINPV. Note that the change does not effect the pore volume calculations
@@ -154,11 +151,15 @@ namespace Opm
             opmfil = true;
             if (opmfil) {
                 minPvFillProps_(grid, eclState, ntg);
-            } else if (eclgrid->isPinchActive()) {
+            }
+
+            std::vector<double> mult;
+            multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
+
+            if (!opmfil && eclgrid->isPinchActive()) {
                 // opmfil is hardcoded to be true. i.e the pinch processor is never used
                 pinchProcess_(grid, *eclState, htrans, numCells);
             }
-
 
             // combine the half-face transmissibilites into the final face
             // transmissibilites.
