@@ -353,8 +353,6 @@ protected:
                                                       rock_comp_props_,
                                                       well_model,
                                                       solver_,
-                                                      has_disgas_,
-                                                      has_vapoil_,
                                                       terminal_output_));
 
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));

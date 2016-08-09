@@ -129,8 +129,6 @@ namespace Opm {
         /// \param[in] vfp_properties   Vertical flow performance tables
         /// \param[in] linsolver        linear solver
         /// \param[in] eclState         eclipse state
-        /// \param[in] has_disgas       turn on dissolved gas
-        /// \param[in] has_vapoil       turn on vaporized oil feature
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters&          param,
@@ -139,8 +137,6 @@ namespace Opm {
                           const RockCompressibility*      rock_comp_props,
                           const StandardWells&                well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
-                          const bool has_disgas,
-                          const bool has_vapoil,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.gridManager().grid())
@@ -155,8 +151,8 @@ namespace Opm {
         , canph_ (detail::active2Canonical(fluid.phaseUsage()))
         , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid_)))
         , ops_   (grid_, geo.nnc())
-        , has_disgas_(has_disgas)
-        , has_vapoil_(has_vapoil)
+        , has_disgas_(FluidSystem::enableDissolvedGas())
+        , has_vapoil_(FluidSystem::enableVaporizedOil())
         , param_( param )
         , use_threshold_pressure_(false)
         , rq_    (fluid.numPhases())
