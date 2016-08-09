@@ -697,7 +697,7 @@ namespace Opm
     {
         OpmLog::note("                     Liquid               VAPOUR              Water              Free Gas             Dissolved Gas");
         OpmLog::note("Currently  in place: " + std::to_string(cip[1]) + "       " + std::to_string(cip[4]) + "       " + std::to_string(cip[0]) + "       " + std::to_string(cip[2]) + "       " + std::to_string(cip[3]));
-        OpmLog::note("Originaly  in place: " + std::to_string(oip[1]) + "       " + std::to_string(oip[4]) + "       " + std::to_string(oip[0]) + "       " + std::to_string(oip[2]) + "       " + std::to_string(oip[3]));
+        OpmLog::note("Originally  in place: " + std::to_string(oip[1]) + "       " + std::to_string(oip[4]) + "       " + std::to_string(oip[0]) + "       " + std::to_string(oip[2]) + "       " + std::to_string(oip[3]));
     }
 
 
