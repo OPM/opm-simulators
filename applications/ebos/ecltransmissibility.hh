@@ -100,10 +100,8 @@ public:
         const auto eclGrid = eclState->getInputGrid();
         const auto& transMult = eclState->getTransMult();
 
-        std::vector<double> ntg =
+        const std::vector<double>& ntg =
             eclState->get3DProperties().getDoubleGridProperty("NTG").getData();
-
-        applyMinPv_(ntg);
 
         unsigned numElements = elementMapper.size();
 
@@ -328,44 +326,6 @@ private:
         case 5: // top
             trans *= transMult.getMultiplier(cartElemIdx, Opm::FaceDir::ZPlus);
             break;
-        }
-    }
-
-    void applyMinPv_(std::vector<double> &ntg)
-    {
-        const auto& model = simulator_.model();
-        const auto& gridManager = simulator_.gridManager();
-        const auto& eclState = gridManager.eclState();
-        const Opm::EclipseGridConstPtr eclGrid = gridManager.eclGrid();
-        const auto& porv = eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
-
-        Scalar minpvValue = eclGrid->getMinpvValue();
-        if (minpvValue <= 0.0)
-            return;
-
-        int numCells = model.numGridDof();
-        for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            const int nx = eclGrid->getNX();
-            const int ny = eclGrid->getNY();
-            const int cartesianCellIdx = gridManager.cartesianIndex(cellIdx);
-
-            const Scalar cellVolume = eclGrid->getCellVolume(cartesianCellIdx);
-            ntg[cartesianCellIdx] *= cellVolume;
-            Scalar totalCellVolume = cellVolume;
-
-            // Average properties as long as there exist cells above which exhibit a pore
-            // volume less than the MINPV threshold
-            int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
-            while (cartesianCellIdxAbove >= 0
-                   && porv[cartesianCellIdxAbove] > 0.0
-                   && porv[cartesianCellIdxAbove] < minpvValue)
-            {
-                const double cellVolumeAbove = eclGrid->getCellVolume(cartesianCellIdxAbove);
-                totalCellVolume += cellVolumeAbove;
-                ntg[cartesianCellIdx] += ntg[cartesianCellIdxAbove]*cellVolumeAbove;
-                cartesianCellIdxAbove -= nx*ny;
-            }
-            ntg[cartesianCellIdx] /= totalCellVolume;
         }
     }
 
