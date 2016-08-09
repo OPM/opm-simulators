@@ -55,7 +55,7 @@ namespace Opm
             ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
             EbosSimulator::registerParameters();
             Ewoms::setupParameters_< TypeTag > ( 2, ptr );
-            ebosSimulator_.reset(new EbosSimulator());
+            ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
             Base::deck_ = ebosSimulator_->gridManager().deck();
