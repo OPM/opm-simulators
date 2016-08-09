@@ -519,7 +519,7 @@ public:
 
         // apply the vaporization parameters for the gas phase (cf. the Eclipse VAPPARS
         // keyword)
-        if (vapPar1_ > 0.0 && maxOilSaturation > 0.01) {
+        if (vapPar1_ > 0.0 && maxOilSaturation > 0.01 && oilSaturation < maxOilSaturation) {
             static const Scalar sqrtEps = std::sqrt(std::numeric_limits<Scalar>::epsilon());
             const Evaluation& So = Toolbox::max(oilSaturation, sqrtEps);
             tmp *= Toolbox::pow(So/maxOilSaturation, vapPar1_);
