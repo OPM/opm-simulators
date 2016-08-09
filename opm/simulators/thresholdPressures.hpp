@@ -324,10 +324,10 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                                            const Grid& grid,
                                            const std::map<std::pair<int, int>, double>& maxDp)
     {
-        SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
+        const SimulationConfig& simulationConfig = eclipseState->getSimulationConfig();
         std::vector<double> thpres_vals;
-        if (simulationConfig->hasThresholdPressure()) {
-            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
+        if (simulationConfig.hasThresholdPressure()) {
+            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig.getThresholdPressure();
             const auto& eqlnum = eclipseState->get3DProperties().getIntGridProperty("EQLNUM");
             const auto& eqlnumData = eqlnum.getData();
 
@@ -382,10 +382,10 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                                                const NNC& nnc,
                                                const std::map<std::pair<int, int>, double>& maxDp)
     {
-        SimulationConfigConstPtr simulationConfig = eclipseState->getSimulationConfig();
+        const SimulationConfig& simulationConfig = eclipseState->getSimulationConfig();
         std::vector<double> thpres_vals;
-        if (simulationConfig->hasThresholdPressure()) {
-            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig->getThresholdPressure();
+        if (simulationConfig.hasThresholdPressure()) {
+            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig.getThresholdPressure();
             const auto& eqlnum = eclipseState->get3DProperties().getIntGridProperty("EQLNUM");
             const auto& eqlnumData = eqlnum.getData();
 

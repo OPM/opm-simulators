@@ -102,7 +102,8 @@ try
         Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
         ParserPtr parser(new Opm::Parser());
         deck = parser->parseFile(deck_filename , parseContext);
-        eclipseState.reset(new Opm::EclipseState(deck , parseContext));
+
+        eclipseState.reset(new Opm::EclipseState(*deck , parseContext));
 
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
