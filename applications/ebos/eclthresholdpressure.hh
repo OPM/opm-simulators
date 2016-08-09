@@ -101,9 +101,9 @@ public:
 
         const auto& gridManager = simulator_.gridManager();
         Opm::EclipseStateConstPtr eclState = gridManager.eclState();
-        Opm::SimulationConfigConstPtr simConfig = eclState->getSimulationConfig();
+        const auto& simConfig = eclState->getSimulationConfig();
 
-        enableThresholdPressure_ = simConfig->hasThresholdPressure();
+        enableThresholdPressure_ = simConfig.hasThresholdPressure();
         if (!enableThresholdPressure_)
             return;
 

@@ -98,7 +98,7 @@ public:
         const auto& cartMapper = gridManager.cartesianIndexMapper();
         const auto eclState = gridManager.eclState();
         const auto eclGrid = eclState->getInputGrid();
-        const auto transMult = eclState->getTransMult();
+        const auto& transMult = eclState->getTransMult();
 
         const std::vector<double>& ntg =
             eclState->get3DProperties().getDoubleGridProperty("NTG").getData();
@@ -214,9 +214,9 @@ public:
 
                 // apply the full face transmissibility multipliers
                 // for the inside ...
-                applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, *transMult);
+                applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
                 // ... and outside elements
-                applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, *transMult);
+                applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
 
                 // apply the region multipliers (cf. the MULTREGT keyword)
                 Opm::FaceDir::DirEnum faceDir;
@@ -240,9 +240,9 @@ public:
                     OPM_THROW(std::logic_error, "Could not determine a face direction");
                 }
 
-                trans *= transMult->getRegionMultiplier(insideCartElemIdx,
-                                                        outsideCartElemIdx,
-                                                        faceDir);
+                trans *= transMult.getRegionMultiplier(insideCartElemIdx,
+                                                       outsideCartElemIdx,
+                                                       faceDir);
 
                 trans_[isId_(insideElemIdx, outsideElemIdx)] = trans;
             }
