@@ -260,7 +260,11 @@ namespace Opm {
         WellModel& wellModel() { return well_model_; }
         const WellModel& wellModel() const { return well_model_; }
 
-        /// Calculate FIP
+        /// Compute fluid in place.
+        /// \param[in]    ReservoirState
+        /// \param[in]    WellState
+        /// \param[in]    FIPNUM for active cells not global cells.
+        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
         std::vector<V>
         computeFluidInPlace(const ReservoirState& x,
                             const WellState& xw,
