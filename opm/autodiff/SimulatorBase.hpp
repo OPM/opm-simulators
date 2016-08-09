@@ -165,6 +165,8 @@ namespace Opm
         V
         FIPTotals(const std::vector<V>& fip);
 
+        void
+        outputFluidInPlace(const V& oip, const V& cip);
 
         void computeWellPotentials(const Wells*                    wells,
                                    const WellState& xw,

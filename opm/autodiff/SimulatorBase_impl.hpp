@@ -136,10 +136,15 @@ namespace Opm
         DynamicListEconLimited dynamic_list_econ_limited;
 
         bool ooip_computed = false;
-        std::vector<int> fipnum = eclipse_state_->get3DProperties().getIntGridProperty("FIPNUM").getData();
-        if (fipnum.empty()) {
-            fipnum.resize(AutoDiffGrid::numCells(grid_));
+        std::vector<int> fipnum_global = eclipse_state_->get3DProperties().getIntGridProperty("FIPNUM").getData();
+        //Get compressed cell fipnum.
+        std::vector<int> fipnum(AutoDiffGrid::numCells(grid_));
+        if (fipnum_global.empty()) {
             std::fill(fipnum.begin(), fipnum.end(), 0);
+        } else {
+            for (size_t c = 0; c < fipnum.size(); ++c) {
+                fipnum[c] = fipnum_global[AutoDiffGrid::globalCell(grid_)[c]];
+            }
         }
         std::vector<V> OOIP;
         // Main simulation loop.
@@ -268,10 +273,13 @@ namespace Opm
             FIPUnitConvert(eclipse_state_->getUnits(), COIP);
             V OOIP_totals = FIPTotals(OOIP);
             V COIP_totals = FIPTotals(COIP);
-            OpmLog::info("*****************************Field Totals**************************");
-            OpmLog::info("                     Liquid               VAPOUR              Water              Free Gas             Dissolved Gas");
-            OpmLog::info("Currently  in place: " + std::to_string(COIP_totals[1]) + "       " + std::to_string(COIP_totals[4]) + "       " + std::to_string(COIP_totals[0]) + "       " + std::to_string(COIP_totals[2]) + "       " + std::to_string(COIP_totals[3]));
-            OpmLog::info("Originally in place: " + std::to_string(OOIP_totals[1]) + "       " + std::to_string(OOIP_totals[4]) + "       " + std::to_string(OOIP_totals[0]) + "       " + std::to_string(OOIP_totals[2]) + "       " + std::to_string(OOIP_totals[3]) + "\n");
+            OpmLog::note("*****************************Field Totals**************************");
+            outputFluidInPlace(OOIP_totals, COIP_totals);
+            for (size_t reg = 0; reg < OOIP.size(); ++reg) {
+                OpmLog::note("*****************************FIPNUM report region " + std::to_string(reg+1) + "**************************");
+                outputFluidInPlace(OOIP[reg], COIP[reg]);
+            }
+
 
             // accumulate total time
             stime += st;
@@ -680,7 +688,17 @@ namespace Opm
         
         return totals;
     }
-    
+
+
+
+    template <class Implementation>
+    void
+    SimulatorBase<Implementation>::outputFluidInPlace(const V& oip, const V& cip)
+    {
+        OpmLog::note("                     Liquid               VAPOUR              Water              Free Gas             Dissolved Gas");
+        OpmLog::note("Currently  in place: " + std::to_string(cip[1]) + "       " + std::to_string(cip[4]) + "       " + std::to_string(cip[0]) + "       " + std::to_string(cip[2]) + "       " + std::to_string(cip[3]));
+        OpmLog::note("Originaly  in place: " + std::to_string(oip[1]) + "       " + std::to_string(oip[4]) + "       " + std::to_string(oip[0]) + "       " + std::to_string(oip[2]) + "       " + std::to_string(oip[3]));
+    }
 
 
     template <class Implementation>
