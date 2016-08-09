@@ -219,10 +219,6 @@ public:
                 output_writer_.writeTimeStep( timer, state, well_state );
             }
 
-            // Max oil saturation (for VPPARS), hysteresis update.
-            props_.updateSatOilMax(state.saturation());
-            props_.updateSatHyst(state.saturation(), allcells_);
-
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
