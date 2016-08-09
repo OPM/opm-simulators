@@ -2347,13 +2347,14 @@ namespace detail {
             fip[4] = state.rv.value() * fip[pg];
         }
 
-        const int dims = 1;
+        const int dims = *std::max_element(fipnum.begin(), fipnum.end());
         std::vector<V> values(dims, V::Zero(5));
-
         for (int d = 0; d < dims; ++d) {
-            for (int c = 0; c < nc; ++c) {
-                for (int i = 0; i < 5; ++i) {
-                    values[d][i] += fip[i][c];
+            for (int i = 0; i < 5; ++i) {
+                for (int c = 0; c < nc; ++c) {
+                    if (fipnum[c] == (d + 1)) {
+                        values[d][i] += fip[i][c];
+                    }
                 }
             }
         }
