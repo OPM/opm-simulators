@@ -111,6 +111,18 @@ namespace Opm
             // Get grid from parser.
             EclipseGridConstPtr eclgrid = eclState->getInputGrid();
 
+            // Use volume weighted arithmetic average of the NTG values for
+            // the cells effected by the current OPM cpgrid process algorithm
+            // for MINPV. Note that the change does not effect the pore volume calculations
+            // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
+            // only the transmissibility calculations.
+            bool opmfil = eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
+            // opmfil is hardcoded to be true. i.e the volume weighting is always used
+            opmfil = true;
+            if (opmfil) {
+                minPvFillProps_(grid, eclState, ntg);
+            }
+
             // Pore volume.
             // New keywords MINPVF will add some PV due to OPM cpgrid process algorithm.
             // But the default behavior is to get the comparable pore volume with ECLIPSE.
@@ -139,18 +151,6 @@ namespace Opm
             }
             else {
                 tpfa_loc_trans_compute_(grid,eclgrid, props.permeability(),htrans);
-            }
-
-            // Use volume weighted arithmetic average of the NTG values for
-            // the cells effected by the current OPM cpgrid process algorithm
-            // for MINPV. Note that the change does not effect the pore volume calculations
-            // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
-            // only the transmissibility calculations.
-            bool opmfil = eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
-            // opmfil is hardcoded to be true. i.e the volume weighting is always used
-            opmfil = true;
-            if (opmfil) {
-                minPvFillProps_(grid, eclState, ntg);
             }
 
             std::vector<double> mult;
@@ -382,6 +382,7 @@ namespace Opm
         const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
         EclipseGridConstPtr eclgrid = eclState->getInputGrid();
         const auto& porv = eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
+        const auto& actnum = eclState->get3DProperties().getIntGridProperty("ACTNUM").getData();
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             const int nx = cartdims[0];
             const int ny = cartdims[1];
@@ -397,6 +398,8 @@ namespace Opm
             while ( cartesianCellIdxAbove >= 0 &&
                  porv[cartesianCellIdxAbove] > 0 &&
                  porv[cartesianCellIdxAbove] < eclgrid->getMinpvValue() ) {
+                if (actnum[cartesianCellIdxAbove] == 0)
+                    break;
 
                 // Volume weighted arithmetic average of NTG
                 const double cellAboveVolume = eclgrid->getCellVolume(cartesianCellIdxAbove);
