@@ -23,6 +23,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <memory>
 
 namespace Opm {
@@ -76,12 +77,12 @@ namespace Opm {
 
         /// Take a single forward step, after which the states will be modified
         /// according to the physical model.
-        /// \param[in] dt                       time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state     reservoir state variables
         /// \param[in, out] well_state          well state variables
         /// \return                             number of linear iterations used
         int
-        step(const double dt,
+        step(const SimulatorTimerInterface& timer,
              ReservoirState& reservoir_state,
              WellState& well_state);
 
@@ -89,20 +90,24 @@ namespace Opm {
         /// according to the physical model. This version allows for the
         /// states passed as in/out arguments to be different from the initial
         /// states.
-        /// \param[in] dt                       time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in] initial_reservoir_state  reservoir state variables at start of timestep
         /// \param[in] initial_well_state       well state variables at start of timestep
         /// \param[in, out] reservoir_state     reservoir state variables
         /// \param[in, out] well_state          well state variables
         /// \return                             number of linear iterations used
         int
-        step(const double dt,
+        step(const SimulatorTimerInterface& timer,
              const ReservoirState& initial_reservoir_state,
              const WellState& initial_well_state,
              ReservoirState& reservoir_state,
              WellState& well_state);
 
-        /// Number of nonlinear solver iterations used in all calls to step().
+
+        /// Number of linearizations used in all calls to step().
+        int linearizations() const;
+
+        /// Number of full nonlinear solver iterations used in all calls to step().
         int nonlinearIterations() const;
 
         /// Number of linear solver iterations used in all calls to step().
@@ -155,6 +160,7 @@ namespace Opm {
         // ---------  Data members  ---------
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
+        int linearizations_;
         int nonlinearIterations_;
         int linearIterations_;
         int wellIterations_;

@@ -28,6 +28,7 @@
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/autodiff/StandardWells.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 namespace Opm {
 
@@ -93,18 +94,18 @@ namespace Opm {
                              const bool                              terminal_output);
 
         /// Called once before each time step.
-        /// \param[in] dt                     time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const double dt,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state);
 
         /// Called once after each time step.
-        /// \param[in] dt                     time step size
+        /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void afterStep(const double dt,
+        void afterStep(const SimulatorTimerInterface& timer,
                        ReservoirState& reservoir_state,
                        WellState& well_state);
 

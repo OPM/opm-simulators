@@ -26,6 +26,7 @@
 #include <opm/autodiff/WellStateMultiSegment.hpp>
 #include <opm/autodiff/WellMultiSegment.hpp>
 #include <opm/autodiff/StandardWells.hpp>
+#include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
 #include <opm/autodiff/MultisegmentWells.hpp>
 
@@ -93,10 +94,10 @@ namespace Opm {
                           const bool terminal_output);
 
         /// Called once before each time step.
-        /// \param[in] dt                     time step size
+        /// \param[in]      timer             simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const double dt,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state);
 
