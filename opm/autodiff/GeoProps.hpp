@@ -382,6 +382,7 @@ namespace Opm
         const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
         EclipseGridConstPtr eclgrid = eclState->getInputGrid();
         const auto& porv = eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
+        const auto& actnum = eclState->get3DProperties().getIntGridProperty("ACTNUM").getData();
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             const int nx = cartdims[0];
             const int ny = cartdims[1];
@@ -395,7 +396,7 @@ namespace Opm
             // that has pore volume less than the MINPV threshold
             int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
             while ( cartesianCellIdxAbove >= 0 &&
-                 porv[cartesianCellIdxAbove] > 0 &&
+                 actnum[cartesianCellIdxAbove] > 0 &&
                  porv[cartesianCellIdxAbove] < eclgrid->getMinpvValue() ) {
 
                 // Volume weighted arithmetic average of NTG
