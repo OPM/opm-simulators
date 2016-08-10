@@ -73,13 +73,27 @@ namespace Opm
     {
         ScheduleConstPtr schedule = eclipseState->getSchedule();
         for (const auto& well : schedule->getWells(currentStep)) {
-            if (well->isInjector(currentStep) && well->getStatus(currentStep) != WellCommon::SHUT) {
-                WellInjectionProperties injection = well->getInjectionProperties(currentStep);
-                if (injection.injectorType == WellInjector::WATER) {
-                    WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
-                    wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
+            WellInjectionProperties injection = well->getInjectionProperties(currentStep);
+            WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
+            if (well->isInjector(currentStep)) {
+                if (well->getStatus(currentStep) != WellCommon::SHUT) {
+                    if (injection.injectorType == WellInjector::WATER) {
+                        wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
+                    } else {
+                        if (polymer.m_polymerConcentration > 0) {
+                            OpmLog::error("Inject polymer through non-water injector '" + well->name() + "'");
+                        }
+                    }
                 } else {
-                    continue;
+                    if (polymer.m_polymerConcentration > 0) {
+                        OpmLog::error("Inject polymer through a shut injector '" + well->name() + "'");
+                    }
+                }
+            }
+
+            if (well->isProducer(currentStep)) {
+                if (polymer.m_polymerConcentration > 0) {
+                    OpmLog::error("Inject polymer through a producer '" + well->name() + "'");
                 }
             }
         }
