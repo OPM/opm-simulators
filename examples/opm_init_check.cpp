@@ -349,7 +349,7 @@ int main(int argc, char** argv) {
     ParseContext parseContext;
     std::cout << "Parsing input file ............: " << input_file << std::endl;
     DeckConstPtr deck = parser->parseFile(input_file, parseContext);
-    std::shared_ptr<EclipseState> state = std::make_shared<EclipseState>( deck , parseContext );
+    std::shared_ptr<EclipseState> state = std::make_shared<EclipseState>( *deck , parseContext );
     
     std::cout << "Loading eclipse INIT file .....: " << init_file << std::endl;
     ecl_file_type * ecl_init = ecl_file_open( init_file.c_str() , 0 );

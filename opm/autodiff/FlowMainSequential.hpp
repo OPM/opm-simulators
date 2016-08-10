@@ -81,7 +81,7 @@ namespace Opm
             std::string flowDefaultSolver = interleavedSolver;
 
             if (!param_.has("solver_approach")) {
-                if (eclipse_state_->getSimulationConfig()->useCPR()) {
+                if (eclipse_state_->getSimulationConfig().useCPR()) {
                     flowDefaultSolver = cprSolver;
                 }
             }

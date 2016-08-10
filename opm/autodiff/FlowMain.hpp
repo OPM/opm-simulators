@@ -414,7 +414,7 @@ namespace Opm
                 deck_ = parser->parseFile(deck_filename, parseContext);
                 checkDeck(deck_, parser);
                 MissingFeatures::checkKeywords(*deck_);
-                eclipse_state_.reset(new EclipseState(deck_, parseContext));
+                eclipse_state_.reset(new EclipseState(*deck_, parseContext));
                 auto ioConfig = eclipse_state_->getIOConfig();
                 ioConfig->setOutputDir(output_dir_);
             }
@@ -684,7 +684,7 @@ namespace Opm
             std::string flowDefaultSolver = interleavedSolver;
 
             if (!param_.has("solver_approach")) {
-                if (eclipse_state_->getSimulationConfig()->useCPR()) {
+                if (eclipse_state_->getSimulationConfig().useCPR()) {
                     flowDefaultSolver = cprSolver;
                 }
             }
@@ -716,8 +716,8 @@ namespace Opm
             SimulatorTimer simtimer;
 
             // initialize variables
-            const auto initConfig = eclipse_state_->getInitConfig();
-            simtimer.init(timeMap, (size_t)initConfig->getRestartStep());
+            const auto& initConfig = eclipse_state_->getInitConfig();
+            simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
 
             if (!ioConfig->initOnly()) {
                 if (output_cout_) {
