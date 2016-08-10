@@ -203,6 +203,72 @@ public:
     { return std::pow(base, exp); }
 };
 
+// these are convenience functions for not having to type MathToolbox<Scalar>::foo()
+template <class Evaluation, class Scalar>
+Evaluation constant(const Scalar& value)
+{ return Opm::MathToolbox<Evaluation>::createConstant(value); }
+
+template <class Evaluation, class Scalar>
+Evaluation variable(const Scalar& value, int idx)
+{ return Opm::MathToolbox<Evaluation>::createVariable(value, idx); }
+
+template <class Evaluation1, class Evaluation2>
+Evaluation1 max(const Evaluation1& arg1, const Evaluation2& arg2)
+{ return Opm::MathToolbox<Evaluation1>::max(arg1, arg2); }
+
+template <class Evaluation1, class Evaluation2>
+Evaluation1 min(const Evaluation1& arg1, const Evaluation2& arg2)
+{ return Opm::MathToolbox<Evaluation1>::min(arg1, arg2); }
+
+template <class Evaluation>
+Evaluation abs(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::abs(value); }
+
+template <class Evaluation>
+Evaluation tan(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::tan(value); }
+
+template <class Evaluation>
+Evaluation atan(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::atan(value); }
+
+template <class Evaluation1, class Evaluation2>
+Evaluation1 atan2(const Evaluation1& value1, const Evaluation2& value2)
+{ return Opm::MathToolbox<Evaluation1>::atan2(value1, value2); }
+
+template <class Evaluation>
+Evaluation sin(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::sin(value); }
+
+template <class Evaluation>
+Evaluation asin(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::asin(value); }
+
+template <class Evaluation>
+Evaluation cos(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::cos(value); }
+
+template <class Evaluation>
+Evaluation acos(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::acos(value); }
+
+template <class Evaluation>
+Evaluation sqrt(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::sqrt(value); }
+
+template <class Evaluation>
+Evaluation exp(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::exp(value); }
+
+template <class Evaluation>
+Evaluation log(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::log(value); }
+
+template <class Evaluation1, class Evaluation2>
+Evaluation1 pow(const Evaluation1& base, const Evaluation2& exp)
+{ return Opm::MathToolbox<Evaluation1>::pow(base, exp); }
+
 } // namespace Opm
 
 #endif
+
