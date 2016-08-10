@@ -91,10 +91,8 @@ namespace Opm
                 }
             }
 
-            if (well->isProducer(currentStep)) {
-                if (polymer.m_polymerConcentration > 0) {
-                    OpmLog::error("Inject polymer through a producer '" + well->name() + "'");
-                }
+            if (well->isProducer(currentStep) && polymer.m_polymerConcentration > 0) {
+                OpmLog::error("Inject polymer through a producer '" + well->name() + "'");
             }
         }
     }
