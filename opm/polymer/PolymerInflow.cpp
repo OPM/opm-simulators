@@ -137,7 +137,7 @@ namespace Opm
         std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), 0.0);
         const int nnz = sparse_inflow_.nonzeroSize();
         for (int i = 0; i < nnz; ++i) {
-            poly_inflow_c[sparse_inflow_.nonzeroIndex(i)] = sparse_inflow_.nonzeroElement(i) ;
+            poly_inflow_c[sparse_inflow_.nonzeroIndex(i)] = sparse_inflow_.nonzeroElement(i);
         }
     }
 
