@@ -24,7 +24,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-
+#include <opm/material/densead/Evaluation.hpp>
 #include <dune/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
