@@ -253,7 +253,7 @@ namespace Opm
                 //
                 // TODO (?): handle the parallel case (maybe this works out of the box)
                 DeckConstPtr miniDeck = schedule->getModifierDeck(nextTimeStepIdx);
-                eclipse_state_->applyModifierDeck(miniDeck);
+                eclipse_state_->applyModifierDeck(*miniDeck);
                 geo_.update(grid_, props_, eclipse_state_, gravity_);
             }
 

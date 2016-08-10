@@ -141,9 +141,6 @@ namespace Opm
                 tpfa_loc_trans_compute_(grid,eclgrid, props.permeability(),htrans);
             }
 
-            std::vector<double> mult;
-            multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
-
             // Use volume weighted arithmetic average of the NTG values for
             // the cells effected by the current OPM cpgrid process algorithm
             // for MINPV. Note that the change does not effect the pore volume calculations
@@ -154,11 +151,15 @@ namespace Opm
             opmfil = true;
             if (opmfil) {
                 minPvFillProps_(grid, eclState, ntg);
-            } else if (eclgrid->isPinchActive()) {
+            }
+
+            std::vector<double> mult;
+            multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
+
+            if (!opmfil && eclgrid->isPinchActive()) {
                 // opmfil is hardcoded to be true. i.e the pinch processor is never used
                 pinchProcess_(grid, *eclState, htrans, numCells);
             }
-
 
             // combine the half-face transmissibilites into the final face
             // transmissibilites.
@@ -432,12 +433,12 @@ namespace Opm
         std::vector<int> actnum;
         eclgrid->exportACTNUM(actnum);
 
-        auto transMult = eclState.getTransMult();
+        const auto& transMult = eclState.getTransMult();
         std::vector<double> multz(numCells, 0.0);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
 
         for (int i = 0; i < numCells; ++i) {
-            multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
+            multz[i] = transMult.getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
         }
 
         // Note the pore volume from eclState is used and not the pvol_ calculated above
@@ -461,7 +462,7 @@ namespace Opm
         intersectionTransMult.resize(numIntersections);
         std::fill(intersectionTransMult.begin(), intersectionTransMult.end(), 1.0);
 
-        std::shared_ptr<const Opm::TransMult> multipliers = eclState->getTransMult();
+        const TransMult& multipliers = eclState->getTransMult();
         auto cell2Faces = Opm::UgGridHelpers::cell2Faces(grid);
         auto faceCells  = Opm::AutoDiffGrid::faceCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
@@ -515,7 +516,7 @@ namespace Opm
 
                 // Multiplier contribution on this face for MULT[XYZ] logical cartesian multipliers
                 intersectionTransMult[faceIdx] *=
-                    multipliers->getMultiplier(cartesianCellIdx, faceDirection);
+                    multipliers.getMultiplier(cartesianCellIdx, faceDirection);
 
                 // Multiplier contribution on this fase for region multipliers
                 const int cellIdxInside  = faceCells(faceIdx, 0);
@@ -529,7 +530,7 @@ namespace Opm
                 const int cartesianCellIdxOutside = global_cell[cellIdxOutside];
                 //  Only apply the region multipliers from the inside
                 if (cartesianCellIdx == cartesianCellIdxInside) {
-                    intersectionTransMult[faceIdx] *= multipliers->getRegionMultiplier(cartesianCellIdxInside,cartesianCellIdxOutside,faceDirection);
+                    intersectionTransMult[faceIdx] *= multipliers.getRegionMultiplier(cartesianCellIdxInside,cartesianCellIdxOutside,faceDirection);
                 }
 
 

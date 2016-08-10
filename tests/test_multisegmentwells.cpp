@@ -72,7 +72,7 @@ struct SetupMSW {
         Opm::ParseContext parse_context;
         Opm::ParserPtr parser(new Opm::Parser());
         Opm::DeckConstPtr deck = parser->parseFile("msw.data", parse_context);
-        Opm::EclipseStateConstPtr ecl_state(new Opm::EclipseState(deck , parse_context));
+        Opm::EclipseStateConstPtr ecl_state(new Opm::EclipseState(*deck , parse_context));
 
         // Create grid.
         const std::vector<double>& porv =

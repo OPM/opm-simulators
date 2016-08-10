@@ -356,7 +356,7 @@ namespace Opm
         // gives a dummy dynamic_list_econ_limited
         DynamicListEconLimited dummy_list_econ_limited;
         WellsManager wellsmanager(eclipseState_,
-                                  eclipseState_->getInitConfig()->getRestartStep(),
+                                  eclipseState_->getInitConfig().getRestartStep(),
                                   Opm::UgGridHelpers::numCells(grid),
                                   Opm::UgGridHelpers::globalCell(grid),
                                   Opm::UgGridHelpers::cartDims(grid),

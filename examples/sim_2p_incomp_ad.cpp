@@ -115,7 +115,7 @@ try
         std::string deck_filename = param.get<std::string>("deck_filename");
         Opm::ParseContext parseContext;
         deck = parser->parseFile(deck_filename, parseContext);
-        eclipseState.reset(new EclipseState(deck , parseContext));
+        eclipseState.reset(new EclipseState(*deck , parseContext));
 
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
