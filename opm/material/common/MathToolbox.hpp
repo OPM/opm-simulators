@@ -203,6 +203,14 @@ public:
     { return std::pow(base, exp); }
 };
 
+template <class Eval1, class Eval2>
+struct ReturnEval_
+{
+    typedef typename std::conditional<std::is_assignable<Eval1, Eval2>::value,
+                                      Eval1,
+                                      Eval2>::type type;
+};
+
 // these are convenience functions for not having to type MathToolbox<Scalar>::foo()
 template <class Evaluation, class Scalar>
 Evaluation constant(const Scalar& value)
@@ -213,12 +221,14 @@ Evaluation variable(const Scalar& value, int idx)
 { return Opm::MathToolbox<Evaluation>::createVariable(value, idx); }
 
 template <class Evaluation1, class Evaluation2>
-Evaluation1 max(const Evaluation1& arg1, const Evaluation2& arg2)
-{ return Opm::MathToolbox<Evaluation1>::max(arg1, arg2); }
+typename ReturnEval_<Evaluation1, Evaluation2>::type
+max(const Evaluation1& arg1, const Evaluation2& arg2)
+{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::max(arg1, arg2); }
 
 template <class Evaluation1, class Evaluation2>
-Evaluation1 min(const Evaluation1& arg1, const Evaluation2& arg2)
-{ return Opm::MathToolbox<Evaluation1>::min(arg1, arg2); }
+typename ReturnEval_<Evaluation1, Evaluation2>::type
+min(const Evaluation1& arg1, const Evaluation2& arg2)
+{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::min(arg1, arg2); }
 
 template <class Evaluation>
 Evaluation abs(const Evaluation& value)
@@ -233,8 +243,9 @@ Evaluation atan(const Evaluation& value)
 { return Opm::MathToolbox<Evaluation>::atan(value); }
 
 template <class Evaluation1, class Evaluation2>
-Evaluation1 atan2(const Evaluation1& value1, const Evaluation2& value2)
-{ return Opm::MathToolbox<Evaluation1>::atan2(value1, value2); }
+typename ReturnEval_<Evaluation1, Evaluation2>::type
+atan2(const Evaluation1& value1, const Evaluation2& value2)
+{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::atan2(value1, value2); }
 
 template <class Evaluation>
 Evaluation sin(const Evaluation& value)
@@ -265,8 +276,9 @@ Evaluation log(const Evaluation& value)
 { return Opm::MathToolbox<Evaluation>::log(value); }
 
 template <class Evaluation1, class Evaluation2>
-Evaluation1 pow(const Evaluation1& base, const Evaluation2& exp)
-{ return Opm::MathToolbox<Evaluation1>::pow(base, exp); }
+typename ReturnEval_<Evaluation1, Evaluation2>::type
+pow(const Evaluation1& base, const Evaluation2& exp)
+{ return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::pow(base, exp); }
 
 } // namespace Opm
 
