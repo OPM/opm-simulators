@@ -25,11 +25,15 @@
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/StandardWellsDense.hpp>
+
+
 
 namespace Opm {
 
 class SimulatorFullyImplicitBlackoilEbos;
-class StandardWells;
+class StandardWellsDense;
 
 /// a simulator for the blackoil model
 class SimulatorFullyImplicitBlackoilEbos
@@ -44,7 +48,7 @@ public:
     typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
-    typedef StandardWells WellModel;
+    typedef StandardWellsDense WellModel;
 
 
     /// Initialise from parameters and objects to observe.
@@ -169,11 +173,11 @@ public:
             // -1 means that we'll take the last report step that was written
             const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
 
-            output_writer_.restore( timer,
-                                    state,
-                                    prev_well_state,
-                                    restorefilename,
-                                    desiredRestoreStep );
+//            output_writer_.restore( timer,
+//                                    state,
+//                                    prev_well_state,
+//                                    restorefilename,
+//                                    desiredRestoreStep );
         }
 
         unsigned int totalLinearizations = 0;

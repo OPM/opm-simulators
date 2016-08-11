@@ -28,7 +28,7 @@
 #include <ewoms/common/start.hh>
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/StandardWells.hpp>
+#include <opm/autodiff/StandardWellsDense.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
@@ -41,6 +41,7 @@
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
@@ -137,7 +138,7 @@ namespace Opm {
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
-                          const StandardWells&                well_model,
+                          const StandardWellsDense&                well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
@@ -300,6 +301,7 @@ namespace Opm {
                 // Compute initial accumulation contributions
                 // and well connection pressures.
                 wellModel().computeWellConnectionPressures(state0, well_state);
+                wellModel().computeAccumWells(state0);
             }
 
             IterationReport iter_report = {false, false, 0, 0};
@@ -307,27 +309,27 @@ namespace Opm {
                 return iter_report;
             }
 
+            double dt = timer.currentStepLength();
             std::vector<ADB> mob_perfcells;
             std::vector<ADB> b_perfcells;
             wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
-            if (param_.solve_welleq_initially_ && iterationIdx == 0) {
+            if (param_.solve_welleq_initially_ && iterationIdx == 0 ) {
                 // solve the well equations as a pre-processing step
-                iter_report = solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+                iter_report = solveWellEq(mob_perfcells, b_perfcells, dt, state, well_state);
             }
             V aliveWells;
             std::vector<ADB> cq_s;
-            wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+            wellModel().computeWellFluxDense(state, mob_perfcells, b_perfcells, cq_s);
             wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-            wellModel().addWellFluxEq(cq_s, state, residual_);
+            wellModel().addWellFluxEq(cq_s, state, dt, residual_);
             addWellContributionToMassBalanceEq(cq_s, state, well_state);
-            wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
+            //wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
 
             if (param_.compute_well_potentials_) {
                 SolutionState state0 = state;
                 makeConstantState(state0);
                 wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
             }
-
             return iter_report;
         }
 
@@ -894,7 +896,7 @@ namespace Opm {
         std::vector<PhasePresence> phaseCondition_;
 
         // Well Model
-        StandardWells                       well_model_;
+        StandardWellsDense                       well_model_;
 
         V isRs_;
         V isRv_;
@@ -915,8 +917,8 @@ namespace Opm {
 
     public:
         /// return the StandardWells object
-        StandardWells& wellModel() { return well_model_; }
-        const StandardWells& wellModel() const { return well_model_; }
+        StandardWellsDense& wellModel() { return well_model_; }
+        const StandardWellsDense& wellModel() const { return well_model_; }
 
         /// return the Well struct in the StandardWells
         const Wells& wells() const { return well_model_.wells(); }
@@ -964,7 +966,7 @@ namespace Opm {
 
             std::vector<int> indices = {{Pressure, Sw, Xvar}};
             int foo = indices.size();
-            indices.resize(5);
+            indices.resize(4);
             wellModel().variableStateWellIndices(indices, foo);
 
             const ADB& ones = ADB::constant(V::Ones(nc, 1));
@@ -1005,7 +1007,7 @@ namespace Opm {
             //state.saturation[Oil] = std::move(so);
 
             // wells
-            wellModel().variableStateExtractWellsVars(indices, vars, state);
+            wellModel().variableStateExtractWellsVars(indices, vars, state, xw);
         }
 
         V
@@ -1218,14 +1220,14 @@ namespace Opm {
 
             for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
             {
-                adbJacs[ flowPhaseIdx ].resize( numPhases + 2 );
+                adbJacs[ flowPhaseIdx ].resize( numPhases + 1 );
                 for( int pvIdx = 0; pvIdx < numPhases; ++pvIdx )
                 {
                     jacs[ flowPhaseIdx ][ pvIdx ].finalize();
                     adbJacs[ flowPhaseIdx ][ pvIdx ].assign( std::move(jacs[ flowPhaseIdx ][ pvIdx ]) );
                 }
                 // add two "dummy" matrices for the well primary variables
-                for( int pvIdx = numPhases; pvIdx < numPhases + 2; ++pvIdx ) {
+                for( int pvIdx = numPhases; pvIdx < numPhases + 1; ++pvIdx ) {
                     adbJacs[ flowPhaseIdx ][ pvIdx ] =
                         sparsityPattern.derivative()[pvIdx];
                 }
@@ -1273,14 +1275,14 @@ namespace Opm {
             // create the Jacobian matrices for the legacy state. here we assume that the
             // sparsity pattern of the inputs is already correct
             ///////
-            std::vector<EigenMatrix> poJac(numPhases + 2);
+            std::vector<EigenMatrix> poJac(numPhases + 1);
             //std::vector<EigenMatrix> TJac(numPhases + 2);
             std::vector<std::vector<EigenMatrix>> SJac(numPhases);
             std::vector<std::vector<EigenMatrix>> mobJac(numPhases);
             std::vector<std::vector<EigenMatrix>> bJac(numPhases);
             std::vector<std::vector<EigenMatrix>> pJac(numPhases);
-            std::vector<EigenMatrix> RsJac(numPhases + 2);
-            std::vector<EigenMatrix> RvJac(numPhases + 2);
+            std::vector<EigenMatrix> RsJac(numPhases + 1);
+            std::vector<EigenMatrix> RvJac(numPhases + 1);
 
             // reservoir stuff
             for (int pvIdx = 0; pvIdx < numPhases; ++ pvIdx) {
@@ -1296,7 +1298,7 @@ namespace Opm {
             }
 
             // auxiliary equations
-            for (int pvIdx = numPhases; pvIdx < numPhases + 2; ++ pvIdx) {
+            for (int pvIdx = numPhases; pvIdx < numPhases + 1; ++ pvIdx) {
                 legacyState.pressure.derivative()[pvIdx].toSparse(poJac[pvIdx]);
                 //legacyState.temperature.derivative()[pvIdx].toSparse(TJac[pvIdx]);
                 legacyState.rs.derivative()[pvIdx].toSparse(RsJac[pvIdx]);
@@ -1304,10 +1306,10 @@ namespace Opm {
             }
 
             for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                SJac[phaseIdx].resize(numPhases + 2);
-                mobJac[phaseIdx].resize(numPhases + 2);
-                bJac[phaseIdx].resize(numPhases + 2);
-                pJac[phaseIdx].resize(numPhases + 2);
+                SJac[phaseIdx].resize(numPhases + 1);
+                mobJac[phaseIdx].resize(numPhases + 1);
+                bJac[phaseIdx].resize(numPhases + 1);
+                pJac[phaseIdx].resize(numPhases + 1);
                 for (int pvIdx = 0; pvIdx < numPhases; ++ pvIdx) {
                     SJac[phaseIdx][pvIdx].resize(numCells, numCells);
                     SJac[phaseIdx][pvIdx].reserve(numCells);
@@ -1323,7 +1325,7 @@ namespace Opm {
                 }
 
                 // auxiliary equations for the saturations and pressures
-                for (int pvIdx = numPhases; pvIdx < numPhases + 2; ++ pvIdx) {
+                for (int pvIdx = numPhases; pvIdx < numPhases + 1; ++ pvIdx) {
                     legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(SJac[phaseIdx][pvIdx]);
                     legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(mobJac[phaseIdx][pvIdx]);
                     legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(bJac[phaseIdx][pvIdx]);
@@ -1403,10 +1405,10 @@ namespace Opm {
             std::vector<ADBJacobianMatrix> RsAdbJacs;
             std::vector<ADBJacobianMatrix> RvAdbJacs;
 
-            poAdbJacs.resize(numPhases + 2);
-            RsAdbJacs.resize(numPhases + 2);
-            RvAdbJacs.resize(numPhases + 2);
-            for(int pvIdx = 0; pvIdx < numPhases + 2; ++pvIdx)
+            poAdbJacs.resize(numPhases + 1);
+            RsAdbJacs.resize(numPhases + 1);
+            RvAdbJacs.resize(numPhases + 1);
+            for(int pvIdx = 0; pvIdx < numPhases + 1; ++pvIdx)
             {
                 poAdbJacs[pvIdx].assign(poJac[pvIdx]);
                 RsAdbJacs[pvIdx].assign(RsJac[pvIdx]);
@@ -1419,11 +1421,11 @@ namespace Opm {
             std::vector<std::vector<ADBJacobianMatrix>> pAdbJacs(numPhases);
             for(int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             {
-                SAdbJacs[phaseIdx].resize(numPhases + 2);
-                mobAdbJacs[phaseIdx].resize(numPhases + 2);
-                bAdbJacs[phaseIdx].resize(numPhases + 2);
-                pAdbJacs[phaseIdx].resize(numPhases + 2);
-                for(int pvIdx = 0; pvIdx < numPhases + 2; ++pvIdx)
+                SAdbJacs[phaseIdx].resize(numPhases + 1);
+                mobAdbJacs[phaseIdx].resize(numPhases + 1);
+                bAdbJacs[phaseIdx].resize(numPhases + 1);
+                pAdbJacs[phaseIdx].resize(numPhases + 1);
+                for(int pvIdx = 0; pvIdx < numPhases + 1; ++pvIdx)
                 {
                     SAdbJacs[phaseIdx][pvIdx].assign(SJac[phaseIdx][pvIdx]);
                     mobAdbJacs[phaseIdx][pvIdx].assign(mobJac[phaseIdx][pvIdx]);
@@ -1529,6 +1531,7 @@ namespace Opm {
 
         IterationReport solveWellEq(const std::vector<ADB>& mob_perfcells,
                                     const std::vector<ADB>& b_perfcells,
+                                    const double dt,
                                     SolutionState& state,
                                     WellState& well_state)
         {
@@ -1557,16 +1560,16 @@ namespace Opm {
             do {
                 // bhp and Q for the wells
                 std::vector<V> vars0;
-                vars0.reserve(2);
+                vars0.reserve(1);
                 wellModel().variableWellStateInitials(well_state, vars0);
                 std::vector<ADB> vars = ADB::variables(vars0);
 
                 SolutionState wellSolutionState = state0;
-                wellModel().variableStateExtractWellsVars(indices, vars, wellSolutionState);
-                wellModel().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+                wellModel().variableStateExtractWellsVars(indices, vars, wellSolutionState, well_state);
+                wellModel().computeWellFluxDense(wellSolutionState, mob_perfcells_const, b_perfcells_const, cq_s);
                 wellModel().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
-                wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);
-                wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
+                wellModel().addWellFluxEq(cq_s, wellSolutionState, dt, residual_);
+                //wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
                 converged = getWellConvergence(it);
 
                 if (converged) {
@@ -1577,9 +1580,9 @@ namespace Opm {
                 if( localWellsActive() )
                 {
                     std::vector<ADB> eqs;
-                    eqs.reserve(2);
+                    eqs.reserve(1);
                     eqs.push_back(residual_.well_flux_eq);
-                    eqs.push_back(residual_.well_eq);
+                    //eqs.push_back(residual_.well_eq);
                     ADB total_residual = vertcatCollapseJacs(eqs);
                     const std::vector<M>& Jn = total_residual.derivative();
                     typedef Eigen::SparseMatrix<double> Sp;
@@ -1615,7 +1618,11 @@ namespace Opm {
                     std::vector<ADB::M> old_derivs = state.qs.derivative();
                     state.qs = ADB::function(std::move(new_qs), std::move(old_derivs));
                 }
-                computeWellConnectionPressures(state, well_state);
+
+                const ADB::V new_well_var = Eigen::Map<const V>(& well_state.wellSolutions()[0], well_state.wellSolutions().size());
+                std::vector<ADB::M> old_derivs = state.wellVariables.derivative();
+                state.wellVariables = ADB::function(std::move(new_well_var), std::move(old_derivs));
+                //computeWellConnectionPressures(state, well_state);
             }
 
             if (!converged) {
