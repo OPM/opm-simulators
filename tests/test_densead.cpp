@@ -568,11 +568,15 @@ inline void testAll()
                            1e-6, 1e9);
 
     while (false) {
+        OPM_UNUSED Scalar val1(0.0), val2(1.0), resultVal;
+        typedef Opm::DenseAd::Evaluation<Scalar, numVars> TmpEval;
+        OPM_UNUSED TmpEval eval1(1.0), eval2(2.0), resultEval;
+
         // make sure that the convenince functions work (i.e., that everything can be
         // accessed without the MathToolbox<Scalar> detour.)
-        Scalar val1(0.0), val2(1.0), resultVal;
         resultVal = Opm::constant<Scalar>(val1);
         resultVal = Opm::variable<Scalar>(val1, /*idx=*/0);
+        resultVal = Opm::decay<Scalar>(val1);
         resultVal = Opm::min(val1, val2);
         resultVal = Opm::max(val1, val2);
         resultVal = Opm::atan2(val1, val2);
@@ -587,10 +591,10 @@ inline void testAll()
         resultVal = Opm::exp(val1);
         resultVal = Opm::log(val1);
 
-        typedef Opm::DenseAd::Evaluation<Scalar, numVars> TmpEval;
-        TmpEval eval1, eval2, resultEval;
         resultEval = Opm::constant<TmpEval>(val1);
         resultEval = Opm::variable<TmpEval>(val1, /*idx=*/0);
+        resultEval = Opm::decay<TmpEval>(eval1);
+        resultVal = Opm::decay<Scalar>(eval1);
         resultEval = Opm::min(eval1, eval2);
         resultEval = Opm::min(eval1, val2);
         resultEval = Opm::max(eval1, eval2);

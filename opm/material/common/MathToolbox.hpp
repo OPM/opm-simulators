@@ -220,6 +220,11 @@ template <class Evaluation, class Scalar>
 Evaluation variable(const Scalar& value, int idx)
 { return Opm::MathToolbox<Evaluation>::createVariable(value, idx); }
 
+template <class ResultEval, class Evaluation>
+auto decay(const Evaluation& value)
+    -> decltype(Opm::MathToolbox<Evaluation>::template decay<ResultEval>(value))
+{ return Opm::MathToolbox<Evaluation>::template decay<ResultEval>(value); }
+
 template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type
 max(const Evaluation1& arg1, const Evaluation2& arg2)
