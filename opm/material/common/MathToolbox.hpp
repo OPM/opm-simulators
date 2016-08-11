@@ -225,6 +225,16 @@ auto decay(const Evaluation& value)
     -> decltype(Opm::MathToolbox<Evaluation>::template decay<ResultEval>(value))
 { return Opm::MathToolbox<Evaluation>::template decay<ResultEval>(value); }
 
+template <class Evaluation>
+auto getValue(const Evaluation& val)
+    -> decltype(Opm::MathToolbox<Evaluation>::value(val))
+{ return Opm::MathToolbox<Evaluation>::value(val); }
+
+template <class Evaluation>
+auto scalarValue(const Evaluation& val)
+    -> decltype(Opm::MathToolbox<Evaluation>::scalarValue(val))
+{ return Opm::MathToolbox<Evaluation>::scalarValue(val); }
+
 template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type
 max(const Evaluation1& arg1, const Evaluation2& arg2)

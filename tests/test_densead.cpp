@@ -577,6 +577,8 @@ inline void testAll()
         resultVal = Opm::constant<Scalar>(val1);
         resultVal = Opm::variable<Scalar>(val1, /*idx=*/0);
         resultVal = Opm::decay<Scalar>(val1);
+        resultVal = Opm::scalarValue(val1);
+        resultVal = Opm::getValue(val1);
         resultVal = Opm::min(val1, val2);
         resultVal = Opm::max(val1, val2);
         resultVal = Opm::atan2(val1, val2);
@@ -595,6 +597,8 @@ inline void testAll()
         resultEval = Opm::variable<TmpEval>(val1, /*idx=*/0);
         resultEval = Opm::decay<TmpEval>(eval1);
         resultVal = Opm::decay<Scalar>(eval1);
+        resultVal = Opm::scalarValue(eval1);
+        resultVal = Opm::getValue(eval1);
         resultEval = Opm::min(eval1, eval2);
         resultEval = Opm::min(eval1, val2);
         resultEval = Opm::max(eval1, eval2);
