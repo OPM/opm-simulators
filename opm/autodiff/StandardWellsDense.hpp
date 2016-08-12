@@ -60,10 +60,11 @@ namespace Opm {
             // ---------      Types      ---------
             using ADB = AutoDiffBlock<double>;
 
-            typedef DenseAd::Evaluation<double, /*size=*/6> Eval;
+            typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
             //typedef AutoDiffBlock<double> ADB;
             using Vector = ADB::V;
             using V = ADB::V;
+
 
             // copied from BlackoilModelBase
             // should put to somewhere better
@@ -125,10 +126,10 @@ namespace Opm {
                             const std::vector<ADB>& b_perfcells,
                             std::vector<ADB>& cq_s) const;
 
-            Eval extractDenseAD(const ADB& data, int i, int j) const;
-            Eval extractDenseADWell(const ADB& data, int i) const;
+            EvalWell extractDenseAD(const ADB& data, int i, int j) const;
+            EvalWell extractDenseADWell(const ADB& data, int i) const;
 
-            const ADB convertToADB(const std::vector<Eval>& local, const std::vector<int>& well_cells, const int nc, const std::vector<int>& well_id, const int nw, const int numVars) const;
+            const ADB convertToADB(const std::vector<EvalWell>& local, const std::vector<int>& well_cells, const int nc, const std::vector<int>& well_id, const int nw, const int numVars) const;
 
 
             template <class SolutionState, class WellState>
@@ -215,6 +216,15 @@ namespace Opm {
             template <class SolutionState>
             void computeAccumWells(const SolutionState& state);
 
+            template <class WellState>
+            void computeWellConnectionDensitesPressures(const WellState& xw,
+                                                        const std::vector<double>& b_perf,
+                                                        const std::vector<double>& rsmax_perf,
+                                                        const std::vector<double>& rvmax_perf,
+                                                        const std::vector<double>& surf_dens_perf,
+                                                        const std::vector<double>& depth_perf,
+                                                        const double grav);
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
@@ -246,14 +256,7 @@ namespace Opm {
                                                              std::vector<double>& rvmax_perf,
                                                              std::vector<double>& surf_dens_perf);
 
-            template <class WellState>
-            void computeWellConnectionDensitesPressures(const WellState& xw,
-                                                        const std::vector<double>& b_perf,
-                                                        const std::vector<double>& rsmax_perf,
-                                                        const std::vector<double>& rvmax_perf,
-                                                        const std::vector<double>& surf_dens_perf,
-                                                        const std::vector<double>& depth_perf,
-                                                        const double grav);
+
 
 
             template <class WellState>

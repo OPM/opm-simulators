@@ -397,6 +397,7 @@ namespace Opm
                     std::vector<ADB>& cq_s) const
     {
         if( ! localWellsActive() ) return ;
+
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];
@@ -408,7 +409,7 @@ namespace Opm
         // pressure diffs computed already (once per step, not changing per iteration)
         const Vector& cdp = wellPerforationPressureDiffs();
 
-        std::vector<std::vector<Eval>> cq_s_dense(np, std::vector<Eval>(nperf,0.0));
+        std::vector<std::vector<EvalWell>> cq_s_dense(np, std::vector<EvalWell>(nperf,0.0));
         std::vector<ADB> cmix_s_ADB = wellVolumeFractions(state);
 
         const int oilpos = pu.phase_pos[Oil];
@@ -417,11 +418,12 @@ namespace Opm
         const ADB rvSat = fluid_->rvSat(perfpressure, cmix_s_ADB[oilpos], well_cells);
 
         for (int w = 0; w < nw; ++w) {
-            Eval bhp = extractDenseADWell(state.bhp,w);
+
+            EvalWell bhp = extractDenseADWell(state.bhp,w);
 
 
             // TODO: fix for 2-phase case
-            std::vector<Eval> cmix_s(np,0.0);
+            std::vector<EvalWell> cmix_s(np,0.0);
             for (int phase = 0; phase < np; ++phase) {
                 cmix_s[phase] = extractDenseADWell(cmix_s_ADB[phase],w);
             }
@@ -431,11 +433,11 @@ namespace Opm
             for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
                 const int cell_idx = well_cells[perf];
                 well_id[perf] = w;
-                Eval pressure = extractDenseAD(state.pressure, cell_idx, cell_idx);
-                Eval rs = extractDenseAD(state.rs, cell_idx, cell_idx);
-                Eval rv = extractDenseAD(state.rv, cell_idx, cell_idx);
-                std::vector<Eval> b_perfcells_dense(np, 0.0);
-                std::vector<Eval> mob_perfcells_dense(np, 0.0);
+                EvalWell pressure = extractDenseAD(state.pressure, cell_idx, cell_idx);
+                EvalWell rs = extractDenseAD(state.rs, cell_idx, cell_idx);
+                EvalWell rv = extractDenseAD(state.rv, cell_idx, cell_idx);
+                std::vector<EvalWell> b_perfcells_dense(np, 0.0);
+                std::vector<EvalWell> mob_perfcells_dense(np, 0.0);
                 for (int phase = 0; phase < np; ++phase) {
                     b_perfcells_dense[phase] = extractDenseAD(b_perfcells[phase], perf, cell_idx);
                     mob_perfcells_dense[phase] = extractDenseAD(mob_perfcells[phase], perf, cell_idx);
@@ -443,7 +445,7 @@ namespace Opm
                 }
 
                 // Pressure drawdown (also used to determine direction of flow)
-                Eval drawdown = pressure - bhp - cdp[perf];
+                EvalWell drawdown = pressure - bhp - cdp[perf];
 
                 // injection perforations
                 if ( drawdown.value > 0 )  {
@@ -452,9 +454,9 @@ namespace Opm
                     if (!wells().allow_cf[w] && wells().type[w] == INJECTOR)
                         continue;
                     // compute phase volumetric rates at standard conditions
-                    std::vector<Eval> cq_ps(np, 0.0);
+                    std::vector<EvalWell> cq_ps(np, 0.0);
                     for (int phase = 0; phase < np; ++phase) {
-                        const Eval cq_p = - Tw[perf] * (mob_perfcells_dense[phase] * drawdown);
+                        const EvalWell cq_p = - Tw[perf] * (mob_perfcells_dense[phase] * drawdown);
                         cq_ps[phase] = b_perfcells_dense[phase] * cq_p;
                     }
 
@@ -462,8 +464,8 @@ namespace Opm
                     if ((*active_)[Oil] && (*active_)[Gas]) {
                         const int oilpos = pu.phase_pos[Oil];
                         const int gaspos = pu.phase_pos[Gas];
-                        const Eval cq_psOil = cq_ps[oilpos];
-                        const Eval cq_psGas = cq_ps[gaspos];
+                        const EvalWell cq_psOil = cq_ps[oilpos];
+                        const EvalWell cq_psGas = cq_ps[gaspos];
                         cq_ps[gaspos] += rs * cq_psOil;
                         cq_ps[oilpos] += rv * cq_psGas;
                     }
@@ -480,15 +482,15 @@ namespace Opm
                         continue;
 
                     // Using total mobilities
-                    Eval total_mob_dense = mob_perfcells_dense[0];
+                    EvalWell total_mob_dense = mob_perfcells_dense[0];
                     for (int phase = 1; phase < np; ++phase) {
                         total_mob_dense += mob_perfcells_dense[phase];
                     }
                     // injection perforations total volume rates
-                    const Eval cqt_i = - Tw[perf] * (total_mob_dense * drawdown);
+                    const EvalWell cqt_i = - Tw[perf] * (total_mob_dense * drawdown);
 
                     // compute volume ratio between connection at standard conditions
-                    Eval volumeRatio = 0.0;
+                    EvalWell volumeRatio = 0.0;
                     if ((*active_)[Water]) {
                         const int watpos = pu.phase_pos[Water];
                         volumeRatio += cmix_s[watpos] / b_perfcells_dense[watpos];
@@ -498,7 +500,7 @@ namespace Opm
 
                         const int oilpos = pu.phase_pos[Oil];
                         const int gaspos = pu.phase_pos[Gas];
-                        Eval rvPerf = 0.0;
+                        EvalWell rvPerf = 0.0;
                         if (cmix_s[gaspos] > 0)
                             rvPerf = cmix_s[oilpos] / cmix_s[gaspos];
 
@@ -507,7 +509,7 @@ namespace Opm
                             rvPerf.value = rvSat.value()[w];
                         }
 
-                        Eval rsPerf = 0.0;
+                        EvalWell rsPerf = 0.0;
                         if (cmix_s[oilpos] > 0)
                             rsPerf = cmix_s[gaspos] / cmix_s[oilpos];
 
@@ -517,13 +519,13 @@ namespace Opm
                         }
 
                         // Incorporate RS/RV factors if both oil and gas active
-                        const Eval d = 1.0 - rvPerf * rsPerf;
+                        const EvalWell d = 1.0 - rvPerf * rsPerf;
 
-                        const Eval tmp_oil = (cmix_s[oilpos] - rvPerf * cmix_s[gaspos]) / d;
+                        const EvalWell tmp_oil = (cmix_s[oilpos] - rvPerf * cmix_s[gaspos]) / d;
                         //std::cout << "tmp_oil " <<tmp_oil << std::endl;
                         volumeRatio += tmp_oil / b_perfcells_dense[oilpos];
 
-                        const Eval tmp_gas = (cmix_s[gaspos] - rsPerf * cmix_s[oilpos]) / d;
+                        const EvalWell tmp_gas = (cmix_s[gaspos] - rsPerf * cmix_s[oilpos]) / d;
                         //std::cout << "tmp_gas " <<tmp_gas << std::endl;
                         volumeRatio += tmp_gas / b_perfcells_dense[gaspos];
                     }
@@ -538,7 +540,7 @@ namespace Opm
                         }
                     }
                     // injecting connections total volumerates at standard conditions
-                    Eval cqt_is = cqt_i/volumeRatio;
+                    EvalWell cqt_is = cqt_i/volumeRatio;
                     //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
                     for (int phase = 0; phase < np; ++phase) {
                         cq_s_dense[phase][perf] = cmix_s[phase] * cqt_is; // * b_perfcells_dense[phase];
@@ -811,12 +813,12 @@ namespace Opm
 //        }
     }
 
-    typedef DenseAd::Evaluation<double, /*size=*/6> Eval;
-    Eval
+    typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
+    EvalWell
     StandardWellsDense::
     extractDenseAD(const ADB& data, int i, int j) const
     {
-        Eval output = 0.0;
+        EvalWell output = 0.0;
         output.value = data.value()[i];
         const int np = wells().number_of_phases;
         const std::vector<Opm::AutoDiffMatrix>& jac = data.derivative();
@@ -831,12 +833,12 @@ namespace Opm
         return output;
     }
 
-    typedef DenseAd::Evaluation<double, /*size=*/6> Eval;
-    Eval
+    typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
+    EvalWell
     StandardWellsDense::
     extractDenseADWell(const ADB& data, int i) const
     {
-        Eval output = 0.0;
+        EvalWell output = 0.0;
         output.value = data.value()[i];
         const int nw = wells().number_of_wells;
         const int np = wells().number_of_phases;
@@ -849,7 +851,7 @@ namespace Opm
         return output;
     }
 
-    const AutoDiffBlock<double> StandardWellsDense::convertToADB(const std::vector<Eval>& local, const std::vector<int>& well_cells, const int nc, const std::vector<int>& well_id, const int nw, const int numVars) const
+    const AutoDiffBlock<double> StandardWellsDense::convertToADB(const std::vector<EvalWell>& local, const std::vector<int>& well_cells, const int nc, const std::vector<int>& well_id, const int nw, const int numVars) const
     {
         typedef typename ADB::M  M;
         const int nLocal = local.size();
