@@ -427,8 +427,7 @@ namespace Opm
             // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
             if (param_.has("output_interval")) {
                 const int output_interval = param_.get<int>("output_interval");
-                IOConfigPtr ioConfig = eclipse_state_->getIOConfig();
-                ioConfig->overrideRestartWriteInterval(static_cast<size_t>(output_interval));
+                eclipse_state_->getRestartConfig().overrideRestartWriteInterval( size_t( output_interval ) );
             }
 
             // Possible to force initialization only behavior (NOSIM).
