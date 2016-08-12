@@ -113,6 +113,8 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
         typedef typename GET_PROP_TYPE(TypeTag, Indices)           BlackoilIndices;
+        typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)       MaterialLaw;
+        typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
@@ -1032,7 +1034,6 @@ namespace Opm {
             const int numCells = reservoirState.numCells();
             const int numPhases = fluid_.numPhases();
             const auto& oilPressure = reservoirState.pressure();
-            const auto& gasPressure = oilPressure;
             const auto& saturations = reservoirState.saturation();
             const auto& rs          = reservoirState.gasoilratio();
             const auto& rv          = reservoirState.rv();
@@ -1041,26 +1042,58 @@ namespace Opm {
                 // set non-switching primary variables
                 PrimaryVariables& cellPv = solution[ cellIdx ];
                 // set water saturation
-                cellPv.setWaterSaturation( saturations[ cellIdx*numPhases + pu.phase_pos[ Water ] ] );
+                cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
 
                 // set switching variable and interpretation
                 if( isRs_[ cellIdx ] && has_disgas_ )
                 {
-                    cellPv.setSwitchingVariable( rs[ cellIdx ] );
-                    cellPv.setOilPressure( oilPressure[ cellIdx ] );
+                    cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
+                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
                     cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
                 }
                 else if( isRv_[ cellIdx ] && has_vapoil_ )
                 {
-                    cellPv.setSwitchingVariable( rv[ cellIdx ] );
-                    cellPv.setOilPressure( gasPressure[ cellIdx ] );
+                    // this case (-> gas only with vaporized oil in the gas) is
+                    // relatively expensive as it requires to compute the capillary
+                    // pressure in order to get the gas phase pressure. (the reason why
+                    // ebos uses the gas pressure here is that it makes the common case
+                    // of the primary variable switching code fast because to determine
+                    // whether the oil phase appears one needs to compute the Rv value
+                    // for the saturated gas phase and if this is not available as a
+                    // primary variable, it needs to be computed.) luckily for here, the
+                    // gas-only case is not too common, so the performance impact of this
+                    // is limited.
+                    typedef Opm::SimpleModularFluidState<double,
+                                                         /*numPhases=*/3,
+                                                         /*numComponents=*/3,
+                                                         FluidSystem,
+                                                         /*storePressure=*/false,
+                                                         /*storeTemperature=*/false,
+                                                         /*storeComposition=*/false,
+                                                         /*storeFugacity=*/false,
+                                                         /*storeSaturation=*/true,
+                                                         /*storeDensity=*/false,
+                                                         /*storeViscosity=*/false,
+                                                         /*storeEnthalpy=*/false> SatOnlyFluidState;
+                    SatOnlyFluidState fluidState;
+                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
+                    fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
+                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
+
+                    double pC[/*numPhases=*/3] = { 0.0, 0.0, 0.0 };
+                    const MaterialLawParams& matParams = simulator.problem().materialLawParams(cellIdx);
+                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+                    double pg = oilPressure[cellIdx] + (pC[FluidSystem::gasPhaseIdx] - pC[FluidSystem::oilPhaseIdx]);
+
+                    cellPv[BlackoilIndices::compositionSwitchIdx] = rv[cellIdx];
+                    cellPv[BlackoilIndices::pressureSwitchIdx] = pg;
                     cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_pg_Rv );
                 }
                 else
                 {
                     assert(isSg_[cellIdx]);
-                    cellPv.setSwitchingVariable( saturations[  cellIdx*numPhases + pu.phase_pos[ Gas ] ] );
-                    cellPv.setOilPressure( oilPressure[ cellIdx ] );
+                    cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
+                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
                     cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
                 }
             }
