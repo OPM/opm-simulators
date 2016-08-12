@@ -951,6 +951,7 @@ namespace Opm {
                 ADB& pp = state.canonical_phase_pressures[canphase];
                 pp = ADB::constant(pp.value());
             }
+            state.wellVariables = ADB::constant(state.wellVariables.value());
         }
 
         void setupLegacyState(SolutionState& state,
