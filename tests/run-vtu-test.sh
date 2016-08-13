@@ -92,7 +92,7 @@ case "$TEST_TYPE" in
         echo "RND: '$RND'"
 
         SIM_NAME=$(grep "Applying the initial solution of the" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        NUM_TIMESTEPS=$(( $(grep "Time step [0-9]* done" "test-$RND.log" | wc -l) + 1))
+        NUM_TIMESTEPS=$(( $(grep "Time step [0-9]* done" "test-$RND.log" | wc -l)))
         TEST_RESULT=$(printf "%s-%05i" "$SIM_NAME" "$NUM_TIMESTEPS")
         TEST_RESULT=$(ls -- "$TEST_RESULT".*)
         rm "test-$RND.log"
@@ -122,7 +122,7 @@ case "$TEST_TYPE" in
         fi
 
         SIM_NAME=$(grep "Applying the initial solution of the" "test-$RND.log" | sed "s/.*\"\(.*\)\".*/\1/" | head -n1)
-        NUM_TIMESTEPS=$(( $(grep "Time step [0-9]* done" "test-$RND.log" | wc -l) + 1))
+        NUM_TIMESTEPS=$(( $(grep "Time step [0-9]* done" "test-$RND.log" | wc -l)))
         rm "test-$RND.log"
 
         echo "Simulation name: '$SIM_NAME'"
