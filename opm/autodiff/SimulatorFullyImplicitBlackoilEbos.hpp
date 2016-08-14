@@ -255,6 +255,19 @@ public:
             else {
                 // solve for complete report step
                 solver->step(timer, state, well_state);
+
+                if( terminal_output_ )
+                {
+                    std::ostringstream iter_msg;
+                    iter_msg << "Stepsize " << (double)unit::convert::to(timer.currentStepLength(), unit::day);
+                    if (solver->wellIterations() != 0) {
+                        iter_msg << " days well iterations = " << solver->wellIterations() << ", ";
+                    }
+                    iter_msg << "non-linear iterations = " << solver->nonlinearIterations()
+                             << ", total linear iterations = " << solver->linearIterations()
+                             << "\n";
+                    OpmLog::info(iter_msg.str());
+                }
             }
 
             solver->model().endReportStep();

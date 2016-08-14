@@ -60,6 +60,8 @@ namespace Opm
 
             Base::deck_ = ebosSimulator_->gridManager().deck();
             Base::eclipse_state_ = ebosSimulator_->gridManager().eclState();
+            auto ioConfig = Base::eclipse_state_->getIOConfig();
+            ioConfig->setOutputDir(Base::output_dir_);
 
             // Possibly override IOConfig setting (from deck) for how often RESTART files should get written to disk (every N report step)
             if (Base::param_.has("output_interval")) {
