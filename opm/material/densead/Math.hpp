@@ -38,6 +38,10 @@
 
 namespace Opm {
 namespace DenseAd {
+// forward declaration of the Evaluation template class
+template <class ValueT, int numVars>
+class Evaluation;
+
 // provide some algebraic functions
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>& x)

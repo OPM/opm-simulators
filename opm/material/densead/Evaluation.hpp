@@ -29,6 +29,8 @@
 #ifndef OPM_LOCAL_AD_EVALUATION_HPP
 #define OPM_LOCAL_AD_EVALUATION_HPP
 
+#include "Math.hpp"
+
 #include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/version.hh>
