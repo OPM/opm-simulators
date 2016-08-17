@@ -901,7 +901,6 @@ namespace Opm
 
 
 
-
     template <class SolutionState, class WellState>
     void
     StandardWellsDense::
@@ -920,6 +919,7 @@ namespace Opm
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];
+
         Vector cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
         for (int phase = 1; phase < np; ++phase) {
             cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
@@ -1194,7 +1194,7 @@ namespace Opm
     template <class WellState>
     void
     StandardWellsDense::
-    updateWellControls(WellState& xw) const
+    updateWellControls(WellState& xw)
     {
         if( !localWellsActive() ) return ;
 
@@ -1205,7 +1205,7 @@ namespace Opm
         const int nw = wells().number_of_wells;
 #pragma omp parallel for schedule(dynamic)
         for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wells().ctrls[w];
+            WellControls* wc = wells().ctrls[w];
             // The current control in the well state overrides
             // the current control set in the Wells struct, which
             // is instead treated as a default.
@@ -1241,6 +1241,8 @@ namespace Opm
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
             }
+
+            well_controls_set_current( wc, current);
 
             // Updating well state and primary variables.
             // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
@@ -1414,8 +1416,9 @@ namespace Opm
             qs += superset((F[phase]-F0_[phase]) * vol_dt, Span(nw,1,phase*nw), nw*np);
         }
 
+
         residual.well_flux_eq = qs;
-        //std::cout << qs.value() << std::endl;
+        //std::cout << "etter dense " <<qs << std::endl;
     }
 
 

@@ -143,7 +143,7 @@ namespace Opm {
                                  WellState& well_state);
 
             template <class WellState>
-            void updateWellControls(WellState& xw) const;
+            void updateWellControls(WellState& xw);
 
             // TODO: should LinearisedBlackoilResidual also be a template class?
             template <class SolutionState>
