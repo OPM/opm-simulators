@@ -664,7 +664,7 @@ namespace Opm
                                                   std::vector<V>& fip)
     {
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            for (int i = 0; i < fip.size(); ++i) {
+            for (size_t i = 0; i < fip.size(); ++i) {
                 fip[i][0] = unit::convert::to(fip[i][0], unit::stb);
                 fip[i][1] = unit::convert::to(fip[i][1], unit::stb); 
                 fip[i][2] = unit::convert::to(fip[i][2], 1000*unit::cubic(unit::feet));
