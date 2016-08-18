@@ -193,16 +193,16 @@ namespace Opm
                         }
 
                         // wellSolutions
-
-                        if (wells->type[w] == PRODUCER && std::abs(total_well_rates) > 0.0) {
-                            for( int i=0;  i<np; ++i)
-                            {
-                                wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
-                            }
+                        //if (std::abs(total_well_rates) > 0.0) {
+                            //wellSolutions()[ 0*nw + newIndex ] = prevState.wellSolutions()[0 * nw_old + oldIndex ];
+                            //if (wells->type[w] == PRODUCER) {
+                        for( int i = 0;  i < np; ++i)
+                        {
+                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
                         }
+                            //}
 
-
-
+                        //}
 
                         // perfPhaseRates
                         int oldPerf_idx = (*it).second[ 1 ];
@@ -242,6 +242,9 @@ namespace Opm
                             // If the set of controls have changed, this may not be identical
                             // to the last control, but it must be a valid control.
                             currentControls()[ newIndex ] = old_control_index;
+                            WellControls* wc = wells->ctrls[newIndex];
+                            well_controls_set_current( wc, old_control_index);
+
                         }
 
                     }

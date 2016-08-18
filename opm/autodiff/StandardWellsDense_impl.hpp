@@ -74,7 +74,6 @@ namespace Opm
 
 
 
-
     StandardWellsDense::StandardWellsDense(const Wells* wells_arg)
       : wells_active_(wells_arg!=nullptr)
       , wells_(wells_arg)
@@ -1235,150 +1234,156 @@ namespace Opm
                 // for wells on one process will be printed.
                 std::ostringstream ss;
                 ss << "Switching control mode for well " << wells().name[w]
-                   << " from " << modestring[well_controls_iget_type(wc, current)]
-                   << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                      << " from " << modestring[well_controls_iget_type(wc, current)]
+                      << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
                 OpmLog::info(ss.str());
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
-            }
+                well_controls_set_current( wc, current);
 
-            well_controls_set_current( wc, current);
 
-            // Updating well state and primary variables.
-            // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
-            const double target = well_controls_iget_target(wc, current);
-            const double* distr = well_controls_iget_distr(wc, current);
-            switch (well_controls_iget_type(wc, current)) {
-            case BHP:
-                xw.bhp()[w] = target;
-                break;
 
-            case THP: {
-                double aqua = 0.0;
-                double liquid = 0.0;
-                double vapour = 0.0;
+                // Updating well state and primary variables if constraint is broken
 
-                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
+                const double target = well_controls_iget_target(wc, current);
+                const double* distr = well_controls_iget_distr(wc, current);
+                switch (well_controls_iget_type(wc, current)) {
+                case BHP:
+                    xw.bhp()[w] = target;
+                    break;
 
-                if ((*active_)[ Water ]) {
-                    aqua = xw.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                case THP: {
+                    double aqua = 0.0;
+                    double liquid = 0.0;
+                    double vapour = 0.0;
+
+                    const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+
+                    if ((*active_)[ Water ]) {
+                        aqua = xw.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                    }
+                    if ((*active_)[ Oil ]) {
+                        liquid = xw.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+                    }
+                    if ((*active_)[ Gas ]) {
+                        vapour = xw.wellRates()[w*np + pu.phase_pos[ Gas ] ];
+                    }
+
+                    const int vfp        = well_controls_iget_vfp(wc, current);
+                    const double& thp    = well_controls_iget_target(wc, current);
+                    const double& alq    = well_controls_iget_alq(wc, current);
+
+                    //Set *BHP* target by calculating bhp from THP
+                    const WellType& well_type = wells().type[w];
+
+                    if (well_type == INJECTOR) {
+                        double dp = wellhelpers::computeHydrostaticCorrection(
+                                    wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
+                                    wellPerforationDensities(), gravity_);
+
+                        xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                    }
+                    else if (well_type == PRODUCER) {
+                        double dp = wellhelpers::computeHydrostaticCorrection(
+                                    wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
+                                    wellPerforationDensities(), gravity_);
+
+                        xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                    }
+                    else {
+                        OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                    }
+                    break;
                 }
-                if ((*active_)[ Oil ]) {
-                    liquid = xw.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+
+                case RESERVOIR_RATE:
+                    // No direct change to any observable quantity at
+                    // surface condition.  In this case, use existing
+                    // flow rates as initial conditions as reservoir
+                    // rate acts only in aggregate.
+                    break;
+
+                case SURFACE_RATE:
+                    // assign target value as initial guess for injectors and
+                    // single phase producers (orat, grat, wrat)
+                    const WellType& well_type = wells().type[w];
+                    if (well_type == INJECTOR) {
+                        for (int phase = 0; phase < np; ++phase) {
+                            const double& compi = wells().comp_frac[np * w + phase];
+                            //if (compi > 0.0) {
+                                xw.wellRates()[np*w + phase] = target * compi;
+                            //}
+                        }
+                    } else if (well_type == PRODUCER) {
+
+                        // only set target as initial rates for single phase
+                        // producers. (orat, grat and wrat, and not lrat)
+                        // lrat will result in numPhasesWithTargetsUnderThisControl == 2
+                        int numPhasesWithTargetsUnderThisControl = 0;
+                        for (int phase = 0; phase < np; ++phase) {
+                            if (distr[phase] > 0.0) {
+                                numPhasesWithTargetsUnderThisControl += 1;
+                            }
+                        }
+                        for (int phase = 0; phase < np; ++phase) {
+                            if (distr[phase] > 0.0 && numPhasesWithTargetsUnderThisControl < 2 ) {
+                                xw.wellRates()[np*w + phase] = target * distr[phase];
+                            }
+                        }
+                    } else {
+                        OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                    }
+
+
+                    break;
                 }
-                if ((*active_)[ Gas ]) {
-                    vapour = xw.wellRates()[w*np + pu.phase_pos[ Gas ] ];
-                }
-
-                const int vfp        = well_controls_iget_vfp(wc, current);
-                const double& thp    = well_controls_iget_target(wc, current);
-                const double& alq    = well_controls_iget_alq(wc, current);
-
-                //Set *BHP* target by calculating bhp from THP
-                const WellType& well_type = wells().type[w];
-
-                if (well_type == INJECTOR) {
-                    double dp = wellhelpers::computeHydrostaticCorrection(
-                            wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
-                            wellPerforationDensities(), gravity_);
-
-                    xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                }
-                else if (well_type == PRODUCER) {
-                    double dp = wellhelpers::computeHydrostaticCorrection(
-                            wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
-                            wellPerforationDensities(), gravity_);
-
-                    xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                }
-                else {
-                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
-                }
-                break;
-            }
-
-            case RESERVOIR_RATE:
-                // No direct change to any observable quantity at
-                // surface condition.  In this case, use existing
-                // flow rates as initial conditions as reservoir
-                // rate acts only in aggregate.
-                break;
-
-            case SURFACE_RATE:
-                // assign target value as initial guess for injectors and
-                // single phase producers (orat, grat, wrat)
-                const WellType& well_type = wells().type[w];
-                if (well_type == INJECTOR) {
+                std::vector<double> g = {1,1,0.01};
+                if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
+                    const double* distr = well_controls_iget_distr(wc, current);
                     for (int phase = 0; phase < np; ++phase) {
-                        const double& compi = wells().comp_frac[np * w + phase];
-                        if (compi > 0.0) {
-                            xw.wellRates()[np*w + phase] = target * compi;
+                        g[phase] = distr[phase];
+                    }
+                }
+                switch (well_controls_iget_type(wc, current)) {
+                case BHP:
+                {
+                    const WellType& well_type = wells().type[w];
+                    xw.wellSolutions()[w] = 0.0;
+                    if (well_type == INJECTOR) {
+                        for (int p = 0; p < np; ++p)  {
+                            xw.wellSolutions()[w] += xw.wellRates()[np*w + p] * wells().comp_frac[np*w + p];
+                        }
+                    } else {
+                        for (int p = 0; p < np; ++p)  {
+                            xw.wellSolutions()[w] += g[p] * xw.wellRates()[np*w + p];
                         }
                     }
-                } else if (well_type == PRODUCER) {
+                }
+                    break;
 
-                    // only set target as initial rates for single phase
-                    // producers. (orat, grat and wrat, and not lrat)
-                    // lrat will result in numPhasesWithTargetsUnderThisControl == 2
-                    int numPhasesWithTargetsUnderThisControl = 0;
-                    for (int phase = 0; phase < np; ++phase) {
-                        if (distr[phase] > 0.0) {
-                            numPhasesWithTargetsUnderThisControl += 1;
-                        }
-                    }
-                    for (int phase = 0; phase < np; ++phase) {
-                        if (distr[phase] > 0.0 && numPhasesWithTargetsUnderThisControl < 2 ) {
-                            xw.wellRates()[np*w + phase] = target * distr[phase];
-                        }
-                    }
+
+                case RESERVOIR_RATE: // Intentional fall-through
+                case SURFACE_RATE:
+                {
+                    xw.wellSolutions()[w] = xw.bhp()[w];
+                }
+                    break;
+                }
+
+                double tot_well_rate = 0.0;
+                for (int p = 0; p < np; ++p)  {
+                    tot_well_rate += g[p] * xw.wellRates()[np*w + p];
+                }
+                if(std::abs(tot_well_rate) > 0) {
+                    xw.wellSolutions()[nw + w] = g[Water] * xw.wellRates()[np*w + Water] / tot_well_rate; //wells->comp_frac[np*w + Water]; // Water;
+                    xw.wellSolutions()[2*nw + w] = g[Gas] * xw.wellRates()[np*w + Gas] / tot_well_rate ; //wells->comp_frac[np*w + Gas]; //Gas
                 } else {
-                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
-                }
-
-
-                break;
-            }
-            std::vector<double> g = {1,1,0.01};
-            if (true) {
-            switch (well_controls_iget_type(wc, current)) {
-            case BHP:
-            {
-                const WellType& well_type = wells().type[w];
-                xw.wellSolutions()[w] = 0.0;
-                if (well_type == INJECTOR) {
-                    for (int p = 0; p < np; ++p)  {
-                        xw.wellSolutions()[w] += xw.wellRates()[np*w + p] * wells().comp_frac[np*w + p];
-                    }
-                } else {
-                    for (int p = 0; p < np; ++p)  {
-                        xw.wellSolutions()[w] += g[p] * xw.wellRates()[np*w + p];
-                    }
+                    //xw.wellSolutions()[nw + w] =  wells().comp_frac[np*w + Water];
+                    //xw.wellSolutions()[2 * nw + w] =  wells().comp_frac[np*w + Gas];
                 }
             }
-                break;
-
-
-            case RESERVOIR_RATE: // Intentional fall-through
-            case SURFACE_RATE:
-            {
-                xw.wellSolutions()[w] = xw.bhp()[w];
-
-            }
-                break;
-            }
-            }
-//            const WellType& well_type = wells().type[w];
-//            double tot_well_rate = 0.0;
-//            for (int p = 0; p < np; ++p)  {
-//                tot_well_rate += g[p] * xw.wellRates()[np*w + p];
-//            }
-//            if (well_type == INJECTOR && tot_well_rate == 0) {
-//                xw.wellSolutions()[nw + w] =  wells().comp_frac[np*w + Water];
-//                xw.wellSolutions()[2 * nw + w] =  wells().comp_frac[np*w + Gas];
-//            }
-
         }
-
     }
 
 

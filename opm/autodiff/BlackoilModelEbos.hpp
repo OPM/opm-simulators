@@ -287,7 +287,7 @@ namespace Opm {
             // get reasonable initial conditions for the wells
             wellModel().updateWellControls(well_state);
 
-            // Create the primary variables.
+            // Set the primary variables for the wells
             setWellVariables(well_state);
 
             //SolutionState state(/*numPhases=*/3);
