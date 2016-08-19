@@ -314,7 +314,7 @@ namespace Opm {
             // Solve in every component (cell or block of cells), in order.
             {
                 DebugTimeReport tr("Solving all components");
-                for (int ii = 0; ii < 10; ++ii) {
+                for (int ii = 0; ii < 5; ++ii) {
                     DebugTimeReport tr2("Solving components single sweep.");
                     solveComponents();
                 }
@@ -452,6 +452,7 @@ namespace Opm {
         DataBlock rhos_;
 
         std::array<double, 2> max_abs_dx_;
+        std::array<int, 2> max_abs_dx_cell_;
 
         // TODO: remove this, for debug only.
         BlackoilTransportModel<Grid, WellModel> tr_model_;
@@ -610,6 +611,8 @@ namespace Opm {
             // Zero the max changed.
             max_abs_dx_[0] = 0.0;
             max_abs_dx_[1] = 0.0;
+            max_abs_dx_cell_[0] = -1;
+            max_abs_dx_cell_[1] = -1;
 
             // Solve the equations.
             const int num_components = components_.size() - 1;
@@ -625,7 +628,8 @@ namespace Opm {
             // Log the max change.
             {
                 std::ostringstream os;
-                os << "===  Max abs dx[0]: " << max_abs_dx_[0] << " dx[1]: " << max_abs_dx_[1];
+                os << "===  Max abs dx[0]: " << max_abs_dx_[0] << " (cell " << max_abs_dx_cell_[0]
+                   <<")  dx[1]: " << max_abs_dx_[1] << " (cell " << max_abs_dx_cell_[1] << ")";
                 OpmLog::debug(os.str());
             }
         }
@@ -644,18 +648,28 @@ namespace Opm {
             // Newton loop.
             int iter = 0;
             const int max_iter = 25;
-            while (!getConvergence(res) && iter < max_iter) {
+            double relaxation = 1.0;
+            while (!getConvergence(cell, res) && iter < max_iter) {
                 Vec2 dx;
                 jac.solve(dx, res);
+                dx *= relaxation;
                 updateState(cell, -dx);
                 assembleSingleCell(cell, res, jac);
                 ++iter;
+                // if (iter > 15) {
+                //     relaxation = 0.7;
+                //     std::ostringstream os;
+                //     os << "Iteration " << iter << " in cell " << cell << ", residual = " << res
+                //        << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
+                //        << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}, dx = " << dx;
+                //     OpmLog::debug(os.str());
+                // }
             }
             if (iter == max_iter) {
                 std::ostringstream os;
                 os << "Failed to converge in cell " << cell << ", residual = " << res
                    << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
-                   << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}";
+                   << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << " }";
                 OpmLog::debug(os.str());
             }
         }
@@ -819,10 +833,13 @@ namespace Opm {
 
 
 
-        bool getConvergence(const Vec2& res)
+        bool getConvergence(const int cell, const Vec2& res)
         {
-            const double tol = 1e-9;
-            return std::fabs(res[0]) < tol && std::fabs(res[1] < tol);
+            const double tol = 1e-5;
+            // Compute scaled residuals (scaled like saturations).
+            double sres[] = { res[0] / (cstate_[cell].b[Oil] * Base::pvdt_[cell]),
+                              res[1] / (cstate_[cell].b[Gas] * Base::pvdt_[cell]) };
+            return std::fabs(sres[0]) < tol && std::fabs(sres[1]) < tol;
         }
 
 
@@ -831,6 +848,12 @@ namespace Opm {
         void updateState(const int cell,
                          const Vec2& dx)
         {
+            if (std::fabs(dx[0]) > max_abs_dx_[0]) {
+                max_abs_dx_cell_[0] = cell;
+            }
+            if (std::fabs(dx[1]) > max_abs_dx_[1]) {
+                max_abs_dx_cell_[1] = cell;
+            }
             max_abs_dx_[0] = std::max(max_abs_dx_[0], std::fabs(dx[0]));
             max_abs_dx_[1] = std::max(max_abs_dx_[1], std::fabs(dx[1]));
 
