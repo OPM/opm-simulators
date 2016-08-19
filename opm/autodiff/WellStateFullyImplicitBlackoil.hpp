@@ -331,6 +331,26 @@ namespace Opm
             return res;
         }
 
+        WellStateFullyImplicitBlackoil() = default;
+        WellStateFullyImplicitBlackoil( const WellStateFullyImplicitBlackoil& rhs ) :
+            BaseType(rhs),
+            perfphaserates_( rhs.perfphaserates_ ),
+            current_controls_( rhs.current_controls_ ),
+            well_potentials_( rhs.well_potentials_ ),
+            well_solutions_( rhs.well_solutions_ )
+        {}
+
+         WellStateFullyImplicitBlackoil& operator=( const WellStateFullyImplicitBlackoil& rhs ) {
+
+             BaseType::operator =(rhs);
+             this->perfPhaseRates() = rhs.perfPhaseRates();
+             this->currentControls() = rhs.currentControls();
+             this->wellPotentials() = rhs.wellPotentials();
+             this->wellSolutions() = rhs.wellSolutions();
+             return *this;
+         }
+
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
