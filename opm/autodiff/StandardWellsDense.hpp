@@ -86,6 +86,15 @@ namespace Opm {
 
             int numPhases() const { return wells().number_of_phases; };
 
+            template<class WellState>
+            void resetWellControlFromState(WellState xw) {
+                const int        nw   = wells_->number_of_wells;
+                for (int w = 0; w < nw; ++w) {
+                    WellControls* wc = wells_->ctrls[w];
+                    well_controls_set_current( wc, xw.currentControls()[w]);
+                }
+            }
+
             const Wells& wells() const;
 
             const Wells* wellsPointer() const;

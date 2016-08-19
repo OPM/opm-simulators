@@ -283,8 +283,10 @@ namespace Opm {
         {
             using namespace Opm::AutoDiffGrid;
 
+            //wellModel().assembleAndUpdate<FluidSystem>(well_state);
             // Possibly switch well controls and updating well state to
             // get reasonable initial conditions for the wells
+            wellModel().resetWellControlFromState(well_state);
             wellModel().updateWellControls(well_state);
 
             // Set the primary variables for the wells
