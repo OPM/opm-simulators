@@ -345,10 +345,10 @@ namespace Opm
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
                  eclWriter_->writeTimeStep(timer.currentStepNum(),
+                                           substep,
                                            timer.simulationTimeElapsed(),
                                            simToSolution( state, phaseUsage_ ),
-                                           wellState.report(),
-                                           substep );
+                                           wellState.report());
             }
         }
 
