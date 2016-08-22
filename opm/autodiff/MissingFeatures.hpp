@@ -31,7 +31,7 @@ namespace MissingFeatures {
     };
 
     template <typename Keyword, typename Item, typename T>
-    void addUnsupported(std::multimap<std::string, PartiallySupported<T> >& map, T itemValue);
+    void addSupported(std::multimap<std::string, PartiallySupported<T> >& map, T itemValue);
 
     template <typename T>
     void checkOptions(const DeckKeyword& keyword, std::multimap<std::string , PartiallySupported<T> >& map);

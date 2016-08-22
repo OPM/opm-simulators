@@ -37,7 +37,7 @@ namespace MissingFeatures {
 
 
     template <typename Keyword, typename Item, typename T>
-    void addUnsupported(std::multimap<std::string, PartiallySupported<T> >& map, T itemValue)
+    void addSupported(std::multimap<std::string, PartiallySupported<T> >& map, T itemValue)
     {
         std::pair<std::string,PartiallySupported<T> > pair({Keyword::keywordName, PartiallySupported<T>{Item::itemName , itemValue}});
         map.insert(pair);
@@ -91,12 +91,12 @@ namespace MissingFeatures {
             "WTEST", "WTRACER", "ZIPPY2" };
         std::multimap<std::string, PartiallySupported<std::string> > string_options;
         std::multimap<std::string, PartiallySupported<int> > int_options;
-        addUnsupported<ParserKeywords::COMPORD, ParserKeywords::COMPORD::ORDER_TYPE, std::string>(string_options , "TRACK");
-        addUnsupported<ParserKeywords::ENDSCALE, ParserKeywords::ENDSCALE::DIRECT, std::string>(string_options, "NODIR");
-        addUnsupported<ParserKeywords::ENDSCALE, ParserKeywords::ENDSCALE::IRREVERS, std::string>(string_options, "REVER");
-        addUnsupported<ParserKeywords::PINCH, ParserKeywords::PINCH::CONTROL_OPTION, std::string>(string_options, "GAP");
-        addUnsupported<ParserKeywords::PINCH, ParserKeywords::PINCH::PINCHOUT_OPTION, std::string>(string_options, "TOPBOT");
-        addUnsupported<ParserKeywords::EHYSTR, ParserKeywords::EHYSTR::relative_perm_hyst, int>(int_options , 0);
+        addSupported<ParserKeywords::COMPORD, ParserKeywords::COMPORD::ORDER_TYPE, std::string>(string_options , "DEPTH");
+        addSupported<ParserKeywords::ENDSCALE, ParserKeywords::ENDSCALE::DIRECT, std::string>(string_options, "NODIR");
+        addSupported<ParserKeywords::ENDSCALE, ParserKeywords::ENDSCALE::IRREVERS, std::string>(string_options, "REVER");
+        addSupported<ParserKeywords::PINCH, ParserKeywords::PINCH::CONTROL_OPTION, std::string>(string_options, "GAP");
+        addSupported<ParserKeywords::PINCH, ParserKeywords::PINCH::PINCHOUT_OPTION, std::string>(string_options, "TOPBOT");
+        addSupported<ParserKeywords::EHYSTR, ParserKeywords::EHYSTR::relative_perm_hyst, int>(int_options , 0);
 
         // check deck and keyword for flow and parser.
         for (size_t idx = 0; idx < deck.size(); ++idx) {
