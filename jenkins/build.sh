@@ -3,12 +3,13 @@
 source `dirname $0`/build-opm-material.sh
 
 declare -a upstreams
-upstreams=(opm-parser)
+upstreams=(ert
+           opm-parser)
 
 declare -A upstreamRev
+upstreamRev[ert]=master
 upstreamRev[opm-parser]=master
 
-ERT_REVISION=master
 OPM_COMMON_REVISION=master
 
 build_opm_material
