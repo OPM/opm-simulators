@@ -138,7 +138,7 @@ namespace Opm {
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
-                          const StandardWellsDense&                well_model,
+                          const StandardWellsDense<FluidSystem, BlackoilIndices>&                well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
@@ -172,8 +172,6 @@ namespace Opm {
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , isBeginReportStep_(false)
-        , wellVariables_(wells().number_of_wells * wells().number_of_phases)
-        , F0_(wells().number_of_wells * wells().number_of_phases)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
@@ -283,573 +281,15 @@ namespace Opm {
         {
             using namespace Opm::AutoDiffGrid;
 
-            //wellModel().assembleAndUpdate<FluidSystem>(well_state);
-            // Possibly switch well controls and updating well state to
-            // get reasonable initial conditions for the wells
-            wellModel().resetWellControlFromState(well_state);
-            wellModel().updateWellControls(well_state);
-
-            // Set the primary variables for the wells
-            setWellVariables(well_state);
-
-            //SolutionState state(/*numPhases=*/3);
-            //setupLegacyState(state, reservoir_state, well_state);
-
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx, reservoir_state);
 
             // -------- Well equations ----------
-
-            if (iterationIdx == 0) {
-                // Create the (constant, derivativeless) initial state.
-                // Compute initial accumulation contributions
-                // and well connection pressures.
-                computeWellConnectionPressures(well_state);
-
-                computeAccumWells();
-                // Create the (constant, derivativeless) initial state.
-                //SolutionState state0 = state;
-                //makeConstantState(state0);
-                // Compute initial accumulation contributions
-                // and well connection pressures.
-                //computeWellConnectionPressures(state0, well_state);
-                //wellModel().computeAccumWells(state0);
-            }
-
-            IterationReport iter_report = {false, false, 0, 0};
-            if ( ! wellsActive() ) {
-                return iter_report;
-            }
-
-
             double dt = timer.currentStepLength();
-            std::vector<ADB> mob_perfcells;
-            std::vector<ADB> b_perfcells;
-            //wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
-            if (param_.solve_welleq_initially_ && iterationIdx == 0) {
-                // solve the well equations as a pre-processing step
-                iter_report = solveWellEq(mob_perfcells, b_perfcells, dt, well_state);
-            }
-            std::vector<ADB> cq_s;                
-            computeWellFluxDense(cq_s, 4);
-            updatePerfPhaseRatesAndPressures(cq_s, well_state);
+            IterationReport iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state, residual_);
 
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
-                for (int p = 0; p < np; ++p) {
-                    for (int w = 0; w < nw; ++w) {
-                    //std::cout << p << " " << w << " " << getQs(w,p).value<<std::endl;
-                    //print( getQs(w, p));
-                }
-            }
-            //std::cout << state.qs.value() << std::endl;
-
-            //wellModel().addWellFluxEq(cq_s, state, dt, residual_);
-            addWellFluxEq(cq_s, dt, 4);
-            addWellContributionToMassBalanceEq(cq_s);
-            //wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
-
-            if (param_.compute_well_potentials_) {
-                //SolutionState state0 = state;
-                //makeConstantState(state0);
-                //wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
-            }
             return iter_report;
         }
-
-        typedef DenseAd::Evaluation<double, /*size=*/3> Eval;
-        EvalWell extendEval(Eval in) const {
-            EvalWell out = 0.0;
-            out.value = in.value;
-            for(int i = 0;i<3;++i) {
-                out.derivatives[i] = in.derivatives[flowToEbosPvIdx(i)];
-            }
-            return out;
-        }
-
-        void print(EvalWell in) const {
-            std::cout << in.value << std::endl;
-            for (int i = 0; i < in.derivatives.size(); ++i) {
-                std::cout << in.derivatives[i] << std::endl;
-            }
-        }
-
-        void
-        setWellVariables(const WellState& xw) {
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
-            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                for (int w = 0; w < nw; ++w) {
-                    wellVariables_[w + nw*phaseIdx] = 0.0;
-                    wellVariables_[w + nw*phaseIdx].value = xw.wellSolutions()[w + nw* phaseIdx];
-                    wellVariables_[w + nw*phaseIdx].derivatives[np + phaseIdx] = 1.0;
-                }
-            }
-        }
-
-        void
-        computeAccumWells() {
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
-            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                for (int w = 0; w < nw; ++w) {
-                    F0_[w + nw * phaseIdx] = wellVolumeFraction(w,phaseIdx).value;
-                }
-            }
-        }
-
-
-        template <class WellState>
-        void
-        updatePerfPhaseRatesAndPressures(const std::vector<ADB>& cq_s,
-                                         WellState& xw) const
-        {
-            if ( !localWellsActive() )
-            {
-                // If there are no wells in the subdomain of the proces then
-                // cq_s has zero size and will cause a segmentation fault below.
-                return;
-            }
-
-            // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
-            const int nperf = wells().well_connpos[nw];
-
-            V cq = superset(cq_s[0].value(), Span(nperf, np, 0), nperf*np);
-            for (int phase = 1; phase < np; ++phase) {
-                cq += superset(cq_s[phase].value(), Span(nperf, np, phase), nperf*np);
-            }
-            xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf*np);
-
-            // Update the perforation pressures.
-            const V& cdp = wellModel().wellPerforationPressureDiffs();
-            for (int w = 0; w < nw; ++w  ) {
-                for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
-                    xw.perfPress()[perf] = cdp[perf] + xw.bhp()[w];
-                }
-            }
-
-        }
-
-        void
-        addWellFluxEq(std::vector<ADB> cq_s,
-                      const double dt,
-                      const int numBlocks)
-        {
-            if( !localWellsActive() )
-            {
-                // If there are no wells in the subdomain of the proces then
-                // cq_s has zero size and will cause a segmentation fault below.
-                return;
-            }
-
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
-
-            double volume = 0.002831684659200; // 0.1 cu ft;
-            //std::vector<ADB> F = wellVolumeFractions(state);
-            //std::cout << F0_[0] << std::endl;
-            //std::cout << F[0] << std::endl;
-            //std::cout << "før Ebos" <<residual_.well_flux_eq << std::endl;
-            ADB qs = ADB::constant(ADB::V::Zero(np*nw));
-            for (int p = 0; p < np; ++p) {
-
-                std::vector<EvalWell> res_vec(nw);
-                for (int w = 0; w < nw; ++w) {
-
-                    EvalWell res = (wellVolumeFraction(w, p) - F0_[w + nw*p]) * volume / dt;
-                    res += getQs(w, p);
-                    //for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
-                    //    res -= cq_s[perf*np + p];
-                    //}
-                    res_vec[w] = res;
-
-                }
-                ADB tmp = convertToADBWell(res_vec, numBlocks);
-                qs += superset(tmp,Span(nw,1,p*nw), nw*np);
-            }
-            //std::cout << residual_.well_flux_eq << std::endl;
-
-
-            //wellModel().convertToADB(res_vec, well_cells, nc, well_id, nw, numBlocks);
-            //ADB qs = state.qs;
-            for (int phase = 0; phase < np; ++phase) {
-                qs -= superset(wellModel().wellOps().p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
-                //qs += superset((F[phase]-F0_[phase]) * vol_dt, Span(nw,1,phase*nw), nw*np);
-            }
-
-            residual_.well_flux_eq = qs;
-
-            //std::cout << "etter Ebos" << residual_.well_flux_eq << std::endl;
-
-        }
-        const AutoDiffBlock<double> convertToADBWell(const std::vector<EvalWell>& local, const int numVars) const
-        {
-            typedef typename ADB::M  M;
-            const int nLocal = local.size();
-            typename ADB::V value( nLocal );
-            //const int numVars = 5;
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
-
-            Eigen::SparseMatrix<double> matFlux(nLocal,np*nw);
-
-            for( int i=0; i<nLocal; ++i )
-            {
-                value[ i ] = local[ i ].value;
-                for (int phase = 0; phase < np; ++phase) {
-                    matFlux.insert(i, nw*phase + i) = local[i].derivatives[np + phase];
-                }
-            }
-
-            std::vector< M > jacs( numVars );
-            if (numVars == 4) {
-                for( int d=0; d<np; ++d ) {
-                    //Eigen::DiagonalMatrix<double>(deri[d]);
-                    //jacs[ d ] = M(mat[d]);
-                }
-
-                jacs[3] = M(matFlux);
-                //jacs[4] = M(matBHP);
-            }
-            else if (numVars == 1) {
-                jacs[0] = M(matFlux);
-                //jacs[1] = M(matBHP);
-            }
-            //std::cout << numVars << std::endl;
-
-            return ADB::function( std::move( value ), std::move( jacs ));
-        }
-
-
-        void
-        computeWellFluxDense(std::vector<ADB>& cq_s, const int numBlocks) const
-        {
-            if( ! localWellsActive() ) return ;
-            const int np = wells().number_of_phases;
-            const int nw = wells().number_of_wells;
-            const int nperf = wells().well_connpos[nw];
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            V Tw = Eigen::Map<const V>(wellModel().wells().WI, nperf);
-            const std::vector<int>& well_cells = wellModel().wellOps().well_cells;
-            std::vector<int> well_id(nperf);
-            std::vector<std::vector<EvalWell>> cq_s_dense(np, std::vector<EvalWell>(nperf,0.0));
-
-
-            // pressure diffs computed already (once per step, not changing per iteration)
-            const V& cdp = wellModel().wellPerforationPressureDiffs();
-
-            //std::vector<std::vector<EvalWell>> cq_s_dense(np, std::vector<EvalWell>(nperf,0.0));
-            //std::vector<ADB> cmix_s_ADB = wellModel().wellVolumeFractions(state);
-
-            for (int w = 0; w < nw; ++w) {
-
-                EvalWell bhp = getBhp(w); //wellModel().extractDenseADWell(state.bhp,w);
-//                std::cout << "well " << w << std::endl;
-//                std::cout << "bhpF " << std::endl;
-//                print(bhp);
-//                std::cout << "state.bhp " << std::endl;
-//                print(wellModel().extractDenseADWell(state.bhp,w));
-
-
-                // TODO: fix for 2-phase case
-                std::vector<EvalWell> cmix_s(np,0.0);
-                for (int phase = 0; phase < np; ++phase) {
-                    //int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
-                    cmix_s[phase] = wellVolumeFraction(w,phase);
-                }
-
-                //std::cout <<"cmix gas "<< w<< " "<<cmix_s[Gas] << std::endl;
-
-
-                for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
-                    const int cell_idx = well_cells[perf];
-                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                    const auto& fs = intQuants.fluidState();
-                    well_id[perf] = w;
-                    EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx)); //wellModel().extractDenseAD(state.pressure, cell_idx, cell_idx);
-                    EvalWell rs = extendEval(fs.Rs()); //wellModel().extractDenseAD(state.rs, cell_idx, cell_idx);
-                    EvalWell rv = extendEval(fs.Rv()); //wellModel().extractDenseAD(state.rv, cell_idx, cell_idx);
-                    std::vector<EvalWell> b_perfcells_dense(np, 0.0);
-                    std::vector<EvalWell> mob_perfcells_dense(np, 0.0);
-                    for (int phase = 0; phase < np; ++phase) {
-                        int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
-                        b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
-                        mob_perfcells_dense[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
-                    }
-
-                    // Pressure drawdown (also used to determine direction of flow)
-                    EvalWell well_pressure = bhp + cdp[perf];
-                    EvalWell drawdown = pressure - well_pressure;
-
-                    // injection perforations
-                    if ( drawdown.value > 0 )  {
-
-                        //Do nothing if crossflow is not allowed
-                        if (!wells().allow_cf[w] && wells().type[w] == INJECTOR)
-                            continue;
-                        // compute phase volumetric rates at standard conditions
-                        std::vector<EvalWell> cq_ps(np, 0.0);
-                        for (int phase = 0; phase < np; ++phase) {
-                            const EvalWell cq_p = - Tw[perf] * (mob_perfcells_dense[phase] * drawdown);
-                            cq_ps[phase] = b_perfcells_dense[phase] * cq_p;
-                        }
-
-
-                        if ((active_)[Oil] && (active_)[Gas]) {
-                            const int oilpos = pu.phase_pos[Oil];
-                            const int gaspos = pu.phase_pos[Gas];
-                            const EvalWell cq_psOil = cq_ps[oilpos];
-                            const EvalWell cq_psGas = cq_ps[gaspos];
-                            cq_ps[gaspos] += rs * cq_psOil;
-                            cq_ps[oilpos] += rv * cq_psGas;
-                        }
-
-
-                        // map to ADB
-                        for (int phase = 0; phase < np; ++phase) {
-                            cq_s_dense[phase][perf] = cq_ps[phase];
-
-                        }
-
-                    } else {
-                        //Do nothing if crossflow is not allowed
-                        if (!wells().allow_cf[w] && wells().type[w] == PRODUCER)
-                            continue;
-
-                        // Using total mobilities
-                        EvalWell total_mob_dense = mob_perfcells_dense[0];
-                        for (int phase = 1; phase < np; ++phase) {
-                            total_mob_dense += mob_perfcells_dense[phase];
-                        }
-                        // injection perforations total volume rates
-                        const EvalWell cqt_i = - Tw[perf] * (total_mob_dense * drawdown);
-
-                        // compute volume ratio between connection at standard conditions
-                        EvalWell volumeRatio = 0.0;
-                        if ((active_)[Water]) {
-                            const int watpos = pu.phase_pos[Water];
-                            volumeRatio += cmix_s[watpos] / b_perfcells_dense[watpos];
-                        }
-
-                        if ((active_)[Oil] && (active_)[Gas]) {
-                            EvalWell well_temperature = extendEval(fs.temperature(FluidSystem::oilPhaseIdx));
-                            EvalWell rsSatEval = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), well_temperature, well_pressure);
-                            EvalWell rvSatEval = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), well_temperature, well_pressure);
-
-                            const int oilpos = pu.phase_pos[Oil];
-                            const int gaspos = pu.phase_pos[Gas];
-                            EvalWell rvPerf = 0.0;
-                            if (cmix_s[gaspos] > 0)
-                                rvPerf = cmix_s[oilpos] / cmix_s[gaspos];
-
-                            if (rvPerf.value > rvSatEval.value) {
-                                rvPerf = rvSatEval;
-                                //rvPerf.value = rvSatEval.value;
-                            }
-
-                            EvalWell rsPerf = 0.0;
-                            if (cmix_s[oilpos] > 0)
-                                rsPerf = cmix_s[gaspos] / cmix_s[oilpos];
-
-                            if (rsPerf.value > rsSatEval.value) {
-                                //rsPerf = 0.0;
-                                rsPerf= rsSatEval;
-                            }
-
-                            // Incorporate RS/RV factors if both oil and gas active
-                            const EvalWell d = 1.0 - rvPerf * rsPerf;
-
-                            const EvalWell tmp_oil = (cmix_s[oilpos] - rvPerf * cmix_s[gaspos]) / d;
-                            //std::cout << "tmp_oil " <<tmp_oil << std::endl;
-                            volumeRatio += tmp_oil / b_perfcells_dense[oilpos];
-
-                            const EvalWell tmp_gas = (cmix_s[gaspos] - rsPerf * cmix_s[oilpos]) / d;
-                            //std::cout << "tmp_gas " <<tmp_gas << std::endl;
-                            volumeRatio += tmp_gas / b_perfcells_dense[gaspos];
-                        }
-                        else {
-                            if ((active_)[Oil]) {
-                                const int oilpos = pu.phase_pos[Oil];
-                                volumeRatio += cmix_s[oilpos] / b_perfcells_dense[oilpos];
-                            }
-                            if ((active_)[Gas]) {
-                                const int gaspos = pu.phase_pos[Gas];
-                                volumeRatio += cmix_s[gaspos] / b_perfcells_dense[gaspos];
-                            }
-                        }
-                        // injecting connections total volumerates at standard conditions
-                        EvalWell cqt_is = cqt_i/volumeRatio;
-                        //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
-                        for (int phase = 0; phase < np; ++phase) {
-                            cq_s_dense[phase][perf] = cmix_s[phase] * cqt_is; // * b_perfcells_dense[phase];
-                        }
-                    }
-                }
-            }
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            cq_s.resize(np, ADB::null());
-            for (int phase = 0; phase < np; ++phase) {
-                cq_s[phase] = wellModel().convertToADB(cq_s_dense[phase], well_cells, nc, well_id, nw, numBlocks);
-                //std::cout << "cq_s " <<cq_s[phase] << std::endl;
-            }
-            //std::cout << aliveWells << std::endl;
-            //std::vector<ADB> cq_s2;
-            //Vector aliveWells;
-            //computeWellFlux(state,mob_perfcells,b_perfcells, aliveWells,cq_s2);
-
-            //for (int phase = 0; phase < np; ++phase) {
-                //if( !(((cq_s[phase].value() - cq_s2[phase].value()).abs()<1e-10).all()) ) {
-                    //std::cout << "phase " << phase << std::endl;
-                    //std::cout << cq_s2[phase].value() << std::endl;
-                    //std::cout << cq_s[phase].value() << std::endl;
-                //}
-            //}
-        }
-        void
-        computeWellConnectionPressures(const WellState& xw)
-        {
-            if( ! localWellsActive() ) return ;
-            // 1. Compute properties required by computeConnectionPressureDelta().
-            //    Note that some of the complexity of this part is due to the function
-            //    taking std::vector<double> arguments, and not Eigen objects.
-            std::vector<double> b_perf;
-            std::vector<double> rsmax_perf;
-            std::vector<double> rvmax_perf;
-            std::vector<double> surf_dens_perf;
-            computePropertiesForWellConnectionPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            const V& pdepth = subset(depth, wellModel().wellOps().well_cells);
-            const int nperf = wells().well_connpos[wells().number_of_wells];
-            const std::vector<double> depth_perf(pdepth.data(), pdepth.data() + nperf);
-
-            wellModel().computeWellConnectionDensitesPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, depth_perf, gravity);
-
-        }
-
-        template<class WellState>
-        void
-        computePropertiesForWellConnectionPressures(const WellState& xw,
-                                                    std::vector<double>& b_perf,
-                                                    std::vector<double>& rsmax_perf,
-                                                    std::vector<double>& rvmax_perf,
-                                                    std::vector<double>& surf_dens_perf)
-        {
-            const int nperf = wells().well_connpos[wells().number_of_wells];
-            const int nw = wells().number_of_wells;
-            const std::vector<int>& well_cells = wellModel().wellOps().well_cells;
-            const PhaseUsage& pu = fluid_.phaseUsage();
-            const int np = fluid_.numPhases();
-            b_perf.resize(nperf*np);
-            rsmax_perf.resize(nperf);
-            rvmax_perf.resize(nperf);
-
-            std::vector<PhasePresence> perf_cond(nperf);
-            for (int perf = 0; perf < nperf; ++perf) {
-                perf_cond[perf] = phaseCondition_[well_cells[perf]];
-            }
-
-            // Compute the average pressure in each well block
-            const V perf_press = Eigen::Map<const V>(xw.perfPress().data(), nperf);
-            //V avg_press = perf_press*0;
-            for (int w = 0; w < nw; ++w) {
-                for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-                    const int cell_idx = well_cells[perf];
-                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                    const auto& fs = intQuants.fluidState();
-
-                    const double p_above = perf == wells().well_connpos[w] ? xw.bhp()[w] : perf_press[perf - 1];
-                    const double p_avg = (perf_press[perf] + p_above)/2;
-                    double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value;
-
-                    if (pu.phase_used[BlackoilPhases::Aqua]) {
-                        b_perf[ pu.phase_pos[BlackoilPhases::Aqua] + perf * pu.num_phases] =
-                                FluidSystem::waterPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    }
-
-
-                    if (pu.phase_used[BlackoilPhases::Vapour]) {
-                        int gaspos = pu.phase_pos[BlackoilPhases::Vapour] + perf * pu.num_phases;
-                        if (perf_cond[perf].hasFreeOil()) {
-                            b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        }
-                        else {
-                            double rv = fs.Rv().value;
-                            b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rv);
-                        }
-                    }
-
-                    if (pu.phase_used[BlackoilPhases::Liquid]) {
-                        int oilpos = pu.phase_pos[BlackoilPhases::Liquid] + perf * pu.num_phases;
-                        if (perf_cond[perf].hasFreeGas()) {
-                            b_perf[oilpos] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        }
-                        else {
-                            double rs = fs.Rs().value;
-                            b_perf[oilpos] = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rs);
-                        }
-                    }
-
-                    if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
-                        rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    }
-
-                }
-            }
-
-
-//            // Use cell values for the temperature as the wells don't knows its temperature yet.
-//            const ADB perf_temp = subset(state.temperature, well_cells);
-
-//            // Compute b, rsmax, rvmax values for perforations.
-//            // Evaluate the properties using average well block pressures
-//            // and cell values for rs, rv, phase condition and temperature.
-//            const ADB avg_press_ad = ADB::constant(avg_press);
-//            // const std::vector<PhasePresence>& pc = phaseCondition();
-
-//            DataBlock b(nperf, pu.num_phases);
-//            if (pu.phase_used[BlackoilPhases::Aqua]) {
-//                const V bw = fluid_.bWat(avg_press_ad, perf_temp, well_cells).value();
-//                b.col(pu.phase_pos[BlackoilPhases::Aqua]) = bw;
-//            }
-//            assert((*active_)[Oil]);
-//            const V perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
-//            if (pu.phase_used[BlackoilPhases::Liquid]) {
-//                const ADB perf_rs = (state.rs.size() > 0) ? subset(state.rs, well_cells) : ADB::null();
-//                const V bo = fluid_.bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
-//                b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
-//            }
-//            if (pu.phase_used[BlackoilPhases::Vapour]) {
-//                const ADB perf_rv = (state.rv.size() > 0) ? subset(state.rv, well_cells) : ADB::null();
-//                const V bg = fluid_.bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
-//                b.col(pu.phase_pos[BlackoilPhases::Vapour]) = bg;
-//            }
-//            if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
-//                const V rssat = fluid_.rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
-//                //rsmax_perf.assign(rssat.data(), rssat.data() + nperf);
-
-//                const V rvsat = fluid_.rvSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
-//                //rvmax_perf.assign(rvsat.data(), rvsat.data() + nperf);
-//            }
-
-//            // b is row major, so can just copy data.
-//            //b_perf.assign(b.data(), b.data() + nperf * pu.num_phases);
-
-            // Surface density.
-            // The compute density segment wants the surface densities as
-            // an np * number of wells cells array
-            V rho = superset(fluid_.surfaceDensity(0 , well_cells), Span(nperf, pu.num_phases, 0), nperf*pu.num_phases);
-            for (int phase = 1; phase < pu.num_phases; ++phase) {
-                rho += superset(fluid_.surfaceDensity(phase , well_cells), Span(nperf, pu.num_phases, phase), nperf*pu.num_phases);
-            }
-            surf_dens_perf.assign(rho.data(), rho.data() + nperf * pu.num_phases);
-
-        }
-
 
 
 
@@ -1188,7 +628,7 @@ namespace Opm {
             }
 
 
-            wellModel().updateWellState(dwells, dpMaxRel(), well_state);
+            wellModel().updateWellState(dwells, well_state);
 
             // Update phase conditions used for property calculations.
             updatePhaseCondFromPrimalVariable(reservoir_state);
@@ -1250,9 +690,10 @@ namespace Opm {
                 tempV.col(idx)   = R.col(idx).abs()/pv;
             }
 
-            const double pvSum = convergenceReduction(B, tempV, R,
+            std::vector<double> pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
+            const double pvSum = detail::convergenceReduction(B, tempV, R,
                                                       R_sum, maxCoeff, B_avg, maxNormWell,
-                                                      nc);
+                                                      nc, np, pv_vector, residual_);
 
             std::vector<double> CNV(np);
             std::vector<double> mass_balance_residual(np);
@@ -1430,7 +871,7 @@ namespace Opm {
         std::vector<PhasePresence> phaseCondition_;
 
         // Well Model
-        StandardWellsDense                       well_model_;
+        StandardWellsDense<FluidSystem, BlackoilIndices> well_model_;
 
         V isRs_;
         V isRv_;
@@ -1447,113 +888,16 @@ namespace Opm {
         double current_relaxation_;
         V dx_old_;
 
-        std::vector<EvalWell> wellVariables_;
-        std::vector<double> F0_;
+
 
         // ---------  Protected methods  ---------
 
     public:
 
-        EvalWell getBhp(const int wellIdx) const {
-            const WellControls* wc = wells().ctrls[wellIdx];
-            if (well_controls_get_current_type(wc) == BHP) {
-                EvalWell bhp = 0.0;
-                const double target_rate = well_controls_get_current_target(wc);
-                bhp.value = target_rate;
-                return bhp;
-            }
-            return wellVariables_[wellIdx];
-        }
-
-        EvalWell getQs(const int wellIdx, const int phaseIdx) const {
-            EvalWell qs = 0.0;
-            const WellControls* wc = wells().ctrls[wellIdx];
-            const int np = fluid_.numPhases();
-            const double target_rate = well_controls_get_current_target(wc);
-//            std::cout << "well info " << std::endl;
-//            std::cout << wellIdx << " " << wells().type[wellIdx] << " " <<target_rate << std::endl;
-//            std::cout << phaseIdx << " " << wells().comp_frac[np*wellIdx + phaseIdx] << std::endl;
-//            std::cout << well_controls_get_current_type(wc) << std::endl;
-//            std::cout << "well info end" << std::endl;
-
-
-            if (wells().type[wellIdx] == INJECTOR) {
-                const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
-                if (comp_frac == 0.0)
-                    return qs;
-
-                if (well_controls_get_current_type(wc) == BHP) {
-                    return wellVariables_[wellIdx];
-                }
-                qs.value = target_rate;
-                return qs;
-            }
-
-            // Producers
-            if (well_controls_get_current_type(wc) == BHP) {
-                return wellVariables_[wellIdx] * wellVolumeFractionScaled(wellIdx,phaseIdx);
-            }
-            if (well_controls_get_current_type(wc) == SURFACE_RATE) {
-                const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
-
-                if (comp_frac == 1.0) {
-                    qs.value = target_rate;
-                    return qs;
-                }
-                int currentControlIdx = 0;
-                for (int i = 0; i < np; ++i) {
-                    currentControlIdx += wells().comp_frac[np*wellIdx + i] * i;
-                }
-
-                if (wellVolumeFractionScaled(wellIdx,currentControlIdx) == 0) {
-                    return qs;
-                }
-//                std::cout << "phase Idx " <<phaseIdx <<std::endl;
-//                std::cout << "currentcontrollidx " <<currentControlIdx <<std::endl;
-//                std::cout << "fraction " <<wellVolumeFractionScaled(wellIdx,phaseIdx) <<std::endl;
-//                std::cout << "controll fraction " <<wellVolumeFractionScaled(wellIdx,currentControlIdx) <<std::endl;
-//                std::cout << "wellvariable " <<  wellVolumeFraction(wellIdx,phaseIdx) <<std::endl;
-
-
-
-
-                return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx,currentControlIdx));
-            }
-            // ReservoirRate
-            return target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx);
-        }
-
-        EvalWell wellVolumeFraction(const int wellIdx, const int phaseIdx) const {
-            assert(fluid_.numPhases() == 3);
-            const int nw = wells().number_of_wells;
-            if (phaseIdx == Water) {
-               return wellVariables_[nw + wellIdx];
-            }
-
-            if (phaseIdx == Gas) {
-               return wellVariables_[2*nw + wellIdx];
-            }
-
-            // Oil
-            return 1.0 - wellVariables_[nw + wellIdx] - wellVariables_[2 * nw + wellIdx];
-        }
-
-        EvalWell wellVolumeFractionScaled(const int wellIdx, const int phaseIdx) const {
-            const WellControls* wc = wells().ctrls[wellIdx];
-            if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
-                const double* distr = well_controls_get_current_distr(wc);
-                return wellVolumeFraction(wellIdx, phaseIdx) / distr[phaseIdx];
-            }
-            std::vector<double> g = {1,1,0.01};
-            return (wellVolumeFraction(wellIdx, phaseIdx) / g[phaseIdx]);
-        }
-
-
-
 
         /// return the StandardWells object
-        StandardWellsDense& wellModel() { return well_model_; }
-        const StandardWellsDense& wellModel() const { return well_model_; }
+        StandardWellsDense<FluidSystem, BlackoilIndices>& wellModel() { return well_model_; }
+        const StandardWellsDense<FluidSystem, BlackoilIndices>& wellModel() const { return well_model_; }
 
         /// return the Well struct in the StandardWells
         const Wells& wells() const { return well_model_.wells(); }
@@ -1564,87 +908,6 @@ namespace Opm {
         /// return true if wells are available on this process
         bool localWellsActive() const { return well_model_.localWellsActive(); }
 
-        void
-        makeConstantState(SolutionState& state) const
-        {
-            // HACK: throw away the derivatives. this may not be the most
-            // performant way to do things, but it will make the state
-            // automatically consistent with variableState() (and doing
-            // things automatically is all the rage in this module ;)
-            state.pressure = ADB::constant(state.pressure.value());
-            state.temperature = ADB::constant(state.temperature.value());
-            state.rs = ADB::constant(state.rs.value());
-            state.rv = ADB::constant(state.rv.value());
-            const int num_phases = state.saturation.size();
-            for (int phaseIdx = 0; phaseIdx < num_phases; ++ phaseIdx) {
-                state.saturation[phaseIdx] = ADB::constant(state.saturation[phaseIdx].value());
-            }
-            state.qs = ADB::constant(state.qs.value());
-            state.bhp = ADB::constant(state.bhp.value());
-            assert(state.canonical_phase_pressures.size() == static_cast<std::size_t>(Opm::BlackoilPhases::MaxNumPhases));
-            for (int canphase = 0; canphase < Opm::BlackoilPhases::MaxNumPhases; ++canphase) {
-                ADB& pp = state.canonical_phase_pressures[canphase];
-                pp = ADB::constant(pp.value());
-            }
-            state.wellVariables = ADB::constant(state.wellVariables.value());
-        }
-
-        void setupLegacyState(SolutionState& state,
-                              const ReservoirState& x,
-                              const WellState& xw) const
-        {
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            const int np = x.numPhases();
-
-            std::vector<V> vars0(np, V::Ones(nc, 1));
-            wellModel().variableWellStateInitials(xw, vars0);
-            std::vector<ADB> vars = ADB::variables(vars0);
-
-            std::vector<int> indices = {{Pressure, Sw, Xvar}};
-            int foo = indices.size();
-            indices.resize(4);
-            wellModel().variableStateWellIndices(indices, foo);
-
-            const ADB& ones = ADB::constant(V::Ones(nc, 1));
-
-
-            // temperature cannot be a variable at this time (only constant).
-            state.temperature = ones;
-
-            // saturations
-            state.saturation[Water] = std::move(vars[indices[Sw]]);
-
-            const ADB& sw = state.saturation[Water];
-            const ADB& xvar = vars[indices[Xvar]];
-            state.saturation[Gas] = xvar;
-            state.saturation[Oil] = sw + xvar;
-
-            // pressures
-            state.pressure = std::move(vars[indices[Pressure]]);
-            const ADB& po = state.pressure;
-
-            const ADB& tmp = po + sw + xvar;
-            state.canonical_phase_pressures[Gas] = tmp;
-            state.canonical_phase_pressures[Water] = tmp;
-            state.canonical_phase_pressures[Oil] = po;
-
-            if (has_disgas_) {
-                state.rs = po + xvar;
-            } else {
-                state.rs = po;
-            }
-            if (has_vapoil_) {
-                state.rv = po + xvar;
-            } else {
-                state.rv = po;
-            }
-
-            // Note that so is never a primary variable.
-            //state.saturation[Oil] = std::move(so);
-
-            // wells
-            wellModel().variableStateExtractWellsVars(indices, vars, state, xw);
-        }
 
         V
         fluidRsSat(const V&                p,
@@ -1767,11 +1030,7 @@ namespace Opm {
             return phaseToComp[ phaseIdx ];
         }
 
-        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
-        {
-            const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
-            return flowToEbos[ phaseIdx ];
-        }
+
 
     private:
         void convertResults(const Simulator& simulator)
@@ -1876,6 +1135,12 @@ namespace Opm {
                     ADB::function(std::move(resid[eqIdx]),
                                   std::move(adbJacs[eqIdx]));
             }
+        }
+
+        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
+        {
+            const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
+            return flowToEbos[ phaseIdx ];
         }
 
         void updateLegacyState(const Simulator& simulator, SolutionState& legacyState)
@@ -2157,7 +1422,6 @@ namespace Opm {
             prevEpisodeIdx = ebosSimulator_.episodeIndex();
 
             convertResults(ebosSimulator_);
-            //updateLegacyState(ebosSimulator_, state);
 
             if (param_.update_equations_scaling_) {
                 updateEquationsScaling();
@@ -2165,173 +1429,13 @@ namespace Opm {
 
         }
 
-        IterationReport solveWellEq(const std::vector<ADB>& mob_perfcells,
-                                    const std::vector<ADB>& b_perfcells,
-                                    const double dt,
-                                    WellState& well_state)
-        {
-            const int np = wells().number_of_phases;
-            //std::vector<ADB> cq_s(np, ADB::null());
-            const int nw = wells().number_of_wells;
-            const int nperf = wells().well_connpos[nw];
-            std::vector<ADB> cq_s(np, ADB::null());
-            WellState well_state0 = well_state;
-
-            int it  = 0;
-            bool converged;
-            do {
-                // bhp and Q for the wells
-                computeWellFluxDense(cq_s, 1);
-                updatePerfPhaseRatesAndPressures(cq_s, well_state);
-                addWellFluxEq(cq_s, dt, 1);
-                converged = getWellConvergence(it);
-
-                if (converged) {
-                    break;
-                }
-
-                ++it;
-                if( localWellsActive() )
-                {
-                    std::vector<ADB> eqs;
-                    eqs.reserve(1);
-                    eqs.push_back(residual_.well_flux_eq);
-                    //eqs.push_back(residual_.well_eq);
-                    ADB total_residual = vertcatCollapseJacs(eqs);
-                    const std::vector<M>& Jn = total_residual.derivative();
-                    typedef Eigen::SparseMatrix<double> Sp;
-                    Sp Jn0;
-                    Jn[0].toSparse(Jn0);
-                    const Eigen::SparseLU< Sp > solver(Jn0);
-                    ADB::V total_residual_v = total_residual.value();
-                    const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
-                    assert(dx.size() == total_residual_v.size());
-                    wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
-                    wellModel().updateWellControls(well_state);
-                    setWellVariables(well_state);
-                }
-            } while (it < 15);
-
-            if (!converged) {
-                well_state = well_state0;
-            }
-
-            const bool failed = false; // Not needed in this method.
-            const int linear_iters = 0; // Not needed in this method
-            return IterationReport{failed, converged, linear_iters, it};
-        }
 
 
-        void
-        addWellContributionToMassBalanceEq(const std::vector<ADB>& cq_s)
-        {
-            if ( !localWellsActive() )
-            {
-                // If there are no wells in the subdomain of the proces then
-                // cq_s has zero size and will cause a segmentation fault below.
-                return;
-            }
-
-            // Add well contributions to mass balance equations
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            const int np = numPhases();
-            for (int phase = 0; phase < np; ++phase) {
-                residual_.material_balance_eq[phase] -= superset(cq_s[phase], wellModel().wellOps().well_cells, nc);
-                }
-        }
 
 
-        bool getWellConvergence(const int iteration)
-        {
-            const double tol_wells = param_.tolerance_wells_;
 
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            const int np = numPhases();
 
-            const V& pv = geo_.poreVolume();
-            std::vector<double> R_sum(np);
-            std::vector<double> B_avg(np);
-            std::vector<double> maxCoeff(np);
-            std::vector<double> maxNormWell(np);
-            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
-            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
-            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
 
-            for ( int idx = 0; idx < np; ++idx )
-            {
-                V b(nc);
-                for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
-                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                    const auto& fs = intQuants.fluidState();
-
-                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
-
-                    b[cell_idx] = 1 / fs.invB(ebosPhaseIdx).value;
-                }
-                B.col(idx) = b;
-            }
-
-            for ( int idx = 0; idx < np; ++idx )
-            {
-                //const ADB& tempB = rq_[idx].b;
-                //B.col(idx)       = 1./tempB.value();
-                R.col(idx)       = residual_.material_balance_eq[idx].value();
-                tempV.col(idx)   = R.col(idx).abs()/pv;
-            }
-
-            convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, maxNormWell, nc);
-
-            std::vector<double> well_flux_residual(np);
-            bool converged_Well = true;
-            // Finish computation
-            for ( int idx = 0; idx < np; ++idx )
-            {
-                well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
-                converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
-            }
-
-            const double residualWell     = detail::infinityNormWell(residual_.well_eq,
-                                                                     linsolver_.parallelInformation());
-            converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
-            const bool converged = converged_Well;
-
-            // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-
-                if (std::isnan(well_flux_residual[phaseIdx])) {
-                    OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
-                }
-                if (well_flux_residual[phaseIdx] > maxResidualAllowed()) {
-                    OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
-                }
-            }
-
-            if ( terminal_output_ )
-            {
-                // Only rank 0 does print to std::cout
-                if (iteration == 0) {
-                    std::string msg;
-                    msg = "Iter";
-                    for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        msg += "  W-FLUX(" + phaseName + ")";
-                    }
-                    OpmLog::note(msg);
-                }
-                std::ostringstream ss;
-                const std::streamsize oprec = ss.precision(3);
-                const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
-                ss << std::setw(4) << iteration;
-                for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                    ss << std::setw(11) << well_flux_residual[phaseIdx];
-                }
-                ss.precision(oprec);
-                ss.flags(oflags);
-                OpmLog::note(ss.str());
-            }
-            return converged;
-        }
 
         std::vector<ADB>
         computePressures(const ADB& po,
@@ -2432,115 +1536,6 @@ namespace Opm {
         }
 
 
-        // TODO: added since the interfaces of the function are different
-        // TODO: for StandardWells and MultisegmentWells
-//        void
-//        computeWellConnectionPressures(const SolutionState& state,
-//                                       const WellState& well_state)
-//        {
-//            wellModel().computeWellConnectionPressures(state, well_state);
-//        }
-
-
-        /// \brief Compute the reduction within the convergence check.
-        /// \param[in] B     A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. B.col(i) contains the values
-        ///                  for phase i.
-        /// \param[in] tempV A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. tempV.col(i) contains the
-        ///                   values
-        ///                  for phase i.
-        /// \param[in] R     A matrix with MaxNumPhases columns and the same number rows
-        ///                  as the number of cells of the grid. B.col(i) contains the values
-        ///                  for phase i.
-        /// \param[out] R_sum An array of size MaxNumPhases where entry i contains the sum
-        ///                   of R for the phase i.
-        /// \param[out] maxCoeff An array of size MaxNumPhases where entry i contains the
-        ///                   maximum of tempV for the phase i.
-        /// \param[out] B_avg An array of size MaxNumPhases where entry i contains the average
-        ///                   of B for the phase i.
-        /// \param[out] maxNormWell The maximum of the well flux equations for each phase.
-        /// \param[in]  nc    The number of cells of the local grid.
-        /// \return The total pore volume over all cells.
-        double
-        convergenceReduction(const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& B,
-                             const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& tempV,
-                             const Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>& R,
-                             std::vector<double>& R_sum,
-                             std::vector<double>& maxCoeff,
-                             std::vector<double>& B_avg,
-                             std::vector<double>& maxNormWell,
-                             int nc) const
-        {
-            const int np = numPhases();
-            const int nw = residual_.well_flux_eq.size() / np;
-            assert(nw * np == int(residual_.well_flux_eq.size()));
-
-            // Do the global reductions
-#if HAVE_MPI
-            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-
-                // Compute the global number of cells and porevolume
-                std::vector<int> v(nc, 1);
-                auto nc_and_pv = std::tuple<int, double>(0, 0.0);
-                auto nc_and_pv_operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
-                                                           Opm::Reduction::makeGlobalSumFunctor<double>());
-                auto nc_and_pv_containers  = std::make_tuple(v, geo_.poreVolume());
-                info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
-
-                for ( int idx = 0; idx < np; ++idx )
-                {
-                    auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
-                    auto containers = std::make_tuple(B.col(idx),
-                                                      tempV.col(idx),
-                                                      R.col(idx));
-                    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
-                                                      Opm::Reduction::makeGlobalMaxFunctor<double>(),
-                                                      Opm::Reduction::makeGlobalSumFunctor<double>());
-                    info.computeReduction(containers, operators, values);
-                    B_avg[idx]       = std::get<0>(values)/std::get<0>(nc_and_pv);
-                    maxCoeff[idx]    = std::get<1>(values);
-                    R_sum[idx]       = std::get<2>(values);
-                    assert(np >= np);
-                    if (idx < np) {
-                        maxNormWell[idx] = 0.0;
-                        for ( int w = 0; w < nw; ++w ) {
-                            maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
-                        }
-                    }
-                }
-                info.communicator().max(maxNormWell.data(), np);
-                // Compute pore volume
-                return std::get<1>(nc_and_pv);
-            }
-            else
-#endif
-            {
-                B_avg.resize(np);
-                maxCoeff.resize(np);
-                R_sum.resize(np);
-                maxNormWell.resize(np);
-                for ( int idx = 0; idx < np; ++idx )
-                {
-                    B_avg[idx] = B.col(idx).sum()/nc;
-                    maxCoeff[idx] = tempV.col(idx).maxCoeff();
-                    R_sum[idx] = R.col(idx).sum();
-
-                    assert(np >= np);
-                    if (idx < np) {
-                        maxNormWell[idx] = 0.0;
-                        for ( int w = 0; w < nw; ++w ) {
-                            maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
-                        }
-                    }
-                }
-                // Compute total pore volume
-                return geo_.poreVolume().sum();
-            }
-        }
 
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
