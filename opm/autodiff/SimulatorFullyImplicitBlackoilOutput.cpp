@@ -24,7 +24,7 @@
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-
+#include <opm/output/Cells.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/core/utility/Compat.hpp>
@@ -344,11 +344,38 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                 eclWriter_->writeTimeStep(timer.currentStepNum(),
-                                           timer.simulationTimeElapsed(),
-                                           simToSolution( state, phaseUsage_ ),
-                                           wellState.report(),
-                                           substep );
+                std::vector<data::CellData> simProps;
+                /*
+                  The simProps vector can be passed to the writeTimestep routine
+                  to add more properties to the restart file. Examples of the
+                  elements for the simProps vector can be the relative
+                  permeabilites KRO, KRG and KRW and the fluxes.
+
+                  Which properties are requested are configured with the RPTRST
+                  keyword, which is internalized in the RestartConfig class in
+                  EclipseState.
+                */
+
+                /*
+                  Assuming we already have correctly initialized
+                  std::vector<double> instances kro,krw and krg with the oil,
+                  water and gas relative permeabilities. Then we can write those
+                  to the restart file with:
+
+                     std::vector<data::CellData> simProps;
+
+                     simProps.emplace_back( {"KRO" , UnitSystem::measure::identity , kro} );
+                     simProps.emplace_back( {"KRG" , UnitSystem::measure::identity , krg} );
+                     simProps.emplace_back( {"KRW" , UnitSystem::measure::identity , krw} );
+
+                */
+
+                eclWriter_->writeTimeStep(timer.currentStepNum(),
+                                          substep,
+                                          timer.simulationTimeElapsed(),
+                                          simToSolution( state, phaseUsage_ ),
+                                          wellState.report(),
+                                          simProps);
             }
         }
 
