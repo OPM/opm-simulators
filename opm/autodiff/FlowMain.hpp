@@ -494,6 +494,9 @@ namespace Opm
         //   fluidprops_ (if SWATINIT is used)
         void setupState()
         {
+            if (deck_->hasKeyword("NOSIM")) {
+                exit(0);
+            }
             const PhaseUsage pu = Opm::phaseUsageFromDeck(deck_);
             const Grid& grid = grid_init_->grid();
 
