@@ -85,9 +85,16 @@ namespace Opm
         for (int eq = 0; eq < num_eq; ++eq) {
             jacs[eq].reserve(num_eq - 1);
             const std::vector<M>& Je = eqs[eq].derivative();
+            Sp Bb;
             const M& B = Je[n];
+            B.toSparse(Bb);
+            //std::cout << "B eigen" << std::endl;
+            //std::cout << Bb << std::endl;
+
             // Update right hand side.
             vals[eq] = eqs[eq].value().matrix() - B * Dibn;
+            //std::cout << "vals " << eq << std::endl;
+            //std::cout << vals[eq][0] << std::endl;
         }
         for (int var = 0; var < num_eq; ++var) {
             if (var == n) {
@@ -149,6 +156,11 @@ namespace Opm
         V equation_value = equation.value();
         ADB eq_coll = collapseJacs(ADB::function(std::move(equation_value), std::move(C_jacs)));
         const M& C = eq_coll.derivative()[0];
+        typedef Eigen::SparseMatrix<double> Sp;
+        Sp Cc;
+        C.toSparse(Cc);
+        //std::cout << "C eigen" << std::endl;
+        //std::cout << Cc <<std::endl;
 
         // Use sparse LU to solve the block submatrices
         typedef Eigen::SparseMatrix<double> Sp;

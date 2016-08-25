@@ -116,6 +116,12 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, Indices)           BlackoilIndices;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)       MaterialLaw;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
+
+        typedef double Scalar;
+        typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
+        typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
+        typedef Dune::BlockVector<VectorBlockType>      BVector;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
@@ -175,9 +181,7 @@ namespace Opm {
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-
             well_model_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
-
             wellModel().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
@@ -229,7 +233,7 @@ namespace Opm {
             const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
             if (must_solve) {
                 // enable single precision for solvers when dt is smaller then 20 days
-                residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
+                //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
                 // Compute the nonlinear update.
                 V dx = solveJacobianSystem();
@@ -283,10 +287,22 @@ namespace Opm {
 
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx, reservoir_state);
-
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
+
             IterationReport iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state, residual_);
+            typedef double Scalar;
+            typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
+            typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
+            typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
+            typedef Dune::BlockVector<VectorBlockType>      BVector;
+
+            typedef Dune::MatrixAdapter<Mat,BVector,BVector> Operator;
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+
+            convertResults2(ebosResid, ebosJac);
+            wellModel().addRhs(ebosResid, ebosJac);
 
             return iter_report;
         }
@@ -392,7 +408,82 @@ namespace Opm {
         /// r is the residual.
         V solveJacobianSystem() const
         {
-            return linsolver_.computeNewtonIncrement(residual_);
+
+            typedef double Scalar;
+            typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
+            typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
+            typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
+            typedef Dune::BlockVector<VectorBlockType>      BVector;
+
+            typedef Dune::MatrixAdapter<Mat,BVector,BVector> Operator;
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+
+            Operator opA(ebosJac);
+            const double relax = 0.9;
+            typedef Dune::SeqILU0<Mat, BVector, BVector> SeqPreconditioner;
+            SeqPreconditioner precond(opA.getmat(), relax);
+            std::cout << "hei" << std::endl;
+
+            Dune::SeqScalarProduct<BVector> sp;
+
+
+            wellModel().apply(ebosJac, ebosResid);
+            Dune::BiCGSTABSolver<BVector> linsolve(opA, sp, precond,
+                                                   0.001,
+                                                   100,
+                                                   false);
+
+
+            const int np = numPhases();
+            const int nc = AutoDiffGrid::numCells(grid_);
+//            std::cout << "ebosResid" << std::endl;
+//            for( int p=0; p<np; ++p) {
+//                for (int cell = 0 ; cell < 1; ++cell) {
+//                    std::cout << ebosResid[cell][p] << std::endl;
+//                }
+//            }
+
+
+            std::cout << "hei2" << std::endl;
+
+
+            // Solve system.
+            Dune::InverseOperatorResult result;
+            BVector x(ebosJac.M());
+            x = 0.0;
+            std::cout << "start" << std::endl;
+            linsolve.apply(x, ebosResid, result);
+            std::cout << "end" << std::endl;
+
+
+            const int nw = wellModel().wells().number_of_wells;
+            BVector xw(nw);
+            wellModel().recoverVariable(x, xw);
+
+            // convert to V;
+
+
+            V dx( (nc + nw) * np);
+            for( int p=0; p<np; ++p) {
+                for (int i = 0; i < nc; ++i) {
+                    int idx = i + nc*ebosCompToFlowPhaseIdx(p);
+                    dx(idx) = x[i][p];
+                }
+                for (int w = 0; w < nw; ++w) {
+                    int idx = w + nw*p + nc*np;
+                    dx(idx) = xw[w][flowPhaseToEbosCompIdx(p)];
+                }
+            }
+
+            V dx2 = linsolver_.computeNewtonIncrement(residual_);
+            std::cout << "------dx------- " << std::endl;
+            std::cout << dx << std::endl;
+            std::cout << "------dx2------- " << std::endl;
+            std::cout << dx2 << std::endl;
+
+            //return dx;
+            return dx;
         }
 
         /// Apply an update to the primary variables, chopped if appropriate.
@@ -665,22 +756,28 @@ namespace Opm {
             std::vector<double> maxNormWell(np);
             Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
             Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
+            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R2(nc, np);
             Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
 
+            auto ebosResid = ebosSimulator_.model().linearizer().residual();
             for ( int idx = 0; idx < np; ++idx )
             {
                 V b(nc);
+                V r(nc);
                 for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
                     const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                     const auto& fs = intQuants.fluidState();
 
                     int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
+                    int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
 
                     b[cell_idx] = 1 / fs.invB(ebosPhaseIdx).value;
+                    r[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
+
                 }
+                R2.col(idx) = r;
                 B.col(idx) = b;
             }
-
 
             for ( int idx = 0; idx < np; ++idx )
             {
@@ -688,12 +785,16 @@ namespace Opm {
                 //B.col(idx)       = 1./tempB.value();
                 R.col(idx)       = residual_.material_balance_eq[idx].value();
                 tempV.col(idx)   = R.col(idx).abs()/pv;
+                std::cout << "------R------- " << idx << std::endl;
+                std::cout << R.col(idx)[0] << std::endl;
+                std::cout << "------R2------- " << idx << std::endl;
+                std::cout << R2.col(idx)[0] << std::endl;
             }
 
             std::vector<double> pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
-            const double pvSum = detail::convergenceReduction(B, tempV, R,
+            const double pvSum = detail::convergenceReduction(B, tempV, R2,
                                                       R_sum, maxCoeff, B_avg, maxNormWell,
-                                                      nc, np, pv_vector, residual_);
+                                                      nc, np, pv_vector, wellModel().residual());
 
             std::vector<double> CNV(np);
             std::vector<double> mass_balance_residual(np);
@@ -1006,13 +1107,11 @@ namespace Opm {
         }
 
     public:
-        /*
         int ebosCompToFlowPhaseIdx( const int compIdx ) const
         {
             const int compToPhase[ 3 ] = { Oil, Water, Gas };
             return compToPhase[ compIdx ];
         }
-        */
 
         int flowToEbosPvIdx( const int flowPv ) const
         {
@@ -1029,6 +1128,7 @@ namespace Opm {
             const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
             return phaseToComp[ phaseIdx ];
         }
+
 
 
 
@@ -1134,6 +1234,52 @@ namespace Opm {
                 residual_.material_balance_eq[ eqIdx ] =
                     ADB::function(std::move(resid[eqIdx]),
                                   std::move(adbJacs[eqIdx]));
+            }
+        }
+        void convertResults2(BVector& ebosResid, Mat& ebosJac) const
+        {
+            const int numPhases = wells().number_of_phases;
+            const int numCells = ebosJac.N();
+            const int cols = ebosJac.M();
+            assert( numCells == cols );
+
+            // write the right-hand-side values from the ebosJac into the objects
+            // allocated above.
+            const auto endrow = ebosJac.end();
+            for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
+            {
+                const double cellVolume = ebosSimulator_.model().dofTotalVolume(cellIdx);
+                auto& cellRes = ebosResid[ cellIdx ];
+
+                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
+                {
+                    const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
+                    cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] /= refDens;
+                    cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] *= cellVolume;
+                }
+            }
+
+            for( auto row = ebosJac.begin(); row != endrow; ++row )
+            {
+                const int rowIdx = row.index();
+                const double cellVolume = ebosSimulator_.model().dofTotalVolume(rowIdx);
+
+
+                // translate the Jacobian of the residual from the format used by ebos to
+                // the one expected by flow
+                const auto endcol = row->end();
+                for( auto col = row->begin(); col != endcol; ++col )
+                {
+                    for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
+                    {
+                        const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
+                        for( int pvIdx=0; pvIdx<numPhases; ++pvIdx )
+                        {
+                            (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)] /= refDens;
+                            (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)] *= cellVolume;
+                        }
+                    }
+                }
             }
         }
 

@@ -220,10 +220,10 @@ namespace detail {
                              int nc,
                              int np,
                              const std::vector<double> pv,
-                             LinearisedBlackoilResidual residual)
+                             std::vector<double> residual_well)
         {
-            const int nw = residual.well_flux_eq.size() / np;
-            assert(nw * np == int(residual.well_flux_eq.size()));
+            const int nw = residual_well.size() / np;
+            assert(nw * np == int(residual_well.size()));
 
             // Do the global reductions
 #if HAVE_MPI
@@ -257,7 +257,7 @@ namespace detail {
                     if (idx < np) {
                         maxNormWell[idx] = 0.0;
                         for ( int w = 0; w < nw; ++w ) {
-                            maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_.well_flux_eq.value()[nw*idx + w]));
+                            maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
                         }
                     }
                 }
@@ -282,7 +282,7 @@ namespace detail {
                     if (idx < np) {
                         maxNormWell[idx] = 0.0;
                         for ( int w = 0; w < nw; ++w ) {
-                            maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual.well_flux_eq.value()[nw*idx + w]));
+                            maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
                         }
                     }
                 }
