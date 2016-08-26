@@ -423,8 +423,6 @@ namespace Opm {
             const double relax = 0.9;
             typedef Dune::SeqILU0<Mat, BVector, BVector> SeqPreconditioner;
             SeqPreconditioner precond(opA.getmat(), relax);
-            std::cout << "hei" << std::endl;
-
             Dune::SeqScalarProduct<BVector> sp;
 
 
@@ -445,17 +443,12 @@ namespace Opm {
 //            }
 
 
-            std::cout << "hei2" << std::endl;
-
 
             // Solve system.
             Dune::InverseOperatorResult result;
             BVector x(ebosJac.M());
             x = 0.0;
-            std::cout << "start" << std::endl;
             linsolve.apply(x, ebosResid, result);
-            std::cout << "end" << std::endl;
-
 
             const int nw = wellModel().wells().number_of_wells;
             BVector xw(nw);
@@ -476,11 +469,11 @@ namespace Opm {
                 }
             }
 
-            V dx2 = linsolver_.computeNewtonIncrement(residual_);
-            std::cout << "------dx------- " << std::endl;
-            std::cout << dx << std::endl;
-            std::cout << "------dx2------- " << std::endl;
-            std::cout << dx2 << std::endl;
+            //V dx2 = linsolver_.computeNewtonIncrement(residual_);
+            //std::cout << "------dx------- " << std::endl;
+            //std::cout << dx << std::endl;
+            //std::cout << "------dx2------- " << std::endl;
+            //std::cout << dx2 << std::endl;
 
             //return dx;
             return dx;
@@ -783,12 +776,12 @@ namespace Opm {
             {
                 //const ADB& tempB = rq_[idx].b;
                 //B.col(idx)       = 1./tempB.value();
-                R.col(idx)       = residual_.material_balance_eq[idx].value();
-                tempV.col(idx)   = R.col(idx).abs()/pv;
-                std::cout << "------R------- " << idx << std::endl;
-                std::cout << R.col(idx)[0] << std::endl;
-                std::cout << "------R2------- " << idx << std::endl;
-                std::cout << R2.col(idx)[0] << std::endl;
+                //R.col(idx)       = residual_.material_balance_eq[idx].value();
+                tempV.col(idx)   = R2.col(idx).abs()/pv;
+//                std::cout << "------R------- " << idx << std::endl;
+//                std::cout << R.col(idx)[0] << std::endl;
+//                std::cout << "------R2------- " << idx << std::endl;
+//                std::cout << R2.col(idx)[0] << std::endl;
             }
 
             std::vector<double> pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
@@ -1567,10 +1560,11 @@ namespace Opm {
 
             prevEpisodeIdx = ebosSimulator_.episodeIndex();
 
-            convertResults(ebosSimulator_);
+            //convertResults(ebosSimulator_);
 
             if (param_.update_equations_scaling_) {
-                updateEquationsScaling();
+                std::cout << "scaling" << std::endl;
+                //updateEquationsScaling();
             }
 
         }

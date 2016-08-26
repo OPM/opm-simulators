@@ -189,17 +189,13 @@ namespace Opm {
                 Mat duneC (nw, nc, 9, 0.4, Mat::implicit);
                 Mat duneA (nc, nc, 9, 0.4, Mat::implicit);
                 BVector rhs(nc);
+                BVector resWell(nw);
+                computeWellFluxDense(ebosSimulator, cq_s, 4, duneA, duneB, duneC, duneD, rhs, resWell, well_state);
+                addWellFluxEq(cq_s, dt, 4, residual, duneD, resWell);
 
-                computeWellFluxDense(ebosSimulator, cq_s, 4, duneA, duneB, duneC, duneD, rhs);
-                //std::cout << cq_s[0] << std::endl;
-                //std::cout << cq_s[1] << std::endl;
-                //std::cout << cq_s[2] << std::endl;
+                //updatePerfPhaseRatesAndPressures(cq_s, well_state);
+                //addWellContributionToMassBalanceEq(cq_s,residual);
 
-
-                updatePerfPhaseRatesAndPressures(cq_s, well_state);
-                addWellContributionToMassBalanceEq(cq_s,residual);
-
-                addWellFluxEq(cq_s, dt, 4, residual, duneD);
                 //std::cout << residual.well_flux_eq << std::endl;
                 duneA.compress();
                 duneB.compress();
@@ -213,15 +209,16 @@ namespace Opm {
                 //print(duneD);
 
 
-                V resWellEigen = residual.well_flux_eq.value();
-                const int np = numPhases();
-                BVector resWell(nw);
-                for (int i = 0; i < nw; ++i){
-                    for( int p = 0; p < np; ++p ) {
-                        int idx = i + p * nw;
-                        resWell[i][flowPhaseToEbosCompIdx(p)] = resWellEigen(idx);
-                    }
-                }
+//                V resWellEigen = residual.well_flux_eq.value();
+//                const int np = numPhases();
+//                BVector resWell2(nw);
+//                for (int i = 0; i < nw; ++i){
+//                    for( int p = 0; p < np; ++p ) {
+//                        int idx = i + p * nw;
+//                        resWell2[i][flowPhaseToEbosCompIdx(p)] = resWellEigen(idx);
+//                        std::cout << resWell[i][flowPhaseToEbosCompIdx(p)] << " " << resWell2[i][flowPhaseToEbosCompIdx(p)]<< std::endl;
+//                    }
+//                }
 
                 resWell_ = resWell;
                 rhs_ = rhs;
@@ -230,6 +227,8 @@ namespace Opm {
                 localInvert(duneD);
                 invDuneD_ = duneD;
                 duneA_ = duneA;
+                //std::cout << "duneA_" << std::endl;
+                //print(duneA_);
 
 
                 if (param_.compute_well_potentials_) {
@@ -249,13 +248,74 @@ namespace Opm {
             void print(Mat& istlA) const {
                 for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
                     for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
-                        std::cout << (*col) << std::endl;
+                        std::cout << row.index() << " " << col.index() << "/n \n"<<(*col) << std::endl;
                     }
                 }
             }
+
+            void matAdd( Mat& res, const Mat& A, const Mat& B ) const
+            {
+                matBinaryOp( res, A, B, true );
+            }
+
+            void matSubstract( Mat& res, const Mat& A, const Mat& B ) const
+            {
+                matBinaryOp( res, A, B, false );
+            }
+
+
+            void matBinaryOp( Mat& res, const Mat& A, const Mat& B, const bool add ) const
+            {
+                assert( A.N() == B.N() && A.M() == B.M() );
+                res.setSize( A.N(), A.M() );
+                res.setBuildMode( Mat::implicit );
+
+                const int avg_cols_per_row = 20;
+                const double overflow_fraction = 0.4;
+                res.setImplicitBuildModeParameters(avg_cols_per_row,overflow_fraction);
+
+                // res = A
+                for( auto rowit = A.begin(), rowEnd = A.end(); rowit != rowEnd; ++rowit )
+                {
+                    const int rowIdx = rowit.index();
+                    const auto colEnd = rowit->end();
+                    for( auto colit = rowit->begin(); colit != colEnd; ++colit )
+                    {
+                        const int colIdx =  colit.index();
+                        res.entry( rowIdx, colIdx ) = (*colit);
+                    }
+                }
+
+                // res += B
+                for( auto rowit = B.begin(), rowEnd = B.end(); rowit != rowEnd; ++rowit )
+                {
+                    const int rowIdx = rowit.index();
+                    const auto colEnd = rowit->end();
+                    for( auto colit = rowit->begin(); colit != colEnd; ++colit )
+                    {
+                        const int colIdx =  colit.index();
+                        // op either implements += or -=
+                        if( add )
+                        {
+                            res.entry( rowIdx, colIdx ) += (*colit);
+                        }
+                        else
+                        {
+                            res.entry( rowIdx, colIdx ) -= (*colit);
+                        }
+                    }
+                }
+
+                res.compress();
+            }
+
             void addRhs(BVector& x, Mat& jac) const {
                 assert(x.size() == rhs.size());
                 x += rhs_;
+                Mat A;//( jac );
+                // jac = A + duneA
+                //matAdd( A, jac, duneA_ );
+                //jac = A;
                 jac += duneA_;
             }
 
@@ -267,7 +327,20 @@ namespace Opm {
 
                 Dune::matMultMat(BmultinvD, duneB_ , invDuneD_);
                 Dune::matMultMat(duneA, BmultinvD, duneC_);
+                //std::cout << "before" << std::endl;
+                //std::cout << "A" << std::endl;
+
+                //print(A);
+                //std::cout << "duneA" << std::endl;
+
+                //print(duneA);
+                Mat E;//( A );
+                // A = E - duneA
+                //matSubstract( E, A, duneA );
+                //A = E;
                 A -= duneA;
+                //std::cout << "after" << std::endl;
+                //print(A);
                 BmultinvD.mmv(resWell_, res);
             }
 
@@ -546,6 +619,8 @@ namespace Opm {
                 }
                 xw.perfPhaseRates().assign(cq.data(), cq.data() + nperf*np);
 
+
+
                 // Update the perforation pressures.
                 const V& cdp = wellPerforationPressureDiffs();
                 for (int w = 0; w < nw; ++w  ) {
@@ -561,7 +636,8 @@ namespace Opm {
                           const double dt,
                           const int numBlocks,
                           LinearisedBlackoilResidual& residual,
-                          Mat& duneD)
+                          Mat& duneD,
+                          BVector& resWell)
             {
 
                 const int np = wells().number_of_phases;
@@ -572,7 +648,7 @@ namespace Opm {
                 //std::cout << F0_[0] << std::endl;
                 //std::cout << F[0] << std::endl;
                 //std::cout << "før Ebos" <<residual_.well_flux_eq << std::endl;
-                ADB qs = ADB::constant(ADB::V::Zero(np*nw));
+                //ADB qs = ADB::constant(ADB::V::Zero(np*nw));
                 for (int p = 0; p < np; ++p) {
 
                     std::vector<EvalWell> res_vec(nw);
@@ -587,20 +663,21 @@ namespace Opm {
                         for (int i = 0; i < np; ++i) {
                             duneD.entry(w,w)[flowPhaseToEbosCompIdx(p)][flowToEbosPvIdx(i)] += res.derivatives[i+3];
                         }
+                        resWell[w][flowPhaseToEbosCompIdx(p)] += res.value;
                     }
 
-                    ADB tmp = convertToADBWell(res_vec, numBlocks);
-                    qs += superset(tmp,Span(nw,1,p*nw), nw*np);
+//                    ADB tmp = convertToADBWell(res_vec, numBlocks);
+//                    qs += superset(tmp,Span(nw,1,p*nw), nw*np);
                 }
 
                 //wellModel().convertToADB(res_vec, well_cells, nc, well_id, nw, numBlocks);
                 //ADB qs = state.qs;
-                for (int phase = 0; phase < np; ++phase) {
-                    qs -= superset(wellOps().p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
-                    //qs += superset((F[phase]-F0_[phase]) * vol_dt, Span(nw,1,phase*nw), nw*np);
-                }
+//                for (int phase = 0; phase < np; ++phase) {
+//                    qs -= superset(wellOps().p2w * cq_s[phase], Span(nw, 1, phase*nw), nw*np);
+//                    //qs += superset((F[phase]-F0_[phase]) * vol_dt, Span(nw,1,phase*nw), nw*np);
+//                }
 
-                residual.well_flux_eq = qs;
+//                residual.well_flux_eq = qs;
                 //std::cout << "etter Ebos" << residual_.well_flux_eq << std::endl;
 
             }
@@ -652,7 +729,9 @@ namespace Opm {
                                  Mat& duneB,
                                  Mat& duneC,
                                  Mat& duneD,
-                                 BVector& rhs) const
+                                 BVector& rhs,
+                                 BVector& resWell,
+                                 WellState& well_state) const
             {
                 if( ! localWellsActive() ) return ;
                 const int np = wells().number_of_phases;
@@ -697,6 +776,8 @@ namespace Opm {
 
                         // Pressure drawdown (also used to determine direction of flow)
                         EvalWell well_pressure = bhp + cdp[perf];
+                        // Store the perforation pressure for later usage.
+                        well_state.perfPress()[perf] = well_pressure.value;
                         EvalWell drawdown = pressure - well_pressure;
 
                         // injection perforations
@@ -812,14 +893,17 @@ namespace Opm {
                                 duneD.entry(w, w)[flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= tmp.derivatives[p2+3];
                             }
                             rhs[cell_idx][flowPhaseToEbosCompIdx(p1)] -= tmp.value;
+                            resWell[w][flowPhaseToEbosCompIdx(p1)] -= tmp.value;
+                            // Store the perforation phase flux for later usage.
+                            well_state.perfPhaseRates()[perf*np + p1] = tmp.value;
                         }
                     }
 
                 }
-                cq_s.resize(np, ADB::null());
-                for (int phase = 0; phase < np; ++phase) {
-                    cq_s[phase] = convertToADB(cq_s_dense[phase], well_cells, numCells(), well_id, nw, numBlocks);
-                }
+               // cq_s.resize(np, ADB::null());
+//                for (int phase = 0; phase < np; ++phase) {
+//                    cq_s[phase] = convertToADB(cq_s_dense[phase], well_cells, numCells(), well_id, nw, numBlocks);
+//                }
 
 
             }
@@ -850,20 +934,12 @@ namespace Opm {
                     Mat duneClo( nw, nc, 9, 0.4, Mat::implicit);
                     Mat duneAlo( nc, nc, 9, 0.4, Mat::implicit);
                     BVector rhslo(nc);
-                    computeWellFluxDense(ebosSimulator, cq_s, 1, duneAlo, duneBlo, duneClo, duneDlo, rhslo);
-                    updatePerfPhaseRatesAndPressures(cq_s, well_state);
-                    addWellFluxEq(cq_s, dt, 1, residual, duneDlo);
-                    V resWellEigen = residual.well_flux_eq.value();
-                    //std::cout << "resWellEigen " << resWellEigen << std::endl;
                     BVector resWell(nw);
-                    for (int i = 0; i < nw; ++i){
-                        for( int p = 0; p < np; ++p ) {
-                            int idx = i + p * nw;
-                            resWell[i][flowPhaseToEbosCompIdx(p)] = resWellEigen(idx);
-                        }
-                    }
+                    computeWellFluxDense(ebosSimulator, cq_s, 1, duneAlo, duneBlo, duneClo, duneDlo, rhslo, resWell, well_state);
+                    //updatePerfPhaseRatesAndPressures(cq_s, well_state);
+                    addWellFluxEq(cq_s, dt, 1, residual, duneDlo, resWell);
+
                     duneDlo.compress();
-                    //print(duneDlo);
                     localInvert(duneDlo);
 
                     resWell_ = resWell;
@@ -876,30 +952,8 @@ namespace Opm {
                     ++it;
                     if( localWellsActive() )
                     {
-//                        std::vector<ADB> eqs;
-//                        eqs.reserve(1);
-//                        eqs.push_back(residual.well_flux_eq);
-//                        //eqs.push_back(residual_.well_eq);
-//                        ADB total_residual = vertcatCollapseJacs(eqs);
-//                        const std::vector<M>& Jn = total_residual.derivative();
-//                        typedef Eigen::SparseMatrix<double> Sp;
-//                        Sp Jn0;
-//                        Jn[0].toSparse(Jn0);
-//                        std::cout << Jn0 << std::endl;
-//                        const Eigen::SparseLU< Sp > solver(Jn0);
-//                        ADB::V total_residual_v = total_residual.value();
-//                        std::cout << "tot res " <<total_residual_v << std::endl;
-//                        const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                         BVector dx_new (nw);
                         duneDlo.mv(resWell_, dx_new);
-//                        std::cout << "hei" << std::endl;
-//                        Sp eye(nw*np,nw*np);
-//                        eye.setIdentity();
-
-//                        Sp invD = solver.solve(eye);
-
-//                        std::cout << invD << std::endl;
-//                        print(duneDlo);
 
                         V dx_new_eigen(np*nw);
                         for( int p=0; p<np; ++p) {
@@ -910,10 +964,6 @@ namespace Opm {
                                 dx_new_eigen(idx) = dx_new[w][flowPhaseToEbosCompIdx(p)];
                             }
                         }
-//                        std::cout << "new " <<dx_new_eigen << std::endl;
-//                        std::cout << "old " <<dx << std::endl;
-
-
                         assert(dx.size() == total_residual_v.size());
                         updateWellState(dx_new_eigen.array(), well_state);
                         updateWellControls(well_state);
