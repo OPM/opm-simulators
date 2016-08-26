@@ -2348,13 +2348,25 @@ namespace detail {
         }
 
         const int dims = *std::max_element(fipnum.begin(), fipnum.end());
-        std::vector<V> values(dims, V::Zero(5));
+        std::vector<V> values(dims, V::Zero(7));
         for (int i = 0; i < 5; ++i) {
             for (int c = 0; c < nc; ++c) {
                 if (fipnum[c] != 0) {
                     values[fipnum[c]-1][i] += fip[i][c];
                 }
             }
+        }
+
+        // compute PAV and PORV or every regions.
+        for (int c = 0; c < nc; ++c) {
+            if (fipnum[c] != 0) {
+                values[fipnum[c]-1][5] += pv[c];
+                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c];
+            }
+        }
+
+        for (auto& x : values) {
+            x[6] = x[6] / x[5];
         }
 
         return values;
