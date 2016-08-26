@@ -290,7 +290,16 @@ namespace Opm {
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
 
-            IterationReport iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state, residual_);
+            IterationReport iter_report;
+            try
+            {
+                iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state, residual_);
+            }
+            catch ( const Dune::FMatrixError& e  )
+            {
+                OPM_THROW(Opm::NumericalProblem,"no convergence");
+            }
+
             typedef double Scalar;
             typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
             typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;

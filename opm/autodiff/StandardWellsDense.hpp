@@ -253,26 +253,22 @@ namespace Opm {
                 }
             }
 
-            void matAdd( Mat& res, const Mat& A, const Mat& B ) const
+            Mat matAdd( const Mat& A, const Mat& B ) const
             {
-                matBinaryOp( res, A, B, true );
+                return matBinaryOp( A, B, true );
             }
 
-            void matSubstract( Mat& res, const Mat& A, const Mat& B ) const
+            Mat matSubstract( const Mat& A, const Mat& B ) const
             {
-                matBinaryOp( res, A, B, false );
+                return matBinaryOp( A, B, false );
             }
 
-
-            void matBinaryOp( Mat& res, const Mat& A, const Mat& B, const bool add ) const
+            Mat matBinaryOp( const Mat& A, const Mat& B, const bool add ) const
             {
-                assert( A.N() == B.N() && A.M() == B.M() );
-                res.setSize( A.N(), A.M() );
-                res.setBuildMode( Mat::implicit );
-
                 const int avg_cols_per_row = 20;
                 const double overflow_fraction = 0.4;
-                res.setImplicitBuildModeParameters(avg_cols_per_row,overflow_fraction);
+                Mat res( A.N(), A.M(), avg_cols_per_row,overflow_fraction, Mat::implicit );
+                assert( A.N() == B.N() && A.M() == B.M() );
 
                 // res = A
                 for( auto rowit = A.begin(), rowEnd = A.end(); rowit != rowEnd; ++rowit )
@@ -294,7 +290,6 @@ namespace Opm {
                     for( auto colit = rowit->begin(); colit != colEnd; ++colit )
                     {
                         const int colIdx =  colit.index();
-                        // op either implements += or -=
                         if( add )
                         {
                             res.entry( rowIdx, colIdx ) += (*colit);
@@ -307,16 +302,15 @@ namespace Opm {
                 }
 
                 res.compress();
+                return res;
             }
 
             void addRhs(BVector& x, Mat& jac) const {
                 assert(x.size() == rhs.size());
                 x += rhs_;
-                Mat A;//( jac );
                 // jac = A + duneA
-                //matAdd( A, jac, duneA_ );
-                //jac = A;
-                jac += duneA_;
+                jac = matAdd( jac, duneA_ );
+                //jac += duneA_;
             }
 
             void apply( Mat& A,
@@ -334,11 +328,9 @@ namespace Opm {
                 //std::cout << "duneA" << std::endl;
 
                 //print(duneA);
-                Mat E;//( A );
                 // A = E - duneA
-                //matSubstract( E, A, duneA );
-                //A = E;
-                A -= duneA;
+                A = matSubstract( A, duneA );
+                //A -= duneA;
                 //std::cout << "after" << std::endl;
                 //print(A);
                 BmultinvD.mmv(resWell_, res);
@@ -397,7 +389,7 @@ namespace Opm {
                 phase_condition_ = pc_arg;
                 vfp_properties_ = vfp_properties_arg;
                 gravity_ = gravity_arg;
-                perf_cell_depth_ = subset(depth_arg, wellOps().well_cells); 
+                perf_cell_depth_ = subset(depth_arg, wellOps().well_cells);
             }
 
             const WellOps& wellOps() const
@@ -880,7 +872,7 @@ namespace Opm {
                             EvalWell cqt_is = cqt_i/volumeRatio;
                             //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
                             for (int phase = 0; phase < np; ++phase) {
-                                cq_s_dense[phase][perf] = cmix_s[phase] * cqt_is; // * b_perfcells_dense[phase];                                
+                                cq_s_dense[phase][perf] = cmix_s[phase] * cqt_is; // * b_perfcells_dense[phase];
                             }
                         }
 
