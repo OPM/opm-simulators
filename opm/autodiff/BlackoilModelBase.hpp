@@ -27,6 +27,8 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
+#include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
@@ -47,47 +49,6 @@ namespace Opm {
     class NewtonIterationBlackoilInterface;
     class VFPProperties;
     class SimulationDataContainer;
-
-    /// Struct for containing iteration variables.
-    struct DefaultBlackoilSolutionState
-    {
-        typedef AutoDiffBlock<double> ADB;
-        explicit DefaultBlackoilSolutionState(const int np)
-            : pressure  (    ADB::null())
-            , temperature(   ADB::null())
-            , saturation(np, ADB::null())
-            , rs        (    ADB::null())
-            , rv        (    ADB::null())
-            , qs        (    ADB::null())
-            , bhp       (    ADB::null())
-            , canonical_phase_pressures(3, ADB::null())
-        {
-        }
-        ADB              pressure;
-        ADB              temperature;
-        std::vector<ADB> saturation;
-        ADB              rs;
-        ADB              rv;
-        ADB              qs;
-        ADB              bhp;
-        // Below are quantities stored in the state for optimization purposes.
-        std::vector<ADB> canonical_phase_pressures; // Always has 3 elements, even if only 2 phases active.
-    };
-
-
-
-
-    /// Class used for reporting the outcome of a nonlinearIteration() call.
-    struct IterationReport
-    {
-        bool failed;
-        bool converged;
-        int linear_iterations;
-        int well_iterations;
-    };
-
-
-
 
     /// Traits to encapsulate the types used by classes using or
     /// extending this model. Forward declared here, must be
