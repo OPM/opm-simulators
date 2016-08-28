@@ -73,14 +73,26 @@ namespace Opm
     {
         ScheduleConstPtr schedule = eclipseState->getSchedule();
         for (const auto& well : schedule->getWells(currentStep)) {
+            WellInjectionProperties injection = well->getInjectionProperties(currentStep);
+            WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
             if (well->isInjector(currentStep)) {
-                WellInjectionProperties injection = well->getInjectionProperties(currentStep);
-                if (injection.injectorType == WellInjector::WATER) {
-                    WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
-                    wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
+                if (well->getStatus(currentStep) != WellCommon::SHUT) {
+                    if (injection.injectorType == WellInjector::WATER) {
+                        wellPolymerRate_.insert(std::make_pair(well->name(), polymer.m_polymerConcentration));
+                    } else {
+                        if (polymer.m_polymerConcentration > 0) {
+                            OpmLog::error("Inject polymer through non-water injector '" + well->name() + "'");
+                        }
+                    }
                 } else {
-                    OPM_THROW(std::logic_error, "For polymer injector you must have a water injector");
+                    if (polymer.m_polymerConcentration > 0) {
+                        OpmLog::error("Inject polymer through a shut injector '" + well->name() + "'");
+                    }
                 }
+            }
+
+            if (well->isProducer(currentStep) && polymer.m_polymerConcentration > 0) {
+                OpmLog::error("Inject polymer through a producer '" + well->name() + "'");
             }
         }
     }
@@ -137,7 +149,7 @@ namespace Opm
         std::fill(poly_inflow_c.begin(), poly_inflow_c.end(), 0.0);
         const int nnz = sparse_inflow_.nonzeroSize();
         for (int i = 0; i < nnz; ++i) {
-            poly_inflow_c[sparse_inflow_.nonzeroIndex(i)] = sparse_inflow_.nonzeroElement(i) ;
+            poly_inflow_c[sparse_inflow_.nonzeroIndex(i)] = sparse_inflow_.nonzeroElement(i);
         }
     }
 
