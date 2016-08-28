@@ -47,7 +47,6 @@
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterleaved.cpp>
 
 
 #include<dune/common/fmatrix.hh>

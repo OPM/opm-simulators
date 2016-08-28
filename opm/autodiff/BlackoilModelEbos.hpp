@@ -56,6 +56,8 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
+#include <dune/istl/solvers.hh>
+
 #include <opm/common/data/SimulationDataContainer.hpp>
 #include <cassert>
 #include <cmath>
