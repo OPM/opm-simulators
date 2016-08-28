@@ -33,7 +33,7 @@
 namespace Opm {
 
 class SimulatorFullyImplicitBlackoilEbos;
-class StandardWellsDense;
+//class StandardWellsDense<FluidSystem>;
 
 /// a simulator for the blackoil model
 class SimulatorFullyImplicitBlackoilEbos
@@ -42,13 +42,16 @@ public:
     typedef typename TTAG(EclFlowProblem) TypeTag;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriter OutputWriter;
     typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
-    typedef StandardWellsDense WellModel;
+    typedef StandardWellsDense<FluidSystem, BlackoilIndices> WellModel;
 
 
     /// Initialise from parameters and objects to observe.
@@ -229,7 +232,8 @@ public:
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            const WellModel well_model(wells);
+            const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
+            const WellModel well_model(wells, model_param_, terminal_output_, pv);
 
             auto solver = createSolver(well_model);
 
