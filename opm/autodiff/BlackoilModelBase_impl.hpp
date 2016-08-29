@@ -2295,6 +2295,84 @@ namespace detail {
 
 
 
+
+    template <class Grid, class WellModel, class Implementation>
+    std::vector<V>
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    computeFluidInPlace(const ReservoirState& x,
+                        const WellState& xw,
+                        const std::vector<int>& fipnum)
+    {
+        using namespace Opm::AutoDiffGrid;
+        const int nc = numCells(grid_);
+        const int np = x.numPhases();
+
+        SolutionState state(np);
+        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
+        state.pressure    = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
+        state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
+        state.saturation[Water] = ADB::constant(s.col(Water));
+        state.saturation[Oil] = ADB::constant(s.col(Oil));
+        state.saturation[Gas] = ADB::constant(s.col(Gas));
+        state.rs =  ADB::constant(Eigen::Map<const V>(& x.gasoilratio()[0], nc, 1));
+        state.rv = ADB::constant(Eigen::Map<const V>(& x.rv()[0], nc, 1));
+        state.canonical_phase_pressures = computePressures(state.pressure, 
+                                                           state.saturation[Water], 
+                                                           state.saturation[Oil], 
+                                                           state.saturation[Gas]);
+
+        const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+
+
+
+        const ADB pv_mult = poroMult(state.pressure);
+        const V& pv = geo_.poreVolume();
+        const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
+        std::vector<V> fip(5, V::Zero(nc));
+        for (int phase = 0; phase < maxnp; ++phase) {
+            if (active_[ phase ]) {
+                const int pos = pu.phase_pos[ phase ];
+                const auto& b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], state.temperature, state.rs, state.rv, cond);
+                fip[phase] = ((pv_mult * b * state.saturation[pos] * pv).value());
+            }
+        }
+
+        if (active_[ Oil ] && active_[ Gas ]) {
+            // Account for gas dissolved in oil and vaporized oil
+            const int po = pu.phase_pos[Oil];
+            const int pg = pu.phase_pos[Gas];
+            fip[3] = state.rs.value() * fip[po];
+            fip[4] = state.rv.value() * fip[pg];
+        }
+
+        const int dims = *std::max_element(fipnum.begin(), fipnum.end());
+        std::vector<V> values(dims, V::Zero(7));
+        for (int i = 0; i < 5; ++i) {
+            for (int c = 0; c < nc; ++c) {
+                if (fipnum[c] != 0) {
+                    values[fipnum[c]-1][i] += fip[i][c];
+                }
+            }
+        }
+
+        // compute PAV and PORV or every regions.
+        for (int c = 0; c < nc; ++c) {
+            if (fipnum[c] != 0) {
+                values[fipnum[c]-1][5] += pv[c];
+                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c];
+            }
+        }
+
+        for (auto& x : values) {
+            x[6] = x[6] / x[5];
+        }
+
+        return values;
+        
+    }
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILMODELBASE_IMPL_HEADER_INCLUDED

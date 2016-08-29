@@ -159,6 +159,13 @@ namespace Opm {
 
 
 
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const WellState& xw,
+                            const std::vector<int>& fipnum)
+        {
+            return asImpl().computeFluidInPlace(x, xw, fipnum);
+        }
 
 
 
@@ -270,6 +277,10 @@ namespace Opm {
                 Base::computeAccum(state, aix);
             }
         }
+
+
+
+
 
 
 
