@@ -725,7 +725,7 @@ namespace Opm
                << std::fixed << std::setprecision(0)
                << "                                                  :      PORV =" << std::setprecision(14) << cip[5] << "   STB                 :"
                << "                                                  : Pressure is weighted by hydrocarbon pore voulme :"
-               << "                                                  : Porv volume are taken at reference conditions   :"            
+               << "                                                  : Pore volume are taken at reference conditions   :"            
                << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
         }
         ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
