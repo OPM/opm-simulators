@@ -240,7 +240,7 @@ try
               << std::flush;
 
     Opm::BlackoilOutputWriter
-        outputWriter(cGrid, param, eclipseState, Opm::NNC(), pu,
+        outputWriter(cGrid, param, eclipseState, pu,
                      new_props->permeability() );
 
     SimulatorReport fullReport;
