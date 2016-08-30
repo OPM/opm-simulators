@@ -159,15 +159,6 @@ namespace Opm {
 
 
 
-        std::vector<V>
-        computeFluidInPlace(const ReservoirState& x,
-                            const WellState& xw,
-                            const std::vector<int>& fipnum)
-        {
-            return asImpl().computeFluidInPlace(x, xw, fipnum);
-        }
-
-
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
