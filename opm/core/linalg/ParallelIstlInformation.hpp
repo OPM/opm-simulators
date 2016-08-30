@@ -179,12 +179,24 @@ public:
         }
         return ownerMask_;
     }
+
+    /// \brief Get the owner Mask.
+    ///
+    /// \return A vector with entries 0, and 1. 0 marks an index that we cannot
+    ///         compute correct results for. 1 marks an index that this process
+    ///         is responsible for and computes correct results in parallel.
+    const std::vector<double>& getOwnerMask() const
+    {
+        return ownerMask_;
+    }
+
     /// \brief Compute one or more global reductions.
     ///
     /// This function can either be used with a container, an operator, and an initial value
     /// to compute a reduction. Or with tuples of them to compute multiple reductions with only
     /// one global communication.
     /// The possible functors needed can be constructed with Opm::Reduction::makeGlobalMaxFunctor(),
+    /// Opm::Reduction::makeLInfinityNormFunctor(),
     /// Opm::Reduction::makeGlobalMinFunctor(), and 
     /// Opm::Reduction::makeGlobalSumFunctor().
     /// \tparam type of the container or the tuple of  containers.
@@ -573,6 +585,45 @@ private:
         return MaskToMinOperator<std::pointer_to_binary_function<const T&,const T&,const T&> >
             (std::pointer_to_binary_function<const T&,const T&,const T&>
              ((const T&(*)(const T&, const T&))std::max<T>));
+    }
+
+    namespace detail
+    {
+        /// \brief Computes the maximum of the absolute values of two values.
+        template<typename T, typename Enable = void>
+        struct MaxAbsFunctor
+        {
+            using result_type = T;
+            result_type operator()(const T& t1,
+                                   const T& t2)
+            {
+                return std::max(std::abs(t1), std::abs(t2));
+            }
+        };
+
+        // Specialization for unsigned integers. They need their own
+        // version since abs(x) is ambiguous (as well as somewhat
+        // meaningless).
+        template<typename T>
+        struct MaxAbsFunctor<T, typename std::enable_if<std::is_unsigned<T>::value>::type>
+        {
+            using result_type = T;
+            result_type operator()(const T& t1,
+                                   const T& t2)
+            {
+                return std::max(t1, t2);
+            }
+        };
+    }
+
+    /// \brief Create a functor for computing a global L infinity norm
+    ///
+    /// To be used with ParallelISTLInformation::computeReduction.
+    template<class T>
+    MaskIDOperator<detail::MaxAbsFunctor<T> >
+    makeLInfinityNormFunctor()
+    {
+        return MaskIDOperator<detail::MaxAbsFunctor<T> >();
     }
     /// \brief Create a functor for computing a global minimum.
     ///

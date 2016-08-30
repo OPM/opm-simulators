@@ -36,6 +36,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include <fstream>
+
 namespace
 {
     void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
@@ -88,9 +90,9 @@ try
     Opm::ParseContext parseContext;
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::DeckConstPtr deck = parser->parseFile(deck_filename , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck, parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck, parseContext));
     const double grav = param.getDefault("gravity", unit::gravity);
-    GridManager gm(deck);
+    GridManager gm(eclipseState->getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
     BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param);
     warnIfUnusedParams(param);

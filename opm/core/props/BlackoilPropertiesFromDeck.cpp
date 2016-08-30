@@ -244,15 +244,15 @@ namespace Opm
         const auto& pu = phaseUsage();
         const int np = numPhases();
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
-        LadEval RsLad = 0.0;
-        LadEval RvLad = 0.0;
-        LadEval muLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
+        Eval RsEval = 0.0;
+        Eval RvEval = 0.0;
+        Eval muEval = 0.0;
 
-        pLad.derivatives[0] = 1.0;
+        pEval.derivatives[0] = 1.0;
 
         R_.resize(n*np);
         this->compute_R_(n, p, T, z, cells, &R_[0]);
@@ -260,30 +260,30 @@ namespace Opm
         for (int i = 0; i < n; ++ i) {
             int cellIdx = cells[i];
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            pLad.value = p[i];
-            TLad.value = T[i];
+            pEval.value = p[i];
+            TEval.value = T[i];
 
             if (pu.phase_used[BlackoilPhases::Aqua]) {
-                muLad = waterPvt_.viscosity(pvtRegionIdx, TLad, pLad);
+                muEval = waterPvt_.viscosity(pvtRegionIdx, TEval, pEval);
                 int offset = pu.num_phases*cellIdx + pu.phase_pos[BlackoilPhases::Aqua];
-                mu[offset] = muLad.value;
-                dmudp[offset] = muLad.derivatives[0];
+                mu[offset] = muEval.value;
+                dmudp[offset] = muEval.derivatives[0];
             }
 
             if (pu.phase_used[BlackoilPhases::Liquid]) {
-                RsLad.value = R_[i*np + pu.phase_pos[BlackoilPhases::Liquid]];
-                muLad = oilPvt_.viscosity(pvtRegionIdx, TLad, pLad, RsLad);
+                RsEval.value = R_[i*np + pu.phase_pos[BlackoilPhases::Liquid]];
+                muEval = oilPvt_.viscosity(pvtRegionIdx, TEval, pEval, RsEval);
                 int offset = pu.num_phases*cellIdx + pu.phase_pos[BlackoilPhases::Liquid];
-                mu[offset] = muLad.value;
-                dmudp[offset] = muLad.derivatives[0];
+                mu[offset] = muEval.value;
+                dmudp[offset] = muEval.derivatives[0];
             }
 
             if (pu.phase_used[BlackoilPhases::Vapour]) {
-                RvLad.value = R_[i*np + pu.phase_pos[BlackoilPhases::Vapour]];
-                muLad = gasPvt_.viscosity(pvtRegionIdx, TLad, pLad, RvLad);
+                RvEval.value = R_[i*np + pu.phase_pos[BlackoilPhases::Vapour]];
+                muEval = gasPvt_.viscosity(pvtRegionIdx, TEval, pEval, RvEval);
                 int offset = pu.num_phases*cellIdx + pu.phase_pos[BlackoilPhases::Vapour];
-                mu[offset] = muLad.value;
-                dmudp[offset] = muLad.derivatives[0];
+                mu[offset] = muEval.value;
+                dmudp[offset] = muEval.derivatives[0];
             }
         }
     }
@@ -396,27 +396,27 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        typedef double LadEval;
+        typedef double Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
-        LadEval RsLad = 0.0;
-        LadEval RvLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
+        Eval RsEval = 0.0;
+        Eval RvEval = 0.0;
 
         for (int i = 0; i < n; ++ i) {
             int cellIdx = cells[i];
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            pLad = p[i];
-            TLad = T[i];
+            pEval = p[i];
+            TEval = T[i];
 
             int oilOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Liquid];
             int gasOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Vapour];
             int waterOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Aqua];
 
             if (pu.phase_used[BlackoilPhases::Aqua]) {
-                LadEval BLad = 1.0/waterPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                Eval BEval = 1.0/waterPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
 
-                B[waterOffset] = BLad;
+                B[waterOffset] = BEval;
             }
 
             if (pu.phase_used[BlackoilPhases::Liquid]) {
@@ -424,18 +424,18 @@ namespace Opm
                 double maxRs = 0.0;
                 if (pu.phase_used[BlackoilPhases::Vapour]) {
                     currentRs = (z[oilOffset] == 0.0) ? 0.0 : z[gasOffset]/z[oilOffset];
-                    maxRs = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TLad, pLad);
+                    maxRs = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
                 }
-                LadEval BLad;
+                Eval BEval;
                 if (currentRs >= maxRs) {
-                    BLad = 1.0/oilPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                    BEval = 1.0/oilPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
                 }
                 else {
-                    RsLad = currentRs;
-                    BLad = 1.0/oilPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
+                    RsEval = currentRs;
+                    BEval = 1.0/oilPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RsEval);
                 }
 
-                B[oilOffset] = BLad;
+                B[oilOffset] = BEval;
             }
 
             if (pu.phase_used[BlackoilPhases::Vapour]) {
@@ -443,18 +443,18 @@ namespace Opm
                 double maxRv = 0.0;
                 if (pu.phase_used[BlackoilPhases::Liquid]) {
                     currentRv = (z[gasOffset] == 0.0) ? 0.0 : z[oilOffset]/z[gasOffset];
-                    maxRv = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TLad, pLad);
+                    maxRv = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
                 }
-                LadEval BLad;
+                Eval BEval;
                 if (currentRv >= maxRv) {
-                    BLad = 1.0/gasPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                    BEval = 1.0/gasPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
                 }
                 else {
-                    RvLad = currentRv;
-                    BLad = 1.0/gasPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RvLad);
+                    RvEval = currentRv;
+                    BEval = 1.0/gasPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RvEval);
                 }
 
-                B[gasOffset] = BLad;
+                B[gasOffset] = BEval;
             }
         }
     }
@@ -469,30 +469,30 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
-        LadEval RsLad = 0.0;
-        LadEval RvLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
+        Eval RsEval = 0.0;
+        Eval RvEval = 0.0;
 
-        pLad.derivatives[0] = 1.0;
+        pEval.derivatives[0] = 1.0;
 
         for (int i = 0; i < n; ++ i) {
             int cellIdx = cells[i];
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            pLad.value = p[i];
-            TLad.value = T[i];
+            pEval.value = p[i];
+            TEval.value = T[i];
 
             int oilOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Liquid];
             int gasOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Vapour];
             int waterOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Aqua];
 
             if (pu.phase_used[BlackoilPhases::Aqua]) {
-                LadEval BLad = 1.0/waterPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                Eval BEval = 1.0/waterPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
 
-                B[waterOffset] = BLad.value;
-                dBdp[waterOffset] = BLad.derivatives[0];
+                B[waterOffset] = BEval.value;
+                dBdp[waterOffset] = BEval.derivatives[0];
             }
 
             if (pu.phase_used[BlackoilPhases::Liquid]) {
@@ -500,19 +500,19 @@ namespace Opm
                 double maxRs = 0.0;
                 if (pu.phase_used[BlackoilPhases::Vapour]) {
                     currentRs = (z[oilOffset] == 0.0) ? 0.0 : z[gasOffset]/z[oilOffset];
-                    maxRs = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TLad.value, pLad.value);
+                    maxRs = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TEval.value, pEval.value);
                 }
-                LadEval BLad;
+                Eval BEval;
                 if (currentRs >= maxRs) {
-                    BLad = 1.0/oilPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                    BEval = 1.0/oilPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
                 }
                 else {
-                    RsLad.value = currentRs;
-                    BLad = 1.0/oilPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RsLad);
+                    RsEval.value = currentRs;
+                    BEval = 1.0/oilPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RsEval);
                 }
 
-                B[oilOffset] = BLad.value;
-                dBdp[oilOffset] = BLad.derivatives[0];
+                B[oilOffset] = BEval.value;
+                dBdp[oilOffset] = BEval.derivatives[0];
             }
 
             if (pu.phase_used[BlackoilPhases::Vapour]) {
@@ -520,19 +520,19 @@ namespace Opm
                 double maxRv = 0.0;
                 if (pu.phase_used[BlackoilPhases::Liquid]) {
                     currentRv = (z[gasOffset] == 0.0) ? 0.0 : z[oilOffset]/z[gasOffset];
-                    maxRv = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TLad.value, pLad.value);
+                    maxRv = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TEval.value, pEval.value);
                 }
-                LadEval BLad;
+                Eval BEval;
                 if (currentRv >= maxRv) {
-                    BLad = 1.0/gasPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad);
+                    BEval = 1.0/gasPvt_.saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
                 }
                 else {
-                    RvLad.value = currentRv;
-                    BLad = 1.0/gasPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TLad, pLad, RvLad);
+                    RvEval.value = currentRv;
+                    BEval = 1.0/gasPvt_.inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RvEval);
                 }
 
-                B[gasOffset] = BLad.value;
-                dBdp[gasOffset] = BLad.derivatives[0];
+                B[gasOffset] = BEval.value;
+                dBdp[gasOffset] = BEval.derivatives[0];
             }
         }
     }
@@ -546,16 +546,16 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        typedef double LadEval;
+        typedef double Eval;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
 
         for (int i = 0; i < n; ++ i) {
             int cellIdx = cells[i];
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            pLad = p[i];
-            TLad = T[i];
+            pEval = p[i];
+            TEval = T[i];
 
             int oilOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Liquid];
             int gasOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Vapour];
@@ -566,29 +566,29 @@ namespace Opm
             }
 
             if (pu.phase_used[BlackoilPhases::Liquid]) {
-                LadEval RsSatLad = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TLad, pLad);
+                Eval RsSatEval = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
 
                 double currentRs = 0.0;
                 if (pu.phase_used[BlackoilPhases::Vapour]) {
                     currentRs = (z[oilOffset] == 0.0) ? 0.0 : z[gasOffset]/z[oilOffset];
                 }
 
-                RsSatLad = std::min(RsSatLad, currentRs);
+                RsSatEval = std::min(RsSatEval, currentRs);
 
-                R[oilOffset] = RsSatLad;
+                R[oilOffset] = RsSatEval;
             }
 
             if (pu.phase_used[BlackoilPhases::Vapour]) {
-                LadEval RvSatLad = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TLad, pLad);
+                Eval RvSatEval = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
 
                 double currentRv = 0.0;
                 if (pu.phase_used[BlackoilPhases::Liquid]) {
                     currentRv = (z[gasOffset] == 0.0) ? 0.0 : z[oilOffset]/z[gasOffset];
                 }
 
-                RvSatLad = std::min(RvSatLad, currentRv);
+                RvSatEval = std::min(RvSatEval, currentRv);
 
-                R[gasOffset] = RvSatLad;
+                R[gasOffset] = RvSatEval;
             }
         }
     }
@@ -603,19 +603,19 @@ namespace Opm
     {
         const auto& pu = phaseUsage();
 
-        typedef Opm::LocalAd::Evaluation<double, /*size=*/1> LadEval;
-        typedef Opm::MathToolbox<LadEval> Toolbox;
+        typedef Opm::DenseAd::Evaluation<double, /*size=*/1> Eval;
+        typedef Opm::MathToolbox<Eval> Toolbox;
 
-        LadEval pLad = 0.0;
-        LadEval TLad = 0.0;
+        Eval pEval = 0.0;
+        Eval TEval = 0.0;
 
-        pLad.derivatives[0] = 1.0;
+        pEval.derivatives[0] = 1.0;
 
         for (int i = 0; i < n; ++ i) {
             int cellIdx = cells[i];
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            pLad.value = p[i];
-            TLad.value = T[i];
+            pEval.value = p[i];
+            TEval.value = T[i];
 
             int oilOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Liquid];
             int gasOffset = pu.num_phases*i + pu.phase_pos[BlackoilPhases::Vapour];
@@ -626,31 +626,31 @@ namespace Opm
             }
 
             if (pu.phase_used[BlackoilPhases::Liquid]) {
-                LadEval RsSatLad = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TLad, pLad);
+                Eval RsSatEval = oilPvt_.saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
 
-                LadEval currentRs = 0.0;
+                Eval currentRs = 0.0;
                 if (pu.phase_used[BlackoilPhases::Vapour]) {
                     currentRs = (z[oilOffset] == 0.0) ? 0.0 : z[gasOffset]/z[oilOffset];
                 }
 
-                RsSatLad = Toolbox::min(RsSatLad, currentRs);
+                RsSatEval = Toolbox::min(RsSatEval, currentRs);
 
-                R[oilOffset] = RsSatLad.value;
-                dRdp[oilOffset] = RsSatLad.derivatives[0];
+                R[oilOffset] = RsSatEval.value;
+                dRdp[oilOffset] = RsSatEval.derivatives[0];
             }
 
             if (pu.phase_used[BlackoilPhases::Vapour]) {
-                LadEval RvSatLad = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TLad, pLad);
+                Eval RvSatEval = gasPvt_.saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
 
-                LadEval currentRv = 0.0;
+                Eval currentRv = 0.0;
                 if (pu.phase_used[BlackoilPhases::Liquid]) {
                     currentRv = (z[gasOffset] == 0.0) ? 0.0 : z[oilOffset]/z[gasOffset];
                 }
 
-                RvSatLad = Toolbox::min(RvSatLad, currentRv);
+                RvSatEval = Toolbox::min(RvSatEval, currentRv);
 
-                R[gasOffset] = RvSatLad.value;
-                dRdp[gasOffset] = RvSatLad.derivatives[0];
+                R[gasOffset] = RvSatEval.value;
+                dRdp[gasOffset] = RvSatEval.derivatives[0];
             }
         }
     }

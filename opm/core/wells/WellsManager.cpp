@@ -333,11 +333,14 @@ namespace Opm
         : w_(0), is_parallel_run_(false)
     {
         std::vector<double> dummy_well_potentials;
+        // TODO: not sure about the usage of this WellsManager constructor
+        // TODO: not sure whether this is the correct thing to do here.
+        DynamicListEconLimited dummy_list_econ_limited;
         init(eclipseState, timeStep, UgGridHelpers::numCells(grid),
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
-             permeability, dummy_well_potentials);
+             permeability, dummy_list_econ_limited, dummy_well_potentials);
 
     }
 
@@ -414,9 +417,10 @@ namespace Opm
 
 
 
-    void WellsManager::setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
+    void WellsManager::setupWellControls(std::vector< const Well* >& wells, size_t timeStep,
                                          std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
-                                         const std::vector<int>& wells_on_proc) {
+                                         const std::vector<int>& wells_on_proc,
+                                         const DynamicListEconLimited& list_econ_limited) {
         int well_index = 0;
         auto well_on_proc = wells_on_proc.begin();
 
@@ -427,17 +431,22 @@ namespace Opm
                 continue;
             }
 
-           WellConstPtr well = (*wellIter);
-
-            if (well->getStatus(timeStep) == WellCommon::STOP) {
-                // STOPed wells are kept in the well list but marked as stopped.
-                well_controls_stop_well(w_->ctrls[well_index]);
-            }
+            const auto* well = (*wellIter);
 
             if (well->getStatus(timeStep) == WellCommon::SHUT) {
                 //SHUT wells are not added to the well list
                 continue;
             }
+
+            if (list_econ_limited.wellShutEconLimited(well->name())) {
+                continue;
+            }
+
+            if (well->getStatus(timeStep) == WellCommon::STOP || list_econ_limited.wellStoppedEconLimited(well->name())) {
+                // Stopped wells are kept in the well list but marked as stopped.
+                well_controls_stop_well(w_->ctrls[well_index]);
+            }
+
 
             if (well->isInjector(timeStep)) {
                 const WellInjectionProperties& injectionProperties = well->getInjectionProperties(timeStep);
@@ -728,12 +737,12 @@ namespace Opm
     }
 
 
-    void WellsManager::setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
+    void WellsManager::setupGuideRates(std::vector< const Well* >& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
                                        const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials)
     {
         const int np = phaseUsage.num_phases;
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
-            WellConstPtr well = *wellIter;
+            const auto* well = *wellIter;
 
             if (well->getStatus(timeStep) == WellCommon::SHUT) {
                 //SHUT wells does not need guide rates

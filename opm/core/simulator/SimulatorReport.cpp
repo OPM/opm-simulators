@@ -27,6 +27,7 @@ namespace Opm
         : pressure_time(0.0),
           transport_time(0.0),
           total_time(0.0),
+          total_linearizations( 0 ),
           total_newton_iterations( 0 ),
           total_linear_iterations( 0 ),
           verbose_(verbose)
@@ -61,6 +62,7 @@ namespace Opm
         {
             os << "Total time taken (seconds):  " << total_time
                << "\nSolver time (seconds):       " << pressure_time
+               << "\nOverall Linearizations:      " << total_linearizations
                << "\nOverall Newton Iterations:   " << total_newton_iterations
                << "\nOverall Linear Iterations:   " << total_linear_iterations
                << std::endl;

@@ -25,6 +25,7 @@
 
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/wells/WellsGroup.hpp>
+#include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/GroupTree.hpp>
 
 #include <opm/core/utility/CompressedPropertyAccess.hpp>
@@ -86,6 +87,7 @@ namespace Opm
                      const F2C& f2c,
                      FC begin_face_centroids,
                      const double* permeability,
+                     const DynamicListEconLimited& list_econ_limited,
                      bool is_parallel_run=false,
                      const std::vector<double>& well_potentials={});
 
@@ -155,17 +157,19 @@ namespace Opm
                   const C2F& cell_to_faces,
                   FC begin_face_centroids,
                   const double* permeability,
+                  const DynamicListEconLimited& list_econ_limited,
                   const std::vector<double>& well_potentials);
         // Disable copying and assignment.
         WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);
         static void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed );
-        void setupWellControls(std::vector<WellConstPtr>& wells, size_t timeStep,
+        void setupWellControls(std::vector<const Well*>& wells, size_t timeStep,
                                std::vector<std::string>& well_names, const PhaseUsage& phaseUsage,
-                               const std::vector<int>& wells_on_proc);
+                               const std::vector<int>& wells_on_proc,
+                               const DynamicListEconLimited& list_econ_limited);
 
         template<class C2F, class FC, class NTG>
-        void createWellsFromSpecs( std::vector<WellConstPtr>& wells, size_t timeStep,
+        void createWellsFromSpecs( std::vector<const Well*>& wells, size_t timeStep,
                                    const C2F& cell_to_faces, 
                                    const int* cart_dims,
                                    FC begin_face_centroids, 
@@ -178,10 +182,11 @@ namespace Opm
                                    const std::map<int,int>& cartesian_to_compressed,
                                    const double* permeability,
                                    const NTG& ntg,
-                                   std::vector<int>& wells_on_proc);
+                                   std::vector<int>& wells_on_proc,
+                                   const DynamicListEconLimited& list_econ_limited);
 
         void addChildGroups(GroupTreeNodeConstPtr parentNode, std::shared_ptr< const Schedule > schedule, size_t timeStep, const PhaseUsage& phaseUsage);
-        void setupGuideRates(std::vector<WellConstPtr>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
+        void setupGuideRates(std::vector<const Well*>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
                              const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials);
         // Data
         Wells* w_;

@@ -33,6 +33,7 @@
 #include <functional>
 #ifdef HAVE_DUNE_ISTL
 
+
 template<typename T>
 void runSumMaxMinTest(const T offset)
 {
@@ -45,12 +46,13 @@ void runSumMaxMinTest(const T offset)
     assert(comm.indexSet()->size()==x.size());
     for(auto it=comm.indexSet()->begin(), itend=comm.indexSet()->end(); it!=itend; ++it)
         x[it->local()]=it->global()+offset;
-    auto containers = std::make_tuple(x, x, x, x);
+    auto containers = std::make_tuple(x, x, x, x, x);
     auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<T>(),
                                       Opm::Reduction::makeGlobalMaxFunctor<T>(),
                                       Opm::Reduction::makeGlobalMinFunctor<T>(),
-                                      Opm::Reduction::makeInnerProductFunctor<T>());
-    auto values     = std::tuple<T,T,T,T>(0,0,100000, 0);
+                                      Opm::Reduction::makeInnerProductFunctor<T>(),
+                                      Opm::Reduction::makeLInfinityNormFunctor<T>());
+    auto values     = std::tuple<T,T,T,T,T>(0,0,100000, 0, 0);
     auto oldvalues  = values;
     start = offset;
     end   = start+N;
@@ -59,10 +61,14 @@ void runSumMaxMinTest(const T offset)
     BOOST_CHECK(std::get<1>(values)==std::max(N+offset-1, std::get<1>(oldvalues)));
     BOOST_CHECK(std::get<2>(values)==std::min(offset, std::get<2>(oldvalues)));
     BOOST_CHECK(std::get<3>(values)==((end-1)*end*(2*end-1)-(start-1)*start*(2*start-1))/6+std::get<3>(oldvalues));
+    // Must avoid std::abs() directly to prevent ambiguity with unsigned integers.
+    Opm::Reduction::detail::MaxAbsFunctor<T> maxabsfunc;
+    BOOST_CHECK(std::get<4>(values)==maxabsfunc(offset, N+offset-1));
 }
 
 BOOST_AUTO_TEST_CASE(tupleReductionTestInt)
 {
+    runSumMaxMinTest<int>(-200);
     runSumMaxMinTest<int>(0);
     runSumMaxMinTest<int>(20);
     runSumMaxMinTest<int>(-20);
@@ -75,6 +81,7 @@ BOOST_AUTO_TEST_CASE(tupleReductionTestUnsignedInt)
 }
 BOOST_AUTO_TEST_CASE(tupleReductionTestFloat)
 {
+    runSumMaxMinTest<float>(-200);
     runSumMaxMinTest<float>(0);
     runSumMaxMinTest<float>(20);
     runSumMaxMinTest<float>(-20);

@@ -30,6 +30,12 @@
 namespace Opm
 {
 
+    enum HydroCarbonState {
+        GasOnly = 0,
+        GasAndOil = 1,
+        OilOnly = 2
+    };
+
     /// Simulator state for a blackoil simulator.
     class BlackoilState : public SimulationDataContainer
     {
@@ -62,16 +68,21 @@ namespace Opm
         std::vector<double>& surfacevol  () { return *surfacevol_ref_;  }
         std::vector<double>& gasoilratio () { return *gasoilratio_ref_; }
         std::vector<double>& rv ()          { return *rv_ref_;          }
+        std::vector<HydroCarbonState>& hydroCarbonState() { return hydrocarbonstate_;  }
 
         const std::vector<double>& surfacevol  () const { return *surfacevol_ref_;  }
         const std::vector<double>& gasoilratio () const { return *gasoilratio_ref_; }
         const std::vector<double>& rv ()          const { return *rv_ref_;          }
+        const std::vector<HydroCarbonState>& hydroCarbonState() const { return hydrocarbonstate_;  }
 
     private:
         void setBlackoilStateReferencePointers();
         std::vector<double>* surfacevol_ref_;
         std::vector<double>* gasoilratio_ref_;
         std::vector<double>* rv_ref_;
+
+        // A vector storing the hydro carbon state.
+        std::vector<HydroCarbonState> hydrocarbonstate_;
 
 
     };

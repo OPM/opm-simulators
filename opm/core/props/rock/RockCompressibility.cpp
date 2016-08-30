@@ -22,6 +22,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Tables/RocktabTable.hpp>
@@ -64,14 +65,18 @@ namespace Opm
             if (rockKeyword.size() != 1) {
                 // here it would be better not to use std::cout directly but to add the
                 // warning to some "warning list"...
-                std::cout << "Can only handle a single region in ROCK ("<<rockKeyword.size()<<" regions specified)."
-                          << " Ignoring all except for the first.\n";
+                OpmLog::warning("Can only handle a single region in ROCK ("
+                                + std::to_string(rockKeyword.size())
+                                + " regions specified)."
+                                + " Ignoring all except for the first.\n" 
+                                + "In file " + rockKeyword.getFileName()
+                                + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
             }
 
             pref_ = rockKeyword.getRecord(0).getItem("PREF").getSIDouble(0);
             rock_comp_ = rockKeyword.getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(0);
         } else {
-            std::cout << "**** warning: no rock compressibility data found in deck (ROCK or ROCKTAB)." << std::endl;
+            OpmLog::warning("No rock compressibility data found in deck (ROCK or ROCKTAB).");
         }
     }
 
@@ -96,7 +101,8 @@ namespace Opm
         if (p_.empty()) {
             // Approximating poro multiplier with a quadratic curve,
             // we must use its derivative.
-            return rock_comp_ + 2 * rock_comp_ * rock_comp_ * (pressure - pref_);
+            const double cpnorm = rock_comp_*(pressure - pref_);
+            return rock_comp_ + cpnorm*rock_comp_;
         } else {
             return Opm::linearInterpolationDerivative(p_, poromult_, pressure);
         }

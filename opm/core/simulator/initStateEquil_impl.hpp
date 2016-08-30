@@ -767,28 +767,34 @@ namespace Opm
                 double sat[BlackoilPhases::MaxNumPhases];
                 double threshold_sat = 1.0e-6;
 
-                sat[waterpos] = smax[waterpos];
-                sat[gaspos] = smax[gaspos];
-                sat[oilpos] = 1.0 - sat[waterpos] - sat[gaspos];
-                if (sw > smax[waterpos]-threshold_sat ) {
-                    sat[waterpos] = smax[waterpos];
-                    props.capPress(1, sat, &cell, pc, 0);                   
-                    phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pc[waterpos];
-                } else if (sg > smax[gaspos]-threshold_sat) {
-                    sat[gaspos] = smax[gaspos];
-                    props.capPress(1, sat, &cell, pc, 0);                   
-                    phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
-                }
-                if (sg < smin[gaspos]+threshold_sat) {
-                    sat[gaspos] = smin[gaspos];
-                    props.capPress(1, sat, &cell, pc, 0);
-                    phase_pressures[gaspos][local_index] = phase_pressures[oilpos][local_index] + pc[gaspos];
-                }
-                if (sw < smin[waterpos]+threshold_sat) {
-                    sat[waterpos] = smin[waterpos];
-                    props.capPress(1, sat, &cell, pc, 0);
-                    phase_pressures[waterpos][local_index] = phase_pressures[oilpos][local_index] - pc[waterpos];
-                }
+                sat[oilpos] = 1.0;
+                  if (water) {
+                      sat[waterpos] = smax[waterpos];
+                      sat[oilpos] -= sat[waterpos];
+                  }
+                  if (gas) {
+                      sat[gaspos] = smax[gaspos];
+                      sat[oilpos] -= sat[gaspos];
+                  }
+                  if (water && sw > smax[waterpos]-threshold_sat ) {
+                      sat[waterpos] = smax[waterpos];
+                      props.capPress(1, sat, &cell, pc, 0);
+                      phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pc[waterpos];
+                  } else if (gas && sg > smax[gaspos]-threshold_sat) {
+                      sat[gaspos] = smax[gaspos];
+                      props.capPress(1, sat, &cell, pc, 0);
+                      phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pc[gaspos];
+                  }
+                  if (gas && sg < smin[gaspos]+threshold_sat) {
+                      sat[gaspos] = smin[gaspos];
+                      props.capPress(1, sat, &cell, pc, 0);
+                      phase_pressures[gaspos][local_index] = phase_pressures[oilpos][local_index] + pc[gaspos];
+                  }
+                  if (water && sw < smin[waterpos]+threshold_sat) {
+                      sat[waterpos] = smin[waterpos];
+                      props.capPress(1, sat, &cell, pc, 0);
+                      phase_pressures[waterpos][local_index] = phase_pressures[oilpos][local_index] - pc[waterpos];
+                  }
             }
             return phase_saturations;
         }

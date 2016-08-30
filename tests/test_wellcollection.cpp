@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     std::string scheduleFile("wells_group.data");
     ParseContext parseContext;
     DeckConstPtr deck =  parser->parseFile(scheduleFile, parseContext);
-    EclipseStateConstPtr eclipseState(new EclipseState(deck, parseContext));
+    EclipseStateConstPtr eclipseState(new EclipseState(*deck, parseContext));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
     GroupTreeNodePtr field=eclipseState->getSchedule()->getGroupTree(2)->getNode("FIELD");
@@ -54,24 +54,24 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     WellCollection collection;
 
     // Add groups to WellCollection
-    GroupConstPtr fieldGroup =  eclipseState->getSchedule()->getGroup(field->name());
+    const auto* fieldGroup =  eclipseState->getSchedule()->getGroup(field->name());
     collection.addField(fieldGroup, 2, pu);
 
     for (auto iter = field->begin(); iter != field->end(); ++iter) {
-        GroupConstPtr childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
+        const auto* childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
         collection.addGroup(childGroupNode, fieldGroup->name(), 2, pu);
     }
 
-    GroupConstPtr g1Group =  eclipseState->getSchedule()->getGroup(g1->name());
+    const auto* g1Group = eclipseState->getSchedule()->getGroup(g1->name());
     for (auto iter = g1->begin(); iter != g1->end(); ++iter) {
-        GroupConstPtr childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
+        const auto* childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
         collection.addGroup(childGroupNode, g1Group->name(), 2, pu);
     }
 
 
-    GroupConstPtr g2Group =  eclipseState->getSchedule()->getGroup(g2->name());
+    const auto* g2Group =  eclipseState->getSchedule()->getGroup(g2->name());
     for (auto iter = g2->begin(); iter != g2->end(); ++iter) {
-        GroupConstPtr childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
+        const auto* childGroupNode = eclipseState->getSchedule()->getGroup((*iter).second->name());
         collection.addGroup(childGroupNode, g2Group->name(), 2, pu);
     }
 
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
 
     // Add wells to WellCollection
     WellCollection wellCollection;
-    std::vector<WellConstPtr> wells = eclipseState->getSchedule()->getWells();
+    auto wells = eclipseState->getSchedule()->getWells();
     for (size_t i=0; i<wells.size(); i++) {
         collection.addWell(wells[i], 2, pu);
     }

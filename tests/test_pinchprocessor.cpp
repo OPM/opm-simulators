@@ -54,9 +54,9 @@ BOOST_AUTO_TEST_CASE(Processing)
     Opm::ParserPtr parser(new Opm::Parser());
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
     Opm::DeckConstPtr deck = parser->parseFile(filename, parseContext);
-    std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(deck, parseContext));
+    std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(*deck, parseContext));
     const auto& porv = eclstate->get3DProperties().getDoubleGridProperty("PORV").getData();
-    EclipseGridConstPtr eclgrid = eclstate->getEclipseGrid();
+    EclipseGridConstPtr eclgrid = eclstate->getInputGrid();
 
     BOOST_CHECK_EQUAL(eclgrid->getMinpvMode(), MinpvMode::EclSTD);
 
@@ -92,10 +92,10 @@ BOOST_AUTO_TEST_CASE(Processing)
     std::vector<double> htrans(Opm::UgGridHelpers::numCellFaces(grid));
     Grid* ug = const_cast<Grid*>(& grid);
     tpfa_htrans_compute(ug, rock.permeability(), htrans.data());
-    auto transMult = eclstate->getTransMult();
+    const auto& transMult = eclstate->getTransMult();
     std::vector<double> multz(nc, 0.0);
     for (int i = 0; i < nc; ++i) {
-        multz[i] = transMult->getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
+        multz[i] = transMult.getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
     }
     Opm::NNC nnc(deck, eclgrid);
     pinch.process(grid, htrans, actnum, multz, porv, nnc);

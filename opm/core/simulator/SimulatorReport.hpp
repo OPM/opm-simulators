@@ -32,6 +32,7 @@ namespace Opm
         double transport_time;
         double total_time;
 
+        unsigned int total_linearizations;
         unsigned int total_newton_iterations;
         unsigned int total_linear_iterations;
 

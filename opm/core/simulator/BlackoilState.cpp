@@ -1,6 +1,8 @@
 #include "BlackoilState.hpp"
 #include <opm/common/util/numeric/cmp.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/simulator/WellState.hpp>
+#include <opm/output/Wells.hpp>
 
 
 using namespace Opm;
@@ -21,15 +23,18 @@ BlackoilState::BlackoilState( size_t num_cells , size_t num_faces , size_t num_p
 }
 
 BlackoilState::BlackoilState( const BlackoilState& other )
-    : SimulationDataContainer(other)
+    : SimulationDataContainer(other),
+      hydrocarbonstate_(other.hydroCarbonState())
 {
     setBlackoilStateReferencePointers();
+
 }
 
 BlackoilState& BlackoilState::operator=( const BlackoilState& other )
 {
     SimulationDataContainer::operator=(other);
     setBlackoilStateReferencePointers();
+    hydrocarbonstate_ = other.hydroCarbonState();
     return *this;
 }
 

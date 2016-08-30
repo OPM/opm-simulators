@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
     std::shared_ptr<const Deck> deck;
     deck = parser->parseFile("norne_pvt.data", parseContext);
 
-    Opm::EclipseStateConstPtr eclState(new EclipseState(deck, parseContext));
+    Opm::EclipseStateConstPtr eclState(new EclipseState(*deck, parseContext));
 
     verify_norne_oil_pvt_region1( deck, eclState );
     verify_norne_oil_pvt_region2( deck, eclState );

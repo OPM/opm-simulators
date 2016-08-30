@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RsvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <array>
 #include <cassert>
@@ -199,7 +200,7 @@ namespace Opm
             std::vector<EquilRecord>
             getEquil(const Opm::EclipseState& state)
             {
-                const auto& init = *state.getInitConfig();
+                const auto& init = state.getInitConfig();
 
                 if( !init.hasEquil() ) {
                     OPM_THROW(std::domain_error, "Deck does not provide equilibration data.");
@@ -264,6 +265,11 @@ namespace Opm
                     if (deck->hasKeyword("DISGAS")) {                    
                         const TableContainer& rsvdTables = tables.getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
+                            if (eqlmap.cells(i).empty())
+                            {
+                                rs_func_.push_back(std::shared_ptr<Miscibility::RsVD>());
+                                continue;
+                            }
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (!rec[i].liveOilInitConstantRs()) {
                                 if (rsvdTables.size() <= 0 ) {
@@ -297,6 +303,11 @@ namespace Opm
                     if (deck->hasKeyword("VAPOIL")) {                    
                         const TableContainer& rvvdTables = tables.getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
+                            if (eqlmap.cells(i).empty())
+                            {
+                                rv_func_.push_back(std::shared_ptr<Miscibility::RvVD>());
+                                continue;
+                            }
                             const int cell = *(eqlmap.cells(i).begin());                   
                             if (!rec[i].wetGasInitConstantRv()) {
                                 if (rvvdTables.size() <= 0) { 
@@ -381,6 +392,12 @@ namespace Opm
                 {
                     for (const auto& r : reg.activeRegions()) {
                         const auto& cells = reg.cells(r);
+                        if (cells.empty())
+                        {
+                            OpmLog::warning("Equilibration region " + std::to_string(r + 1) 
+                                            + " has no active cells");
+                            continue;
+                        }
                         const int repcell = *cells.begin();
 
                         const RhoCalc calc(props, repcell);

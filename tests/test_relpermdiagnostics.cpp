@@ -34,7 +34,7 @@
 #include <boost/test/floating_point_comparison.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/OpmLog/EclipsePRTLog.hpp>
+#include <opm/common/OpmLog/CounterLog.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/grid/cart_grid.h>
@@ -57,17 +57,13 @@ BOOST_AUTO_TEST_CASE(diagnosis)
                               { ParseContext::PARSE_RANDOM_TEXT, InputError::IGNORE}
                              });
     Opm::DeckConstPtr deck(parser->parseFile("../tests/relpermDiagnostics.DATA", parseContext));
-    eclState.reset(new EclipseState(deck, parseContext));
-
-    GridManager gm(deck);
+    eclState.reset(new EclipseState(*deck, parseContext));
+    GridManager gm(eclState->getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
-    std::string logFile = "LOGFILE.txt";
-    std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile, Log::DefaultMessageTypes);
-    OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
+    std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
+    OpmLog::addBackend( "COUNTERLOG" , counterLog );
     RelpermDiagnostics diagnostics;
     diagnostics.diagnosis(eclState, deck, grid);
-    auto msg = diagnostics.getMessages();
-    BOOST_CHECK(!msg.empty());
-    BOOST_CHECK_EQUAL(msg.size(), 1);
+    BOOST_CHECK_EQUAL(1, counterLog->numMessages(Log::MessageType::Warning));
 }
 BOOST_AUTO_TEST_SUITE_END()

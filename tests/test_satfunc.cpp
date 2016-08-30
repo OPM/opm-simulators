@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE (GwsegStandard)
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
     Opm::DeckConstPtr deck = parser->parseFile("satfuncStandard.DATA", parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPSBase)
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
     Opm::DeckConstPtr deck = parser->parseFile("satfuncEPSBase.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -241,7 +241,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_A)
     Opm::ParseContext parseContext;
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_A.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_C)
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
     Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_C.DATA", parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -596,7 +596,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_D)
     Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
     Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_D.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck , parseContext));
+    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;

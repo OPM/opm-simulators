@@ -76,9 +76,9 @@ try
                               { ParseContext::INTERNAL_ERROR_UNINITIALIZED_THPRES, InputError::IGNORE}
                              });
     Opm::DeckConstPtr deck(parser->parseFile(eclipseFilename, parseContext));
-    eclState.reset(new EclipseState(deck, parseContext));
+    eclState.reset(new EclipseState(*deck, parseContext));
 
-    GridManager gm(deck);
+    GridManager gm(eclState->getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
     using boost::filesystem::path; 
     path fpath(eclipseFilename);
@@ -92,13 +92,13 @@ try
     std::string logFile = baseName + ".SATFUNCLOG";
     std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile, Log::DefaultMessageTypes);
     OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
-    Opm::time::StopWatch timer;
-    timer.start();
+    prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true, false));
+    std::shared_ptr<StreamLog> streamLog = std::make_shared<EclipsePRTLog>(std::cout, Log::DefaultMessageTypes);
+    OpmLog::addBackend( "STREAMLOG" , streamLog );
+    streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
+    streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true, true));
     RelpermDiagnostics diagnostic;
     diagnostic.diagnosis(eclState, deck, grid);
-    timer.stop();
-    double tt = timer.secsSinceStart();
-    std::cout << "relperm diagnostics: " << tt << " seconds." << std::endl;
 }
 catch (const std::exception &e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";

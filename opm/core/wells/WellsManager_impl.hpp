@@ -2,6 +2,7 @@
 #include <opm/core/grid/GridHelpers.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
@@ -106,7 +107,7 @@ getCubeDim(const C2F& c2f,
 namespace Opm
 {
 template<class C2F, class FC, class NTG>
-void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t timeStep,
+void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t timeStep,
                                         const C2F& c2f,
                                         const int* cart_dims,
                                         FC begin_face_centroids,
@@ -119,7 +120,8 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                                         const std::map<int,int>& cartesian_to_compressed,
                                         const double* permeability,
                                         const NTG& ntg,
-                                        std::vector<int>& wells_on_proc)
+                                        std::vector<int>& wells_on_proc,
+                                        const DynamicListEconLimited& list_econ_limited)
 {
     if (dimensions != 3) {
         OPM_THROW(std::domain_error,
@@ -137,10 +139,19 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
     // the index of the well according to the eclipse state
     int well_index_on_proc = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
-        WellConstPtr well = (*wellIter);
+        const auto* well = (*wellIter);
 
         if (well->getStatus(timeStep) == WellCommon::SHUT) {
             continue;
+        }
+
+        if (list_econ_limited.wellShutEconLimited(well->name())) {
+            continue;
+        }
+
+        std::vector<int> cells_connection_closed;
+        if (list_econ_limited.anyConnectionClosedForWell(well->name())) {
+            cells_connection_closed = list_econ_limited.getClosedConnectionsForWell(well->name());
         }
 
         {   // COMPDAT handling
@@ -174,6 +185,16 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     else
                     {
                         int cell = cgit->second;
+                        // check if the connection is closed due to economic limits
+                        if (!cells_connection_closed.empty()) {
+                            const bool connection_found = std::find(cells_connection_closed.begin(),
+                                                                    cells_connection_closed.end(), cell)
+                                                          != cells_connection_closed.end();
+                            if (connection_found) {
+                                continue;
+                            }
+                        }
+
                         PerfData pd;
                         pd.cell = cell;
                         {
@@ -233,9 +254,9 @@ void WellsManager::createWellsFromSpecs(std::vector<WellConstPtr>& wells, size_t
                     // Check that the complete well is on this process
                     if ( sum_completions_on_proc < completionSet->size() )
                     {
-                        std::cout<< "Well "<< well->name() << " does not seem to be"
-                                 << "completely in the disjoint partition of "
-                                 << "process. Therefore we  deactivate it here." << std::endl;
+                        OpmLog::warning("Well " + well->name() + " does not seem to be"
+                                        + "completely in the disjoint partition of "
+                                        + "process. Therefore we  deactivate it here.");
                         // Mark well as not existent on this process
                         wells_on_proc[wellIter-wells.begin()] = 0;
                         wellperf_data[well_index_on_proc].clear();
@@ -326,13 +347,14 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const C2F&                      cell_to_faces,
              FC                              begin_face_centroids,
              const double*                   permeability,
+             const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
              const std::vector<double>&      well_potentials)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
-         cell_to_faces, begin_face_centroids, permeability, well_potentials);
+         cell_to_faces, begin_face_centroids, permeability, list_econ_limited, well_potentials);
 }
 
 /// Construct wells from deck.
@@ -347,6 +369,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
                    const double*                   permeability,
+                   const DynamicListEconLimited&   list_econ_limited,
                    const std::vector<double>&      well_potentials)
 {
     if (dimensions != 3) {
@@ -378,8 +401,8 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     std::map<std::string, int> well_names_to_index;
 
     auto schedule = eclipseState->getSchedule();
-    std::vector<WellConstPtr> wells    = schedule->getWells(timeStep);
-    std::vector<int>          wells_on_proc;
+    auto wells       = schedule->getWells(timeStep);
+    std::vector<int> wells_on_proc;
 
     well_names.reserve(wells.size());
     well_data.reserve(wells.size());
@@ -390,7 +413,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     DoubleArray ntg_glob(eclipseState, "NTG", 1.0);
     NTGArray    ntg(ntg_glob, global_cell);
 
-    EclipseGridConstPtr eclGrid = eclipseState->getEclipseGrid();
+    EclipseGridConstPtr eclGrid = eclipseState->getInputGrid();
 
     // use cell thickness (dz) from eclGrid
     // dz overwrites values calculated by WellDetails::getCubeDim
@@ -409,16 +432,15 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                          dz,
                          well_names, well_data, well_names_to_index,
                          pu, cartesian_to_compressed, permeability, ntg,
-                         wells_on_proc);
+                         wells_on_proc, list_econ_limited);
 
-    setupWellControls(wells, timeStep, well_names, pu, wells_on_proc);
+    setupWellControls(wells, timeStep, well_names, pu, wells_on_proc, list_econ_limited);
 
     {
         GroupTreeNodeConstPtr fieldNode =
             schedule->getGroupTree(timeStep)->getNode("FIELD");
 
-        GroupConstPtr fieldGroup =
-            schedule->getGroup(fieldNode->name());
+        const auto* fieldGroup = schedule->getGroup(fieldNode->name());
 
         well_collection_.addField(fieldGroup, timeStep, pu);
         addChildGroups(fieldNode, schedule, timeStep, pu);
