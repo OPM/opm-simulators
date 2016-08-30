@@ -534,11 +534,18 @@ namespace {
 
     std::vector<V>
     FullyImplicitCompressiblePolymerSolver::computeFluidInPlace(const PolymerBlackoilState& x,
-                                                                const WellStateFullyImplicitBlackoilPolymer& xw,
                                                                 const std::vector<int>& fipnum)
     {
-        const SolutionState state = constantState(x, xw);
+        const int np = x.numPhases();
         const int nc = grid_.number_of_cells;
+
+        SolutionState state(np);
+        state.pressure = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
+        state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
+        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
+        for (int phase = 0; phase < np; ++phase) {
+            state.saturation[phase] = ADB::constant(s.col(phase));
+        }
 
         const ADB&              press = state.pressure;
         const ADB&              temp  = state.temperature;

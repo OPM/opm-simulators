@@ -116,7 +116,6 @@ namespace Opm {
         /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas. 
         std::vector<V> 
         computeFluidInPlace(const PolymerBlackoilState& x,
-                            const WellStateFullyImplicitBlackoilPolymer& xw,
                             const std::vector<int>& fipnum);
 
     private:

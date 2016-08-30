@@ -2300,7 +2300,6 @@ namespace detail {
     std::vector<V>
     BlackoilModelBase<Grid, WellModel, Implementation>::
     computeFluidInPlace(const ReservoirState& x,
-                        const WellState& xw,
                         const std::vector<int>& fipnum)
     {
         using namespace Opm::AutoDiffGrid;

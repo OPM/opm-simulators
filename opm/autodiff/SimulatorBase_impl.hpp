@@ -199,7 +199,7 @@ namespace Opm
 
             // Compute orignal FIP;
             if (!ooip_computed) {
-                OOIP = solver->computeFluidInPlace(state, well_state, fipnum);
+                OOIP = solver->computeFluidInPlace(state, fipnum);
                 FIPUnitConvert(eclipse_state_->getUnits(), OOIP);
                 ooip_computed = true;
             }
@@ -269,7 +269,7 @@ namespace Opm
             const double st = solver_timer.secsSinceStart();
             // Compute current FIP.
             std::vector<V> COIP;
-            COIP = solver->computeFluidInPlace(state, well_state, fipnum);
+            COIP = solver->computeFluidInPlace(state, fipnum);
             FIPUnitConvert(eclipse_state_->getUnits(), COIP);
             V OOIP_totals = FIPTotals(OOIP, state.pressure());
             V COIP_totals = FIPTotals(COIP, state.pressure());
