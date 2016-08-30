@@ -2365,8 +2365,8 @@ namespace detail {
             }
         }
 
-        for (auto& x : values) {
-            x[6] = x[6] / x[5];
+        for (auto& val : values) {
+            val[6] = val[6] / val[5];
         }
 
         return values;
