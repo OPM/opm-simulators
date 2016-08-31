@@ -106,7 +106,7 @@ try
         eclipseState.reset(new Opm::EclipseState(*deck , parseContext));
 
         // Grid init
-        grid.reset(new GridManager(eclipseState->getInputGrid()));
+        grid.reset(new GridManager(*eclipseState->getInputGrid()));
         {
             const UnstructuredGrid& ug_grid = *(grid->c_grid());
             // Rock and fluid init

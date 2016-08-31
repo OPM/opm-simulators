@@ -54,7 +54,7 @@ namespace Opm
     public:
         /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
         GridInit(EclipseStateConstPtr eclipse_state, const std::vector<double>& porv)
-            : grid_manager_(eclipse_state->getInputGrid(), porv)
+            : grid_manager_(*eclipse_state->getInputGrid(), porv)
         {
         }
         /// Access the created grid.
@@ -76,7 +76,7 @@ namespace Opm
         /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
         GridInit(EclipseStateConstPtr eclipse_state, const std::vector<double>& porv)
         {
-            grid_.processEclipseFormat(eclipse_state->getInputGrid(), false, false, false, porv);
+            grid_.processEclipseFormat(*eclipse_state->getInputGrid(), false, false, false, porv);
         }
         /// Access the created grid. Note that mutable access may be required for load balancing.
         Dune::CpGrid& grid()
