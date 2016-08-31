@@ -212,7 +212,6 @@ namespace Opm
         BlackoilOutputWriter(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              Opm::EclipseStateConstPtr eclipseState,
-                             const NNC&,
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability );
 
@@ -285,7 +284,6 @@ namespace Opm
     BlackoilOutputWriter(const Grid& grid,
                          const parameter::ParameterGroup& param,
                          Opm::EclipseStateConstPtr eclipseState,
-                         const NNC& nnc,
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),

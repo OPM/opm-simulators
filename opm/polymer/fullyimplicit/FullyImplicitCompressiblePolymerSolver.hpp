@@ -54,6 +54,13 @@ namespace Opm {
     class FullyImplicitCompressiblePolymerSolver
     {
     public:
+        typedef AutoDiffBlock<double> ADB;
+        typedef ADB::V V;
+        typedef ADB::M M;
+        typedef Eigen::Array<double,
+                             Eigen::Dynamic,
+                             Eigen::Dynamic,
+                             Eigen::RowMajor> DataBlock;
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
@@ -102,14 +109,17 @@ namespace Opm {
         double relativeChange(const PolymerBlackoilState& previous,
                               const PolymerBlackoilState& current ) const;
 
+        /// Compute fluid in place.
+        /// \param[in]    ReservoirState
+        /// \param[in]    WellState
+        /// \param[in]    FIPNUM for active cells not global cells.
+        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas. 
+        std::vector<V> 
+        computeFluidInPlace(const PolymerBlackoilState& x,
+                            const std::vector<int>& fipnum);
+
     private:
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
-        typedef ADB::M M;
-        typedef Eigen::Array<double,
-                             Eigen::Dynamic,
-                             Eigen::Dynamic,
-                             Eigen::RowMajor> DataBlock;
+
 
         struct ReservoirResidualQuant {
             ReservoirResidualQuant();

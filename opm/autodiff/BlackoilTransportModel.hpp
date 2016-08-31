@@ -160,8 +160,6 @@ namespace Opm {
 
 
 
-
-
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
         V solveJacobianSystem() const
@@ -270,6 +268,10 @@ namespace Opm {
                 Base::computeAccum(state, aix);
             }
         }
+
+
+
+
 
 
 

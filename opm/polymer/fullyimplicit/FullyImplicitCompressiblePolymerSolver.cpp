@@ -520,13 +520,63 @@ namespace {
         }
         rq_[0].accum[aix] = pv_mult * rq_[0].b * sat[0];
         rq_[1].accum[aix] = pv_mult * rq_[1].b * sat[1];
-		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
+	const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const double rho_rock = polymer_props_ad_.rockDensity();
         const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
 
         const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
         rq_[2].accum[aix] = pv_mult * rq_[0].b * sat[0] * c * (1. - dead_pore_vol) + pv_mult *  rho_rock * (1. - phi) / phi * ads;
+    }
+
+
+
+
+    std::vector<V>
+    FullyImplicitCompressiblePolymerSolver::computeFluidInPlace(const PolymerBlackoilState& x,
+                                                                const std::vector<int>& fipnum)
+    {
+        const int np = x.numPhases();
+        const int nc = grid_.number_of_cells;
+
+        SolutionState state(np);
+        state.pressure = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
+        state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
+        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
+        for (int phase = 0; phase < np; ++phase) {
+            state.saturation[phase] = ADB::constant(s.col(phase));
+        }
+
+        const ADB&              press = state.pressure;
+        const ADB&              temp  = state.temperature;
+        const std::vector<ADB>& sat   = state.saturation;
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+	std::vector<ADB> pressure = computePressures(state);
+
+        const ADB pv_mult = poroMult(press);
+        const V& pv = geo_.poreVolume();
+        std::vector<V> fip(5, V::Zero(nc));
+        for (int phase = 0; phase < 2; ++phase) {
+            const ADB& b = fluidReciprocFVF(phase, pressure[phase], temp, cond, cells_);
+            fip[phase] = (pv_mult * b * sat[phase] * pv).value();
+        }
+
+
+        const int dims = *std::max_element(fipnum.begin(), fipnum.end());
+        std::vector<V> values(dims, V::Zero(5));
+
+        for (int d = 0; d < dims; ++d) {
+            for (int c = 0; c < nc; ++c) {
+                for (int i = 0; i < 5; ++i) {
+                    if (fipnum[c] == d) {
+                        values[d][i] += fip[c][i];
+                    }
+                }
+            }
+        }
+
+        return values;
     }
 
 

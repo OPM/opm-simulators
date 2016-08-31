@@ -100,6 +100,15 @@ namespace Opm
     }
 
     template <class PhysicalModel>
+    std::vector<V> 
+    NonlinearSolver<PhysicalModel>::computeFluidInPlace(const ReservoirState& x,
+                                                        const std::vector<int>& fipnum) const
+    {
+        return model_->computeFluidInPlace(x, fipnum);
+    }
+
+
+    template <class PhysicalModel>
     int
     NonlinearSolver<PhysicalModel>::
     step(const SimulatorTimerInterface& timer,

@@ -663,7 +663,6 @@ namespace Opm
             output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
                                                           param_,
                                                           eclipse_state_,
-                                                          geoprops_->nonCartesianConnections(),
                                                           Opm::phaseUsageFromDeck(deck_),
                                                           fluidprops_->permeability()));
         }
