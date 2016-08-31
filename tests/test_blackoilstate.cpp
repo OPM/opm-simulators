@@ -48,10 +48,10 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
     const auto es2 = Opm::Parser::parse(filename2);
     auto eg2 = es2.getInputGrid();
 
-    GridManager gridManager1(eg1);
+    GridManager gridManager1(*eg1);
     const UnstructuredGrid& grid1 = *gridManager1.c_grid();
 
-    GridManager gridManager2(eg2);
+    GridManager gridManager2(*eg2);
     const UnstructuredGrid& grid2 = *gridManager2.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid1 ) , UgGridHelpers::numFaces( grid1 ) , 3);
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
     std::vector<int> actnum = get_testBlackoilStateActnum();
     eg->resetACTNUM(actnum.data());
 
-    GridManager gridManager(eg);
+    GridManager gridManager(*eg);
     const UnstructuredGrid& grid = *gridManager.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid ) , UgGridHelpers::numFaces( grid ) , 3);
