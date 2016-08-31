@@ -42,7 +42,7 @@ try
     std::cout << "Done!" << std::endl;
 
     // Setup grid
-    GridManager grid(eclipseState->getInputGrid());
+    GridManager grid(*eclipseState->getInputGrid());
 
     // Define rock and fluid properties
     IncompPropertiesFromDeck incomp_properties(deck, eclipseState, *grid.c_grid());
