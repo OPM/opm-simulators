@@ -268,6 +268,17 @@ namespace Opm {
         computeFluidInPlace(const ReservoirState& x,
                             const std::vector<int>& fipnum);
 
+        const ADB& getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex phase) const {
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            if (pu.phase_used[phase]) {
+                const int pos = pu.phase_pos[phase];
+                return rq_[pos].b;
+            }
+            else {
+                return ADB::null();
+            }
+        }
+
     protected:
 
         // ---------  Types and enums  ---------

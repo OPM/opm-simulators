@@ -260,6 +260,10 @@ namespace Opm {
         }
 
 
+        const ADB& getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex phase) const {
+            return transport_model_->getReciprocalFormationVolumeFactor(phase);
+        }
+
 
     protected:
         typedef BlackoilPressureModel<Grid, WellModel> PressureModel;

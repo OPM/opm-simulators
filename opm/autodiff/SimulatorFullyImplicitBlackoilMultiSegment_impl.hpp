@@ -125,7 +125,8 @@ namespace Opm
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
-                output_writer_.writeTimeStep( timer, state, well_state );
+                std::vector<data::CellData> noData;
+                output_writer_.writeTimeStep( timer, state, well_state, noData );
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -179,8 +180,10 @@ namespace Opm
             // Increment timer, remember well state.
             ++timer;
 
+
             // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
+            const auto& physicalModel = solver->model();
+            output_writer_.writeTimeStep( timer, state, well_state, physicalModel );
 
             prev_well_state = well_state;
         }

@@ -176,7 +176,10 @@ namespace Opm
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
-                output_writer_.writeTimeStep( timer, state, well_state );
+                // No per cell data is written for initial step, but will be
+                // for subsequent steps, when we have started simulating
+                std::vector<data::CellData> noData;
+                output_writer_.writeTimeStep( timer, state, well_state, noData );
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -191,7 +194,7 @@ namespace Opm
 
             const WellModel well_model(wells);
 
-            auto solver = asImpl().createSolver(well_model);
+            std::unique_ptr<Solver> solver = asImpl().createSolver(well_model);
 
             // Compute orignal FIP;
             if (!ooip_computed) {
@@ -296,7 +299,8 @@ namespace Opm
             ++timer;
 
             // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
+            const auto& physicalModel = solver->model();
+            output_writer_.writeTimeStep( timer, state, well_state, physicalModel );
 
             prev_well_state = well_state;
             // The well potentials are only computed if they are needed

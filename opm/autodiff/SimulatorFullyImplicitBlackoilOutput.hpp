@@ -215,15 +215,18 @@ namespace Opm
                              const double* permeability );
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
+        template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellState& wellState,
+                           const Model& physicalModel,
                            bool substep = false);
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellState& wellState,
+                                 const std::vector<data::CellData>& simProps,
                                  bool substep);
 
         /** \brief return output directory */
@@ -371,5 +374,181 @@ namespace Opm
     }
 
 
+
+
+
+    namespace detail {
+
+        struct WriterCall : public ThreadHandle :: ObjectInterface
+        {
+            BlackoilOutputWriter& writer_;
+            std::unique_ptr< SimulatorTimerInterface > timer_;
+            const SimulationDataContainer state_;
+            const WellState wellState_;
+            std::vector<data::CellData> simProps_;
+            const bool substep_;
+
+            explicit WriterCall( BlackoilOutputWriter& writer,
+                                 const SimulatorTimerInterface& timer,
+                                 const SimulationDataContainer& state,
+                                 const WellState& wellState,
+                                 const std::vector<data::CellData>& simProps,
+                                 bool substep )
+                : writer_( writer ),
+                  timer_( timer.clone() ),
+                  state_( state ),
+                  wellState_( wellState ),
+                  simProps_( simProps ),
+                  substep_( substep )
+            {
+            }
+
+            // callback to writer's serial writeTimeStep method
+            void run ()
+            {
+                // write data
+                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, substep_ );
+            }
+        };
+
+
+
+
+        template<class Model>
+        std::vector<data::CellData> getCellData(const Model& model,
+                const RestartConfig& restartConfig,
+                const int reportStepNum) {
+            std::vector<data::CellData> simProps;
+
+
+            std::map<const char*, int> outKeywords {
+                {"ALLPROPS", 0},
+
+                {"BG", 0},
+                {"BO", 0},
+                {"BW", 0},
+
+                {"CONV", 0},
+                {"DEN", 0},
+
+                {"KRG", 0},
+                {"KRO", 0},
+                {"KRW", 0},
+
+                {"RVSAT", 0},
+                {"RSSAT", 0},
+
+                {"NORST", 0},
+                {"PBPD", 0},
+                {"VISC", 0}
+            };
+
+            //Get the value of each of the keys
+            for (auto& keyValue : outKeywords) {
+                keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
+            }
+
+            //Postprocess some of the special keys
+            if (outKeywords["ALLPROPS"] > 0) {
+                //ALLPROPS implies KRO,KRW,KRG,xxx_DEN,xxx_VISC,BG,BO (xxx= OIL,GAS,WAT)
+                outKeywords["BG"] = std::max(outKeywords["BG"], 1);
+                outKeywords["BO"] = std::max(outKeywords["BO"], 1);
+                outKeywords["BW"] = std::max(outKeywords["BW"], 1);
+
+                outKeywords["KRG"] = std::max(outKeywords["KRG"], 1);
+                outKeywords["KRO"] = std::max(outKeywords["KRO"], 1);
+                outKeywords["KRW"] = std::max(outKeywords["KRW"], 1);
+
+                outKeywords["DEN"] = std::max(outKeywords["DEN"], 1);
+                outKeywords["VISC"] = std::max(outKeywords["VISC"], 1);
+            }
+
+
+
+            if (outKeywords["BW"]  > 0) {
+                const auto& b_adb = model.getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex::Aqua);
+                const auto& b_v = b_adb.value();
+                const std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
+                simProps.emplace_back("1OVERBW", Opm::UnitSystem::measure::volume, b);
+            }
+            if (outKeywords["BO"]  > 0) {
+                const auto& b_adb = model.getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex::Liquid);
+                const auto& b_v = b_adb.value();
+                const std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
+                simProps.emplace_back("1OVERBO", Opm::UnitSystem::measure::volume, b);
+            }
+            if (outKeywords["BG"] > 0) {
+                const auto& b_adb = model.getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex::Vapour);
+                const auto& b_v = b_adb.value();
+                const std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
+                simProps.emplace_back("1OVERBG", Opm::UnitSystem::measure::volume, b);
+            }
+
+            return simProps;
+        }
+
+        /**
+         * Template specialization to print raw cell data
+         */
+        template<>
+        inline
+        std::vector<data::CellData> getCellData<std::vector<data::CellData> >(const std::vector<data::CellData>& model,
+                const RestartConfig& restartConfig,
+                const int reportStepNum) {
+            return model;
+        }
+
+    }
+
+
+
+
+    template<class Model>
+    inline void
+    BlackoilOutputWriter::
+    writeTimeStep(const SimulatorTimerInterface& timer,
+                  const SimulationDataContainer& localState,
+                  const WellState& localWellState,
+                  const Model& physicalModel,
+                  bool substep)
+    {
+        // VTK output (is parallel if grid is parallel)
+        if( vtkWriter_ ) {
+            vtkWriter_->writeTimeStep( timer, localState, localWellState, false );
+        }
+
+        bool isIORank = output_ ;
+        if( parallelOutput_ && parallelOutput_->isParallel() )
+        {
+            // If this is not the initial write and no substep, then the well
+            // state used in the computation is actually the one of the last
+            // step. We need that well state for the gathering. Otherwise
+            // It an exception with a message like "global state does not
+            // contain well ..." might be thrown.
+            int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
+                (timer.reportStepNum() - 1) : timer.reportStepNum();
+            // collect all solutions to I/O rank
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
+        }
+
+        const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
+        const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
+        const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
+        const int reportStepNum = timer.reportStepNum();
+        std::vector<data::CellData> cellData = detail::getCellData( physicalModel, restartConfig, reportStepNum );
+
+        // serial output is only done on I/O rank
+        if( isIORank )
+        {
+            if( asyncOutput_ ) {
+                // dispatch the write call to the extra thread
+                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, substep ) );
+            }
+            else {
+                // just write the data to disk
+                writeTimeStepSerial( timer, state, wellState, cellData, substep );
+            }
+        }
+    }
 }
 #endif

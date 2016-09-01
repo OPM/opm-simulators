@@ -61,6 +61,7 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
+
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
@@ -120,6 +121,16 @@ namespace Opm {
 
     private:
 
+        const ADB& getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex phase) const {
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            if (pu.phase_used[phase]) {
+                const int pos = pu.phase_pos[phase];
+                return rq_[pos].b;
+            }
+            else {
+                return ADB::null();
+            }
+        }
 
         struct ReservoirResidualQuant {
             ReservoirResidualQuant();
