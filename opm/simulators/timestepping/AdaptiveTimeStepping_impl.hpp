@@ -228,7 +228,8 @@ namespace Opm {
                 // write data if outputWriter was provided
                 if( outputWriter ) {
                     bool substep = true;
-                    outputWriter->writeTimeStep( substepTimer, state, well_state, substep);
+                    const auto& physicalModel = solver.model();
+                    outputWriter->writeTimeStep( substepTimer, state, well_state, physicalModel, substep);
                 }
 
                 // set new time step length
