@@ -271,8 +271,8 @@ namespace Opm
             std::vector<V> COIP;
             COIP = solver->computeFluidInPlace(state, fipnum);
             FIPUnitConvert(eclipse_state_->getUnits(), COIP);
-            V OOIP_totals = FIPTotals(OOIP, state.pressure());
-            V COIP_totals = FIPTotals(COIP, state.pressure());
+            V OOIP_totals = FIPTotals(OOIP, state);
+            V COIP_totals = FIPTotals(COIP, state);
             outputFluidInPlace(OOIP_totals, COIP_totals,eclipse_state_->getUnits(), 0);
             for (size_t reg = 0; reg < OOIP.size(); ++reg) {
                 outputFluidInPlace(OOIP[reg], COIP[reg], eclipse_state_->getUnits(), reg+1);
@@ -682,7 +682,7 @@ namespace Opm
 
     template <class Implementation>
     V
-    SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip, const std::vector<double>& press)
+    SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip, const ReservoirState& state)
     {
         V totals(V::Zero(7));
         for (int i = 0; i < 5; ++i) {
@@ -690,9 +690,12 @@ namespace Opm
                 totals[i] += fip[reg][i];
             }
         }
-        const V p = Eigen::Map<const V>(& press[0], press.size());
-        totals[5] = geo_.poreVolume().sum();
-        totals[6] = unit::convert::to((p * geo_.poreVolume()).sum() / totals[5], unit::barsa);
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int np = state.numPhases();            
+        const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+        const V p = Eigen::Map<const V>(& state.pressure()[0], nc);
+        totals[5] = (geo_.poreVolume() * (s.col(Oil) + s.col(Gas))).sum();
+        totals[6] = unit::convert::to((p * geo_.poreVolume() * (s.col(Oil) + s.col(Gas))).sum() / totals[5], unit::barsa);
         
         return totals;
     }

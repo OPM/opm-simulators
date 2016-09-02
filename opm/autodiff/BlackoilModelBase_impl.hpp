@@ -2359,8 +2359,8 @@ namespace detail {
         // compute PAV and PORV or every regions.
         for (int c = 0; c < nc; ++c) {
             if (fipnum[c] != 0) {
-                values[fipnum[c]-1][5] += pv[c];
-                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c];
+                values[fipnum[c]-1][5] += pv[c] * (s.col(Gas)[c] + s.col(Oil)[c]);
+                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * (s.col(Gas)[c] + s.col(Oil)[c]);
             }
         }
 
