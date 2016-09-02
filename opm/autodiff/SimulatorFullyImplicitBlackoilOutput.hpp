@@ -216,7 +216,15 @@ namespace Opm
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability );
 
-        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        /** \copydoc Opm::OutputWriter::writeInit */
+        void writeInit(const std::vector<data::CellData>& simProps, const NNC& nnc);
+
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This function will extract the
+         *        requested output cell properties specified by the RPTRST keyword
+         *        and write these to file.
+         */
         template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
@@ -224,7 +232,35 @@ namespace Opm
                            const Model& physicalModel,
                            bool substep = false);
 
-        /** \copydoc Opm::OutputWriter::writeTimeStep */
+
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This function will write all
+         *        CellData in simProps to the file as well.
+         */
+        void writeTimeStepWithCellProperties(
+                           const SimulatorTimerInterface& timer,
+                           const SimulationDataContainer& reservoirState,
+                           const Opm::WellState& wellState,
+                           const std::vector<data::CellData>& simProps,
+                           bool substep = false);
+
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This function will not write
+         *        any cell properties (e.g., those requested by RPTRST keyword)
+         */
+        void writeTimeStepWithoutCellProperties(
+                           const SimulatorTimerInterface& timer,
+                           const SimulationDataContainer& reservoirState,
+                           const Opm::WellState& wellState,
+                           bool substep = false);
+
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This is the function which does
+         *        the actual write to file.
+         */
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellState& wellState,
@@ -381,39 +417,6 @@ namespace Opm
 
     namespace detail {
 
-        struct WriterCall : public ThreadHandle :: ObjectInterface
-        {
-            BlackoilOutputWriter& writer_;
-            std::unique_ptr< SimulatorTimerInterface > timer_;
-            const SimulationDataContainer state_;
-            const WellState wellState_;
-            std::vector<data::CellData> simProps_;
-            const bool substep_;
-
-            explicit WriterCall( BlackoilOutputWriter& writer,
-                                 const SimulatorTimerInterface& timer,
-                                 const SimulationDataContainer& state,
-                                 const WellState& wellState,
-                                 const std::vector<data::CellData>& simProps,
-                                 bool substep )
-                : writer_( writer ),
-                  timer_( timer.clone() ),
-                  state_( state ),
-                  wellState_( wellState ),
-                  simProps_( simProps ),
-                  substep_( substep )
-            {
-            }
-
-            // callback to writer's serial writeTimeStep method
-            void run ()
-            {
-                // write data
-                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, substep_ );
-            }
-        };
-
-
         /**
          * Converts an ADB into a standard vector by copy
          */
@@ -464,6 +467,7 @@ namespace Opm
             }
 
             //Postprocess some of the special keys
+            //FIXME: This logic should be removed once ALLPROPS-handling works in RestartConfig
             if (outKeywords["ALLPROPS"] > 0) {
                 //ALLPROPS implies KRO,KRW,KRG,xxx_DEN,xxx_VISC,BG,BO (xxx= OIL,GAS,WAT)
                 outKeywords["BG"] = std::max(outKeywords["BG"], 1);
@@ -498,20 +502,20 @@ namespace Opm
             if (aqua_active && outKeywords["BW"] > 0) {
                 simProps.emplace_back(
                         "1OVERBW",
-                        Opm::UnitSystem::measure::volume,
-                        adbToDoubleVector(sd.rq[aqua_idx].b));
+                        Opm::UnitSystem::measure::volume, //FIXME: Thsi should be oil dissolution factor
+                        std::move(adbToDoubleVector(sd.rq[aqua_idx].b)));
             }
             if (liquid_active && outKeywords["BO"]  > 0) {
                 simProps.emplace_back(
                         "1OVERBO",
                         Opm::UnitSystem::measure::volume,
-                        adbToDoubleVector(sd.rq[liquid_idx].b));
+                        std::move(adbToDoubleVector(sd.rq[liquid_idx].b)));
             }
             if (vapour_active && outKeywords["BG"] > 0) {
                 simProps.emplace_back(
                         "1OVERBG",
                         Opm::UnitSystem::measure::volume,
-                        adbToDoubleVector(sd.rq[vapour_idx].b));
+                        std::move(adbToDoubleVector(sd.rq[vapour_idx].b)));
             }
 
             /**
@@ -522,19 +526,19 @@ namespace Opm
                     simProps.emplace_back(
                             "WAT_DEN",
                             Opm::UnitSystem::measure::density,
-                            adbToDoubleVector(sd.rq[aqua_idx].rho));
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].rho)));
                 }
                 if (liquid_active) {
                     simProps.emplace_back(
                             "OIL_DEN",
                             Opm::UnitSystem::measure::density,
-                            adbToDoubleVector(sd.rq[liquid_idx].rho));
+                            std::move(adbToDoubleVector(sd.rq[liquid_idx].rho)));
                 }
                 if (vapour_active) {
                     simProps.emplace_back(
                             "GAS_DEN",
                             Opm::UnitSystem::measure::density,
-                            adbToDoubleVector(sd.rq[vapour_idx].rho));
+                            std::move(adbToDoubleVector(sd.rq[vapour_idx].rho)));
                 }
             }
 
@@ -546,19 +550,19 @@ namespace Opm
                     simProps.emplace_back(
                             "WAT_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            adbToDoubleVector(sd.rq[aqua_idx].mu));
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].mu)));
                 }
                 if (liquid_active) {
                     simProps.emplace_back(
                             "OIL_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            adbToDoubleVector(sd.rq[liquid_idx].mu));
+                            std::move(adbToDoubleVector(sd.rq[liquid_idx].mu)));
                 }
                 if (vapour_active) {
                     simProps.emplace_back(
                             "GAS_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            adbToDoubleVector(sd.rq[vapour_idx].mu));
+                            std::move(adbToDoubleVector(sd.rq[vapour_idx].mu)));
                 }
             }
 
@@ -569,35 +573,35 @@ namespace Opm
                 simProps.emplace_back(
                         "WATKR",
                         Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(sd.rq[aqua_idx].kr));
+                        std::move(adbToDoubleVector(sd.rq[aqua_idx].kr)));
             }
             if (aqua_active && outKeywords["KRO"] > 0) {
                 simProps.emplace_back(
                         "OILKR",
                         Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(sd.rq[liquid_idx].kr));
+                        std::move(adbToDoubleVector(sd.rq[liquid_idx].kr)));
             }
             if (aqua_active && outKeywords["KRG"] > 0) {
                 simProps.emplace_back(
                         "GASKR",
                         Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(sd.rq[vapour_idx].kr));
+                        std::move(adbToDoubleVector(sd.rq[vapour_idx].kr)));
             }
 
             /**
              * Vaporized and dissolved gas/oil ratio
              */
-            if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
-                simProps.emplace_back(
-                        "RVSAT",
-                        Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(sd.rv));
-            }
             if (vapour_active && liquid_active && outKeywords["RSSAT"] > 0) {
                 simProps.emplace_back(
                         "RSSAT",
-                        Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(sd.rs));
+                        Opm::UnitSystem::measure::gas_oil_ratio,
+                        std::move(adbToDoubleVector(sd.rs)));
+            }
+            if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
+                simProps.emplace_back(
+                        "RVSAT",
+                        Opm::UnitSystem::measure::oil_gas_ratio,
+                        std::move(adbToDoubleVector(sd.rv)));
             }
 
 
@@ -614,20 +618,6 @@ namespace Opm
             return simProps;
         }
 
-        /**
-         * Template specialization to print raw cell data. That is, if the
-         * model argument is a vector of celldata, simply return that as-is.
-         */
-        template<>
-        inline
-        std::vector<data::CellData> getCellData<std::vector<data::CellData> >(
-                const Opm::PhaseUsage& phaseUsage,
-                const std::vector<data::CellData>& model,
-                const RestartConfig& restartConfig,
-                const int reportStepNum) {
-            return model;
-        }
-
     }
 
 
@@ -642,43 +632,10 @@ namespace Opm
                   const Model& physicalModel,
                   bool substep)
     {
-        // VTK output (is parallel if grid is parallel)
-        if( vtkWriter_ ) {
-            vtkWriter_->writeTimeStep( timer, localState, localWellState, false );
-        }
-
-        bool isIORank = output_ ;
-        if( parallelOutput_ && parallelOutput_->isParallel() )
-        {
-            // If this is not the initial write and no substep, then the well
-            // state used in the computation is actually the one of the last
-            // step. We need that well state for the gathering. Otherwise
-            // It an exception with a message like "global state does not
-            // contain well ..." might be thrown.
-            int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
-                (timer.reportStepNum() - 1) : timer.reportStepNum();
-            // collect all solutions to I/O rank
-            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
-        }
-
-        const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
-        const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
         const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
         std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum );
-
-        // serial output is only done on I/O rank
-        if( isIORank )
-        {
-            if( asyncOutput_ ) {
-                // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, substep ) );
-            }
-            else {
-                // just write the data to disk
-                writeTimeStepSerial( timer, state, wellState, cellData, substep );
-            }
-        }
+        writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }
 #endif

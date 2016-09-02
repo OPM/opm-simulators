@@ -125,8 +125,9 @@ namespace Opm
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
-                std::vector<data::CellData> noData;
-                output_writer_.writeTimeStep( timer, state, well_state, noData );
+                // No per cell data is written for initial step, but will be
+                // for subsequent steps, when we have started simulating
+                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.

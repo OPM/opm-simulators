@@ -58,16 +58,6 @@ namespace Opm
 
 
 
-
-
-
-
-
-
-
-
-
-
     void outputStateVtk(const UnstructuredGrid& grid,
                         const SimulationDataContainer& state,
                         const int step,
@@ -264,6 +254,106 @@ namespace Opm
 
 
 
+    namespace detail {
+
+        struct WriterCall : public ThreadHandle :: ObjectInterface
+        {
+            BlackoilOutputWriter& writer_;
+            std::unique_ptr< SimulatorTimerInterface > timer_;
+            const SimulationDataContainer state_;
+            const WellState wellState_;
+            std::vector<data::CellData> simProps_;
+            const bool substep_;
+
+            explicit WriterCall( BlackoilOutputWriter& writer,
+                                 const SimulatorTimerInterface& timer,
+                                 const SimulationDataContainer& state,
+                                 const WellState& wellState,
+                                 const std::vector<data::CellData>& simProps,
+                                 bool substep )
+                : writer_( writer ),
+                  timer_( timer.clone() ),
+                  state_( state ),
+                  wellState_( wellState ),
+                  simProps_( simProps ),
+                  substep_( substep )
+            {
+            }
+
+            // callback to writer's serial writeTimeStep method
+            void run ()
+            {
+                // write data
+                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, substep_ );
+            }
+        };
+    }
+
+
+
+
+    void
+    BlackoilOutputWriter::
+    writeTimeStepWithoutCellProperties(
+                  const SimulatorTimerInterface& timer,
+                  const SimulationDataContainer& localState,
+                  const WellState& localWellState,
+                  bool substep)
+    {
+        std::vector<data::CellData> noCellProperties;
+        writeTimeStepWithCellProperties(timer, localState, localWellState, noCellProperties, substep);
+    }
+
+
+
+
+
+    void
+    BlackoilOutputWriter::
+    writeTimeStepWithCellProperties(
+                  const SimulatorTimerInterface& timer,
+                  const SimulationDataContainer& localState,
+                  const WellState& localWellState,
+                  const std::vector<data::CellData>& cellData,
+                  bool substep)
+    {
+        // VTK output (is parallel if grid is parallel)
+        if( vtkWriter_ ) {
+            vtkWriter_->writeTimeStep( timer, localState, localWellState, false );
+        }
+
+        bool isIORank = output_ ;
+        if( parallelOutput_ && parallelOutput_->isParallel() )
+        {
+            // If this is not the initial write and no substep, then the well
+            // state used in the computation is actually the one of the last
+            // step. We need that well state for the gathering. Otherwise
+            // It an exception with a message like "global state does not
+            // contain well ..." might be thrown.
+            int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
+                (timer.reportStepNum() - 1) : timer.reportStepNum();
+            // collect all solutions to I/O rank
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
+        }
+
+        const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
+        const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
+
+        // serial output is only done on I/O rank
+        if( isIORank )
+        {
+            if( asyncOutput_ ) {
+                // dispatch the write call to the extra thread
+                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, substep ) );
+            }
+            else {
+                // just write the data to disk
+                writeTimeStepSerial( timer, state, wellState, cellData, substep );
+            }
+        }
+    }
+
+
 
     void
     BlackoilOutputWriter::
@@ -285,31 +375,6 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                /*
-                  The simProps vector can be passed to the writeTimestep routine
-                  to add more properties to the restart file. Examples of the
-                  elements for the simProps vector can be the relative
-                  permeabilites KRO, KRG and KRW and the fluxes.
-
-                  Which properties are requested are configured with the RPTRST
-                  keyword, which is internalized in the RestartConfig class in
-                  EclipseState.
-                */
-
-                /*
-                  Assuming we already have correctly initialized
-                  std::vector<double> instances kro,krw and krg with the oil,
-                  water and gas relative permeabilities. Then we can write those
-                  to the restart file with:
-
-                     std::vector<data::CellData> simProps;
-
-                     simProps.emplace_back( {"KRO" , UnitSystem::measure::identity , kro} );
-                     simProps.emplace_back( {"KRG" , UnitSystem::measure::identity , krg} );
-                     simProps.emplace_back( {"KRW" , UnitSystem::measure::identity , krw} );
-
-                */
-
                 eclWriter_->writeTimeStep(timer.reportStepNum(),
                                           substep,
                                           timer.simulationTimeElapsed(),
@@ -381,10 +446,9 @@ namespace Opm
                 restorefile >> state;
                 restorefile >> wellState;
 
-                // FIXME: We this should optimally have the proper per cell data to dump
-                // Right now it will not dump any per cell data until we start simulating
-                std::vector<data::CellData> noData;
-                writeTimeStep( timer, state, wellState, noData );
+                // No per cell data is written for restore steps, but will be
+                // for subsequent steps, when we have started simulating
+                writeTimeStepWithoutCellProperties( timer, state, wellState );
 
                 // some output
                 std::cout << "Restored step " << timer.reportStepNum() << " at day "
