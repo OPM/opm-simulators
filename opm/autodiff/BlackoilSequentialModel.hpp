@@ -53,6 +53,9 @@ namespace Opm {
         typedef BlackoilSequentialModelParameters ModelParameters;
         typedef DefaultBlackoilSolutionState SolutionState;
 
+        typedef BlackoilTransportModel<Grid, WellModel> TransportModel;
+        typedef typename TransportModel::ReservoirResidualQuant ReservoirResidualQuant;
+
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
@@ -260,14 +263,14 @@ namespace Opm {
         }
 
 
-        const ADB& getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex phase) const {
-            return transport_model_->getReciprocalFormationVolumeFactor(phase);
+        /// Return reservoir residual quantitites (in particular for output functionality)
+        const std::vector<ReservoirResidualQuant>& getReservoirResidualQuantities() const {
+            return transport_model_->getReservoirResidualQuantities();
         }
 
 
     protected:
         typedef BlackoilPressureModel<Grid, WellModel> PressureModel;
-        typedef BlackoilTransportModel<Grid, WellModel> TransportModel;
         typedef NonlinearSolver<PressureModel> PressureSolver;
         typedef NonlinearSolver<TransportModel> TransportSolver;
 

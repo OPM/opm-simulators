@@ -117,6 +117,18 @@ namespace Opm {
         typedef ADB::V V;
         typedef ADB::M M;
 
+        struct ReservoirResidualQuant {
+            ReservoirResidualQuant();
+            std::vector<ADB> accum; // Accumulations
+            ADB              mflux; // Mass flux (surface conditions)
+            ADB              b;     // Reciprocal FVF
+            ADB              mu;    // Viscosities
+            ADB              rho;   // Densities
+            ADB              kr;    // Permeabilities
+            ADB              dh;    // Pressure drop across int. interfaces
+            ADB              mob;   // Phase mobility (per cell)
+        };
+
         typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
         typedef typename ModelTraits<Implementation>::WellState WellState;
         typedef typename ModelTraits<Implementation>::ModelParameters ModelParameters;
@@ -268,15 +280,9 @@ namespace Opm {
         computeFluidInPlace(const ReservoirState& x,
                             const std::vector<int>& fipnum);
 
-        const ADB& getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex phase) const {
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            if (pu.phase_used[phase]) {
-                const int pos = pu.phase_pos[phase];
-                return rq_[pos].b;
-            }
-            else {
-                return ADB::null();
-            }
+        /// Return reservoir residual quantitites (in particular for output functionality)
+        const std::vector<ReservoirResidualQuant>& getReservoirResidualQuantities() const {
+            return rq_;
         }
 
     protected:
@@ -288,14 +294,6 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
 
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant();
-            std::vector<ADB> accum; // Accumulations
-            ADB              mflux; // Mass flux (surface conditions)
-            ADB              b;     // Reciprocal FVF
-            ADB              dh;    // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-        };
 
         // ---------  Data members  ---------
 

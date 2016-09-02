@@ -287,6 +287,9 @@ namespace {
         : accum(2, ADB::null())
         , mflux(   ADB::null())
         , b    (   ADB::null())
+        , mu   (   ADB::null())
+        , rho  (   ADB::null())
+        , kr   (   ADB::null())
         , head (   ADB::null())
         , mob  (   ADB::null())
         , ads  (2, ADB::null())
@@ -644,11 +647,17 @@ namespace {
         // Set up the common parts of the mass balance equations
         // for each active phase.
         const V trans = subset(geo_.transmissibility(), ops_.internal_faces);
-        const std::vector<ADB> kr = computeRelPerm(state);
+        {
+            const std::vector<ADB> kr = computeRelPerm(state);
+            const auto& pu = fluid_.phaseUsage();
+            for (int phaseIdx=0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+                rq_[phaseIdx].kr = kr[pu.phase_pos[phaseIdx]];
+            }
+        }
 		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0]);
+        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, rq_[0].kr);
         const ADB mc = computeMc(state);
-        computeMassFlux(trans, mc, kr[1], krw_eff, state);
+        computeMassFlux(trans, mc, rq_[1].kr, krw_eff, state);
         residual_.material_balance_eq[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
                                     + ops_.div*rq_[0].mflux;
         residual_.material_balance_eq[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
@@ -953,17 +962,23 @@ namespace {
 		std::vector<ADB> press = computePressures(state);
 		const ADB& temp = state.temperature;
 
-        const ADB mu_w = fluidViscosity(0, press[0], temp, cond, cells_);
-        ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value());
-        rq_[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
-        rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
-        const ADB mu_o = fluidViscosity(1, press[1], temp, cond, cells_);
-        rq_[1].mob = tr_mult * kro / mu_o;
+		{
+            const ADB mu_w = fluidViscosity(0, press[0], temp, cond, cells_);
+            ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value());
+            rq_[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
+            rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
+            const ADB mu_o = fluidViscosity(1, press[1], temp, cond, cells_);
+            rq_[1].mob = tr_mult * kro / mu_o;
+
+            rq_[0].mu = mu_w;
+            rq_[1].mu = mu_o;
+		}
+
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB rho   = fluidDensity(phase, press[phase], temp, cond, cells_);
-            ADB& head = rq_[ phase ].head;
+            rq_[phase].rho = fluidDensity(phase, press[phase], temp, cond, cells_);
+            ADB& head = rq_[phase].head;
             // compute gravity potensial using the face average as in eclipse and MRST
-            const ADB rhoavg = ops_.caver * rho;
+            const ADB rhoavg = ops_.caver * rq_[phase].rho;
             const ADB dp = ops_.ngrad * press[phase] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
             head = transi*dp;
             UpwindSelector<double> upwind(grid_, ops_, head.value());

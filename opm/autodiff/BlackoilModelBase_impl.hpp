@@ -457,6 +457,9 @@ namespace detail {
         : accum(2, ADB::null())
         , mflux(   ADB::null())
         , b    (   ADB::null())
+        , mu   (   ADB::null())
+        , rho  (   ADB::null())
+        , kr   (   ADB::null())
         , dh   (   ADB::null())
         , mob  (   ADB::null())
     {
@@ -830,13 +833,19 @@ namespace detail {
         V trans_all(transi.size() + trans_nnc.size());
         trans_all << transi, trans_nnc;
 
-        const std::vector<ADB> kr = asImpl().computeRelPerm(state);
+
+        {
+            const std::vector<ADB> kr = asImpl().computeRelPerm(state);
+            for (int phaseIdx=0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+                rq_[phaseIdx].kr = kr[canph_[phaseIdx]];
+            }
+        }
 #pragma omp parallel for schedule(static)
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             const std::vector<PhasePresence>& cond = phaseCondition();
-            const ADB mu = asImpl().fluidViscosity(canph_[phaseIdx], state.canonical_phase_pressures[canph_[phaseIdx]], state.temperature, state.rs, state.rv, cond);
-            const ADB rho = asImpl().fluidDensity(canph_[phaseIdx], rq_[phaseIdx].b, state.rs, state.rv);
-            asImpl().computeMassFlux(phaseIdx, trans_all, kr[canph_[phaseIdx]], mu, rho, state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            rq_[phaseIdx].mu = asImpl().fluidViscosity(canph_[phaseIdx], state.canonical_phase_pressures[canph_[phaseIdx]], state.temperature, state.rs, state.rv, cond);
+            rq_[phaseIdx].rho = asImpl().fluidDensity(canph_[phaseIdx], rq_[phaseIdx].b, state.rs, state.rv);
+            asImpl().computeMassFlux(phaseIdx, trans_all, rq_[phaseIdx].kr, rq_[phaseIdx].mu, rq_[phaseIdx].rho, state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
             residual_.material_balance_eq[ phaseIdx ] =
                 pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])

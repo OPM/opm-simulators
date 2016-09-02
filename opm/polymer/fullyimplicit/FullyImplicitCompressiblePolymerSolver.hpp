@@ -62,6 +62,20 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
 
+        struct ReservoirResidualQuant {
+            ReservoirResidualQuant();
+            std::vector<ADB> accum; // Accumulations
+            ADB              mflux; // Mass flux (surface conditions)
+            ADB              b;     // Reciprocal FVF
+            ADB              mu;    // Viscosities
+            ADB              rho;   // Densities
+            ADB              kr;    // Permeabilities
+            ADB              head;  // Pressure drop across int. interfaces
+            ADB              mob;   // Phase mobility (per cell)
+            std::vector<ADB> ads;   // Adsorption term.
+        };
+
+
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
@@ -110,6 +124,11 @@ namespace Opm {
         double relativeChange(const PolymerBlackoilState& previous,
                               const PolymerBlackoilState& current ) const;
 
+        /// Return reservoir residual quantitites (in particular for output functionality)
+        const std::vector<ReservoirResidualQuant>& getReservoirResidualQuantities() const {
+            return rq_;
+        }
+
         /// Compute fluid in place.
         /// \param[in]    ReservoirState
         /// \param[in]    WellState
@@ -120,27 +139,6 @@ namespace Opm {
                             const std::vector<int>& fipnum);
 
     private:
-
-        const ADB& getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex phase) const {
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            if (pu.phase_used[phase]) {
-                const int pos = pu.phase_pos[phase];
-                return rq_[pos].b;
-            }
-            else {
-                return ADB::null();
-            }
-        }
-
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant();
-            std::vector<ADB> accum; // Accumulations
-            ADB              mflux; // Mass flux (surface conditions)
-            ADB              b;     // Reciprocal FVF
-            ADB              head;  // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-			std::vector<ADB> ads;   // Adsorption term.
-        };
 
         struct SolutionState {
             SolutionState(const int np);

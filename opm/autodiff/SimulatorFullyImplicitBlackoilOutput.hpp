@@ -38,6 +38,7 @@
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/ThreadHandle.hpp>
+#include <opm/autodiff/AutoDiffBlock.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
@@ -412,35 +413,48 @@ namespace Opm
         };
 
 
+        /**
+         * Converts an ADB into a standard vector by copy
+         */
+        inline std::vector<double> adbToDoubleVector(const Opm::AutoDiffBlock<double>& input) {
+            const auto& b_v = input.value();
+            std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
+            return b;
+        }
 
 
         template<class Model>
-        std::vector<data::CellData> getCellData(const Model& model,
+        std::vector<data::CellData> getCellData(
+                const Opm::PhaseUsage& phaseUsage,
+                const Model& model,
                 const RestartConfig& restartConfig,
                 const int reportStepNum) {
-            std::vector<data::CellData> simProps;
 
+
+            std::vector<data::CellData> simProps;
 
             std::map<const char*, int> outKeywords {
                 {"ALLPROPS", 0},
 
+                // Formation volume factors
                 {"BG", 0},
                 {"BO", 0},
                 {"BW", 0},
 
-                {"CONV", 0},
-                {"DEN", 0},
+                {"CONV", 0}, // < Cells with convergence problems
+                {"DEN", 0},  // < Densities
 
+                // Relative permeabilities
                 {"KRG", 0},
                 {"KRO", 0},
                 {"KRW", 0},
 
-                {"RVSAT", 0},
-                {"RSSAT", 0},
+                {"RVSAT", 0}, // < Vaporized gas/oil ratio
+                {"RSSAT", 0}, // < Dissolved gas/oil ratio
 
-                {"NORST", 0},
-                {"PBPD", 0},
-                {"VISC", 0}
+                {"NORST", 0}, // < Visualization restart file only
+                {"PBPD", 0},  // < Bubble point and dew point pressures
+                {"VISC", 0}   // < Viscosities
             };
 
             //Get the value of each of the keys
@@ -455,44 +469,143 @@ namespace Opm
                 outKeywords["BO"] = std::max(outKeywords["BO"], 1);
                 outKeywords["BW"] = std::max(outKeywords["BW"], 1);
 
+                outKeywords["DEN"] = std::max(outKeywords["DEN"], 1);
+
                 outKeywords["KRG"] = std::max(outKeywords["KRG"], 1);
                 outKeywords["KRO"] = std::max(outKeywords["KRO"], 1);
                 outKeywords["KRW"] = std::max(outKeywords["KRW"], 1);
 
-                outKeywords["DEN"] = std::max(outKeywords["DEN"], 1);
                 outKeywords["VISC"] = std::max(outKeywords["VISC"], 1);
             }
 
+            const std::vector<typename Model::ReservoirResidualQuant>& rq = model.getReservoirResidualQuantities();
 
 
-            if (outKeywords["BW"]  > 0) {
-                const auto& b_adb = model.getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex::Aqua);
-                const auto& b_v = b_adb.value();
-                const std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
-                simProps.emplace_back("1OVERBW", Opm::UnitSystem::measure::volume, b);
+            //Get shorthands for water, oil, gas
+            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
+            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
+            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
+
+            const int aqua_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Aqua];
+            const int liquid_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Liquid];
+            const int vapour_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Vapour];
+
+
+            /**
+             * Formation volume factors for water, oil, gas
+             */
+            if (aqua_active && outKeywords["BW"] > 0) {
+                simProps.emplace_back(
+                        "1OVERBW",
+                        Opm::UnitSystem::measure::volume,
+                        adbToDoubleVector(rq[aqua_idx].b));
             }
-            if (outKeywords["BO"]  > 0) {
-                const auto& b_adb = model.getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex::Liquid);
-                const auto& b_v = b_adb.value();
-                const std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
-                simProps.emplace_back("1OVERBO", Opm::UnitSystem::measure::volume, b);
+            if (liquid_active && outKeywords["BO"]  > 0) {
+                simProps.emplace_back(
+                        "1OVERBO",
+                        Opm::UnitSystem::measure::volume,
+                        adbToDoubleVector(rq[liquid_idx].b));
             }
-            if (outKeywords["BG"] > 0) {
-                const auto& b_adb = model.getReciprocalFormationVolumeFactor(PhaseUsage::PhaseIndex::Vapour);
-                const auto& b_v = b_adb.value();
-                const std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
-                simProps.emplace_back("1OVERBG", Opm::UnitSystem::measure::volume, b);
+            if (vapour_active && outKeywords["BG"] > 0) {
+                simProps.emplace_back(
+                        "1OVERBG",
+                        Opm::UnitSystem::measure::volume,
+                        adbToDoubleVector(rq[vapour_idx].b));
             }
+
+            /**
+             * Densities for water, oil gas
+             */
+            if (outKeywords["DEN"] > 0) {
+                if (aqua_active) {
+                    simProps.emplace_back(
+                            "WAT_DEN",
+                            Opm::UnitSystem::measure::density,
+                            adbToDoubleVector(rq[aqua_idx].rho));
+                }
+                if (liquid_active) {
+                    simProps.emplace_back(
+                            "OIL_DEN",
+                            Opm::UnitSystem::measure::density,
+                            adbToDoubleVector(rq[liquid_idx].rho));
+                }
+                if (vapour_active) {
+                    simProps.emplace_back(
+                            "GAS_DEN",
+                            Opm::UnitSystem::measure::density,
+                            adbToDoubleVector(rq[vapour_idx].rho));
+                }
+            }
+
+            /**
+             * Viscosities for water, oil gas
+             */
+            if (outKeywords["VISC"] > 0) {
+                if (aqua_active) {
+                    simProps.emplace_back(
+                            "WAT_VISC",
+                            Opm::UnitSystem::measure::viscosity,
+                            adbToDoubleVector(rq[aqua_idx].mu));
+                }
+                if (liquid_active) {
+                    simProps.emplace_back(
+                            "OIL_VISC",
+                            Opm::UnitSystem::measure::viscosity,
+                            adbToDoubleVector(rq[liquid_idx].mu));
+                }
+                if (vapour_active) {
+                    simProps.emplace_back(
+                            "GAS_VISC",
+                            Opm::UnitSystem::measure::viscosity,
+                            adbToDoubleVector(rq[vapour_idx].mu));
+                }
+            }
+
+            /**
+             * Relative permeabilities for water, oil, gas
+             */
+            if (aqua_active && outKeywords["KRW"] > 0) {
+                simProps.emplace_back(
+                        "WATKR",
+                        Opm::UnitSystem::measure::permeability,
+                        adbToDoubleVector(rq[aqua_idx].kr));
+            }
+            if (aqua_active && outKeywords["KRO"] > 0) {
+                simProps.emplace_back(
+                        "OILKR",
+                        Opm::UnitSystem::measure::permeability,
+                        adbToDoubleVector(rq[liquid_idx].kr));
+            }
+            if (aqua_active && outKeywords["KRG"] > 0) {
+                simProps.emplace_back(
+                        "GASKR",
+                        Opm::UnitSystem::measure::permeability,
+                        adbToDoubleVector(rq[vapour_idx].kr));
+            }
+
+            /**
+             * Vaporized and dissolved gas/oil ratio
+             */
+            if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
+                //FIXME: This requires a separate structure instead of RQ. Perhaps solutionstate?
+            }
+            if (vapour_active && liquid_active && outKeywords["RSSAT"] > 0) {
+
+            }
+
 
             return simProps;
         }
 
         /**
-         * Template specialization to print raw cell data
+         * Template specialization to print raw cell data. That is, if the
+         * model argument is a vector of celldata, simply return that as-is.
          */
         template<>
         inline
-        std::vector<data::CellData> getCellData<std::vector<data::CellData> >(const std::vector<data::CellData>& model,
+        std::vector<data::CellData> getCellData<std::vector<data::CellData> >(
+                const Opm::PhaseUsage& phaseUsage,
+                const std::vector<data::CellData>& model,
                 const RestartConfig& restartConfig,
                 const int reportStepNum) {
             return model;
@@ -535,7 +648,7 @@ namespace Opm
         const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
         const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
-        std::vector<data::CellData> cellData = detail::getCellData( physicalModel, restartConfig, reportStepNum );
+        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum );
 
         // serial output is only done on I/O rank
         if( isIORank )
