@@ -719,8 +719,8 @@ namespace Opm
             ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << " BARSA                :\n"
                << std::fixed << std::setprecision(0)
                << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RM3                :\n"
-               << "                                                  : Pressure is weighted by hydrocarbon pore voulme:\n"
-               << "                                                  : Porv volume are taken at reference conditions  :\n"
+               << "                                                  : Pressure is weighted by hydrocarbon pore volume:\n"
+               << "                                                  : Porv volumes are taken at reference conditions  :\n"
                << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
         }
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
