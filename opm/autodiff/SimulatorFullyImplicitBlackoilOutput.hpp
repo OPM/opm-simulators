@@ -25,6 +25,7 @@
 #include <opm/core/utility/Compat.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/output/eclipse/EclipseReader.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -478,7 +479,7 @@ namespace Opm
                 outKeywords["VISC"] = std::max(outKeywords["VISC"], 1);
             }
 
-            const std::vector<typename Model::ReservoirResidualQuant>& rq = model.getReservoirResidualQuantities();
+            const typename Model::SimulatorData& sd = model.getSimulatorData();
 
 
             //Get shorthands for water, oil, gas
@@ -498,19 +499,19 @@ namespace Opm
                 simProps.emplace_back(
                         "1OVERBW",
                         Opm::UnitSystem::measure::volume,
-                        adbToDoubleVector(rq[aqua_idx].b));
+                        adbToDoubleVector(sd.rq[aqua_idx].b));
             }
             if (liquid_active && outKeywords["BO"]  > 0) {
                 simProps.emplace_back(
                         "1OVERBO",
                         Opm::UnitSystem::measure::volume,
-                        adbToDoubleVector(rq[liquid_idx].b));
+                        adbToDoubleVector(sd.rq[liquid_idx].b));
             }
             if (vapour_active && outKeywords["BG"] > 0) {
                 simProps.emplace_back(
                         "1OVERBG",
                         Opm::UnitSystem::measure::volume,
-                        adbToDoubleVector(rq[vapour_idx].b));
+                        adbToDoubleVector(sd.rq[vapour_idx].b));
             }
 
             /**
@@ -521,19 +522,19 @@ namespace Opm
                     simProps.emplace_back(
                             "WAT_DEN",
                             Opm::UnitSystem::measure::density,
-                            adbToDoubleVector(rq[aqua_idx].rho));
+                            adbToDoubleVector(sd.rq[aqua_idx].rho));
                 }
                 if (liquid_active) {
                     simProps.emplace_back(
                             "OIL_DEN",
                             Opm::UnitSystem::measure::density,
-                            adbToDoubleVector(rq[liquid_idx].rho));
+                            adbToDoubleVector(sd.rq[liquid_idx].rho));
                 }
                 if (vapour_active) {
                     simProps.emplace_back(
                             "GAS_DEN",
                             Opm::UnitSystem::measure::density,
-                            adbToDoubleVector(rq[vapour_idx].rho));
+                            adbToDoubleVector(sd.rq[vapour_idx].rho));
                 }
             }
 
@@ -545,19 +546,19 @@ namespace Opm
                     simProps.emplace_back(
                             "WAT_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            adbToDoubleVector(rq[aqua_idx].mu));
+                            adbToDoubleVector(sd.rq[aqua_idx].mu));
                 }
                 if (liquid_active) {
                     simProps.emplace_back(
                             "OIL_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            adbToDoubleVector(rq[liquid_idx].mu));
+                            adbToDoubleVector(sd.rq[liquid_idx].mu));
                 }
                 if (vapour_active) {
                     simProps.emplace_back(
                             "GAS_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            adbToDoubleVector(rq[vapour_idx].mu));
+                            adbToDoubleVector(sd.rq[vapour_idx].mu));
                 }
             }
 
@@ -568,29 +569,45 @@ namespace Opm
                 simProps.emplace_back(
                         "WATKR",
                         Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(rq[aqua_idx].kr));
+                        adbToDoubleVector(sd.rq[aqua_idx].kr));
             }
             if (aqua_active && outKeywords["KRO"] > 0) {
                 simProps.emplace_back(
                         "OILKR",
                         Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(rq[liquid_idx].kr));
+                        adbToDoubleVector(sd.rq[liquid_idx].kr));
             }
             if (aqua_active && outKeywords["KRG"] > 0) {
                 simProps.emplace_back(
                         "GASKR",
                         Opm::UnitSystem::measure::permeability,
-                        adbToDoubleVector(rq[vapour_idx].kr));
+                        adbToDoubleVector(sd.rq[vapour_idx].kr));
             }
 
             /**
              * Vaporized and dissolved gas/oil ratio
              */
             if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
-                //FIXME: This requires a separate structure instead of RQ. Perhaps solutionstate?
+                simProps.emplace_back(
+                        "RVSAT",
+                        Opm::UnitSystem::measure::permeability,
+                        adbToDoubleVector(sd.rv));
             }
             if (vapour_active && liquid_active && outKeywords["RSSAT"] > 0) {
+                simProps.emplace_back(
+                        "RSSAT",
+                        Opm::UnitSystem::measure::permeability,
+                        adbToDoubleVector(sd.rs));
+            }
 
+
+            /**
+             * Bubble point and dew point pressures
+             */
+            if (vapour_active && liquid_active && outKeywords["PBPD"] > 0) {
+                Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
+                        "Writing bubble points and dew points (PBPD) to file is unsupported, "
+                        "as the simulator does not use these internally.");
             }
 
 

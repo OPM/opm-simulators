@@ -189,7 +189,7 @@ namespace detail {
         , has_vapoil_(has_vapoil)
         , param_( param )
         , use_threshold_pressure_(false)
-        , rq_    (fluid.numPhases())
+        , sd_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid))
         , well_model_ (well_model)
         , isRs_(V::Zero(AutoDiffGrid::numCells(grid)))
@@ -465,6 +465,15 @@ namespace detail {
     {
     }
 
+    template <class Grid, class WellModel, class Implementation>
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    SimulatorData::SimulatorData(int num_phases)
+        : rq(num_phases)
+        , rv(ADB::null())
+        , rs(ADB::null())
+    {
+    }
+
 
 
 
@@ -707,10 +716,10 @@ namespace detail {
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                rq_[pos].b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
-                rq_[pos].accum[aix] = pv_mult * rq_[pos].b * sat[pos];
-                // OPM_AD_DUMP(rq_[pos].b);
-                // OPM_AD_DUMP(rq_[pos].accum[aix]);
+                sd_.rq[pos].b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
+                sd_.rq[pos].accum[aix] = pv_mult * sd_.rq[pos].b * sat[pos];
+                // OPM_AD_DUMP(sd_.rq[pos].b);
+                // OPM_AD_DUMP(sd_.rq[pos].accum[aix]);
             }
         }
 
@@ -721,11 +730,11 @@ namespace detail {
 
             // Temporary copy to avoid contribution of dissolved gas in the vaporized oil
             // when both dissolved gas and vaporized oil are present.
-            const ADB accum_gas_copy =rq_[pg].accum[aix];
+            const ADB accum_gas_copy =sd_.rq[pg].accum[aix];
 
-            rq_[pg].accum[aix] += state.rs * rq_[po].accum[aix];
-            rq_[po].accum[aix] += state.rv * accum_gas_copy;
-            // OPM_AD_DUMP(rq_[pg].accum[aix]);
+            sd_.rq[pg].accum[aix] += state.rs * sd_.rq[po].accum[aix];
+            sd_.rq[po].accum[aix] += state.rv * accum_gas_copy;
+            // OPM_AD_DUMP(sd_.rq[pg].accum[aix]);
         }
     }
 
@@ -789,7 +798,7 @@ namespace detail {
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        asImpl().wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
+        asImpl().wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
@@ -820,10 +829,10 @@ namespace detail {
     {
         // Compute b_p and the accumulation term b_p*s_p for each phase,
         // except gas. For gas, we compute b_g*s_g + Rs*b_o*s_o.
-        // These quantities are stored in rq_[phase].accum[1].
+        // These quantities are stored in sd_.rq[phase].accum[1].
         // The corresponding accumulation terms from the start of
         // the timestep (b^0_p*s^0_p etc.) were already computed
-        // on the initial call to assemble() and stored in rq_[phase].accum[0].
+        // on the initial call to assemble() and stored in sd_.rq[phase].accum[0].
         asImpl().computeAccum(state, 1);
 
         // Set up the common parts of the mass balance equations
@@ -837,19 +846,19 @@ namespace detail {
         {
             const std::vector<ADB> kr = asImpl().computeRelPerm(state);
             for (int phaseIdx=0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
-                rq_[phaseIdx].kr = kr[canph_[phaseIdx]];
+                sd_.rq[phaseIdx].kr = kr[canph_[phaseIdx]];
             }
         }
 #pragma omp parallel for schedule(static)
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             const std::vector<PhasePresence>& cond = phaseCondition();
-            rq_[phaseIdx].mu = asImpl().fluidViscosity(canph_[phaseIdx], state.canonical_phase_pressures[canph_[phaseIdx]], state.temperature, state.rs, state.rv, cond);
-            rq_[phaseIdx].rho = asImpl().fluidDensity(canph_[phaseIdx], rq_[phaseIdx].b, state.rs, state.rv);
-            asImpl().computeMassFlux(phaseIdx, trans_all, rq_[phaseIdx].kr, rq_[phaseIdx].mu, rq_[phaseIdx].rho, state.canonical_phase_pressures[canph_[phaseIdx]], state);
+            sd_.rq[phaseIdx].mu = asImpl().fluidViscosity(canph_[phaseIdx], state.canonical_phase_pressures[canph_[phaseIdx]], state.temperature, state.rs, state.rv, cond);
+            sd_.rq[phaseIdx].rho = asImpl().fluidDensity(canph_[phaseIdx], sd_.rq[phaseIdx].b, state.rs, state.rv);
+            asImpl().computeMassFlux(phaseIdx, trans_all, sd_.rq[phaseIdx].kr, sd_.rq[phaseIdx].mu, sd_.rq[phaseIdx].rho, state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
             residual_.material_balance_eq[ phaseIdx ] =
-                pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
-                + ops_.div*rq_[phaseIdx].mflux;
+                pvdt_ * (sd_.rq[phaseIdx].accum[1] - sd_.rq[phaseIdx].accum[0])
+                + ops_.div*sd_.rq[phaseIdx].mflux;
         }
 
         // -------- Extra (optional) rs and rv contributions to the mass balance equations --------
@@ -862,15 +871,15 @@ namespace detail {
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
 
             const UpwindSelector<double> upwindOil(grid_, ops_,
-                                                rq_[po].dh.value());
+                                                sd_.rq[po].dh.value());
             const ADB rs_face = upwindOil.select(state.rs);
 
             const UpwindSelector<double> upwindGas(grid_, ops_,
-                                                rq_[pg].dh.value());
+                                                sd_.rq[pg].dh.value());
             const ADB rv_face = upwindGas.select(state.rv);
 
-            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
-            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
+            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * sd_.rq[po].mflux);
+            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * sd_.rq[pg].mflux);
 
             // OPM_AD_DUMP(residual_.material_balance_eq[ Gas ]);
 
@@ -897,7 +906,7 @@ namespace detail {
         {
             if (active_[idx]) {
                 const int pos    = pu.phase_pos[idx];
-                const ADB& temp_b = rq_[pos].b;
+                const ADB& temp_b = sd_.rq[pos].b;
                 B = 1. / temp_b.value();
 #if HAVE_MPI
                 if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
@@ -1570,21 +1579,21 @@ namespace detail {
     {
         // Compute and store mobilities.
         const ADB tr_mult = transMult(state.pressure);
-        rq_[ actph ].mob = tr_mult * kr / mu;
+        sd_.rq[ actph ].mob = tr_mult * kr / mu;
 
         // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
         const ADB rhoavg = ops_.caver * rho;
-        rq_[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        sd_.rq[ actph ].dh = ops_.ngrad * phasePressure - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
         if (use_threshold_pressure_) {
-            applyThresholdPressures(rq_[ actph ].dh);
+            applyThresholdPressures(sd_.rq[ actph ].dh);
         }
 
         // Compute phase fluxes with upwinding of formation value factor and mobility.
-        const ADB& b   = rq_[ actph ].b;
-        const ADB& mob = rq_[ actph ].mob;
-        const ADB& dh  = rq_[ actph ].dh;
+        const ADB& b   = sd_.rq[ actph ].b;
+        const ADB& mob = sd_.rq[ actph ].mob;
+        const ADB& dh  = sd_.rq[ actph ].dh;
         UpwindSelector<double> upwind(grid_, ops_, dh.value());
-        rq_[ actph ].mflux = upwind.select(b * mob) * (transi * dh);
+        sd_.rq[ actph ].mflux = upwind.select(b * mob) * (transi * dh);
     }
 
 
@@ -1806,7 +1815,7 @@ namespace detail {
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
         const int nm = asImpl().numMaterials();
-        assert(int(rq_.size()) == nm);
+        assert(int(sd_.rq.size()) == nm);
 
         const V& pv = geo_.poreVolume();
 
@@ -1820,7 +1829,7 @@ namespace detail {
 
         for ( int idx = 0; idx < nm; ++idx )
         {
-            const ADB& tempB = rq_[idx].b;
+            const ADB& tempB = sd_.rq[idx].b;
             B.col(idx)       = 1./tempB.value();
             R.col(idx)       = residual_.material_balance_eq[idx].value();
             tempV.col(idx)   = R.col(idx).abs()/pv;
@@ -1941,7 +1950,7 @@ namespace detail {
         Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, nm);
         for ( int idx = 0; idx < nm; ++idx )
         {
-            const ADB& tempB = rq_[idx].b;
+            const ADB& tempB = sd_.rq[idx].b;
             B.col(idx)       = 1./tempB.value();
             R.col(idx)       = residual_.material_balance_eq[idx].value();
             tempV.col(idx)   = R.col(idx).abs()/pv;

@@ -53,8 +53,9 @@ namespace Opm {
         typedef BlackoilSequentialModelParameters ModelParameters;
         typedef DefaultBlackoilSolutionState SolutionState;
 
+        typedef BlackoilPressureModel<Grid, WellModel> PressureModel;
         typedef BlackoilTransportModel<Grid, WellModel> TransportModel;
-        typedef typename TransportModel::ReservoirResidualQuant ReservoirResidualQuant;
+        typedef typename TransportModel::SimulatorData SimulatorData;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -263,14 +264,13 @@ namespace Opm {
         }
 
 
-        /// Return reservoir residual quantitites (in particular for output functionality)
-        const std::vector<ReservoirResidualQuant>& getReservoirResidualQuantities() const {
-            return transport_model_->getReservoirResidualQuantities();
+        /// Return reservoir simulation data (for output functionality)
+        const SimulatorData& getSimulatorData() const {
+            return transport_model_->getSimulatorData();
         }
 
 
     protected:
-        typedef BlackoilPressureModel<Grid, WellModel> PressureModel;
         typedef NonlinearSolver<PressureModel> PressureSolver;
         typedef NonlinearSolver<TransportModel> TransportSolver;
 

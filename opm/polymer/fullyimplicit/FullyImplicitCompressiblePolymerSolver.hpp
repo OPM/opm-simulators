@@ -75,6 +75,17 @@ namespace Opm {
             std::vector<ADB> ads;   // Adsorption term.
         };
 
+        struct SimulatorData {
+            SimulatorData(int num_phases)
+                : rq(num_phases)
+                , rs(ADB::null())
+                , rv(ADB::null())
+            {
+            }
+            std::vector<ReservoirResidualQuant> rq;
+            ADB rs;
+            ADB rv;
+        };
 
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -124,9 +135,9 @@ namespace Opm {
         double relativeChange(const PolymerBlackoilState& previous,
                               const PolymerBlackoilState& current ) const;
 
-        /// Return reservoir residual quantitites (in particular for output functionality)
-        const std::vector<ReservoirResidualQuant>& getReservoirResidualQuantities() const {
-            return rq_;
+        /// Return reservoir simulation data (for output functionality)
+        const SimulatorData& getSimulatorData() const {
+            return sd_;
         }
 
         /// Compute fluid in place.
@@ -173,7 +184,7 @@ namespace Opm {
         const M                         grav_;
 		V    			 				cmax_;
         std::vector<PhasePresence> phaseCondition_;
-        std::vector<ReservoirResidualQuant> rq_;
+        SimulatorData sd_;
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
         // The well_eq has size equal to the number of wells.

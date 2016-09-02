@@ -109,7 +109,7 @@ namespace Opm {
             }
             residual_.matbalscale.resize(fluid_.numPhases() + 1, 1.1169); // use the same as the water phase
             // If deck has polymer, residual_ should contain polymer equation.
-            rq_.resize(fluid_.numPhases() + 1);
+            sd_.rq.resize(fluid_.numPhases() + 1);
             residual_.material_balance_eq.resize(fluid_.numPhases() + 1, ADB::null());
             Base::material_name_.push_back("Polymer");
             assert(poly_pos_ == fluid_.numPhases());
@@ -245,7 +245,7 @@ namespace Opm {
             const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], AutoDiffGrid::numCells(grid_));
             const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
             // Compute polymer accumulation term.
-            rq_[poly_pos_].accum[aix] = pv_mult * rq_[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol)
+            sd_.rq[poly_pos_].accum[aix] = pv_mult * sd_.rq[pu.phase_pos[Water]].b * sat[pu.phase_pos[Water]] * c * (1. - dead_pore_vol)
                                         + pv_mult * rho_rock * (1. - phi) / phi * ads;
         }
 
@@ -282,10 +282,10 @@ namespace Opm {
 
         // Compute b_p and the accumulation term b_p*s_p for each phase,
         // except gas. For gas, we compute b_g*s_g + Rs*b_o*s_o.
-        // These quantities are stored in rq_[phase].accum[1].
+        // These quantities are stored in sd_.rq[phase].accum[1].
         // The corresponding accumulation terms from the start of
         // the timestep (b^0_p*s^0_p etc.) were already computed
-        // on the initial call to assemble() and stored in rq_[phase].accum[0].
+        // on the initial call to assemble() and stored in sd_.rq[phase].accum[0].
         computeAccum(state, 1);
 
         // Set up the common parts of the mass balance equations
@@ -308,12 +308,12 @@ namespace Opm {
         for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
             const std::vector<PhasePresence>& cond = phaseCondition();
             const ADB mu = fluidViscosity(canph_[phaseIdx], state.canonical_phase_pressures[canph_[phaseIdx]], state.temperature, state.rs, state.rv, cond);
-            const ADB rho = fluidDensity(canph_[phaseIdx], rq_[phaseIdx].b, state.rs, state.rv);
+            const ADB rho = fluidDensity(canph_[phaseIdx], sd_.rq[phaseIdx].b, state.rs, state.rv);
             computeMassFlux(phaseIdx, transi, kr[canph_[phaseIdx]], mu, rho, state.canonical_phase_pressures[canph_[phaseIdx]], state);
 
             residual_.material_balance_eq[ phaseIdx ] =
-                pvdt_ * (rq_[phaseIdx].accum[1] - rq_[phaseIdx].accum[0])
-                + ops_.div*rq_[phaseIdx].mflux;
+                pvdt_ * (sd_.rq[phaseIdx].accum[1] - sd_.rq[phaseIdx].accum[0])
+                + ops_.div*sd_.rq[phaseIdx].mflux;
         }
 
         // -------- Extra (optional) rs and rv contributions to the mass balance equations --------
@@ -326,15 +326,15 @@ namespace Opm {
             const int pg = fluid_.phaseUsage().phase_pos[ Gas ];
 
             const UpwindSelector<double> upwindOil(grid_, ops_,
-                                                rq_[po].dh.value());
+                                                sd_.rq[po].dh.value());
             const ADB rs_face = upwindOil.select(state.rs);
 
             const UpwindSelector<double> upwindGas(grid_, ops_,
-                                                rq_[pg].dh.value());
+                                                sd_.rq[pg].dh.value());
             const ADB rv_face = upwindGas.select(state.rv);
 
-            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * rq_[po].mflux);
-            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * rq_[pg].mflux);
+            residual_.material_balance_eq[ pg ] += ops_.div * (rs_face * sd_.rq[po].mflux);
+            residual_.material_balance_eq[ po ] += ops_.div * (rv_face * sd_.rq[pg].mflux);
 
             // OPM_AD_DUMP(residual_.material_balance_eq[ Gas ]);
 
@@ -342,8 +342,8 @@ namespace Opm {
 
         // Add polymer equation.
         if (has_polymer_) {
-            residual_.material_balance_eq[poly_pos_] = pvdt_ * (rq_[poly_pos_].accum[1] - rq_[poly_pos_].accum[0])
-                                               + ops_.div*rq_[poly_pos_].mflux;
+            residual_.material_balance_eq[poly_pos_] = pvdt_ * (sd_.rq[poly_pos_].accum[1] - sd_.rq[poly_pos_].accum[0])
+                                               + ops_.div*sd_.rq[poly_pos_].mflux;
         }
 
 
@@ -462,24 +462,24 @@ namespace Opm {
                 const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr);
                 const ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value());
                 // Reduce mobility of water phase by relperm reduction and effective viscosity increase.
-                rq_[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+                sd_.rq[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
                 // Compute polymer mobility.
                 const ADB inv_poly_eff_visc = polymer_props_ad_.effectiveInvPolymerVisc(state.concentration, mu.value());
-                rq_[poly_pos_].mob = tr_mult * mc * krw_eff * inv_poly_eff_visc;
-                rq_[poly_pos_].b = rq_[actph].b;
-                rq_[poly_pos_].dh = rq_[actph].dh;
-                UpwindSelector<double> upwind(grid_, ops_, rq_[poly_pos_].dh.value());
+                sd_.rq[poly_pos_].mob = tr_mult * mc * krw_eff * inv_poly_eff_visc;
+                sd_.rq[poly_pos_].b = sd_.rq[actph].b;
+                sd_.rq[poly_pos_].dh = sd_.rq[actph].dh;
+                UpwindSelector<double> upwind(grid_, ops_, sd_.rq[poly_pos_].dh.value());
                 // Compute polymer flux.
-                rq_[poly_pos_].mflux = upwind.select(rq_[poly_pos_].b * rq_[poly_pos_].mob) * (transi * rq_[poly_pos_].dh);
+                sd_.rq[poly_pos_].mflux = upwind.select(sd_.rq[poly_pos_].b * sd_.rq[poly_pos_].mob) * (transi * sd_.rq[poly_pos_].dh);
                 // Must recompute water flux since we have to use modified mobilities.
-                rq_[ actph ].mflux = upwind.select(rq_[actph].b * rq_[actph].mob) * (transi * rq_[actph].dh);
+                sd_.rq[ actph ].mflux = upwind.select(sd_.rq[actph].b * sd_.rq[actph].mob) * (transi * sd_.rq[actph].dh);
 
                 // applying the shear-thinning factors
                 if (has_plyshlog_) {
                     V shear_mult_faces_v = Eigen::Map<V>(shear_mult_faces_.data(), shear_mult_faces_.size());
                     ADB shear_mult_faces_adb = ADB::constant(shear_mult_faces_v);
-                    rq_[poly_pos_].mflux = rq_[poly_pos_].mflux / shear_mult_faces_adb;
-                    rq_[actph].mflux = rq_[actph].mflux / shear_mult_faces_adb;
+                    sd_.rq[poly_pos_].mflux = sd_.rq[poly_pos_].mflux / shear_mult_faces_adb;
+                    sd_.rq[actph].mflux = sd_.rq[actph].mflux / shear_mult_faces_adb;
                 }
             }
         }
@@ -534,7 +534,7 @@ namespace Opm {
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
+        wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
@@ -598,19 +598,19 @@ namespace Opm {
 
         const ADB tr_mult = transMult(state.pressure);
         const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv, cond);
-        rq_[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
+        sd_.rq[phase].mob = tr_mult * kr[canonicalPhaseIdx] / mu;
 
         // compute gravity potensial using the face average as in eclipse and MRST
-        const ADB rho   = fluidDensity(canonicalPhaseIdx, rq_[phase].b, state.rs, state.rv);
+        const ADB rho   = fluidDensity(canonicalPhaseIdx, sd_.rq[phase].b, state.rs, state.rv);
         const ADB rhoavg = ops_.caver * rho;
-        rq_[ phase ].dh = ops_.ngrad * phasePressure[ canonicalPhaseIdx ] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
+        sd_.rq[ phase ].dh = ops_.ngrad * phasePressure[ canonicalPhaseIdx ] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
         if (use_threshold_pressure_) {
-            applyThresholdPressures(rq_[ phase ].dh);
+            applyThresholdPressures(sd_.rq[ phase ].dh);
         }
 
-        const ADB& b   = rq_[ phase ].b;
-        const ADB& mob = rq_[ phase ].mob;
-        const ADB& dh  = rq_[ phase ].dh;
+        const ADB& b   = sd_.rq[ phase ].b;
+        const ADB& mob = sd_.rq[ phase ].mob;
+        const ADB& dh  = sd_.rq[ phase ].dh;
         UpwindSelector<double> upwind(grid_, ops_, dh.value());
 
         const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
@@ -619,7 +619,7 @@ namespace Opm {
                                                          cmax,
                                                          kr[canonicalPhaseIdx]);
         ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value());
-        rq_[ phase ].mob = tr_mult * krw_eff * inv_wat_eff_visc;
+        sd_.rq[ phase ].mob = tr_mult * krw_eff * inv_wat_eff_visc;
 
         const V& polymer_conc = state.concentration.value();
         V visc_mult_cells = polymer_props_ad_.viscMult(polymer_conc);
@@ -629,7 +629,7 @@ namespace Opm {
         visc_mult.resize(nface);
         std::copy(visc_mult_faces.data(), visc_mult_faces.data() + nface, visc_mult.begin());
 
-        rq_[ phase ].mflux = (transi * upwind.select(b * mob)) * dh;
+        sd_.rq[ phase ].mflux = (transi * upwind.select(b * mob)) * dh;
 
 
         const auto& b_faces_adb = upwind.select(b);
@@ -650,7 +650,7 @@ namespace Opm {
         std::vector<double> phiavg(phiavg_adb.value().data(), phiavg_adb.value().data() + phiavg_adb.size());
 
         water_vel.resize(nface);
-        std::copy(rq_[0].mflux.value().data(), rq_[0].mflux.value().data() + nface, water_vel.begin());
+        std::copy(sd_.rq[0].mflux.value().data(), sd_.rq[0].mflux.value().data() + nface, water_vel.begin());
 
         for (size_t i = 0; i < nface; ++i) {
             water_vel[i] = water_vel[i] / (b_faces[i] * phiavg[i] * internal_face_areas[i]);
@@ -723,7 +723,7 @@ namespace Opm {
         std::copy(visc_mult_wells_v.data(), visc_mult_wells_v.data() + visc_mult_wells_v.size(), visc_mult_wells.begin());
 
         const int water_pos = fluid_.phaseUsage().phase_pos[Water];
-        ADB b_perfcells = subset(rq_[water_pos].b, well_cells);
+        ADB b_perfcells = subset(sd_.rq[water_pos].b, well_cells);
 
         const ADB& p_perfcells = subset(state.pressure, well_cells);
         const V& cdp = wellModel().wellPerforationPressureDiffs();

@@ -136,7 +136,7 @@ namespace Opm {
         using Base::asImpl;
         using Base::linsolver_;
         using Base::residual_;
-        using Base::rq_;
+        using Base::sd_;
         using Base::grid_;
         using Base::ops_;
         using Base::has_vapoil_;
@@ -167,11 +167,11 @@ namespace Opm {
             residual_.material_balance_eq[0] = pressure_residual; // HACK
 
             // Compute total reservoir volume flux.
-            const int n = rq_[0].mflux.size();
+            const int n = sd_.rq[0].mflux.size();
             V flux = V::Zero(n);
             for (int phase = 0; phase < numPhases(); ++phase) {
-                UpwindSelector<double> upwind(grid_, ops_, rq_[phase].dh.value());
-                flux += rq_[phase].mflux.value() / upwind.select(rq_[phase].b.value());
+                UpwindSelector<double> upwind(grid_, ops_, sd_.rq[phase].dh.value());
+                flux += sd_.rq[phase].mflux.value() / upwind.select(sd_.rq[phase].b.value());
             }
 
             // Storing the fluxes in the assemble() method is a bit of
@@ -235,9 +235,9 @@ namespace Opm {
             assert(numPhases() == 3);
             assert(numMaterials() == 3);
             V one = V::Constant(state.pressure.size(), 1.0);
-            scaling_[Water] = one / rq_[Water].b;
-            scaling_[Oil] = one / rq_[Oil].b - state.rs / rq_[Gas].b;
-            scaling_[Gas] = one / rq_[Gas].b - state.rv / rq_[Oil].b;
+            scaling_[Water] = one / sd_.rq[Water].b;
+            scaling_[Oil] = one / sd_.rq[Oil].b - state.rs / sd_.rq[Gas].b;
+            scaling_[Gas] = one / sd_.rq[Gas].b - state.rv / sd_.rq[Oil].b;
             if (has_disgas_ && has_vapoil_) {
                 ADB r_factor = one / (one - state.rs * state.rv);
                 scaling_[Oil] = r_factor * scaling_[Oil];

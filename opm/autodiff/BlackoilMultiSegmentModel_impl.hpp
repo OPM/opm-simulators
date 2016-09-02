@@ -195,7 +195,7 @@ namespace Opm {
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        wellModel().extractWellPerfProperties(state, rq_, mob_perfcells, b_perfcells);
+        wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
@@ -273,7 +273,7 @@ namespace Opm {
         // TODO: make sure the order of the density and the order of the kr are the same.
         for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
             const int canonicalPhaseIdx = canph_[phaseIdx];
-            fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, rq_[phaseIdx].b, state.rs, state.rv);
+            fluid_density[phaseIdx] = fluidDensity(canonicalPhaseIdx, sd_.rq[phaseIdx].b, state.rs, state.rv);
          }
          wellModel().computeWellConnectionPressures(state, well_state, kr_adb, fluid_density);
     }
