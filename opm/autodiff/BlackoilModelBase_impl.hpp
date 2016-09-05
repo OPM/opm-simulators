@@ -2310,9 +2310,9 @@ namespace detail {
         const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
         state.pressure    = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
         state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
-        state.saturation[Water] = ADB::constant(s.col(Water));
-        state.saturation[Oil] = ADB::constant(s.col(Oil));
-        state.saturation[Gas] = ADB::constant(s.col(Gas));
+        state.saturation[Water] = active_[Water] ? ADB::constant(s.col(Water)) : ADB::null();
+        state.saturation[Oil] = active_[Oil] ? ADB::constant(s.col(Oil)) : ADB::constant(V::Zero(nc));
+        state.saturation[Gas] = active_[Gas] ? ADB::constant(s.col(Gas)) : ADB::constant(V::Zero(nc));
         state.rs =  ADB::constant(Eigen::Map<const V>(& x.gasoilratio()[0], nc, 1));
         state.rv = ADB::constant(Eigen::Map<const V>(& x.rv()[0], nc, 1));
         state.canonical_phase_pressures = computePressures(state.pressure, 
@@ -2357,10 +2357,11 @@ namespace detail {
         }
 
         // compute PAV and PORV or every regions.
+        const V hydrocarbon = state.saturation[Oil].value() + state.saturation[Gas].value();
         for (int c = 0; c < nc; ++c) {
             if (fipnum[c] != 0) {
-                values[fipnum[c]-1][5] += pv[c] * (s.col(Gas)[c] + s.col(Oil)[c]);
-                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * (s.col(Gas)[c] + s.col(Oil)[c]);
+                values[fipnum[c]-1][5] += pv[c] * hydrocarbon[c];
+                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * hydrocarbon[c];
             }
         }
 
