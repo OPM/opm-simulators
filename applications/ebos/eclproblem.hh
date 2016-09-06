@@ -812,15 +812,15 @@ private:
         const auto& gridManager = this->simulator().gridManager();
         Opm::DeckConstPtr deck = gridManager.deck();
         Opm::EclipseStateConstPtr eclState = gridManager.eclState();
+        Opm::EclipseGridConstPtr eclGrid = eclState->getInputGrid();
         const auto& props = eclState->get3DProperties();
 
         size_t numDof = this->model().numGridDof();
 
-        intrinsicPermeability_.resize(numDof);
-        porosity_.resize(numDof);
-
         ////////////////////////////////
-        // permeability
+        // intrinsic permeability
+
+        intrinsicPermeability_.resize(numDof);
 
         // read the intrinsic permeabilities from the eclState. Note that all arrays
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
@@ -853,62 +853,61 @@ private:
 
 
         ////////////////////////////////
-        // compute the porosity
-        if (!props.hasDeckDoubleGridProperty("PORO") && !props.hasDeckDoubleGridProperty("PORV"))
-            OPM_THROW(std::runtime_error,
-                      "Can't read the porosity from the ECL state object. "
-                      "(The PORO and PORV keywords are missing)");
+        // porosity
+        porosity_.resize(numDof);
 
-        if (props.hasDeckDoubleGridProperty("PORO")) {
-            const std::vector<double> &poroData =
-            props.getDoubleGridProperty("PORO").getData();
+        const std::vector<double> &porvData =
+            props.getDoubleGridProperty("PORV").getData();
+        const std::vector<int> &actnumData =
+            props.getIntGridProperty("ACTNUM").getData();
 
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
-                porosity_[dofIdx] = poroData[cartesianElemIdx];
-            }
-        }
+        int nx = eclGrid->getNX();
+        int ny = eclGrid->getNY();
+        for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+            unsigned cartElemIdx = gridManager.cartesianIndex(dofIdx);
+            Scalar poreVolume = porvData[cartElemIdx];
 
-        // apply the NTG keyword to the porosity
-        if (props.hasDeckDoubleGridProperty("NTG")) {
-            const std::vector<double> &ntgData =
-                props.getDoubleGridProperty("NTG").getData();
+            // sum up the pore volume of the active cell and all inactive ones above it
+            // which were disabled due to their pore volume being too small
+            if (eclGrid->getMinpvMode() == Opm::MinpvMode::ModeEnum::OpmFIL) {
+                Scalar minPvValue = eclGrid->getMinpvValue();
+                for (int aboveElemCartIdx = static_cast<int>(cartElemIdx) - nx*ny;
+                     aboveElemCartIdx >= 0;
+                     aboveElemCartIdx -= nx*ny)
+                {
+                    if (porvData[aboveElemCartIdx] >= minPvValue)
+                        // the cartesian element above exhibits a pore volume which larger or
+                        // equal to the minimum one
+                        break;
 
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                porosity_[dofIdx] *= ntgData[gridManager.cartesianIndex(dofIdx)];
-        }
+                    Scalar aboveElemVolume = eclGrid->getCellVolume(aboveElemCartIdx);
+                    if (actnumData[aboveElemCartIdx] == 0 && aboveElemVolume > 1e-3)
+                        // stop at explicitly disabled elements, but only if their volume is
+                        // greater than 10^-3 m^3
+                        break;
 
-        // apply the MULTPV keyword to the porosity
-        if (props.hasDeckDoubleGridProperty("MULTPV")) {
-            const std::vector<double> &multpvData =
-                props.getDoubleGridProperty("MULTPV").getData();
-
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx)
-                porosity_[dofIdx] *= multpvData[gridManager.cartesianIndex(dofIdx)];
-        }
-
-        // overwrite the porosity using the PORV keyword for the elements for which PORV
-        // is defined...
-        if (props.hasDeckDoubleGridProperty("PORV")) {
-            const std::vector<double> &porvData =
-                props.getDoubleGridProperty("PORV").getData();
-
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
-                if (std::isfinite(porvData[cartesianElemIdx])) {
-                    Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
-                    porosity_[dofIdx] = porvData[cartesianElemIdx]/dofVolume;
+                    poreVolume += porvData[aboveElemCartIdx];
                 }
             }
-        }
 
-        // the fluid-matrix interactions for ECL problems are dealt with by a separate class
+            // we define the porosity as the accumulated pore volume divided by the
+            // geometric volume of the element. Note that -- in pathetic cases -- it can
+            // be larger than 1.0!
+            Scalar dofVolume = this->simulator().model().dofTotalVolume(dofIdx);
+            assert(dofVolume > 0.0);
+            porosity_[dofIdx] = poreVolume/dofVolume;
+        }
+        ////////////////////////////////
+
+        ////////////////////////////////
+        // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         std::vector<int> compressedToCartesianElemIdx(numDof);
         for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
             compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
+        ////////////////////////////////
     }
 
     void initFluidSystem_()
