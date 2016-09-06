@@ -248,8 +248,7 @@ public:
             lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
         }
 
-        // parameters for the Van Genuchten law
-        // alpha and n
+        // parameters for the Van Genuchten law: alpha and n
         lensMaterialParams_.setVgAlpha(0.00045);
         lensMaterialParams_.setVgN(7.3);
         outerMaterialParams_.setVgAlpha(0.0037);
