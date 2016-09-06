@@ -502,19 +502,19 @@ namespace Opm
             if (aqua_active && outKeywords["BW"] > 0) {
                 simProps.emplace_back(
                         "1OVERBW",
-                        Opm::UnitSystem::measure::volume, //FIXME: Thsi should be oil dissolution factor
+                        Opm::UnitSystem::measure::water_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[aqua_idx].b)));
             }
             if (liquid_active && outKeywords["BO"]  > 0) {
                 simProps.emplace_back(
                         "1OVERBO",
-                        Opm::UnitSystem::measure::volume,
+                        Opm::UnitSystem::measure::oil_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[liquid_idx].b)));
             }
             if (vapour_active && outKeywords["BG"] > 0) {
                 simProps.emplace_back(
                         "1OVERBG",
-                        Opm::UnitSystem::measure::volume,
+                        Opm::UnitSystem::measure::gas_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[vapour_idx].b)));
             }
 
