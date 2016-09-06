@@ -420,10 +420,10 @@ namespace Opm
         /**
          * Converts an ADB into a standard vector by copy
          */
-        inline std::vector<double> adbToDoubleVector(const Opm::AutoDiffBlock<double>& input) {
-            const auto& b_v = input.value();
-            std::vector<double> b(b_v.data(), b_v.data() + b_v.size());
-            return b;
+        inline std::vector<double> adbToDoubleVector(const Opm::AutoDiffBlock<double>& adb) {
+            const auto& adb_v = adb.value();
+            std::vector<double> vec(adb_v.data(), adb_v.data() + adb_v.size());
+            return vec;
         }
 
 
@@ -462,21 +462,21 @@ namespace Opm
                 outKeywords["BW"] = 0;
                 simProps.emplace_back(
                         "1OVERBW",
-                        Opm::UnitSystem::measure::water_formation_volume_factor,
+                        Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[aqua_idx].b)));
             }
             if (liquid_active && outKeywords["BO"]  > 0) {
                 outKeywords["BO"] = 0;
                 simProps.emplace_back(
                         "1OVERBO",
-                        Opm::UnitSystem::measure::oil_formation_volume_factor,
+                        Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[liquid_idx].b)));
             }
             if (vapour_active && outKeywords["BG"] > 0) {
                 outKeywords["BG"] = 0;
                 simProps.emplace_back(
                         "1OVERBG",
-                        Opm::UnitSystem::measure::gas_formation_volume_factor,
+                        Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[vapour_idx].b)));
             }
 
