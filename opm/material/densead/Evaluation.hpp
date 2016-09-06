@@ -55,7 +55,7 @@ public:
 
     enum { size = numVars };
 
-    Evaluation()
+    Evaluation() : value(), derivatives()
     {}
 
     // copy other function evaluation
