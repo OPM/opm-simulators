@@ -437,54 +437,13 @@ namespace Opm
 
             std::vector<data::CellData> simProps;
 
-            std::map<const char*, int> outKeywords {
-                {"ALLPROPS", 0},
-
-                // Formation volume factors
-                {"BG", 0},
-                {"BO", 0},
-                {"BW", 0},
-
-                {"CONV", 0}, // < Cells with convergence problems
-                {"DEN", 0},  // < Densities
-
-                // Relative permeabilities
-                {"KRG", 0},
-                {"KRO", 0},
-                {"KRW", 0},
-
-                {"RVSAT", 0}, // < Vaporized gas/oil ratio
-                {"RSSAT", 0}, // < Dissolved gas/oil ratio
-
-                {"NORST", 0}, // < Visualization restart file only
-                {"PBPD", 0},  // < Bubble point and dew point pressures
-                {"VISC", 0}   // < Viscosities
-            };
-
             //Get the value of each of the keys
+            std::map<std::string, int> outKeywords = restartConfig.getRestartKeywords(reportStepNum);
             for (auto& keyValue : outKeywords) {
                 keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
             }
 
-            //Postprocess some of the special keys
-            //FIXME: This logic should be removed once ALLPROPS-handling works in RestartConfig
-            if (outKeywords["ALLPROPS"] > 0) {
-                //ALLPROPS implies KRO,KRW,KRG,xxx_DEN,xxx_VISC,BG,BO (xxx= OIL,GAS,WAT)
-                outKeywords["BG"] = std::max(outKeywords["BG"], 1);
-                outKeywords["BO"] = std::max(outKeywords["BO"], 1);
-                outKeywords["BW"] = std::max(outKeywords["BW"], 1);
-
-                outKeywords["DEN"] = std::max(outKeywords["DEN"], 1);
-
-                outKeywords["KRG"] = std::max(outKeywords["KRG"], 1);
-                outKeywords["KRO"] = std::max(outKeywords["KRO"], 1);
-                outKeywords["KRW"] = std::max(outKeywords["KRW"], 1);
-
-                outKeywords["VISC"] = std::max(outKeywords["VISC"], 1);
-            }
-
             const typename Model::SimulatorData& sd = model.getSimulatorData();
-
 
             //Get shorthands for water, oil, gas
             const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
@@ -500,18 +459,21 @@ namespace Opm
              * Formation volume factors for water, oil, gas
              */
             if (aqua_active && outKeywords["BW"] > 0) {
+                outKeywords["BW"] = 0;
                 simProps.emplace_back(
                         "1OVERBW",
                         Opm::UnitSystem::measure::water_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[aqua_idx].b)));
             }
             if (liquid_active && outKeywords["BO"]  > 0) {
+                outKeywords["BO"] = 0;
                 simProps.emplace_back(
                         "1OVERBO",
                         Opm::UnitSystem::measure::oil_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[liquid_idx].b)));
             }
             if (vapour_active && outKeywords["BG"] > 0) {
+                outKeywords["BG"] = 0;
                 simProps.emplace_back(
                         "1OVERBG",
                         Opm::UnitSystem::measure::gas_formation_volume_factor,
@@ -522,6 +484,7 @@ namespace Opm
              * Densities for water, oil gas
              */
             if (outKeywords["DEN"] > 0) {
+                outKeywords["DEN"] = 0;
                 if (aqua_active) {
                     simProps.emplace_back(
                             "WAT_DEN",
@@ -546,6 +509,7 @@ namespace Opm
              * Viscosities for water, oil gas
              */
             if (outKeywords["VISC"] > 0) {
+                outKeywords["VISC"] = 0;
                 if (aqua_active) {
                     simProps.emplace_back(
                             "WAT_VISC",
@@ -570,18 +534,21 @@ namespace Opm
              * Relative permeabilities for water, oil, gas
              */
             if (aqua_active && outKeywords["KRW"] > 0) {
+                outKeywords["KRW"] = 0;
                 simProps.emplace_back(
                         "WATKR",
                         Opm::UnitSystem::measure::permeability,
                         std::move(adbToDoubleVector(sd.rq[aqua_idx].kr)));
             }
             if (aqua_active && outKeywords["KRO"] > 0) {
+                outKeywords["KRO"] = 0;
                 simProps.emplace_back(
                         "OILKR",
                         Opm::UnitSystem::measure::permeability,
                         std::move(adbToDoubleVector(sd.rq[liquid_idx].kr)));
             }
             if (aqua_active && outKeywords["KRG"] > 0) {
+                outKeywords["KRG"] = 0;
                 simProps.emplace_back(
                         "GASKR",
                         Opm::UnitSystem::measure::permeability,
@@ -592,12 +559,14 @@ namespace Opm
              * Vaporized and dissolved gas/oil ratio
              */
             if (vapour_active && liquid_active && outKeywords["RSSAT"] > 0) {
+                outKeywords["RSSAT"] = 0;
                 simProps.emplace_back(
                         "RSSAT",
                         Opm::UnitSystem::measure::gas_oil_ratio,
                         std::move(adbToDoubleVector(sd.rs)));
             }
             if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
+                outKeywords["RVSAT"] = 0;
                 simProps.emplace_back(
                         "RVSAT",
                         Opm::UnitSystem::measure::oil_gas_ratio,
@@ -609,11 +578,21 @@ namespace Opm
              * Bubble point and dew point pressures
              */
             if (vapour_active && liquid_active && outKeywords["PBPD"] > 0) {
+                outKeywords["PBPD"] = 0;
                 Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
                         "Writing bubble points and dew points (PBPD) to file is unsupported, "
                         "as the simulator does not use these internally.");
             }
 
+            //Warn for any unhandled keyword
+            for (auto& keyValue : outKeywords) {
+                if (keyValue.second > 0) {
+                    std::string logstring = "Keyword '";
+                    logstring.append(keyValue.first);
+                    logstring.append("' is unhandled for output to file.");
+                    Opm::OpmLog::warning("Unhandled output keyword", logstring);
+                }
+            }
 
             return simProps;
         }
