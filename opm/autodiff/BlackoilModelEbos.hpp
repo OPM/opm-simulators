@@ -159,31 +159,23 @@ namespace Opm {
             eclState().getTableManager().getVFPProdTables())
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
-        , canph_ (detail::active2Canonical(fluid.phaseUsage()))
         , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid_)))
-        , ops_   (grid_, geo.nnc())
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
         , param_( param )
-        , use_threshold_pressure_(false)
-        , rq_    (fluid.numPhases())
         , phaseCondition_(AutoDiffGrid::numCells(grid_))
         , well_model_ (well_model)
         , isRs_(V::Zero(AutoDiffGrid::numCells(grid_)))
         , isRv_(V::Zero(AutoDiffGrid::numCells(grid_)))
         , isSg_(V::Zero(AutoDiffGrid::numCells(grid_)))
-        , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
-                    ADB::null(),
-                    ADB::null(),
-                    { 1.1169, 1.0031, 0.0031 }, // the default magic numbers
-                    false } )
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , isBeginReportStep_(false)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            well_model_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
+            const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
+            const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
+            well_model_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth, pv);
             wellModel().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
@@ -221,7 +213,6 @@ namespace Opm {
                                            ReservoirState& reservoir_state,
                                            WellState& well_state)
         {
-            const double dt = timer.currentStepLength();
             if (iteration == 0) {
                 // For each iteration we store in a vector the norms of the residual of
                 // the mass balance for each active phase, the well flux and the well equations.
@@ -230,15 +221,17 @@ namespace Opm {
                 dx_old_ = V::Zero(sizeNonLinear());
             }
             IterationReport iter_report = assemble(timer, iteration, reservoir_state, well_state);
-            residual_norms_history_.push_back(computeResidualNorms());
-            const bool converged = getConvergence(timer, iteration);
-            const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
+            std::vector<double> residual_norms;
+            const bool converged = getConvergence(timer, iteration,residual_norms);
+            residual_norms_history_.push_back(residual_norms);
+            const bool must_solve = true;
+            Dune::InverseOperatorResult result;
             if (must_solve) {
                 // enable single precision for solvers when dt is smaller then 20 days
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
                 // Compute the nonlinear update.
-                V dx = solveJacobianSystem();
+                V dx = solveJacobianSystem(result);
 
                 // Stabilize the nonlinear update.
                 bool isOscillate = false;
@@ -260,7 +253,7 @@ namespace Opm {
                 updateState(dx, reservoir_state, well_state);
             }
             const bool failed = false; // Not needed in this model.
-            const int linear_iters = must_solve ? linearIterationsLastSolve() : 0;
+            const int linear_iters = must_solve ? result.iterations : 0;
             return IterationReport{ failed, converged, linear_iters, iter_report.well_iterations };
         }
 
@@ -295,7 +288,7 @@ namespace Opm {
             IterationReport iter_report;
             try
             {
-                iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state, residual_);
+                iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state);
             }
             catch ( const Dune::FMatrixError& e  )
             {
@@ -312,57 +305,14 @@ namespace Opm {
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            convertResults2(ebosResid, ebosJac);
+            convertResults(ebosResid, ebosJac);
             wellModel().addRhs(ebosResid, ebosJac);
 
             return iter_report;
         }
 
 
-
-        /// \brief Compute the residual norms of the mass balance for each phase,
-        /// the well flux, and the well equation.
-        /// \return a vector that contains for each phase the norm of the mass balance
-        /// and afterwards the norm of the residual of the well flux and the well equation.
-        std::vector<double> computeResidualNorms() const
-        {
-            std::vector<double> residualNorms;
-
-            std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
-            const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
-
-            for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-                const double massBalanceResid = detail::infinityNorm( (*massBalanceIt),
-                                                                      linsolver_.parallelInformation() );
-                if (!std::isfinite(massBalanceResid)) {
-                    OPM_THROW(Opm::NumericalProblem,
-                              "Encountered a non-finite residual");
-                }
-                residualNorms.push_back(massBalanceResid);
-            }
-
-            // the following residuals are not used in the oscillation detection now
-            const double wellFluxResid = detail::infinityNormWell( residual_.well_flux_eq,
-                                                                   linsolver_.parallelInformation() );
-            if (!std::isfinite(wellFluxResid)) {
-                OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual");
-            }
-            residualNorms.push_back(wellFluxResid);
-
-            const double wellResid = detail::infinityNormWell( residual_.well_eq,
-                                                               linsolver_.parallelInformation() );
-            if (!std::isfinite(wellResid)) {
-                OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual");
-            }
-            residualNorms.push_back(wellResid);
-
-            return residualNorms;
-        }
-
-
-        /// \brief compute the relative change between to simulation states
+         /// \brief compute the relative change between to simulation states
         //  \return || u^n+1 - u^n || / || u^n+1 ||
         double relativeChange( const SimulationDataContainer& previous, const SimulationDataContainer& current ) const
         {
@@ -405,7 +355,9 @@ namespace Opm {
         /// The size (number of unknowns) of the nonlinear system of equations.
         int sizeNonLinear() const
         {
-            return residual_.sizeNonLinear();
+            const int nc = Opm::AutoDiffGrid::numCells(grid_);
+            const int nw = wellModel().wells().number_of_wells;
+            return numPhases() * (nc + nw);
         }
 
         /// Number of linear iterations used in last call to solveJacobianSystem().
@@ -417,7 +369,7 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        V solveJacobianSystem() const
+        V solveJacobianSystem(Dune::InverseOperatorResult& result) const
         {
 
             typedef double Scalar;
@@ -437,26 +389,18 @@ namespace Opm {
             Dune::SeqScalarProduct<BVector> sp;
 
 
+
             wellModel().apply(ebosJac, ebosResid);
             Dune::BiCGSTABSolver<BVector> linsolve(opA, sp, precond,
-                                                   0.001,
+                                                   0.01,
                                                    100,
                                                    false);
 
 
             const int np = numPhases();
             const int nc = AutoDiffGrid::numCells(grid_);
-//            std::cout << "ebosResid" << std::endl;
-//            for( int p=0; p<np; ++p) {
-//                for (int cell = 0 ; cell < 1; ++cell) {
-//                    std::cout << ebosResid[cell][p] << std::endl;
-//                }
-//            }
-
-
 
             // Solve system.
-            Dune::InverseOperatorResult result;
             BVector x(ebosJac.M());
             x = 0.0;
             linsolve.apply(x, ebosResid, result);
@@ -466,9 +410,7 @@ namespace Opm {
             wellModel().recoverVariable(x, xw);
 
             // convert to V;
-
-
-            V dx( (nc + nw) * np);
+            V dx( sizeNonLinear() );
             for( int p=0; p<np; ++p) {
                 for (int i = 0; i < nc; ++i) {
                     int idx = i + nc*ebosCompToFlowPhaseIdx(p);
@@ -741,7 +683,7 @@ namespace Opm {
         /// \param[in]   timer       simulation timer
         /// \param[in]   dt          timestep length
         /// \param[in]   iteration   current iteration number
-        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration)
+        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
         {
             const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
@@ -750,7 +692,6 @@ namespace Opm {
 
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
             const int np = numPhases();
-            assert(int(rq_.size()) == np);
 
             const V& pv = geo_.poreVolume();
 
@@ -785,14 +726,7 @@ namespace Opm {
 
             for ( int idx = 0; idx < np; ++idx )
             {
-                //const ADB& tempB = rq_[idx].b;
-                //B.col(idx)       = 1./tempB.value();
-                //R.col(idx)       = residual_.material_balance_eq[idx].value();
                 tempV.col(idx)   = R2.col(idx).abs()/pv;
-//                std::cout << "------R------- " << idx << std::endl;
-//                std::cout << R.col(idx)[0] << std::endl;
-//                std::cout << "------R2------- " << idx << std::endl;
-//                std::cout << R2.col(idx)[0] << std::endl;
             }
 
             std::vector<double> pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
@@ -821,15 +755,10 @@ namespace Opm {
                     well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
                     converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
                 }
+                residual_norms.push_back(CNV[idx]);
             }
 
-            const double residualWell     = detail::infinityNormWell(residual_.well_eq,
-                                                                     linsolver_.parallelInformation());
-            converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
             const bool converged = converged_MB && converged_CNV && converged_Well;
-
-            // Residual in Pascal can have high values and still be ok.
-            const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
 
             if ( terminal_output_ )
             {
@@ -848,7 +777,6 @@ namespace Opm {
                         const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
                         msg += "  W-FLUX(" + phaseName + ")";
                     }
-                    // std::cout << "  WELL-CONT ";
                     OpmLog::note(msg);
                 }
                 std::ostringstream ss;
@@ -864,7 +792,6 @@ namespace Opm {
                 for (int idx = 0; idx < np; ++idx) {
                     ss << std::setw(11) << well_flux_residual[idx];
                 }
-                // std::cout << std::setw(11) << residualWell;
                 ss.precision(oprec);
                 ss.flags(oflags);
                 OpmLog::note(ss.str());
@@ -884,9 +811,6 @@ namespace Opm {
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }
-            if (std::isnan(residualWell) || residualWell > maxWellResidualAllowed) {
-                OPM_THROW(Opm::NumericalProblem, "NaN or too large residual for well control equation");
-            }
 
             return converged;
         }
@@ -898,35 +822,6 @@ namespace Opm {
             return fluid_.numPhases();
         }
 
-        /// Update the scaling factors for mass balance equations
-        void updateEquationsScaling()
-        {
-            ADB::V B;
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            for ( int idx=0; idx<MaxNumPhases; ++idx )
-            {
-                if (active_[idx]) {
-                    const int pos    = pu.phase_pos[idx];
-                    const ADB& temp_b = rq_[pos].b;
-                    B = 1. / temp_b.value();
-#if HAVE_MPI
-                    if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-                    {
-                        const ParallelISTLInformation& real_info =
-                            boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-                        double B_global_sum = 0;
-                        real_info.computeReduction(B, Reduction::makeGlobalSumFunctor<double>(), B_global_sum);
-                        residual_.matbalscale[idx] = B_global_sum / global_nc_;
-                    }
-                    else
-#endif
-                    {
-                        residual_.matbalscale[idx] = B.mean();
-                    }
-                }
-            }
-        }
-
 
     protected:
 
@@ -936,19 +831,6 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
-
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant()
-                : b    (   ADB::null())
-                , dh   (   ADB::null())
-                , mob  (   ADB::null())
-            {
-            }
-
-            ADB              b;     // Reciprocal FVF
-            ADB              dh;    // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-        };
 
         // ---------  Data members  ---------
 
@@ -962,17 +844,11 @@ namespace Opm {
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active phases. Maps active -> canonical phase indices.
-        const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
-        HelperOps                       ops_;
         const bool has_disgas_;
         const bool has_vapoil_;
 
         ModelParameters                 param_;
-        bool use_threshold_pressure_;
-        V threshold_pressures_by_connection_;
-
-        std::vector<ReservoirResidualQuant> rq_;
         std::vector<PhasePresence> phaseCondition_;
 
         // Well Model
@@ -981,8 +857,6 @@ namespace Opm {
         V isRs_;
         V isRv_;
         V isSg_;
-
-        LinearisedBlackoilResidual residual_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1137,110 +1011,8 @@ namespace Opm {
 
 
     private:
-        void convertResults(const Simulator& simulator)
-        {
-            const auto& ebosJac = simulator.model().linearizer().matrix();
-            const auto& ebosResid = simulator.model().linearizer().residual();
 
-            const int numPhases = wells().number_of_phases;
-            const int numCells = ebosJac.N();
-            const int cols = ebosJac.M();
-            assert( numCells == cols );
-
-            // create the matrices and the right hand sides in a format which is more
-            // appropriate for the conversion from what's produced ebos to the flow stuff
-            typedef Eigen::SparseMatrix<double, Eigen::RowMajor> M;
-            typedef ADB::V  V;
-            std::vector< std::vector< M > > jacs( numPhases );
-            std::vector< V > resid (numPhases);
-            for( int eqIdx = 0; eqIdx < numPhases; ++eqIdx )
-            {
-                jacs[ eqIdx ].resize( numPhases );
-                resid[ eqIdx ].resize( numCells );
-                for( int pvIdx = 0; pvIdx < numPhases; ++pvIdx )
-                {
-                    jacs[ eqIdx ][ pvIdx ] = M( numCells, cols );
-                    jacs[ eqIdx ][ pvIdx ].reserve( ebosJac.nonzeroes() );
-                }
-            }
-
-            // write the right-hand-side values from the ebosJac into the objects
-            // allocated above.
-            const auto endrow = ebosJac.end();
-            for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
-            {
-                const double cellVolume = simulator.model().dofTotalVolume(cellIdx);
-                const auto& cellRes = ebosResid[ cellIdx ];
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                {
-                    const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
-                    double ebosVal = cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] / refDens * cellVolume;
-
-                    resid[ flowPhaseIdx ][ cellIdx ] = ebosVal;
-                }
-            }
-
-            for( auto row = ebosJac.begin(); row != endrow; ++row )
-            {
-                const int rowIdx = row.index();
-                const double cellVolume = simulator.model().dofTotalVolume(rowIdx);
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                {
-                    for( int pvIdx = 0; pvIdx < numPhases; ++pvIdx )
-                    {
-                        jacs[flowPhaseIdx][pvIdx].startVec(rowIdx);
-                    }
-                }
-
-                // translate the Jacobian of the residual from the format used by ebos to
-                // the one expected by flow
-                const auto endcol = row->end();
-                for( auto col = row->begin(); col != endcol; ++col )
-                {
-                    const int colIdx = col.index();
-                    for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                    {
-                        const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
-                        for( int pvIdx=0; pvIdx<numPhases; ++pvIdx )
-                        {
-                            double ebosVal = (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)]/refDens*cellVolume;
-                            if (ebosVal != 0.0)
-                                jacs[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(rowIdx, colIdx) = ebosVal;
-                        }
-                    }
-                }
-            }
-
-            // convert the resulting matrices from/ row major ordering to colum major.
-            typedef typename ADB::M ADBJacobianMatrix;
-            std::vector< std::vector< ADBJacobianMatrix > > adbJacs( numPhases );
-
-            for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-            {
-                adbJacs[ flowPhaseIdx ].resize( numPhases + 1 );
-                for( int pvIdx = 0; pvIdx < numPhases; ++pvIdx )
-                {
-                    jacs[ flowPhaseIdx ][ pvIdx ].finalize();
-                    adbJacs[ flowPhaseIdx ][ pvIdx ].assign( std::move(jacs[ flowPhaseIdx ][ pvIdx ]) );
-                }
-                // add two "dummy" matrices for the well primary variables
-                const int numWells = wells().number_of_wells;
-                for( int pvIdx = numPhases; pvIdx < numPhases + 1; ++pvIdx ) {
-                    adbJacs[ flowPhaseIdx ][ pvIdx ] = ADBJacobianMatrix( numPhases*numWells, numPhases*numWells );
-                        //sparsityPattern.derivative()[pvIdx];
-                }
-            }
-
-            for( int eqIdx = 0; eqIdx < numPhases; ++eqIdx )
-            {
-                residual_.material_balance_eq[ eqIdx ] =
-                    ADB::function(std::move(resid[eqIdx]),
-                                  std::move(adbJacs[eqIdx]));
-            }
-        }
-        void convertResults2(BVector& ebosResid, Mat& ebosJac) const
+        void convertResults(BVector& ebosResid, Mat& ebosJac) const
         {
             const int numPhases = wells().number_of_phases;
             const int numCells = ebosJac.N();
@@ -1293,230 +1065,6 @@ namespace Opm {
             return flowToEbos[ phaseIdx ];
         }
 
-        void updateLegacyState(const Simulator& simulator, SolutionState& legacyState)
-        {
-            const int numPhases = 3;
-            const int numCells = simulator.model().numGridDof();
-
-            typedef Eigen::SparseMatrix<double, Eigen::ColMajor> EigenMatrix;
-
-            ///////
-            // create the value vectors for the legacy state
-            ///////
-            V poVal;
-            V TVal;
-            std::vector<V> SVal(numPhases);
-            std::vector<V> mobVal(numPhases);
-            std::vector<V> bVal(numPhases);
-            std::vector<V> pVal(numPhases);
-            V RsVal;
-            V RvVal;
-
-            poVal.resize(numCells);
-            TVal.resize(numCells);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                SVal[phaseIdx].resize(numCells);
-                mobVal[phaseIdx].resize(numCells);
-                bVal[phaseIdx].resize(numCells);
-                pVal[phaseIdx].resize(numCells);
-            }
-            RsVal.resize(numCells);
-            RvVal.resize(numCells);
-
-            ///////
-            // create the Jacobian matrices for the legacy state. here we assume that the
-            // sparsity pattern of the inputs is already correct
-            ///////
-            std::vector<EigenMatrix> poJac(numPhases + 1);
-            //std::vector<EigenMatrix> TJac(numPhases + 2);
-            std::vector<std::vector<EigenMatrix>> SJac(numPhases);
-            std::vector<std::vector<EigenMatrix>> mobJac(numPhases);
-            std::vector<std::vector<EigenMatrix>> bJac(numPhases);
-            std::vector<std::vector<EigenMatrix>> pJac(numPhases);
-            std::vector<EigenMatrix> RsJac(numPhases + 1);
-            std::vector<EigenMatrix> RvJac(numPhases + 1);
-
-            // reservoir stuff
-            for (int pvIdx = 0; pvIdx < numPhases; ++ pvIdx) {
-                poJac[pvIdx].resize(numCells, numCells);
-                //TJac[pvIdx].resize(numCells, numCells);
-                RsJac[pvIdx].resize(numCells, numCells);
-                RvJac[pvIdx].resize(numCells, numCells);
-
-                poJac[pvIdx].reserve(numCells);
-                //TJac[pvIdx].reserve(numCells);
-                RsJac[pvIdx].reserve(numCells);
-                RvJac[pvIdx].reserve(numCells);
-            }
-
-            // auxiliary equations
-            for (int pvIdx = numPhases; pvIdx < numPhases + 1; ++ pvIdx) {
-                legacyState.pressure.derivative()[pvIdx].toSparse(poJac[pvIdx]);
-                //legacyState.temperature.derivative()[pvIdx].toSparse(TJac[pvIdx]);
-                legacyState.rs.derivative()[pvIdx].toSparse(RsJac[pvIdx]);
-                legacyState.rv.derivative()[pvIdx].toSparse(RvJac[pvIdx]);
-            }
-
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                SJac[phaseIdx].resize(numPhases + 1);
-                mobJac[phaseIdx].resize(numPhases + 1);
-                bJac[phaseIdx].resize(numPhases + 1);
-                pJac[phaseIdx].resize(numPhases + 1);
-                for (int pvIdx = 0; pvIdx < numPhases; ++ pvIdx) {
-                    SJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    SJac[phaseIdx][pvIdx].reserve(numCells);
-
-                    mobJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    mobJac[phaseIdx][pvIdx].reserve(numCells);
-
-                    bJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    bJac[phaseIdx][pvIdx].reserve(numCells);
-
-                    pJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    pJac[phaseIdx][pvIdx].reserve(numCells);
-                }
-
-                // auxiliary equations for the saturations and pressures
-                for (int pvIdx = numPhases; pvIdx < numPhases + 1; ++ pvIdx) {
-                    legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(SJac[phaseIdx][pvIdx]);
-                    legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(mobJac[phaseIdx][pvIdx]);
-                    legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(bJac[phaseIdx][pvIdx]);
-                    legacyState.canonical_phase_pressures[phaseIdx].derivative()[pvIdx].toSparse(pJac[phaseIdx][pvIdx]);
-                }
-            }
-
-            ///////
-            // write the values and the derivatives into the data structures for the
-            // legacy state.
-            ///////
-            for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
-            {
-                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0));
-                const auto& fs = intQuants.fluidState();
-
-                poVal[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value;
-                TVal[cellIdx] = fs.temperature(0).value;
-                RsVal[cellIdx] = fs.Rs().value;
-                RvVal[cellIdx] = fs.Rv().value;
-
-                for (int pvIdx = 0; pvIdx < numPhases; ++pvIdx) {
-                    poJac[pvIdx].startVec(cellIdx);
-                    //TJac[pvIdx].startVec(cellIdx);
-                    RsJac[pvIdx].startVec(cellIdx);
-                    RvJac[pvIdx].startVec(cellIdx);
-
-                    poJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.pressure(FluidSystem::oilPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                    //TJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.temperature(FluidSystem::oilPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                    RsJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.Rs().derivatives[flowToEbosPvIdx(pvIdx)];
-                    RvJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.Rv().derivatives[flowToEbosPvIdx(pvIdx)];
-                }
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                {
-                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(flowPhaseIdx);
-                    SVal[flowPhaseIdx][cellIdx] = fs.saturation(ebosPhaseIdx).value;
-                    mobVal[flowPhaseIdx][cellIdx] = intQuants.mobility(ebosPhaseIdx).value;
-                    bVal[flowPhaseIdx][cellIdx] = fs.invB(ebosPhaseIdx).value;
-                    pVal[flowPhaseIdx][cellIdx] = fs.pressure(ebosPhaseIdx).value;
-
-                    for (int pvIdx = 0; pvIdx < numPhases; ++pvIdx) {
-                        SJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        mobJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        bJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        pJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        SJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.saturation(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                        mobJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = intQuants.mobility(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                        bJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.invB(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                        pJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.pressure(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                    }
-                }
-            }
-
-            // finalize all Jacobian matrices
-            for (int pvIdx = 0; pvIdx < numPhases; ++pvIdx) {
-                poJac[pvIdx].finalize();
-                //TJac[pvIdx].finalize();
-                RsJac[pvIdx].finalize();
-                RvJac[pvIdx].finalize();
-
-                for (int phaseIdx = 0; phaseIdx < 3; ++ phaseIdx) {
-                    SJac[phaseIdx][pvIdx].finalize();
-                    mobJac[phaseIdx][pvIdx].finalize();
-                    bJac[phaseIdx][pvIdx].finalize();
-                    pJac[phaseIdx][pvIdx].finalize();
-                }
-            }
-
-            ///////
-            // create Opm::AutoDiffMatrix objects from Eigen::SparseMatrix
-            // objects. (Opm::AutoDiffMatrix is not directly assignable, wtf?)
-            ///////
-            typedef typename ADB::M ADBJacobianMatrix;
-
-            std::vector<ADBJacobianMatrix> poAdbJacs;
-            std::vector<ADBJacobianMatrix> RsAdbJacs;
-            std::vector<ADBJacobianMatrix> RvAdbJacs;
-
-            poAdbJacs.resize(numPhases + 1);
-            RsAdbJacs.resize(numPhases + 1);
-            RvAdbJacs.resize(numPhases + 1);
-            for(int pvIdx = 0; pvIdx < numPhases + 1; ++pvIdx)
-            {
-                poAdbJacs[pvIdx].assign(poJac[pvIdx]);
-                RsAdbJacs[pvIdx].assign(RsJac[pvIdx]);
-                RvAdbJacs[pvIdx].assign(RvJac[pvIdx]);
-            }
-
-            std::vector<std::vector<ADBJacobianMatrix>> SAdbJacs(numPhases);
-            std::vector<std::vector<ADBJacobianMatrix>> mobAdbJacs(numPhases);
-            std::vector<std::vector<ADBJacobianMatrix>> bAdbJacs(numPhases);
-            std::vector<std::vector<ADBJacobianMatrix>> pAdbJacs(numPhases);
-            for(int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            {
-                SAdbJacs[phaseIdx].resize(numPhases + 1);
-                mobAdbJacs[phaseIdx].resize(numPhases + 1);
-                bAdbJacs[phaseIdx].resize(numPhases + 1);
-                pAdbJacs[phaseIdx].resize(numPhases + 1);
-                for(int pvIdx = 0; pvIdx < numPhases + 1; ++pvIdx)
-                {
-                    SAdbJacs[phaseIdx][pvIdx].assign(SJac[phaseIdx][pvIdx]);
-                    mobAdbJacs[phaseIdx][pvIdx].assign(mobJac[phaseIdx][pvIdx]);
-                    bAdbJacs[phaseIdx][pvIdx].assign(bJac[phaseIdx][pvIdx]);
-                    pAdbJacs[phaseIdx][pvIdx].assign(pJac[phaseIdx][pvIdx]);
-                }
-            }
-
-            ///////
-            // create the ADB objects in the legacy state
-            ///////
-            legacyState.pressure =
-                ADB::function(std::move(poVal),
-                              std::move(poAdbJacs));
-            legacyState.temperature =
-                ADB::constant(std::move(TVal));
-            legacyState.rs =
-                ADB::function(std::move(RsVal),
-                              std::move(RsAdbJacs));
-            legacyState.rv =
-                ADB::function(std::move(RvVal),
-                              std::move(RvAdbJacs));
-
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            {
-                legacyState.saturation[phaseIdx] =
-                    ADB::function(std::move(SVal[phaseIdx]),
-                                  std::move(SAdbJacs[phaseIdx]));
-                legacyState.canonical_phase_pressures[phaseIdx] =
-                    ADB::function(std::move(pVal[phaseIdx]),
-                                  std::move(pAdbJacs[phaseIdx]));
-                rq_[phaseIdx].mob =
-                    ADB::function(std::move(mobVal[phaseIdx]),
-                                 std::move(mobAdbJacs[phaseIdx]));
-                rq_[phaseIdx].b =
-                    ADB::function(std::move(bVal[phaseIdx]),
-                                  std::move(bAdbJacs[phaseIdx]));
-            }
-        }
 
     public:
         void beginReportStep()
@@ -1574,54 +1122,12 @@ namespace Opm {
             //convertResults(ebosSimulator_);
 
             if (param_.update_equations_scaling_) {
-                std::cout << "scaling" << std::endl;
+                std::cout << "equation scaling not suported yet" << std::endl;
                 //updateEquationsScaling();
             }
 
         }
 
-
-
-
-
-
-
-
-
-        std::vector<ADB>
-        computePressures(const ADB& po,
-                         const ADB& sw,
-                         const ADB& so,
-                         const ADB& sg) const
-        {
-            // convert the pressure offsets to the capillary pressures
-            std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
-            for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-                // The reference pressure is always the liquid phase (oil) pressure.
-                if (phaseIdx == BlackoilPhases::Liquid)
-                    continue;
-                if (active_[phaseIdx]) {
-                    pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];
-                }
-            }
-
-            // Since pcow = po - pw, but pcog = pg - po,
-            // we have
-            //   pw = po - pcow
-            //   pg = po + pcgo
-            // This is an unfortunate inconsistency, but a convention we must handle.
-            for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-                if (active_[phaseIdx]) {
-                    if (phaseIdx == BlackoilPhases::Aqua) {
-                        pressure[phaseIdx] = po - pressure[phaseIdx];
-                    } else {
-                        pressure[phaseIdx] += po;
-                    }
-                }
-            }
-
-            return pressure;
-        }
 
         V computeGasPressure(const V& po,
                            const V& sw,
