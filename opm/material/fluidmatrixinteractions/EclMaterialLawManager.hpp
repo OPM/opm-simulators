@@ -182,7 +182,7 @@ public:
             fs.setSaturation(waterPhaseIdx, Sw);
             fs.setSaturation(gasPhaseIdx, 0);
             fs.setSaturation(oilPhaseIdx, 0);
-            Scalar pc[numPhases];
+            Scalar pc[numPhases] = { 0 };
             MaterialLaw::capillaryPressures(pc, materialLawParams(elemIdx), fs);
 
             Scalar pcowAtSw = pc[oilPhaseIdx] - pc[waterPhaseIdx];
