@@ -466,8 +466,8 @@ namespace Opm
                  double linsolver_prolongate_factor)
     {
         // Solve with AMG solver.
-        typedef Dune::MatrixAdapter<typename O::matrix_type, Vector, Vector> Operator;
-        Operator sOpA(opA.getmat());
+        typedef Dune::MatrixAdapter<typename O::matrix_type, Vector, Vector> AMGOperator;
+        AMGOperator sOpA(opA.getmat());
 
 #if FIRST_DIAGONAL
         typedef Dune::Amg::FirstDiagonal CouplingMetric;
@@ -482,7 +482,7 @@ namespace Opm
 #endif
 
         typedef Dune::Amg::CoarsenCriterion<CriterionBase> Criterion;
-        typedef Dune::Amg::FastAMG<Operator,Vector>   Precond;
+        typedef Dune::Amg::FastAMG<AMGOperator, Vector>   Precond;
 
         // Construct preconditioner.
         Criterion criterion;
