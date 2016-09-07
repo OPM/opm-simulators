@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(Processing)
 
     const int nc_initial = eclgrid->getNumActive();
 
-    Opm::GridManager gridM(eclgrid, porv);
+    Opm::GridManager gridM(*eclgrid, porv);
     typedef UnstructuredGrid Grid;
     const Grid& grid = *(gridM.c_grid());
     const int* global_cell = Opm::UgGridHelpers::globalCell(grid);

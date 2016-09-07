@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(diagnosis)
                              });
     Opm::DeckConstPtr deck(parser->parseFile("../tests/relpermDiagnostics.DATA", parseContext));
     eclState.reset(new EclipseState(*deck, parseContext));
-    GridManager gm(eclState->getInputGrid());
+    GridManager gm(*eclState->getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
     std::shared_ptr<CounterLog> counterLog = std::make_shared<CounterLog>(Log::DefaultMessageTypes);
     OpmLog::addBackend( "COUNTERLOG" , counterLog );
