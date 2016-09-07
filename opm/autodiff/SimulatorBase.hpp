@@ -163,7 +163,7 @@ namespace Opm
                        std::vector<V>& fip);
         
         V
-        FIPTotals(const std::vector<V>& fip, const std::vector<double>& press);
+        FIPTotals(const std::vector<V>& fip, const ReservoirState& state);
 
         void
         outputFluidInPlace(const V& oip, const V& cip, const UnitSystem& units, const int reg);

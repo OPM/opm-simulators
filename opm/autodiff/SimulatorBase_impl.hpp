@@ -271,8 +271,8 @@ namespace Opm
             std::vector<V> COIP;
             COIP = solver->computeFluidInPlace(state, fipnum);
             FIPUnitConvert(eclipse_state_->getUnits(), COIP);
-            V OOIP_totals = FIPTotals(OOIP, state.pressure());
-            V COIP_totals = FIPTotals(COIP, state.pressure());
+            V OOIP_totals = FIPTotals(OOIP, state);
+            V COIP_totals = FIPTotals(COIP, state);
             outputFluidInPlace(OOIP_totals, COIP_totals,eclipse_state_->getUnits(), 0);
             for (size_t reg = 0; reg < OOIP.size(); ++reg) {
                 outputFluidInPlace(OOIP[reg], COIP[reg], eclipse_state_->getUnits(), reg+1);
@@ -682,7 +682,7 @@ namespace Opm
 
     template <class Implementation>
     V
-    SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip, const std::vector<double>& press)
+    SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip, const ReservoirState& state)
     {
         V totals(V::Zero(7));
         for (int i = 0; i < 5; ++i) {
@@ -690,9 +690,16 @@ namespace Opm
                 totals[i] += fip[reg][i];
             }
         }
-        const V p = Eigen::Map<const V>(& press[0], press.size());
+        const int nc = Opm::AutoDiffGrid::numCells(grid_);
+        const int np = state.numPhases();
+        const PhaseUsage& pu = props_.phaseUsage();
+        const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
+        const V so = pu.phase_used[BlackoilPhases::Liquid] ? V(s.col(BlackoilPhases::Liquid)) : V::Zero(nc);
+        const V sg = pu.phase_used[BlackoilPhases::Vapour] ? V(s.col(BlackoilPhases::Vapour)) : V::Zero(nc);
+        const V hydrocarbon = so + sg;
+        const V p = Eigen::Map<const V>(& state.pressure()[0], nc);
         totals[5] = geo_.poreVolume().sum();
-        totals[6] = unit::convert::to((p * geo_.poreVolume()).sum() / totals[5], unit::barsa);
+        totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum()), unit::barsa);
         
         return totals;
     }
@@ -705,28 +712,32 @@ namespace Opm
     {
         std::ostringstream ss;
         if (!reg) {
-            ss << "                                                  ==================================================\n"
-               << "                                                  :                   Field Totals                 :\n";
+            ss << "                                                  ===================================================\n"
+               << "                                                  :                   Field Totals                  :\n";
         } else {
-            ss << "                                                  ==================================================\n"
+            ss << "                                                  ===================================================\n"
                << "                                                  :        FIPNUM report region  "
-               << std::setw(2) << reg << "                :\n";
+               << std::setw(2) << reg << "                 :\n";
         }
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << " BARSA                :\n"
+            ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << " BARSA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RM3                :\n"
-               << "                                                  : Pressure is weighted by hydrocarbon pore voulme:\n"
-               << "                                                  : Porv volume are taken at reference conditions  :\n"
-               << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RM3                 :\n";
+            if (!reg) {
+                ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
+                   << "                                                  : Porv volumes are taken at reference conditions  :\n";
+            }
+            ss << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
         }
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << "  PSIA                 :"
+            ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << "  PSIA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setprecision(14) << cip[5] << "   STB                 :"
-               << "                                                  : Pressure is weighted by hydrocarbon pore voulme :"
-               << "                                                  : Pore volume are taken at reference conditions   :"            
-               << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RB                  :\n";
+            if (!reg) {
+                ss << "                                                  : Pressure is weighted by hydrocarbon pore voulme :\n"
+                   << "                                                  : Pore volumes are taken at reference conditions  :\n";
+            }
+            ss << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
         }
         ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
            << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"

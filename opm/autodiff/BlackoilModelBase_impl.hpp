@@ -2310,9 +2310,9 @@ namespace detail {
         const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
         state.pressure    = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
         state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
-        state.saturation[Water] = ADB::constant(s.col(Water));
-        state.saturation[Oil] = ADB::constant(s.col(Oil));
-        state.saturation[Gas] = ADB::constant(s.col(Gas));
+        state.saturation[Water] = active_[Water] ? ADB::constant(s.col(Water)) : ADB::null();
+        state.saturation[Oil] = active_[Oil] ? ADB::constant(s.col(Oil)) : ADB::constant(V::Zero(nc));
+        state.saturation[Gas] = active_[Gas] ? ADB::constant(s.col(Gas)) : ADB::constant(V::Zero(nc));
         state.rs =  ADB::constant(Eigen::Map<const V>(& x.gasoilratio()[0], nc, 1));
         state.rv = ADB::constant(Eigen::Map<const V>(& x.rv()[0], nc, 1));
         state.canonical_phase_pressures = computePressures(state.pressure, 
@@ -2323,8 +2323,6 @@ namespace detail {
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
 
         const std::vector<PhasePresence> cond = phaseCondition();
-
-
 
         const ADB pv_mult = poroMult(state.pressure);
         const V& pv = geo_.poreVolume();
@@ -2356,16 +2354,25 @@ namespace detail {
             }
         }
 
-        // compute PAV and PORV or every regions.
+        // compute PAV and PORV for every regions.
+        const V hydrocarbon = state.saturation[Oil].value() + state.saturation[Gas].value();
+        V hcpv = V::Zero(nc);
+        V pres = V::Zero(nc);
         for (int c = 0; c < nc; ++c) {
             if (fipnum[c] != 0) {
+                hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
+                pres[fipnum[c]-1] += pv[c] * state.pressure.value()[c];
                 values[fipnum[c]-1][5] += pv[c];
-                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c];
+                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * hydrocarbon[c];
             }
         }
 
-        for (auto& val : values) {
-            val[6] = val[6] / val[5];
+        for (int reg = 0; reg < dims; ++reg) {
+            if (hcpv[reg] != 0) {
+                values[reg][6] /= hcpv[reg];
+            } else {
+                values[reg][6] = pres[reg] / values[reg][5];
+            }
         }
 
         return values;

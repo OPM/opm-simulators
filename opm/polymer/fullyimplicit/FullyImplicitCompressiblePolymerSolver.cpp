@@ -564,16 +564,33 @@ namespace {
 
 
         const int dims = *std::max_element(fipnum.begin(), fipnum.end());
-        std::vector<V> values(dims, V::Zero(5));
-
-        for (int d = 0; d < dims; ++d) {
+        std::vector<V> values(dims, V::Zero(7));
+        V hcpv = V::Zero(nc);
+        V pres = V::Zero(nc);
+        for (int i = 0; i < 5; ++i) {
             for (int c = 0; c < nc; ++c) {
-                for (int i = 0; i < 5; ++i) {
-                    if (fipnum[c] == d) {
-                        values[d][i] += fip[c][i];
-                    }
+                if (fipnum[c] != 0) {
+                    values[fipnum[c]-1][i] += fip[i][c];
                 }
             }
+        }
+
+        // compute PAV and PORV or every regions.
+        for (int c = 0; c < nc; ++c) {
+            if (fipnum[c] != 0) {
+                hcpv[fipnum[c]-1] += pv[c] * s.col(Oil)[c];
+                pres[fipnum[c]-1] += pv[c] * state.pressure.value()[c];
+                values[fipnum[c]-1][5] += pv[c];
+                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * s.col(Oil)[c];
+            }
+        }
+
+        for (int reg = 0; reg < dims; ++reg) {
+             if (hcpv[reg] != 0) {
+                 values[reg][6] /= hcpv[reg];
+             } else {
+                 values[reg][6] = pres[reg] / values[reg][5];
+             }
         }
 
         return values;
