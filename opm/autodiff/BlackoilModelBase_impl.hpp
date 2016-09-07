@@ -2324,8 +2324,6 @@ namespace detail {
 
         const std::vector<PhasePresence> cond = phaseCondition();
 
-
-
         const ADB pv_mult = poroMult(state.pressure);
         const V& pv = geo_.poreVolume();
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
@@ -2356,17 +2354,25 @@ namespace detail {
             }
         }
 
-        // compute PAV and PORV or every regions.
+        // compute PAV and PORV for every regions.
         const V hydrocarbon = state.saturation[Oil].value() + state.saturation[Gas].value();
+        V hcpv = V::Zero(nc);
+        V pres = V::Zero(nc);
         for (int c = 0; c < nc; ++c) {
             if (fipnum[c] != 0) {
-                values[fipnum[c]-1][5] += pv[c] * hydrocarbon[c];
+                hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
+                pres[fipnum[c]-1] += pv[c] * state.pressure.value()[c];
+                values[fipnum[c]-1][5] += pv[c];
                 values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * hydrocarbon[c];
             }
         }
 
-        for (auto& val : values) {
-            val[6] = val[6] / val[5];
+        for (int reg = 0; reg < dims; ++reg) {
+            if (hcpv[reg] != 0) {
+                values[reg][6] /= hcpv[reg];
+            } else {
+                values[reg][6] = pres[reg] / values[reg][5];
+            }
         }
 
         return values;

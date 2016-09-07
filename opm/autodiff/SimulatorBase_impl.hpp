@@ -698,8 +698,8 @@ namespace Opm
         const V sg = pu.phase_used[BlackoilPhases::Vapour] ? V(s.col(BlackoilPhases::Vapour)) : V::Zero(nc);
         const V hydrocarbon = so + sg;
         const V p = Eigen::Map<const V>(& state.pressure()[0], nc);
-        totals[5] = (geo_.poreVolume() * hydrocarbon).sum();
-        totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / totals[5], unit::barsa);
+        totals[5] = geo_.poreVolume().sum();
+        totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum()), unit::barsa);
         
         return totals;
     }
@@ -722,18 +722,22 @@ namespace Opm
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << " BARSA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RM3                 :\n"
-               << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
-               << "                                                  : Porv volumes are taken at reference conditions  :\n"
-               << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RM3                 :\n";
+            if (!reg) {
+                ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
+                   << "                                                  : Porv volumes are taken at reference conditions  :\n";
+            }
+            ss << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
         }
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             ss << "                                                  :      PAV  =" << std::setw(14) << cip[6] << "  PSIA                 :\n"
                << std::fixed << std::setprecision(0)
-               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RB                  :\n"
-               << "                                                  : Pressure is weighted by hydrocarbon pore voulme :\n"
-               << "                                                  : Pore volumes are taken at reference conditions  :\n"
-               << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
+               << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RB                  :\n";
+            if (!reg) {
+                ss << "                                                  : Pressure is weighted by hydrocarbon pore voulme :\n"
+                   << "                                                  : Pore volumes are taken at reference conditions  :\n";
+            }
+            ss << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
         }
         ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
            << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"
