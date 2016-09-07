@@ -171,6 +171,7 @@ namespace Opm {
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , isBeginReportStep_(false)
+        , dx_old_(AutoDiffGrid::numCells(grid_))
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
@@ -218,7 +219,7 @@ namespace Opm {
                 // the mass balance for each active phase, the well flux and the well equations.
                 residual_norms_history_.clear();
                 current_relaxation_ = 1.0;
-                dx_old_ = V::Zero(sizeNonLinear());
+                dx_old_ = 0.0; //V::Zero(sizeNonLinear());
             }
             IterationReport iter_report = assemble(timer, iteration, reservoir_state, well_state);
             std::vector<double> residual_norms;
@@ -231,7 +232,11 @@ namespace Opm {
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
                 // Compute the nonlinear update.
-                V dx = solveJacobianSystem(result);
+                const int nc = AutoDiffGrid::numCells(grid_);
+                const int nw = wellModel().wells().number_of_wells;
+                BVector x(nc);
+                BVector xw(nw);
+                V dx = solveJacobianSystem(result, x, xw);
 
                 // Stabilize the nonlinear update.
                 bool isOscillate = false;
@@ -246,15 +251,37 @@ namespace Opm {
                         OpmLog::info(msg);
                     }
                 }
-                nonlinear_solver.stabilizeNonlinearUpdate(dx, dx_old_, current_relaxation_);
+                nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
 
                 // Apply the update, applying model-dependent
                 // limitations and chopping of the update.
-                updateState(dx, reservoir_state, well_state);
+                //auto well_state2 = well_state;
+                //auto reservoir_state2 = reservoir_state;
+                //updateState(dx, reservoir_state2, well_state);
+                updateState(x,reservoir_state);
+                wellModel().updateWellState(xw, well_state);
+
+//                for (int c = 0; c < nc; ++c) {
+//                printIf(c, reservoir_state.pressure()[c], reservoir_state2.pressure()[c], 1e5, "pressure");
+//                printIf(c, reservoir_state.rv()[c], reservoir_state2.rv()[c] , 1e-3, "rv");
+//                printIf(c, reservoir_state.gasoilratio()[c], reservoir_state2.gasoilratio()[c], 1, "rs");
+//                printIf(c, reservoir_state.saturation()[3*c+0], reservoir_state2.saturation()[3*c+0], 1e-3, "sw");
+//                printIf(c, reservoir_state.saturation()[3*c+1], reservoir_state2.saturation()[3*c+1], 1e-3, "so");
+//                printIf(c, reservoir_state.saturation()[3*c+2], reservoir_state2.saturation()[3*c+2], 1e-3, "sg");
+//                printIf(c, reservoir_state.hydroCarbonState()[c], reservoir_state2.hydroCarbonState()[c], 1e-6,"state");
+//                }
+
+
+
             }
             const bool failed = false; // Not needed in this model.
             const int linear_iters = must_solve ? result.iterations : 0;
             return IterationReport{ failed, converged, linear_iters, iter_report.well_iterations };
+        }
+        void printIf(int c, double x, double y, double eps, std::string type) {
+            if (std::abs(x-y) > eps) {
+                std::cout << type << " " <<c << ": "<<x << " " << y << std::endl;
+            }
         }
 
 
@@ -369,7 +396,7 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        V solveJacobianSystem(Dune::InverseOperatorResult& result) const
+        V solveJacobianSystem(Dune::InverseOperatorResult& result, BVector& x, BVector& xw) const
         {
 
             typedef double Scalar;
@@ -401,12 +428,13 @@ namespace Opm {
             const int nc = AutoDiffGrid::numCells(grid_);
 
             // Solve system.
-            BVector x(ebosJac.M());
+            //BVector x(ebosJac.M());
             x = 0.0;
             linsolve.apply(x, ebosResid, result);
 
             const int nw = wellModel().wells().number_of_wells;
-            BVector xw(nw);
+            //BVector xw(nw);
+            xw = 0.0;
             wellModel().recoverVariable(x, xw);
 
             // convert to V;
@@ -430,6 +458,148 @@ namespace Opm {
 
             //return dx;
             return dx;
+        }
+
+        /// Apply an update to the primary variables, chopped if appropriate.
+        /// \param[in]      dx                updates to apply to primary variables
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        void updateState(const BVector& dx,
+                         ReservoirState& reservoir_state)
+        {
+            using namespace Opm::AutoDiffGrid;
+            const int np = fluid_.numPhases();
+            const int nc = numCells(grid_);
+
+            for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
+                double dp = dx[cell_idx][flowPhaseToEbosCompIdx(0)];
+                reservoir_state.pressure()[cell_idx] -= dp;
+
+                // Saturation updates.
+                const double dsw = active_[Water] ? dx[cell_idx][flowPhaseToEbosCompIdx(1)] : 0.0;
+                const int xvar_ind = active_[Water] ? 2 : 1;
+                const double dxvar = active_[Gas] ? dx[cell_idx][flowPhaseToEbosCompIdx(xvar_ind)] : 0.0;
+
+                double dso = 0.0;
+                double dsg = 0.0;
+                double drs = 0.0;
+                double drv = 0.0;
+
+                double maxVal = 0.0;
+                // water phase
+                maxVal = std::max(std::abs(dsw),maxVal);
+                dso -= dsw;
+                // gas phase
+                switch (reservoir_state.hydroCarbonState()[cell_idx]) {
+                case HydroCarbonState::GasAndOil:
+                    dsg = dxvar;
+                    break;
+                case HydroCarbonState::OilOnly:
+                    drs = dxvar;
+                    break;
+                case HydroCarbonState::GasOnly:
+                    dsg -= dsw;
+                    drv = dxvar;
+                    break;
+                default:
+                    OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << cell_idx << ": " << reservoir_state.hydroCarbonState()[cell_idx]);
+                }
+                dso -= dsg;
+
+                // Appleyard chop process.
+                maxVal = std::max(std::abs(dsg),maxVal);
+                double step = dsMax()/maxVal;
+                step = std::min(step, 1.0);
+
+
+                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+                if (active_[Water]) {
+                    double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
+                    sw -= step * dsw;
+                }
+                if (active_[Gas]) {
+                    double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+                    sg -= step * dsg;
+                }
+                double& so = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Oil ]];
+                so -= step * dso;
+
+                // const double drmaxrel = drMaxRel();
+                // Update rs and rv
+                if (has_disgas_) {
+                    double& rs = reservoir_state.gasoilratio()[cell_idx];
+                    rs -= drs;
+                }
+                if (has_vapoil_) {
+                    double& rv = reservoir_state.rv()[cell_idx];
+                    rv -= drv;
+                }
+
+                // Sg is used as primal variable for water only cells.
+                const double epsilon = 1e-4; //std::sqrt(std::numeric_limits<double>::epsilon());
+
+                // phase translation sg <-> rs
+                const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
+                switch (hydroCarbonState) {
+                case HydroCarbonState::GasAndOil: {
+                    double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
+                    double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+
+                    if (sw > (1.0 - epsilon)) // water only i.e. do nothing
+                        break;
+                    if (sg <= 0.0 && has_disgas_) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
+                        sg = 0;
+                        so = 1.0 - sw - sg;
+                        double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        double& rs = reservoir_state.gasoilratio()[cell_idx];
+                        rs = rsSat*(1-epsilon);
+                    } else if (so <= 0.0 && has_vapoil_) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasOnly; // sg --> rv
+                        so = 0;
+                        sg = 1.0 - sw - so;
+                        double& rv = reservoir_state.rv()[cell_idx];
+                        double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        rv = rvSat*(1-epsilon);
+                    }
+                    break;
+                }
+                case HydroCarbonState::OilOnly: {
+                    double& rs = reservoir_state.gasoilratio()[cell_idx];
+                    double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+                    // TODO:: not hardcode pvtRegion = 0
+                    double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    if (rs > ( rsSat * (1+epsilon) ) ) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                        sg = epsilon;
+                        so -= epsilon;
+                        rs = rsSat;
+                    }
+                    break;
+                }
+                case HydroCarbonState::GasOnly: {
+                    double& rv = reservoir_state.rv()[cell_idx];
+                    double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    if (rv > rvSat * (1+epsilon) ) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                        so = epsilon;
+                        rv = rvSat;
+                        double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+                        sg -= epsilon;
+                    }
+                    break;
+                }
+
+                default:
+                    OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << cell_idx << ": " << hydroCarbonState);
+                }
+            }
+
+
+            //wellModel().updateWellState(dwells, well_state);
+
+            // Update phase conditions used for property calculations.
+            updatePhaseCondFromPrimalVariable(reservoir_state);
         }
 
         /// Apply an update to the primary variables, chopped if appropriate.
@@ -865,7 +1035,7 @@ namespace Opm {
 
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
-        V dx_old_;
+        BVector dx_old_;
 
 
 

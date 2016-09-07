@@ -677,8 +677,16 @@ namespace Opm {
                                 dx_new_eigen(idx) = dx_new[w][flowPhaseToEbosCompIdx(p)];
                             }
                         }
-                        assert(dx.size() == total_residual_v.size());
-                        updateWellState(dx_new_eigen.array(), well_state);
+                        //auto well_state2 = well_state;
+                        //updateWellState(dx_new_eigen.array(), well_state);
+                        updateWellState(dx_new, well_state);
+
+//                        for (int w = 0; w < nw; ++w) {
+//                            printIf(w, well_state.wellSolutions()[w], well_state2.wellSolutions()[w], 1e-3 ,"well solution 1");
+//                            printIf(w, well_state.wellSolutions()[nw + w], well_state2.wellSolutions()[nw + w], 1e-3 ,"well solution 2");
+//                            printIf(w, well_state.wellSolutions()[2*nw + w], well_state2.wellSolutions()[2*nw + w], 1e-3 ,"well solution 3");
+//                        }
+
                         updateWellControls(well_state);
                         setWellVariables(well_state);
                     }
@@ -692,6 +700,13 @@ namespace Opm {
                 const int linear_iters = 0; // Not needed in this method
                 return IterationReport{failed, converged, linear_iters, it};
             }
+
+            void printIf(int c, double x, double y, double eps, std::string type) {
+                if (std::abs(x-y) > eps) {
+                    std::cout << type << " " << c << ": "<<x << " " << y << std::endl;
+                }
+            }
+
 
             std::vector<double> residual() {
 
@@ -879,6 +894,237 @@ namespace Opm {
                     }
                 }
             }
+
+            template <class WellState>
+            void updateWellState(const BVector& dwells,
+                                 WellState& well_state)
+            {
+                if( localWellsActive() )
+                {
+                    const int np = wells().number_of_phases;
+                    const int nw = wells().number_of_wells;
+
+                    double dFLimit = 0.2;
+                    double dBHPLimit = 2.0;
+                    const Vector xvar_well_old = Eigen::Map<const Vector>(&well_state.wellSolutions()[0], nw*np);
+
+
+                    for (int w = 0; w < nw; ++w) {
+                        const WellControls* wc = wells().ctrls[w];
+                        // The current control in the well state overrides
+                        // the current control set in the Wells struct, which
+                        // is instead treated as a default.
+                        const int current = well_state.currentControls()[w];
+                        const double target_rate = well_controls_iget_target(wc, current);
+                        const double* distr = well_controls_iget_distr(wc, current);
+                        std::vector<double> F(np,0.0);
+                        const int sign2 = dwells[w][flowPhaseToEbosCompIdx(1)] > 0 ? 1: -1;
+                        const double dx2_limited = sign2 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(1)]),dFLimit);
+                        well_state.wellSolutions()[nw + w] = xvar_well_old[nw + w] - dx2_limited;
+                        const int sign3 = dwells[w][flowPhaseToEbosCompIdx(2)] > 0 ? 1: -1;
+                        const double dx3_limited = sign3 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(2)]),dFLimit);
+                        well_state.wellSolutions()[2*nw + w] = xvar_well_old[2*nw + w] - dx3_limited;
+                        F[Water] = well_state.wellSolutions()[nw + w];
+                        F[Gas] = well_state.wellSolutions()[2*nw + w];
+                        F[Oil] = 1.0 - F[Water] - F[Gas];
+
+        //                const double dFw = dxvar_well[nw + w];
+        //                const double dFg = dxvar_well[nw*2 + w];
+        //                const double dFo = - dFw - dFg;
+        //                //std::cout << w << " "<< F[Water] << " "  << F[Oil] << " " << F[Gas] << std::endl;
+        //                double step = dFLimit / std::max(std::abs(dFw),std::max(std::abs(dFg),std::abs(dFo))); //)) / dFLimit;
+        //                step = std::min(step, 1.0);
+        //                //std::cout << step << std::endl;
+        //                F[Water] = xvar_well_old[nw + w] - step*dFw;
+        //                F[Gas] = xvar_well_old[2*nw + w] - step*dFg;
+        //                F[Oil] = (1.0 - xvar_well_old[2*nw + w] - xvar_well_old[nw + w]) - step * dFo;
+
+                        if (F[Water] < 0.0) {
+                            F[Gas] /= (1.0 - F[Water]);
+                            F[Oil] /= (1.0 - F[Water]);
+                            F[Water] = 0.0;
+                        }
+                        if (F[Gas] < 0.0) {
+                            F[Water] /= (1.0 - F[Gas]);
+                            F[Oil] /= (1.0 - F[Gas]);
+                            F[Gas] = 0.0;
+                        }
+                        if (F[Oil] < 0.0) {
+                            F[Water] /= (1.0 - F[Oil]);
+                            F[Gas] /= (1.0 - F[Oil]);
+                            F[Oil] = 0.0;
+                        }
+                        well_state.wellSolutions()[nw + w] = F[Water];
+                        well_state.wellSolutions()[2*nw + w] = F[Gas];
+
+                        //std::cout << wells().name[w] << " "<< F[Water] << " "  << F[Oil] << " " << F[Gas] << std::endl;
+
+
+                        std::vector<double> g = {1,1,0.01};
+
+                        if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
+                            for (int p = 0; p < np; ++p) {
+                                F[p] /= distr[p];
+                            }
+                        } else {
+                            for (int p = 0; p < np; ++p) {
+                                F[p] /= g[p];
+                            }
+                        }
+                        //std::cout << w << " "<< F[Water] << " "  << F[Oil] << " " << F[Gas] << std::endl;
+
+
+
+
+
+
+        //                const double dFw = dxvar_well[nw + w];
+        //                const double dFg = dxvar_well[nw*2 + w];
+        //                const double dFo = - dFw - dFg;
+                            //std::cout << w << " "<< F[Water] << " "  << F[Oil] << " " << F[Gas] << std::endl;
+        //                double step = dFLimit / std::max(std::abs(dFw),std::max(std::abs(dFg),std::abs(dFo))); //)) / dFLimit;
+        //                step = std::min(step, 1.0);
+        //                std::cout << step << std::endl;
+        //                F[Water] = xvar_well_old[nw + w] - step*dFw;
+        //                F[Gas] = xvar_well_old[2*nw + w] - step*dFg;
+        //                F[Oil] = (1.0 - xvar_well_old[2*nw + w] - xvar_well_old[nw + w]) - step * dFo;
+        //                double sumF = F[Water]+F[Gas]+F[Oil];
+        //                F[Water] /= sumF;
+        //                F[Gas] /= sumF;
+        //                F[Oil] /= sumF;
+        //                well_state.wellSolutions()[nw + w] = F[Water];
+        //                well_state.wellSolutions()[2 * nw + w] = F[Gas];
+
+                        switch (well_controls_iget_type(wc, current)) {
+                        case BHP:
+                        {
+                            //const int sign1 = dxvar_well[w] > 0 ? 1: -1;
+                            //const double dx1_limited = sign1 * std::min(std::abs(dxvar_well[w]),std::abs(xvar_well_old[w])*dTotalRateLimit);
+                            well_state.wellSolutions()[w] = xvar_well_old[w] - dwells[w][flowPhaseToEbosCompIdx(0)];
+
+                            switch (wells().type[w]) {
+                            case INJECTOR:
+                                for (int p = 0; p < np; ++p) {
+                                    const double comp_frac = wells().comp_frac[np*w + p];
+                                    //if (comp_frac > 0) {
+                                    well_state.wellRates()[w*np + p] = comp_frac * well_state.wellSolutions()[w];
+                                    //}
+
+                                }
+                                break;
+                            case PRODUCER:
+                                for (int p = 0; p < np; ++p) {
+                                    well_state.wellRates()[w*np + p] = well_state.wellSolutions()[w] * F[p];
+                                }
+                                break;
+                            }
+                        }
+                            break;
+                        case SURFACE_RATE:
+                        {
+                            const int sign1 = dwells[w][flowPhaseToEbosCompIdx(0)] > 0 ? 1: -1;
+                            const double dx1_limited = sign1 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(0)]),std::abs(xvar_well_old[w])*dBHPLimit);
+                            well_state.wellSolutions()[w] = xvar_well_old[w] - dx1_limited;
+                            //const int sign = (dxvar_well1[w] < 0) ? -1 : 1;
+                            //well_state.bhp()[w] -= sign * std::min( std::abs(dxvar_well1[w]), std::abs(well_state.bhp()[w])*dpmaxrel) ;
+                            well_state.bhp()[w] = well_state.wellSolutions()[w];
+
+                            if (wells().type[w]==PRODUCER) {
+
+                                double F_target = 0.0;
+                                for (int p = 0; p < np; ++p) {
+                                    F_target += wells().comp_frac[np*w + p] * F[p];
+                                }
+                                for (int p = 0; p < np; ++p) {
+                                    //std::cout << F[p] << std::endl;
+                                    well_state.wellRates()[np*w + p] = F[p] * target_rate /F_target;
+                                }
+                            } else {
+
+                                for (int p = 0; p < np; ++p) {
+                                    //std::cout << wells().comp_frac[np*w + p] << " " <<distr[p] << std::endl;
+                                    well_state.wellRates()[w*np + p] = wells().comp_frac[np*w + p] * target_rate;
+                                }
+                            }
+
+
+                        }
+                            break;
+                        case RESERVOIR_RATE: {
+                            const int sign1 = dwells[w][flowPhaseToEbosCompIdx(0)] > 0 ? 1: -1;
+                            const double dx1_limited = sign1 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(0)]),std::abs(xvar_well_old[w])*dBHPLimit);
+                            well_state.wellSolutions()[w] = xvar_well_old[w] - dx1_limited;
+                            //const int sign = (dxvar_well1[w] < 0) ? -1 : 1;
+                            //well_state.bhp()[w] -= sign * std::min( std::abs(dxvar_well1[w]), std::abs(well_state.bhp()[w])*dpmaxrel) ;
+                            well_state.bhp()[w] = well_state.wellSolutions()[w];
+                            for (int p = 0; p < np; ++p) {
+                                well_state.wellRates()[np*w + p] = F[p] * target_rate;
+                            }
+                        }
+                            break;
+
+                        }
+                    }
+
+
+
+
+
+                    const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                    //Loop over all wells
+        #pragma omp parallel for schedule(static)
+                    for (int w = 0; w < nw; ++w) {
+                        const WellControls* wc = wells().ctrls[w];
+                        const int nwc = well_controls_get_num(wc);
+                        //Loop over all controls until we find a THP control
+                        //that specifies what we need...
+                        //Will only update THP for wells with THP control
+                        for (int ctrl_index=0; ctrl_index < nwc; ++ctrl_index) {
+                            if (well_controls_iget_type(wc, ctrl_index) == THP) {
+                                double aqua = 0.0;
+                                double liquid = 0.0;
+                                double vapour = 0.0;
+
+                                if ((*active_)[ Water ]) {
+                                    aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                                }
+                                if ((*active_)[ Oil ]) {
+                                    liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+                                }
+                                if ((*active_)[ Gas ]) {
+                                    vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
+                                }
+
+                                double alq = well_controls_iget_alq(wc, ctrl_index);
+                                int table_id = well_controls_iget_vfp(wc, ctrl_index);
+
+                                const WellType& well_type = wells().type[w];
+                                if (well_type == INJECTOR) {
+                                    double dp = wellhelpers::computeHydrostaticCorrection(
+                                            wells(), w, vfp_properties_->getInj()->getTable(table_id)->getDatumDepth(),
+                                            wellPerforationDensities(), gravity_);
+
+                                    well_state.thp()[w] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, well_state.bhp()[w] + dp);
+                                }
+                                else if (well_type == PRODUCER) {
+                                    double dp = wellhelpers::computeHydrostaticCorrection(
+                                            wells(), w, vfp_properties_->getProd()->getTable(table_id)->getDatumDepth(),
+                                            wellPerforationDensities(), gravity_);
+
+                                    well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, well_state.bhp()[w] + dp, alq);
+                                }
+                                else {
+                                    OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
+                                }
+
+                                //Assume only one THP control specified for each well
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
 
 
 

@@ -278,6 +278,38 @@ namespace Opm
         return;
     }
 
+    template <class PhysicalModel>
+    void
+    NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
+    {
+        // The dxOld is updated with dx.
+        // If omega is equal to 1., no relaxtion will be appiled.
+
+        BVector tempDxOld = dxOld;
+        dxOld = dx;
+
+        switch (relaxType()) {
+            case DAMPEN:
+                if (omega == 1.) {
+                    return;
+                }
+                dx *= omega;
+                return;
+            case SOR:
+                if (omega == 1.) {
+                    return;
+                }
+                dx *= omega;
+                tempDxOld *= (1.-omega);
+                dx += tempDxOld;
+                return;
+            default:
+                OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
+        }
+
+        return;
+    }
+
 
 } // namespace Opm
 
