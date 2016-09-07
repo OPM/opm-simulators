@@ -245,15 +245,6 @@ namespace Opm
     }
 #endif
 
-    void
-    BlackoilOutputWriter::
-    writeInit(const std::vector<data::CellData>& simProps,  const NNC& nnc)
-    {
-        if( eclWriter_ ) {
-            eclWriter_->writeInitAndEgrid(simProps, nnc);
-        }
-    }
-
 
 
     namespace detail {
