@@ -460,24 +460,24 @@ namespace Opm
              */
             if (aqua_active && outKeywords["BW"] > 0) {
                 outKeywords["BW"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "1OVERBW",
                         Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[aqua_idx].b)));
+                        std::move(adbToDoubleVector(sd.rq[aqua_idx].b))});
             }
             if (liquid_active && outKeywords["BO"]  > 0) {
                 outKeywords["BO"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "1OVERBO",
                         Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[liquid_idx].b)));
+                        std::move(adbToDoubleVector(sd.rq[liquid_idx].b))});
             }
             if (vapour_active && outKeywords["BG"] > 0) {
                 outKeywords["BG"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "1OVERBG",
                         Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[vapour_idx].b)));
+                        std::move(adbToDoubleVector(sd.rq[vapour_idx].b))});
             }
 
             /**
@@ -486,22 +486,22 @@ namespace Opm
             if (outKeywords["DEN"] > 0) {
                 outKeywords["DEN"] = 0;
                 if (aqua_active) {
-                    simProps.emplace_back(
+                    simProps.emplace_back(data::CellData{
                             "WAT_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].rho)));
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].rho))});
                 }
                 if (liquid_active) {
-                    simProps.emplace_back(
+                    simProps.emplace_back(data::CellData{
                             "OIL_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[liquid_idx].rho)));
+                            std::move(adbToDoubleVector(sd.rq[liquid_idx].rho))});
                 }
                 if (vapour_active) {
-                    simProps.emplace_back(
+                    simProps.emplace_back(data::CellData{
                             "GAS_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[vapour_idx].rho)));
+                            std::move(adbToDoubleVector(sd.rq[vapour_idx].rho))});
                 }
             }
 
@@ -511,22 +511,22 @@ namespace Opm
             if (outKeywords["VISC"] > 0) {
                 outKeywords["VISC"] = 0;
                 if (aqua_active) {
-                    simProps.emplace_back(
+                    simProps.emplace_back(data::CellData{
                             "WAT_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].mu)));
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].mu))});
                 }
                 if (liquid_active) {
-                    simProps.emplace_back(
+                    simProps.emplace_back(data::CellData{
                             "OIL_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[liquid_idx].mu)));
+                            std::move(adbToDoubleVector(sd.rq[liquid_idx].mu))});
                 }
                 if (vapour_active) {
-                    simProps.emplace_back(
+                    simProps.emplace_back(data::CellData{
                             "GAS_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[vapour_idx].mu)));
+                            std::move(adbToDoubleVector(sd.rq[vapour_idx].mu))});
                 }
             }
 
@@ -535,24 +535,24 @@ namespace Opm
              */
             if (aqua_active && outKeywords["KRW"] > 0) {
                 outKeywords["KRW"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "WATKR",
                         Opm::UnitSystem::measure::permeability,
-                        std::move(adbToDoubleVector(sd.rq[aqua_idx].kr)));
+                        std::move(adbToDoubleVector(sd.rq[aqua_idx].kr))});
             }
             if (aqua_active && outKeywords["KRO"] > 0) {
                 outKeywords["KRO"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "OILKR",
                         Opm::UnitSystem::measure::permeability,
-                        std::move(adbToDoubleVector(sd.rq[liquid_idx].kr)));
+                        std::move(adbToDoubleVector(sd.rq[liquid_idx].kr))});
             }
             if (aqua_active && outKeywords["KRG"] > 0) {
                 outKeywords["KRG"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "GASKR",
                         Opm::UnitSystem::measure::permeability,
-                        std::move(adbToDoubleVector(sd.rq[vapour_idx].kr)));
+                        std::move(adbToDoubleVector(sd.rq[vapour_idx].kr))});
             }
 
             /**
@@ -560,17 +560,17 @@ namespace Opm
              */
             if (vapour_active && liquid_active && outKeywords["RSSAT"] > 0) {
                 outKeywords["RSSAT"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "RSSAT",
                         Opm::UnitSystem::measure::gas_oil_ratio,
-                        std::move(adbToDoubleVector(sd.rs)));
+                        std::move(adbToDoubleVector(sd.rs))});
             }
             if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
                 outKeywords["RVSAT"] = 0;
-                simProps.emplace_back(
+                simProps.emplace_back(data::CellData{
                         "RVSAT",
                         Opm::UnitSystem::measure::oil_gas_ratio,
-                        std::move(adbToDoubleVector(sd.rv)));
+                        std::move(adbToDoubleVector(sd.rv))});
             }
 
 
