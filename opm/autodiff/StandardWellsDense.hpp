@@ -238,87 +238,26 @@ namespace Opm {
                 }
             }
 
-            Mat matAdd( const Mat& A, const Mat& B ) const
-            {
-                return matBinaryOp( A, B, true );
-            }
-
-            Mat matSubstract( const Mat& A, const Mat& B ) const
-            {
-                return matBinaryOp( A, B, false );
-            }
-
-            Mat matBinaryOp( const Mat& A, const Mat& B, const bool add ) const
-            {
-                const int avg_cols_per_row = 20;
-                const double overflow_fraction = 0.4;
-                Mat res( A.N(), A.M(), avg_cols_per_row,overflow_fraction, Mat::implicit );
-                assert( A.N() == B.N() && A.M() == B.M() );
-
-                // res = A
-                for( auto rowit = A.begin(), rowEnd = A.end(); rowit != rowEnd; ++rowit )
-                {
-                    const int rowIdx = rowit.index();
-                    const auto colEnd = rowit->end();
-                    for( auto colit = rowit->begin(); colit != colEnd; ++colit )
-                    {
-                        const int colIdx =  colit.index();
-                        res.entry( rowIdx, colIdx ) = (*colit);
-                    }
-                }
-
-                // res += B
-                for( auto rowit = B.begin(), rowEnd = B.end(); rowit != rowEnd; ++rowit )
-                {
-                    const int rowIdx = rowit.index();
-                    const auto colEnd = rowit->end();
-                    for( auto colit = rowit->begin(); colit != colEnd; ++colit )
-                    {
-                        const int colIdx =  colit.index();
-                        if( add )
-                        {
-                            res.entry( rowIdx, colIdx ) += (*colit);
-                        }
-                        else
-                        {
-                            res.entry( rowIdx, colIdx ) -= (*colit);
-                        }
-                    }
-                }
-
-                res.compress();
-                return res;
-            }
-
             void addRhs(BVector& x, Mat& jac) const {
                 assert(x.size() == rhs.size());
                 x += rhs_;
-                // jac = A + duneA
-                //jac = matAdd( jac, duneA_ );
                 jac += duneA_;
             }
 
-            void apply( Mat& A,
-                        BVector& res) const {
+            // substract Binv(D)rw from r;
+            void apply( BVector& r) const {
+                BVector invDrw(invDuneD_.N());
+                invDuneD_.mv(resWell_,invDrw);
+                duneB_.mmv(invDrw, r);
+            }
 
-                Mat BmultinvD;
-                Mat duneA;
-
-                Dune::matMultMat(BmultinvD, duneB_ , invDuneD_);
-                Dune::matMultMat(duneA, BmultinvD, duneC_);
-                //std::cout << "before" << std::endl;
-                //std::cout << "A" << std::endl;
-
-                //print(A);
-                //std::cout << "duneA" << std::endl;
-
-                //print(duneA);
-                // A = E - duneA
-                A = matSubstract( A, duneA );
-                //A -= duneA;
-                //std::cout << "after" << std::endl;
-                //print(A);
-                BmultinvD.mmv(resWell_, res);
+            // subtract B*inv(D)*C * x from A*x
+            void apply(const BVector& x, BVector& Ax) {
+                BVector Cx(duneC_.N());
+                duneC_.mv(x, Cx);
+                BVector invDCx(invDuneD_.N());
+                invDuneD_.mv(Cx, invDCx);
+                duneB_.mmv(invDCx,Ax);
             }
 
             void recoverVariable(const BVector& x, BVector& xw) const {

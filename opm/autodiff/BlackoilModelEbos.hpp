@@ -98,6 +98,7 @@ namespace Opm {
     /// upwind weighting of mobilities.
     class BlackoilModelEbos
     {
+        typedef BlackoilModelEbos ThisType;
     public:
         // ---------  Types and enums  ---------
         typedef AutoDiffBlock<double> ADB;
@@ -362,6 +363,12 @@ namespace Opm {
             return linsolver_.iterations();
         }
 
+        template <class X, class Y>
+        void applyWellModel(const X& x, Y& y )
+        {
+           wellModel().apply(x, y);
+        }
+
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
@@ -374,17 +381,19 @@ namespace Opm {
             typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
             typedef Dune::BlockVector<VectorBlockType>      BVector;
 
-            typedef Dune::MatrixAdapter<Mat,BVector,BVector> Operator;
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            Operator opA(ebosJac);
+            typedef WellModelMatrixAdapter<Mat,BVector,BVector, ThisType> Operator;
+            Operator opA(ebosJac, const_cast< ThisType&  > (*this));
             const double relax = 0.9;
             typedef Dune::SeqILU0<Mat, BVector, BVector> SeqPreconditioner;
             SeqPreconditioner precond(opA.getmat(), relax);
             Dune::SeqScalarProduct<BVector> sp;
 
-            wellModel().apply(ebosJac, ebosResid);
+            // apply well residual to the residual.
+            wellModel().apply(ebosResid);
+
             Dune::BiCGSTABSolver<BVector> linsolve(opA, sp, precond,
                                                    0.01,
                                                    100,
@@ -393,9 +402,48 @@ namespace Opm {
             x = 0.0;
             linsolve.apply(x, ebosResid, result);
 
+            // recover wells.
             xw = 0.0;
             wellModel().recoverVariable(x, xw);
         }
+
+        //=====================================================================
+        // Implementation for ISTL-matrix based operator
+        //=====================================================================
+
+        /*!
+           \brief Adapter to turn a matrix into a linear operator.
+
+           Adapts a matrix to the assembled linear operator interface
+         */
+        template<class M, class X, class Y, class WellModel>
+        class WellModelMatrixAdapter : public Dune::MatrixAdapter<M,X,Y>
+        {
+          typedef Dune::MatrixAdapter<M,X,Y> BaseType;
+        public:
+          //! export types
+          typedef M matrix_type;
+          typedef X domain_type;
+          typedef Y range_type;
+          typedef typename X::field_type field_type;
+
+          //! constructor: just store a reference to a matrix
+          explicit WellModelMatrixAdapter (const M& A, WellModel& wellMod ) : BaseType( A ), wellMod_( wellMod ) {}
+
+          //! apply operator to x:  \f$ y = A(x) \f$
+          virtual void apply (const X& x, Y& y) const
+          {
+            BaseType::apply( x, y );
+
+            wellMod_.applyWellModel(x, y );
+          }
+
+        private:
+          WellModel& wellMod_;
+        };
+
+        /** @} end documentation */
+
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
