@@ -153,21 +153,15 @@ namespace Opm {
         , grid_(ebosSimulator_.gridManager().grid())
         , fluid_ (fluid)
         , geo_   (geo)
-        , rock_comp_props_(rock_comp_props)
         , vfp_properties_(
             eclState().getTableManager().getVFPInjTables(),
             eclState().getTableManager().getVFPProdTables())
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
-        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid_)))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
         , param_( param )
-        , phaseCondition_(AutoDiffGrid::numCells(grid_))
         , well_model_ (well_model)
-        , isRs_(V::Zero(AutoDiffGrid::numCells(grid_)))
-        , isRv_(V::Zero(AutoDiffGrid::numCells(grid_)))
-        , isSg_(V::Zero(AutoDiffGrid::numCells(grid_)))
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , isBeginReportStep_(false)
@@ -176,7 +170,7 @@ namespace Opm {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
-            well_model_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth, pv);
+            well_model_.init(&fluid_, &active_, &vfp_properties_, gravity, depth, pv);
             wellModel().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
@@ -188,13 +182,10 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const SimulatorTimerInterface& timer,
-                         const ReservoirState& reservoir_state,
+        void prepareStep(const SimulatorTimerInterface& /*timer*/,
+                         const ReservoirState& /*reservoir_state*/,
                          const WellState& /* well_state */)
         {
-            if (active_[Gas]) {
-                updatePrimalVariableFromState(reservoir_state);
-            }
         }
 
 
@@ -219,7 +210,7 @@ namespace Opm {
                 // the mass balance for each active phase, the well flux and the well equations.
                 residual_norms_history_.clear();
                 current_relaxation_ = 1.0;
-                dx_old_ = 0.0; //V::Zero(sizeNonLinear());
+                dx_old_ = 0.0;
             }
             IterationReport iter_report = assemble(timer, iteration, reservoir_state, well_state);
             std::vector<double> residual_norms;
@@ -236,7 +227,7 @@ namespace Opm {
                 const int nw = wellModel().wells().number_of_wells;
                 BVector x(nc);
                 BVector xw(nw);
-                V dx = solveJacobianSystem(result, x, xw);
+                solveJacobianSystem(result, x, xw);
 
                 // Stabilize the nonlinear update.
                 bool isOscillate = false;
@@ -255,23 +246,8 @@ namespace Opm {
 
                 // Apply the update, applying model-dependent
                 // limitations and chopping of the update.
-                //auto well_state2 = well_state;
-                //auto reservoir_state2 = reservoir_state;
-                //updateState(dx, reservoir_state2, well_state);
                 updateState(x,reservoir_state);
                 wellModel().updateWellState(xw, well_state);
-
-//                for (int c = 0; c < nc; ++c) {
-//                printIf(c, reservoir_state.pressure()[c], reservoir_state2.pressure()[c], 1e5, "pressure");
-//                printIf(c, reservoir_state.rv()[c], reservoir_state2.rv()[c] , 1e-3, "rv");
-//                printIf(c, reservoir_state.gasoilratio()[c], reservoir_state2.gasoilratio()[c], 1, "rs");
-//                printIf(c, reservoir_state.saturation()[3*c+0], reservoir_state2.saturation()[3*c+0], 1e-3, "sw");
-//                printIf(c, reservoir_state.saturation()[3*c+1], reservoir_state2.saturation()[3*c+1], 1e-3, "so");
-//                printIf(c, reservoir_state.saturation()[3*c+2], reservoir_state2.saturation()[3*c+2], 1e-3, "sg");
-//                printIf(c, reservoir_state.hydroCarbonState()[c], reservoir_state2.hydroCarbonState()[c], 1e-6,"state");
-//                }
-
-
 
             }
             const bool failed = false; // Not needed in this model.
@@ -322,13 +298,6 @@ namespace Opm {
                 OPM_THROW(Opm::NumericalProblem,"no convergence");
             }
 
-            typedef double Scalar;
-            typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
-            typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
-            typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
-            typedef Dune::BlockVector<VectorBlockType>      BVector;
-
-            typedef Dune::MatrixAdapter<Mat,BVector,BVector> Operator;
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
@@ -396,7 +365,7 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        V solveJacobianSystem(Dune::InverseOperatorResult& result, BVector& x, BVector& xw) const
+        void solveJacobianSystem(Dune::InverseOperatorResult& result, BVector& x, BVector& xw) const
         {
 
             typedef double Scalar;
@@ -415,49 +384,17 @@ namespace Opm {
             SeqPreconditioner precond(opA.getmat(), relax);
             Dune::SeqScalarProduct<BVector> sp;
 
-
-
             wellModel().apply(ebosJac, ebosResid);
             Dune::BiCGSTABSolver<BVector> linsolve(opA, sp, precond,
                                                    0.01,
                                                    100,
                                                    false);
-
-
-            const int np = numPhases();
-            const int nc = AutoDiffGrid::numCells(grid_);
-
             // Solve system.
-            //BVector x(ebosJac.M());
             x = 0.0;
             linsolve.apply(x, ebosResid, result);
 
-            const int nw = wellModel().wells().number_of_wells;
-            //BVector xw(nw);
             xw = 0.0;
             wellModel().recoverVariable(x, xw);
-
-            // convert to V;
-            V dx( sizeNonLinear() );
-            for( int p=0; p<np; ++p) {
-                for (int i = 0; i < nc; ++i) {
-                    int idx = i + nc*ebosCompToFlowPhaseIdx(p);
-                    dx(idx) = x[i][p];
-                }
-                for (int w = 0; w < nw; ++w) {
-                    int idx = w + nw*p + nc*np;
-                    dx(idx) = xw[w][flowPhaseToEbosCompIdx(p)];
-                }
-            }
-
-            //V dx2 = linsolver_.computeNewtonIncrement(residual_);
-            //std::cout << "------dx------- " << std::endl;
-            //std::cout << dx << std::endl;
-            //std::cout << "------dx2------- " << std::endl;
-            //std::cout << dx2 << std::endl;
-
-            //return dx;
-            return dx;
         }
 
         /// Apply an update to the primary variables, chopped if appropriate.
@@ -559,6 +496,7 @@ namespace Opm {
                         so = 0;
                         sg = 1.0 - sw - so;
                         double& rv = reservoir_state.rv()[cell_idx];
+                        // use gas pressure?
                         double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                         rv = rvSat*(1-epsilon);
                     }
@@ -595,251 +533,8 @@ namespace Opm {
                 }
             }
 
-
-            //wellModel().updateWellState(dwells, well_state);
-
-            // Update phase conditions used for property calculations.
-            updatePhaseCondFromPrimalVariable(reservoir_state);
         }
 
-        /// Apply an update to the primary variables, chopped if appropriate.
-        /// \param[in]      dx                updates to apply to primary variables
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        void updateState(const V& dx,
-                         ReservoirState& reservoir_state,
-                         WellState& well_state)
-        {
-            using namespace Opm::AutoDiffGrid;
-            const int np = fluid_.numPhases();
-            const int nc = numCells(grid_);
-            const V null;
-            assert(null.size() == 0);
-            const V zero = V::Zero(nc);
-
-            // Extract parts of dx corresponding to each part.
-            const V dp = subset(dx, Span(nc));
-            int varstart = nc;
-            const V dsw = active_[Water] ? subset(dx, Span(nc, 1, varstart)) : null;
-            varstart += dsw.size();
-
-            const V dxvar = active_[Gas] ? subset(dx, Span(nc, 1, varstart)): null;
-            varstart += dxvar.size();
-
-            // Extract well parts np phase rates + bhp
-            const V dwells = subset(dx, Span(wellModel().numWellVars(), 1, varstart));
-            varstart += dwells.size();
-
-            assert(varstart == dx.size());
-
-            // Pressure update.
-            const double dpmaxrel = dpMaxRel();
-            const V p_old = Eigen::Map<const V>(&reservoir_state.pressure()[0], nc, 1);
-            const V absdpmax = dpmaxrel*p_old.abs();
-            const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
-            const V p = (p_old - dp_limited).max(zero);
-            std::copy(&p[0], &p[0] + nc, reservoir_state.pressure().begin());
-
-
-            // Saturation updates.
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const DataBlock s_old = Eigen::Map<const DataBlock>(& reservoir_state.saturation()[0], nc, np);
-            const double dsmax = dsMax();
-
-            V so;
-            V sw;
-            V sg;
-
-            {
-                V maxVal = zero;
-                V dso = zero;
-                if (active_[Water]){
-                    maxVal = dsw.abs().max(maxVal);
-                    dso = dso - dsw;
-                }
-
-                V dsg;
-                if (active_[Gas]){
-                    dsg = isSg_ * dxvar - isRv_ * dsw;
-                    maxVal = dsg.abs().max(maxVal);
-                    dso = dso - dsg;
-                }
-
-                maxVal = dso.abs().max(maxVal);
-
-                V step = dsmax/maxVal;
-                step = step.min(1.);
-
-                if (active_[Water]) {
-                    const int pos = pu.phase_pos[ Water ];
-                    const V sw_old = s_old.col(pos);
-                    sw = sw_old - step * dsw;
-                }
-
-                if (active_[Gas]) {
-                    const int pos = pu.phase_pos[ Gas ];
-                    const V sg_old = s_old.col(pos);
-                    sg = sg_old - step * dsg;
-                }
-
-                assert(active_[Oil]);
-                const int pos = pu.phase_pos[ Oil ];
-                const V so_old = s_old.col(pos);
-                so = so_old - step * dso;
-            }
-
-            // Appleyard chop process.
-            if (active_[Gas]) {
-                auto ixg = sg < 0;
-                for (int c = 0; c < nc; ++c) {
-                    if (ixg[c]) {
-                        if (active_[Water]) {
-                            sw[c] = sw[c] / (1-sg[c]);
-                        }
-                        so[c] = so[c] / (1-sg[c]);
-                        sg[c] = 0;
-                    }
-                }
-            }
-
-            if (active_[Oil]) {
-                auto ixo = so < 0;
-                for (int c = 0; c < nc; ++c) {
-                    if (ixo[c]) {
-                        if (active_[Water]) {
-                            sw[c] = sw[c] / (1-so[c]);
-                        }
-                        if (active_[Gas]) {
-                            sg[c] = sg[c] / (1-so[c]);
-                        }
-                        so[c] = 0;
-                    }
-                }
-            }
-
-            if (active_[Water]) {
-                auto ixw = sw < 0;
-                for (int c = 0; c < nc; ++c) {
-                    if (ixw[c]) {
-                        so[c] = so[c] / (1-sw[c]);
-                        if (active_[Gas]) {
-                            sg[c] = sg[c] / (1-sw[c]);
-                        }
-                        sw[c] = 0;
-                    }
-                }
-            }
-
-            //const V sumSat = sw + so + sg;
-            //sw = sw / sumSat;
-            //so = so / sumSat;
-            //sg = sg / sumSat;
-
-            // Update the reservoir_state
-            if (active_[Water]) {
-                for (int c = 0; c < nc; ++c) {
-                    reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
-                }
-            }
-
-            if (active_[Gas]) {
-                for (int c = 0; c < nc; ++c) {
-                    reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
-                }
-            }
-
-            if (active_[ Oil ]) {
-                for (int c = 0; c < nc; ++c) {
-                    reservoir_state.saturation()[c*np + pu.phase_pos[ Oil ]] = so[c];
-                }
-            }
-
-            // Update rs and rv
-            const double drmaxrel = drMaxRel();
-            V rs;
-            if (has_disgas_) {
-                const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-                const V drs = isRs_ * dxvar;
-                const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
-                rs = rs_old - drs_limited;
-            }
-            V rv;
-            if (has_vapoil_) {
-                const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-                const V drv = isRv_ * dxvar;
-                const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
-                rv = rv_old - drv_limited;
-            }
-
-            // Sg is used as primal variable for water only cells.
-            const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
-            auto watOnly = sw >  (1 - epsilon);
-
-            // phase translation sg <-> rs
-            std::vector<HydroCarbonState>& hydroCarbonState = reservoir_state.hydroCarbonState();
-            std::fill(hydroCarbonState.begin(), hydroCarbonState.end(), HydroCarbonState::GasAndOil);
-
-            if (has_disgas_) {
-                const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
-                const V rsSat = fluidRsSat(p, so, cells_);
-                // The obvious case
-                auto hasGas = (sg > 0 && isRs_ == 0);
-
-                // Set oil saturated if previous rs is sufficiently large
-                const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-                auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs_ == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
-                auto useSg = watOnly || hasGas || gasVaporized;
-                for (int c = 0; c < nc; ++c) {
-                    if (useSg[c]) {
-                        rs[c] = rsSat[c];
-                    } else {
-                        hydroCarbonState[c] = HydroCarbonState::OilOnly;
-                    }
-                }
-
-            }
-
-            // phase transitions so <-> rv
-            if (has_vapoil_) {
-
-                // The gas pressure is needed for the rvSat calculations
-                const V gaspress_old = computeGasPressure(p_old, s_old.col(Water), s_old.col(Oil), s_old.col(Gas));
-                const V gaspress = computeGasPressure(p, sw, so, sg);
-                const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
-                const V rvSat = fluidRvSat(gaspress, so, cells_);
-
-                // The obvious case
-                auto hasOil = (so > 0 && isRv_ == 0);
-
-                // Set oil saturated if previous rv is sufficiently large
-                const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-                auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv_ == 1) && (rv_old > rvSat0 * (1-epsilon)) );
-                auto useSg = watOnly || hasOil || oilCondensed;
-                for (int c = 0; c < nc; ++c) {
-                    if (useSg[c]) {
-                        rv[c] = rvSat[c];
-                    } else {
-                        hydroCarbonState[c] = HydroCarbonState::GasOnly;
-                    }
-                }
-
-            }
-
-            // Update the reservoir_state
-            if (has_disgas_) {
-                std::copy(&rs[0], &rs[0] + nc, reservoir_state.gasoilratio().begin());
-            }
-
-            if (has_vapoil_) {
-                std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
-            }
-
-
-            wellModel().updateWellState(dwells, well_state);
-
-            // Update phase conditions used for property calculations.
-            updatePhaseCondFromPrimalVariable(reservoir_state);
-        }
 
         /// Return true if output to cout is wanted.
         bool terminalOutputEnabled() const
@@ -1008,7 +703,6 @@ namespace Opm {
         const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
-        const RockCompressibility*      rock_comp_props_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
@@ -1019,14 +713,9 @@ namespace Opm {
         const bool has_vapoil_;
 
         ModelParameters                 param_;
-        std::vector<PhasePresence> phaseCondition_;
 
         // Well Model
         StandardWellsDense<FluidSystem, BlackoilIndices> well_model_;
-
-        V isRs_;
-        V isRv_;
-        V isSg_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1058,22 +747,6 @@ namespace Opm {
         bool localWellsActive() const { return well_model_.localWellsActive(); }
 
 
-        V
-        fluidRsSat(const V&                p,
-                   const V&                satOil,
-                   const std::vector<int>& cells) const
-        {
-            return fluid_.rsSat(ADB::constant(p), ADB::constant(satOil), cells).value();
-        }
-
-        V
-        fluidRvSat(const V&                p,
-                   const V&                satOil,
-                   const std::vector<int>& cells) const
-        {
-            return fluid_.rvSat(ADB::constant(p), ADB::constant(satOil), cells).value();
-        }
-
         void convertInput( const int iterationIdx,
                            const ReservoirState& reservoirState,
                            Simulator& simulator ) const
@@ -1095,13 +768,13 @@ namespace Opm {
                 cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
 
                 // set switching variable and interpretation
-                if( isRs_[ cellIdx ] && has_disgas_ )
+                if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::OilOnly && has_disgas_ )
                 {
                     cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
                     cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
                     cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
                 }
-                else if( isRv_[ cellIdx ] && has_vapoil_ )
+                else if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasOnly && has_vapoil_ )
                 {
                     // this case (-> gas only with vaporized oil in the gas) is
                     // relatively expensive as it requires to compute the capillary
@@ -1141,7 +814,7 @@ namespace Opm {
                 }
                 else
                 {
-                    assert(isSg_[cellIdx]);
+                    assert( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasAndOil);
                     cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
                     cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
                     cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
@@ -1186,8 +859,7 @@ namespace Opm {
         {
             const int numPhases = wells().number_of_phases;
             const int numCells = ebosJac.N();
-            const int cols = ebosJac.M();
-            assert( numCells == cols );
+            assert( numCells == ebosJac.M());
 
             // write the right-hand-side values from the ebosJac into the objects
             // allocated above.
@@ -1297,72 +969,6 @@ namespace Opm {
             }
 
         }
-
-
-        V computeGasPressure(const V& po,
-                           const V& sw,
-                           const V& so,
-                           const V& sg) const
-        {
-            assert (active_[Gas]);
-            std::vector<ADB> cp = fluid_.capPress(ADB::constant(sw),
-                                                  ADB::constant(so),
-                                                  ADB::constant(sg),
-                                                  cells_);
-            return cp[Gas].value() + po;
-        }
-
-        const std::vector<PhasePresence>
-        phaseCondition() const {return phaseCondition_;}
-
-        /// update the primal variable for Sg, Rv or Rs. The Gas phase must
-        /// be active to call this method.
-        void
-        updatePrimalVariableFromState(const ReservoirState& state)
-        {
-            updatePhaseCondFromPrimalVariable(state);
-        }
-
-
-        /// Update the phaseCondition_ member based on the primalVariable_ member.
-        /// Also updates isRs_, isRv_ and isSg_;
-        void
-        updatePhaseCondFromPrimalVariable(const ReservoirState& state)
-        {
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            isRs_ = V::Zero(nc);
-            isRv_ = V::Zero(nc);
-            isSg_ = V::Zero(nc);
-
-            if (! (active_[Gas] && active_[Oil])) {
-                // updatePhaseCondFromPrimarVariable() logic requires active gas and oil phase.
-                phaseCondition_.assign(nc, PhasePresence());
-                return;
-            }
-            for (int c = 0; c < nc; ++c) {
-                phaseCondition_[c] = PhasePresence(); // No free phases.
-                phaseCondition_[c].setFreeWater(); // Not necessary for property calculation usage.
-                switch (state.hydroCarbonState()[c]) {
-                case HydroCarbonState::GasAndOil:
-                    phaseCondition_[c].setFreeOil();
-                    phaseCondition_[c].setFreeGas();
-                    isSg_[c] = 1;
-                    break;
-                case HydroCarbonState::OilOnly:
-                    phaseCondition_[c].setFreeOil();
-                    isRs_[c] = 1;
-                    break;
-                case HydroCarbonState::GasOnly:
-                    phaseCondition_[c].setFreeGas();
-                    isRv_[c] = 1;
-                    break;
-                default:
-                    OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << c << ": " << state.hydroCarbonState()[c]);
-                }
-            }
-        }
-
-
 
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
