@@ -31,7 +31,6 @@
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/output/Cells.hpp>
-#include <opm/output/OutputWriter.hpp>
 #include <opm/output/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
