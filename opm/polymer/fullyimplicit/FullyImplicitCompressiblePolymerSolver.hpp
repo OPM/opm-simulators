@@ -61,6 +61,32 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
+
+        struct ReservoirResidualQuant {
+            ReservoirResidualQuant();
+            std::vector<ADB> accum; // Accumulations
+            ADB              mflux; // Mass flux (surface conditions)
+            ADB              b;     // Reciprocal FVF
+            ADB              mu;    // Viscosities
+            ADB              rho;   // Densities
+            ADB              kr;    // Permeabilities
+            ADB              head;  // Pressure drop across int. interfaces
+            ADB              mob;   // Phase mobility (per cell)
+            std::vector<ADB> ads;   // Adsorption term.
+        };
+
+        struct SimulatorData {
+            SimulatorData(int num_phases)
+                : rq(num_phases)
+                , rs(ADB::null())
+                , rv(ADB::null())
+            {
+            }
+            std::vector<ReservoirResidualQuant> rq;
+            ADB rs;
+            ADB rv;
+        };
+
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
         /// remain in scope for the lifetime of the solver.
@@ -109,6 +135,11 @@ namespace Opm {
         double relativeChange(const PolymerBlackoilState& previous,
                               const PolymerBlackoilState& current ) const;
 
+        /// Return reservoir simulation data (for output functionality)
+        const SimulatorData& getSimulatorData() const {
+            return sd_;
+        }
+
         /// Compute fluid in place.
         /// \param[in]    ReservoirState
         /// \param[in]    WellState
@@ -119,17 +150,6 @@ namespace Opm {
                             const std::vector<int>& fipnum);
 
     private:
-
-
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant();
-            std::vector<ADB> accum; // Accumulations
-            ADB              mflux; // Mass flux (surface conditions)
-            ADB              b;     // Reciprocal FVF
-            ADB              head;  // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-			std::vector<ADB> ads;   // Adsorption term.
-        };
 
         struct SolutionState {
             SolutionState(const int np);
@@ -164,7 +184,7 @@ namespace Opm {
         const M                         grav_;
 		V    			 				cmax_;
         std::vector<PhasePresence> phaseCondition_;
-        std::vector<ReservoirResidualQuant> rq_;
+        SimulatorData sd_;
         // The mass_balance vector has one element for each active phase,
         // each of which has size equal to the number of cells.
         // The well_eq has size equal to the number of wells.
