@@ -336,9 +336,7 @@ namespace Opm
                      new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
         eclWriter_( output_ && parallelOutput_->isIORank() &&
                     param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState,
-                                      parallelOutput_->numCells(),
-                                      parallelOutput_->globalCell())
+                    new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , *eclipseState->getInputGrid()))
                    : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()

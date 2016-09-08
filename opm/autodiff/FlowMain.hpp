@@ -657,9 +657,8 @@ namespace Opm
             const Grid& grid = grid_init_->grid();
             if( output && output_ecl && output_cout_)
             {
-                EclipseWriter writer(eclipse_state_,
-                                     Opm::UgGridHelpers::numCells(grid),
-                                     Opm::UgGridHelpers::globalCell(grid));
+                const EclipseGrid& inputGrid = *eclipse_state_->getInputGrid();
+                EclipseWriter writer(eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid ));
                 writer.writeInitAndEgrid(geoprops_->simProps(grid),
                                          geoprops_->nonCartesianConnections());
             }
