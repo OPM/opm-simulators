@@ -217,7 +217,7 @@ namespace Opm {
             std::vector<double> residual_norms;
             const bool converged = getConvergence(timer, iteration,residual_norms);
             residual_norms_history_.push_back(residual_norms);
-            const bool must_solve = true;
+            const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
             Dune::InverseOperatorResult result;
             if (must_solve) {
                 // enable single precision for solvers when dt is smaller then 20 days
