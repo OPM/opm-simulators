@@ -2304,35 +2304,28 @@ namespace detail {
     {
         using namespace Opm::AutoDiffGrid;
         const int nc = numCells(grid_);
-        const int np = x.numPhases();
-
-        SolutionState state(np);
-        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
-        state.pressure    = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
-        state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
-        state.saturation[Water] = active_[Water] ? ADB::constant(s.col(Water)) : ADB::null();
-        state.saturation[Oil] = active_[Oil] ? ADB::constant(s.col(Oil)) : ADB::constant(V::Zero(nc));
-        state.saturation[Gas] = active_[Gas] ? ADB::constant(s.col(Gas)) : ADB::constant(V::Zero(nc));
-        state.rs =  ADB::constant(Eigen::Map<const V>(& x.gasoilratio()[0], nc, 1));
-        state.rv = ADB::constant(Eigen::Map<const V>(& x.rv()[0], nc, 1));
-        state.canonical_phase_pressures = computePressures(state.pressure, 
-                                                           state.saturation[Water], 
-                                                           state.saturation[Oil], 
-                                                           state.saturation[Gas]);
-
+        std::vector<ADB> saturation(3, ADB::null());
+        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, x.numPhases());
+        const ADB pressure    = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
+        const ADB temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
+        saturation[Water] = active_[Water] ? ADB::constant(s.col(Water)) : ADB::null();
+        saturation[Oil] = active_[Oil] ? ADB::constant(s.col(Oil)) : ADB::constant(V::Zero(nc));
+        saturation[Gas] = active_[Gas] ? ADB::constant(s.col(Gas)) : ADB::constant(V::Zero(nc));
+        const ADB rs =  ADB::constant(Eigen::Map<const V>(& x.gasoilratio()[0], nc, 1));
+        const ADB rv = ADB::constant(Eigen::Map<const V>(& x.rv()[0], nc, 1));
+        const auto canonical_phase_pressures = computePressures(pressure, saturation[Water], saturation[Oil], saturation[Gas]);
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-
         const std::vector<PhasePresence> cond = phaseCondition();
 
-        const ADB pv_mult = poroMult(state.pressure);
+        const ADB pv_mult = poroMult(pressure);
         const V& pv = geo_.poreVolume();
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
         std::vector<V> fip(5, V::Zero(nc));
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
-                const auto& b = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], state.temperature, state.rs, state.rv, cond);
-                fip[phase] = ((pv_mult * b * state.saturation[pos] * pv).value());
+                const auto& b = asImpl().fluidReciprocFVF(phase, canonical_phase_pressures[phase], temperature, rs, rv, cond);
+                fip[phase] = ((pv_mult * b * saturation[pos] * pv).value());
             }
         }
 
@@ -2340,8 +2333,8 @@ namespace detail {
             // Account for gas dissolved in oil and vaporized oil
             const int po = pu.phase_pos[Oil];
             const int pg = pu.phase_pos[Gas];
-            fip[3] = state.rs.value() * fip[po];
-            fip[4] = state.rv.value() * fip[pg];
+            fip[3] = rs.value() * fip[po];
+            fip[4] = rv.value() * fip[pg];
         }
 
         const int dims = *std::max_element(fipnum.begin(), fipnum.end());
@@ -2355,15 +2348,15 @@ namespace detail {
         }
 
         // compute PAV and PORV for every regions.
-        const V hydrocarbon = state.saturation[Oil].value() + state.saturation[Gas].value();
+        const V hydrocarbon = saturation[Oil].value() + saturation[Gas].value();
         V hcpv = V::Zero(nc);
         V pres = V::Zero(nc);
         for (int c = 0; c < nc; ++c) {
             if (fipnum[c] != 0) {
                 hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
-                pres[fipnum[c]-1] += pv[c] * state.pressure.value()[c];
+                pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
                 values[fipnum[c]-1][5] += pv[c];
-                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * hydrocarbon[c];
+                values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
             }
         }
 
