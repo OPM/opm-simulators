@@ -469,8 +469,8 @@ namespace detail {
     BlackoilModelBase<Grid, WellModel, Implementation>::
     SimulatorData::SimulatorData(int num_phases)
         : rq(num_phases)
-        , rv(ADB::null())
         , rs(ADB::null())
+        , rv(ADB::null())
     {
     }
 
