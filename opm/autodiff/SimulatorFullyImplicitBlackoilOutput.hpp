@@ -532,25 +532,43 @@ namespace Opm
              * Relative permeabilities for water, oil, gas
              */
             if (aqua_active && outKeywords["KRW"] > 0) {
-                outKeywords["KRW"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "WATKR",
-                        Opm::UnitSystem::measure::permeability,
-                        std::move(adbToDoubleVector(sd.rq[aqua_idx].kr))});
+                if (sd.rq[aqua_idx].kr.size() > 0) {
+                    outKeywords["KRW"] = 0;
+                    simProps.emplace_back(data::CellData{
+                            "WATKR",
+                            Opm::UnitSystem::measure::permeability,
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].kr))});
+                }
+                else {
+                    Opm::OpmLog::warning("Empty:WATKR",
+                                         "Not emitting empty Water Rel-Perm");
+                }
             }
-            if (aqua_active && outKeywords["KRO"] > 0) {
-                outKeywords["KRO"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "OILKR",
-                        Opm::UnitSystem::measure::permeability,
-                        std::move(adbToDoubleVector(sd.rq[liquid_idx].kr))});
+            if (liquid_active && outKeywords["KRO"] > 0) {
+                if (sd.rq[liquid_idx].kr.size() > 0) {
+                    outKeywords["KRO"] = 0;
+                    simProps.emplace_back(data::CellData{
+                             "OILKR",
+                             Opm::UnitSystem::measure::permeability,
+                             std::move(adbToDoubleVector(sd.rq[liquid_idx].kr))});
+                }
+                else {
+                    Opm::OpmLog::warning("Empty:OILKR",
+                                         "Not emitting empty Oil Rel-Perm");
+                }
             }
-            if (aqua_active && outKeywords["KRG"] > 0) {
-                outKeywords["KRG"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "GASKR",
-                        Opm::UnitSystem::measure::permeability,
-                        std::move(adbToDoubleVector(sd.rq[vapour_idx].kr))});
+            if (vapour_active && outKeywords["KRG"] > 0) {
+                if (sd.rq[vapour_idx].kr.size() > 0) {
+                    outKeywords["KRG"] = 0;
+                    simProps.emplace_back(data::CellData{
+                             "GASKR",
+                             Opm::UnitSystem::measure::permeability,
+                             std::move(adbToDoubleVector(sd.rq[vapour_idx].kr))});
+                }
+                else {
+                    Opm::OpmLog::warning("Empty:GASKR",
+                                         "Not emitting empty Gas Rel-Perm");
+                }
             }
 
             /**
