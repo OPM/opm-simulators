@@ -340,7 +340,8 @@ namespace Opm
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
-             permeability, dummy_list_econ_limited, dummy_well_potentials);
+             permeability, dummy_list_econ_limited, dummy_well_potentials,
+             std::set<std::string>());
 
     }
 

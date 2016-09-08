@@ -121,6 +121,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                         const double* permeability,
                                         const NTG& ntg,
                                         std::vector<int>& wells_on_proc,
+                                        const std::set<std::string>& ignored_wells,
                                         const DynamicListEconLimited& list_econ_limited)
 {
     if (dimensions != 3) {
@@ -137,9 +138,14 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
     // Note that some wells are deactivated as they live on the interior
     // domain of another proccess. Therefore this might different from
     // the index of the well according to the eclipse state
-    int well_index_on_proc = 0;
+    int active_well_index = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
         const auto* well = (*wellIter);
+
+        if ( ignored_wells.find(well->name()) != ignored_wells.end() ) {
+            wells_on_proc[ wellIter - wells.begin() ] = 0;
+            continue;
+        }
 
         if (well->getStatus(timeStep) == WellCommon::SHUT) {
             continue;
@@ -157,8 +163,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
         {   // COMPDAT handling
             auto completionSet = well->getCompletions(timeStep);
             // shut completions and open ones stored in this process will have 1 others 0.
-            std::vector<std::size_t> completion_on_proc(completionSet->size(), 1);
-            std::size_t shut_completions_number = 0;
+
             for (size_t c=0; c<completionSet->size(); c++) {
                 CompletionConstPtr completion = completionSet->get(c);
                 if (completion->getState() == WellCompletion::OPEN) {
@@ -170,17 +175,9 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                     int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
                     std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
                     if (cgit == cartesian_to_compressed.end()) {
-                        if ( is_parallel_run_ )
-                        {
-                            completion_on_proc[c]=0;
-                            continue;
-                        }
-                        else
-                        {
-                            OPM_MESSAGE("****Warning: Cell with i,j,k indices " << i << ' ' << j << ' '
-                                      << k << " not found in grid. The completion will be igored (well = "
-                                      << well->name() << ')');
-                        }
+                        OPM_MESSAGE("****Warning: Cell with i,j,k indices " << i << ' ' << j << ' '
+                                    << k << " not found in grid. The completion will be igored (well = "
+                                    << well->name() << ')');
                     }
                     else
                     {
@@ -226,47 +223,17 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                             }
                             pd.well_index *= wellPi;
                         }
-                        wellperf_data[well_index_on_proc].push_back(pd);
+                        wellperf_data[active_well_index].push_back(pd);
                     }
                 } else {
-                    ++shut_completions_number;
                     if (completion->getState() != WellCompletion::SHUT) {
                         OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion->getState() ) << " not handled");
                     }
                 }
             }
-            if ( is_parallel_run_ )
-            {
-                // sum_completions_on_proc includes completions
-                // that are shut
-                std::size_t sum_completions_on_proc = std::accumulate(completion_on_proc.begin(),
-                                                                      completion_on_proc.end(),0);
-                // Set wells that are not on this processor to SHUT.
-                // A well is not here if only shut completions are found.
-                if ( sum_completions_on_proc == shut_completions_number )
-                {
-                    // Mark well as not existent on this process
-                    wells_on_proc[wellIter-wells.begin()] = 0;
-                    continue;
-                }
-                else
-                {
-                    // Check that the complete well is on this process
-                    if ( sum_completions_on_proc < completionSet->size() )
-                    {
-                        OpmLog::warning("Well " + well->name() + " does not seem to be"
-                                        + "completely in the disjoint partition of "
-                                        + "process. Therefore we  deactivate it here.");
-                        // Mark well as not existent on this process
-                        wells_on_proc[wellIter-wells.begin()] = 0;
-                        wellperf_data[well_index_on_proc].clear();
-                        continue;
-                    }
-                }
-            }
         }
         {   // WELSPECS handling
-            well_names_to_index[well->name()] = well_index_on_proc;
+            well_names_to_index[well->name()] = active_well_index;
             well_names.push_back(well->name());
             {
                 WellData wd;
@@ -282,7 +249,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
             }
         }
 
-        well_index_on_proc++;
+        active_well_index++;
     }
     // Set up reference depths that were defaulted. Count perfs.
 
@@ -349,12 +316,13 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const double*                   permeability,
              const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
-             const std::vector<double>&      well_potentials)
+             const std::vector<double>&      well_potentials,
+             const std::set<std::string>&    deactivated_wells)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
-         cell_to_faces, begin_face_centroids, permeability, list_econ_limited, well_potentials);
+         cell_to_faces, begin_face_centroids, permeability, list_econ_limited, well_potentials, deactivated_wells);
 }
 
 /// Construct wells from deck.
@@ -370,7 +338,8 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    FC                              begin_face_centroids,
                    const double*                   permeability,
                    const DynamicListEconLimited&   list_econ_limited,
-                   const std::vector<double>&      well_potentials)
+                   const std::vector<double>&      well_potentials,
+                   const std::set<std::string>&    deactivated_wells)
 {
     if (dimensions != 3) {
         OPM_THROW(std::runtime_error,
@@ -432,7 +401,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                          dz,
                          well_names, well_data, well_names_to_index,
                          pu, cartesian_to_compressed, permeability, ntg,
-                         wells_on_proc, list_econ_limited);
+                         wells_on_proc, deactivated_wells, list_econ_limited);
 
     setupWellControls(wells, timeStep, well_names, pu, wells_on_proc, list_econ_limited);
 
