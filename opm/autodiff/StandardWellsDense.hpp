@@ -114,13 +114,17 @@ namespace Opm {
                       const std::vector<double>& depth_arg,
                       const std::vector<double>& pv_arg)
             {
+
+                if ( ! localWellsActive() ) {
+                    return;
+                }
+
                 fluid_ = fluid_arg;
                 active_ = active_arg;
                 vfp_properties_ = vfp_properties_arg;
                 gravity_ = gravity_arg;
                 cell_depths_ = extractPerfData(depth_arg);
                 pv_ = pv_arg;
-
 
                 // setup sparsity pattern for the matrices
                 //[A B^T    [x    =  [ res
@@ -221,7 +225,7 @@ namespace Opm {
 
                         const int cell_idx = wells().well_cells[perf];
                         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                        std::vector<EvalWell> cq_s(np);
+                        std::vector<EvalWell> cq_s(np,0.0);
                         computeWellFlux(w, wells().WI[perf], intQuants, wellPerforationPressureDiffs()[perf], cq_s);
 
                         for (int p1 = 0; p1 < np; ++p1) {
@@ -286,6 +290,10 @@ namespace Opm {
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const {
+                if ( ! localWellsActive() ) {
+                    return;
+                }
+
                 BVector invDrw(invDuneD_.N());
                 invDuneD_.mv(resWell_,invDrw);
                 duneB_.mmtv(invDrw, r);
@@ -293,6 +301,9 @@ namespace Opm {
 
             // subtract B*inv(D)*C * x from A*x
             void apply(const BVector& x, BVector& Ax) {
+                if ( ! localWellsActive() ) {
+                    return;
+                }
                 BVector Cx(duneC_.N());
                 duneC_.mv(x, Cx);
                 BVector invDCx(invDuneD_.N());
@@ -302,6 +313,9 @@ namespace Opm {
 
             // xw = inv(D)*(rw - C*x)
             void recoverVariable(const BVector& x, BVector& xw) const {
+                if ( ! localWellsActive() ) {
+                    return;
+                }
                 BVector resWell = resWell_;
                 duneC_.mmv(x, resWell);
                 invDuneD_.mv(resWell, xw);
