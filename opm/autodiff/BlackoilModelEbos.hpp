@@ -286,6 +286,7 @@ namespace Opm {
 
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx, reservoir_state);
+
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
 
@@ -298,12 +299,6 @@ namespace Opm {
             {
                 OPM_THROW(Opm::NumericalProblem,"no convergence");
             }
-
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-
-            convertResults(ebosResid, ebosJac);
-            wellModel().addRhs(ebosResid, ebosJac);
 
             return iter_report;
         }
@@ -381,7 +376,7 @@ namespace Opm {
             typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
             typedef Dune::BlockVector<VectorBlockType>      BVector;
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             typedef WellModelMatrixAdapter<Mat,BVector,BVector, ThisType> Operator;
@@ -1009,7 +1004,9 @@ namespace Opm {
 
             prevEpisodeIdx = ebosSimulator_.episodeIndex();
 
-            //convertResults(ebosSimulator_);
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            convertResults(ebosResid, ebosJac);
 
             if (param_.update_equations_scaling_) {
                 std::cout << "equation scaling not suported yet" << std::endl;
