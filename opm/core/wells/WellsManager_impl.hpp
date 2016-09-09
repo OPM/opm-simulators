@@ -121,7 +121,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                         const double* permeability,
                                         const NTG& ntg,
                                         std::vector<int>& wells_on_proc,
-                                        const std::set<std::string>& ignored_wells,
+                                        const std::set<int>& ignored_wells,
                                         const DynamicListEconLimited& list_econ_limited)
 {
     if (dimensions != 3) {
@@ -134,6 +134,8 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
     wellperf_data.resize(wells.size());
     wells_on_proc.resize(wells.size(), 1);
 
+    auto ignored_well = ignored_wells.begin();
+
     // The well index on the current process.
     // Note that some wells are deactivated as they live on the interior
     // domain of another proccess. Therefore this might different from
@@ -141,9 +143,11 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
     int active_well_index = 0;
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
         const auto* well = (*wellIter);
+        const int well_index = wellIter - wells.begin();
 
-        if ( ignored_wells.find(well->name()) != ignored_wells.end() ) {
-            wells_on_proc[ wellIter - wells.begin() ] = 0;
+        if ( ignored_well != ignored_wells.end() && *ignored_well == well_index ) {
+            wells_on_proc[ well_index ] = 0;
+            ++ignored_well;
             continue;
         }
 
@@ -317,7 +321,7 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
              const std::vector<double>&      well_potentials,
-             const std::set<std::string>&    deactivated_wells)
+             const std::set<int>&            deactivated_wells)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
@@ -339,7 +343,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    const double*                   permeability,
                    const DynamicListEconLimited&   list_econ_limited,
                    const std::vector<double>&      well_potentials,
-                   const std::set<std::string>&    deactivated_wells)
+                   const std::set<int>&            deactivated_wells)
 {
     if (dimensions != 3) {
         OPM_THROW(std::runtime_error,
