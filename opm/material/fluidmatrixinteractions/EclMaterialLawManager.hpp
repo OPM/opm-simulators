@@ -275,31 +275,6 @@ private:
 
         enableEndPointScaling_ = deck->hasKeyword("ENDSCALE");
 
-        if (enableEndPointScaling()) {
-            // sift through the options of the ENDSCALE keyword
-            const auto& endscaleKeyword = deck->getKeyword("ENDSCALE");
-            const auto& endscaleRecord = endscaleKeyword.getRecord(0);
-            for (unsigned itemIdx = 0; itemIdx < endscaleRecord.size() && itemIdx < 2; ++ itemIdx) {
-                std::string optionValue = endscaleRecord.getItem(itemIdx).getTrimmedString(0);
-
-                // convert the value of the option to upper case, just to be sure
-                std::transform(optionValue.begin(),
-                               optionValue.end(),
-                               optionValue.begin(),
-                               ::toupper);
-
-                if (optionValue == "DIRECT") {
-                    OPM_THROW(std::runtime_error,
-                              "Directional end-point scaling (indicated by the 'DIRECT' option"
-                              " of the 'ENDSCALE' keyword) is not yet supported");
-                }
-                if (optionValue == "IRREVERS") {
-                    OPM_THROW(std::runtime_error,
-                              "Irreversible end-point scaling (indicated by the 'IRREVERS' option"
-                              " of the 'ENDSCALE' keyword) is not yet supported");
-                }
-            }
-        }
     }
 
     void readGlobalHysteresisOptions_(Opm::DeckConstPtr deck)
