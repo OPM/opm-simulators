@@ -108,7 +108,13 @@ namespace Opm
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability(),
                                        dynamic_list_econ_limited,
-                                       is_parallel_run_);
+                                       is_parallel_run_,
+                                       // We need to pass the optionaly arguments
+                                       // as we get the following error otherwise
+                                       // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
+                                       // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructor
+                                       std::vector<double>(), // null well_potentials
+                                       Base::defunct_well_names_);
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
             // well_state.init(wells, state, prev_well_state);
