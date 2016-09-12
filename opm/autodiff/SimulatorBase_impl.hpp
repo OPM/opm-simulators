@@ -26,6 +26,7 @@
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/well_controls.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
+#include <opm/autodiff/BlackoilModel.hpp>
 
 namespace Opm
 {

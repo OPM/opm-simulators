@@ -42,6 +42,7 @@
 #include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
+#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
@@ -52,6 +53,8 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
+#include <opm/core/simulator/SimulatorReport.hpp>
+#include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -221,7 +224,6 @@ namespace Opm {
                                            ReservoirState& reservoir_state,
                                            WellState& well_state)
         {
-            const double dt = timer.currentStepLength();
             if (iteration == 0) {
                 // For each iteration we store in a vector the norms of the residual of
                 // the mass balance for each active phase, the well flux and the well equations.
@@ -302,13 +304,6 @@ namespace Opm {
                 OPM_THROW(Opm::NumericalProblem,"no convergence");
             }
 
-            typedef double Scalar;
-            typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
-            typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
-            typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
-            typedef Dune::BlockVector<VectorBlockType>      BVector;
-
-            typedef Dune::MatrixAdapter<Mat,BVector,BVector> Operator;
             auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
@@ -927,6 +922,16 @@ namespace Opm {
             }
         }
 
+        std::vector<std::vector<double> >
+        computeFluidInPlace(const ReservoirState& x,
+                            const std::vector<int>& fipnum) const
+        {
+            OPM_THROW(std::logic_error,
+                      "computeFluidInPlace() not implemented by BlackoilModelEbos!");
+        }
+
+        const Simulator& ebosSimulator() const
+        { return ebosSimulator_; }
 
     protected:
 
@@ -1244,8 +1249,7 @@ namespace Opm {
         {
             const int numPhases = wells().number_of_phases;
             const int numCells = ebosJac.N();
-            const int cols = ebosJac.M();
-            assert( numCells == cols );
+            assert( numCells == static_cast<int>(ebosJac.M()) );
 
             // write the right-hand-side values from the ebosJac into the objects
             // allocated above.

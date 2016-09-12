@@ -390,7 +390,7 @@ namespace Opm
             //const int np = residual.material_balance_eq.size();
             assert( np == int(residual.material_balance_eq.size()) );
             std::vector<ADB> eqs;
-            eqs.reserve(np + 1);
+            eqs.reserve(np + 2);
             for (int phase = 0; phase < np; ++phase) {
                 eqs.push_back(residual.material_balance_eq[phase]);
             }
@@ -401,14 +401,14 @@ namespace Opm
             if( hasWells )
             {
                 eqs.push_back(residual.well_flux_eq);
-                //eqs.push_back(residual.well_eq);
+                eqs.push_back(residual.well_eq);
 
                 // Eliminate the well-related unknowns, and corresponding equations.
-                elim_eqs.reserve(1);
+                elim_eqs.reserve(2);
                 elim_eqs.push_back(eqs[np]);
                 eqs = eliminateVariable(eqs, np); // Eliminate well flux unknowns.
-                //elim_eqs.push_back(eqs[np]);
-                //eqs = eliminateVariable(eqs, np); // Eliminate well bhp unknowns.
+                elim_eqs.push_back(eqs[np]);
+                eqs = eliminateVariable(eqs, np); // Eliminate well bhp unknowns.
                 assert(int(eqs.size()) == np);
             }
 
@@ -500,7 +500,7 @@ namespace Opm
             if ( hasWells ) {
                 // Compute full solution using the eliminated equations.
                 // Recovery in inverse order of elimination.
-                //dx = recoverVariable(elim_eqs[1], dx, np);
+                dx = recoverVariable(elim_eqs[1], dx, np);
                 dx = recoverVariable(elim_eqs[0], dx, np);
             }
             return dx;
@@ -575,7 +575,6 @@ namespace Opm
         computePressureIncrement(const LinearisedBlackoilResidual& residual)
         {
             typedef LinearisedBlackoilResidual::ADB ADB;
-            typedef ADB::V V;
 
             // Build the vector of equations (should be just a single material balance equation
             // in which the pressure equation is stored).

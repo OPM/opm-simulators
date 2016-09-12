@@ -173,6 +173,7 @@ namespace Opm
         typedef BlackoilPropsAdFromDeck FluidProps;
         typedef FluidProps::MaterialLawManager MaterialLawManager;
         typedef typename Simulator::ReservoirState ReservoirState;
+        typedef typename Simulator::OutputWriter OutputWriter;
 
 
         // ------------   Data members   ------------
@@ -207,7 +208,7 @@ namespace Opm
         // distributeData()
         boost::any parallel_information_;
         // setupOutputWriter()
-        std::unique_ptr<BlackoilOutputWriter> output_writer_;
+        std::unique_ptr<OutputWriter> output_writer_;
         // setupLinearSolver
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
         // createSimulator()
@@ -673,11 +674,11 @@ namespace Opm
             // create output writer after grid is distributed, otherwise the parallel output
             // won't work correctly since we need to create a mapping from the distributed to
             // the global view
-            output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
-                                                          param_,
-                                                          eclipse_state_,
-                                                          Opm::phaseUsageFromDeck(deck_),
-                                                          fluidprops_->permeability()));
+            output_writer_.reset(new OutputWriter(grid_init_->grid(),
+                                                  param_,
+                                                  eclipse_state_,
+                                                  Opm::phaseUsageFromDeck(deck_),
+                                                  fluidprops_->permeability()));
         }
 
 

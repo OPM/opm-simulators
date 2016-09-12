@@ -24,6 +24,8 @@
 #define OPM_NONLINEARSOLVER_IMPL_HEADER_INCLUDED
 
 #include <opm/autodiff/NonlinearSolver.hpp>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm
 {
@@ -100,15 +102,6 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    std::vector<V> 
-    NonlinearSolver<PhysicalModel>::computeFluidInPlace(const ReservoirState& x,
-                                                        const std::vector<int>& fipnum) const
-    {
-        return model_->computeFluidInPlace(x, fipnum);
-    }
-
-
-    template <class PhysicalModel>
     int
     NonlinearSolver<PhysicalModel>::
     step(const SimulatorTimerInterface& timer,
@@ -117,6 +110,7 @@ namespace Opm
     {
         return step(timer, reservoir_state, well_state, reservoir_state, well_state);
     }
+
 
 
     template <class PhysicalModel>
@@ -175,6 +169,7 @@ namespace Opm
 
         return linIters;
     }
+
 
 
     template <class PhysicalModel>

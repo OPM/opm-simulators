@@ -205,8 +205,8 @@ namespace {
          PolymerBlackoilState& x ,
          WellStateFullyImplicitBlackoilPolymer& xw)
     {
-        const double dt = timer.currentStepLength();
         const std::vector<double>& polymer_inflow = xw.polymerInflow();
+        const double dt = timer.currentStepLength();
 
         // Initial max concentration of this time step from PolymerBlackoilState.
         cmax_ = Eigen::Map<V>(&x.getCellData( x.CMAX )[0], Opm::AutoDiffGrid::numCells(grid_));

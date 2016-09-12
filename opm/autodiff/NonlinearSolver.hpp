@@ -131,7 +131,11 @@ namespace Opm {
         /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
         std::vector<V>
         computeFluidInPlace(const ReservoirState& x,
-                            const std::vector<int>& fipnum) const;
+                            const std::vector<int>& fipnum) const
+        {
+            return model_->computeFluidInPlace(x, fipnum);
+        }
+
 
         /// Reference to physical model.
         const PhysicalModel& model() const;

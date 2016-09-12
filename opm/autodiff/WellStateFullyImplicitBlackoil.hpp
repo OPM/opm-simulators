@@ -225,7 +225,6 @@ namespace Opm
                                 }
                             }
                         }
-
                         // perfPressures
                         if( num_perf_old_well == num_perf_this_well )
                         {

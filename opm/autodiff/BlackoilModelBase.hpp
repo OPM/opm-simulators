@@ -27,13 +27,13 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
-#include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/IterationReport.hpp>
+#include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
