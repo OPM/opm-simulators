@@ -178,7 +178,7 @@ namespace Opm
             if (timer.initialStep()) {
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
+                output_writer_.writeTimeStep( timer, state, well_state );
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -683,7 +683,10 @@ namespace Opm
     typename SimulatorBase<Implementation>::V
     SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip, const ReservoirState& state)
     {
-        typedef typename SimulatorBase<Implementation>::DataBlock DataBlock;
+        typedef Eigen::Array<double,
+                             Eigen::Dynamic,
+                             Eigen::Dynamic,
+                             Eigen::RowMajor> DataBlock;
 
         V totals(V::Zero(7));
         for (int i = 0; i < 5; ++i) {

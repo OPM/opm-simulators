@@ -221,11 +221,6 @@ public:
             // give the polymer and surfactant simulators the chance to do their stuff
             handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
-            // write the inital state at the report stage
-            if (timer.initialStep()) {
-                output_writer_.writeTimeStep( timer, state, well_state );
-            }
-
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
@@ -236,6 +231,11 @@ public:
             const WellModel well_model(wells, model_param_, terminal_output_, pv);
 
             auto solver = createSolver(well_model);
+
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+                output_writer_.writeTimeStep( timer, state, well_state );
+            }
 
             if( terminal_output_ )
             {
