@@ -680,9 +680,11 @@ namespace Opm
 
 
     template <class Implementation>
-    V
+    typename SimulatorBase<Implementation>::V
     SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip, const ReservoirState& state)
     {
+        typedef typename SimulatorBase<Implementation>::DataBlock DataBlock;
+
         V totals(V::Zero(7));
         for (int i = 0; i < 5; ++i) {
             for (size_t reg = 0; reg < fip.size(); ++reg) {

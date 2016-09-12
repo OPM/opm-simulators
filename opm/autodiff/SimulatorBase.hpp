@@ -86,6 +86,9 @@ namespace Opm
     {
         typedef SimulatorTraits<Implementation> Traits;
 
+        typedef AutoDiffBlock<double> ADB;
+        typedef ADB::V V;
+
     public:
         typedef typename Traits::ReservoirState ReservoirState;
         typedef typename Traits::WellState WellState;

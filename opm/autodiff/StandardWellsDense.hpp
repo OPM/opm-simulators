@@ -305,7 +305,7 @@ namespace Opm {
             }
 
             void addRhs(BVector& x, Mat& jac) const {
-                assert(x.size() == rhs.size());
+                assert(x.size() == rhs_.size());
                 x += rhs_;
                 // jac = A + duneA
                 jac = matAdd( jac, duneA_ );
