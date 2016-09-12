@@ -78,8 +78,7 @@ namespace Opm
         /// well productivity indices, otherwise it must be given in
         /// order to approximate these by the Peaceman formula.
         ///
-        /// \param deactivated_wells The indices (according to the
-        ///        eclipse schedule) of wells that should be treated
+        /// \param deactivated_wells A set of wells that should be treated
         ///        like shut wells. E.g. in a a parallel run these would be
         ///        the wells handeled by another process. Defaults to empty set.
         template<class F2C, class FC>
@@ -95,7 +94,7 @@ namespace Opm
                      const DynamicListEconLimited& list_econ_limited,
                      bool is_parallel_run=false,
                      const std::vector<double>& well_potentials={},
-                     const std::set<int>& deactivated_wells = {});
+                     const std::set<std::string>& deactivated_wells = {});
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
@@ -165,7 +164,7 @@ namespace Opm
                   const double* permeability,
                   const DynamicListEconLimited& list_econ_limited,
                   const std::vector<double>& well_potentials,
-                  const std::set<int>& deactivated_wells);
+                  const std::set<std::string>& deactivated_wells);
         // Disable copying and assignment.
         WellsManager(const WellsManager& other);
         WellsManager& operator=(const WellsManager& other);
@@ -190,7 +189,7 @@ namespace Opm
                                    const double* permeability,
                                    const NTG& ntg,
                                    std::vector<int>& wells_on_proc,
-                                   const std::set<int>& deactivated_wells,
+                                   const std::set<std::string>& deactivated_wells,
                                    const DynamicListEconLimited& list_econ_limited);
 
         void addChildGroups(GroupTreeNodeConstPtr parentNode, std::shared_ptr< const Schedule > schedule, size_t timeStep, const PhaseUsage& phaseUsage);
