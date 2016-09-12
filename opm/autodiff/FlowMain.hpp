@@ -145,6 +145,7 @@ namespace Opm
             asImpl().extractMessages();
             asImpl().runDiagnostics();
             asImpl().setupState();
+            asImpl().writeInit();
             asImpl().distributeData();
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
@@ -649,7 +650,19 @@ namespace Opm
         }
 
 
-
+        void writeInit()
+        {
+            bool output      = param_.getDefault("output", true);
+            bool output_ecl  = param_.getDefault("output_ecl", true);
+            const Grid& grid = grid_init_->grid();
+            if( output && output_ecl && output_cout_)
+            {
+                const EclipseGrid& inputGrid = *eclipse_state_->getInputGrid();
+                EclipseWriter writer(eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid ));
+                writer.writeInitAndEgrid(geoprops_->simProps(grid),
+                                         geoprops_->nonCartesianConnections());
+            }
+        }
 
 
         // Setup output writer.
@@ -663,7 +676,6 @@ namespace Opm
             output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
                                                           param_,
                                                           eclipse_state_,
-                                                          geoprops_->nonCartesianConnections(),
                                                           Opm::phaseUsageFromDeck(deck_),
                                                           fluidprops_->permeability()));
         }
@@ -747,7 +759,6 @@ namespace Opm
                     fullReport.reportParam(tot_os);
                 }
             } else {
-                output_writer_->writeInit(geoprops_->simProps(grid_init_->grid()) , geoprops_->nonCartesianConnections( ));
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }

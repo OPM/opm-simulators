@@ -25,13 +25,13 @@
 #include <opm/core/utility/Compat.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/output/eclipse/EclipseReader.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
 #include <opm/output/Cells.hpp>
-#include <opm/output/OutputWriter.hpp>
 #include <opm/output/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
@@ -39,6 +39,7 @@
 
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/ThreadHandle.hpp>
+#include <opm/autodiff/AutoDiffBlock.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
@@ -212,23 +213,58 @@ namespace Opm
         BlackoilOutputWriter(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              Opm::EclipseStateConstPtr eclipseState,
-                             const NNC&,
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability );
 
         /** \copydoc Opm::OutputWriter::writeInit */
         void writeInit(const std::vector<data::CellData>& simProps, const NNC& nnc);
 
-        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This function will extract the
+         *        requested output cell properties specified by the RPTRST keyword
+         *        and write these to file.
+         */
+        template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
+                           const SimulationDataContainer& reservoirState,
+                           const Opm::WellState& wellState,
+                           const Model& physicalModel,
+                           bool substep = false);
+
+
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This function will write all
+         *        CellData in simProps to the file as well.
+         */
+        void writeTimeStepWithCellProperties(
+                           const SimulatorTimerInterface& timer,
+                           const SimulationDataContainer& reservoirState,
+                           const Opm::WellState& wellState,
+                           const std::vector<data::CellData>& simProps,
+                           bool substep = false);
+
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This function will not write
+         *        any cell properties (e.g., those requested by RPTRST keyword)
+         */
+        void writeTimeStepWithoutCellProperties(
+                           const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellState& wellState,
                            bool substep = false);
 
-        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        /*!
+         * \brief Write a blackoil reservoir state to disk for later inspection with
+         *        visualization tools like ResInsight. This is the function which does
+         *        the actual write to file.
+         */
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellState& wellState,
+                                 const std::vector<data::CellData>& simProps,
                                  bool substep);
 
         /** \brief return output directory */
@@ -285,7 +321,6 @@ namespace Opm
     BlackoilOutputWriter(const Grid& grid,
                          const parameter::ParameterGroup& param,
                          Opm::EclipseStateConstPtr eclipseState,
-                         const NNC& nnc,
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),
@@ -301,9 +336,7 @@ namespace Opm
                      new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
         eclWriter_( output_ && parallelOutput_->isIORank() &&
                     param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState,
-                                      parallelOutput_->numCells(),
-                                      parallelOutput_->globalCell())
+                    new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , *eclipseState->getInputGrid()))
                    : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()
@@ -377,5 +410,227 @@ namespace Opm
     }
 
 
+
+
+
+    namespace detail {
+
+        /**
+         * Converts an ADB into a standard vector by copy
+         */
+        inline std::vector<double> adbToDoubleVector(const Opm::AutoDiffBlock<double>& adb) {
+            const auto& adb_v = adb.value();
+            std::vector<double> vec(adb_v.data(), adb_v.data() + adb_v.size());
+            return vec;
+        }
+
+
+        template<class Model>
+        std::vector<data::CellData> getCellData(
+                const Opm::PhaseUsage& phaseUsage,
+                const Model& model,
+                const RestartConfig& restartConfig,
+                const int reportStepNum) {
+
+
+            std::vector<data::CellData> simProps;
+
+            //Get the value of each of the keys
+            std::map<std::string, int> outKeywords = restartConfig.getRestartKeywords(reportStepNum);
+            for (auto& keyValue : outKeywords) {
+                keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
+            }
+
+            const typename Model::SimulatorData& sd = model.getSimulatorData();
+
+            //Get shorthands for water, oil, gas
+            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
+            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
+            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
+
+            const int aqua_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Aqua];
+            const int liquid_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Liquid];
+            const int vapour_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Vapour];
+
+
+            /**
+             * Formation volume factors for water, oil, gas
+             */
+            if (aqua_active && outKeywords["BW"] > 0) {
+                outKeywords["BW"] = 0;
+                simProps.emplace_back(data::CellData{
+                        "1OVERBW",
+                        Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
+                        std::move(adbToDoubleVector(sd.rq[aqua_idx].b))});
+            }
+            if (liquid_active && outKeywords["BO"]  > 0) {
+                outKeywords["BO"] = 0;
+                simProps.emplace_back(data::CellData{
+                        "1OVERBO",
+                        Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
+                        std::move(adbToDoubleVector(sd.rq[liquid_idx].b))});
+            }
+            if (vapour_active && outKeywords["BG"] > 0) {
+                outKeywords["BG"] = 0;
+                simProps.emplace_back(data::CellData{
+                        "1OVERBG",
+                        Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
+                        std::move(adbToDoubleVector(sd.rq[vapour_idx].b))});
+            }
+
+            /**
+             * Densities for water, oil gas
+             */
+            if (outKeywords["DEN"] > 0) {
+                outKeywords["DEN"] = 0;
+                if (aqua_active) {
+                    simProps.emplace_back(data::CellData{
+                            "WAT_DEN",
+                            Opm::UnitSystem::measure::density,
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].rho))});
+                }
+                if (liquid_active) {
+                    simProps.emplace_back(data::CellData{
+                            "OIL_DEN",
+                            Opm::UnitSystem::measure::density,
+                            std::move(adbToDoubleVector(sd.rq[liquid_idx].rho))});
+                }
+                if (vapour_active) {
+                    simProps.emplace_back(data::CellData{
+                            "GAS_DEN",
+                            Opm::UnitSystem::measure::density,
+                            std::move(adbToDoubleVector(sd.rq[vapour_idx].rho))});
+                }
+            }
+
+            /**
+             * Viscosities for water, oil gas
+             */
+            if (outKeywords["VISC"] > 0) {
+                outKeywords["VISC"] = 0;
+                if (aqua_active) {
+                    simProps.emplace_back(data::CellData{
+                            "WAT_VISC",
+                            Opm::UnitSystem::measure::viscosity,
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].mu))});
+                }
+                if (liquid_active) {
+                    simProps.emplace_back(data::CellData{
+                            "OIL_VISC",
+                            Opm::UnitSystem::measure::viscosity,
+                            std::move(adbToDoubleVector(sd.rq[liquid_idx].mu))});
+                }
+                if (vapour_active) {
+                    simProps.emplace_back(data::CellData{
+                            "GAS_VISC",
+                            Opm::UnitSystem::measure::viscosity,
+                            std::move(adbToDoubleVector(sd.rq[vapour_idx].mu))});
+                }
+            }
+
+            /**
+             * Relative permeabilities for water, oil, gas
+             */
+            if (aqua_active && outKeywords["KRW"] > 0) {
+                if (sd.rq[aqua_idx].kr.size() > 0) {
+                    outKeywords["KRW"] = 0;
+                    simProps.emplace_back(data::CellData{
+                            "WATKR",
+                            Opm::UnitSystem::measure::permeability,
+                            std::move(adbToDoubleVector(sd.rq[aqua_idx].kr))});
+                }
+                else {
+                    Opm::OpmLog::warning("Empty:WATKR",
+                                         "Not emitting empty Water Rel-Perm");
+                }
+            }
+            if (liquid_active && outKeywords["KRO"] > 0) {
+                if (sd.rq[liquid_idx].kr.size() > 0) {
+                    outKeywords["KRO"] = 0;
+                    simProps.emplace_back(data::CellData{
+                             "OILKR",
+                             Opm::UnitSystem::measure::permeability,
+                             std::move(adbToDoubleVector(sd.rq[liquid_idx].kr))});
+                }
+                else {
+                    Opm::OpmLog::warning("Empty:OILKR",
+                                         "Not emitting empty Oil Rel-Perm");
+                }
+            }
+            if (vapour_active && outKeywords["KRG"] > 0) {
+                if (sd.rq[vapour_idx].kr.size() > 0) {
+                    outKeywords["KRG"] = 0;
+                    simProps.emplace_back(data::CellData{
+                             "GASKR",
+                             Opm::UnitSystem::measure::permeability,
+                             std::move(adbToDoubleVector(sd.rq[vapour_idx].kr))});
+                }
+                else {
+                    Opm::OpmLog::warning("Empty:GASKR",
+                                         "Not emitting empty Gas Rel-Perm");
+                }
+            }
+
+            /**
+             * Vaporized and dissolved gas/oil ratio
+             */
+            if (vapour_active && liquid_active && outKeywords["RSSAT"] > 0) {
+                outKeywords["RSSAT"] = 0;
+                simProps.emplace_back(data::CellData{
+                        "RSSAT",
+                        Opm::UnitSystem::measure::gas_oil_ratio,
+                        std::move(adbToDoubleVector(sd.rs))});
+            }
+            if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
+                outKeywords["RVSAT"] = 0;
+                simProps.emplace_back(data::CellData{
+                        "RVSAT",
+                        Opm::UnitSystem::measure::oil_gas_ratio,
+                        std::move(adbToDoubleVector(sd.rv))});
+            }
+
+
+            /**
+             * Bubble point and dew point pressures
+             */
+            if (vapour_active && liquid_active && outKeywords["PBPD"] > 0) {
+                outKeywords["PBPD"] = 0;
+                Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
+                        "Writing bubble points and dew points (PBPD) to file is unsupported, "
+                        "as the simulator does not use these internally.");
+            }
+
+            //Warn for any unhandled keyword
+            for (auto& keyValue : outKeywords) {
+                if (keyValue.second > 0) {
+                    std::string logstring = "Keyword '";
+                    logstring.append(keyValue.first);
+                    logstring.append("' is unhandled for output to file.");
+                    Opm::OpmLog::warning("Unhandled output keyword", logstring);
+                }
+            }
+
+            return simProps;
+        }
+
+    }
+
+
+
+
+    template<class Model>
+    inline void
+    BlackoilOutputWriter::
+    writeTimeStep(const SimulatorTimerInterface& timer,
+                  const SimulationDataContainer& localState,
+                  const WellState& localWellState,
+                  const Model& physicalModel,
+                  bool substep)
+    {
+        const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
+        const int reportStepNum = timer.reportStepNum();
+        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum );
+        writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
+    }
 }
 #endif

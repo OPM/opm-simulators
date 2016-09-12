@@ -42,6 +42,11 @@
 
 #include <boost/filesystem.hpp>
 
+//For OutputWriterHelper
+#include <map>
+#include <opm/parser/eclipse/Units/UnitSystem.hpp>
+
+
 #ifdef HAVE_OPM_GRID
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/version.hh>
@@ -50,6 +55,7 @@
 #endif
 namespace Opm
 {
+
 
 
     void outputStateVtk(const UnstructuredGrid& grid,
@@ -245,14 +251,6 @@ namespace Opm
     }
 #endif
 
-    void
-    BlackoilOutputWriter::
-    writeInit(const std::vector<data::CellData>& simProps,  const NNC& nnc)
-    {
-        if( eclWriter_ ) {
-            eclWriter_->writeInitAndEgrid(simProps, nnc);
-        }
-    }
 
 
 
@@ -264,17 +262,20 @@ namespace Opm
             std::unique_ptr< SimulatorTimerInterface > timer_;
             const SimulationDataContainer state_;
             const WellState wellState_;
+            std::vector<data::CellData> simProps_;
             const bool substep_;
 
             explicit WriterCall( BlackoilOutputWriter& writer,
                                  const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& state,
                                  const WellState& wellState,
+                                 const std::vector<data::CellData>& simProps,
                                  bool substep )
                 : writer_( writer ),
                   timer_( timer.clone() ),
                   state_( state ),
                   wellState_( wellState ),
+                  simProps_( simProps ),
                   substep_( substep )
             {
             }
@@ -283,17 +284,37 @@ namespace Opm
             void run ()
             {
                 // write data
-                writer_.writeTimeStepSerial( *timer_, state_, wellState_, substep_ );
+                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, substep_ );
             }
         };
     }
 
 
+
+
     void
     BlackoilOutputWriter::
-    writeTimeStep(const SimulatorTimerInterface& timer,
+    writeTimeStepWithoutCellProperties(
+                  const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
                   const WellState& localWellState,
+                  bool substep)
+    {
+        std::vector<data::CellData> noCellProperties;
+        writeTimeStepWithCellProperties(timer, localState, localWellState, noCellProperties, substep);
+    }
+
+
+
+
+
+    void
+    BlackoilOutputWriter::
+    writeTimeStepWithCellProperties(
+                  const SimulatorTimerInterface& timer,
+                  const SimulationDataContainer& localState,
+                  const WellState& localWellState,
+                  const std::vector<data::CellData>& cellData,
                   bool substep)
     {
         // VTK output (is parallel if grid is parallel)
@@ -304,8 +325,15 @@ namespace Opm
         bool isIORank = output_ ;
         if( parallelOutput_ && parallelOutput_->isParallel() )
         {
+            // If this is not the initial write and no substep, then the well
+            // state used in the computation is actually the one of the last
+            // step. We need that well state for the gathering. Otherwise
+            // It an exception with a message like "global state does not
+            // contain well ..." might be thrown.
+            int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
+                (timer.reportStepNum() - 1) : timer.reportStepNum();
             // collect all solutions to I/O rank
-            isIORank = parallelOutput_->collectToIORank( localState, localWellState, timer.reportStepNum() );
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
         }
 
         const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
@@ -316,20 +344,23 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, substep ) );
+                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, substep ) );
             }
             else {
                 // just write the data to disk
-                writeTimeStepSerial( timer, state, wellState, substep );
+                writeTimeStepSerial( timer, state, wellState, cellData, substep );
             }
         }
     }
+
+
 
     void
     BlackoilOutputWriter::
     writeTimeStepSerial(const SimulatorTimerInterface& timer,
                         const SimulationDataContainer& state,
                         const WellState& wellState,
+                        const std::vector<data::CellData>& simProps,
                         bool substep)
     {
         // Matlab output
@@ -344,33 +375,7 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                std::vector<data::CellData> simProps;
-                /*
-                  The simProps vector can be passed to the writeTimestep routine
-                  to add more properties to the restart file. Examples of the
-                  elements for the simProps vector can be the relative
-                  permeabilites KRO, KRG and KRW and the fluxes.
-
-                  Which properties are requested are configured with the RPTRST
-                  keyword, which is internalized in the RestartConfig class in
-                  EclipseState.
-                */
-
-                /*
-                  Assuming we already have correctly initialized
-                  std::vector<double> instances kro,krw and krg with the oil,
-                  water and gas relative permeabilities. Then we can write those
-                  to the restart file with:
-
-                     std::vector<data::CellData> simProps;
-
-                     simProps.emplace_back( {"KRO" , UnitSystem::measure::identity , kro} );
-                     simProps.emplace_back( {"KRG" , UnitSystem::measure::identity , krg} );
-                     simProps.emplace_back( {"KRW" , UnitSystem::measure::identity , krw} );
-
-                */
-
-                eclWriter_->writeTimeStep(timer.currentStepNum(),
+                eclWriter_->writeTimeStep(timer.reportStepNum(),
                                           substep,
                                           timer.simulationTimeElapsed(),
                                           simToSolution( state, phaseUsage_ ),
@@ -441,7 +446,10 @@ namespace Opm
                 restorefile >> state;
                 restorefile >> wellState;
 
-                writeTimeStep( timer, state, wellState );
+                // No per cell data is written for restore steps, but will be
+                // for subsequent steps, when we have started simulating
+                writeTimeStepWithoutCellProperties( timer, state, wellState );
+
                 // some output
                 std::cout << "Restored step " << timer.reportStepNum() << " at day "
                           <<  unit::convert::to(timer.simulationTimeElapsed(),unit::day) << std::endl;

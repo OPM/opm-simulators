@@ -160,6 +160,16 @@ namespace Opm
                     const BlackoilState&            x,
                     WellState& xw);
 
+        void
+        FIPUnitConvert(const UnitSystem& units,
+                       std::vector<V>& fip);
+        
+        V
+        FIPTotals(const std::vector<V>& fip, const ReservoirState& state);
+
+        void
+        outputFluidInPlace(const V& oip, const V& cip, const UnitSystem& units, const int reg);
+
         void computeWellPotentials(const Wells*                    wells,
                                    const WellState& xw,
                                    std::vector<double>& well_potentials);

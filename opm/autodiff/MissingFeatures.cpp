@@ -77,7 +77,7 @@ namespace MissingFeatures {
             "GRUPNET", "IMKRVD", "IMPES", "IMPTVD", "MAPUNITS",
             "MAXVALUE", "MESSAGES", "MINVALUE", "MONITOR", "MSGFILE",
             "MULT_XYZ", "NETBALAN", "NEXTSTEP", "NOCASC", "NOECHO",
-            "NOGGF", "NOINSPEC", "NOMONITO", "NONNC", "NORSSPEC", "NOSIM",
+            "NOGGF", "NOINSPEC", "NOMONITO", "NONNC", "NORSSPEC",
             "NSTACK", "NUMRES", "NUPCOL", "OILVISCT", "OLDTRAN", "OPTIONS",
             "PARALLEL", "PBVD", "PCG", "PERMXY", "PERMYZ",
             "PERMZX", "PIMULTAB", "PLYADSS", "PLYDHFLF",
