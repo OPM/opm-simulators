@@ -121,7 +121,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                         const double* permeability,
                                         const NTG& ntg,
                                         std::vector<int>& wells_on_proc,
-                                        const std::set<std::string>& ignored_wells,
+                                        const std::unordered_set<std::string>& ignored_wells,
                                         const DynamicListEconLimited& list_econ_limited)
 {
     if (dimensions != 3) {
@@ -317,7 +317,7 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
              const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
              const std::vector<double>&      well_potentials,
-             const std::set<std::string>&    deactivated_wells)
+             const std::unordered_set<std::string>&    deactivated_wells)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
@@ -339,7 +339,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                    const double*                   permeability,
                    const DynamicListEconLimited&   list_econ_limited,
                    const std::vector<double>&      well_potentials,
-                   const std::set<std::string>&    deactivated_wells)
+                   const std::unordered_set<std::string>&    deactivated_wells)
 {
     if (dimensions != 3) {
         OPM_THROW(std::runtime_error,

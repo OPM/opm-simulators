@@ -341,7 +341,7 @@ namespace Opm
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
              permeability, dummy_list_econ_limited, dummy_well_potentials,
-             std::set<std::string>());
+             std::unordered_set<std::string>());
 
     }
 
