@@ -45,10 +45,12 @@ namespace Opm
     public:
         virtual ~ParallelDebugOutputInterface() {}
 
-        // gather solution to rank 0 for EclipseWriter
+        //! \brief gather solution to rank 0 for EclipseWriter
+        //! \param localWellState      The well state
+        //! \param wellStateStepNumber The step number of the well state.
         virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
                                       const WellState& localWellState,
-                                      const int reportStep ) = 0;
+                                      const int wellStateStepNumber ) = 0;
 
         virtual const SimulationDataContainer& globalReservoirState() const = 0 ;
         virtual const WellState& globalWellState() const = 0 ;
@@ -77,7 +79,7 @@ namespace Opm
         // gather solution to rank 0 for EclipseWriter
         virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
                                       const WellState& localWellState,
-                                      const int /* reportStep */)
+                                      const int /* wellStateStepNumber */)
         {
             globalState_ = &localReservoirState;
             wellState_   = &localWellState;
@@ -382,9 +384,11 @@ namespace Opm
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
             {
                 // write all cell data registered in local state
-	        for (auto& pair : globalState_.cellData()) {
+                // we loop over the data of the local state as
+                // its order governs the order the data got received.
+                for (auto& pair : localState_.cellData()) {
                     const std::string& key = pair.first;
-		    auto& data = pair.second;
+                    auto& data = globalState_.getCellData(key);
                     const size_t stride = globalState_.numCellDataComponents( key );
 
                     for( size_t i=0; i<stride; ++i )
@@ -519,7 +523,7 @@ namespace Opm
         // gather solution to rank 0 for EclipseWriter
         bool collectToIORank( const SimulationDataContainer& localReservoirState,
                               const WellState& localWellState,
-                              const int reportStep )
+                              const int wellStateStepNumber )
         {
             if( isIORank() )
             {
@@ -530,7 +534,7 @@ namespace Opm
                 const DynamicListEconLimited dynamic_list_econ_limited;
                 // Create wells and well state.
                 WellsManager wells_manager(eclipseState_,
-                                           reportStep,
+                                           wellStateStepNumber,
                                            Opm::UgGridHelpers::numCells( globalGrid ),
                                            Opm::UgGridHelpers::globalCell( globalGrid ),
                                            Opm::UgGridHelpers::cartDims( globalGrid ),

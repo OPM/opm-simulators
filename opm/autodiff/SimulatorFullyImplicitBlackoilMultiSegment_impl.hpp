@@ -72,9 +72,6 @@ namespace Opm
             adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
         }
 
-        // init output writer
-        output_writer_.writeInit( geo_.simProps(grid_) , geo_.nonCartesianConnections( ) );
-
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
         {
@@ -128,6 +125,8 @@ namespace Opm
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
+                // No per cell data is written for initial step, but will be
+                // for subsequent steps, when we have started simulating
                 output_writer_.writeTimeStep( timer, state, well_state );
             }
 
@@ -182,8 +181,10 @@ namespace Opm
             // Increment timer, remember well state.
             ++timer;
 
+
             // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
+            const auto& physicalModel = solver->model();
+            output_writer_.writeTimeStep( timer, state, well_state, physicalModel );
 
             prev_well_state = well_state;
         }

@@ -172,7 +172,7 @@ namespace Opm {
         using Base::param_;
         using Base::use_threshold_pressure_;
         using Base::threshold_pressures_by_connection_;
-        using Base::rq_;
+        using Base::sd_;
         using Base::phaseCondition_;
         using Base::residual_;
         using Base::terminal_output_;

@@ -78,6 +78,25 @@ namespace Opm {
         typedef ADB::V V;
         typedef ADB::M M;
 
+        struct ReservoirResidualQuant {
+            ReservoirResidualQuant();
+            std::vector<ADB> accum; // Accumulations
+            ADB              mflux; // Mass flux (surface conditions)
+            ADB              b;     // Reciprocal FVF
+            ADB              mu;    // Viscosities
+            ADB              rho;   // Densities
+            ADB              kr;    // Permeabilities
+            ADB              dh;    // Pressure drop across int. interfaces
+            ADB              mob;   // Phase mobility (per cell)
+        };
+
+        struct SimulatorData {
+            SimulatorData(int num_phases);
+            std::vector<ReservoirResidualQuant> rq;
+            ADB rs;
+            ADB rv;
+        };
+
         typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
         typedef typename ModelTraits<Implementation>::WellState WellState;
         typedef typename ModelTraits<Implementation>::ModelParameters ModelParameters;
@@ -221,6 +240,19 @@ namespace Opm {
         WellModel& wellModel() { return well_model_; }
         const WellModel& wellModel() const { return well_model_; }
 
+        /// Return reservoir simulation data (for output functionality)
+        const SimulatorData& getSimulatorData() const {
+            return sd_;
+        }
+
+        /// Compute fluid in place.
+        /// \param[in]    ReservoirState
+        /// \param[in]    FIPNUM for active cells not global cells.
+        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const std::vector<int>& fipnum);
+
     protected:
 
         // ---------  Types and enums  ---------
@@ -230,14 +262,6 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
 
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant();
-            std::vector<ADB> accum; // Accumulations
-            ADB              mflux; // Mass flux (surface conditions)
-            ADB              b;     // Reciprocal FVF
-            ADB              dh;    // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-        };
 
         // ---------  Data members  ---------
 
@@ -260,7 +284,7 @@ namespace Opm {
         bool use_threshold_pressure_;
         V threshold_pressures_by_connection_;
 
-        std::vector<ReservoirResidualQuant> rq_;
+        SimulatorData sd_;
         std::vector<PhasePresence> phaseCondition_;
 
         // Well Model

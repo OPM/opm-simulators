@@ -305,7 +305,7 @@ namespace Opm {
             }
 
             void addRhs(BVector& x, Mat& jac) const {
-                assert(x.size() == rhs.size());
+                assert(x.size() == rhs_.size());
                 x += rhs_;
                 // jac = A + duneA
                 jac = matAdd( jac, duneA_ );
@@ -955,7 +955,6 @@ namespace Opm {
                                 dx_new_eigen(idx) = dx_new[w][flowPhaseToEbosCompIdx(p)];
                             }
                         }
-                        assert(dx.size() == total_residual_v.size());
                         updateWellState(dx_new_eigen.array(), well_state);
                         updateWellControls(well_state);
                         setWellVariables(well_state);
@@ -1995,7 +1994,6 @@ namespace Opm {
             }
 
             EvalWell wellVolumeFraction(const int wellIdx, const int phaseIdx) const {
-                assert(fluid_.numPhases() == 3);
                 const int nw = wells().number_of_wells;
                 if (phaseIdx == Water) {
                    return wellVariables_[nw + wellIdx];

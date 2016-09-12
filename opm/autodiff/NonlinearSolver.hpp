@@ -125,6 +125,14 @@ namespace Opm {
         /// Number of well iterations used in all calls to step().
         int wellIterationsLastStep() const;
 
+        /// Compute fluid in place.
+        /// \param[in]    ReservoirState
+        /// \param[in]    FIPNUM for active cells not global cells.
+        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const std::vector<int>& fipnum) const;
+
         /// Reference to physical model.
         const PhysicalModel& model() const;
 

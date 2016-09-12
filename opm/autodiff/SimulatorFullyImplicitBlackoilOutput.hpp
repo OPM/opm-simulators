@@ -212,7 +212,6 @@ namespace Opm
         BlackoilOutputWriter(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              Opm::EclipseStateConstPtr eclipseState,
-                             const NNC&,
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability );
 
@@ -224,6 +223,20 @@ namespace Opm
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellState& wellState,
                            bool substep = false);
+
+        /** \copydoc Opm::OutputWriter::writeTimeStep */
+        template <class DummyModel>
+        void writeTimeStep(const SimulatorTimerInterface& timer,
+                           const SimulationDataContainer& reservoirState,
+                           const Opm::WellState& wellState,
+                           const DummyModel &model,
+                           bool substep = false)
+        {
+            writeTimeStep(timer,
+                          reservoirState,
+                          wellState,
+                          substep);
+        }
 
         /** \copydoc Opm::OutputWriter::writeTimeStep */
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
@@ -285,7 +298,6 @@ namespace Opm
     BlackoilOutputWriter(const Grid& grid,
                          const parameter::ParameterGroup& param,
                          Opm::EclipseStateConstPtr eclipseState,
-                         const NNC& nnc,
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),

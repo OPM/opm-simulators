@@ -185,7 +185,7 @@ namespace {
         , grav_  (gravityOperator(grid_, ops_, geo_))
 		, cmax_(V::Zero(grid.number_of_cells))
         , phaseCondition_ (grid.number_of_cells)
-        , rq_    (fluid.numPhases() + 1)
+        , sd_    (fluid.numPhases() + 1)
         , residual_ ( { std::vector<ADB>(fluid.numPhases() + 1, ADB::null()),
                         ADB::null(),
                         ADB::null(),
@@ -287,6 +287,9 @@ namespace {
         : accum(2, ADB::null())
         , mflux(   ADB::null())
         , b    (   ADB::null())
+        , mu   (   ADB::null())
+        , rho  (   ADB::null())
+        , kr   (   ADB::null())
         , head (   ADB::null())
         , mob  (   ADB::null())
         , ads  (2, ADB::null())
@@ -516,17 +519,84 @@ namespace {
         const ADB pv_mult = poroMult(press);
 
         for (int phase = 0; phase < 2; ++phase) {
-            rq_[phase].b = fluidReciprocFVF(phase, pressure[phase], temp, cond, cells_);
+            sd_.rq[phase].b = fluidReciprocFVF(phase, pressure[phase], temp, cond, cells_);
         }
-        rq_[0].accum[aix] = pv_mult * rq_[0].b * sat[0];
-        rq_[1].accum[aix] = pv_mult * rq_[1].b * sat[1];
-		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
+        sd_.rq[0].accum[aix] = pv_mult * sd_.rq[0].b * sat[0];
+        sd_.rq[1].accum[aix] = pv_mult * sd_.rq[1].b * sat[1];
+	const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
         const ADB ads = polymer_props_ad_.adsorption(state.concentration, cmax);
         const double rho_rock = polymer_props_ad_.rockDensity();
         const V phi = Eigen::Map<const V>(&fluid_.porosity()[0], grid_.number_of_cells, 1);
 
         const double dead_pore_vol = polymer_props_ad_.deadPoreVol();
-        rq_[2].accum[aix] = pv_mult * rq_[0].b * sat[0] * c * (1. - dead_pore_vol) + pv_mult *  rho_rock * (1. - phi) / phi * ads;
+        sd_.rq[2].accum[aix] = pv_mult * sd_.rq[0].b * sat[0] * c * (1. - dead_pore_vol) + pv_mult *  rho_rock * (1. - phi) / phi * ads;
+    }
+
+
+
+
+    std::vector<V>
+    FullyImplicitCompressiblePolymerSolver::computeFluidInPlace(const PolymerBlackoilState& x,
+                                                                const std::vector<int>& fipnum)
+    {
+        const int np = x.numPhases();
+        const int nc = grid_.number_of_cells;
+
+        SolutionState state(np);
+        state.pressure = ADB::constant(Eigen::Map<const V>(& x.pressure()[0], nc, 1));
+        state.temperature = ADB::constant(Eigen::Map<const V>(& x.temperature()[0], nc, 1));
+        const DataBlock s = Eigen::Map<const DataBlock>(& x.saturation()[0], nc, np);
+        for (int phase = 0; phase < np; ++phase) {
+            state.saturation[phase] = ADB::constant(s.col(phase));
+        }
+
+        const ADB&              press = state.pressure;
+        const ADB&              temp  = state.temperature;
+        const std::vector<ADB>& sat   = state.saturation;
+
+        const std::vector<PhasePresence> cond = phaseCondition();
+	std::vector<ADB> pressure = computePressures(state);
+
+        const ADB pv_mult = poroMult(press);
+        const V& pv = geo_.poreVolume();
+        std::vector<V> fip(5, V::Zero(nc));
+        for (int phase = 0; phase < 2; ++phase) {
+            const ADB& b = fluidReciprocFVF(phase, pressure[phase], temp, cond, cells_);
+            fip[phase] = (pv_mult * b * sat[phase] * pv).value();
+        }
+
+
+        const int dims = *std::max_element(fipnum.begin(), fipnum.end());
+        std::vector<V> values(dims, V::Zero(7));
+        V hcpv = V::Zero(nc);
+        V pres = V::Zero(nc);
+        for (int i = 0; i < 5; ++i) {
+            for (int c = 0; c < nc; ++c) {
+                if (fipnum[c] != 0) {
+                    values[fipnum[c]-1][i] += fip[i][c];
+                }
+            }
+        }
+
+        // compute PAV and PORV or every regions.
+        for (int c = 0; c < nc; ++c) {
+            if (fipnum[c] != 0) {
+                hcpv[fipnum[c]-1] += pv[c] * s.col(Oil)[c];
+                pres[fipnum[c]-1] += pv[c] * state.pressure.value()[c];
+                values[fipnum[c]-1][5] += pv[c];
+                values[fipnum[c]-1][6] += pv[c] * state.pressure.value()[c] * s.col(Oil)[c];
+            }
+        }
+
+        for (int reg = 0; reg < dims; ++reg) {
+             if (hcpv[reg] != 0) {
+                 values[reg][6] /= hcpv[reg];
+             } else {
+                 values[reg][6] = pres[reg] / values[reg][5];
+             }
+        }
+
+        return values;
     }
 
 
@@ -568,26 +638,32 @@ namespace {
 
         // Compute b_p and the accumulation term b_p*s_p for each phase,
         // except gas. For gas, we compute b_g*s_g + Rs*b_o*s_o.
-        // These quantities are stored in rq_[phase].accum[1].
+        // These quantities are stored in sd_.rq[phase].accum[1].
         // The corresponding accumulation terms from the start of
         // the timestep (b^0_p*s^0_p etc.) were already computed
-        // in step() and stored in rq_[phase].accum[0].
+        // in step() and stored in sd_.rq[phase].accum[0].
         computeAccum(state, 1);
 
         // Set up the common parts of the mass balance equations
         // for each active phase.
         const V trans = subset(geo_.transmissibility(), ops_.internal_faces);
-        const std::vector<ADB> kr = computeRelPerm(state);
+        {
+            const std::vector<ADB> kr = computeRelPerm(state);
+            const auto& pu = fluid_.phaseUsage();
+            for (int phaseIdx=0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+                sd_.rq[phaseIdx].kr = kr[pu.phase_pos[phaseIdx]];
+            }
+        }
 		const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr[0]);
+        const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, sd_.rq[0].kr);
         const ADB mc = computeMc(state);
-        computeMassFlux(trans, mc, kr[1], krw_eff, state);
-        residual_.material_balance_eq[0] = pvdt*(rq_[0].accum[1] - rq_[0].accum[0])
-                                    + ops_.div*rq_[0].mflux;
-        residual_.material_balance_eq[1] = pvdt*(rq_[1].accum[1] - rq_[1].accum[0])
-                                    + ops_.div*rq_[1].mflux;
-        residual_.material_balance_eq[2] = pvdt*(rq_[2].accum[1] - rq_[2].accum[0]) //+ cell / dt * (rq_[2].ads[1] - rq_[2].ads[0])
-                                    + ops_.div*rq_[2].mflux;
+        computeMassFlux(trans, mc, sd_.rq[1].kr, krw_eff, state);
+        residual_.material_balance_eq[0] = pvdt*(sd_.rq[0].accum[1] - sd_.rq[0].accum[0])
+                                    + ops_.div*sd_.rq[0].mflux;
+        residual_.material_balance_eq[1] = pvdt*(sd_.rq[1].accum[1] - sd_.rq[1].accum[0])
+                                    + ops_.div*sd_.rq[1].mflux;
+        residual_.material_balance_eq[2] = pvdt*(sd_.rq[2].accum[1] - sd_.rq[2].accum[0]) //+ cell / dt * (sd_.rq[2].ads[1] - sd_.rq[2].ads[0])
+                                    + ops_.div*sd_.rq[2].mflux;
 
         // -------- Extra (optional) sg or rs equation, and rs contributions to the mass balance equations --------
 
@@ -659,13 +735,13 @@ namespace {
         // DUMP(nkgradp_well);
         const Selector<double> cell_to_well_selector(nkgradp_well.value());
         ADB well_rates_all = ADB::constant(V::Zero(nw*np), state.bhp.blockPattern());
-        ADB perf_total_mob = subset(rq_[0].mob, well_cells) + subset(rq_[1].mob, well_cells);
+        ADB perf_total_mob = subset(sd_.rq[0].mob, well_cells) + subset(sd_.rq[1].mob, well_cells);
         std::vector<ADB> well_contribs(np, ADB::null());
         std::vector<ADB> well_perf_rates(np, ADB::null());
         for (int phase = 0; phase < np; ++phase) {
-            const ADB& cell_b = rq_[phase].b;
+            const ADB& cell_b = sd_.rq[phase].b;
             const ADB perf_b = subset(cell_b, well_cells);
-            const ADB& cell_mob = rq_[phase].mob;
+            const ADB& cell_mob = sd_.rq[phase].mob;
             const V well_fraction = compi.col(phase);
             // Using total mobilities for all phases for injection.
             const ADB perf_mob_injector = (wops_.w2p * well_fraction.matrix()).array() * perf_total_mob;
@@ -883,31 +959,37 @@ namespace {
     {
         const ADB tr_mult = transMult(state.pressure);
         const std::vector<PhasePresence> cond = phaseCondition();
-		std::vector<ADB> press = computePressures(state);
-		const ADB& temp = state.temperature;
+        std::vector<ADB> press = computePressures(state);
+        const ADB& temp = state.temperature;
 
-        const ADB mu_w = fluidViscosity(0, press[0], temp, cond, cells_);
-        ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value());
-        rq_[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
-        rq_[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
-        const ADB mu_o = fluidViscosity(1, press[1], temp, cond, cells_);
-        rq_[1].mob = tr_mult * kro / mu_o;
+        {
+            const ADB mu_w = fluidViscosity(0, press[0], temp, cond, cells_);
+            ADB inv_wat_eff_vis = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu_w.value());
+            sd_.rq[0].mob = tr_mult * krw_eff * inv_wat_eff_vis;
+            sd_.rq[2].mob = tr_mult * mc * krw_eff * inv_wat_eff_vis;
+            const ADB mu_o = fluidViscosity(1, press[1], temp, cond, cells_);
+            sd_.rq[1].mob = tr_mult * kro / mu_o;
+
+            sd_.rq[0].mu = mu_w;
+            sd_.rq[1].mu = mu_o;
+        }
+
         for (int phase = 0; phase < 2; ++phase) {
-            const ADB rho   = fluidDensity(phase, press[phase], temp, cond, cells_);
-            ADB& head = rq_[ phase ].head;
+            sd_.rq[phase].rho = fluidDensity(phase, press[phase], temp, cond, cells_);
+            ADB& head = sd_.rq[phase].head;
             // compute gravity potensial using the face average as in eclipse and MRST
-            const ADB rhoavg = ops_.caver * rho;
+            const ADB rhoavg = ops_.caver * sd_.rq[phase].rho;
             const ADB dp = ops_.ngrad * press[phase] - geo_.gravity()[2] * (rhoavg * (ops_.ngrad * geo_.z().matrix()));
             head = transi*dp;
             UpwindSelector<double> upwind(grid_, ops_, head.value());
-            const ADB& b       = rq_[phase].b;
-            const ADB& mob     = rq_[phase].mob;
-            rq_[phase].mflux = upwind.select(b * mob) * head;
+            const ADB& b       = sd_.rq[phase].b;
+            const ADB& mob     = sd_.rq[phase].mob;
+            sd_.rq[phase].mflux = upwind.select(b * mob) * head;
         }
-        rq_[2].b = rq_[0].b;
-        rq_[2].head = rq_[0].head;
-        UpwindSelector<double> upwind(grid_, ops_, rq_[2].head.value());
-        rq_[2].mflux = upwind.select(rq_[2].b * rq_[2].mob) * rq_[2].head;
+        sd_.rq[2].b = sd_.rq[0].b;
+        sd_.rq[2].head = sd_.rq[0].head;
+        UpwindSelector<double> upwind(grid_, ops_, sd_.rq[2].head.value());
+        sd_.rq[2].mflux = upwind.select(sd_.rq[2].b * sd_.rq[2].mob) * sd_.rq[2].head;
     }
 
 
