@@ -142,12 +142,12 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
     for (auto wellIter= wells.begin(); wellIter != wells.end(); ++wellIter) {
         const auto* well = (*wellIter);
 
-        if ( ignored_wells.find(well->name()) != ignored_wells.end() ) {
-            wells_on_proc[ wellIter - wells.begin() ] = 0;
+        if (well->getStatus(timeStep) == WellCommon::SHUT) {
             continue;
         }
 
-        if (well->getStatus(timeStep) == WellCommon::SHUT) {
+        if ( ignored_wells.find(well->name()) != ignored_wells.end() ) {
+            wells_on_proc[ wellIter - wells.begin() ] = 0;
             continue;
         }
 
