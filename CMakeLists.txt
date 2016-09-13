@@ -143,8 +143,9 @@ if (HAVE_OPM_DATA)
                              ${PROJECT_SOURCE_DIR}/tests/check_RESTART.py
                              $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/spe1/SPE1CASE2.DATA ${OPM_DATA_ROOT}/spe1/SPE1CASE2_RESTART.DATA )
     endif()
-
-    include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
+ 
+   include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
+   
     
 
 endif()

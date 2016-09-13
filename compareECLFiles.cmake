@@ -21,9 +21,9 @@ macro (add_test_compareECLFiles casename filename)
                            ${CMAKE_BINARY_DIR}/bin
                            ${filename}
                            ${abs_tol} ${rel_tol}
-			   ${SUMMARY_REGRESSION_TEST_COMMAND} 
-			   ${RESTART_REGRESSION_TEST_COMMAND} 
-			   ${INIT_REGRESSION_TEST_COMMAND} 
+			   ${COMPARE_SUMMARY_COMMAND} 
+			   ${COMPARE_ECL_COMMAND} 
+			   
                TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename}.DATA )
 endmacro (add_test_compareECLFiles)
 
@@ -32,8 +32,9 @@ if(NOT TARGET test-suite)
   add_custom_target(test-suite)
 endif()
 
-
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 
-add_test_compareECLFiles(spe9 SPE9_CP)
+add_test_compareECLFiles(spe1 SPE1CASE2)
+add_test_compareECLFiles(spe3 SPE3CASE1)
+add_test_compareECLFiles(spe9 SPE9_CP_SHORT)
 
