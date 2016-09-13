@@ -160,13 +160,21 @@ namespace Opm{
             if (deck->hasKeyword("SSFN")) {
                 ssfnTableCheck_(ssfnTables.getTable<SsfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("MISC")) {
-                miscTableCheck_(miscTables.getTable<MiscTable>(satnumIdx), satnumIdx+1);
-            }
             if (deck->hasKeyword("MSFN")) {
                 msfnTableCheck_(msfnTables.getTable<MsfnTable>(satnumIdx), satnumIdx+1);
             }
         }
+
+
+        if (deck->hasKeyword("MISCIBLE")) {
+            const int numMiscNumIdx = deck->getKeyword("MISCIBLE").getRecord(0).getItem("NTMISC").get< int >(0);
+            const std::string msg = "Number of misc regions: " + std::to_string(numMiscNumIdx) + "\n";
+            OpmLog::info(msg);
+            for (int miscNumIdx = 0; miscNumIdx < numMiscNumIdx; ++miscNumIdx) {
+                miscTableCheck_(miscTables.getTable<MiscTable>(miscNumIdx), miscNumIdx+1);
+            }
+        }
+
     }
 
 
@@ -522,21 +530,21 @@ namespace Opm{
 
 
     void RelpermDiagnostics::miscTableCheck_(const Opm::MiscTable& miscTables,
-                                             const int satnumIdx)
+                                             const int miscnumIdx)
     {
         const auto& frac = miscTables.getSolventFractionColumn();
         const auto& misc = miscTables.getMiscibilityColumn();
 
-        const std::string regionIdx = std::to_string(satnumIdx);
+        const std::string regionIdx = std::to_string(miscnumIdx);
         //Check phase fraction column.
         if (frac.front() < 0.0 || frac.back() > 1.0) {
-            const std::string msg = "In MISC table SATNUM = " + regionIdx + ", phase fraction should be in range [0,1].";
+            const std::string msg = "In MISC table MISCNUM = " + regionIdx + ", phase fraction should be in range [0,1].";
             OpmLog::error(msg);
         }
 
         //Check miscibility column.
         if (misc.front() < 0.0 || misc.back() > 1.0) {
-            const std::string msg = "In MISC table SATNUM = " + regionIdx + ", miscibility should be in range [0,1].";
+            const std::string msg = "In MISC table MISCNUM = " + regionIdx + ", miscibility should be in range [0,1].";
             OpmLog::error(msg);
         }
     }

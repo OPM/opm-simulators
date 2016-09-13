@@ -129,7 +129,7 @@ namespace Opm {
         void ssfnTableCheck_(const Opm::SsfnTable& ssfnTables,
                              const int satnumIdx);
         void miscTableCheck_(const Opm::MiscTable& miscTables,
-                             const int satnumIdx);
+                             const int miscnumIdx);
         void msfnTableCheck_(const Opm::MsfnTable& msfnTables,
                              const int satnumIdx);
     };
