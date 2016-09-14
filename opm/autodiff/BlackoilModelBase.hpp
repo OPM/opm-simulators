@@ -132,8 +132,8 @@ namespace Opm {
         struct SimulatorData {
             SimulatorData(int num_phases);
             std::vector<ReservoirResidualQuant> rq;
-            ADB rs;
-            ADB rv;
+            ADB rsSat;
+            ADB rvSat;
         };
 
         typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
@@ -323,7 +323,7 @@ namespace Opm {
         bool use_threshold_pressure_;
         V threshold_pressures_by_connection_;
 
-        SimulatorData sd_;
+        mutable SimulatorData sd_;
         std::vector<PhasePresence> phaseCondition_;
 
         // Well Model

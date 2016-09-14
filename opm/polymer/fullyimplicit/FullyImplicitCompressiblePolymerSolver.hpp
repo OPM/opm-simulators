@@ -78,13 +78,13 @@ namespace Opm {
         struct SimulatorData {
             SimulatorData(int num_phases)
                 : rq(num_phases)
-                , rs(ADB::null())
-                , rv(ADB::null())
+                , rsSat(ADB::null())
+                , rvSat(ADB::null())
             {
             }
             std::vector<ReservoirResidualQuant> rq;
-            ADB rs;
-            ADB rv;
+            ADB rsSat;
+            ADB rvSat;
         };
 
         /// Construct a solver. It will retain references to the

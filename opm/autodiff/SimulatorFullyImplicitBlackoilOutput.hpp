@@ -579,14 +579,14 @@ namespace Opm
                 simProps.emplace_back(data::CellData{
                         "RSSAT",
                         Opm::UnitSystem::measure::gas_oil_ratio,
-                        std::move(adbToDoubleVector(sd.rs))});
+                        std::move(adbToDoubleVector(sd.rsSat))});
             }
             if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
                 outKeywords["RVSAT"] = 0;
                 simProps.emplace_back(data::CellData{
                         "RVSAT",
                         Opm::UnitSystem::measure::oil_gas_ratio,
-                        std::move(adbToDoubleVector(sd.rv))});
+                        std::move(adbToDoubleVector(sd.rvSat))});
             }
 
 
