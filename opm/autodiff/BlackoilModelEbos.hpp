@@ -101,6 +101,7 @@ namespace Opm {
     /// upwind weighting of mobilities.
     class BlackoilModelEbos
     {
+        typedef BlackoilModelEbos ThisType;
     public:
         // ---------  Types and enums  ---------
         typedef AutoDiffBlock<double> ADB;
@@ -156,37 +157,24 @@ namespace Opm {
         , grid_(ebosSimulator_.gridManager().grid())
         , fluid_ (fluid)
         , geo_   (geo)
-        , rock_comp_props_(rock_comp_props)
         , vfp_properties_(
             eclState().getTableManager().getVFPInjTables(),
             eclState().getTableManager().getVFPProdTables())
         , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
-        , canph_ (detail::active2Canonical(fluid.phaseUsage()))
-        , cells_ (detail::buildAllCells(Opm::AutoDiffGrid::numCells(grid_)))
-        , ops_   (grid_, geo.nnc())
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
         , param_( param )
-        , use_threshold_pressure_(false)
-        , rq_    (fluid.numPhases())
-        , phaseCondition_(AutoDiffGrid::numCells(grid_))
         , well_model_ (well_model)
-        , isRs_(V::Zero(AutoDiffGrid::numCells(grid_)))
-        , isRv_(V::Zero(AutoDiffGrid::numCells(grid_)))
-        , isSg_(V::Zero(AutoDiffGrid::numCells(grid_)))
-        , residual_ ( { std::vector<ADB>(fluid.numPhases(), ADB::null()),
-                    ADB::null(),
-                    ADB::null(),
-                    { 1.1169, 1.0031, 0.0031 }, // the default magic numbers
-                    false } )
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , isBeginReportStep_(false)
+        , dx_old_(AutoDiffGrid::numCells(grid_))
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            const V depth = Opm::AutoDiffGrid::cellCentroidsZToEigen(grid_);
-            well_model_.init(&fluid_, &active_, &phaseCondition_, &vfp_properties_, gravity, depth);
+            const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
+            const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
+            well_model_.init(&fluid_, &active_, &vfp_properties_, gravity, depth, pv);
             wellModel().setWellsActive( localWellsActive() );
             global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
         }
@@ -198,13 +186,10 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const SimulatorTimerInterface& timer,
-                         const ReservoirState& reservoir_state,
+        void prepareStep(const SimulatorTimerInterface& /*timer*/,
+                         const ReservoirState& /*reservoir_state*/,
                          const WellState& /* well_state */)
         {
-            if (active_[Gas]) {
-                updatePrimalVariableFromState(reservoir_state);
-            }
         }
 
 
@@ -229,18 +214,24 @@ namespace Opm {
                 // the mass balance for each active phase, the well flux and the well equations.
                 residual_norms_history_.clear();
                 current_relaxation_ = 1.0;
-                dx_old_ = V::Zero(sizeNonLinear());
+                dx_old_ = 0.0;
             }
             IterationReport iter_report = assemble(timer, iteration, reservoir_state, well_state);
-            residual_norms_history_.push_back(computeResidualNorms());
-            const bool converged = getConvergence(timer, iteration);
+            std::vector<double> residual_norms;
+            const bool converged = getConvergence(timer, iteration,residual_norms);
+            residual_norms_history_.push_back(residual_norms);
             const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
+            Dune::InverseOperatorResult result;
             if (must_solve) {
                 // enable single precision for solvers when dt is smaller then 20 days
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
                 // Compute the nonlinear update.
-                V dx = solveJacobianSystem();
+                const int nc = AutoDiffGrid::numCells(grid_);
+                const int nw = wellModel().wells().number_of_wells;
+                BVector x(nc);
+                BVector xw(nw);
+                solveJacobianSystem(result, x, xw);
 
                 // Stabilize the nonlinear update.
                 bool isOscillate = false;
@@ -255,15 +246,22 @@ namespace Opm {
                         OpmLog::info(msg);
                     }
                 }
-                nonlinear_solver.stabilizeNonlinearUpdate(dx, dx_old_, current_relaxation_);
+                nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
 
                 // Apply the update, applying model-dependent
                 // limitations and chopping of the update.
-                updateState(dx, reservoir_state, well_state);
+                updateState(x,reservoir_state);
+                wellModel().updateWellState(xw, well_state);
+
             }
             const bool failed = false; // Not needed in this model.
-            const int linear_iters = must_solve ? linearIterationsLastSolve() : 0;
+            const int linear_iters = must_solve ? result.iterations : 0;
             return IterationReport{ failed, converged, linear_iters, iter_report.well_iterations };
+        }
+        void printIf(int c, double x, double y, double eps, std::string type) {
+            if (std::abs(x-y) > eps) {
+                std::cout << type << " " <<c << ": "<<x << " " << y << std::endl;
+            }
         }
 
 
@@ -291,73 +289,25 @@ namespace Opm {
 
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx, reservoir_state);
+
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
 
             IterationReport iter_report;
             try
             {
-                iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state, residual_);
+                iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state);
             }
             catch ( const Dune::FMatrixError& e  )
             {
                 OPM_THROW(Opm::NumericalProblem,"no convergence");
             }
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-
-            convertResults2(ebosResid, ebosJac);
-            wellModel().addRhs(ebosResid, ebosJac);
-
             return iter_report;
         }
 
 
-
-        /// \brief Compute the residual norms of the mass balance for each phase,
-        /// the well flux, and the well equation.
-        /// \return a vector that contains for each phase the norm of the mass balance
-        /// and afterwards the norm of the residual of the well flux and the well equation.
-        std::vector<double> computeResidualNorms() const
-        {
-            std::vector<double> residualNorms;
-
-            std::vector<ADB>::const_iterator massBalanceIt = residual_.material_balance_eq.begin();
-            const std::vector<ADB>::const_iterator endMassBalanceIt = residual_.material_balance_eq.end();
-
-            for (; massBalanceIt != endMassBalanceIt; ++massBalanceIt) {
-                const double massBalanceResid = detail::infinityNorm( (*massBalanceIt),
-                                                                      linsolver_.parallelInformation() );
-                if (!std::isfinite(massBalanceResid)) {
-                    OPM_THROW(Opm::NumericalProblem,
-                              "Encountered a non-finite residual");
-                }
-                residualNorms.push_back(massBalanceResid);
-            }
-
-            // the following residuals are not used in the oscillation detection now
-            const double wellFluxResid = detail::infinityNormWell( residual_.well_flux_eq,
-                                                                   linsolver_.parallelInformation() );
-            if (!std::isfinite(wellFluxResid)) {
-                OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual");
-            }
-            residualNorms.push_back(wellFluxResid);
-
-            const double wellResid = detail::infinityNormWell( residual_.well_eq,
-                                                               linsolver_.parallelInformation() );
-            if (!std::isfinite(wellResid)) {
-                OPM_THROW(Opm::NumericalProblem,
-                          "Encountered a non-finite residual");
-            }
-            residualNorms.push_back(wellResid);
-
-            return residualNorms;
-        }
-
-
-        /// \brief compute the relative change between to simulation states
+         /// \brief compute the relative change between to simulation states
         //  \return || u^n+1 - u^n || / || u^n+1 ||
         double relativeChange( const SimulationDataContainer& previous, const SimulationDataContainer& current ) const
         {
@@ -400,7 +350,9 @@ namespace Opm {
         /// The size (number of unknowns) of the nonlinear system of equations.
         int sizeNonLinear() const
         {
-            return residual_.sizeNonLinear();
+            const int nc = Opm::AutoDiffGrid::numCells(grid_);
+            const int nw = wellModel().wells().number_of_wells;
+            return numPhases() * (nc + nw);
         }
 
         /// Number of linear iterations used in last call to solveJacobianSystem().
@@ -409,10 +361,16 @@ namespace Opm {
             return linsolver_.iterations();
         }
 
+        template <class X, class Y>
+        void applyWellModel(const X& x, Y& y )
+        {
+           wellModel().apply(x, y);
+        }
+
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        V solveJacobianSystem() const
+        void solveJacobianSystem(Dune::InverseOperatorResult& result, BVector& x, BVector& xw) const
         {
 
             typedef double Scalar;
@@ -421,308 +379,208 @@ namespace Opm {
             typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
             typedef Dune::BlockVector<VectorBlockType>      BVector;
 
-            typedef Dune::MatrixAdapter<Mat,BVector,BVector> Operator;
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            Operator opA(ebosJac);
+            typedef WellModelMatrixAdapter<Mat,BVector,BVector, ThisType> Operator;
+            Operator opA(ebosJac, const_cast< ThisType&  > (*this));
             const double relax = 0.9;
             typedef Dune::SeqILU0<Mat, BVector, BVector> SeqPreconditioner;
             SeqPreconditioner precond(opA.getmat(), relax);
             Dune::SeqScalarProduct<BVector> sp;
 
+            // apply well residual to the residual.
+            wellModel().apply(ebosResid);
 
-            wellModel().apply(ebosJac, ebosResid);
             Dune::BiCGSTABSolver<BVector> linsolve(opA, sp, precond,
-                                                   0.001,
+                                                   0.01,
                                                    100,
                                                    false);
-
-
-            const int np = numPhases();
-            const int nc = AutoDiffGrid::numCells(grid_);
-//            std::cout << "ebosResid" << std::endl;
-//            for( int p=0; p<np; ++p) {
-//                for (int cell = 0 ; cell < 1; ++cell) {
-//                    std::cout << ebosResid[cell][p] << std::endl;
-//                }
-//            }
-
-
-
             // Solve system.
-            Dune::InverseOperatorResult result;
-            BVector x(ebosJac.M());
             x = 0.0;
             linsolve.apply(x, ebosResid, result);
 
-            const int nw = wellModel().wells().number_of_wells;
-            BVector xw(nw);
+            // recover wells.
+            xw = 0.0;
             wellModel().recoverVariable(x, xw);
-
-            // convert to V;
-
-
-            V dx( (nc + nw) * np);
-            for( int p=0; p<np; ++p) {
-                for (int i = 0; i < nc; ++i) {
-                    int idx = i + nc*ebosCompToFlowPhaseIdx(p);
-                    dx(idx) = x[i][p];
-                }
-                for (int w = 0; w < nw; ++w) {
-                    int idx = w + nw*p + nc*np;
-                    dx(idx) = xw[w][flowPhaseToEbosCompIdx(p)];
-                }
-            }
-
-            //V dx2 = linsolver_.computeNewtonIncrement(residual_);
-            //std::cout << "------dx------- " << std::endl;
-            //std::cout << dx << std::endl;
-            //std::cout << "------dx2------- " << std::endl;
-            //std::cout << dx2 << std::endl;
-
-            //return dx;
-            return dx;
         }
+
+        //=====================================================================
+        // Implementation for ISTL-matrix based operator
+        //=====================================================================
+
+        /*!
+           \brief Adapter to turn a matrix into a linear operator.
+
+           Adapts a matrix to the assembled linear operator interface
+         */
+        template<class M, class X, class Y, class WellModel>
+        class WellModelMatrixAdapter : public Dune::MatrixAdapter<M,X,Y>
+        {
+          typedef Dune::MatrixAdapter<M,X,Y> BaseType;
+        public:
+          //! export types
+          typedef M matrix_type;
+          typedef X domain_type;
+          typedef Y range_type;
+          typedef typename X::field_type field_type;
+
+          //! constructor: just store a reference to a matrix
+          explicit WellModelMatrixAdapter (const M& A, WellModel& wellMod ) : BaseType( A ), wellMod_( wellMod ) {}
+
+          //! apply operator to x:  \f$ y = A(x) \f$
+          virtual void apply (const X& x, Y& y) const
+          {
+            BaseType::apply( x, y );
+
+            wellMod_.applyWellModel(x, y );
+          }
+
+        private:
+          WellModel& wellMod_;
+        };
+
+        /** @} end documentation */
+
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void updateState(const V& dx,
-                         ReservoirState& reservoir_state,
-                         WellState& well_state)
+        void updateState(const BVector& dx,
+                         ReservoirState& reservoir_state)
         {
             using namespace Opm::AutoDiffGrid;
             const int np = fluid_.numPhases();
             const int nc = numCells(grid_);
-            const V null;
-            assert(null.size() == 0);
-            const V zero = V::Zero(nc);
 
-            // Extract parts of dx corresponding to each part.
-            const V dp = subset(dx, Span(nc));
-            int varstart = nc;
-            const V dsw = active_[Water] ? subset(dx, Span(nc, 1, varstart)) : null;
-            varstart += dsw.size();
+            for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
+                double dp = dx[cell_idx][flowPhaseToEbosCompIdx(0)];
+                reservoir_state.pressure()[cell_idx] -= dp;
 
-            const V dxvar = active_[Gas] ? subset(dx, Span(nc, 1, varstart)): null;
-            varstart += dxvar.size();
+                // Saturation updates.
+                const double dsw = active_[Water] ? dx[cell_idx][flowPhaseToEbosCompIdx(1)] : 0.0;
+                const int xvar_ind = active_[Water] ? 2 : 1;
+                const double dxvar = active_[Gas] ? dx[cell_idx][flowPhaseToEbosCompIdx(xvar_ind)] : 0.0;
 
-            // Extract well parts np phase rates + bhp
-            const V dwells = subset(dx, Span(wellModel().numWellVars(), 1, varstart));
-            varstart += dwells.size();
+                double dso = 0.0;
+                double dsg = 0.0;
+                double drs = 0.0;
+                double drv = 0.0;
 
-            assert(varstart == dx.size());
-
-            // Pressure update.
-            const double dpmaxrel = dpMaxRel();
-            const V p_old = Eigen::Map<const V>(&reservoir_state.pressure()[0], nc, 1);
-            const V absdpmax = dpmaxrel*p_old.abs();
-            const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
-            const V p = (p_old - dp_limited).max(zero);
-            std::copy(&p[0], &p[0] + nc, reservoir_state.pressure().begin());
-
-
-            // Saturation updates.
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            const DataBlock s_old = Eigen::Map<const DataBlock>(& reservoir_state.saturation()[0], nc, np);
-            const double dsmax = dsMax();
-
-            V so;
-            V sw;
-            V sg;
-
-            {
-                V maxVal = zero;
-                V dso = zero;
-                if (active_[Water]){
-                    maxVal = dsw.abs().max(maxVal);
-                    dso = dso - dsw;
+                double maxVal = 0.0;
+                // water phase
+                maxVal = std::max(std::abs(dsw),maxVal);
+                dso -= dsw;
+                // gas phase
+                switch (reservoir_state.hydroCarbonState()[cell_idx]) {
+                case HydroCarbonState::GasAndOil:
+                    dsg = dxvar;
+                    break;
+                case HydroCarbonState::OilOnly:
+                    drs = dxvar;
+                    break;
+                case HydroCarbonState::GasOnly:
+                    dsg -= dsw;
+                    drv = dxvar;
+                    break;
+                default:
+                    OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << cell_idx << ": " << reservoir_state.hydroCarbonState()[cell_idx]);
                 }
+                dso -= dsg;
 
-                V dsg;
-                if (active_[Gas]){
-                    dsg = isSg_ * dxvar - isRv_ * dsw;
-                    maxVal = dsg.abs().max(maxVal);
-                    dso = dso - dsg;
-                }
+                // Appleyard chop process.
+                maxVal = std::max(std::abs(dsg),maxVal);
+                double step = dsMax()/maxVal;
+                step = std::min(step, 1.0);
 
-                maxVal = dso.abs().max(maxVal);
 
-                V step = dsmax/maxVal;
-                step = step.min(1.);
-
+                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
                 if (active_[Water]) {
-                    const int pos = pu.phase_pos[ Water ];
-                    const V sw_old = s_old.col(pos);
-                    sw = sw_old - step * dsw;
+                    double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
+                    sw -= step * dsw;
                 }
-
                 if (active_[Gas]) {
-                    const int pos = pu.phase_pos[ Gas ];
-                    const V sg_old = s_old.col(pos);
-                    sg = sg_old - step * dsg;
+                    double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+                    sg -= step * dsg;
+                }
+                double& so = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Oil ]];
+                so -= step * dso;
+
+                // const double drmaxrel = drMaxRel();
+                // Update rs and rv
+                if (has_disgas_) {
+                    double& rs = reservoir_state.gasoilratio()[cell_idx];
+                    rs -= drs;
+                }
+                if (has_vapoil_) {
+                    double& rv = reservoir_state.rv()[cell_idx];
+                    rv -= drv;
                 }
 
-                assert(active_[Oil]);
-                const int pos = pu.phase_pos[ Oil ];
-                const V so_old = s_old.col(pos);
-                so = so_old - step * dso;
-            }
+                // Sg is used as primal variable for water only cells.
+                const double epsilon = 1e-4; //std::sqrt(std::numeric_limits<double>::epsilon());
 
-            // Appleyard chop process.
-            if (active_[Gas]) {
-                auto ixg = sg < 0;
-                for (int c = 0; c < nc; ++c) {
-                    if (ixg[c]) {
-                        if (active_[Water]) {
-                            sw[c] = sw[c] / (1-sg[c]);
-                        }
-                        so[c] = so[c] / (1-sg[c]);
-                        sg[c] = 0;
+                // phase translation sg <-> rs
+                const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
+                switch (hydroCarbonState) {
+                case HydroCarbonState::GasAndOil: {
+                    double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
+                    double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+
+                    if (sw > (1.0 - epsilon)) // water only i.e. do nothing
+                        break;
+                    if (sg <= 0.0 && has_disgas_) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
+                        sg = 0;
+                        so = 1.0 - sw - sg;
+                        double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        double& rs = reservoir_state.gasoilratio()[cell_idx];
+                        rs = rsSat*(1-epsilon);
+                    } else if (so <= 0.0 && has_vapoil_) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasOnly; // sg --> rv
+                        so = 0;
+                        sg = 1.0 - sw - so;
+                        double& rv = reservoir_state.rv()[cell_idx];
+                        // use gas pressure?
+                        double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        rv = rvSat*(1-epsilon);
                     }
+                    break;
                 }
-            }
-
-            if (active_[Oil]) {
-                auto ixo = so < 0;
-                for (int c = 0; c < nc; ++c) {
-                    if (ixo[c]) {
-                        if (active_[Water]) {
-                            sw[c] = sw[c] / (1-so[c]);
-                        }
-                        if (active_[Gas]) {
-                            sg[c] = sg[c] / (1-so[c]);
-                        }
-                        so[c] = 0;
+                case HydroCarbonState::OilOnly: {
+                    double& rs = reservoir_state.gasoilratio()[cell_idx];
+                    double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+                    // TODO:: not hardcode pvtRegion = 0
+                    double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    if (rs > ( rsSat * (1+epsilon) ) ) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                        sg = epsilon;
+                        so -= epsilon;
+                        rs = rsSat;
                     }
+                    break;
                 }
-            }
-
-            if (active_[Water]) {
-                auto ixw = sw < 0;
-                for (int c = 0; c < nc; ++c) {
-                    if (ixw[c]) {
-                        so[c] = so[c] / (1-sw[c]);
-                        if (active_[Gas]) {
-                            sg[c] = sg[c] / (1-sw[c]);
-                        }
-                        sw[c] = 0;
+                case HydroCarbonState::GasOnly: {
+                    double& rv = reservoir_state.rv()[cell_idx];
+                    double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    if (rv > rvSat * (1+epsilon) ) {
+                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                        so = epsilon;
+                        rv = rvSat;
+                        double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+                        sg -= epsilon;
                     }
+                    break;
+                }
+
+                default:
+                    OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << cell_idx << ": " << hydroCarbonState);
                 }
             }
 
-            //const V sumSat = sw + so + sg;
-            //sw = sw / sumSat;
-            //so = so / sumSat;
-            //sg = sg / sumSat;
-
-            // Update the reservoir_state
-            if (active_[Water]) {
-                for (int c = 0; c < nc; ++c) {
-                    reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
-                }
-            }
-
-            if (active_[Gas]) {
-                for (int c = 0; c < nc; ++c) {
-                    reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
-                }
-            }
-
-            if (active_[ Oil ]) {
-                for (int c = 0; c < nc; ++c) {
-                    reservoir_state.saturation()[c*np + pu.phase_pos[ Oil ]] = so[c];
-                }
-            }
-
-            // Update rs and rv
-            const double drmaxrel = drMaxRel();
-            V rs;
-            if (has_disgas_) {
-                const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-                const V drs = isRs_ * dxvar;
-                const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
-                rs = rs_old - drs_limited;
-            }
-            V rv;
-            if (has_vapoil_) {
-                const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-                const V drv = isRv_ * dxvar;
-                const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
-                rv = rv_old - drv_limited;
-            }
-
-            // Sg is used as primal variable for water only cells.
-            const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
-            auto watOnly = sw >  (1 - epsilon);
-
-            // phase translation sg <-> rs
-            std::vector<HydroCarbonState>& hydroCarbonState = reservoir_state.hydroCarbonState();
-            std::fill(hydroCarbonState.begin(), hydroCarbonState.end(), HydroCarbonState::GasAndOil);
-
-            if (has_disgas_) {
-                const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
-                const V rsSat = fluidRsSat(p, so, cells_);
-                // The obvious case
-                auto hasGas = (sg > 0 && isRs_ == 0);
-
-                // Set oil saturated if previous rs is sufficiently large
-                const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
-                auto gasVaporized =  ( (rs > rsSat * (1+epsilon) && isRs_ == 1 ) && (rs_old > rsSat0 * (1-epsilon)) );
-                auto useSg = watOnly || hasGas || gasVaporized;
-                for (int c = 0; c < nc; ++c) {
-                    if (useSg[c]) {
-                        rs[c] = rsSat[c];
-                    } else {
-                        hydroCarbonState[c] = HydroCarbonState::OilOnly;
-                    }
-                }
-
-            }
-
-            // phase transitions so <-> rv
-            if (has_vapoil_) {
-
-                // The gas pressure is needed for the rvSat calculations
-                const V gaspress_old = computeGasPressure(p_old, s_old.col(Water), s_old.col(Oil), s_old.col(Gas));
-                const V gaspress = computeGasPressure(p, sw, so, sg);
-                const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
-                const V rvSat = fluidRvSat(gaspress, so, cells_);
-
-                // The obvious case
-                auto hasOil = (so > 0 && isRv_ == 0);
-
-                // Set oil saturated if previous rv is sufficiently large
-                const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
-                auto oilCondensed = ( (rv > rvSat * (1+epsilon) && isRv_ == 1) && (rv_old > rvSat0 * (1-epsilon)) );
-                auto useSg = watOnly || hasOil || oilCondensed;
-                for (int c = 0; c < nc; ++c) {
-                    if (useSg[c]) {
-                        rv[c] = rvSat[c];
-                    } else {
-                        hydroCarbonState[c] = HydroCarbonState::GasOnly;
-                    }
-                }
-
-            }
-
-            // Update the reservoir_state
-            if (has_disgas_) {
-                std::copy(&rs[0], &rs[0] + nc, reservoir_state.gasoilratio().begin());
-            }
-
-            if (has_vapoil_) {
-                std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
-            }
-
-
-            wellModel().updateWellState(dwells, well_state);
-
-            // Update phase conditions used for property calculations.
-            updatePhaseCondFromPrimalVariable(reservoir_state);
         }
+
 
         /// Return true if output to cout is wanted.
         bool terminalOutputEnabled() const
@@ -736,7 +594,7 @@ namespace Opm {
         /// \param[in]   timer       simulation timer
         /// \param[in]   dt          timestep length
         /// \param[in]   iteration   current iteration number
-        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration)
+        bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
         {
             const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
@@ -745,7 +603,6 @@ namespace Opm {
 
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
             const int np = numPhases();
-            assert(int(rq_.size()) == np);
 
             const V& pv = geo_.poreVolume();
 
@@ -780,14 +637,7 @@ namespace Opm {
 
             for ( int idx = 0; idx < np; ++idx )
             {
-                //const ADB& tempB = rq_[idx].b;
-                //B.col(idx)       = 1./tempB.value();
-                //R.col(idx)       = residual_.material_balance_eq[idx].value();
                 tempV.col(idx)   = R2.col(idx).abs()/pv;
-//                std::cout << "------R------- " << idx << std::endl;
-//                std::cout << R.col(idx)[0] << std::endl;
-//                std::cout << "------R2------- " << idx << std::endl;
-//                std::cout << R2.col(idx)[0] << std::endl;
             }
 
             std::vector<double> pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
@@ -816,15 +666,10 @@ namespace Opm {
                     well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
                     converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
                 }
+                residual_norms.push_back(CNV[idx]);
             }
 
-            const double residualWell     = detail::infinityNormWell(residual_.well_eq,
-                                                                     linsolver_.parallelInformation());
-            converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
             const bool converged = converged_MB && converged_CNV && converged_Well;
-
-            // Residual in Pascal can have high values and still be ok.
-            const double maxWellResidualAllowed = 1000.0 * maxResidualAllowed();
 
             if ( terminal_output_ )
             {
@@ -843,7 +688,6 @@ namespace Opm {
                         const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
                         msg += "  W-FLUX(" + phaseName + ")";
                     }
-                    // std::cout << "  WELL-CONT ";
                     OpmLog::note(msg);
                 }
                 std::ostringstream ss;
@@ -859,7 +703,6 @@ namespace Opm {
                 for (int idx = 0; idx < np; ++idx) {
                     ss << std::setw(11) << well_flux_residual[idx];
                 }
-                // std::cout << std::setw(11) << residualWell;
                 ss.precision(oprec);
                 ss.flags(oflags);
                 OpmLog::note(ss.str());
@@ -879,9 +722,6 @@ namespace Opm {
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }
-            if (std::isnan(residualWell) || residualWell > maxWellResidualAllowed) {
-                OPM_THROW(Opm::NumericalProblem, "NaN or too large residual for well control equation");
-            }
 
             return converged;
         }
@@ -891,35 +731,6 @@ namespace Opm {
         int numPhases() const
         {
             return fluid_.numPhases();
-        }
-
-        /// Update the scaling factors for mass balance equations
-        void updateEquationsScaling()
-        {
-            ADB::V B;
-            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
-            for ( int idx=0; idx<MaxNumPhases; ++idx )
-            {
-                if (active_[idx]) {
-                    const int pos    = pu.phase_pos[idx];
-                    const ADB& temp_b = rq_[pos].b;
-                    B = 1. / temp_b.value();
-#if HAVE_MPI
-                    if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-                    {
-                        const ParallelISTLInformation& real_info =
-                            boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-                        double B_global_sum = 0;
-                        real_info.computeReduction(B, Reduction::makeGlobalSumFunctor<double>(), B_global_sum);
-                        residual_.matbalscale[idx] = B_global_sum / global_nc_;
-                    }
-                    else
-#endif
-                    {
-                        residual_.matbalscale[idx] = B.mean();
-                    }
-                }
-            }
         }
 
         std::vector<std::vector<double> >
@@ -942,52 +753,25 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
 
-        struct ReservoirResidualQuant {
-            ReservoirResidualQuant()
-                : b    (   ADB::null())
-                , dh   (   ADB::null())
-                , mob  (   ADB::null())
-            {
-            }
-
-            ADB              b;     // Reciprocal FVF
-            ADB              dh;    // Pressure drop across int. interfaces
-            ADB              mob;   // Phase mobility (per cell)
-        };
-
         // ---------  Data members  ---------
 
         Simulator& ebosSimulator_;
         const Grid&         grid_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
-        const RockCompressibility*      rock_comp_props_;
         VFPProperties                   vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active phases. Maps active -> canonical phase indices.
-        const std::vector<int>          canph_;
         const std::vector<int>          cells_;  // All grid cells
-        HelperOps                       ops_;
         const bool has_disgas_;
         const bool has_vapoil_;
 
         ModelParameters                 param_;
-        bool use_threshold_pressure_;
-        V threshold_pressures_by_connection_;
-
-        std::vector<ReservoirResidualQuant> rq_;
-        std::vector<PhasePresence> phaseCondition_;
 
         // Well Model
         StandardWellsDense<FluidSystem, BlackoilIndices> well_model_;
-
-        V isRs_;
-        V isRv_;
-        V isSg_;
-
-        LinearisedBlackoilResidual residual_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -996,7 +780,7 @@ namespace Opm {
 
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
-        V dx_old_;
+        BVector dx_old_;
 
 
 
@@ -1019,22 +803,6 @@ namespace Opm {
         bool localWellsActive() const { return well_model_.localWellsActive(); }
 
 
-        V
-        fluidRsSat(const V&                p,
-                   const V&                satOil,
-                   const std::vector<int>& cells) const
-        {
-            return fluid_.rsSat(ADB::constant(p), ADB::constant(satOil), cells).value();
-        }
-
-        V
-        fluidRvSat(const V&                p,
-                   const V&                satOil,
-                   const std::vector<int>& cells) const
-        {
-            return fluid_.rvSat(ADB::constant(p), ADB::constant(satOil), cells).value();
-        }
-
         void convertInput( const int iterationIdx,
                            const ReservoirState& reservoirState,
                            Simulator& simulator ) const
@@ -1056,13 +824,13 @@ namespace Opm {
                 cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
 
                 // set switching variable and interpretation
-                if( isRs_[ cellIdx ] && has_disgas_ )
+                if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::OilOnly && has_disgas_ )
                 {
                     cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
                     cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
                     cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
                 }
-                else if( isRv_[ cellIdx ] && has_vapoil_ )
+                else if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasOnly && has_vapoil_ )
                 {
                     // this case (-> gas only with vaporized oil in the gas) is
                     // relatively expensive as it requires to compute the capillary
@@ -1102,7 +870,7 @@ namespace Opm {
                 }
                 else
                 {
-                    assert(isSg_[cellIdx]);
+                    assert( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasAndOil);
                     cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
                     cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
                     cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
@@ -1142,110 +910,8 @@ namespace Opm {
 
 
     private:
-        void convertResults(const Simulator& simulator)
-        {
-            const auto& ebosJac = simulator.model().linearizer().matrix();
-            const auto& ebosResid = simulator.model().linearizer().residual();
 
-            const int numPhases = wells().number_of_phases;
-            const int numCells = ebosJac.N();
-            const int cols = ebosJac.M();
-            assert( numCells == cols );
-
-            // create the matrices and the right hand sides in a format which is more
-            // appropriate for the conversion from what's produced ebos to the flow stuff
-            typedef Eigen::SparseMatrix<double, Eigen::RowMajor> M;
-            typedef ADB::V  V;
-            std::vector< std::vector< M > > jacs( numPhases );
-            std::vector< V > resid (numPhases);
-            for( int eqIdx = 0; eqIdx < numPhases; ++eqIdx )
-            {
-                jacs[ eqIdx ].resize( numPhases );
-                resid[ eqIdx ].resize( numCells );
-                for( int pvIdx = 0; pvIdx < numPhases; ++pvIdx )
-                {
-                    jacs[ eqIdx ][ pvIdx ] = M( numCells, cols );
-                    jacs[ eqIdx ][ pvIdx ].reserve( ebosJac.nonzeroes() );
-                }
-            }
-
-            // write the right-hand-side values from the ebosJac into the objects
-            // allocated above.
-            const auto endrow = ebosJac.end();
-            for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
-            {
-                const double cellVolume = simulator.model().dofTotalVolume(cellIdx);
-                const auto& cellRes = ebosResid[ cellIdx ];
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                {
-                    const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
-                    double ebosVal = cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] / refDens * cellVolume;
-
-                    resid[ flowPhaseIdx ][ cellIdx ] = ebosVal;
-                }
-            }
-
-            for( auto row = ebosJac.begin(); row != endrow; ++row )
-            {
-                const int rowIdx = row.index();
-                const double cellVolume = simulator.model().dofTotalVolume(rowIdx);
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                {
-                    for( int pvIdx = 0; pvIdx < numPhases; ++pvIdx )
-                    {
-                        jacs[flowPhaseIdx][pvIdx].startVec(rowIdx);
-                    }
-                }
-
-                // translate the Jacobian of the residual from the format used by ebos to
-                // the one expected by flow
-                const auto endcol = row->end();
-                for( auto col = row->begin(); col != endcol; ++col )
-                {
-                    const int colIdx = col.index();
-                    for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                    {
-                        const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
-                        for( int pvIdx=0; pvIdx<numPhases; ++pvIdx )
-                        {
-                            double ebosVal = (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)]/refDens*cellVolume;
-                            if (ebosVal != 0.0)
-                                jacs[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(rowIdx, colIdx) = ebosVal;
-                        }
-                    }
-                }
-            }
-
-            // convert the resulting matrices from/ row major ordering to colum major.
-            typedef typename ADB::M ADBJacobianMatrix;
-            std::vector< std::vector< ADBJacobianMatrix > > adbJacs( numPhases );
-
-            for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-            {
-                adbJacs[ flowPhaseIdx ].resize( numPhases + 1 );
-                for( int pvIdx = 0; pvIdx < numPhases; ++pvIdx )
-                {
-                    jacs[ flowPhaseIdx ][ pvIdx ].finalize();
-                    adbJacs[ flowPhaseIdx ][ pvIdx ].assign( std::move(jacs[ flowPhaseIdx ][ pvIdx ]) );
-                }
-                // add two "dummy" matrices for the well primary variables
-                const int numWells = wells().number_of_wells;
-                for( int pvIdx = numPhases; pvIdx < numPhases + 1; ++pvIdx ) {
-                    adbJacs[ flowPhaseIdx ][ pvIdx ] = ADBJacobianMatrix( numPhases*numWells, numPhases*numWells );
-                        //sparsityPattern.derivative()[pvIdx];
-                }
-            }
-
-            for( int eqIdx = 0; eqIdx < numPhases; ++eqIdx )
-            {
-                residual_.material_balance_eq[ eqIdx ] =
-                    ADB::function(std::move(resid[eqIdx]),
-                                  std::move(adbJacs[eqIdx]));
-            }
-        }
-        void convertResults2(BVector& ebosResid, Mat& ebosJac) const
+        void convertResults(BVector& ebosResid, Mat& ebosJac) const
         {
             const int numPhases = wells().number_of_phases;
             const int numCells = ebosJac.N();
@@ -1297,230 +963,6 @@ namespace Opm {
             return flowToEbos[ phaseIdx ];
         }
 
-        void updateLegacyState(const Simulator& simulator, SolutionState& legacyState)
-        {
-            const int numPhases = 3;
-            const int numCells = simulator.model().numGridDof();
-
-            typedef Eigen::SparseMatrix<double, Eigen::ColMajor> EigenMatrix;
-
-            ///////
-            // create the value vectors for the legacy state
-            ///////
-            V poVal;
-            V TVal;
-            std::vector<V> SVal(numPhases);
-            std::vector<V> mobVal(numPhases);
-            std::vector<V> bVal(numPhases);
-            std::vector<V> pVal(numPhases);
-            V RsVal;
-            V RvVal;
-
-            poVal.resize(numCells);
-            TVal.resize(numCells);
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                SVal[phaseIdx].resize(numCells);
-                mobVal[phaseIdx].resize(numCells);
-                bVal[phaseIdx].resize(numCells);
-                pVal[phaseIdx].resize(numCells);
-            }
-            RsVal.resize(numCells);
-            RvVal.resize(numCells);
-
-            ///////
-            // create the Jacobian matrices for the legacy state. here we assume that the
-            // sparsity pattern of the inputs is already correct
-            ///////
-            std::vector<EigenMatrix> poJac(numPhases + 1);
-            //std::vector<EigenMatrix> TJac(numPhases + 2);
-            std::vector<std::vector<EigenMatrix>> SJac(numPhases);
-            std::vector<std::vector<EigenMatrix>> mobJac(numPhases);
-            std::vector<std::vector<EigenMatrix>> bJac(numPhases);
-            std::vector<std::vector<EigenMatrix>> pJac(numPhases);
-            std::vector<EigenMatrix> RsJac(numPhases + 1);
-            std::vector<EigenMatrix> RvJac(numPhases + 1);
-
-            // reservoir stuff
-            for (int pvIdx = 0; pvIdx < numPhases; ++ pvIdx) {
-                poJac[pvIdx].resize(numCells, numCells);
-                //TJac[pvIdx].resize(numCells, numCells);
-                RsJac[pvIdx].resize(numCells, numCells);
-                RvJac[pvIdx].resize(numCells, numCells);
-
-                poJac[pvIdx].reserve(numCells);
-                //TJac[pvIdx].reserve(numCells);
-                RsJac[pvIdx].reserve(numCells);
-                RvJac[pvIdx].reserve(numCells);
-            }
-
-            // auxiliary equations
-            for (int pvIdx = numPhases; pvIdx < numPhases + 1; ++ pvIdx) {
-                legacyState.pressure.derivative()[pvIdx].toSparse(poJac[pvIdx]);
-                //legacyState.temperature.derivative()[pvIdx].toSparse(TJac[pvIdx]);
-                legacyState.rs.derivative()[pvIdx].toSparse(RsJac[pvIdx]);
-                legacyState.rv.derivative()[pvIdx].toSparse(RvJac[pvIdx]);
-            }
-
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                SJac[phaseIdx].resize(numPhases + 1);
-                mobJac[phaseIdx].resize(numPhases + 1);
-                bJac[phaseIdx].resize(numPhases + 1);
-                pJac[phaseIdx].resize(numPhases + 1);
-                for (int pvIdx = 0; pvIdx < numPhases; ++ pvIdx) {
-                    SJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    SJac[phaseIdx][pvIdx].reserve(numCells);
-
-                    mobJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    mobJac[phaseIdx][pvIdx].reserve(numCells);
-
-                    bJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    bJac[phaseIdx][pvIdx].reserve(numCells);
-
-                    pJac[phaseIdx][pvIdx].resize(numCells, numCells);
-                    pJac[phaseIdx][pvIdx].reserve(numCells);
-                }
-
-                // auxiliary equations for the saturations and pressures
-                for (int pvIdx = numPhases; pvIdx < numPhases + 1; ++ pvIdx) {
-                    legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(SJac[phaseIdx][pvIdx]);
-                    legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(mobJac[phaseIdx][pvIdx]);
-                    legacyState.saturation[phaseIdx].derivative()[pvIdx].toSparse(bJac[phaseIdx][pvIdx]);
-                    legacyState.canonical_phase_pressures[phaseIdx].derivative()[pvIdx].toSparse(pJac[phaseIdx][pvIdx]);
-                }
-            }
-
-            ///////
-            // write the values and the derivatives into the data structures for the
-            // legacy state.
-            ///////
-            for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
-            {
-                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0));
-                const auto& fs = intQuants.fluidState();
-
-                poVal[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value;
-                TVal[cellIdx] = fs.temperature(0).value;
-                RsVal[cellIdx] = fs.Rs().value;
-                RvVal[cellIdx] = fs.Rv().value;
-
-                for (int pvIdx = 0; pvIdx < numPhases; ++pvIdx) {
-                    poJac[pvIdx].startVec(cellIdx);
-                    //TJac[pvIdx].startVec(cellIdx);
-                    RsJac[pvIdx].startVec(cellIdx);
-                    RvJac[pvIdx].startVec(cellIdx);
-
-                    poJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.pressure(FluidSystem::oilPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                    //TJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.temperature(FluidSystem::oilPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                    RsJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.Rs().derivatives[flowToEbosPvIdx(pvIdx)];
-                    RvJac[pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.Rv().derivatives[flowToEbosPvIdx(pvIdx)];
-                }
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
-                {
-                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(flowPhaseIdx);
-                    SVal[flowPhaseIdx][cellIdx] = fs.saturation(ebosPhaseIdx).value;
-                    mobVal[flowPhaseIdx][cellIdx] = intQuants.mobility(ebosPhaseIdx).value;
-                    bVal[flowPhaseIdx][cellIdx] = fs.invB(ebosPhaseIdx).value;
-                    pVal[flowPhaseIdx][cellIdx] = fs.pressure(ebosPhaseIdx).value;
-
-                    for (int pvIdx = 0; pvIdx < numPhases; ++pvIdx) {
-                        SJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        mobJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        bJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        pJac[flowPhaseIdx][pvIdx].startVec(cellIdx);
-                        SJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.saturation(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                        mobJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = intQuants.mobility(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                        bJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.invB(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                        pJac[flowPhaseIdx][pvIdx].insertBackByOuterInnerUnordered(cellIdx, cellIdx) = fs.pressure(ebosPhaseIdx).derivatives[flowToEbosPvIdx(pvIdx)];
-                    }
-                }
-            }
-
-            // finalize all Jacobian matrices
-            for (int pvIdx = 0; pvIdx < numPhases; ++pvIdx) {
-                poJac[pvIdx].finalize();
-                //TJac[pvIdx].finalize();
-                RsJac[pvIdx].finalize();
-                RvJac[pvIdx].finalize();
-
-                for (int phaseIdx = 0; phaseIdx < 3; ++ phaseIdx) {
-                    SJac[phaseIdx][pvIdx].finalize();
-                    mobJac[phaseIdx][pvIdx].finalize();
-                    bJac[phaseIdx][pvIdx].finalize();
-                    pJac[phaseIdx][pvIdx].finalize();
-                }
-            }
-
-            ///////
-            // create Opm::AutoDiffMatrix objects from Eigen::SparseMatrix
-            // objects. (Opm::AutoDiffMatrix is not directly assignable, wtf?)
-            ///////
-            typedef typename ADB::M ADBJacobianMatrix;
-
-            std::vector<ADBJacobianMatrix> poAdbJacs;
-            std::vector<ADBJacobianMatrix> RsAdbJacs;
-            std::vector<ADBJacobianMatrix> RvAdbJacs;
-
-            poAdbJacs.resize(numPhases + 1);
-            RsAdbJacs.resize(numPhases + 1);
-            RvAdbJacs.resize(numPhases + 1);
-            for(int pvIdx = 0; pvIdx < numPhases + 1; ++pvIdx)
-            {
-                poAdbJacs[pvIdx].assign(poJac[pvIdx]);
-                RsAdbJacs[pvIdx].assign(RsJac[pvIdx]);
-                RvAdbJacs[pvIdx].assign(RvJac[pvIdx]);
-            }
-
-            std::vector<std::vector<ADBJacobianMatrix>> SAdbJacs(numPhases);
-            std::vector<std::vector<ADBJacobianMatrix>> mobAdbJacs(numPhases);
-            std::vector<std::vector<ADBJacobianMatrix>> bAdbJacs(numPhases);
-            std::vector<std::vector<ADBJacobianMatrix>> pAdbJacs(numPhases);
-            for(int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            {
-                SAdbJacs[phaseIdx].resize(numPhases + 1);
-                mobAdbJacs[phaseIdx].resize(numPhases + 1);
-                bAdbJacs[phaseIdx].resize(numPhases + 1);
-                pAdbJacs[phaseIdx].resize(numPhases + 1);
-                for(int pvIdx = 0; pvIdx < numPhases + 1; ++pvIdx)
-                {
-                    SAdbJacs[phaseIdx][pvIdx].assign(SJac[phaseIdx][pvIdx]);
-                    mobAdbJacs[phaseIdx][pvIdx].assign(mobJac[phaseIdx][pvIdx]);
-                    bAdbJacs[phaseIdx][pvIdx].assign(bJac[phaseIdx][pvIdx]);
-                    pAdbJacs[phaseIdx][pvIdx].assign(pJac[phaseIdx][pvIdx]);
-                }
-            }
-
-            ///////
-            // create the ADB objects in the legacy state
-            ///////
-            legacyState.pressure =
-                ADB::function(std::move(poVal),
-                              std::move(poAdbJacs));
-            legacyState.temperature =
-                ADB::constant(std::move(TVal));
-            legacyState.rs =
-                ADB::function(std::move(RsVal),
-                              std::move(RsAdbJacs));
-            legacyState.rv =
-                ADB::function(std::move(RvVal),
-                              std::move(RvAdbJacs));
-
-            for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            {
-                legacyState.saturation[phaseIdx] =
-                    ADB::function(std::move(SVal[phaseIdx]),
-                                  std::move(SAdbJacs[phaseIdx]));
-                legacyState.canonical_phase_pressures[phaseIdx] =
-                    ADB::function(std::move(pVal[phaseIdx]),
-                                  std::move(pAdbJacs[phaseIdx]));
-                rq_[phaseIdx].mob =
-                    ADB::function(std::move(mobVal[phaseIdx]),
-                                 std::move(mobAdbJacs[phaseIdx]));
-                rq_[phaseIdx].b =
-                    ADB::function(std::move(bVal[phaseIdx]),
-                                  std::move(bAdbJacs[phaseIdx]));
-            }
-        }
 
     public:
         void beginReportStep()
@@ -1575,122 +1017,16 @@ namespace Opm {
 
             prevEpisodeIdx = ebosSimulator_.episodeIndex();
 
-            //convertResults(ebosSimulator_);
+            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            convertResults(ebosResid, ebosJac);
 
             if (param_.update_equations_scaling_) {
-                std::cout << "scaling" << std::endl;
+                std::cout << "equation scaling not suported yet" << std::endl;
                 //updateEquationsScaling();
             }
 
         }
-
-
-
-
-
-
-
-
-
-        std::vector<ADB>
-        computePressures(const ADB& po,
-                         const ADB& sw,
-                         const ADB& so,
-                         const ADB& sg) const
-        {
-            // convert the pressure offsets to the capillary pressures
-            std::vector<ADB> pressure = fluid_.capPress(sw, so, sg, cells_);
-            for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-                // The reference pressure is always the liquid phase (oil) pressure.
-                if (phaseIdx == BlackoilPhases::Liquid)
-                    continue;
-                if (active_[phaseIdx]) {
-                    pressure[phaseIdx] = pressure[phaseIdx] - pressure[BlackoilPhases::Liquid];
-                }
-            }
-
-            // Since pcow = po - pw, but pcog = pg - po,
-            // we have
-            //   pw = po - pcow
-            //   pg = po + pcgo
-            // This is an unfortunate inconsistency, but a convention we must handle.
-            for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
-                if (active_[phaseIdx]) {
-                    if (phaseIdx == BlackoilPhases::Aqua) {
-                        pressure[phaseIdx] = po - pressure[phaseIdx];
-                    } else {
-                        pressure[phaseIdx] += po;
-                    }
-                }
-            }
-
-            return pressure;
-        }
-
-        V computeGasPressure(const V& po,
-                           const V& sw,
-                           const V& so,
-                           const V& sg) const
-        {
-            assert (active_[Gas]);
-            std::vector<ADB> cp = fluid_.capPress(ADB::constant(sw),
-                                                  ADB::constant(so),
-                                                  ADB::constant(sg),
-                                                  cells_);
-            return cp[Gas].value() + po;
-        }
-
-        const std::vector<PhasePresence>
-        phaseCondition() const {return phaseCondition_;}
-
-        /// update the primal variable for Sg, Rv or Rs. The Gas phase must
-        /// be active to call this method.
-        void
-        updatePrimalVariableFromState(const ReservoirState& state)
-        {
-            updatePhaseCondFromPrimalVariable(state);
-        }
-
-
-        /// Update the phaseCondition_ member based on the primalVariable_ member.
-        /// Also updates isRs_, isRv_ and isSg_;
-        void
-        updatePhaseCondFromPrimalVariable(const ReservoirState& state)
-        {
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            isRs_ = V::Zero(nc);
-            isRv_ = V::Zero(nc);
-            isSg_ = V::Zero(nc);
-
-            if (! (active_[Gas] && active_[Oil])) {
-                // updatePhaseCondFromPrimarVariable() logic requires active gas and oil phase.
-                phaseCondition_.assign(nc, PhasePresence());
-                return;
-            }
-            for (int c = 0; c < nc; ++c) {
-                phaseCondition_[c] = PhasePresence(); // No free phases.
-                phaseCondition_[c].setFreeWater(); // Not necessary for property calculation usage.
-                switch (state.hydroCarbonState()[c]) {
-                case HydroCarbonState::GasAndOil:
-                    phaseCondition_[c].setFreeOil();
-                    phaseCondition_[c].setFreeGas();
-                    isSg_[c] = 1;
-                    break;
-                case HydroCarbonState::OilOnly:
-                    phaseCondition_[c].setFreeOil();
-                    isRs_[c] = 1;
-                    break;
-                case HydroCarbonState::GasOnly:
-                    phaseCondition_[c].setFreeGas();
-                    isRv_[c] = 1;
-                    break;
-                default:
-                    OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << c << ": " << state.hydroCarbonState()[c]);
-                }
-            }
-        }
-
-
 
 
         double dpMaxRel() const { return param_.dp_max_rel_; }

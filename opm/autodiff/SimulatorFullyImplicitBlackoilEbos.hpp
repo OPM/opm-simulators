@@ -179,13 +179,13 @@ public:
         if( ! restorefilename.empty() )
         {
             // -1 means that we'll take the last report step that was written
-//            const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
+            //const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
 
-//            output_writer_.restore( timer,
-//                                    state,
-//                                    prev_well_state,
-//                                    restorefilename,
-//                                    desiredRestoreStep );
+            //            output_writer_.restore( timer,
+            //                                    state,
+            //                                    prev_well_state,
+            //                                    restorefilename,
+            //                                    desiredRestoreStep );
         }
 
         unsigned int totalLinearizations = 0;
