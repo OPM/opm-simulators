@@ -19,6 +19,8 @@
 #ifndef OPM_PARALLELDEBUGOUTPUT_HEADER_INCLUDED
 #define OPM_PARALLELDEBUGOUTPUT_HEADER_INCLUDED
 
+#include <unordered_set>
+
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 
