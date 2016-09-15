@@ -437,7 +437,8 @@ namespace Opm
                 const Opm::PhaseUsage& phaseUsage,
                 const Model& model,
                 const RestartConfig& restartConfig,
-                const int reportStepNum) {
+                const int reportStepNum,
+                const bool output) {
 
 
             std::vector<data::CellData> simProps;
@@ -547,8 +548,11 @@ namespace Opm
                             std::move(adbToDoubleVector(sd.rq[aqua_idx].kr))});
                 }
                 else {
-                    Opm::OpmLog::warning("Empty:WATKR",
-                                         "Not emitting empty Water Rel-Perm");
+                    if ( output )
+                    {
+                        Opm::OpmLog::warning("Empty:WATKR",
+                                             "Not emitting empty Water Rel-Perm");
+                    }
                 }
             }
             if (liquid_active && outKeywords["KRO"] > 0) {
@@ -560,8 +564,11 @@ namespace Opm
                              std::move(adbToDoubleVector(sd.rq[liquid_idx].kr))});
                 }
                 else {
-                    Opm::OpmLog::warning("Empty:OILKR",
-                                         "Not emitting empty Oil Rel-Perm");
+                    if ( output )
+                    {
+                        Opm::OpmLog::warning("Empty:OILKR",
+                                             "Not emitting empty Oil Rel-Perm");
+                    }
                 }
             }
             if (vapour_active && outKeywords["KRG"] > 0) {
@@ -573,8 +580,11 @@ namespace Opm
                              std::move(adbToDoubleVector(sd.rq[vapour_idx].kr))});
                 }
                 else {
-                    Opm::OpmLog::warning("Empty:GASKR",
-                                         "Not emitting empty Gas Rel-Perm");
+                    if ( output )
+                    {
+                        Opm::OpmLog::warning("Empty:GASKR",
+                                             "Not emitting empty Gas Rel-Perm");
+                    }
                 }
             }
 
@@ -600,7 +610,8 @@ namespace Opm
             /**
              * Bubble point and dew point pressures
              */
-            if (vapour_active && liquid_active && outKeywords["PBPD"] > 0) {
+            if (output && vapour_active &&
+                liquid_active && outKeywords["PBPD"] > 0) {
                 outKeywords["PBPD"] = 0;
                 Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
                         "Writing bubble points and dew points (PBPD) to file is unsupported, "
@@ -608,12 +619,15 @@ namespace Opm
             }
 
             //Warn for any unhandled keyword
-            for (auto& keyValue : outKeywords) {
-                if (keyValue.second > 0) {
-                    std::string logstring = "Keyword '";
-                    logstring.append(keyValue.first);
-                    logstring.append("' is unhandled for output to file.");
-                    Opm::OpmLog::warning("Unhandled output keyword", logstring);
+            if (output)
+            {
+                for (auto& keyValue : outKeywords) {
+                    if (keyValue.second > 0) {
+                        std::string logstring = "Keyword '";
+                        logstring.append(keyValue.first);
+                        logstring.append("' is unhandled for output to file.");
+                        Opm::OpmLog::warning("Unhandled output keyword", logstring);
+                    }
                 }
             }
 
@@ -636,7 +650,7 @@ namespace Opm
     {
         const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
-        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum );
+        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum,  parallelOutput_->isIORank() );
         writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }
