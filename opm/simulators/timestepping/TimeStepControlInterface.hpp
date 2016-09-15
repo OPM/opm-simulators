@@ -56,7 +56,7 @@ namespace Opm
         /// \param timeError   object to compute || u^n+1 - u^n || / || u^n+1 ||
         ///
         /// \return suggested time step size for the next step
-        virtual double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange ) const = 0;
+        virtual double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange , const double simulationTimeElapsed) const = 0;
 
         /// virtual destructor (empty)
         virtual ~TimeStepControlInterface () {}

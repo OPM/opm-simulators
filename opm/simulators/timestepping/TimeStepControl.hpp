@@ -48,7 +48,7 @@ namespace Opm
                                              const bool verbose = false);
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */ ) const;
+        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */ ) const;
 
     protected:
         const int     target_iterations_;
@@ -82,7 +82,7 @@ namespace Opm
                             const bool verbose = false );
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relativeChange ) const;
+        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
 
     protected:
         const double tol_;
@@ -111,10 +111,31 @@ namespace Opm
                                              const bool verbose = false);
 
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
-        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange ) const;
+        double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
 
     protected:
         const int     target_iterations_;
+    };
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    ///  HardcodedTimeStepControl
+    ///  Input generated from summary file using the ert application:
+    ///  ecl_summary DECK TIME > filename
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class HardcodedTimeStepControl : public TimeStepControlInterface
+    {
+    public:
+        /// \brief constructor
+        /// \param filename   filename contaning the timesteps
+        HardcodedTimeStepControl( const std::string filename);
+
+        /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
+        double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& /*relativeChange */, const double simulationTimeElapsed) const;
+
+    protected:
+        std::vector<double> timesteps_;
     };
 
 

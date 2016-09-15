@@ -23,6 +23,9 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <string>
+#include <fstream>
+#include <iostream>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -55,7 +58,7 @@ namespace Opm
     }
 
     double SimpleIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */ ) const
+    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */) const
     {
         double dtEstimate = dt ;
 
@@ -71,6 +74,38 @@ namespace Opm
             dtEstimate *= growthrate_;
         }
 
+        return dtEstimate;
+    }
+
+    ////////////////////////////////////////////////////////
+    //
+    //  HardcodedTimeStepControl Implementation
+    //
+    ////////////////////////////////////////////////////////
+
+    HardcodedTimeStepControl::
+    HardcodedTimeStepControl( const std::string filename)
+    {
+        std::ifstream infile (filename);
+        double time;
+        std::string line;
+        std::getline(infile, line); //assumes two lines before the timing starts.
+        std::getline(infile, line);
+
+        while (!infile.eof() ) {
+            infile >> time; // read the time in days
+            std::string line;
+            std::getline(infile, line); // skip the rest of the line
+            timesteps_.push_back( time * unit::day );
+        }
+
+    }
+
+    double HardcodedTimeStepControl::
+    computeTimeStepSize( const double /*dt */, const int /*iterations */, const RelativeChangeInterface& /* relativeChange */ , const double simulationTimeElapsed) const
+    {
+        auto nextTime = std::upper_bound(timesteps_.begin(), timesteps_.end(), simulationTimeElapsed);
+        double dtEstimate = (*nextTime - simulationTimeElapsed);
         return dtEstimate;
     }
 
@@ -90,7 +125,7 @@ namespace Opm
     {}
 
     double PIDTimeStepControl::
-    computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relChange ) const
+    computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relChange, const double /*simulationTimeElapsed */) const
     {
         // shift errors
         for( int i=0; i<2; ++i ) {
@@ -141,9 +176,9 @@ namespace Opm
     {}
 
     double PIDAndIterationCountTimeStepControl::
-    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange ) const
+    computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange,  const double simulationTimeElapsed ) const
     {
-        double dtEstimate = BaseType :: computeTimeStepSize( dt, iterations, relChange );
+        double dtEstimate = BaseType :: computeTimeStepSize( dt, iterations, relChange, simulationTimeElapsed);
 
         // further reduce step size if to many iterations were used
         if( iterations > target_iterations_ )
