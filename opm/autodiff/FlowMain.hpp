@@ -618,6 +618,9 @@ namespace Opm
         //    OpmLog singleton.
         void extractMessages()
         {
+            if ( !output_cout_ )
+                return;
+
             auto extractMessage = [](const Message& msg) {
                 auto log_type = detail::convertMessageType(msg.mtype);
                 const auto& location = msg.location;
