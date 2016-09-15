@@ -1082,7 +1082,11 @@ namespace detail {
         } while (it < 15);
 
         if (converged) {
-            OpmLog::note("well converged iter: " + std::to_string(it));
+            if (terminalOutputEnabled())
+            {
+                OpmLog::note("well converged iter: " + std::to_string(it));
+            }
+
             const int nw = wells().number_of_wells;
             {
                 // We will set the bhp primary variable to the new ones,
