@@ -339,10 +339,14 @@ namespace Opm
         {
             // Write parameters used for later reference. (only if rank is zero)
             output_to_files_ = output_cout_ && param_.getDefault("output", true);
+            // Always read output_dir as it will be set unconditionally later.
+            // Not doing this might cause files to be created in the current
+            // directory.
+            output_dir_ =
+                param_.getDefault("output_dir", std::string("."));
+
             if (output_to_files_) {
                 // Create output directory if needed.
-                output_dir_ =
-                    param_.getDefault("output_dir", std::string("."));
                 boost::filesystem::path fpath(output_dir_);
                 if (!is_directory(fpath)) {
                     try {
