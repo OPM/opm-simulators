@@ -845,7 +845,7 @@ namespace detail {
 
         {
             const std::vector<ADB> kr = asImpl().computeRelPerm(state);
-            for (int phaseIdx=0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+            for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
                 sd_.rq[phaseIdx].kr = kr[canph_[phaseIdx]];
             }
         }

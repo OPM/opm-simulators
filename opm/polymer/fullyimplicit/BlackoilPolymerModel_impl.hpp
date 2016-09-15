@@ -293,7 +293,7 @@ namespace Opm {
         const V transi = subset(geo_.transmissibility(), ops_.internal_faces);
         {
             const std::vector<ADB> kr = computeRelPerm(state);
-            for (int phaseIdx=0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+            for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
                 sd_.rq[phaseIdx].kr = kr[canph_[phaseIdx]];
             }
         }
@@ -303,7 +303,7 @@ namespace Opm {
             std::vector<double> water_vel;
             std::vector<double> visc_mult;
 
-            computeWaterShearVelocityFaces(transi, sd_.rq, state.canonical_phase_pressures, state, water_vel, visc_mult);
+            computeWaterShearVelocityFaces(transi, state.canonical_phase_pressures, state, water_vel, visc_mult);
             if ( !polymer_props_ad_.computeShearMultLog(water_vel, visc_mult, shear_mult_faces_) ) {
                 // std::cerr << " failed in calculating the shear-multiplier " << std::endl;
                 OPM_THROW(std::runtime_error, " failed in calculating the shear-multiplier. ");
@@ -590,7 +590,7 @@ namespace Opm {
 
     template<class Grid>
     void
-    BlackoilPolymerModel<Grid>::computeWaterShearVelocityFaces(const V& transi, const std::vector<typename Base::ReservoirResidualQuant>& rq,
+    BlackoilPolymerModel<Grid>::computeWaterShearVelocityFaces(const V& transi,
                                                                const std::vector<ADB>& phasePressure, const SolutionState& state,
                                                                std::vector<double>& water_vel, std::vector<double>& visc_mult)
     {
@@ -603,7 +603,7 @@ namespace Opm {
 
         const ADB tr_mult = transMult(state.pressure);
         const ADB mu    = fluidViscosity(canonicalPhaseIdx, phasePressure[canonicalPhaseIdx], state.temperature, state.rs, state.rv, cond);
-        sd_.rq[phase].mob = tr_mult * rq[phase].kr / mu;
+        sd_.rq[phase].mob = tr_mult * sd_.rq[phase].kr / mu;
 
         // compute gravity potensial using the face average as in eclipse and MRST
         const ADB rho   = fluidDensity(canonicalPhaseIdx, sd_.rq[phase].b, state.rs, state.rv);
@@ -622,7 +622,7 @@ namespace Opm {
         const ADB mc = computeMc(state);
         ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
                                                          cmax,
-                                                         rq[phase].kr);
+                                                         sd_.rq[phase].kr);
         ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value());
         sd_.rq[ phase ].mob = tr_mult * krw_eff * inv_wat_eff_visc;
 
