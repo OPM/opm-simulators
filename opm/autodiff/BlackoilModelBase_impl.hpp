@@ -469,8 +469,8 @@ namespace detail {
     BlackoilModelBase<Grid, WellModel, Implementation>::
     SimulatorData::SimulatorData(int num_phases)
         : rq(num_phases)
-        , rs(ADB::null())
-        , rv(ADB::null())
+        , rsSat(ADB::null())
+        , rvSat(ADB::null())
     {
     }
 
@@ -657,17 +657,17 @@ namespace detail {
 
                 if (active_[ Oil ]) {
                     // RS and RV is only defined if both oil and gas phase are active.
-                    const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
+                    sd_.rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
-                        state.rs = (1-isRs_)*rsSat + isRs_*xvar;
+                        state.rs = (1-isRs_)*sd_.rsSat + isRs_*xvar;
                     } else {
-                        state.rs = rsSat;
+                        state.rs = sd_.rsSat;
                     }
-                    const ADB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
+                    sd_.rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
                     if (has_vapoil_) {
-                        state.rv = (1-isRv_)*rvSat + isRv_*xvar;
+                        state.rv = (1-isRv_)*sd_.rvSat + isRv_*xvar;
                     } else {
-                        state.rv = rvSat;
+                        state.rv = sd_.rvSat;
                     }
                 }
             }
@@ -1414,6 +1414,7 @@ namespace detail {
         if (has_disgas_) {
             const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
             const V rsSat = fluidRsSat(p, so, cells_);
+            sd_.rsSat = ADB::constant(rsSat);
             // The obvious case
             auto hasGas = (sg > 0 && isRs_ == 0);
 
@@ -1439,6 +1440,7 @@ namespace detail {
             const V gaspress = computeGasPressure(p, sw, so, sg);
             const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
             const V rvSat = fluidRvSat(gaspress, so, cells_);
+            sd_.rvSat = ADB::constant(rvSat);
 
             // The obvious case
             auto hasOil = (so > 0 && isRv_ == 0);
