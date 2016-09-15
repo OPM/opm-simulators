@@ -251,7 +251,26 @@ namespace detail {
     }
 
 
-
+    template <class Grid, class WellModel, class Implementation>
+    bool
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    isParallel() const
+    {
+#if HAVE_MPI
+        if ( linsolver_.parallelInformation().type() !=
+             typeid(ParallelISTLInformation) )
+        {
+            return false;
+        }
+        else
+        {
+            const auto& comm =boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation()).communicator();
+            return  comm.size() > 1;
+        }
+#else
+        return false;
+#endif
+    }
 
 
     template <class Grid, class WellModel, class Implementation>
@@ -2357,29 +2376,85 @@ namespace detail {
             fip[4] = rv.value() * fip[pg];
         }
 
-        const int dims = *std::max_element(fipnum.begin(), fipnum.end());
+        // For a parallel run this is just a local maximum and needs to be updated later
+        int dims = *std::max_element(fipnum.begin(), fipnum.end());
         std::vector<V> values(dims, V::Zero(7));
-        for (int i = 0; i < 5; ++i) {
+
+        const V hydrocarbon = saturation[Oil].value() + saturation[Gas].value();
+        V hcpv;
+        V pres;
+
+        if ( !isParallel() )
+        {
+            for (int i = 0; i < 5; ++i) {
+                for (int c = 0; c < nc; ++c) {
+                    if (fipnum[c] != 0) {
+                        values[fipnum[c]-1][i] += fip[i][c];
+                    }
+                }
+            }
+
+            hcpv = V::Zero(dims);
+            pres = V::Zero(dims);
+
             for (int c = 0; c < nc; ++c) {
                 if (fipnum[c] != 0) {
-                    values[fipnum[c]-1][i] += fip[i][c];
+                    hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
+                    pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
+                    values[fipnum[c]-1][5] += pv[c];
+                    values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
                 }
             }
         }
+        else
+        {
+#if HAVE_MPI
+            // mask[c] is 1 if we need to compute something in parallel
+            const auto & pinfo =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            const auto& mask = pinfo.getOwnerMask();
+            auto comm = pinfo.communicator();
+            // Compute the global dims value and resize values accordingly.
+            dims = comm.max(dims);
+            values.resize(dims, V::Zero(7));
 
-        // compute PAV and PORV for every regions.
-        const V hydrocarbon = saturation[Oil].value() + saturation[Gas].value();
-        V hcpv = V::Zero(dims);
-        V pres = V::Zero(dims);
-        for (int c = 0; c < nc; ++c) {
-            if (fipnum[c] != 0) {
-                hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
-                pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
-                values[fipnum[c]-1][5] += pv[c];
-                values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
+            for (int i = 0; i < 5; ++i) {
+                for (int c = 0; c < nc; ++c) {
+                    if (fipnum[c] != 0 && mask[c]) {
+                        values[fipnum[c]-1][i] += fip[i][c];
+                    }
+                }
             }
+
+            hcpv = V::Zero(dims);
+            pres = V::Zero(dims);
+
+            for (int c = 0; c < nc; ++c) {
+                if (fipnum[c] != 0 && mask[c]) {
+                    hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
+                    pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
+                    values[fipnum[c]-1][5] += pv[c];
+                    values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
+                }
+            }
+
+            // For the frankenstein branch we hopefully can turn values into a vanilla
+            // std::vector<double>, use some index magic above, use one communication
+            // to sum up the vector entries instead of looping over the regions.
+            for(int reg=0; reg < dims; ++reg)
+            {
+                comm.sum(values[reg].data(), values[reg].size());
+            }
+
+            comm.sum(hcpv.data(), hcpv.size());
+            comm.sum(pres.data(), pres.size());
+#else
+            // This should never happen!
+            OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
+#endif
         }
 
+        // compute PAV and PORV for every regions.
         for (int reg = 0; reg < dims; ++reg) {
             if (hcpv[reg] != 0) {
                 values[reg][6] /= hcpv[reg];
@@ -2389,7 +2464,6 @@ namespace detail {
         }
 
         return values;
-        
     }
 
 } // namespace Opm

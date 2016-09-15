@@ -20,6 +20,7 @@
 */
 
 #include <utility>
+#include <functional>
 #include <algorithm>
 #include <locale>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
@@ -697,9 +698,38 @@ namespace Opm
         const V sg = pu.phase_used[BlackoilPhases::Vapour] ? V(s.col(BlackoilPhases::Vapour)) : V::Zero(nc);
         const V hydrocarbon = so + sg;
         const V p = Eigen::Map<const V>(& state.pressure()[0], nc);
-        totals[5] = geo_.poreVolume().sum();
-        totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum()), unit::barsa);
-        
+        if ( ! is_parallel_run_ )
+        {
+            totals[5] = geo_.poreVolume().sum();
+            totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum()), unit::barsa);
+        }
+        else
+        {
+#if HAVE_MPI
+            const auto & pinfo =
+                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
+            auto operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
+                                             Opm::Reduction::makeGlobalSumFunctor<double>(),
+                                             Opm::Reduction::makeGlobalSumFunctor<double>());
+            auto pav_nom   = p * geo_.poreVolume() * hydrocarbon;
+            auto pav_denom = geo_.poreVolume() * hydrocarbon;
+
+            // using ref cref to prevent copying
+            auto inputs = std::make_tuple(std::cref(geo_.poreVolume()),
+                                          std::cref(pav_nom), std::cref(pav_denom));
+            std::tuple<double, double, double> results(0.0, 0.0, 0.0);
+
+            pinfo.computeReduction(inputs, operators, results);
+            using std::get;
+            totals[5] = get<0>(results);
+            totals[6] = unit::convert::to(get<1>(results)/get<2>(results),
+                                          unit::barsa);
+#else
+            // This should never happen!
+            OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
+#endif
+        }
+
         return totals;
     }
 
