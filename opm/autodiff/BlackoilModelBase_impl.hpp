@@ -2369,8 +2369,8 @@ namespace detail {
 
         // compute PAV and PORV for every regions.
         const V hydrocarbon = saturation[Oil].value() + saturation[Gas].value();
-        V hcpv = V::Zero(nc);
-        V pres = V::Zero(nc);
+        V hcpv = V::Zero(dims);
+        V pres = V::Zero(dims);
         for (int c = 0; c < nc; ++c) {
             if (fipnum[c] != 0) {
                 hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
