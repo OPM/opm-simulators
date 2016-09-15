@@ -1,6 +1,7 @@
 /*
   Copyright 2016 SINTEF ICT, Applied Mathematics.
   Copyright 2016 Statoil ASA.
+  Copyright 2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -95,6 +96,8 @@ namespace Opm {
                                const std::vector<double>& pv)
                 : wells_active_(wells_arg!=nullptr)
                 , wells_(wells_arg)
+                , param_(param)
+                , terminal_output_(terminal_output)
                 , fluid_(nullptr)
                 , active_(nullptr)
                 , vfp_properties_(nullptr)
@@ -102,9 +105,10 @@ namespace Opm {
                 , well_perforation_pressure_diffs_(wells_arg->well_connpos[wells_arg->number_of_wells])
                 , wellVariables_(wells_arg->number_of_wells * wells_arg->number_of_phases)
                 , F0_(wells_arg->number_of_wells * wells_arg->number_of_phases)
-                , param_(param)
-                , terminal_output_(terminal_output)
               {
+                invDuneD_.setBuildMode( Mat::row_wise );
+                duneC_.setBuildMode( Mat::row_wise );
+                duneB_.setBuildMode( Mat::row_wise );
               }
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
@@ -132,18 +136,24 @@ namespace Opm {
 
                 const int nw = wells().number_of_wells;
                 const int nperf = wells().well_connpos[nw];
-                int nc = numCells();
-                Mat duneD (nw,nw,nw,Mat::row_wise);
-                Mat duneC (nw,nc,nperf, Mat::row_wise);
-                Mat duneB (nw,nc,nperf, Mat::row_wise); // B^T
+                const int nc = numCells();
 
-                typedef Mat::CreateIterator Iter;
-                for(Iter row=duneD.createbegin(); row!=duneD.createend(); ++row){
-                  // Add nonzeros for diagonal
-                  row.insert(row.index());
+                // set invDuneD
+                invDuneD_.setSize( nw, nw, nw );
+
+                // set duneC
+                duneC_.setSize( nw, nc, nperf );
+
+                // set duneB
+                duneB_.setSize( nw, nc, nperf );
+
+                for(auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
+                    // Add nonzeros for diagonal
+                    row.insert(row.index());
                 }
-                for(Iter row=duneC.createbegin(); row!=duneC.createend(); ++row){
-                  // Add nonzeros for diagonal
+
+                for(auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
+                    // Add nonzeros for diagonal
                     for (int perf = wells().well_connpos[row.index()] ; perf < wells().well_connpos[row.index()+1]; ++perf) {
                         const int cell_idx = wells().well_cells[perf];
                         row.insert(cell_idx);
@@ -151,18 +161,14 @@ namespace Opm {
                 }
 
                 // make the B^T matrix
-                for(Iter row=duneB.createbegin(); row!=duneB.createend(); ++row){
+                for(auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
                     for (int perf = wells().well_connpos[row.index()] ; perf < wells().well_connpos[row.index()+1]; ++perf) {
                         const int cell_idx = wells().well_cells[perf];
                         row.insert(cell_idx);
                     }
                 }
-                invDuneD_ = duneD;
-                duneC_ = duneC;
-                duneB_ = duneB;
 
-                BVector resWell(nw);
-                resWell_ = resWell;
+                resWell_.resize( nw );
             }
 
 
@@ -267,7 +273,7 @@ namespace Opm {
                 }
 
                 // do the local inversion of D.
-                localInvert(invDuneD_);
+                localInvert( invDuneD_ );
 
             }
 
@@ -1377,12 +1383,11 @@ namespace Opm {
             std::vector<EvalWell> wellVariables_;
             std::vector<double> F0_;
 
-            //Mat duneA_;
             Mat duneB_;
             Mat duneC_;
             Mat invDuneD_;
+
             BVector resWell_;
-            //BVector rhs_;
 
             // protected methods
             EvalWell getBhp(const int wellIdx) const {
