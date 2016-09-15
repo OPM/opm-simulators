@@ -656,6 +656,11 @@ namespace Opm
         //   OpmLog singleton.
         void runDiagnostics()
         {
+            if( ! output_cout_ )
+            {
+                return;
+            }
+
             // Run relperm diagnostics
             RelpermDiagnostics diagnostic;
             diagnostic.diagnosis(eclipse_state_, deck_, grid_init_->grid());
