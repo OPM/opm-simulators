@@ -84,29 +84,25 @@ namespace Opm
     ////////////////////////////////////////////////////////
 
     HardcodedTimeStepControl::
-    HardcodedTimeStepControl( const std::string filename)
+    HardcodedTimeStepControl( const std::string& filename)
     {
         std::ifstream infile (filename);
-        double time;
+        std::string::size_type sz;
         std::string line;
-        std::getline(infile, line); //assumes two lines before the timing starts.
-        std::getline(infile, line);
+        while ( std::getline(infile, line)) {
+            if( line[0] != '-') { // ignore lines starting with '-'
+                const double time = std::stod(line,&sz); // read the first number i.e. the actual substep time
+                subStepTime_.push_back( time * unit::day );
+            }
 
-        while (!infile.eof() ) {
-            infile >> time; // read the time in days
-            std::string line;
-            std::getline(infile, line); // skip the rest of the line
-            timesteps_.push_back( time * unit::day );
         }
-
     }
 
     double HardcodedTimeStepControl::
     computeTimeStepSize( const double /*dt */, const int /*iterations */, const RelativeChangeInterface& /* relativeChange */ , const double simulationTimeElapsed) const
     {
-        auto nextTime = std::upper_bound(timesteps_.begin(), timesteps_.end(), simulationTimeElapsed);
-        double dtEstimate = (*nextTime - simulationTimeElapsed);
-        return dtEstimate;
+        auto nextTime = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), simulationTimeElapsed);
+        return (*nextTime - simulationTimeElapsed);
     }
 
 
