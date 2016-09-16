@@ -340,10 +340,17 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
     const ValueType& pow_x = ValueTypeToolbox::pow(base.value, exp);
     result.value = pow_x;
 
-    // derivatives use the chain rule
-    const ValueType& df_dx = pow_x/base.value*exp;
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*base.derivatives[curVarIdx];
+    if (base == 0.0) {
+        // we special case the base 0 case because 0.0 is in the valid range of the
+        // base but the generic code leads to NaNs.
+        result = 0.0;
+    }
+    else {
+        // derivatives use the chain rule
+        const ValueType& df_dx = pow_x/base.value*exp;
+        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+            result.derivatives[curVarIdx] = df_dx*base.derivatives[curVarIdx];
+    }
 
     return result;
 }
@@ -357,13 +364,20 @@ Evaluation<ValueType, numVars> pow(const BaseType& base,
 
     Evaluation<ValueType, numVars> result;
 
-    const ValueType& lnBase = ValueTypeToolbox::log(base);
-    result.value = ValueTypeToolbox::exp(lnBase*exp.value);
+    if (base == 0.0) {
+        // we special case the base 0 case because 0.0 is in the valid range of the
+        // base but the generic code leads to NaNs.
+        result = 0.0;
+    }
+    else {
+        const ValueType& lnBase = ValueTypeToolbox::log(base);
+        result.value = ValueTypeToolbox::exp(lnBase*exp.value);
 
-    // derivatives use the chain rule
-    const ValueType& df_dx = lnBase*result.value;
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*exp.derivatives[curVarIdx];
+        // derivatives use the chain rule
+        const ValueType& df_dx = lnBase*result.value;
+        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
+            result.derivatives[curVarIdx] = df_dx*exp.derivatives[curVarIdx];
+    }
 
     return result;
 }
@@ -378,18 +392,25 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
 
     Evaluation<ValueType, numVars> result;
 
-    ValueType valuePow = ValueTypeToolbox::pow(base.value, exp.value);
-    result.value = valuePow;
+    if (base == 0.0) {
+        // we special case the base 0 case because 0.0 is in the valid range of the
+        // base but the generic code leads to NaNs.
+        result = 0.0;
+    }
+    else {
+        ValueType valuePow = ValueTypeToolbox::pow(base.value, exp.value);
+        result.value = valuePow;
 
-    // use the chain rule for the derivatives. since both, the base and the exponent can
-    // potentially depend on the variable set, calculating these is quite elaborate...
-    const ValueType& f = base.value;
-    const ValueType& g = exp.value;
-    const ValueType& logF = ValueTypeToolbox::log(f);
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
-        const ValueType& fPrime = base.derivatives[curVarIdx];
-        const ValueType& gPrime = exp.derivatives[curVarIdx];
-        result.derivatives[curVarIdx] = (g*fPrime/f + logF*gPrime) * valuePow;
+        // use the chain rule for the derivatives. since both, the base and the exponent can
+        // potentially depend on the variable set, calculating these is quite elaborate...
+        const ValueType& f = base.value;
+        const ValueType& g = exp.value;
+        const ValueType& logF = ValueTypeToolbox::log(f);
+        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
+            const ValueType& fPrime = base.derivatives[curVarIdx];
+            const ValueType& gPrime = exp.derivatives[curVarIdx];
+            result.derivatives[curVarIdx] = (g*fPrime/f + logF*gPrime) * valuePow;
+        }
     }
 
     return result;
