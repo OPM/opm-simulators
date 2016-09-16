@@ -167,7 +167,7 @@ namespace Opm{
 
 
         if (deck->hasKeyword("MISCIBLE")) {
-            const int numMiscNumIdx = deck->getKeyword("MISCIBLE").getRecord(0).getItem("NTMISC").get< int >(0);
+            const int numMiscNumIdx = miscTables.size();
             const std::string msg = "Number of misc regions: " + std::to_string(numMiscNumIdx) + "\n";
             OpmLog::info(msg);
             for (int miscNumIdx = 0; miscNumIdx < numMiscNumIdx; ++miscNumIdx) {
