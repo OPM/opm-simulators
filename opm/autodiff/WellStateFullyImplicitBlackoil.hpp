@@ -230,10 +230,15 @@ namespace Opm
                 const auto& wv = this->wellRates();
 
                 data::Rates wellrates;
-                if( np == 3 ) {
-                    /* only write if 3-phase solution */
+                if( np > 0 ) {
                     wellrates.set( rt::wat, wv[ wellrate_index + 0 ] );
+                }
+
+                if( np > 1 ) {
                     wellrates.set( rt::oil, wv[ wellrate_index + 1 ] );
+                }
+
+                if( np > 2 ) {
                     wellrates.set( rt::gas, wv[ wellrate_index + 2 ] );
                 }
 
