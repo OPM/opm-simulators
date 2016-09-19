@@ -48,7 +48,9 @@ SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param
            /*vapoil=*/false,
            eclipse_state,
            output_writer,
-           /*threshold_pressures_by_face=*/std::vector<double>())
+           /*threshold_pressures_by_face=*/std::vector<double>(),
+           // names of deactivated wells in parallel run
+           std::unordered_set<std::string>())
     , deck_(deck)
     , polymer_props_(polymer_props)
 

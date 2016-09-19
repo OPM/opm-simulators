@@ -28,6 +28,7 @@
 #define BOOST_TEST_MODULE MultisegmentWellsTest
 
 #include <vector>
+#include <unordered_set>
 #include <memory>
 #include <array>
 
@@ -106,7 +107,13 @@ struct SetupMSW {
                                         Opm::UgGridHelpers::beginFaceCentroids(grid),
                                         fluidprops->permeability(),
                                         dummy_dynamic_list,
-                                        false);
+                                        false
+                                        // We need to pass the optionaly arguments
+                                        // as we get the following error otherwise
+                                        // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
+                                        // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructor
+                                        , std::vector<double>(), // null well_potentials
+                                        std::unordered_set<std::string>());
 
         const Wells* wells = wells_manager.c_wells();
         const auto wells_ecl = ecl_state->getSchedule()->getWells(current_timestep);

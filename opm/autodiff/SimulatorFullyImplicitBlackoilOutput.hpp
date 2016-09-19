@@ -397,7 +397,14 @@ namespace Opm
                                   Opm::UgGridHelpers::cell2Faces(grid),
                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
                                   permeability,
-                                  dummy_list_econ_limited);
+                                  dummy_list_econ_limited
+                                  // We need to pass the optionaly arguments
+                                  // as we get the following error otherwise
+                                  // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
+                                  // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructo
+                                  , false,
+                                  std::vector<double>(),
+                                  std::unordered_set<std::string>());
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate); //Resize for restart step

@@ -50,7 +50,9 @@ namespace Opm
                has_vapoil,
                eclipse_state,
                output_writer,
-               threshold_pressures_by_face)
+               threshold_pressures_by_face,
+               // names of deactivated wells in parallel run
+               std::unordered_set<std::string>())
     , has_solvent_(has_solvent)
     , deck_(deck)
     , solvent_props_(solvent_props)

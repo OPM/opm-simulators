@@ -214,6 +214,9 @@ namespace Opm
         std::unique_ptr<Simulator> simulator_;
         // create log file
         std::string logFile_;
+        // The names of wells that are artifically defunct in parallel runs.
+        // Those wells are handled on a another process.
+        std::unordered_set<std::string> defunct_well_names_;
         // ------------   Methods   ------------
 
 
@@ -598,10 +601,11 @@ namespace Opm
             // If there are more than one processors involved, we now repartition the grid
             // and initilialize new properties and states for it.
             if (must_distribute_) {
-                distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
-                                      *state_, *fluidprops_, *geoprops_,
-                                      material_law_manager_, threshold_pressures_,
-                                      parallel_information_, use_local_perm_);
+                defunct_well_names_ =
+                    distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
+                                          *state_, *fluidprops_, *geoprops_,
+                                          material_law_manager_, threshold_pressures_,
+                                          parallel_information_, use_local_perm_);
             }
         }
 
@@ -811,7 +815,8 @@ namespace Opm
                                                  Base::deck_->hasKeyword("VAPOIL"),
                                                  Base::eclipse_state_,
                                                  *Base::output_writer_,
-                                                 Base::threshold_pressures_));
+                                                 Base::threshold_pressures_,
+                                                 Base::defunct_well_names_));
         }
     };
 

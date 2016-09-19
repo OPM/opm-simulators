@@ -19,6 +19,8 @@
 #ifndef OPM_PARALLELDEBUGOUTPUT_HEADER_INCLUDED
 #define OPM_PARALLELDEBUGOUTPUT_HEADER_INCLUDED
 
+#include <unordered_set>
+
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 
@@ -543,7 +545,14 @@ namespace Opm
                                            Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
                                            permeability_,
                                            dynamic_list_econ_limited,
-                                           false);
+                                           false
+                                           // We need to pass the optionaly arguments
+                                           // as we get the following error otherwise
+                                           // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
+                                           // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructor
+                                           , std::vector<double>(),
+                                           std::unordered_set<std::string>()
+                                           );
 
                 const Wells* wells = wells_manager.c_wells();
                 globalWellState_.init(wells, *globalReservoirState_, globalWellState_ );
