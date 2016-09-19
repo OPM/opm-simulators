@@ -251,6 +251,9 @@ namespace Opm {
                          ReservoirState& reservoir_state,
                          WellState& well_state);
 
+        /// Return true if this is a parallel run.
+        bool isParallel() const;
+
         /// Return true if output to cout is wanted.
         bool terminalOutputEnabled() const;
 
