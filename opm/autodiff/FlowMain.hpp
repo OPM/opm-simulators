@@ -396,7 +396,10 @@ namespace Opm
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
             // Read parameters.
-            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
+            if ( output_cout_ )
+            {
+                OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
+            }
         }
 
 
