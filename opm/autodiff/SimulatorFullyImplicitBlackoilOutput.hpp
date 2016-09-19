@@ -650,7 +650,8 @@ namespace Opm
     {
         const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
-        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum,  parallelOutput_->isIORank() );
+        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum,
+                                                                    output_ && parallelOutput_->isIORank() );
         writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }
