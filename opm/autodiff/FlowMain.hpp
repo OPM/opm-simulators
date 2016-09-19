@@ -182,6 +182,7 @@ namespace Opm
         // members first occur.
 
         // setupParallelism()
+        int  mpi_rank_ = 0;
         bool output_cout_ = false;
         bool must_distribute_ = false;
         // setupParameters()
@@ -231,9 +232,9 @@ namespace Opm
             // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
             // be 0 and size 1.
             const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
-            const int mpi_rank = mpi_helper.rank();
+            mpi_rank_ = mpi_helper.rank();
             const int mpi_size = mpi_helper.size();
-            output_cout_ = ( mpi_rank == 0 );
+            output_cout_ = ( mpi_rank_ == 0 );
             must_distribute_ = ( mpi_size > 1 );
 
 #ifdef _OPENMP
@@ -252,7 +253,7 @@ namespace Opm
                 if (mpi_size == 1) {
                     std::cout << "OpenMP using " << num_omp_threads << " threads." << std::endl;
                 } else {
-                    std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank << "." << std::endl;
+                    std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank_ << "." << std::endl;
                 }
             }
 #endif
@@ -373,19 +374,32 @@ namespace Opm
             using boost::filesystem::path; 
             path fpath(deck_filename);
             std::string baseName;
-            std::string debugFile;
+            std::ostringstream debugFileStream;
+            std::ostringstream logFileStream;
+
             if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
                 baseName = path(fpath.stem()).string();
             } else {
                 baseName = path(fpath.filename()).string();
             }
             if (param_.has("output_dir")) {
-                logFile_ = output_dir_ + "/" + baseName + ".PRT";
-                debugFile = output_dir_ + "/." + baseName + ".DEBUG";
+                logFileStream << output_dir_ << "/" << baseName + ".PRT";
+                debugFileStream << output_dir_ + "/." + baseName + ".DEBUG";
             } else {
-                logFile_ = baseName + ".PRT";
-                debugFile = "." + baseName + ".DEBUG";
+                logFileStream << baseName << ".PRT";
+                debugFileStream << "." << baseName << ".DEBUG";
             }
+            if ( must_distribute_ && mpi_rank_ != 0 )
+            {
+                // Added rank to log file for non-zero ranks.
+                // This prevents message loss.
+                debugFileStream << "."<< mpi_rank_;
+                // If the following file appears then there is a bug.
+                logFileStream << "." << mpi_rank_;
+            }
+            std::string debugFile = debugFileStream.str();
+            logFile_ = logFileStream.str();
+
             std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes, false, output_cout_);
             std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
             OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
