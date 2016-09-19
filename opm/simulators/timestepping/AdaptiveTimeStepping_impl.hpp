@@ -57,6 +57,17 @@ namespace Opm {
                 return solver_.model().relativeChange( previous_, current_ );
             }
         };
+
+        template<class E>
+        void logException(const E& exception, bool verbose)
+        {
+            if( verbose )
+            {
+                std::ostringstream message;
+                message << "Caught Exception: " << exception.what();
+                OpmLog::debug(message.str());
+            }
+        }
     }
 
     // AdaptiveTimeStepping
@@ -207,19 +218,19 @@ namespace Opm {
                 }
             }
             catch (const Opm::NumericalProblem& e) {
-                std::cerr << e.what() << std::endl;
+                detail::logException(e, solver_verbose_);
                 // since linearIterations is < 0 this will restart the solver
             }
             catch (const std::runtime_error& e) {
-                std::cerr << e.what() << std::endl;
+                detail::logException(e, solver_verbose_);
                 // also catch linear solver not converged
             }
             catch (const Dune::ISTLError& e) {
-                std::cerr << e.what() << std::endl;
+                detail::logException(e, solver_verbose_);
                 // also catch errors in ISTL AMG that occur when time step is too large
             }
             catch (const Dune::MatrixBlockError& e) {
-                std::cerr << e.what() << std::endl;
+                detail::logException(e, solver_verbose_);
                 // this can be thrown by ISTL's ILU0 in block mode, yet is not an ISTLError
             }
 
