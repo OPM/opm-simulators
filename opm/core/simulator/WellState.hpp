@@ -213,7 +213,7 @@ namespace Opm
             return wellRates().size() / numWells();
         }
 
-        virtual data::Wells report(const PhaseUsage &pu) const
+        virtual data::Wells report(const PhaseUsage&) const
         {
             return { { /* WellState offers no completion data, so that has to be added later */ },
                 this->bhp(),
