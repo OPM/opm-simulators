@@ -379,7 +379,7 @@ namespace Opm
                                           substep,
                                           timer.simulationTimeElapsed(),
                                           simToSolution( state, phaseUsage_ ),
-                                          wellState.report(),
+                                          wellState.report(phaseUsage_),
                                           simProps);
             }
         }

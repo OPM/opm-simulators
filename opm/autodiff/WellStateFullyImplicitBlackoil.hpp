@@ -24,6 +24,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <vector>
 #include <cassert>
@@ -191,8 +192,8 @@ namespace Opm
         std::vector<double>& wellPotentials() { return well_potentials_; }
         const std::vector<double>& wellPotentials() const { return well_potentials_; }
 
-        data::Wells report() const override {
-            data::Wells res = WellState::report();
+        data::Wells report(const PhaseUsage &pu) const override {
+            data::Wells res = WellState::report(pu);
 
             const int nw = this->numWells();
             // If there are now wells numPhases throws a floating point
@@ -230,11 +231,16 @@ namespace Opm
                 const auto& wv = this->wellRates();
 
                 data::Rates wellrates;
-                if( np == 3 ) {
-                    /* only write if 3-phase solution */
-                    wellrates.set( rt::wat, wv[ wellrate_index + 0 ] );
-                    wellrates.set( rt::oil, wv[ wellrate_index + 1 ] );
-                    wellrates.set( rt::gas, wv[ wellrate_index + 2 ] );
+                if( pu.phase_used[BlackoilPhases::Aqua] ) {
+                    wellrates.set( rt::wat, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ] );
+                }
+
+                if( pu.phase_used[BlackoilPhases::Liquid] ) {
+                    wellrates.set( rt::oil, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ] );
+                }
+
+                if( pu.phase_used[BlackoilPhases::Vapour] ) {
+                    wellrates.set( rt::wat, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
                 }
 
                 const double bhp  = this->bhp()[ w ];
