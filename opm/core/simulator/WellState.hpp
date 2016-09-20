@@ -34,6 +34,7 @@
 
 namespace Opm
 {
+    class PhaseUsage;
 
     /// The state of a set of wells.
     class WellState
@@ -212,7 +213,7 @@ namespace Opm
             return wellRates().size() / numWells();
         }
 
-        virtual data::Wells report() const
+        virtual data::Wells report(const PhaseUsage &pu) const
         {
             return { { /* WellState offers no completion data, so that has to be added later */ },
                 this->bhp(),
