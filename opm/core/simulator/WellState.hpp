@@ -65,6 +65,7 @@ namespace Opm
                 for (int w = 0; w < nw; ++w) {
                     assert((wells->type[w] == INJECTOR) || (wells->type[w] == PRODUCER));
                     const WellControls* ctrl = wells->ctrls[w];
+                    const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
 
                     // setup wellname -> well index mapping
                     {
@@ -75,8 +76,18 @@ namespace Opm
                         wellMapEntry[ 0 ] = w;
                         wellMapEntry[ 1 ] = wells->well_connpos[w];
                         // also store the number of perforations in this well
-                        const int num_perf_this_well = wells->well_connpos[w + 1] - wells->well_connpos[w];
                         wellMapEntry[ 2 ] = num_perf_this_well;
+                    }
+
+                    if ( num_perf_this_well == 0 )
+                    {
+                        // No perforations of the well. Initialize to zero.
+                        for (int p = 0; p < np; ++p) {
+                            wellrates_[np*w + p] = 0.0;
+                        }
+                        bhp_[w] = 0;
+                        thp_[w] = 0;
+                        continue;
                     }
 
                     if (well_controls_well_is_stopped(ctrl)) {
@@ -143,7 +154,7 @@ namespace Opm
                                     } else {
                                         thp_[w] = bhp_[w];
                         }
-                        }
+                    }
                 }
 
                 // The perforation rates and perforation pressures are
