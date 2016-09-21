@@ -240,7 +240,7 @@ namespace Opm
                 }
 
                 if( pu.phase_used[BlackoilPhases::Vapour] ) {
-                    wellrates.set( rt::wat, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
+                    wellrates.set( rt::gas, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
                 }
 
                 const double bhp  = this->bhp()[ w ];
