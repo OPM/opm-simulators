@@ -87,6 +87,9 @@ namespace Opm
     HardcodedTimeStepControl( const std::string& filename)
     {
         std::ifstream infile (filename);
+        if (!infile.is_open()) {
+            OPM_THROW(std::runtime_error,"Incorrect or no filename is provided to the hardcodedTimeStep. Use timestep.control.filename=your_file_name");
+        }
         std::string::size_type sz;
         std::string line;
         while ( std::getline(infile, line)) {
