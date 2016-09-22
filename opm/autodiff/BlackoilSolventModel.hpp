@@ -22,7 +22,7 @@
 
 #include <opm/autodiff/BlackoilModelBase.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/BlackoilSolventState.hpp>
+#include <opm/core/simulator/BlackoilSolventState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp>
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/StandardWellsSolvent.hpp>
