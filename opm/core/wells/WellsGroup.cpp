@@ -487,14 +487,24 @@ namespace Opm
         InjectionSpecification::ControlMode inj_mode = injSpec().control_mode_;
         switch (inj_mode) {
         case InjectionSpecification::RATE:
+            // need to be careful in the future.
+            // pay attention to the phase under control and the phase for the guide rate
+            // they can be different, and more delicate situatioin can happen here.
         case InjectionSpecification::RESV:
         {
-            const double my_guide_rate = injectionGuideRate(true);
+            // very hacky way here.
+            // The logic of the code is that only a well is specified under GRUP control, it is under group control.
+            // Which is not the case observed from the result.
+            // From the result, if we specify group control with GCONPROD and WCONPROD for a well, it looks like
+            // the well will be under group control.
+            // TODO: make the logic correct here instead of using `false here`.
+            const double my_guide_rate = injectionGuideRate(false);
+
             for (size_t i = 0; i < children_.size(); ++i) {
                 // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->injectionGuideRate(true);
+                const double children_guide_rate = children_[i]->injectionGuideRate(false);
                 children_[i]->applyInjGroupControl(inj_mode,
                         (children_guide_rate / my_guide_rate) * getTarget(inj_mode),
                         false);
