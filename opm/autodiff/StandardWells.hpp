@@ -22,6 +22,8 @@
 #ifndef OPM_STANDARDWELLS_HEADER_INCLUDED
 #define OPM_STANDARDWELLS_HEADER_INCLUDED
 
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -39,7 +41,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-
+#include <opm/simulators/WellSwitchingLogger.hpp>
 
 namespace Opm {
 
@@ -57,6 +59,9 @@ namespace Opm {
             // ---------      Types      ---------
             using ADB = AutoDiffBlock<double>;
             using Vector = ADB::V;
+            using Communication =
+                Dune::CollectiveCommunication<typename Dune::MPIHelper
+                                              ::MPICommunicator>;
 
             // copied from BlackoilModelBase
             // should put to somewhere better
@@ -65,7 +70,8 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            explicit StandardWells(const Wells* wells_arg);
+            explicit StandardWells(const Wells* wells_arg,
+                                   const Communication& comm=Communication());
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -204,6 +210,8 @@ namespace Opm {
 
             bool store_well_perforation_fluxes_;
             Vector well_perforation_fluxes_;
+
+            Communication comm_;
 
             // protected methods
             template <class SolutionState, class WellState>

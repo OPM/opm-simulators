@@ -150,12 +150,19 @@ namespace Opm
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
             asImpl().createSimulator();
-
+            
             // Run.
             return asImpl().runSimulator();
         }
         catch (const std::exception &e) {
-            std::cerr << "Program threw an exception: " << e.what() << "\n";
+            std::ostringstream message;
+            message  << "Program threw an exception: " << e.what();
+
+            if( output_cout_ )
+            {
+                OpmLog::error(message.str());
+            }
+
             return EXIT_FAILURE;
         }
 
@@ -389,7 +396,6 @@ namespace Opm
                 logFileStream << baseName << ".PRT";
                 debugFileStream << "." << baseName << ".DEBUG";
             }
-            if ( must_distribute_ && mpi_rank_ != 0 )
             {
                 // Added rank to log file for non-zero ranks.
                 // This prevents message loss.

@@ -71,7 +71,8 @@ namespace Opm
 
 
 
-    StandardWells::StandardWells(const Wells* wells_arg)
+StandardWells::StandardWells(const Wells* wells_arg,
+                             const Communication& comm)
       : wells_active_(wells_arg!=nullptr)
       , wells_(wells_arg)
       , wops_(wells_arg)
@@ -82,6 +83,7 @@ namespace Opm
       , well_perforation_densities_(Vector())
       , well_perforation_pressure_diffs_(Vector())
       , store_well_perforation_fluxes_(false)
+      , comm_(comm)
     {
     }
 
@@ -706,9 +708,10 @@ namespace Opm
     StandardWells::
     updateWellControls(WellState& xw) const
     {
+        wellhelpers::WellSwitchingLogger logger(comm_);
+
         if( !localWellsActive() ) return ;
 
-        std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
@@ -743,11 +746,9 @@ namespace Opm
                 // Constraint number ctrl_index was broken, switch to it.
                 // We disregard terminal_ouput here as with it only messages
                 // for wells on one process will be printed.
-                std::ostringstream ss;
-                ss << "Switching control mode for well " << wells().name[w]
-                   << " from " << modestring[well_controls_iget_type(wc, current)]
-                   << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
-                OpmLog::info(ss.str());
+                logger.wellSwitched(wells().name[w],
+                                    well_controls_iget_type(wc, current),
+                                    well_controls_iget_type(wc, ctrl_index));
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
             }

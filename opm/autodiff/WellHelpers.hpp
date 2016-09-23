@@ -35,6 +35,8 @@ namespace Opm {
 
     namespace wellhelpers
     {
+
+    
         inline
         double rateToCompare(const std::vector<double>& well_phase_flow_rate,
                              const int well,
