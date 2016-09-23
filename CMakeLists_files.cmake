@@ -150,6 +150,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilPropsAdFromDeck.hpp
   opm/autodiff/SolventPropsAdFromDeck.hpp
   opm/autodiff/BlackoilPropsAdInterface.hpp
+  opm/autodiff/Compat.hpp
   opm/autodiff/CPRPreconditioner.hpp
   opm/autodiff/createGlobalCellArray.hpp
   opm/autodiff/BlackoilSequentialModel.hpp
