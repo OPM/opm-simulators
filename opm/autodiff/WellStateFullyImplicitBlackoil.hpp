@@ -194,6 +194,8 @@ namespace Opm
 
         data::Wells report(const PhaseUsage &pu) const override {
             data::Wells res = WellState::report(pu);
+            res.perf_phase_rate = perfphaserates_;
+            res.well_control = current_controls_;
 
             const int nw = this->numWells();
             // If there are now wells numPhases throws a floating point

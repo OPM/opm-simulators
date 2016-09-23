@@ -171,12 +171,15 @@ inline void solutionToSim( const data::Solution& sol,
 
 
 
+template<class WellState>
 inline void wellsToState( const data::Wells& wells, WellState& state ) {
     state.bhp() = wells.bhp;
     state.temperature() = wells.temperature;
     state.wellRates() = wells.well_rate;
     state.perfPress() = wells.perf_pressure;
     state.perfRates() = wells.perf_rate;
+    state.perfPhaseRates() = wells.perf_phase_rate;
+    state.currentControls() = wells.well_control;
 }
 
 }
