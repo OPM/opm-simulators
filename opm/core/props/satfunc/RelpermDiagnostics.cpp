@@ -109,8 +109,10 @@ namespace Opm{
                                          std::shared_ptr< const Deck > deck)
     {
         const int numSatRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
-        const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
-        OpmLog::info(msg);
+        {
+            const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
+            OpmLog::info(msg);
+        }
         const auto& tableManager = eclState->getTableManager();
         const TableContainer& swofTables    = tableManager.getSwofTables();
         const TableContainer& slgofTables   = tableManager.getSlgofTables();
