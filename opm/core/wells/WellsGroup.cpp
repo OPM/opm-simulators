@@ -1087,7 +1087,8 @@ namespace Opm
             injection_specification.reinjection_fraction_target_ = group.getTargetReinjectFraction(timeStep);
             injection_specification.voidage_replacment_fraction_ = group.getTargetVoidReplacementFraction(timeStep);
         }
-        else if (group.isProductionGroup(timeStep)) {
+
+        if (group.isProductionGroup(timeStep)) {
             production_specification.oil_max_rate_ = group.getOilTargetRate(timeStep);
             production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(group.getProductionControlMode(timeStep)));
             production_specification.water_max_rate_ = group.getWaterTargetRate(timeStep);
