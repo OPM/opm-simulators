@@ -34,7 +34,7 @@
 
 namespace Opm
 {
-    class PhaseUsage;
+    struct PhaseUsage;
 
     /// The state of a set of wells.
     class WellState
