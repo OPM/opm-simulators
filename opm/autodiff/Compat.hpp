@@ -1,5 +1,6 @@
 /*
    Copyright 2016 Statoil ASA
+   2016 IRIS
 
    This file is part of the Open Porous Media project (OPM).
 
@@ -17,13 +18,14 @@
    along with OPM. If not, see <http://www.gnu.org/licenses/>.
    */
 
-#ifndef OPM_CORE_COMPAT_HPP
-#define OPM_CORE_COMPAT_HPP
+#ifndef OPM_SIMULATORS_COMPAT_HPP
+#define OPM_SIMULATORS_COMPAT_HPP
 
 #include <opm/common/data/SimulationDataContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
+#include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/output/Cells.hpp>
 #include <opm/output/Wells.hpp>
 
@@ -97,6 +99,10 @@ inline data::Solution simToSolution( const SimulationDataContainer& reservoir,
         sol.insert( ds::RV, reservoir.getCellData( BlackoilState::RV ) );
     }
 
+    if (reservoir.hasCellData( BlackoilSolventState::SSOL)) {
+        sol.insert( ds::SSOL, reservoir.getCellData( BlackoilSolventState::SSOL ) );
+    }
+
     sol.sdc = &reservoir;
 
     return sol;
@@ -144,6 +150,11 @@ inline void solutionToSim( const data::Solution& sol,
     if( sol.has( ds::RV ) ) {
         state.getCellData( "RV" ) = sol[ ds::RV ];
     }
+
+    if (sol.has( ds::SSOL ) ) {
+        state.getCellData("SSOL") = sol [ ds::SSOL];
+    }
+
 }
 
 
@@ -170,4 +181,4 @@ inline void wellsToState( const data::Wells& wells, WellState& state ) {
 
 }
 
-#endif //OPM_CORE_COMPAT_HPP
+#endif //OPM_SIMULATORS_COMPAT_HPP
