@@ -230,7 +230,10 @@ namespace Opm {
                 }
 
                 // write data if outputWriter was provided
-                if( outputWriter ) {
+                // if the time step is done we do not need
+                // to write it as this will be done by the simulator
+                // anyway.
+                if( outputWriter && !substepTimer.done() ) {
                     bool substep = true;
                     const auto& physicalModel = solver.model();
                     outputWriter->writeTimeStep( substepTimer, state, well_state, physicalModel, substep);
