@@ -203,8 +203,9 @@ private:
 
                 int offset1 = equilRegionInside*numEquilRegions_ + equilRegionOutside;
                 int offset2 = equilRegionOutside*numEquilRegions_ + equilRegionInside;
-                thpresDefault_[offset1] = std::max(thpres_[offset1], pth);
-                thpresDefault_[offset2] = std::max(thpres_[offset2], pth);
+
+                thpresDefault_[offset1] = std::max(thpresDefault_[offset1], pth);
+                thpresDefault_[offset2] = std::max(thpresDefault_[offset2], pth);
             }
         }
 
