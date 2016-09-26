@@ -259,17 +259,11 @@ private:
 
                 unsigned equilRegionInside = elemEquilRegion_[insideElemIdx];
                 unsigned equilRegionOutside = elemEquilRegion_[outsideElemIdx];
-                if (thpres->hasRegionBarrier(equilRegionInside + 1, equilRegionOutside + 1) ||
-                    thpres->hasRegionBarrier(equilRegionOutside + 1, equilRegionInside + 1))
-                {
+                if (thpres->hasRegionBarrier(equilRegionInside + 1, equilRegionOutside + 1)) {
                     Scalar pth = 0.0;
                     if (thpres->hasThresholdPressure(equilRegionInside + 1, equilRegionOutside + 1)) {
                         // threshold pressure explicitly specified
                         pth = thpres->getThresholdPressure(equilRegionInside + 1, equilRegionOutside + 1);
-                    }
-                    else if (thpres->hasThresholdPressure(equilRegionOutside + 1, equilRegionInside + 1)) {
-                        // threshold pressure explicitly specified
-                        pth = thpres->getThresholdPressure(equilRegionOutside + 1, equilRegionInside + 1);
                     }
                     else {
                         // take the threshold pressure from the initial condition
