@@ -438,40 +438,28 @@ namespace Opm
             return adbVToDoubleVector(adb.value());
         }
 
+
         /**
-         * Checks if the summaryConfig has a keyword with the standardized field, region, or block prefixes.
+         * Returns the data requested in the restartConfig
          */
-        inline bool hasFRBKeyword(const SummaryConfig& summaryConfig, const std::string keyword) {
-            std::string field_kw = "F" + keyword;
-            std::string region_kw = "R" + keyword;
-            std::string block_kw = "B" + keyword;
-            return summaryConfig.hasKeyword(field_kw)
-                    || summaryConfig.hasKeyword(region_kw)
-                    || summaryConfig.hasKeyword(block_kw);
-        }
-
-
         template<class Model>
-        std::vector<data::CellData> getCellData(
+        void getRestartData(
+                std::vector<data::CellData>& output,
                 const Opm::PhaseUsage& phaseUsage,
-                const Model& model,
+                const Model& physicalModel,
                 const RestartConfig& restartConfig,
-                const SummaryConfig& summaryConfig,
                 const int reportStepNum,
                 const bool log) {
 
             typedef Opm::AutoDiffBlock<double> ADB;
 
-            //Our return vector of properties
-            std::vector<data::CellData> simProps;
+            const typename Model::SimulatorData& sd = physicalModel.getSimulatorData();
 
             //Get the value of each of the keys for the restart keywords
             std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
             for (auto& keyValue : rstKeywords) {
                 keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
             }
-
-            const typename Model::SimulatorData& sd = model.getSimulatorData();
 
             //Get shorthands for water, oil, gas
             const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
@@ -488,7 +476,7 @@ namespace Opm
              */
             if (aqua_active && rstKeywords["BW"] > 0) {
                 rstKeywords["BW"] = 0;
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                         "1OVERBW",
                         Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[aqua_idx].b)),
@@ -496,7 +484,7 @@ namespace Opm
             }
             if (liquid_active && rstKeywords["BO"]  > 0) {
                 rstKeywords["BO"] = 0;
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                         "1OVERBO",
                         Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[liquid_idx].b)),
@@ -504,7 +492,7 @@ namespace Opm
             }
             if (vapour_active && rstKeywords["BG"] > 0) {
                 rstKeywords["BG"] = 0;
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                         "1OVERBG",
                         Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
                         std::move(adbToDoubleVector(sd.rq[vapour_idx].b)),
@@ -517,21 +505,21 @@ namespace Opm
             if (rstKeywords["DEN"] > 0) {
                 rstKeywords["DEN"] = 0;
                 if (aqua_active) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                             "WAT_DEN",
                             Opm::UnitSystem::measure::density,
                             std::move(adbToDoubleVector(sd.rq[aqua_idx].rho)),
                             true});
                 }
                 if (liquid_active) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                             "OIL_DEN",
                             Opm::UnitSystem::measure::density,
                             std::move(adbToDoubleVector(sd.rq[liquid_idx].rho)),
                             true});
                 }
                 if (vapour_active) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                             "GAS_DEN",
                             Opm::UnitSystem::measure::density,
                             std::move(adbToDoubleVector(sd.rq[vapour_idx].rho)),
@@ -545,21 +533,21 @@ namespace Opm
             if (rstKeywords["VISC"] > 0) {
                 rstKeywords["VISC"] = 0;
                 if (aqua_active) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                             "WAT_VISC",
                             Opm::UnitSystem::measure::viscosity,
                             std::move(adbToDoubleVector(sd.rq[aqua_idx].mu)),
                             true});
                 }
                 if (liquid_active) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                             "OIL_VISC",
                             Opm::UnitSystem::measure::viscosity,
                             std::move(adbToDoubleVector(sd.rq[liquid_idx].mu)),
                             true});
                 }
                 if (vapour_active) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                             "GAS_VISC",
                             Opm::UnitSystem::measure::viscosity,
                             std::move(adbToDoubleVector(sd.rq[vapour_idx].mu)),
@@ -573,7 +561,7 @@ namespace Opm
             if (aqua_active && rstKeywords["KRW"] > 0) {
                 if (sd.rq[aqua_idx].kr.size() > 0) {
                     rstKeywords["KRW"] = 0;
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                             "WATKR",
                             Opm::UnitSystem::measure::permeability,
                             std::move(adbToDoubleVector(sd.rq[aqua_idx].kr)),
@@ -590,7 +578,7 @@ namespace Opm
             if (liquid_active && rstKeywords["KRO"] > 0) {
                 if (sd.rq[liquid_idx].kr.size() > 0) {
                     rstKeywords["KRO"] = 0;
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "OILKR",
                              Opm::UnitSystem::measure::permeability,
                              std::move(adbToDoubleVector(sd.rq[liquid_idx].kr)),
@@ -607,7 +595,7 @@ namespace Opm
             if (vapour_active && rstKeywords["KRG"] > 0) {
                 if (sd.rq[vapour_idx].kr.size() > 0) {
                     rstKeywords["KRG"] = 0;
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "GASKR",
                              Opm::UnitSystem::measure::permeability,
                              std::move(adbToDoubleVector(sd.rq[vapour_idx].kr)),
@@ -627,7 +615,7 @@ namespace Opm
              */
             if (vapour_active && liquid_active && rstKeywords["RSSAT"] > 0) {
                 rstKeywords["RSSAT"] = 0;
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                         "RSSAT",
                         Opm::UnitSystem::measure::gas_oil_ratio,
                         std::move(adbToDoubleVector(sd.rsSat)),
@@ -635,7 +623,7 @@ namespace Opm
             }
             if (vapour_active && liquid_active && rstKeywords["RVSAT"] > 0) {
                 rstKeywords["RVSAT"] = 0;
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                         "RVSAT",
                         Opm::UnitSystem::measure::oil_gas_ratio,
                         std::move(adbToDoubleVector(sd.rvSat)),
@@ -665,14 +653,49 @@ namespace Opm
                     }
                 }
             }
+        }
 
+
+
+
+        /**
+         * Checks if the summaryConfig has a keyword with the standardized field, region, or block prefixes.
+         */
+        inline bool hasFRBKeyword(const SummaryConfig& summaryConfig, const std::string keyword) {
+            std::string field_kw = "F" + keyword;
+            std::string region_kw = "R" + keyword;
+            std::string block_kw = "B" + keyword;
+            return summaryConfig.hasKeyword(field_kw)
+                    || summaryConfig.hasKeyword(region_kw)
+                    || summaryConfig.hasKeyword(block_kw);
+        }
+
+
+        /**
+         * Returns the data as asked for in the summaryConfig
+         */
+        template<class Model>
+        void getSummaryData(
+                std::vector<data::CellData>& output,
+                const Opm::PhaseUsage& phaseUsage,
+                const Model& physicalModel,
+                const SummaryConfig& summaryConfig) {
+
+            typedef Opm::AutoDiffBlock<double> ADB;
+
+            const typename Model::SimulatorData& sd = physicalModel.getSimulatorData();
+
+            //Get shorthands for water, oil, gas
+            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
+            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
+            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
 
             /**
              * Now process all of the summary config files
              */
             // Water in place
             if (aqua_active && hasFRBKeyword(summaryConfig, "WIP")) {
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                          "WIP",
                          Opm::UnitSystem::measure::volume,
                          std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_AQUA])),
@@ -681,7 +704,7 @@ namespace Opm
             if (liquid_active) {
                 //Oil in place (liquid phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPL")) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "OIPL",
                              Opm::UnitSystem::measure::volume,
                              std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_LIQUID])),
@@ -689,7 +712,7 @@ namespace Opm
                 }
                 //Oil in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPG")) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "OIPG",
                              Opm::UnitSystem::measure::volume,
                              std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL])),
@@ -699,7 +722,7 @@ namespace Opm
                 if (hasFRBKeyword(summaryConfig, "OIP")) {
                     ADB::V oip = sd.fip[Model::SimulatorData::FIP_LIQUID] +
                                  sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL];
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "OIP",
                              Opm::UnitSystem::measure::volume,
                              std::move(adbVToDoubleVector(oip)),
@@ -709,7 +732,7 @@ namespace Opm
             if (vapour_active) {
                 // Gas in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "GIPG")) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "GIPG",
                              Opm::UnitSystem::measure::volume,
                              std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPOUR])),
@@ -717,7 +740,7 @@ namespace Opm
                 }
                 // Gas in place (liquid phase only)
                 if (hasFRBKeyword(summaryConfig, "GIPL")) {
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "GIPL",
                              Opm::UnitSystem::measure::volume,
                              std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS])),
@@ -727,7 +750,7 @@ namespace Opm
                 if (hasFRBKeyword(summaryConfig, "GIP")) {
                     ADB::V gip = sd.fip[Model::SimulatorData::FIP_VAPOUR] +
                                  sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS];
-                    simProps.emplace_back(data::CellData{
+                    output.emplace_back(data::CellData{
                              "GIP",
                              Opm::UnitSystem::measure::volume,
                              std::move(adbVToDoubleVector(gip)),
@@ -736,7 +759,7 @@ namespace Opm
             }
             // Cell pore volume in reservoir conditions
             if (hasFRBKeyword(summaryConfig, "RPV")) {
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                          "RPV",
                          Opm::UnitSystem::measure::volume,
                          std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_PV])),
@@ -744,15 +767,12 @@ namespace Opm
             }
             // Pressure averaged value (hydrocarbon pore volume weighted)
             if (summaryConfig.hasKeyword("FPRH") || summaryConfig.hasKeyword("RPRH")) {
-                simProps.emplace_back(data::CellData{
+                output.emplace_back(data::CellData{
                          "PRH",
                          Opm::UnitSystem::measure::pressure,
                          std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_WEIGHTED_PRESSURE])),
                          false});
             }
-
-
-            return simProps;
         }
 
     }
@@ -773,9 +793,11 @@ namespace Opm
         const SummaryConfig& summaryConfig = eclipseState_->getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
-        std::vector<data::CellData> cellData =
-            detail::getCellData( phaseUsage_, physicalModel, restartConfig, 
-                                 summaryConfig, reportStepNum, logMessages );
+
+        std::vector<data::CellData> cellData;
+        detail::getRestartData( cellData, phaseUsage_, physicalModel, 
+                                restartConfig, reportStepNum, logMessages );
+        detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
 
         writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
