@@ -45,6 +45,17 @@ namespace Opm {
         AdaptiveTimeStepping( const parameter::ParameterGroup& param,
                               const bool terminal_output = true );
 
+        //! \brief contructor taking parameter object
+        //! \param tuning Pointer to ecl TUNING keyword
+        //! \param time_step current report step
+        //! \param param The parameter object
+        //! \param pinfo The information about the data distribution
+        //!              and communication for a parallel run.
+        AdaptiveTimeStepping( const Tuning& tuning,
+                              size_t time_step,
+                              const parameter::ParameterGroup& param,
+                              const bool terminal_output = true );
+
         /** \brief  step method that acts like the solver::step method
                     in a sub cycle of time steps
 
@@ -76,6 +87,8 @@ namespace Opm {
         void stepImpl( const SimulatorTimer& timer,
                        Solver& solver, State& state, WellState& well_state,
                        Output* outputWriter);
+
+        void init(const parameter::ParameterGroup& param);
 
         typedef std::unique_ptr< TimeStepControlInterface > TimeStepControlType;
 

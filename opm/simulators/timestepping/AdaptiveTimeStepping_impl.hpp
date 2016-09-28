@@ -30,6 +30,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <dune/istl/istlexception.hh>
 #include <dune/istl/ilu.hh> // For MatrixBlockException
+#include <opm/parser/eclipse/EclipseState/Schedule/Tuning.hpp>
 
 namespace Opm {
 
@@ -61,6 +62,26 @@ namespace Opm {
     // AdaptiveTimeStepping
     //---------------------
 
+    AdaptiveTimeStepping::AdaptiveTimeStepping( const Tuning& tuning,
+                                                size_t time_step,
+                                                const parameter::ParameterGroup& param,
+                                                const bool terminal_output )
+        : timeStepControl_()
+        , restart_factor_( tuning.getTSFCNV(time_step) )
+        , growth_factor_(tuning.getTFDIFF(time_step) )
+        , max_growth_( tuning.getTSFMAX(time_step) )
+          // default is 1 year, convert to seconds
+        , max_time_step_( tuning.getTSMAXZ(time_step) )
+        , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
+        , solver_verbose_( param.getDefault("solver.verbose", bool(true) ) && terminal_output )
+        , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) && terminal_output )
+        , suggested_next_timestep_( tuning.getTSINIT(time_step) )
+        , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
+    {
+        init(param);
+
+    }
+
     AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param,
                                                 const bool terminal_output )
         : timeStepControl_()
@@ -74,6 +95,12 @@ namespace Opm {
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) && terminal_output )
         , suggested_next_timestep_( -1.0 )
         , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
+    {
+        init(param);
+    }
+
+    void AdaptiveTimeStepping::
+    init(const parameter::ParameterGroup& param)
     {
         // valid are "pid" and "pid+iteration"
         std::string control = param.getDefault("timestep.control", std::string("pid") );
@@ -108,6 +135,7 @@ namespace Opm {
     }
 
 
+
     template <class Solver, class State, class WellState>
     void AdaptiveTimeStepping::
     step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state )
@@ -122,6 +150,7 @@ namespace Opm {
     {
         stepImpl( simulatorTimer, solver, state, well_state, &outputWriter );
     }
+
 
     // implementation of the step method
     template <class Solver, class State, class WState, class Output >
