@@ -187,7 +187,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             int pvtRegionIdx = pvtRegion[cellIdx];
 
             double T = initialState.temperature()[cellIdx];
-            double p = initialState.pressure()[cellIdx];
+            double p = phasePressure[wpos][cellIdx];
             double b = pvtw.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
 
             rho[wpos][cellIdx] = surfaceDensity[pvtRegionIdx][wpos]*b;
@@ -201,7 +201,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             int pvtRegionIdx = pvtRegion[cellIdx];
 
             double T = initialState.temperature()[cellIdx];
-            double p = initialState.pressure()[cellIdx];
+            double p = phasePressure[opos][cellIdx];
             double Rs = initialState.gasoilratio()[cellIdx];
             double RsSat = pvto.saturatedGasDissolutionFactor(pvtRegionIdx, T, p);
 
@@ -227,7 +227,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             int pvtRegionIdx = pvtRegion[cellIdx];
 
             double T = initialState.temperature()[cellIdx];
-            double p = initialState.pressure()[cellIdx];
+            double p = phasePressure[gpos][cellIdx];
             double Rv = initialState.rv()[cellIdx];
             double RvSat = pvtg.saturatedOilVaporizationFactor(pvtRegionIdx, T, p);
 
