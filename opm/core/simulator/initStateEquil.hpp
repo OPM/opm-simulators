@@ -25,7 +25,7 @@
 #include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/simulator/EquilibrationHelpers.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/props/BlackoilPropertiesInterface.hpp>
+#include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/Units.hpp>
@@ -163,7 +163,7 @@ namespace Opm
         phaseSaturations(const Grid&             grid,
                          const Region&           reg,
                          const CellRange&        cells,
-                         BlackoilPropertiesInterface& props,
+                         BlackoilPropertiesFromDeck& props,
                          const std::vector<double> swat_init,
                          std::vector< std::vector<double> >& phase_pressures);
 
