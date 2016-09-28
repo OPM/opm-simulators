@@ -698,7 +698,7 @@ namespace Opm
         SolutionVector dx = newtonIncrement.computeNewtonIncrement( residual );
         // get number of linear iterations
         iterations_ = newtonIncrement.iterations();
-        return std::move(dx);
+        return dx;
     }
 
     const boost::any& NewtonIterationBlackoilInterleaved::parallelInformation() const

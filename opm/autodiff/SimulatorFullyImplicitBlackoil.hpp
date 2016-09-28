@@ -62,9 +62,10 @@ public:
                                    const bool vapoil,
                                    std::shared_ptr<EclipseState> eclipse_state,
                                    BlackoilOutputWriter& output_writer,
-                                   const std::vector<double>& threshold_pressures_by_face)
+                                   const std::vector<double>& threshold_pressures_by_face,
+                                   const std::unordered_set<std::string>& defunct_well_names)
     : Base(param, grid, geo, props, rock_comp_props, linsolver, gravity, disgas, vapoil,
-           eclipse_state, output_writer, threshold_pressures_by_face)
+           eclipse_state, output_writer, threshold_pressures_by_face, defunct_well_names)
     {}
 };
 

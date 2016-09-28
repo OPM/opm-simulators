@@ -20,6 +20,7 @@
 */
 
 #include <utility>
+#include <functional>
 #include <algorithm>
 #include <locale>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
@@ -43,7 +44,8 @@ namespace Opm
                                                  const bool has_vapoil,
                                                  std::shared_ptr<EclipseState> eclipse_state,
                                                  OutputWriter& output_writer,
-                                                 const std::vector<double>& threshold_pressures_by_face)
+                                                 const std::vector<double>& threshold_pressures_by_face,
+                                                 const std::unordered_set<std::string>& defunct_well_names)
         : param_(param),
           model_param_(param),
           solver_param_(param),
@@ -60,7 +62,8 @@ namespace Opm
           output_writer_(output_writer),
           rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
-          is_parallel_run_( false )
+          is_parallel_run_( false ),
+          defunct_well_names_(defunct_well_names)
     {
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid);
@@ -167,7 +170,8 @@ namespace Opm
                                        props_.permeability(),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
-                                       well_potentials);
+                                       well_potentials,
+                                       defunct_well_names_);
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
             well_state.init(wells, state, prev_well_state);
@@ -698,9 +702,38 @@ namespace Opm
         const V sg = pu.phase_used[BlackoilPhases::Vapour] ? V(s.col(BlackoilPhases::Vapour)) : V::Zero(nc);
         const V hydrocarbon = so + sg;
         const V p = Eigen::Map<const V>(& state.pressure()[0], nc);
-        totals[5] = geo_.poreVolume().sum();
-        totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum()), unit::barsa);
-        
+        if ( ! is_parallel_run_ )
+        {
+            totals[5] = geo_.poreVolume().sum();
+            totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum()), unit::barsa);
+        }
+        else
+        {
+#if HAVE_MPI
+            const auto & pinfo =
+                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
+            auto operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
+                                             Opm::Reduction::makeGlobalSumFunctor<double>(),
+                                             Opm::Reduction::makeGlobalSumFunctor<double>());
+            auto pav_nom   = p * geo_.poreVolume() * hydrocarbon;
+            auto pav_denom = geo_.poreVolume() * hydrocarbon;
+
+            // using ref cref to prevent copying
+            auto inputs = std::make_tuple(std::cref(geo_.poreVolume()),
+                                          std::cref(pav_nom), std::cref(pav_denom));
+            std::tuple<double, double, double> results(0.0, 0.0, 0.0);
+
+            pinfo.computeReduction(inputs, operators, results);
+            using std::get;
+            totals[5] = get<0>(results);
+            totals[6] = unit::convert::to(get<1>(results)/get<2>(results),
+                                          unit::barsa);
+#else
+            // This should never happen!
+            OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
+#endif
+        }
+
         return totals;
     }
 

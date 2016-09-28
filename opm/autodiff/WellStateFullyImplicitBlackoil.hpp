@@ -25,6 +25,7 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <vector>
 #include <cassert>

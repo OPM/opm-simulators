@@ -397,7 +397,14 @@ namespace Opm
                                   Opm::UgGridHelpers::cell2Faces(grid),
                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
                                   permeability,
-                                  dummy_list_econ_limited);
+                                  dummy_list_econ_limited
+                                  // We need to pass the optionaly arguments
+                                  // as we get the following error otherwise
+                                  // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
+                                  // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructo
+                                  , false,
+                                  std::vector<double>(),
+                                  std::unordered_set<std::string>());
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate); //Resize for restart step
@@ -579,14 +586,14 @@ namespace Opm
                 simProps.emplace_back(data::CellData{
                         "RSSAT",
                         Opm::UnitSystem::measure::gas_oil_ratio,
-                        std::move(adbToDoubleVector(sd.rs))});
+                        std::move(adbToDoubleVector(sd.rsSat))});
             }
             if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
                 outKeywords["RVSAT"] = 0;
                 simProps.emplace_back(data::CellData{
                         "RVSAT",
                         Opm::UnitSystem::measure::oil_gas_ratio,
-                        std::move(adbToDoubleVector(sd.rv))});
+                        std::move(adbToDoubleVector(sd.rvSat))});
             }
 
 

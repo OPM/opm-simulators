@@ -185,7 +185,26 @@ typedef Eigen::Array<double,
     }
 
 
-
+    template <class Grid, class WellModel, class Implementation>
+    bool
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    isParallel() const
+    {
+#if HAVE_MPI
+        if ( linsolver_.parallelInformation().type() !=
+             typeid(ParallelISTLInformation) )
+        {
+            return false;
+        }
+        else
+        {
+            const auto& comm =boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation()).communicator();
+            return  comm.size() > 1;
+        }
+#else
+        return false;
+#endif
+    }
 
 
     template <class Grid, class WellModel, class Implementation>
@@ -403,8 +422,8 @@ typedef Eigen::Array<double,
     BlackoilModelBase<Grid, WellModel, Implementation>::
     SimulatorData::SimulatorData(int num_phases)
         : rq(num_phases)
-        , rs(ADB::null())
-        , rv(ADB::null())
+        , rsSat(ADB::null())
+        , rvSat(ADB::null())
     {
     }
 
@@ -591,17 +610,17 @@ typedef Eigen::Array<double,
 
                 if (active_[ Oil ]) {
                     // RS and RV is only defined if both oil and gas phase are active.
-                    const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
+                    sd_.rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
-                        state.rs = (1-isRs_)*rsSat + isRs_*xvar;
+                        state.rs = (1-isRs_)*sd_.rsSat + isRs_*xvar;
                     } else {
-                        state.rs = rsSat;
+                        state.rs = sd_.rsSat;
                     }
-                    const ADB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
+                    sd_.rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
                     if (has_vapoil_) {
-                        state.rv = (1-isRv_)*rvSat + isRv_*xvar;
+                        state.rv = (1-isRv_)*sd_.rvSat + isRv_*xvar;
                     } else {
-                        state.rv = rvSat;
+                        state.rv = sd_.rvSat;
                     }
                 }
             }
@@ -779,7 +798,7 @@ typedef Eigen::Array<double,
 
         {
             const std::vector<ADB> kr = asImpl().computeRelPerm(state);
-            for (int phaseIdx=0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
+            for (int phaseIdx = 0; phaseIdx < fluid_.numPhases(); ++phaseIdx) {
                 sd_.rq[phaseIdx].kr = kr[canph_[phaseIdx]];
             }
         }
@@ -1219,6 +1238,7 @@ typedef Eigen::Array<double,
         if (has_disgas_) {
             const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
             const V rsSat = fluidRsSat(p, so, cells_);
+            sd_.rsSat = ADB::constant(rsSat);
             // The obvious case
             auto hasGas = (sg > 0 && isRs_ == 0);
 
@@ -1244,6 +1264,7 @@ typedef Eigen::Array<double,
             const V gaspress = computeGasPressure(p, sw, so, sg);
             const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
             const V rvSat = fluidRvSat(gaspress, so, cells_);
+            sd_.rvSat = ADB::constant(rvSat);
 
             // The obvious case
             auto hasOil = (so > 0 && isRv_ == 0);
@@ -2160,29 +2181,85 @@ typedef Eigen::Array<double,
             fip[4] = rv.value() * fip[pg];
         }
 
-        const int dims = *std::max_element(fipnum.begin(), fipnum.end());
+        // For a parallel run this is just a local maximum and needs to be updated later
+        int dims = *std::max_element(fipnum.begin(), fipnum.end());
         std::vector<V> values(dims, V::Zero(7));
-        for (int i = 0; i < 5; ++i) {
+
+        const V hydrocarbon = saturation[Oil].value() + saturation[Gas].value();
+        V hcpv;
+        V pres;
+
+        if ( !isParallel() )
+        {
+            for (int i = 0; i < 5; ++i) {
+                for (int c = 0; c < nc; ++c) {
+                    if (fipnum[c] != 0) {
+                        values[fipnum[c]-1][i] += fip[i][c];
+                    }
+                }
+            }
+
+            hcpv = V::Zero(dims);
+            pres = V::Zero(dims);
+
             for (int c = 0; c < nc; ++c) {
                 if (fipnum[c] != 0) {
-                    values[fipnum[c]-1][i] += fip[i][c];
+                    hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
+                    pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
+                    values[fipnum[c]-1][5] += pv[c];
+                    values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
                 }
             }
         }
+        else
+        {
+#if HAVE_MPI
+            // mask[c] is 1 if we need to compute something in parallel
+            const auto & pinfo =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            const auto& mask = pinfo.getOwnerMask();
+            auto comm = pinfo.communicator();
+            // Compute the global dims value and resize values accordingly.
+            dims = comm.max(dims);
+            values.resize(dims, V::Zero(7));
 
-        // compute PAV and PORV for every regions.
-        const V hydrocarbon = saturation[Oil].value() + saturation[Gas].value();
-        V hcpv = V::Zero(nc);
-        V pres = V::Zero(nc);
-        for (int c = 0; c < nc; ++c) {
-            if (fipnum[c] != 0) {
-                hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
-                pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
-                values[fipnum[c]-1][5] += pv[c];
-                values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
+            for (int i = 0; i < 5; ++i) {
+                for (int c = 0; c < nc; ++c) {
+                    if (fipnum[c] != 0 && mask[c]) {
+                        values[fipnum[c]-1][i] += fip[i][c];
+                    }
+                }
             }
+
+            hcpv = V::Zero(dims);
+            pres = V::Zero(dims);
+
+            for (int c = 0; c < nc; ++c) {
+                if (fipnum[c] != 0 && mask[c]) {
+                    hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
+                    pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
+                    values[fipnum[c]-1][5] += pv[c];
+                    values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
+                }
+            }
+
+            // For the frankenstein branch we hopefully can turn values into a vanilla
+            // std::vector<double>, use some index magic above, use one communication
+            // to sum up the vector entries instead of looping over the regions.
+            for(int reg=0; reg < dims; ++reg)
+            {
+                comm.sum(values[reg].data(), values[reg].size());
+            }
+
+            comm.sum(hcpv.data(), hcpv.size());
+            comm.sum(pres.data(), pres.size());
+#else
+            // This should never happen!
+            OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
+#endif
         }
 
+        // compute PAV and PORV for every regions.
         for (int reg = 0; reg < dims; ++reg) {
             if (hcpv[reg] != 0) {
                 values[reg][6] /= hcpv[reg];
@@ -2192,7 +2269,6 @@ typedef Eigen::Array<double,
         }
 
         return values;
-        
     }
 
 } // namespace Opm

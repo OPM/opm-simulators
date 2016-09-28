@@ -51,7 +51,9 @@ namespace Opm
                has_vapoil,
                eclipse_state,
                output_writer,
-               threshold_pressures_by_face)
+               threshold_pressures_by_face,
+               // names of deactivated wells in parallel run
+               std::unordered_set<std::string>())
         , polymer_props_(polymer_props)
         , has_polymer_(has_polymer)
         , has_plyshlog_(has_plyshlog)

@@ -111,21 +111,8 @@ namespace Opm
             // Get grid from parser.
             EclipseGridConstPtr eclgrid = eclState->getInputGrid();
 
-            // Pore volume.
-            // New keywords MINPVF will add some PV due to OPM cpgrid process algorithm.
-            // But the default behavior is to get the comparable pore volume with ECLIPSE.
-            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                int cartesianCellIdx = AutoDiffGrid::globalCell(grid)[cellIdx];
-                pvol_[cellIdx] =
-                    props.porosity()[cellIdx]
-                    * multpv[cartesianCellIdx]
-                    * ntg[cartesianCellIdx];
-                if (eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL) {
-                    pvol_[cellIdx] *= AutoDiffGrid::cellVolume(grid, cellIdx);
-                } else {
-                    pvol_[cellIdx] *= eclgrid->getCellVolume(cartesianCellIdx);
-                }
-            }
+            // update the pore volume of all active cells in the grid
+            computePoreVolume_(grid, eclState);
 
             // Non-neighbour connections.
             nnc_ = eclState->getInputNNC();
@@ -303,6 +290,59 @@ namespace Opm
         void minPvFillProps_(const Grid &grid,
                              Opm::EclipseStateConstPtr eclState,
                              std::vector<double> &ntg);
+
+        template <class GridType>
+        void computePoreVolume_(const GridType &grid,
+                                Opm::EclipseStateConstPtr eclState)
+        {
+            int numCells = Opm::AutoDiffGrid::numCells(grid);
+            const int* globalCell = Opm::UgGridHelpers::globalCell(grid);
+            EclipseGridConstPtr eclGrid = eclState->getInputGrid();
+            const int nx = eclGrid->getNX();
+            const int ny = eclGrid->getNY();
+
+            // the "raw" pore volume.
+            const std::vector<double>& porvData =
+                eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
+            pvol_.resize(numCells);
+
+            // the "activation number" grid property
+            const std::vector<int>& actnumData =
+                eclState->get3DProperties().getIntGridProperty("ACTNUM").getData();
+
+
+            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                const int cellCartIdx = globalCell[cellIdx];
+
+                double cellPoreVolume = porvData[cellCartIdx];
+
+                if (eclGrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL) {
+                    // Sum the pore volumes of the cells above which have been deactivated
+                    // because their volume less is less than the MINPV threshold
+                    for (int aboveCellCartIdx = cellCartIdx - nx*ny;
+                         aboveCellCartIdx >= 0;
+                         aboveCellCartIdx -= nx*ny)
+                    {
+                        if (porvData[aboveCellCartIdx] >= eclGrid->getMinpvValue()) {
+                            // stop if we encounter a cell which has a pore volume which is
+                            // at least as large as the minimum one
+                            break;
+                        }
+
+                        const double aboveCellVolume = eclGrid->getCellVolume(aboveCellCartIdx);
+                        if (actnumData[aboveCellCartIdx] == 0 && aboveCellVolume > 1e-6) {
+                            // stop at explicitly disabled cells, but only if their volume is
+                            // greater than 10^-6 m^3
+                            break;
+                        }
+
+                        cellPoreVolume += porvData[aboveCellCartIdx];
+                    }
+                }
+
+                pvol_[cellIdx] = cellPoreVolume;
+            }
+        }
 
         template <class Grid>
         void pinchProcess_(const Grid& grid,

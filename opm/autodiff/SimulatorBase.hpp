@@ -130,7 +130,8 @@ namespace Opm
                       const bool vapoil,
                       std::shared_ptr<EclipseState> eclipse_state,
                       OutputWriter& output_writer,
-                      const std::vector<double>& threshold_pressures_by_face);
+                      const std::vector<double>& threshold_pressures_by_face,
+                      const std::unordered_set<std::string>& defunct_well_names);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -214,6 +215,10 @@ namespace Opm
         std::vector<double> threshold_pressures_by_face_;
         // Whether this a parallel simulation or not
         bool is_parallel_run_;
+        // The names of wells that should be defunct
+        // (e.g. in a parallel run when they are handeled by
+        // a different process)
+        std::unordered_set<std::string> defunct_well_names_;
     };
 
 } // namespace Opm

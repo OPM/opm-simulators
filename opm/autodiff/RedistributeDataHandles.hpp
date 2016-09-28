@@ -1,8 +1,8 @@
 /*
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services.
-  Coypright 2015 NTNU
-  Copyright 2015 Statoil AS
-  Copyright 2015 IRIS AS
+  Copyright 2015-2016 Dr. Blatt - HPC-Simulation-Software & Services.
+  Coypright 2015      NTNU
+  Copyright 2015-2016 Statoil AS
+  Copyright 2015      IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -22,6 +22,9 @@
 #ifndef OPM_REDISTRIBUTEDATAHANDLES_HEADER
 #define OPM_REDISTRIBUTEDATAHANDLES_HEADER
 
+#include <unordered_set>
+#include <string>
+
 #include <opm/core/simulator/BlackoilState.hpp>
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
@@ -33,17 +36,19 @@ namespace Opm
 {
 
 template <class Grid>
-inline void distributeGridAndData( Grid& ,
-                                   Opm::DeckConstPtr ,
-                                   EclipseStateConstPtr ,
-                                   BlackoilState& ,
-                                   BlackoilPropsAdFromDeck& ,
-                                   DerivedGeology&,
-                                   std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>&,
-                                   std::vector<double>&,
-                                   boost::any& ,
-                                   const bool )
+inline std::unordered_set<std::string>
+distributeGridAndData( Grid& ,
+                       Opm::DeckConstPtr ,
+                       EclipseStateConstPtr ,
+                       BlackoilState& ,
+                       BlackoilPropsAdFromDeck& ,
+                       DerivedGeology&,
+                       std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>&,
+                       std::vector<double>&,
+                       boost::any& ,
+                       const bool )
 {
+    return std::unordered_set<std::string>();
 }
 
 #if HAVE_OPM_GRID && HAVE_MPI
@@ -413,22 +418,25 @@ private:
 };
 
 inline
-void distributeGridAndData( Dune::CpGrid& grid,
-                            Opm::DeckConstPtr deck,
-                            EclipseStateConstPtr eclipseState,
-                            BlackoilState& state,
-                            BlackoilPropsAdFromDeck& properties,
-                            DerivedGeology& geology,
-                            std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>& material_law_manager,
-                            std::vector<double>& threshold_pressures,
-                            boost::any& parallelInformation,
-                            const bool useLocalPerm)
+std::unordered_set<std::string>
+distributeGridAndData( Dune::CpGrid& grid,
+                       Opm::DeckConstPtr deck,
+                       EclipseStateConstPtr eclipseState,
+                       BlackoilState& state,
+                       BlackoilPropsAdFromDeck& properties,
+                       DerivedGeology& geology,
+                       std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>& material_law_manager,
+                       std::vector<double>& threshold_pressures,
+                       boost::any& parallelInformation,
+                       const bool useLocalPerm)
 {
     Dune::CpGrid global_grid ( grid );
     global_grid.switchToGlobalView();
 
     // distribute the grid and switch to the distributed view
-    grid.loadBalance(eclipseState, geology.transmissibility().data());
+    using std::get;
+    auto my_defunct_wells = get<1>(grid.loadBalance(eclipseState,
+                                            geology.transmissibility().data()));
     grid.switchToDistributedView();
     std::vector<int> compressedToCartesianIdx;
     Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
@@ -493,6 +501,8 @@ void distributeGridAndData( Dune::CpGrid& grid,
     material_law_manager = distributed_material_law_manager;
     threshold_pressures   = distributed_pressures;
     extractParallelGridInformationToISTL(grid, parallelInformation);
+
+    return my_defunct_wells;
 }
 #endif
 
