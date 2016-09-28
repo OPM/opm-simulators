@@ -196,7 +196,9 @@ namespace Opm
             data::Wells res = WellState::report(pu);
 
             const int nw = this->numWells();
-            const int np = nw ? this->numPhases() : -1;
+            if( nw == 0 ) return res;
+            const int np = this->numPhases();
+
 
             using rt = data::Rates::opt;
             std::vector< rt > phs( np );
