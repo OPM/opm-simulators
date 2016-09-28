@@ -813,10 +813,13 @@ namespace Opm
                                         const bool forced)
     {
         // Not changing if we're not forced to change
-        if (!forced
-             && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
-            return;
-        }
+        // It should be the well will under group control, if we prevent the well from group control
+        // with keyword WGRUPCON.
+        // It is just current undertstanding, while further change in the understanding will be possible.
+        // if (!forced
+        //      && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
+        //     return;
+        // }
         if (wells_->type[self_index_] != INJECTOR) {
             assert(target == 0.0);
             return;
