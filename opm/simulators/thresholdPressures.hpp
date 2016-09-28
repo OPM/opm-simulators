@@ -208,6 +208,10 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             if (Rs >= RsSat) {
                 double b = pvto.saturatedInverseFormationVolumeFactor(pvtRegionIdx, T, p);
                 rho[opos][cellIdx] = surfaceDensity[pvtRegionIdx][opos]*b;
+                if (pu.phase_used[BlackoilPhases::Vapour]) {
+                    int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                    rho[opos][cellIdx] += surfaceDensity[pvtRegionIdx][gpos]*RsSat*b;
+                }
             }
             else {
                 double b = pvto.inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
@@ -234,11 +238,14 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             if (Rv >= RvSat) {
                 double b = pvtg.saturatedInverseFormationVolumeFactor(pvtRegionIdx, T, p);
                 rho[gpos][cellIdx] = surfaceDensity[pvtRegionIdx][gpos]*b;
+                if (pu.phase_used[BlackoilPhases::Liquid]) {
+                    int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                    rho[gpos][cellIdx] += surfaceDensity[pvtRegionIdx][opos]*RvSat*b;
+                }
             }
             else {
                 double b = pvtg.inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
                 rho[gpos][cellIdx] = surfaceDensity[pvtRegionIdx][gpos]*b;
-
                 if (pu.phase_used[BlackoilPhases::Liquid]) {
                     int opos = pu.phase_pos[BlackoilPhases::Liquid];
                     rho[gpos][cellIdx] += surfaceDensity[pvtRegionIdx][opos]*Rv*b;
