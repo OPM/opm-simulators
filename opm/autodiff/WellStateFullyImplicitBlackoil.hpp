@@ -197,7 +197,7 @@ namespace Opm
 
             const int nw = this->numWells();
             if( nw == 0 ) return res;
-            const int np = this->numPhases();
+            const int np = pu.num_phases;
 
 
             using rt = data::Rates::opt;
