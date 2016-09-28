@@ -111,7 +111,12 @@ namespace Opm
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
-            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+
+            if (param_.getDefault("use_TUNING", false)) {
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( *schedule->getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+            } else {
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+            }
         }
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
