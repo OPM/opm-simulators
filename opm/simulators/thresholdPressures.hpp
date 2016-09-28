@@ -278,7 +278,6 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const double z1 = UgGridHelpers::cellCenterDepth(grid, c1);
             const double z2 = UgGridHelpers::cellCenterDepth(grid, c2);
-            const double zAvg = (z1 + z2)/2; // average depth
 
             const double rhoAvg = (rho[phaseIdx][c1] + rho[phaseIdx][c2])/2;
 
@@ -289,8 +288,8 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             const double sResid2 = minSat[numPhases*c2 + phaseIdx];
 
             // compute gravity corrected pressure potentials at the average depth
-            const double p1 = phasePressure[phaseIdx][c1] + rhoAvg*gravity*(zAvg - z1);
-            const double p2 = phasePressure[phaseIdx][c2] + rhoAvg*gravity*(zAvg - z2);
+            const double p1 = phasePressure[phaseIdx][c1];
+            const double p2 = phasePressure[phaseIdx][c2] + rhoAvg*gravity*(z1 - z2);
 
             if ((p1 > p2 && s1 > sResid1) || (p2 > p1 && s2 > sResid2))
                 maxDp[barrierId] = std::max(maxDp[barrierId], std::abs(p1 - p2));
