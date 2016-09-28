@@ -277,7 +277,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
         // update the maximum pressure potential difference between the two
         // regions
-        const auto barrierId = std::make_pair(eq1, eq2);
+        const auto barrierId = std::make_pair(std::min(eq1, eq2), std::max(eq1, eq2));
         if (maxDp.count(barrierId) == 0) {
             maxDp[barrierId] = 0.0;
         }
@@ -363,8 +363,11 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                         // set the threshold pressure for faces of PVT regions where the third item
                         // has been defaulted to the maximum pressure potential difference between
                         // these regions
-                        const auto barrierId = std::make_pair(eq1, eq2);
-                        thpres_vals[face] = maxDp.at(barrierId);
+                        const auto barrierId = std::make_pair(std::min(eq1, eq2), std::max(eq1, eq2));
+                        if (maxDp.count(barrierId) > 0)
+                            thpres_vals[face] = maxDp.at(barrierId);
+                        else
+                            thpres_vals[face] = 0.0;
                     }
                 }
 
