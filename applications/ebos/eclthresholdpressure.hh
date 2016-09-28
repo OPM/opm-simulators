@@ -192,14 +192,22 @@ private:
                 unsigned equilRegionOutside = elemEquilRegion_[outsideElemIdx];
 
                 if (equilRegionInside == equilRegionOutside)
+                    // the current face is not at the boundary between EQUIL regions!
                     continue;
 
-                // determine the maximum difference of the pressure of all phases over
-                // the intersection
-                Scalar pth = 0;
+                // determine the maximum difference of the pressure of any phase over the
+                // intersection
+                Scalar pth = 0.0;
                 const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                    pth = std::max(pth, std::abs(Toolbox::value(extQuants.pressureDifference(phaseIdx))));
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+                    const auto& up = elemCtx.intensiveQuantities(upIdx, /*timeIdx=*/0);
+
+                    if (up.mobility(phaseIdx) > 0.0) {
+                        Scalar phaseVal = Toolbox::value(extQuants.pressureDifference(phaseIdx));
+                        pth = std::max(pth, std::abs(phaseVal));
+                    }
+                }
 
                 int offset1 = equilRegionInside*numEquilRegions_ + equilRegionOutside;
                 int offset2 = equilRegionOutside*numEquilRegions_ + equilRegionInside;
