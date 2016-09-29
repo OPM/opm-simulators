@@ -22,7 +22,6 @@
 #include <opm/core/grid.h>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/core/utility/Compat.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -34,6 +33,7 @@
 #include <opm/output/Cells.hpp>
 #include <opm/output/eclipse/EclipseWriter.hpp>
 
+#include <opm/autodiff/Compat.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/ParallelDebugOutput.hpp>
 
