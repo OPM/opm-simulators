@@ -295,6 +295,9 @@ namespace Opm
                 SimulatorReport step_report;
                 step_report.pressure_time = st;
                 step_report.total_time =  step_timer.secsSinceStart();
+                step_report.total_newton_iterations = solver->nonlinearIterations();
+                step_report.total_linear_iterations = solver->linearIterations();
+                step_report.total_linearizations = solver->linearizations();
                 step_report.reportParam(tstep_os);
             }
 
