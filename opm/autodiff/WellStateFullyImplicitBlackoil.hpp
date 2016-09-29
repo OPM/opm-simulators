@@ -224,6 +224,7 @@ namespace Opm
             for( const auto& wt : this->wellMap() ) {
                 const auto w = wt.second[ 0 ];
                 auto& well = res.at( wt.first );
+                well.control = this->currentControls()[ w ];
 
                 int local_comp_index = 0;
                 for( auto& cpair : well.completions ) {
