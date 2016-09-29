@@ -27,7 +27,6 @@
 #include <opm/output/Cells.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/DataMap.hpp>
-#include <opm/core/utility/Compat.hpp>
 #include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
