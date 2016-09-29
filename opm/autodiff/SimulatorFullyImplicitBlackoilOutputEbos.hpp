@@ -33,6 +33,7 @@
 #include <opm/output/Cells.hpp>
 #include <opm/output/eclipse/EclipseWriter.hpp>
 
+#include <opm/autodiff/Compat.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/ParallelDebugOutput.hpp>
 
