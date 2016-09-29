@@ -672,17 +672,18 @@ namespace Opm
                         int table_id = well_controls_iget_vfp(wc, ctrl_index);
 
                         const WellType& well_type = wells().type[w];
+                        const int perf = wells().well_connpos[w]; //first perforation.
                         if (well_type == INJECTOR) {
                             double dp = wellhelpers::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_->getInj()->getTable(table_id)->getDatumDepth(),
-                                    wellPerforationDensities(), gravity_);
+                                    wellPerforationDensities()[perf], gravity_);
 
                             well_state.thp()[w] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp);
                         }
                         else if (well_type == PRODUCER) {
                             double dp = wellhelpers::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_->getProd()->getTable(table_id)->getDatumDepth(),
-                                    wellPerforationDensities(), gravity_);
+                                    wellPerforationDensities()[perf], gravity_);
 
                             well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp[w] + dp, alq);
                         }
@@ -786,17 +787,18 @@ namespace Opm
                 //Set *BHP* target by calculating bhp from THP
                 const WellType& well_type = wells().type[w];
 
+                const int perf = wells().well_connpos[w]; // first perforation.
                 if (well_type == INJECTOR) {
                     double dp = wellhelpers::computeHydrostaticCorrection(
                             wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
-                            wellPerforationDensities(), gravity_);
+                            wellPerforationDensities()[perf], gravity_);
 
                     xw.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                 }
                 else if (well_type == PRODUCER) {
                     double dp = wellhelpers::computeHydrostaticCorrection(
                             wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
-                            wellPerforationDensities(), gravity_);
+                            wellPerforationDensities()[perf], gravity_);
 
                     xw.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                 }
@@ -1096,11 +1098,12 @@ namespace Opm
 
                     //Set *BHP* target by calculating bhp from THP
                     const WellType& well_type = wells().type[w];
+                    const int perf = wells().well_connpos[w]; //first perforation
 
                     if (well_type == INJECTOR) {
                         double dp = wellhelpers::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
-                                    wellPerforationDensities(), gravity_);
+                                    wellPerforationDensities()[perf], gravity_);
                         const double bhp = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
                         // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
                         if ( bhp < bhps[w]) {
@@ -1110,7 +1113,7 @@ namespace Opm
                     else if (well_type == PRODUCER) {
                         double dp = wellhelpers::computeHydrostaticCorrection(
                                     wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
-                                    wellPerforationDensities(), gravity_);
+                                    wellPerforationDensities()[perf], gravity_);
 
                         const double bhp = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                         // apply the strictest of the bhp controlls i.e. largest bhp for producers

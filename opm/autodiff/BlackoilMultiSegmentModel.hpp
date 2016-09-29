@@ -123,7 +123,7 @@ namespace Opm {
         using Base::pvdt_;
         using Base::geo_;
         using Base::active_;
-        using Base::rq_;
+        using Base::sd_;
         using Base::fluid_;
         using Base::terminal_output_;
         using Base::grid_;

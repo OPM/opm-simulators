@@ -168,9 +168,9 @@ try
 
     if (eclipseState->get3DProperties().hasDeckDoubleGridProperty("PORV")) {
         const auto& porv = eclipseState->get3DProperties().getDoubleGridProperty("PORV").getData();
-        grid.reset(new GridManager(eclipseState->getInputGrid(), porv));
+        grid.reset(new GridManager(*eclipseState->getInputGrid(), porv));
     } else {
-        grid.reset(new GridManager(eclipseState->getInputGrid()));
+        grid.reset(new GridManager(*eclipseState->getInputGrid()));
     }
     auto &cGrid = *grid->c_grid();
     const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
@@ -240,7 +240,7 @@ try
               << std::flush;
 
     Opm::BlackoilOutputWriter
-        outputWriter(cGrid, param, eclipseState, Opm::NNC(), pu,
+        outputWriter(cGrid, param, eclipseState, pu,
                      new_props->permeability() );
 
     SimulatorReport fullReport;

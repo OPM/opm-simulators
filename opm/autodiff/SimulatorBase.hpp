@@ -21,14 +21,12 @@
 #ifndef OPM_SIMULATORBASE_HEADER_INCLUDED
 #define OPM_SIMULATORBASE_HEADER_INCLUDED
 
-#include <ewoms/common/timer.hh>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
-#include <opm/autodiff/IterationReport.hpp>
-#include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>
+#include <opm/autodiff/BlackoilModel.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
@@ -132,7 +130,8 @@ namespace Opm
                       const bool vapoil,
                       std::shared_ptr<EclipseState> eclipse_state,
                       OutputWriter& output_writer,
-                      const std::vector<double>& threshold_pressures_by_face);
+                      const std::vector<double>& threshold_pressures_by_face,
+                      const std::unordered_set<std::string>& defunct_well_names);
 
         /// Run the simulation.
         /// This will run succesive timesteps until timer.done() is true. It will
@@ -159,6 +158,16 @@ namespace Opm
                     const Wells*                    wells,
                     const BlackoilState&            x,
                     WellState& xw);
+
+        void
+        FIPUnitConvert(const UnitSystem& units,
+                       std::vector<V>& fip);
+        
+        V
+        FIPTotals(const std::vector<V>& fip, const ReservoirState& state);
+
+        void
+        outputFluidInPlace(const V& oip, const V& cip, const UnitSystem& units, const int reg);
 
         void computeWellPotentials(const Wells*                    wells,
                                    const WellState& xw,
@@ -206,6 +215,10 @@ namespace Opm
         std::vector<double> threshold_pressures_by_face_;
         // Whether this a parallel simulation or not
         bool is_parallel_run_;
+        // The names of wells that should be defunct
+        // (e.g. in a parallel run when they are handeled by
+        // a different process)
+        std::unordered_set<std::string> defunct_well_names_;
     };
 
 } // namespace Opm

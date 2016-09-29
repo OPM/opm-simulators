@@ -89,7 +89,36 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
 
 
 
+VFPInjProperties::EvalWell VFPInjProperties::bhp(const int table_id,
+                                                   const EvalWell& aqua,
+                                                   const EvalWell& liquid,
+                                                   const EvalWell& vapour,
+                                                   const double& thp) const {
 
+    //Get the table
+    const VFPInjTable* table = detail::getTable(m_tables, table_id);
+    EvalWell bhp = 0.0;
+
+    //Find interpolation variables
+    EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+
+    //Compute the BHP for each well independently
+    if (table != nullptr) {
+        //First, find the values to interpolate between
+        //Value of FLO is negative in OPM for producers, but positive in VFP table
+        auto flo_i = detail::findInterpData(flo.value, table->getFloAxis());
+        auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
+
+        detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
+
+        bhp = bhp_val.dflo * flo;
+        bhp.value = bhp_val.value; // thp is assumed constant i.e.
+    }
+    else {
+        bhp.value = -1e100; //Signal that this value has not been calculated properly, due to "missing" table
+    }
+    return bhp;
+}
 
 
 

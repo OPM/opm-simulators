@@ -95,7 +95,7 @@ namespace Opm {
         if (has_solvent_) {
 
             // If deck has solvent, residual_ should contain solvent equation.
-            rq_.resize(fluid_.numPhases() + 1);
+            sd_.rq.resize(fluid_.numPhases() + 1);
             residual_.material_balance_eq.resize(fluid_.numPhases() + 1, ADB::null());
             Base::material_name_.push_back("Solvent");
             assert(solvent_pos_ == fluid_.numPhases());
@@ -220,17 +220,17 @@ namespace Opm {
                 if (active_[ Oil ]) {
                     // RS and RV is only defined if both oil and gas phase are active.
                     state.canonical_phase_pressures = computePressures(state.pressure, state.saturation[pu.phase_pos[ Water ]], so, sg, state.solvent_saturation);
-                    const ADB rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
+                    sd_.rsSat = fluidRsSat(state.canonical_phase_pressures[ Oil ], so , cells_);
                     if (has_disgas_) {
-                        state.rs = (1-Base::isRs_)*rsSat + Base::isRs_*xvar;
+                        state.rs = (1-Base::isRs_)*sd_.rsSat + Base::isRs_*xvar;
                     } else {
-                        state.rs = rsSat;
+                        state.rs = sd_.rsSat;
                     }
-                    const ADB rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
+                    sd_.rvSat = fluidRvSat(state.canonical_phase_pressures[ Gas ], so , cells_);
                     if (has_vapoil_) {
-                        state.rv = (1-Base::isRv_)*rvSat + Base::isRv_*xvar;
+                        state.rv = (1-Base::isRv_)*sd_.rvSat + Base::isRv_*xvar;
                     } else {
-                        state.rv = rvSat;
+                        state.rv = sd_.rvSat;
                     }
                 }
             }
@@ -270,8 +270,8 @@ namespace Opm {
 
             const ADB& pg = state.canonical_phase_pressures[pu.phase_pos[Gas]];
             const std::vector<PhasePresence>& cond = phaseCondition();
-            rq_[solvent_pos_].b = fluidReciprocFVF(Solvent, pg, state.temperature, state.rs, state.rv,cond);
-            rq_[solvent_pos_].accum[aix] = pv_mult * rq_[solvent_pos_].b * ss;
+            sd_.rq[solvent_pos_].b = fluidReciprocFVF(Solvent, pg, state.temperature, state.rs, state.rv,cond);
+            sd_.rq[solvent_pos_].accum[aix] = pv_mult * sd_.rq[solvent_pos_].b * ss;
         }
     }
 
@@ -289,8 +289,8 @@ namespace Opm {
 
         if (has_solvent_) {
             residual_.material_balance_eq[ solvent_pos_ ] =
-                pvdt_ * (rq_[solvent_pos_].accum[1] - rq_[solvent_pos_].accum[0])
-                + ops_.div*rq_[solvent_pos_].mflux;
+                pvdt_ * (sd_.rq[solvent_pos_].accum[1] - sd_.rq[solvent_pos_].accum[0])
+                + ops_.div*sd_.rq[solvent_pos_].mflux;
         }
 
     }
@@ -302,7 +302,7 @@ namespace Opm {
         Base::updateEquationsScaling();
         assert(MaxNumPhases + 1 == residual_.matbalscale.size());
         if (has_solvent_) {
-            const ADB& temp_b = rq_[solvent_pos_].b;
+            const ADB& temp_b = sd_.rq[solvent_pos_].b;
             ADB::V B = 1. / temp_b.value();
 #if HAVE_MPI
             if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
@@ -549,6 +549,7 @@ namespace Opm {
         if (has_disgas_) {
             const V rsSat0 = fluidRsSat(p_old, s_old.col(pu.phase_pos[Oil]), cells_);
             const V rsSat = fluidRsSat(p, so, cells_);
+            sd_.rsSat = ADB::constant(rsSat);
             // The obvious case
             auto hasGas = (sg > 0 && Base::isRs_ == 0);
 
@@ -574,6 +575,7 @@ namespace Opm {
             const V gaspress = computeGasPressure(p, sw, so, sg);
             const V rvSat0 = fluidRvSat(gaspress_old, s_old.col(pu.phase_pos[Oil]), cells_);
             const V rvSat = fluidRvSat(gaspress, so, cells_);
+            sd_.rvSat = ADB::constant(rvSat);
 
             // The obvious case
             auto hasOil = (so > 0 && Base::isRv_ == 0);
@@ -660,7 +662,7 @@ namespace Opm {
                 // Compute solvent properties
                 const std::vector<PhasePresence>& cond = phaseCondition();
                 ADB mu_s = fluidViscosity(Solvent, phasePressure,state.temperature, state.rs, state.rv, cond);
-                ADB rho_s = fluidDensity(Solvent,rq_[solvent_pos_].b, state.rs, state.rv);
+                ADB rho_s = fluidDensity(Solvent,sd_.rq[solvent_pos_].b, state.rs, state.rv);
 
                 // Compute solvent relperm and mass flux
                 ADB krs = solvent_props_.solventRelPermMultiplier(F_solvent, cells_) * kr_mod;

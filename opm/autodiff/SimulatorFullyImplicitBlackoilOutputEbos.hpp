@@ -17,8 +17,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
-#define OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
+#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUTEBOS_HEADER_INCLUDED
+#define OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUTEBOS_HEADER_INCLUDED
 #include <opm/core/grid.h>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <opm/core/simulator/WellState.hpp>
@@ -58,166 +58,20 @@
 #endif
 namespace Opm
 {
-
-    class SimulationDataContainer;
     class BlackoilState;
 
-    void outputStateVtk(const UnstructuredGrid& grid,
-                        const Opm::SimulationDataContainer& state,
-                        const int step,
-                        const std::string& output_dir);
-
-
-    void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::SimulationDataContainer& state,
-                           const int step,
-                           const std::string& output_dir);
-
-    void outputWellStateMatlab(const Opm::WellState& well_state,
-                               const int step,
-                               const std::string& output_dir);
-#ifdef HAVE_OPM_GRID
-    void outputStateVtk(const Dune::CpGrid& grid,
-                        const Opm::SimulationDataContainer& state,
-                        const int step,
-                        const std::string& output_dir);
-#endif
-
-    template<class Grid>
-    void outputStateMatlab(const Grid& grid,
-                           const Opm::SimulationDataContainer& state,
-                           const int step,
-                           const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        for (const auto& pair : state.cellData())
-        {
-            const std::string& name = pair.first;
-            std::string key;
-            if( name == "SURFACEVOL" ) {
-                key = "surfvolume";
-            }
-            else if( name == "RV" ) {
-                key = "rv";
-            }
-            else if( name == "GASOILRATIO" ) {
-                key = "rs";
-            }
-            else { // otherwise skip entry
-                continue;
-            }
-            // set data to datmap
-            dm[ key ] = &pair.second;
-        }
-
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  UgGridHelpers::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-
-    class BlackoilSubWriter {
-        public:
-            BlackoilSubWriter( const std::string& outputDir )
-                : outputDir_( outputDir )
-        {}
-
-        virtual void writeTimeStep(const SimulatorTimerInterface& timer,
-                           const SimulationDataContainer& state,
-                           const WellState&,
-                           bool /*substep*/ = false) = 0;
-        protected:
-            const std::string outputDir_;
-    };
-
-    template< class Grid >
-    class BlackoilVTKWriter : public BlackoilSubWriter {
-        public:
-            BlackoilVTKWriter( const Grid& grid,
-                               const std::string& outputDir )
-                : BlackoilSubWriter( outputDir )
-                , grid_( grid )
-        {}
-
-            void writeTimeStep(const SimulatorTimerInterface& timer,
-                    const SimulationDataContainer& state,
-                    const WellState&,
-                    bool /*substep*/ = false) override
-            {
-                outputStateVtk(grid_, state, timer.currentStepNum(), outputDir_);
-            }
-
-        protected:
-            const Grid& grid_;
-    };
-
-    template< typename Grid >
-    class BlackoilMatlabWriter : public BlackoilSubWriter
-    {
-        public:
-            BlackoilMatlabWriter( const Grid& grid,
-                             const std::string& outputDir )
-                : BlackoilSubWriter( outputDir )
-                , grid_( grid )
-        {}
-
-        void writeTimeStep(const SimulatorTimerInterface& timer,
-                           const SimulationDataContainer& reservoirState,
-                           const WellState& wellState,
-                           bool /*substep*/ = false) override
-        {
-            outputStateMatlab(grid_, reservoirState, timer.currentStepNum(), outputDir_);
-            outputWellStateMatlab(wellState, timer.currentStepNum(), outputDir_);
-        }
-
-        protected:
-            const Grid& grid_;
-    };
-
     /** \brief Wrapper class for VTK, Matlab, and ECL output. */
-    class BlackoilOutputWriter
+    class BlackoilOutputWriterEbos
     {
 
     public:
         // constructor creating different sub writers
         template <class Grid>
-        BlackoilOutputWriter(const Grid& grid,
-                             const parameter::ParameterGroup& param,
-                             Opm::EclipseStateConstPtr eclipseState,
-                             const Opm::PhaseUsage &phaseUsage,
-                             const double* permeability );
-
-        /** \copydoc Opm::OutputWriter::writeInit */
-        void writeInit(const std::vector<data::CellData>& simProps, const NNC& nnc);
+        BlackoilOutputWriterEbos(const Grid& grid,
+                                 const parameter::ParameterGroup& param,
+                                 Opm::EclipseStateConstPtr eclipseState,
+                                 const Opm::PhaseUsage &phaseUsage,
+                                 const double* permeability );
 
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
@@ -257,7 +111,7 @@ namespace Opm
                            bool substep = false);
 
         /*!
-         * \brief Write a blackoil reservoir state to disk for later inspection with
+         * \brief Write a blackoil reservoir state to disk for later inspection withS
          *        visualization tools like ResInsight. This is the function which does
          *        the actual write to file.
          */
@@ -301,8 +155,6 @@ namespace Opm
 
         std::ofstream backupfile_;
         Opm::PhaseUsage phaseUsage_;
-        std::unique_ptr< BlackoilSubWriter > vtkWriter_;
-        std::unique_ptr< BlackoilSubWriter > matlabWriter_;
         std::unique_ptr< EclipseWriter > eclWriter_;
         EclipseStateConstPtr eclipseState_;
 
@@ -317,8 +169,8 @@ namespace Opm
     //////////////////////////////////////////////////////////////
     template <class Grid>
     inline
-    BlackoilOutputWriter::
-    BlackoilOutputWriter(const Grid& grid,
+    BlackoilOutputWriterEbos::
+    BlackoilOutputWriterEbos(const Grid& grid,
                          const parameter::ParameterGroup& param,
                          Opm::EclipseStateConstPtr eclipseState,
                          const Opm::PhaseUsage &phaseUsage,
@@ -329,11 +181,6 @@ namespace Opm
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
-        vtkWriter_( output_ && param.getDefault("output_vtk",false) ?
-                     new BlackoilVTKWriter< Grid >( grid, outputDir_ ) : 0 ),
-        matlabWriter_( output_ && parallelOutput_->isIORank() &&
-                       param.getDefault("output_matlab", false) ?
-                     new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
         eclWriter_( output_ && parallelOutput_->isIORank() &&
                     param.getDefault("output_ecl", true) ?
                     new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , *eclipseState->getInputGrid()))
@@ -379,7 +226,7 @@ namespace Opm
 
     template <class Grid>
     inline void
-    BlackoilOutputWriter::
+    BlackoilOutputWriterEbos::
     initFromRestartFile( const PhaseUsage& phaseusage,
                          const double* permeability,
                          const Grid& grid,
@@ -397,14 +244,7 @@ namespace Opm
                                   Opm::UgGridHelpers::cell2Faces(grid),
                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
                                   permeability,
-                                  dummy_list_econ_limited
-                                  // We need to pass the optionaly arguments
-                                  // as we get the following error otherwise
-                                  // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
-                                  // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructo
-                                  , false,
-                                  std::vector<double>(),
-                                  std::unordered_set<std::string>());
+                                  dummy_list_econ_limited);
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate); //Resize for restart step
@@ -421,24 +261,14 @@ namespace Opm
 
 
     namespace detail {
-
-        /**
-         * Converts an ADB into a standard vector by copy
-         */
-        inline std::vector<double> adbToDoubleVector(const Opm::AutoDiffBlock<double>& adb) {
-            const auto& adb_v = adb.value();
-            std::vector<double> vec(adb_v.data(), adb_v.data() + adb_v.size());
-            return vec;
-        }
-
-
         template<class Model>
-        std::vector<data::CellData> getCellData(
+        std::vector<data::CellData> getCellDataEbos(
                 const Opm::PhaseUsage& phaseUsage,
                 const Model& model,
                 const RestartConfig& restartConfig,
-                const int reportStepNum) {
-
+                const int reportStepNum)
+        {
+            typedef typename Model::FluidSystem FluidSystem;
 
             std::vector<data::CellData> simProps;
 
@@ -448,17 +278,63 @@ namespace Opm
                 keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
             }
 
-            const typename Model::SimulatorData& sd = model.getSimulatorData();
-
             //Get shorthands for water, oil, gas
             const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
             const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
             const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
 
-            const int aqua_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Aqua];
-            const int liquid_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Liquid];
-            const int vapour_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Vapour];
+            const auto& ebosModel = model.ebosSimulator().model();
 
+            // extract everything which can possibly be written to disk
+            int numCells = ebosModel.numGridDof();
+            std::vector<double> bWater(numCells);
+            std::vector<double> bOil(numCells);
+            std::vector<double> bGas(numCells);
+
+            std::vector<double> rhoWater(numCells);
+            std::vector<double> rhoOil(numCells);
+            std::vector<double> rhoGas(numCells);
+
+            std::vector<double> muWater(numCells);
+            std::vector<double> muOil(numCells);
+            std::vector<double> muGas(numCells);
+
+            std::vector<double> krWater(numCells);
+            std::vector<double> krOil(numCells);
+            std::vector<double> krGas(numCells);
+
+            std::vector<double> Rs(numCells);
+            std::vector<double> Rv(numCells);
+
+            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                const auto& intQuants = *ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+
+                bWater[cellIdx] = fs.invB(FluidSystem::waterPhaseIdx).value;
+                bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value;
+                bGas[cellIdx] = fs.invB(FluidSystem::gasPhaseIdx).value;
+
+                rhoWater[cellIdx] = fs.density(FluidSystem::waterPhaseIdx).value;
+                rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value;
+                rhoGas[cellIdx] = fs.density(FluidSystem::gasPhaseIdx).value;
+
+                muWater[cellIdx] = fs.viscosity(FluidSystem::waterPhaseIdx).value;
+                muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value;
+                muGas[cellIdx] = fs.viscosity(FluidSystem::gasPhaseIdx).value;
+
+                krWater[cellIdx] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value;
+                krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value;
+                krGas[cellIdx] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value;
+
+                Rs[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
+                                                                      FluidSystem::oilPhaseIdx,
+                                                                      intQuants.pvtRegionIndex(),
+                                                                      /*maxOilSaturation=*/1.0).value;
+                Rv[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
+                                                                      FluidSystem::gasPhaseIdx,
+                                                                      intQuants.pvtRegionIndex(),
+                                                                      /*maxOilSaturation=*/1.0).value;
+            }
 
             /**
              * Formation volume factors for water, oil, gas
@@ -468,21 +344,21 @@ namespace Opm
                 simProps.emplace_back(data::CellData{
                         "1OVERBW",
                         Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[aqua_idx].b))});
+                        std::move(bWater)});
             }
             if (liquid_active && outKeywords["BO"]  > 0) {
                 outKeywords["BO"] = 0;
                 simProps.emplace_back(data::CellData{
                         "1OVERBO",
                         Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[liquid_idx].b))});
+                        std::move(bOil)});
             }
             if (vapour_active && outKeywords["BG"] > 0) {
                 outKeywords["BG"] = 0;
                 simProps.emplace_back(data::CellData{
                         "1OVERBG",
                         Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[vapour_idx].b))});
+                        std::move(bGas)});
             }
 
             /**
@@ -494,19 +370,19 @@ namespace Opm
                     simProps.emplace_back(data::CellData{
                             "WAT_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].rho))});
+                            std::move(rhoWater)});
                 }
                 if (liquid_active) {
                     simProps.emplace_back(data::CellData{
                             "OIL_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[liquid_idx].rho))});
+                            std::move(rhoOil)});
                 }
                 if (vapour_active) {
                     simProps.emplace_back(data::CellData{
                             "GAS_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[vapour_idx].rho))});
+                            std::move(rhoGas)});
                 }
             }
 
@@ -519,19 +395,19 @@ namespace Opm
                     simProps.emplace_back(data::CellData{
                             "WAT_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].mu))});
+                            std::move(muWater)});
                 }
                 if (liquid_active) {
                     simProps.emplace_back(data::CellData{
                             "OIL_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[liquid_idx].mu))});
+                            std::move(muOil)});
                 }
                 if (vapour_active) {
                     simProps.emplace_back(data::CellData{
                             "GAS_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[vapour_idx].mu))});
+                            std::move(muGas)});
                 }
             }
 
@@ -539,43 +415,25 @@ namespace Opm
              * Relative permeabilities for water, oil, gas
              */
             if (aqua_active && outKeywords["KRW"] > 0) {
-                if (sd.rq[aqua_idx].kr.size() > 0) {
-                    outKeywords["KRW"] = 0;
-                    simProps.emplace_back(data::CellData{
-                            "WATKR",
-                            Opm::UnitSystem::measure::permeability,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].kr))});
-                }
-                else {
-                    Opm::OpmLog::warning("Empty:WATKR",
-                                         "Not emitting empty Water Rel-Perm");
-                }
+                outKeywords["KRW"] = 0;
+                simProps.emplace_back(data::CellData{
+                        "WATKR",
+                        Opm::UnitSystem::measure::permeability,
+                        std::move(krWater)});
             }
             if (liquid_active && outKeywords["KRO"] > 0) {
-                if (sd.rq[liquid_idx].kr.size() > 0) {
-                    outKeywords["KRO"] = 0;
-                    simProps.emplace_back(data::CellData{
-                             "OILKR",
-                             Opm::UnitSystem::measure::permeability,
-                             std::move(adbToDoubleVector(sd.rq[liquid_idx].kr))});
-                }
-                else {
-                    Opm::OpmLog::warning("Empty:OILKR",
-                                         "Not emitting empty Oil Rel-Perm");
-                }
+                outKeywords["KRO"] = 0;
+                simProps.emplace_back(data::CellData{
+                         "OILKR",
+                         Opm::UnitSystem::measure::permeability,
+                         std::move(krOil)});
             }
             if (vapour_active && outKeywords["KRG"] > 0) {
-                if (sd.rq[vapour_idx].kr.size() > 0) {
-                    outKeywords["KRG"] = 0;
-                    simProps.emplace_back(data::CellData{
-                             "GASKR",
-                             Opm::UnitSystem::measure::permeability,
-                             std::move(adbToDoubleVector(sd.rq[vapour_idx].kr))});
-                }
-                else {
-                    Opm::OpmLog::warning("Empty:GASKR",
-                                         "Not emitting empty Gas Rel-Perm");
-                }
+                outKeywords["KRG"] = 0;
+                simProps.emplace_back(data::CellData{
+                          "GASKR",
+                          Opm::UnitSystem::measure::permeability,
+                          std::move(krGas)});
             }
 
             /**
@@ -586,14 +444,14 @@ namespace Opm
                 simProps.emplace_back(data::CellData{
                         "RSSAT",
                         Opm::UnitSystem::measure::gas_oil_ratio,
-                        std::move(adbToDoubleVector(sd.rsSat))});
+                        std::move(Rs)});
             }
             if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
                 outKeywords["RVSAT"] = 0;
                 simProps.emplace_back(data::CellData{
                         "RVSAT",
                         Opm::UnitSystem::measure::oil_gas_ratio,
-                        std::move(adbToDoubleVector(sd.rvSat))});
+                        std::move(Rv)});
             }
 
 
@@ -619,7 +477,6 @@ namespace Opm
 
             return simProps;
         }
-
     }
 
 
@@ -627,7 +484,7 @@ namespace Opm
 
     template<class Model>
     inline void
-    BlackoilOutputWriter::
+    BlackoilOutputWriterEbos::
     writeTimeStep(const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
                   const WellState& localWellState,
@@ -636,7 +493,7 @@ namespace Opm
     {
         const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
-        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum );
+        std::vector<data::CellData> cellData = detail::getCellDataEbos( phaseUsage_, physicalModel, restartConfig, reportStepNum );
         writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }

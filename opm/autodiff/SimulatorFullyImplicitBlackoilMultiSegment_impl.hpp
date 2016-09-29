@@ -72,9 +72,6 @@ namespace Opm
             adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
         }
 
-        // init output writer
-        output_writer_.writeInit( geo_.simProps(grid_) , geo_.nonCartesianConnections( ) );
-
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
         {
@@ -111,7 +108,13 @@ namespace Opm
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        props_.permeability(),
                                        dynamic_list_econ_limited,
-                                       is_parallel_run_);
+                                       is_parallel_run_,
+                                       // We need to pass the optionaly arguments
+                                       // as we get the following error otherwise
+                                       // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
+                                       // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructor
+                                       std::vector<double>(), // null well_potentials
+                                       Base::defunct_well_names_);
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
             // well_state.init(wells, state, prev_well_state);
@@ -128,7 +131,9 @@ namespace Opm
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
-                output_writer_.writeTimeStep( timer, state, well_state );
+                // No per cell data is written for initial step, but will be
+                // for subsequent steps, when we have started simulating
+                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -182,8 +187,10 @@ namespace Opm
             // Increment timer, remember well state.
             ++timer;
 
+
             // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
+            const auto& physicalModel = solver->model();
+            output_writer_.writeTimeStep( timer, state, well_state, physicalModel );
 
             prev_well_state = well_state;
         }

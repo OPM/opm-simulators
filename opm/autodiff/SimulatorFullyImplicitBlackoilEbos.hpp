@@ -18,17 +18,26 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
-#define OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
+#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
+#define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
-#include <opm/autodiff/SimulatorBase.hpp>
+//#include <opm/autodiff/SimulatorBase.hpp>
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.hpp>
+#include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/StandardWellsDense.hpp>
+#include <opm/autodiff/RateConverter.hpp>
+#include <opm/autodiff/SimFIBODetails.hpp>
 
+#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
+#include <opm/core/utility/initHydroCarbonState.hpp>
+#include <opm/core/utility/StopWatch.hpp>
 
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm {
 
@@ -47,7 +56,7 @@ public:
 
     typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
-    typedef BlackoilOutputWriter OutputWriter;
+    typedef BlackoilOutputWriterEbos OutputWriter;
     typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
@@ -90,7 +99,7 @@ public:
                                        const bool has_disgas,
                                        const bool has_vapoil,
                                        std::shared_ptr<EclipseState> eclipse_state,
-                                       BlackoilOutputWriter& output_writer,
+                                       BlackoilOutputWriterEbos& output_writer,
                                        const std::vector<double>& threshold_pressures_by_face)
         : ebosSimulator_(ebosSimulator),
           param_(param),
@@ -166,21 +175,17 @@ public:
             adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
         }
 
-
-
-        output_writer_.writeInit( geo_.simProps(grid()) , geo_.nonCartesianConnections( ) );
-
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
         {
             // -1 means that we'll take the last report step that was written
-            const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
+            //const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
 
-//            output_writer_.restore( timer,
-//                                    state,
-//                                    prev_well_state,
-//                                    restorefilename,
-//                                    desiredRestoreStep );
+            //            output_writer_.restore( timer,
+            //                                    state,
+            //                                    prev_well_state,
+            //                                    restorefilename,
+            //                                    desiredRestoreStep );
         }
 
         unsigned int totalLinearizations = 0;
@@ -221,11 +226,6 @@ public:
             // give the polymer and surfactant simulators the chance to do their stuff
             handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
-            // write the inital state at the report stage
-            if (timer.initialStep()) {
-                output_writer_.writeTimeStep( timer, state, well_state );
-            }
-
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
@@ -236,6 +236,11 @@ public:
             const WellModel well_model(wells, model_param_, terminal_output_, pv);
 
             auto solver = createSolver(well_model);
+
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+                output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+            }
 
             if( terminal_output_ )
             {
@@ -326,7 +331,7 @@ public:
             ++timer;
 
             // write simulation state at the report stage
-            output_writer_.writeTimeStep( timer, state, well_state );
+            output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
 
             prev_well_state = well_state;
             // The well potentials are only computed if they are needed

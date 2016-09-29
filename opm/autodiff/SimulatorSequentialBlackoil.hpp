@@ -65,7 +65,9 @@ public:
                                 BlackoilOutputWriter& output_writer,
                                 const std::vector<double>& threshold_pressures_by_face)
     : Base(param, grid, geo, props, rock_comp_props, linsolver, gravity, disgas, vapoil,
-           eclipse_state, output_writer, threshold_pressures_by_face)
+           eclipse_state, output_writer, threshold_pressures_by_face,
+           // names of deactivated wells in parallel run
+           std::unordered_set<std::string>())
     {}
 };
 

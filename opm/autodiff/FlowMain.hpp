@@ -145,6 +145,7 @@ namespace Opm
             asImpl().extractMessages();
             asImpl().runDiagnostics();
             asImpl().setupState();
+            asImpl().writeInit();
             asImpl().distributeData();
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
@@ -172,6 +173,7 @@ namespace Opm
         typedef BlackoilPropsAdFromDeck FluidProps;
         typedef FluidProps::MaterialLawManager MaterialLawManager;
         typedef typename Simulator::ReservoirState ReservoirState;
+        typedef typename Simulator::OutputWriter OutputWriter;
 
 
         // ------------   Data members   ------------
@@ -206,13 +208,16 @@ namespace Opm
         // distributeData()
         boost::any parallel_information_;
         // setupOutputWriter()
-        std::unique_ptr<BlackoilOutputWriter> output_writer_;
+        std::unique_ptr<OutputWriter> output_writer_;
         // setupLinearSolver
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
         // createSimulator()
         std::unique_ptr<Simulator> simulator_;
         // create log file
         std::string logFile_;
+        // The names of wells that are artifically defunct in parallel runs.
+        // Those wells are handled on a another process.
+        std::unordered_set<std::string> defunct_well_names_;
         // ------------   Methods   ------------
 
 
@@ -597,10 +602,11 @@ namespace Opm
             // If there are more than one processors involved, we now repartition the grid
             // and initilialize new properties and states for it.
             if (must_distribute_) {
-                distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
-                                      *state_, *fluidprops_, *geoprops_,
-                                      material_law_manager_, threshold_pressures_,
-                                      parallel_information_, use_local_perm_);
+                defunct_well_names_ =
+                    distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
+                                          *state_, *fluidprops_, *geoprops_,
+                                          material_law_manager_, threshold_pressures_,
+                                          parallel_information_, use_local_perm_);
             }
         }
 
@@ -649,7 +655,19 @@ namespace Opm
         }
 
 
-
+        void writeInit()
+        {
+            bool output      = param_.getDefault("output", true);
+            bool output_ecl  = param_.getDefault("output_ecl", true);
+            const Grid& grid = grid_init_->grid();
+            if( output && output_ecl && output_cout_)
+            {
+                const EclipseGrid& inputGrid = *eclipse_state_->getInputGrid();
+                EclipseWriter writer(eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid ));
+                writer.writeInitAndEgrid(geoprops_->simProps(grid),
+                                         geoprops_->nonCartesianConnections());
+            }
+        }
 
 
         // Setup output writer.
@@ -660,12 +678,11 @@ namespace Opm
             // create output writer after grid is distributed, otherwise the parallel output
             // won't work correctly since we need to create a mapping from the distributed to
             // the global view
-            output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
-                                                          param_,
-                                                          eclipse_state_,
-                                                          geoprops_->nonCartesianConnections(),
-                                                          Opm::phaseUsageFromDeck(deck_),
-                                                          fluidprops_->permeability()));
+            output_writer_.reset(new OutputWriter(grid_init_->grid(),
+                                                  param_,
+                                                  eclipse_state_,
+                                                  Opm::phaseUsageFromDeck(deck_),
+                                                  fluidprops_->permeability()));
         }
 
 
@@ -747,7 +764,6 @@ namespace Opm
                     fullReport.reportParam(tot_os);
                 }
             } else {
-                output_writer_->writeInit(geoprops_->simProps(grid_init_->grid()) , geoprops_->nonCartesianConnections( ));
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
                 }
@@ -800,7 +816,8 @@ namespace Opm
                                                  Base::deck_->hasKeyword("VAPOIL"),
                                                  Base::eclipse_state_,
                                                  *Base::output_writer_,
-                                                 Base::threshold_pressures_));
+                                                 Base::threshold_pressures_,
+                                                 Base::defunct_well_names_));
         }
     };
 

@@ -19,7 +19,7 @@
 */
 #include "config.h"
 
-#include "SimulatorFullyImplicitBlackoilOutput.hpp"
+#include "SimulatorFullyImplicitBlackoilOutputEbos.hpp"
 
 #include <opm/common/data/SimulationDataContainer.hpp>
 
@@ -55,217 +55,18 @@
 #endif
 namespace Opm
 {
-
-
-
-    void outputStateVtk(const UnstructuredGrid& grid,
-                        const SimulationDataContainer& state,
-                        const int step,
-                        const std::string& output_dir)
-    {
-        // Write data in VTK format.
-        std::ostringstream vtkfilename;
-        vtkfilename << output_dir << "/vtk_files";
-        boost::filesystem::path fpath(vtkfilename.str());
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
-        vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
-        std::ofstream vtkfile(vtkfilename.str().c_str());
-        if (!vtkfile) {
-            OPM_THROW(std::runtime_error, "Failed to open " << vtkfilename.str());
-        }
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  AutoDiffGrid::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-        Opm::writeVtkData(grid, dm, vtkfile);
-    }
-
-
-    void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::SimulationDataContainer& state,
-                           const int step,
-                           const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        for (const auto& pair : state.cellData()) {
-            const std::string& name = pair.first;
-            std::string key;
-            if( name == "SURFACEVOL" ) {
-                key = "surfvolume";
-            }
-            else if( name == "RV" ) {
-                key = "rv";
-            }
-            else if( name == "GASOILRATIO" ) {
-                key = "rs";
-            }
-            else { // otherwise skip entry
-                continue;
-            }
-            // set data to datmap
-            dm[ key ] = &pair.second;
-        }
-
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  UgGridHelpers::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-    void outputWellStateMatlab(const Opm::WellState& well_state,
-                               const int step,
-                               const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["bhp"] = &well_state.bhp();
-        dm["wellrates"] = &well_state.wellRates();
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error,"Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error,"Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
-
-#if 0
-    void outputWaterCut(const Opm::Watercut& watercut,
-                        const std::string& output_dir)
-    {
-        // Write water cut curve.
-        std::string fname = output_dir  + "/watercut.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        watercut.write(os);
-    }
-
-    void outputWellReport(const Opm::WellReport& wellreport,
-                          const std::string& output_dir)
-    {
-        // Write well report.
-        std::string fname = output_dir  + "/wellreport.txt";
-        std::ofstream os(fname.c_str());
-        if (!os) {
-            OPM_THROW(std::runtime_error, "Failed to open " << fname);
-        }
-        wellreport.write(os);
-    }
-#endif
-
-#ifdef HAVE_OPM_GRID
-    void outputStateVtk(const Dune::CpGrid& grid,
-                        const Opm::SimulationDataContainer& state,
-                        const int step,
-                        const std::string& output_dir)
-    {
-        // Write data in VTK format.
-        std::ostringstream vtkfilename;
-        std::ostringstream vtkpath;
-        vtkpath << output_dir << "/vtk_files";
-        vtkpath << "/output-" << std::setw(3) << std::setfill('0') << step;
-        boost::filesystem::path fpath(vtkpath.str());
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
-        vtkfilename << "output-" << std::setw(3) << std::setfill('0') << step;
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
-        Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafGridView(), Dune::VTK::nonconforming);
-#else
-        Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafView(), Dune::VTK::nonconforming);
-#endif
-        writer.addCellData(state.saturation(), "saturation", state.numPhases());
-        writer.addCellData(state.pressure(), "pressure", 1);
-
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  AutoDiffGrid::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        writer.addCellData(cell_velocity, "velocity", Dune::CpGrid::dimension);
-        writer.pwrite(vtkfilename.str(), vtkpath.str(), std::string("."), Dune::VTK::ascii);
-    }
-#endif
-
-
-
-
     namespace detail {
 
-        struct WriterCall : public ThreadHandle :: ObjectInterface
+        struct WriterCallEbos : public ThreadHandle :: ObjectInterface
         {
-            BlackoilOutputWriter& writer_;
+            BlackoilOutputWriterEbos& writer_;
             std::unique_ptr< SimulatorTimerInterface > timer_;
             const SimulationDataContainer state_;
             const WellState wellState_;
             std::vector<data::CellData> simProps_;
             const bool substep_;
 
-            explicit WriterCall( BlackoilOutputWriter& writer,
+            explicit WriterCallEbos( BlackoilOutputWriterEbos& writer,
                                  const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& state,
                                  const WellState& wellState,
@@ -289,11 +90,8 @@ namespace Opm
         };
     }
 
-
-
-
     void
-    BlackoilOutputWriter::
+    BlackoilOutputWriterEbos::
     writeTimeStepWithoutCellProperties(
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
@@ -309,7 +107,7 @@ namespace Opm
 
 
     void
-    BlackoilOutputWriter::
+    BlackoilOutputWriterEbos::
     writeTimeStepWithCellProperties(
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
@@ -317,11 +115,6 @@ namespace Opm
                   const std::vector<data::CellData>& cellData,
                   bool substep)
     {
-        // VTK output (is parallel if grid is parallel)
-        if( vtkWriter_ ) {
-            vtkWriter_->writeTimeStep( timer, localState, localWellState, false );
-        }
-
         bool isIORank = output_ ;
         if( parallelOutput_ && parallelOutput_->isParallel() )
         {
@@ -344,7 +137,7 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, substep ) );
+                asyncOutput_->dispatch( detail::WriterCallEbos( *this, timer, state, wellState, cellData, substep ) );
             }
             else {
                 // just write the data to disk
@@ -356,18 +149,13 @@ namespace Opm
 
 
     void
-    BlackoilOutputWriter::
+    BlackoilOutputWriterEbos::
     writeTimeStepSerial(const SimulatorTimerInterface& timer,
                         const SimulationDataContainer& state,
                         const WellState& wellState,
                         const std::vector<data::CellData>& simProps,
                         bool substep)
     {
-        // Matlab output
-        if( matlabWriter_ ) {
-            matlabWriter_->writeTimeStep( timer, state, wellState, substep );
-        }
-
         // ECL output
         if ( eclWriter_ )
         {
@@ -379,7 +167,7 @@ namespace Opm
                                           substep,
                                           timer.simulationTimeElapsed(),
                                           simToSolution( state, phaseUsage_ ),
-                                          wellState.report(phaseUsage_),
+                                          wellState.report(),
                                           simProps);
             }
         }
@@ -415,7 +203,7 @@ namespace Opm
     }
 
     void
-    BlackoilOutputWriter::
+    BlackoilOutputWriterEbos::
     restore(SimulatorTimerInterface& timer,
             BlackoilState& state,
             WellStateFullyImplicitBlackoil& wellState,
@@ -487,7 +275,7 @@ namespace Opm
     }
 
 
-    bool BlackoilOutputWriter::isRestart() const {
+    bool BlackoilOutputWriterEbos::isRestart() const {
         const auto& initconfig = eclipseState_->getInitConfig();
         return initconfig.restartRequested();
     }

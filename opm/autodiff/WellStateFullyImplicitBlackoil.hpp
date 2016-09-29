@@ -25,6 +25,7 @@
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <vector>
 #include <cassert>
@@ -119,6 +120,7 @@ namespace Opm
                 const WellType& well_type = wells->type[w];
 
                 switch (well_controls_iget_type(wc, current)) {
+                case THP: // Intentional fall-through
                 case BHP:
                 {
                     if (well_type == INJECTOR) {
@@ -148,13 +150,13 @@ namespace Opm
                     total_rates += g[p] * wellRates()[np*w + p];
                 }
 
-                //if(std::abs(total_rates) > 0) {
-                //    wellSolutions()[nw + w] = g[Water] * wellRates()[np*w + Water] / total_rates; //wells->comp_frac[np*w + Water]; // Water;
-                //    wellSolutions()[2*nw + w] = g[Gas] * wellRates()[np*w + Gas] / total_rates ; //wells->comp_frac[np*w + Gas]; //Gas
-                //} else {
-                wellSolutions()[nw + w] = wells->comp_frac[np*w + Water];
-                wellSolutions()[2*nw + w] = wells->comp_frac[np*w + Gas];
-                //}
+                if(std::abs(total_rates) > 0) {
+                    wellSolutions()[nw + w] = g[Water] * wellRates()[np*w + Water] / total_rates; //wells->comp_frac[np*w + Water]; // Water;
+                    wellSolutions()[2*nw + w] = g[Gas] * wellRates()[np*w + Gas] / total_rates ; //wells->comp_frac[np*w + Gas]; //Gas
+                } else {
+                    wellSolutions()[nw + w] = wells->comp_frac[np*w + Water];
+                    wellSolutions()[2*nw + w] = wells->comp_frac[np*w + Gas];
+                }
 
 
             }
@@ -225,7 +227,6 @@ namespace Opm
                                 }
                             }
                         }
-
                         // perfPressures
                         if( num_perf_old_well == num_perf_this_well )
                         {

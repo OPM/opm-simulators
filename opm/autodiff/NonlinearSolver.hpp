@@ -24,6 +24,9 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/autodiff/DuneMatrix.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/istl/bcrsmatrix.hh>
 #include <memory>
 
 namespace Opm {
@@ -39,6 +42,10 @@ namespace Opm {
         typedef AutoDiffBlock<double> ADB;
         typedef ADB::V V;
         typedef ADB::M M;
+
+        typedef double Scalar;
+        typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
+        typedef Dune::BlockVector<VectorBlockType>      BVector;
 
         // Available relaxation scheme types.
         enum RelaxType { DAMPEN, SOR };
@@ -125,6 +132,18 @@ namespace Opm {
         /// Number of well iterations used in all calls to step().
         int wellIterationsLastStep() const;
 
+        /// Compute fluid in place.
+        /// \param[in]    ReservoirState
+        /// \param[in]    FIPNUM for active cells not global cells.
+        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
+        std::vector<V>
+        computeFluidInPlace(const ReservoirState& x,
+                            const std::vector<int>& fipnum) const
+        {
+            return model_->computeFluidInPlace(x, fipnum);
+        }
+
+
         /// Reference to physical model.
         const PhysicalModel& model() const;
 
@@ -137,6 +156,8 @@ namespace Opm {
 
         /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
         void stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega) const;
+
+        void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const;
 
         /// The greatest relaxation factor (i.e. smallest factor) allowed.
         double relaxMax() const          { return param_.relax_max_; }
