@@ -239,7 +239,7 @@ public:
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
-                output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+                //output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
             }
 
             if( terminal_output_ )
