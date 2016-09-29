@@ -148,7 +148,6 @@ namespace{
             VecDestroy( &b );
             MatDestroy( &A );
             KSPDestroy( &ksp );
-            PCDestroy( &preconditioner );
         }
     };
 
@@ -197,7 +196,12 @@ namespace{
         PetscReal residual;
         KSPConvergedReason reason;
 
+#if PETSC_VERSION_MAJOR <= 3 && PETSC_VERSION_MINOR < 5
         KSPSetOperators( t.ksp, t.A, t.A, DIFFERENT_NONZERO_PATTERN );
+#else
+        KSPSetOperators( t.ksp, t.A, t.A );
+        KSPSetReusePreconditioner(t.ksp, PETSC_FALSE);
+#endif
         KSPGetPC( t.ksp, &t.preconditioner );
         auto err = KSPSetType( t.ksp, method );
         CHKERRXX( err );
@@ -216,7 +220,7 @@ namespace{
         if( ksp_view )
             KSPView( t.ksp, PETSC_VIEWER_STDOUT_WORLD );
 
-        err = PetscPrintf( PETSC_COMM_WORLD, "KSP Iterations %D, Final Residual %G\n", its, residual );
+        err = PetscPrintf( PETSC_COMM_WORLD, "KSP Iterations %D, Final Residual %g\n", its, (double)residual );
         CHKERRXX( err );
     }
 
