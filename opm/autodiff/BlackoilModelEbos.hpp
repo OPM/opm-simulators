@@ -523,6 +523,8 @@ namespace Opm {
 
                 // phase translation sg <-> rs
                 const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
+                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                const auto& fs = intQuants.fluidState();
                 switch (hydroCarbonState) {
                 case HydroCarbonState::GasAndOil: {
                     double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
@@ -534,7 +536,7 @@ namespace Opm {
                         reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
                         sg = 0;
                         so = 1.0 - sw - sg;
-                        double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                         double& rs = reservoir_state.gasoilratio()[cell_idx];
                         rs = rsSat*(1-epsilon);
                     } else if (so <= 0.0 && has_vapoil_) {
@@ -543,7 +545,7 @@ namespace Opm {
                         sg = 1.0 - sw - so;
                         double& rv = reservoir_state.rv()[cell_idx];
                         // use gas pressure?
-                        double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                         rv = rvSat*(1-epsilon);
                     }
                     break;
@@ -551,8 +553,7 @@ namespace Opm {
                 case HydroCarbonState::OilOnly: {
                     double& rs = reservoir_state.gasoilratio()[cell_idx];
                     double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
-                    // TODO:: not hardcode pvtRegion = 0
-                    double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                     if (rs > ( rsSat * (1+epsilon) ) ) {
                         reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
                         sg = epsilon;
@@ -563,7 +564,7 @@ namespace Opm {
                 }
                 case HydroCarbonState::GasOnly: {
                     double& rv = reservoir_state.rv()[cell_idx];
-                    double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(0, reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                     if (rv > rvSat * (1+epsilon) ) {
                         reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
                         so = epsilon;
