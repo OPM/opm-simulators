@@ -71,7 +71,7 @@ namespace Opm
 
 
 
-    StandardWells::StandardWells(const Wells* wells_arg, const WellCollection* well_collection)
+    StandardWells::StandardWells(const Wells* wells_arg, WellCollection* well_collection)
       : wells_active_(wells_arg!=nullptr)
       , wells_(wells_arg)
       , wops_(wells_arg)
@@ -711,6 +711,17 @@ namespace Opm
 
         if( !localWellsActive() ) return ;
 
+        if (well_collection_->needUpdateWellTargets() ) {
+            well_collection_->updateWellTargets(xw);
+            std::cout << " well_collection_ need to update well targets " << std::endl;
+            std::cin.ignore();
+            for (size_t i = 0; i < well_collection_->numNode(); ++i) {
+                well_collection_->getNode(i)->setShouldUpdateWellTargets(false);
+            }
+            return;
+        }
+
+        std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
@@ -757,8 +768,37 @@ namespace Opm
                 logger.wellSwitched(wells().name[w],
                                     well_controls_iget_type(wc, current),
                                     well_controls_iget_type(wc, ctrl_index));
+                std::ostringstream ss;
+                ss << "Switching control mode for well " << wells().name[w]
+                   << " from " << modestring[well_controls_iget_type(wc, current)]
+                   << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+
+                const double* distr_before = well_controls_iget_distr(wc, current);
+                const double* distr_after = well_controls_iget_distr(wc, ctrl_index);
+                std::cout << "distr_before " << distr_before[0] << " " << distr_before[1] << " " << distr_before[2] << std::endl;
+                std::cout << "distr_after " << distr_after[0] << " " << distr_after[1] << " " << distr_after[2] << std::endl;
+
+                OpmLog::info(ss.str());
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
+
+                // not good practice, revising the interface for the better implementation later.
+                auto* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+
+                // where to initialize this variable?
+                if (well_node->individualControl()) {
+                    if (ctrl_index == well_node->groupControlIndex()) {
+                        std::cout << "well " << well_node->name() << " is switching from individual control to group control " << std::endl;
+                        well_node->setIndividualControl(false);
+                        well_node->setShouldUpdateWellTargets(true);
+                    }
+                } else {
+                    if (ctrl_index != well_node->groupControlIndex()) {
+                        well_node->setIndividualControl(true);
+                        std::cout << "well " << well_node->name() << " is switching from group control to individual control " << std::endl;
+                        well_node->setShouldUpdateWellTargets(true);
+                    }
+                }
             }
 
             // Updating well state and primary variables.

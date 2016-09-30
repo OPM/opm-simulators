@@ -71,7 +71,7 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            StandardWells(const Wells* wells_arg, const WellCollection* well_collection);
+            StandardWells(const Wells* wells_arg, WellCollection* well_collection);
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -196,7 +196,7 @@ namespace Opm {
             const Wells*   wells_;
             const WellOps  wops_;
             // TODO: It will probably need to be updated during running time.
-            const WellCollection* well_collection_;
+            WellCollection* well_collection_;
 
             const BlackoilPropsAdInterface* fluid_;
             const std::vector<bool>*  active_;
