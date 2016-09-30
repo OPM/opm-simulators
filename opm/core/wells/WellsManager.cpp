@@ -373,6 +373,12 @@ namespace Opm
         return well_collection_;
     }
 
+    WellCollection& WellsManager::wellCollection() {
+        return well_collection_;
+
+    }
+
+
     bool WellsManager::conditionsMet(const std::vector<double>& well_bhp,
                                      const std::vector<double>& well_reservoirrates_phase,
                                      const std::vector<double>& well_surfacerates_phase)
