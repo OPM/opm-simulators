@@ -187,7 +187,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             int pvtRegionIdx = pvtRegion[cellIdx];
 
             double T = initialState.temperature()[cellIdx];
-            double p = initialState.pressure()[cellIdx];
+            double p = phasePressure[wpos][cellIdx];
             double b = pvtw.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
 
             rho[wpos][cellIdx] = surfaceDensity[pvtRegionIdx][wpos]*b;
@@ -201,21 +201,22 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             int pvtRegionIdx = pvtRegion[cellIdx];
 
             double T = initialState.temperature()[cellIdx];
-            double p = initialState.pressure()[cellIdx];
+            double p = phasePressure[opos][cellIdx];
             double Rs = initialState.gasoilratio()[cellIdx];
             double RsSat = pvto.saturatedGasDissolutionFactor(pvtRegionIdx, T, p);
 
+            double b;
             if (Rs >= RsSat) {
-                double b = pvto.saturatedInverseFormationVolumeFactor(pvtRegionIdx, T, p);
-                rho[opos][cellIdx] = surfaceDensity[pvtRegionIdx][opos]*b;
+                b = pvto.saturatedInverseFormationVolumeFactor(pvtRegionIdx, T, p);
             }
             else {
-                double b = pvto.inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
-                rho[opos][cellIdx] = surfaceDensity[pvtRegionIdx][opos]*b;
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-                    rho[opos][cellIdx] += surfaceDensity[pvtRegionIdx][gpos]*Rs*b;
-                }
+                b = pvto.inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+            }
+
+            rho[opos][cellIdx] = surfaceDensity[pvtRegionIdx][opos]*b;
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
+                int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                rho[opos][cellIdx] += surfaceDensity[pvtRegionIdx][gpos]*Rs*b;
             }
         }
     }
@@ -227,22 +228,21 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             int pvtRegionIdx = pvtRegion[cellIdx];
 
             double T = initialState.temperature()[cellIdx];
-            double p = initialState.pressure()[cellIdx];
+            double p = phasePressure[gpos][cellIdx];
             double Rv = initialState.rv()[cellIdx];
             double RvSat = pvtg.saturatedOilVaporizationFactor(pvtRegionIdx, T, p);
 
+            double b;
             if (Rv >= RvSat) {
-                double b = pvtg.saturatedInverseFormationVolumeFactor(pvtRegionIdx, T, p);
-                rho[gpos][cellIdx] = surfaceDensity[pvtRegionIdx][gpos]*b;
+                b = pvtg.saturatedInverseFormationVolumeFactor(pvtRegionIdx, T, p);
             }
             else {
-                double b = pvtg.inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
-                rho[gpos][cellIdx] = surfaceDensity[pvtRegionIdx][gpos]*b;
-
-                if (pu.phase_used[BlackoilPhases::Liquid]) {
-                    int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                    rho[gpos][cellIdx] += surfaceDensity[pvtRegionIdx][opos]*Rv*b;
-                }
+                b = pvtg.inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+            }
+            rho[gpos][cellIdx] = surfaceDensity[pvtRegionIdx][gpos]*b;
+            if (pu.phase_used[BlackoilPhases::Liquid]) {
+                int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                rho[gpos][cellIdx] += surfaceDensity[pvtRegionIdx][opos]*Rv*b;
             }
         }
     }
@@ -270,7 +270,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
         // update the maximum pressure potential difference between the two
         // regions
-        const auto barrierId = std::make_pair(eq1, eq2);
+        const auto barrierId = std::make_pair(std::min(eq1, eq2), std::max(eq1, eq2));
         if (maxDp.count(barrierId) == 0) {
             maxDp[barrierId] = 0.0;
         }
@@ -278,7 +278,6 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
         for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const double z1 = UgGridHelpers::cellCenterDepth(grid, c1);
             const double z2 = UgGridHelpers::cellCenterDepth(grid, c2);
-            const double zAvg = (z1 + z2)/2; // average depth
 
             const double rhoAvg = (rho[phaseIdx][c1] + rho[phaseIdx][c2])/2;
 
@@ -289,8 +288,8 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
             const double sResid2 = minSat[numPhases*c2 + phaseIdx];
 
             // compute gravity corrected pressure potentials at the average depth
-            const double p1 = phasePressure[phaseIdx][c1] + rhoAvg*gravity*(zAvg - z1);
-            const double p2 = phasePressure[phaseIdx][c2] + rhoAvg*gravity*(zAvg - z2);
+            const double p1 = phasePressure[phaseIdx][c1];
+            const double p2 = phasePressure[phaseIdx][c2] + rhoAvg*gravity*(z1 - z2);
 
             if ((p1 > p2 && s1 > sResid1) || (p2 > p1 && s2 > sResid2))
                 maxDp[barrierId] = std::max(maxDp[barrierId], std::abs(p1 - p2));
@@ -356,8 +355,11 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                         // set the threshold pressure for faces of PVT regions where the third item
                         // has been defaulted to the maximum pressure potential difference between
                         // these regions
-                        const auto barrierId = std::make_pair(eq1, eq2);
-                        thpres_vals[face] = maxDp.at(barrierId);
+                        const auto barrierId = std::make_pair(std::min(eq1, eq2), std::max(eq1, eq2));
+                        if (maxDp.count(barrierId) > 0)
+                            thpres_vals[face] = maxDp.at(barrierId);
+                        else
+                            thpres_vals[face] = 0.0;
                     }
                 }
 
