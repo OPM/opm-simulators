@@ -479,7 +479,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                         "1OVERBW",
                         Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[aqua_idx].b)),
+                        adbToDoubleVector(sd.rq[aqua_idx].b),
                         true});
             }
             if (liquid_active && rstKeywords["BO"]  > 0) {
@@ -487,7 +487,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                         "1OVERBO",
                         Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[liquid_idx].b)),
+                        adbToDoubleVector(sd.rq[liquid_idx].b),
                         true});
             }
             if (vapour_active && rstKeywords["BG"] > 0) {
@@ -495,7 +495,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                         "1OVERBG",
                         Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
-                        std::move(adbToDoubleVector(sd.rq[vapour_idx].b)),
+                        adbToDoubleVector(sd.rq[vapour_idx].b),
                         true});
             }
 
@@ -508,21 +508,21 @@ namespace Opm
                     output.emplace_back(data::CellData{
                             "WAT_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].rho)),
+                            adbToDoubleVector(sd.rq[aqua_idx].rho),
                             true});
                 }
                 if (liquid_active) {
                     output.emplace_back(data::CellData{
                             "OIL_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[liquid_idx].rho)),
+                            adbToDoubleVector(sd.rq[liquid_idx].rho),
                             true});
                 }
                 if (vapour_active) {
                     output.emplace_back(data::CellData{
                             "GAS_DEN",
                             Opm::UnitSystem::measure::density,
-                            std::move(adbToDoubleVector(sd.rq[vapour_idx].rho)),
+                            adbToDoubleVector(sd.rq[vapour_idx].rho),
                             true});
                 }
             }
@@ -536,21 +536,21 @@ namespace Opm
                     output.emplace_back(data::CellData{
                             "WAT_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].mu)),
+                            adbToDoubleVector(sd.rq[aqua_idx].mu),
                             true});
                 }
                 if (liquid_active) {
                     output.emplace_back(data::CellData{
                             "OIL_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[liquid_idx].mu)),
+                            adbToDoubleVector(sd.rq[liquid_idx].mu),
                             true});
                 }
                 if (vapour_active) {
                     output.emplace_back(data::CellData{
                             "GAS_VISC",
                             Opm::UnitSystem::measure::viscosity,
-                            std::move(adbToDoubleVector(sd.rq[vapour_idx].mu)),
+                            adbToDoubleVector(sd.rq[vapour_idx].mu),
                             true});
                 }
             }
@@ -564,7 +564,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                             "WATKR",
                             Opm::UnitSystem::measure::permeability,
-                            std::move(adbToDoubleVector(sd.rq[aqua_idx].kr)),
+                            adbToDoubleVector(sd.rq[aqua_idx].kr),
                             true});
                 }
                 else {
@@ -581,7 +581,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "OILKR",
                              Opm::UnitSystem::measure::permeability,
-                             std::move(adbToDoubleVector(sd.rq[liquid_idx].kr)),
+                             adbToDoubleVector(sd.rq[liquid_idx].kr),
                              true});
                 }
                 else {
@@ -598,7 +598,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "GASKR",
                              Opm::UnitSystem::measure::permeability,
-                             std::move(adbToDoubleVector(sd.rq[vapour_idx].kr)),
+                             adbToDoubleVector(sd.rq[vapour_idx].kr),
                              true});
                 }
                 else {
@@ -618,7 +618,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                         "RSSAT",
                         Opm::UnitSystem::measure::gas_oil_ratio,
-                        std::move(adbToDoubleVector(sd.rsSat)),
+                        adbToDoubleVector(sd.rsSat),
                         true});
             }
             if (vapour_active && liquid_active && rstKeywords["RVSAT"] > 0) {
@@ -626,7 +626,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                         "RVSAT",
                         Opm::UnitSystem::measure::oil_gas_ratio,
-                        std::move(adbToDoubleVector(sd.rvSat)),
+                        adbToDoubleVector(sd.rvSat),
                         true});
             }
 
@@ -698,7 +698,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                          "WIP",
                          Opm::UnitSystem::measure::volume,
-                         std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_AQUA])),
+                         adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_AQUA]),
                          false});
             }
             if (liquid_active) {
@@ -707,7 +707,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "OIPL",
                              Opm::UnitSystem::measure::volume,
-                             std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_LIQUID])),
+                             adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_LIQUID]),
                              false});
                 }
                 //Oil in place (gas phase only)
@@ -715,7 +715,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "OIPG",
                              Opm::UnitSystem::measure::volume,
-                             std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL])),
+                             adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL]),
                              false});
                 }
                 // Oil in place (in liquid and gas phases)
@@ -725,7 +725,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "OIP",
                              Opm::UnitSystem::measure::volume,
-                             std::move(adbVToDoubleVector(oip)),
+                             adbVToDoubleVector(oip),
                              false});
                 }
             }
@@ -735,7 +735,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "GIPG",
                              Opm::UnitSystem::measure::volume,
-                             std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPOUR])),
+                             adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPOUR]),
                              false});
                 }
                 // Gas in place (liquid phase only)
@@ -743,7 +743,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "GIPL",
                              Opm::UnitSystem::measure::volume,
-                             std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS])),
+                             adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS]),
                              false});
                 }
                 // Gas in place (in both liquid and gas phases)
@@ -753,7 +753,7 @@ namespace Opm
                     output.emplace_back(data::CellData{
                              "GIP",
                              Opm::UnitSystem::measure::volume,
-                             std::move(adbVToDoubleVector(gip)),
+                             adbVToDoubleVector(gip),
                              false});
                 }
             }
@@ -762,7 +762,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                          "RPV",
                          Opm::UnitSystem::measure::volume,
-                         std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_PV])),
+                         adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_PV]),
                          false});
             }
             // Pressure averaged value (hydrocarbon pore volume weighted)
@@ -770,7 +770,7 @@ namespace Opm
                 output.emplace_back(data::CellData{
                          "PRH",
                          Opm::UnitSystem::measure::pressure,
-                         std::move(adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_WEIGHTED_PRESSURE])),
+                         adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_WEIGHTED_PRESSURE]),
                          false});
             }
         }
