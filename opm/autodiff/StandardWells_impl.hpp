@@ -71,10 +71,11 @@ namespace Opm
 
 
 
-StandardWells::StandardWells(const Wells* wells_arg)
+    StandardWells::StandardWells(const Wells* wells_arg, const WellCollection* well_collection)
       : wells_active_(wells_arg!=nullptr)
       , wells_(wells_arg)
       , wops_(wells_arg)
+      , well_collection_(well_collection)
       , fluid_(nullptr)
       , active_(nullptr)
       , phase_condition_(nullptr)
@@ -740,6 +741,15 @@ StandardWells::StandardWells(const Wells* wells_arg)
                     break;
                 }
             }
+            // TODO: when constraints got broken. For a well under group control, we need to change it to individual control
+            // We need to check the controls in the same group. If there is still some wells under group control,
+            // we need to update their group share targets. If no well is under group control, it means the group target
+            // will not be able to meet. We need to give a message there.
+            // It is better to wait until after the limit check loop. We need to record whose control status changed
+            // from group control to individual control here.
+            // Not sure exactly how the well go back from the individual control to group control.
+            // A guess is that the target is not updated. It works as a limit. When it got broken again, it switch back to
+            // group control. Then we also need to do something there.
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
                 // We disregard terminal_ouput here as with it only messages

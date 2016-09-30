@@ -38,6 +38,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
+#include <opm/core/wells/WellCollection.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
@@ -70,7 +71,7 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            explicit StandardWells(const Wells* wells_arg);
+            StandardWells(const Wells* wells_arg, const WellCollection* well_collection);
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -194,6 +195,8 @@ namespace Opm {
             bool wells_active_;
             const Wells*   wells_;
             const WellOps  wops_;
+            // TODO: It will probably need to be updated during running time.
+            const WellCollection* well_collection_;
 
             const BlackoilPropsAdInterface* fluid_;
             const std::vector<bool>*  active_;
