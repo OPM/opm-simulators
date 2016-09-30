@@ -24,6 +24,8 @@
 #define OPM_NONLINEARSOLVER_IMPL_HEADER_INCLUDED
 
 #include <opm/autodiff/NonlinearSolver.hpp>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 
 namespace Opm
 {
@@ -98,15 +100,6 @@ namespace Opm
     {
         return wellIterationsLast_;
     }
-
-    template <class PhysicalModel>
-    std::vector<V> 
-    NonlinearSolver<PhysicalModel>::computeFluidInPlace(const ReservoirState& x,
-                                                        const std::vector<int>& fipnum) const
-    {
-        return model_->computeFluidInPlace(x, fipnum);
-    }
-
 
     template <class PhysicalModel>
     int
@@ -281,6 +274,38 @@ namespace Opm
                     return;
                 }
                 dx = dx*omega + (1.-omega)*tempDxOld;
+                return;
+            default:
+                OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
+        }
+
+        return;
+    }
+
+    template <class PhysicalModel>
+    void
+    NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
+    {
+        // The dxOld is updated with dx.
+        // If omega is equal to 1., no relaxtion will be appiled.
+
+        BVector tempDxOld = dxOld;
+        dxOld = dx;
+
+        switch (relaxType()) {
+            case DAMPEN:
+                if (omega == 1.) {
+                    return;
+                }
+                dx *= omega;
+                return;
+            case SOR:
+                if (omega == 1.) {
+                    return;
+                }
+                dx *= omega;
+                tempDxOld *= (1.-omega);
+                dx += tempDxOld;
                 return;
             default:
                 OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");

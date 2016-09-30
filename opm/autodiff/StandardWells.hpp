@@ -38,6 +38,7 @@
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
 
@@ -57,6 +58,7 @@ namespace Opm {
             // ---------      Types      ---------
             using ADB = AutoDiffBlock<double>;
             using Vector = ADB::V;
+            using V = ADB::V;
 
             // copied from BlackoilModelBase
             // should put to somewhere better

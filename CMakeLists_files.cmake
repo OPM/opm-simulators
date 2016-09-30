@@ -36,6 +36,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/ImpesTPFAAD.cpp
   opm/autodiff/moduleVersion.cpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
+  opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.cpp
   opm/autodiff/SimulatorIncompTwophaseAd.cpp
   opm/autodiff/TransportSolverTwophaseAd.cpp
   opm/autodiff/BlackoilPropsAdFromDeck.cpp
@@ -103,6 +104,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/find_zero.cpp
   examples/flow.cpp
   examples/flow_sequential.cpp
+  examples/flow_ebos.cpp
   examples/flow_multisegment.cpp
   examples/flow_solvent.cpp
   examples/sim_2p_incomp.cpp
@@ -164,6 +166,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/DuneMatrix.hpp
   opm/autodiff/ExtractParallelGridInformationToISTL.hpp
   opm/autodiff/FlowMain.hpp
+  opm/autodiff/FlowMainEbos.hpp
   opm/autodiff/FlowMainPolymer.hpp
   opm/autodiff/FlowMainSequential.hpp
   opm/autodiff/FlowMainSolvent.hpp

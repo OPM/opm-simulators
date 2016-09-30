@@ -558,6 +558,28 @@ namespace Opm
         }
 
 
+        /**
+         * Converts the AutoDiffMatrix to an Eigen SparseMatrix.This might be
+         * an expensive operation to perform for e.g., an identity matrix or a
+         * diagonal matrix.
+         */
+        template<class Scalar, int Options, class Index>
+        void assign(const Eigen::SparseMatrix<Scalar, Options, Index>& s)
+        {
+            (*this) = AutoDiffMatrix( s.rows(), s.cols() );
+            type_ = Sparse;
+            sparse_ = s;
+        }
+
+
+        template<class Scalar, int Options, class Index>
+        void assign(const Eigen::SparseMatrix<Scalar, Options, Index>&& s)
+        {
+            (*this) = AutoDiffMatrix( s.rows(), s.cols() );
+            type_ = Sparse;
+            sparse_ = std::move(s);
+        }
+
 
         /**
          * Returns number of rows in the matrix

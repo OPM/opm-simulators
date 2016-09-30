@@ -22,6 +22,7 @@
 #define OPM_SIMULATORFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
 #include <opm/autodiff/SimulatorBase.hpp>
+#include <opm/autodiff/BlackoilModel.hpp>
 #include <opm/autodiff/NonlinearSolver.hpp>
 
 namespace Opm {
