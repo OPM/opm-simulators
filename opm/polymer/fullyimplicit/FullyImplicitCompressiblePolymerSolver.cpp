@@ -33,6 +33,7 @@
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/well_controls.h>
@@ -555,7 +556,7 @@ namespace {
         const std::vector<ADB>& sat   = state.saturation;
 
         const std::vector<PhasePresence> cond = phaseCondition();
-	std::vector<ADB> pressure = computePressures(state);
+        std::vector<ADB> pressure = computePressures(state);
 
         const ADB pv_mult = poroMult(press);
         const V& pv = geo_.poreVolume();
@@ -595,6 +596,18 @@ namespace {
                  values[reg][6] = pres[reg] / values[reg][5];
              }
         }
+
+        // Fluid in place is not implemented in this class.
+        // See BlackoilModelBase::computeFluidInPlace(...) for how it's implemented there
+        // FIXME: This following code has not been tested.
+        if (sd_.fip[0].size() == 0) {
+            OpmLog::warning("NOT_COMPUTING_FIP",
+                    "Computing fluid in place is not implemented for summary files.");
+            for (int i = 0; i < 7; ++i) {
+                sd_.fip[i] = V::Zero(nc);
+            }
+        }
+
 
         return values;
     }
