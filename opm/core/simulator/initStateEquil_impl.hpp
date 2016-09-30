@@ -885,7 +885,7 @@ namespace Opm
      */
     template<class Grid>
     void initStateEquil(const Grid& grid,
-                        BlackoilPropertiesInterface& props,
+                        BlackoilPropertiesFromDeck& props,
                         const Opm::DeckConstPtr deck,
                         const Opm::EclipseStateConstPtr eclipseState,
                         const double gravity,
@@ -901,6 +901,36 @@ namespace Opm
         state.saturation() = Details::convertSats(isc.saturation());
         state.gasoilratio() = isc.rs();
         state.rv() = isc.rv();
+
+        // set the Rs and Rv factors to the saturated ones if both the gas and the oil
+        // saturations are zero. in most cases this does not matter, but when doing the
+        // gravity correction (in particular, when determining the upstream direction) it
+        // does.
+        if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
+            const int posOil = pu.phase_pos[BlackoilPhases::Liquid];
+            const int posGas = pu.phase_pos[BlackoilPhases::Vapour];
+            for (unsigned cellIdx = 0; cellIdx < state.pressure().size(); ++ cellIdx) {
+                const double so = isc.saturation()[posOil][cellIdx];
+                const double sg = isc.saturation()[posGas][cellIdx];
+
+                if (so <= 0.0 && sg <= 0.0) {
+                    int pvtRegionIdx = props.cellPvtRegionIndex()[cellIdx];
+                    const double po = state.pressure()[cellIdx];
+                    const double pg = po; // hack: include capillary pressure!
+                    const double T = 273.15 + 25.0; // does not matter for isothermal simulations!
+                    const double rsSat = props.oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx,
+                                                                                      T,
+                                                                                      pg);
+                    const double rvSat = props.gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx,
+                                                                                       T,
+                                                                                       po);
+
+                    state.gasoilratio()[cellIdx] = rsSat;
+                    state.rv()[cellIdx] = rvSat;
+                }
+            }
+        }
+
         initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
     }
 
