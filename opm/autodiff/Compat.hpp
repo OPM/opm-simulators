@@ -21,6 +21,9 @@
 #ifndef OPM_SIMULATORS_COMPAT_HPP
 #define OPM_SIMULATORS_COMPAT_HPP
 
+#include <algorithm>
+#include <cassert>
+
 #include <opm/common/data/SimulationDataContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
@@ -167,14 +170,59 @@ inline void solutionToSim( const data::Solution& sol,
 
 
 
+inline void wellsToState( const data::Wells& wells,
+                          PhaseUsage phases,
+                          WellState& state ) {
 
+    using rt = data::Rates::opt;
 
-inline void wellsToState( const data::Wells& wells, WellState& state ) {
-    state.bhp() = wells.bhp;
-    state.temperature() = wells.temperature;
-    state.wellRates() = wells.well_rate;
-    state.perfPress() = wells.perf_pressure;
-    state.perfRates() = wells.perf_rate;
+    const auto np = phases.num_phases;
+
+    std::vector< rt > phs( np );
+    if( phases.phase_used[BlackoilPhases::Aqua] ) {
+        phs.at( phases.phase_pos[BlackoilPhases::Aqua] ) = rt::wat;
+    }
+
+    if( phases.phase_used[BlackoilPhases::Liquid] ) {
+        phs.at( phases.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
+    }
+
+    if( phases.phase_used[BlackoilPhases::Vapour] ) {
+        phs.at( phases.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
+    }
+
+    for( const auto& wm : state.wellMap() ) {
+        const auto well_index = wm.second[ 0 ];
+        const auto& well = wells.at( wm.first );
+
+        state.bhp()[ well_index ] = well.bhp;
+        state.temperature()[ well_index ] = well.temperature;
+
+        const auto wellrate_index = well_index * np;
+        for( size_t i = 0; i < phs.size(); ++i ) {
+            assert( well.rates.has( phs[ i ] ) );
+            state.wellRates()[ wellrate_index + i ] = well.rates.get( phs[ i ] );
+        }
+
+        using PerfPairTypeAlias = decltype( *well.completions.begin() );
+        const auto perforation_pressure = []( const PerfPairTypeAlias& p ) {
+            return p.second.pressure;
+        };
+
+        const auto perforation_reservoir_rate = []( const PerfPairTypeAlias& p ) {
+            return p.second.reservoir_rate;
+        };
+
+        std::transform( well.completions.begin(),
+                        well.completions.end(),
+                        state.perfPress().begin() + wm.second[ 1 ],
+                        perforation_pressure );
+
+        std::transform( well.completions.begin(),
+                        well.completions.end(),
+                        state.perfRates().begin() + wm.second[ 1 ],
+                        perforation_reservoir_rate );
+    }
 }
 
 }
