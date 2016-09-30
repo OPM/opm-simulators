@@ -92,6 +92,8 @@ namespace Opm
         /// Gets the parent of the group, NULL if no parent.
         const WellsGroupInterface* getParent() const;
 
+        WellsGroupInterface* getParent();
+
         /// Calculates the number of leaf nodes in the given group.
         /// A leaf node is defined to have one leaf node in its group.
         virtual int numberOfLeafNodes() = 0;
@@ -202,6 +204,18 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase) = 0;
 
+        /// Return whether the well is running under group control target
+        /// or under their own limit.
+        /// True  under their own limit.
+        /// False running under group control target
+        bool individualControl() const;
+
+        /// Update the status for individual contrl
+        void setIndividualControl(const bool);
+
+        virtual bool shouldUpdateWellTargets() const;
+
+        virtual bool setShouldUpdateWellTargets(const bool);
 
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
@@ -221,6 +235,13 @@ namespace Opm
         ProductionSpecification production_specification_;
         InjectionSpecification injection_specification_;
         PhaseUsage phase_usage_;
+        // when some well (mabye group also later), change status from group control
+        // to individual control, or the other way, the targets for the wells in the group need to be redistributed.
+        bool should_update_well_targets_;
+        // Whether well is running under the group control target.
+        // Current only consider one level of control.
+        // So not putting it in the WellsGroupInterface yet.
+        bool individual_control_;
     };
 
 
@@ -302,6 +323,9 @@ namespace Opm
         ///                         with all phase rates of a single well adjacent in the array.
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
+
+        template <class WellState>
+        void updateWellTargets(const WellState& well_state);
 
     private:
         std::vector<std::shared_ptr<WellsGroupInterface> > children_;
@@ -394,6 +418,7 @@ namespace Opm
         ///                         with all phase rates of a single well adjacent in the array.
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
+        int groupControlIndex() const;
 
     private:
         Wells* wells_;
@@ -416,5 +441,7 @@ namespace Opm
     std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group& group, size_t timeStep,
                                                                const PhaseUsage& phase_usage );
 }
+
+#include "WellsGroup_impl.hpp"
 #endif	/* OPM_WELLSGROUP_HPP */
 

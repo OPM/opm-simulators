@@ -110,6 +110,20 @@ namespace Opm
         void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                               const std::vector<double>& well_surfacerates_phase);
 
+        /// Checking whehter need to update the targets of the wells / or the groups later
+        /// True  need to update well targets within this iteration, no switching control within this iteration.
+        /// False no need to update well targets within this iteration, continuing as usual.
+        /// TODO: currently return true whenever a wellNode needs to be updated. Later some more sophiscated
+        /// strategy might be required.
+        bool needUpdateWellTargets() const;
+
+        const size_t numNode() const;
+
+        WellNode* getNode(size_t i) const;
+
+        template <class WellState>
+        void updateWellTargets(const WellState& well_state);
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;
@@ -121,5 +135,7 @@ namespace Opm
     };
 
 } // namespace Opm
+
+#include "WellCollection_impl.hpp"
 #endif	/* OPM_WELLCOLLECTION_HPP */
 

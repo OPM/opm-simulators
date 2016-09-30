@@ -189,4 +189,30 @@ namespace Opm
             roots_[i]->applyExplicitReinjectionControls(well_reservoirrates_phase, well_surfacerates_phase);
         }
     }
+
+
+    //TODO: later, it should be extended to update group targets
+    bool WellCollection::needUpdateWellTargets() const
+    {
+        for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
+            if (leaf_nodes_[i]->shouldUpdateWellTargets() && !leaf_nodes_[i]->individualControl()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    const size_t WellCollection::numNode() const
+    {
+        return leaf_nodes_.size();
+    }
+
+
+    WellNode* WellCollection::getNode(size_t i) const
+    {
+        assert( i< numNode());
+        return leaf_nodes_[i];
+    }
+
 }

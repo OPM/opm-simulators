@@ -68,7 +68,9 @@ namespace Opm
           name_(myname),
           production_specification_(prod_spec),
           injection_specification_(inje_spec),
-          phase_usage_(phase_usage)
+          phase_usage_(phase_usage),
+          individual_control_(true), // always begin with individual control
+          should_update_well_targets_(false)
     {
     }
 
@@ -80,6 +82,12 @@ namespace Opm
     {
         return parent_;
     }
+
+    WellsGroupInterface* WellsGroupInterface::getParent()
+    {
+        return parent_;
+    }
+
     const std::string& WellsGroupInterface::name() const
     {
         return name_;
@@ -229,7 +237,14 @@ namespace Opm
     }
 
 
+    bool WellsGroupInterface::shouldUpdateWellTargets() const {
+        return should_update_well_targets_;
+    }
 
+
+    bool WellsGroupInterface::setShouldUpdateWellTargets(const bool should_update_well_targets) {
+        should_update_well_targets_ = should_update_well_targets;
+    }
 
 
     // ==============   WellsGroup members =============
@@ -638,6 +653,16 @@ namespace Opm
         }
     }
 
+
+    bool WellsGroupInterface::individualControl() const {
+        return individual_control_;
+    }
+
+    void WellsGroupInterface::setIndividualControl(const bool individual_control) {
+        individual_control_ = individual_control;
+    }
+
+
     // ==============    WellNode members   ============
 
 
@@ -851,6 +876,8 @@ namespace Opm
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
         set_current_control(self_index_, group_control_index_, wells_);
+        // TODO: it might always be the case
+        setIndividualControl(false);
     }
 
 
@@ -1000,6 +1027,14 @@ namespace Opm
             return injSpec().guide_rate_;
         }
         return 0.0;
+    }
+
+
+
+    /// Returning the group control index
+    int WellNode::groupControlIndex() const
+    {
+        return group_control_index_;
     }
 
 
