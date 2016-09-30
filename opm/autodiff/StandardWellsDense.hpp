@@ -1007,7 +1007,7 @@ namespace Opm {
                         {
                             const int sign1 = dwells[w][flowPhaseToEbosCompIdx(0)] > 0 ? 1: -1;
                             const double dx1_limited = sign1 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(0)]),std::abs(xvar_well_old[w])*dBHPLimit);
-                            well_state.wellSolutions()[w] = xvar_well_old[w] - dx1_limited;
+                            well_state.wellSolutions()[w] = std::max(xvar_well_old[w] - dx1_limited,1e5);
                             well_state.bhp()[w] = well_state.wellSolutions()[w];
 
                             if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
