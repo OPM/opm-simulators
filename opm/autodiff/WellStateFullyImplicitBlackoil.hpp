@@ -276,8 +276,8 @@ namespace Opm
         std::vector<double>& wellSolutions() { return well_solutions_; }
         const std::vector<double>& wellSolutions() const { return well_solutions_; }
 
-        data::Wells report() const override {
-            data::Wells res = WellState::report();
+        data::Wells report(const PhaseUsage& pu) const override {
+            data::Wells res = WellState::report(pu);
 
             const int nw = this->numWells();
             // If there are now wells numPhases throws a floating point

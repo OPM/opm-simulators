@@ -226,6 +226,7 @@ namespace Opm {
 
                 const double volume = 0.002831684659200; // 0.1 cu ft;
                 for (int w = 0; w < nw; ++w) {
+                    double total_flux = 0.0;
 
                     for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
 
@@ -243,6 +244,7 @@ namespace Opm {
 
                             // subtract sum of phase fluxes in the well equations.
                             resWell_[w][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value;
+                            total_flux += cq_s[p1].value;
 
                             // assemble the jacobians
                             for (int p2 = 0; p2 < np; ++p2) {
@@ -260,15 +262,23 @@ namespace Opm {
                         // Store the perforation pressure for later usage.
                         well_state.perfPress()[perf] = well_state.bhp()[w] + wellPerforationPressureDiffs()[perf];
                     }
-
-                    // add vol * dF/dt + Q to the well equations;
-                    for (int p1 = 0; p1 < np; ++p1) {
-                        EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
-                        resWell_loc += getQs(w, p1);
-                        for (int p2 = 0; p2 < np; ++p2) {
-                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivatives[p2+3];
+                    if (std::abs(total_flux) == 0) { // add a trivial equation for the case when there is no flow
+                        for (int p1 = 0; p1 < np; ++p1) {
+                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p1)] += 1;
+                            resWell_[w][flowPhaseToEbosCompIdx(p1)] += 0;
                         }
-                        resWell_[w][flowPhaseToEbosCompIdx(p1)] += resWell_loc.value;
+                    }
+                    else {
+
+                        // add vol * dF/dt + Q to the well equations;
+                        for (int p1 = 0; p1 < np; ++p1) {
+                            EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
+                            resWell_loc += getQs(w, p1);
+                            for (int p2 = 0; p2 < np; ++p2) {
+                                invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivatives[p2+3];
+                            }
+                            resWell_[w][flowPhaseToEbosCompIdx(p1)] += resWell_loc.value;
+                        }
                     }
                 }
 
@@ -997,7 +1007,7 @@ namespace Opm {
                         {
                             const int sign1 = dwells[w][flowPhaseToEbosCompIdx(0)] > 0 ? 1: -1;
                             const double dx1_limited = sign1 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(0)]),std::abs(xvar_well_old[w])*dBHPLimit);
-                            well_state.wellSolutions()[w] = xvar_well_old[w] - dx1_limited;
+                            well_state.wellSolutions()[w] = std::max(xvar_well_old[w] - dx1_limited,1e5);
                             well_state.bhp()[w] = well_state.wellSolutions()[w];
 
                             if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
