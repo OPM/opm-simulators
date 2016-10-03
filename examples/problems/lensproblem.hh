@@ -248,6 +248,12 @@ public:
             lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
         }
 
+        // residual saturations
+        lensMaterialParams_.setResidualSaturation(wettingPhaseIdx, 0.18);
+        lensMaterialParams_.setResidualSaturation(nonWettingPhaseIdx, 0.0);
+        outerMaterialParams_.setResidualSaturation(wettingPhaseIdx, 0.05);
+        outerMaterialParams_.setResidualSaturation(nonWettingPhaseIdx, 0.0);
+
         // parameters for the Van Genuchten law: alpha and n
         lensMaterialParams_.setVgAlpha(0.00045);
         lensMaterialParams_.setVgN(7.3);
