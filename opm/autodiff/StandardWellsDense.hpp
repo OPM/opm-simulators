@@ -226,14 +226,13 @@ namespace Opm {
 
                 const double volume = 0.002831684659200; // 0.1 cu ft;
                 for (int w = 0; w < nw; ++w) {
-                    double total_flux = 0.0;
-
+                    bool allow_cf = allow_cross_flow(w, ebosSimulator);
                     for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
 
                         const int cell_idx = wells().well_cells[perf];
                         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                         std::vector<EvalWell> cq_s(np,0.0);
-                        computeWellFlux(w, wells().WI[perf], intQuants, wellPerforationPressureDiffs()[perf], cq_s);
+                        computeWellFlux(w, wells().WI[perf], intQuants, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
                         for (int p1 = 0; p1 < np; ++p1) {
 
@@ -244,7 +243,6 @@ namespace Opm {
 
                             // subtract sum of phase fluxes in the well equations.
                             resWell_[w][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value;
-                            total_flux += cq_s[p1].value;
 
                             // assemble the jacobians
                             for (int p2 = 0; p2 < np; ++p2) {
@@ -262,29 +260,49 @@ namespace Opm {
                         // Store the perforation pressure for later usage.
                         well_state.perfPress()[perf] = well_state.bhp()[w] + wellPerforationPressureDiffs()[perf];
                     }
-                    if (std::abs(total_flux) == 0) { // add a trivial equation for the case when there is no flow
-                        for (int p1 = 0; p1 < np; ++p1) {
-                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p1)] += 1;
-                            resWell_[w][flowPhaseToEbosCompIdx(p1)] += 0;
-                        }
-                    }
-                    else {
 
-                        // add vol * dF/dt + Q to the well equations;
-                        for (int p1 = 0; p1 < np; ++p1) {
-                            EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
-                            resWell_loc += getQs(w, p1);
-                            for (int p2 = 0; p2 < np; ++p2) {
-                                invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivatives[p2+3];
-                            }
-                            resWell_[w][flowPhaseToEbosCompIdx(p1)] += resWell_loc.value;
+                    // add vol * dF/dt + Q to the well equations;
+                    for (int p1 = 0; p1 < np; ++p1) {
+                        EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
+                        resWell_loc += getQs(w, p1);
+                        for (int p2 = 0; p2 < np; ++p2) {
+                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivatives[p2+3];
                         }
+                        resWell_[w][flowPhaseToEbosCompIdx(p1)] += resWell_loc.value;
                     }
                 }
 
                 // do the local inversion of D.
                 localInvert( invDuneD_ );
 
+            }
+
+            template <typename Simulator>
+            bool allow_cross_flow(const int w, Simulator& ebosSimulator) const {
+
+                if (wells().allow_cf[w]) {
+                    return true;
+                }
+                // check for special case where all perforations have cross flow
+                // then the wells must allow for cross flow
+                for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
+                    const int cell_idx = wells().well_cells[perf];
+                    const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                    const auto& fs = intQuants.fluidState();
+                    EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+                    EvalWell bhp = getBhp(w);
+                    // Pressure drawdown (also used to determine direction of flow)
+                    EvalWell well_pressure = bhp + wellPerforationPressureDiffs()[perf];
+                    EvalWell drawdown = pressure - well_pressure;
+
+                    if ( drawdown.value < 0 && wells().type[w] == INJECTOR)  {
+                        return false;
+                    }
+                    if ( drawdown.value > 0 && wells().type[w] == PRODUCER)  {
+                        return false;
+                    }
+                }
+                return true;
             }
 
             void localInvert(Mat& istlA) const {
@@ -484,7 +502,7 @@ namespace Opm {
 
             template<typename intensiveQuants>
             void
-            computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const double& cdp, std::vector<EvalWell>& cq_s)  const
+            computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
             {
                 const Opm::PhaseUsage& pu = fluid_->phaseUsage();
                 EvalWell bhp = getBhp(w);
@@ -514,7 +532,7 @@ namespace Opm {
                 if ( drawdown.value > 0 )  {
 
                     //Do nothing if crossflow is not allowed
-                    if (!wells().allow_cf[w] && wells().type[w] == INJECTOR)
+                    if (!allow_cf && wells().type[w] == INJECTOR)
                         return;
                     // compute phase volumetric rates at standard conditions
                     std::vector<EvalWell> cq_ps(np, 0.0);
@@ -539,7 +557,7 @@ namespace Opm {
 
                 } else {
                     //Do nothing if crossflow is not allowed
-                    if (!wells().allow_cf[w] && wells().type[w] == PRODUCER)
+                    if (!allow_cf && wells().type[w] == PRODUCER)
                         return;
 
                     // Using total mobilities
