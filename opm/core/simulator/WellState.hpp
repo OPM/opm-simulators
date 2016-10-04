@@ -22,7 +22,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
-#include <opm/output/Wells.hpp>
+#include <opm/output/data/Wells.hpp>
 
 #include <array>
 #include <map>

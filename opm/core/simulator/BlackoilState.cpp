@@ -2,7 +2,7 @@
 #include <opm/common/util/numeric/cmp.hpp>
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/output/Wells.hpp>
+#include <opm/output/data/Wells.hpp>
 
 
 using namespace Opm;
