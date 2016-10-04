@@ -26,8 +26,9 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/autodiff/BlackoilSolventState.hpp>
-#include <opm/output/Cells.hpp>
-#include <opm/output/Wells.hpp>
+#include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Solution.hpp>
+#include <opm/output/data/Wells.hpp>
 
 namespace Opm {
 
@@ -69,13 +70,11 @@ inline std::vector< double >& stripe( const std::vector< double >& v,
 
 
 
-inline data::Solution simToSolution( const SimulationDataContainer& reservoir,
-                             PhaseUsage phases ) {
-    using ds = data::Solution::key;
-
+    inline data::Solution simToSolution( const SimulationDataContainer& reservoir,
+                                         PhaseUsage phases ) {
     data::Solution sol;
-    sol.insert( ds::PRESSURE, reservoir.pressure() );
-    sol.insert( ds::TEMP, reservoir.temperature() );
+    sol.insert( "PRESSURE", UnitSystem::measure::pressure, reservoir.pressure() , data::TargetType::RESTART_SOLUTION);
+    sol.insert( "TEMP"    , UnitSystem::measure::temperature, reservoir.temperature() , data::TargetType::RESTART_SOLUTION );
 
     const auto ph = reservoir.numPhases();
     const auto& sat = reservoir.saturation();
@@ -84,23 +83,23 @@ inline data::Solution simToSolution( const SimulationDataContainer& reservoir,
     const auto vapour = BlackoilPhases::Vapour;
 
     if( phases.phase_used[ aqua ] ) {
-        sol.insert( ds::SWAT, destripe( sat, ph, phases.phase_pos[ aqua ] ) );
+        sol.insert( "SWAT", UnitSystem::measure::identity, destripe( sat, ph, phases.phase_pos[ aqua ] ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if( phases.phase_used[ vapour ] ) {
-        sol.insert( ds::SGAS, destripe( sat, ph, phases.phase_pos[ vapour ] ) );
+        sol.insert( "SGAS", UnitSystem::measure::identity, destripe( sat, ph, phases.phase_pos[ vapour ] ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if( reservoir.hasCellData( BlackoilState::GASOILRATIO ) ) {
-        sol.insert( ds::RS, reservoir.getCellData( BlackoilState::GASOILRATIO ) );
+        sol.insert( "RS", UnitSystem::measure::identity, reservoir.getCellData( BlackoilState::GASOILRATIO ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if( reservoir.hasCellData( BlackoilState::RV ) ) {
-        sol.insert( ds::RV, reservoir.getCellData( BlackoilState::RV ) );
+        sol.insert( "RV", UnitSystem::measure::identity, reservoir.getCellData( BlackoilState::RV ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if (reservoir.hasCellData( BlackoilSolventState::SSOL)) {
-        sol.insert( ds::SSOL, reservoir.getCellData( BlackoilSolventState::SSOL ) );
+        sol.insert( "SSOL", UnitSystem::measure::identity, reservoir.getCellData( BlackoilSolventState::SSOL ) , data::TargetType::RESTART_SOLUTION );
     }
 
     sol.sdc = &reservoir;
@@ -118,41 +117,40 @@ inline data::Solution simToSolution( const SimulationDataContainer& reservoir,
 inline void solutionToSim( const data::Solution& sol,
                           PhaseUsage phases,
                           SimulationDataContainer& state ) {
-    using ds = data::Solution::key;
 
     const auto stride = phases.num_phases;
-    if( sol.has( ds::SWAT ) ) {
-        stripe( sol[ ds::SWAT ],
+    if( sol.has( "SWAT" ) ) {
+        stripe( sol.data( "SWAT" ),
                 stride,
                 phases.phase_pos[ BlackoilPhases::Aqua ],
                 state.saturation() );
     }
 
-    if( sol.has( ds::SGAS ) ) {
-        stripe( sol[ ds::SGAS ],
+    if( sol.has( "SGAS" ) ) {
+        stripe( sol.data( "SGAS" ),
                 stride,
                 phases.phase_pos[ BlackoilPhases::Vapour ],
                 state.saturation() );
     }
 
-    if( sol.has( ds::PRESSURE ) ) {
-        state.pressure() = sol[ ds::PRESSURE ];
+    if( sol.has( "PRESSURE" ) ) {
+        state.pressure() = sol.data( "PRESSURE" );
     }
 
-    if( sol.has( ds::TEMP ) ) {
-        state.temperature() = sol[ ds::TEMP ];
+    if( sol.has( "TEMP" ) ) {
+        state.temperature() = sol.data( "TEMP" );
     }
 
-    if( sol.has( ds::RS ) ) {
-        state.getCellData( "GASOILRATIO" ) = sol[ ds::RS ];
+    if( sol.has( "RS" ) ) {
+        state.getCellData( "GASOILRATIO" ) = sol.data( "RS" );
     }
 
-    if( sol.has( ds::RV ) ) {
-        state.getCellData( "RV" ) = sol[ ds::RV ];
+    if( sol.has( "RV" ) ) {
+        state.getCellData( "RV" ) = sol.data( "RV" );
     }
 
-    if (sol.has( ds::SSOL ) ) {
-        state.getCellData("SSOL") = sol [ ds::SSOL];
+    if (sol.has( "SSOL" ) ) {
+        state.getCellData("SSOL") = sol.data("SSOL");
     }
 
 }
