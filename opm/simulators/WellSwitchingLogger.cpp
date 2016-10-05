@@ -53,18 +53,16 @@ int WellSwitchingLogger::calculateMessageSize(std::vector<int>& well_name_length
     // const char* length include delimiter for each switch
     MPI_Pack_size(switchMap_.size(), MPI_INT, MPI_COMM_WORLD, &increment);
     message_size += increment;
-    // for each well the name + two controls in one write
-    auto length_iter = well_name_lengths.begin();
 
-    for(const auto& switchEntry : switchMap_)
+    // for each well the name + two controls in one write
+    for(const auto& length : well_name_lengths)
     {
         // well name
-        MPI_Pack_size(*length_iter, MPI_CHAR, MPI_COMM_WORLD, &increment);
+        MPI_Pack_size(length, MPI_CHAR, MPI_COMM_WORLD, &increment);
         message_size += increment;
         // controls
         MPI_Pack_size(2, MPI_CHAR, MPI_COMM_WORLD, &increment);
         message_size += increment;
-        ++length_iter;
     }
     return message_size;
 }
