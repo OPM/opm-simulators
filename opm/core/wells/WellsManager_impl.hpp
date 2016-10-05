@@ -407,9 +407,9 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
 
     {
         GroupTreeNodeConstPtr fieldNode =
-            schedule->getGroupTree(timeStep)->getNode("FIELD");
+            schedule->getGroupTree(timeStep).getNode("FIELD");
 
-        const auto* fieldGroup = schedule->getGroup(fieldNode->name());
+        const auto& fieldGroup = schedule->getGroup(fieldNode->name());
 
         well_collection_.addField(fieldGroup, timeStep, pu);
         addChildGroups(fieldNode, schedule, timeStep, pu);

@@ -88,24 +88,24 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     EclipseStateConstPtr eclipseState(new EclipseState(*deck , parseContext));
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-    std::vector<GroupTreeNodeConstPtr> nodes = eclipseState->getSchedule()->getGroupTree(2)->getNodes();
+    auto nodes = eclipseState->getSchedule()->getGroupTree(2).getNodes();
 
     for (size_t i=0; i<nodes.size(); i++) {
-        const auto* group = eclipseState->getSchedule()->getGroup(nodes[i]->name());
+        const auto& group = eclipseState->getSchedule()->getGroup(nodes[i]->name());
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, 2, pu);
-        BOOST_CHECK_EQUAL(group->name(), wellsGroup->name());
-        if (group->isInjectionGroup(2)) {
-            BOOST_CHECK_EQUAL(group->getSurfaceMaxRate(2), wellsGroup->injSpec().surface_flow_max_rate_);
-            BOOST_CHECK_EQUAL(group->getReservoirMaxRate(2), wellsGroup->injSpec().reservoir_flow_max_rate_);
-            BOOST_CHECK_EQUAL(group->getTargetReinjectFraction(2), wellsGroup->injSpec().reinjection_fraction_target_);
-            BOOST_CHECK_EQUAL(group->getTargetVoidReplacementFraction(2), wellsGroup->injSpec().voidage_replacment_fraction_);
+        BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
+        if (group.isInjectionGroup(2)) {
+            BOOST_CHECK_EQUAL(group.getSurfaceMaxRate(2), wellsGroup->injSpec().surface_flow_max_rate_);
+            BOOST_CHECK_EQUAL(group.getReservoirMaxRate(2), wellsGroup->injSpec().reservoir_flow_max_rate_);
+            BOOST_CHECK_EQUAL(group.getTargetReinjectFraction(2), wellsGroup->injSpec().reinjection_fraction_target_);
+            BOOST_CHECK_EQUAL(group.getTargetVoidReplacementFraction(2), wellsGroup->injSpec().voidage_replacment_fraction_);
         }
-        if (group->isProductionGroup(2)) {
-            BOOST_CHECK_EQUAL(group->getReservoirVolumeTargetRate(2), wellsGroup->prodSpec().reservoir_flow_max_rate_);
-            BOOST_CHECK_EQUAL(group->getGasTargetRate(2), wellsGroup->prodSpec().gas_max_rate_);
-            BOOST_CHECK_EQUAL(group->getOilTargetRate(2), wellsGroup->prodSpec().oil_max_rate_);
-            BOOST_CHECK_EQUAL(group->getWaterTargetRate(2), wellsGroup->prodSpec().water_max_rate_);
-            BOOST_CHECK_EQUAL(group->getLiquidTargetRate(2), wellsGroup->prodSpec().liquid_max_rate_);
+        if (group.isProductionGroup(2)) {
+            BOOST_CHECK_EQUAL(group.getReservoirVolumeTargetRate(2), wellsGroup->prodSpec().reservoir_flow_max_rate_);
+            BOOST_CHECK_EQUAL(group.getGasTargetRate(2), wellsGroup->prodSpec().gas_max_rate_);
+            BOOST_CHECK_EQUAL(group.getOilTargetRate(2), wellsGroup->prodSpec().oil_max_rate_);
+            BOOST_CHECK_EQUAL(group.getWaterTargetRate(2), wellsGroup->prodSpec().water_max_rate_);
+            BOOST_CHECK_EQUAL(group.getLiquidTargetRate(2), wellsGroup->prodSpec().liquid_max_rate_);
         }
     }
 }

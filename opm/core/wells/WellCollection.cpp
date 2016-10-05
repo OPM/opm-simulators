@@ -29,8 +29,8 @@
 
 namespace Opm
 {
-    void WellCollection::addField(const Group* fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
-        WellsGroupInterface* fieldNode = findNode(fieldGroup->name());
+    void WellCollection::addField(const Group& fieldGroup, size_t timeStep, const PhaseUsage& phaseUsage) {
+        WellsGroupInterface* fieldNode = findNode(fieldGroup.name());
         if (fieldNode) {
             OPM_THROW(std::runtime_error, "Trying to add FIELD node, but this already exists. Can only have one FIELD node.");
         }
@@ -38,15 +38,15 @@ namespace Opm
         roots_.push_back(createGroupWellsGroup(fieldGroup, timeStep, phaseUsage));
     }
 
-    void WellCollection::addGroup(const Group* groupChild, std::string parent_name,
+    void WellCollection::addGroup(const Group& groupChild, std::string parent_name,
                                   size_t timeStep, const PhaseUsage& phaseUsage) {
         WellsGroupInterface* parent = findNode(parent_name);
         if (!parent) {
             OPM_THROW(std::runtime_error, "Trying to add child group to group named " << parent_name << ", but this does not exist in the WellCollection.");
         }
 
-        if (findNode(groupChild->name())) {
-            OPM_THROW(std::runtime_error, "Trying to add child group named " << groupChild->name() << ", but this group is already in the WellCollection.");
+        if (findNode(groupChild.name())) {
+            OPM_THROW(std::runtime_error, "Trying to add child group named " << groupChild.name() << ", but this group is already in the WellCollection.");
 
         }
 
