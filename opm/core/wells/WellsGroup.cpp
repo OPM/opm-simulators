@@ -310,7 +310,10 @@ namespace Opm
     {
         if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD
                        || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
-            const double my_guide_rate =  productionGuideRate(!forced);
+            const double my_guide_rate =  productionGuideRate(false);
+            std::cout << " forced " << forced << std::endl;
+            std::cout << " name " << name () << std::endl;
+            std::cout << " my_guide_rate is " << my_guide_rate << std::endl;
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
                 std::cout << "returning" << std::endl;
@@ -470,7 +473,9 @@ namespace Opm
         case ProductionSpecification::LRAT:
         case ProductionSpecification::RESV:
         {
-            const double my_guide_rate = productionGuideRate(true);
+            // const double my_guide_rate = productionGuideRate(true);
+            const double my_guide_rate = productionGuideRate(false);
+            std::cout << "my_guide_rate of group " << name() << " is " << my_guide_rate << std::endl;
             if (my_guide_rate == 0) {
                 OPM_THROW(std::runtime_error, "Can't apply group control for group " << name() << " as the sum of guide rates for all group controlled wells is zero.");
             }
@@ -549,7 +554,13 @@ namespace Opm
     {
         double sum = 0.0;
         for (size_t i = 0; i < children_.size(); ++i) {
-            sum += children_[i]->productionGuideRate(only_group);
+            if (only_group) {
+                if (!children_[i]->individualControl()) {
+                    sum += children_[i]->productionGuideRate(only_group);
+                }
+            } else {
+                sum += children_[i]->productionGuideRate(only_group);
+            }
         }
         return sum;
     }
@@ -1013,6 +1024,7 @@ namespace Opm
         // 2. the well violating some limits and working under limits. We do not have strategy
         // to handle this situation yet.
         //  if (!only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+        std::cout << "guide_rate for well " << name() << " is " << prodSpec().guide_rate_ << std::endl;
         return prodSpec().guide_rate_;
         // }
         // return 0.0;

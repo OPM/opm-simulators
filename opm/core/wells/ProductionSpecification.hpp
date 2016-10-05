@@ -46,4 +46,3 @@ namespace Opm
 }
 
 #endif	/* OPM_PRODUCTIONSPECIFICATION_HPP */
-
