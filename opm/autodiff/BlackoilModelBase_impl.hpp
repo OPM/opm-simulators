@@ -1077,8 +1077,11 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
-                asImpl().wellModel().updateWellControls(well_state);
             }
+            // We have to update the well controls regardless whether there are local
+            // wells active or not as parallel logging will take place that needs to
+            // communicate with all processes.
+            asImpl().wellModel().updateWellControls(well_state);
         } while (it < 15);
 
         if (converged) {
