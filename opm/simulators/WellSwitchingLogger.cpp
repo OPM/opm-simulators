@@ -30,19 +30,19 @@ namespace wellhelpers
 {
 
 #if HAVE_MPI
-int WellSwitchingLogger::calculateMessageSize(std::vector<int>& well_name_length)
+int WellSwitchingLogger::calculateMessageSize(std::vector<int>& well_name_lengths)
 {
 
     // Each process will send a message to the root process with
     // the following data:
     // total number of switches, for each switch the length of the
     // well name, for each switch the well name and the two controls.
-    well_name_length.reserve(switchMap_.size());
+    well_name_lengths.reserve(switchMap_.size());
 
     for(const auto& switchEntry : switchMap_)
     {
         int length = switchEntry.first.size() +1;  //we write an additional \0
-        well_name_length.push_back(length);
+        well_name_lengths.push_back(length);
     }
 
     // compute the message size
@@ -50,27 +50,26 @@ int WellSwitchingLogger::calculateMessageSize(std::vector<int>& well_name_length
     int increment = 0;
     // number of switches
     MPI_Pack_size(1, MPI_INT, MPI_COMM_WORLD, &message_size);
-    message_size += increment;
     // const char* length include delimiter for each switch
     MPI_Pack_size(switchMap_.size(), MPI_INT, MPI_COMM_WORLD, &increment);
     message_size += increment;
     // for each well the name + two controls in one write
-    auto length = well_name_length.begin();
+    auto length_iter = well_name_lengths.begin();
 
     for(const auto& switchEntry : switchMap_)
     {
         // well name
-        MPI_Pack_size(*length, MPI_CHAR, MPI_COMM_WORLD, &increment);
+        MPI_Pack_size(*length_iter, MPI_CHAR, MPI_COMM_WORLD, &increment);
         message_size += increment;
         // controls
         MPI_Pack_size(2, MPI_CHAR, MPI_COMM_WORLD, &increment);
         message_size += increment;
-        ++length;
+        ++length_iter;
     }
     return message_size;
 }
 
-void WellSwitchingLogger::packData(std::vector<int>& well_name_length,
+void WellSwitchingLogger::packData(std::vector<int>& well_name_lengths,
                                    std::vector<char>& buffer)
 {
     // Pack the data
@@ -79,7 +78,7 @@ void WellSwitchingLogger::packData(std::vector<int>& well_name_length,
     int no_switches = switchMap_.size();
     MPI_Pack(&no_switches, 1, MPI_INT, buffer.data(), buffer.size(),
              &offset, MPI_COMM_WORLD);
-    MPI_Pack(well_name_length.data(), well_name_length.size(),
+    MPI_Pack(well_name_lengths.data(), well_name_lengths.size(),
              MPI_INT, buffer.data(), buffer.size(),
              &offset, MPI_COMM_WORLD);
 
@@ -112,17 +111,17 @@ void WellSwitchingLogger::unpackDataAndLog(std::vector<char>& recv_buffer,
             continue;
         }
 
-        std::vector<int> well_name_length(no_switches);
+        std::vector<int> well_name_lengths(no_switches);
 
         MPI_Unpack(recv_buffer.data(), recv_buffer.size(), &offset,
-                   well_name_length.data(), well_name_length.size(),
+                   well_name_lengths.data(), well_name_lengths.size(),
                    MPI_INT, MPI_COMM_WORLD);
 
         for ( int i = 0; i < no_switches; ++i )
         {
-            char well_name[well_name_length[i]] = {};
+            char well_name[well_name_lengths[i]] = {};
             MPI_Unpack(recv_buffer.data(), recv_buffer.size(), &offset,
-                       well_name, well_name_length[i], MPI_CHAR,
+                       well_name, well_name_lengths[i], MPI_CHAR,
                        MPI_COMM_WORLD);
 
             std::array<char,2> fromto{{}};
@@ -156,8 +155,8 @@ void WellSwitchingLogger::gatherDataAndLog()
     }
 
     std::vector<int> message_sizes;
-    std::vector<int> well_name_length;
-    int message_size = calculateMessageSize(well_name_length);
+    std::vector<int> well_name_lengths;
+    int message_size = calculateMessageSize(well_name_lengths);
 
     if ( cc_.rank() == 0 ){
         for(const auto& entry : switchMap_)
@@ -172,7 +171,7 @@ void WellSwitchingLogger::gatherDataAndLog()
                1, MPI_INT, 0, MPI_COMM_WORLD);
 
     std::vector<char> buffer(message_size);
-    packData(well_name_length, buffer);
+    packData(well_name_lengths, buffer);
 
     std::vector<int> displ;
 
