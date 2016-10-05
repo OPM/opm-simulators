@@ -46,7 +46,7 @@ public:
     /// \brief Constructor
     /// \param output_dir The output directory to use for reading/Writing.
     /// \param deckanme The name of the deck.
-    ParallelFileMerger(fs::path output_dir,
+    ParallelFileMerger(const fs::path& output_dir,
                        const std::string& deckname)
         : debugFileRegex_("\\."+deckname+"\\.\\d+\\.DEBUG"),
           logFileRegex_(deckname+"\\.\\d+\\.PRT")
