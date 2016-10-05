@@ -438,7 +438,7 @@ namespace Opm
                 const Model& model,
                 const RestartConfig& restartConfig,
                 const int reportStepNum,
-                const bool output) {
+                const bool log) {
 
 
             std::vector<data::CellData> simProps;
@@ -548,7 +548,7 @@ namespace Opm
                             std::move(adbToDoubleVector(sd.rq[aqua_idx].kr))});
                 }
                 else {
-                    if ( output )
+                    if ( log )
                     {
                         Opm::OpmLog::warning("Empty:WATKR",
                                              "Not emitting empty Water Rel-Perm");
@@ -564,7 +564,7 @@ namespace Opm
                              std::move(adbToDoubleVector(sd.rq[liquid_idx].kr))});
                 }
                 else {
-                    if ( output )
+                    if ( log )
                     {
                         Opm::OpmLog::warning("Empty:OILKR",
                                              "Not emitting empty Oil Rel-Perm");
@@ -580,7 +580,7 @@ namespace Opm
                              std::move(adbToDoubleVector(sd.rq[vapour_idx].kr))});
                 }
                 else {
-                    if ( output )
+                    if ( log )
                     {
                         Opm::OpmLog::warning("Empty:GASKR",
                                              "Not emitting empty Gas Rel-Perm");
@@ -610,7 +610,7 @@ namespace Opm
             /**
              * Bubble point and dew point pressures
              */
-            if (output && vapour_active &&
+            if (log && vapour_active &&
                 liquid_active && outKeywords["PBPD"] > 0) {
                 outKeywords["PBPD"] = 0;
                 Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
@@ -619,7 +619,7 @@ namespace Opm
             }
 
             //Warn for any unhandled keyword
-            if (output)
+            if (log)
             {
                 for (auto& keyValue : outKeywords) {
                     if (keyValue.second > 0) {
@@ -650,8 +650,10 @@ namespace Opm
     {
         const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
-        std::vector<data::CellData> cellData = detail::getCellData( phaseUsage_, physicalModel, restartConfig, reportStepNum,
-                                                                    output_ && parallelOutput_->isIORank() );
+        bool logMessages = output_ && parallelOutput_->isIORank();
+        std::vector<data::CellData> cellData =
+            detail::getCellData( phaseUsage_,physicalModel, restartConfig,
+                                 reportStepNum, logMessages );
         writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }
