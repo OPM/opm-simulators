@@ -280,11 +280,14 @@ namespace Opm
             FIPUnitConvert(eclipse_state_->getUnits(), COIP);
             V OOIP_totals = FIPTotals(OOIP, state);
             V COIP_totals = FIPTotals(COIP, state);
-            outputFluidInPlace(OOIP_totals, COIP_totals,eclipse_state_->getUnits(), 0);
-            for (size_t reg = 0; reg < OOIP.size(); ++reg) {
-                outputFluidInPlace(OOIP[reg], COIP[reg], eclipse_state_->getUnits(), reg+1);
-            }
 
+            if ( terminal_output_ )
+            {
+                outputFluidInPlace(OOIP_totals, COIP_totals,eclipse_state_->getUnits(), 0);
+                for (size_t reg = 0; reg < OOIP.size(); ++reg) {
+                    outputFluidInPlace(OOIP[reg], COIP[reg], eclipse_state_->getUnits(), reg+1);
+                }
+            }
 
             // accumulate total time
             stime += st;

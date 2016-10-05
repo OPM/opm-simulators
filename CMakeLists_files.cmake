@@ -66,6 +66,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/polymer/fullyimplicit/PolymerPropsAd.cpp
   opm/simulators/SimulatorCompressibleTwophase.cpp
   opm/simulators/SimulatorIncompTwophase.cpp
+	opm/simulators/WellSwitchingLogger.cpp
   )
 
 
@@ -87,6 +88,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_solventprops_ad.cpp
 	tests/test_multisegmentwells.cpp
 	# tests/test_thresholdpressure.cpp
+	tests/test_wellswitchlogger.cpp
   )
 
 list (APPEND TEST_DATA_FILES
@@ -238,7 +240,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer_impl.hpp
   opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp
+  opm/simulators/ParallelFileMerger.hpp
   opm/simulators/SimulatorCompressibleTwophase.hpp
   opm/simulators/SimulatorIncompTwophase.hpp
+	opm/simulators/WellSwitchingLogger.hpp
   )
 

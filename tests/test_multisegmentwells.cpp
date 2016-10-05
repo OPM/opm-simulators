@@ -26,6 +26,7 @@
 #endif
 
 #define BOOST_TEST_MODULE MultisegmentWellsTest
+#define BOOST_TEST_NO_MAIN
 
 #include <vector>
 #include <unordered_set>
@@ -166,4 +167,17 @@ BOOST_AUTO_TEST_CASE(testStructure)
     BOOST_CHECK_EQUAL(nw, ms_wells->msWells().size());
     BOOST_CHECK_EQUAL(0, ms_wells->topWellSegments()[0]);
     BOOST_CHECK_EQUAL(1, ms_wells->topWellSegments()[1]);
+}
+
+bool
+init_unit_test_func()
+{
+    return true;
+}
+
+int main(int argc, char** argv)
+{
+    Dune::MPIHelper::instance(argc, argv);
+    boost::unit_test::unit_test_main(&init_unit_test_func,
+                                     argc, argv);
 }
