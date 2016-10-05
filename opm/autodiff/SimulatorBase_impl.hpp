@@ -113,7 +113,7 @@ namespace Opm
         {
 
             if (param_.getDefault("use_TUNING", false)) {
-                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( *schedule->getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule->getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
             }
