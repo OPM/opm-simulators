@@ -40,7 +40,7 @@
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
-#include <opm/simulators/ParallelFileMerger.hpp       >
+#include <opm/simulators/ParallelFileMerger.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -426,12 +426,17 @@ namespace Opm
             prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
+
             // Read parameters.
             if ( output_cout_ )
             {
                 OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
             }
         }
+
+
+
+
 
         void mergeParallelLogFiles()
         {
@@ -681,7 +686,9 @@ namespace Opm
         void extractMessages()
         {
             if ( !output_cout_ )
+            {
                 return;
+            }
 
             auto extractMessage = [](const Message& msg) {
                 auto log_type = detail::convertMessageType(msg.mtype);

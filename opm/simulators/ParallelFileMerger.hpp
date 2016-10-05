@@ -71,7 +71,6 @@ public:
         {
             std::string rank = boost::regex_replace(filename, regex, "\\1");
 
-
             if( boost::regex_match(filename, logFileRegex_) )
             {
                 appendFile(*logStream_, file, rank);
@@ -101,9 +100,9 @@ private:
     {
         if( fs::file_size(file) )
         {
-            std::cerr<<"WARNING: There has been logging out by non-root process "
-                     <<rank<<std::endl<<"Please report this in the issue tracker!"
-                     <<std::endl;
+            std::cerr << "WARNING: There has been logging out by non-root process "
+                      << rank << std::endl<<"Please report this in the issue tracker!"
+                     << std::endl;
             fs::ifstream in(file);
             of<<std::endl<< std::endl;
             of<<"=======================================================";
