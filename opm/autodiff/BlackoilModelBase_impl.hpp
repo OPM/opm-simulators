@@ -1043,6 +1043,7 @@ namespace detail {
         int it  = 0;
         bool converged;
         do {
+            std::cout << "in solveWellEq " << std::endl;
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
@@ -1056,6 +1057,17 @@ namespace detail {
             asImpl().wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);
             asImpl().wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = getWellConvergence(it);
+
+            if (asImpl().wellModel().justUpdateWellTargets()) {
+                std::cout << "converged changed to false due to justUpdateWellTargets " << std::endl;
+                converged = false;
+                asImpl().wellModel().setJustUpdateWellTargets(false);
+            }
+
+            if (converged && asImpl().wellModel().needUpdateWellTargets()) {
+                std::cout << "converged changed to false due to needUpdateWellTargets " << std::endl;
+                converged = false;
+            }
 
             if (converged) {
                 break;
@@ -1078,6 +1090,9 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
+                std::cout << "after updateWellState " << std::endl;
+                asImpl().wellModel().updateWellControls(well_state);
+                std::cout << " justUpdateWellTargets " << asImpl().wellModel().justUpdateWellTargets() << std::endl;
             }
             // We have to update the well controls regardless whether there are local
             // wells active or not as parallel logging will take place that needs to
@@ -1118,6 +1133,7 @@ namespace detail {
         }
         const bool failed = false; // Not needed in this method.
         const int linear_iters = 0; // Not needed in this method
+        std::cout << " end of solveWellEq " << std::endl;
         return IterationReport{failed, converged, linear_iters, it};
     }
 

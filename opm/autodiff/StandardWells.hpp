@@ -191,6 +191,18 @@ namespace Opm {
                                   const WellState& well_state,
                                   DynamicListEconLimited& list_econ_limited) const;
 
+            bool justUpdateWellTargets() const {
+                return well_collection_->justUpdateWellTargets();
+            }
+
+            bool needUpdateWellTargets() const {
+                return well_collection_->needUpdateWellTargets();
+            }
+
+            void setJustUpdateWellTargets(const bool flag) const {
+                well_collection_->setJustUpdateWellTargets(flag);
+            }
+
         protected:
             bool wells_active_;
             const Wells*   wells_;

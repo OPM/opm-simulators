@@ -711,10 +711,11 @@ namespace Opm
 
         if( !localWellsActive() ) return ;
 
+        std::cout << " StandardWells updateWellControls " << std::endl;
+
         if (well_collection_->needUpdateWellTargets() ) {
-            well_collection_->updateWellTargets(xw);
             std::cout << " well_collection_ need to update well targets " << std::endl;
-            std::cin.ignore();
+            well_collection_->updateWellTargets(xw);
             for (size_t i = 0; i < well_collection_->numNode(); ++i) {
                 well_collection_->getNode(i)->setShouldUpdateWellTargets(false);
             }
@@ -790,16 +791,27 @@ namespace Opm
                     if (ctrl_index == well_node->groupControlIndex()) {
                         std::cout << "well " << well_node->name() << " is switching from individual control to group control " << std::endl;
                         well_node->setIndividualControl(false);
-                        well_node->setShouldUpdateWellTargets(true);
+                        std::cout << "well_name " << well_node->name() << " should update well target? " << well_node->shouldUpdateWellTargets() << std::endl;
                     }
                 } else {
                     if (ctrl_index != well_node->groupControlIndex()) {
                         well_node->setIndividualControl(true);
                         std::cout << "well " << well_node->name() << " is switching from group control to individual control " << std::endl;
-                        well_node->setShouldUpdateWellTargets(true);
+                        std::cout << "well_name " << well_node->name() << " should update well target? " << well_node->shouldUpdateWellTargets() << std::endl;
+                    }
+                }
+                well_node->setShouldUpdateWellTargets(true);
+            } else {
+                // no constraints got broken
+                // the wells running under group control should set to be under group control
+                auto* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+                if (well_node->individualControl()) {
+                    if (current == well_node->groupControlIndex()) {
+                        well_node->setIndividualControl(false);
                     }
                 }
             }
+
 
             // Updating well state and primary variables.
             // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
