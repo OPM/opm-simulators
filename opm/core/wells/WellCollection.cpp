@@ -194,12 +194,19 @@ namespace Opm
     //TODO: later, it should be extended to update group targets
     bool WellCollection::needUpdateWellTargets() const
     {
+        bool any_group_control_node = false;
+        bool any_should_update_node = false;
         for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
-            if (leaf_nodes_[i]->shouldUpdateWellTargets() && !leaf_nodes_[i]->individualControl()) {
-                return true;
+            std::cout << " well " << leaf_nodes_[i]->name() << " under group control ? " << !leaf_nodes_[i]->individualControl() << " should update well target? " << leaf_nodes_[i]->shouldUpdateWellTargets() << std::endl;
+            if (leaf_nodes_[i]->shouldUpdateWellTargets()) {
+                any_should_update_node = true;
+            }
+            if (!leaf_nodes_[i]->individualControl()) {
+                any_group_control_node = true;
             }
         }
-        return false;
+        std::cout << " any_group_control_node " << any_group_control_node << " any_should_update_node " << any_should_update_node << std::endl;
+        return (any_group_control_node && any_should_update_node);
     }
 
 
@@ -213,6 +220,14 @@ namespace Opm
     {
         assert( i< numNode());
         return leaf_nodes_[i];
+    }
+
+    bool WellCollection::justUpdateWellTargets() const {
+        return just_update_well_targets_;
+    }
+
+    void WellCollection::setJustUpdateWellTargets(const bool flag) {
+        just_update_well_targets_ = flag;
     }
 
 }

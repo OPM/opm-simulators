@@ -308,6 +308,9 @@ namespace Opm
                                            const double target,
                                            const bool forced)
     {
+        if (prodSpec().control_mode_ == ProductionSpecification::NONE) {
+            return;
+        }
         if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD
                        || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
             const double my_guide_rate =  productionGuideRate(false);
@@ -483,7 +486,7 @@ namespace Opm
                 // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->productionGuideRate(true);
+                const double children_guide_rate = children_[i]->productionGuideRate(false);
                 children_[i]->applyProdGroupControl(prod_mode,
                                                    (children_guide_rate / my_guide_rate) * getTarget(prod_mode),
                                                     false);
@@ -930,13 +933,13 @@ namespace Opm
                                          const bool forced)
     {
         // Not changing if we're not forced to change
-        if (!forced && (prodSpec().control_mode_ != ProductionSpecification::GRUP
+        /* if (!forced && (prodSpec().control_mode_ != ProductionSpecification::GRUP
                         && prodSpec().control_mode_ != ProductionSpecification::NONE)) {
             std::cout << "Returning" << std::endl;
             return;
-        }
+        } */
         if (wells_->type[self_index_] != PRODUCER) {
-            assert(target == 0.0);
+            // assert(target == 0.0);
             return;
         }
         // We're a producer, so we need to negate the input
@@ -987,6 +990,9 @@ namespace Opm
         default:
             OPM_THROW(std::runtime_error, "Group production control mode not handled: " << control_mode);
         }
+
+        std::cout << " well name " << name() << " group_control_index_ " << group_control_index_ << " ntarget " << ntarget
+             << std::endl;
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.

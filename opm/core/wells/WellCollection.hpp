@@ -124,12 +124,18 @@ namespace Opm
         template <class WellState>
         void updateWellTargets(const WellState& well_state);
 
+        bool justUpdateWellTargets() const;
+
+        void setJustUpdateWellTargets(const bool flag);
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;
 
         // This will be used to traverse the bottom nodes.
         std::vector<WellNode*> leaf_nodes_;
+
+        bool just_update_well_targets_;
 
 
     };
