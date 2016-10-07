@@ -130,19 +130,19 @@ namespace Opm
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
                                           const double target,
-                                          const bool forced) = 0;
+                                          const bool only_group) = 0;
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           const bool forced) = 0;
+                                           const bool only_group) = 0;
 
         /// Gets the worst offending well based on the input
         /// \param[in]    well_reservoirrates_phase
@@ -271,20 +271,20 @@ namespace Opm
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
                                           const double target,
-                                          bool forced);
+                                          bool only_group);
 
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           bool forced);
+                                           bool only_group);
 
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
@@ -363,20 +363,20 @@ namespace Opm
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-       /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        ///                          otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
                                           const double target,
-                                          bool forced);
+                                          bool only_group);
 
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        ///                          otherwise, all children will be set under group control
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           bool forced);
+                                           bool only_group);
 
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.

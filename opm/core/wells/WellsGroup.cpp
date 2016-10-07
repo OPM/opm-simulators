@@ -278,22 +278,22 @@ namespace Opm
     /// Sets the current active control to the provided one for all injectors within the group.
     /// After this call, the combined rate (which rate depending on control_mode) of the group
     /// shall be equal to target.
-    /// \param[in] forced if true, all children will be set under group control, otherwise
-    ///                   only children that are under group control will be changed.
+    /// \param[in] only_group    if true, only children that are under group control will be changed.
+    ///                          otherwise, all children will be set under group control
     void WellsGroup::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
                                           const double target,
-                                          const bool forced)
+                                          const bool only_group)
     {
-        if (forced || injSpec().control_mode_ == InjectionSpecification::FLD
+        if (!only_group || injSpec().control_mode_ == InjectionSpecification::FLD
             || injSpec().control_mode_ == InjectionSpecification::NONE) {
-            const double my_guide_rate = injectionGuideRate(!forced);
+            const double my_guide_rate = injectionGuideRate(only_group);
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->injectionGuideRate(!forced) / my_guide_rate;
-                children_[i]->applyInjGroupControl(control_mode, child_target, true);
+                const double child_target = target * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
+                children_[i]->applyInjGroupControl(control_mode, child_target, false);
             }
             injSpec().control_mode_ = InjectionSpecification::FLD;
         }
@@ -302,19 +302,19 @@ namespace Opm
     /// Sets the current active control to the provided one for all producers within the group.
     /// After this call, the combined rate (which rate depending on control_mode) of the group
     /// shall be equal to target.
-    /// \param[in] forced if true, all children will be set under group control, otherwise
-    ///                   only children that are under group control will be changed.
+    /// \param[in] only_group    if true, only children that are under group control will be changed.
+    ///                          otherwise, all children will be set under group control
     void WellsGroup::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           const bool forced)
+                                           const bool only_group)
     {
         if (prodSpec().control_mode_ == ProductionSpecification::NONE) {
             return;
         }
-        if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD
+        if (!only_group || (prodSpec().control_mode_ == ProductionSpecification::FLD
                        || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
             const double my_guide_rate =  productionGuideRate(false);
-            std::cout << " forced " << forced << std::endl;
+            std::cout << " only_group " << only_group << std::endl;
             std::cout << " name " << name () << std::endl;
             std::cout << " my_guide_rate is " << my_guide_rate << std::endl;
             if (my_guide_rate == 0.0) {
@@ -323,8 +323,8 @@ namespace Opm
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->productionGuideRate(!forced) / my_guide_rate;
-                children_[i]->applyProdGroupControl(control_mode, child_target, true);
+                const double child_target = target * children_[i]->productionGuideRate(only_group) / my_guide_rate;
+                children_[i]->applyProdGroupControl(control_mode, child_target, false);
             }
             prodSpec().control_mode_ = ProductionSpecification::FLD;
         }
@@ -370,7 +370,7 @@ namespace Opm
                                     + " target not met for group " + name() + "\n"
                                     + "target = " + std::to_string(target_rate) + "\n"
                                     + "rate   = " + std::to_string(my_rate));
-                    applyInjGroupControl(mode, target_rate, true);
+                    applyInjGroupControl(mode, target_rate, false);
                     injSpec().control_mode_ = mode;
                     return false;
                 }
@@ -421,7 +421,7 @@ namespace Opm
                 std::cout << "Applying group control" << std::endl;
                 applyProdGroupControl(production_mode_violated,
                                       getTarget(production_mode_violated),
-                                      true);
+                                      false);
                 return false;
             case ProductionSpecification::NONE_P:
                 // Do nothing
@@ -530,7 +530,7 @@ namespace Opm
                 const double children_guide_rate = children_[i]->injectionGuideRate(false);
                 children_[i]->applyInjGroupControl(inj_mode,
                         (children_guide_rate / my_guide_rate) * getTarget(inj_mode),
-                        false);
+                        true);
             }
             return;
         }
@@ -633,11 +633,11 @@ namespace Opm
 #ifdef DIRTY_WELLCTRL_HACK
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
-                        false);
+                        true);
 #else
                 children_[i]->applyInjGroupControl(InjectionSpecification::RATE,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
-                        false);
+                        true);
 #endif
             }
         }
@@ -661,7 +661,7 @@ namespace Opm
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().voidage_replacment_fraction_,
-                        false);
+                        true);
             }
 
         }
@@ -849,13 +849,13 @@ namespace Opm
 
     void WellNode::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
                                         const double target,
-                                        const bool forced)
+                                        const bool only_group)
     {
         // Not changing if we're not forced to change
         // It should be the well will under group control, if we prevent the well from group control
         // with keyword WGRUPCON.
         // It is just current undertstanding, while further change in the understanding will be possible.
-        // if (!forced
+        // if (only_group
         //      && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
         //     return;
         // }
@@ -930,10 +930,10 @@ namespace Opm
     }
     void WellNode::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                          const double target,
-                                         const bool forced)
+                                         const bool only_group)
     {
         // Not changing if we're not forced to change
-        /* if (!forced && (prodSpec().control_mode_ != ProductionSpecification::GRUP
+        /* if (only_group && (prodSpec().control_mode_ != ProductionSpecification::GRUP
                         && prodSpec().control_mode_ != ProductionSpecification::NONE)) {
             std::cout << "Returning" << std::endl;
             return;
