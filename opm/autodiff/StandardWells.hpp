@@ -70,8 +70,7 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            explicit StandardWells(const Wells* wells_arg,
-                                   const Communication& comm=Communication());
+            explicit StandardWells(const Wells* wells_arg);
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -210,8 +209,6 @@ namespace Opm {
 
             bool store_well_perforation_fluxes_;
             Vector well_perforation_fluxes_;
-
-            Communication comm_;
 
             // protected methods
             template <class SolutionState, class WellState>

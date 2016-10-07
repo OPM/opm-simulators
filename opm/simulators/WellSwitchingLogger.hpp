@@ -52,7 +52,8 @@ public:
     /// \brief Constructor.
     ///
     /// \param cc The collective communication to use.
-    explicit WellSwitchingLogger(const Communication& cc=Communication())
+    explicit WellSwitchingLogger(const Communication& cc =
+                                 Dune::MPIHelper::getCollectiveCommunication())
         : cc_(cc)
     {}
 

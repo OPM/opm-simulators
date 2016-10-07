@@ -90,8 +90,7 @@ namespace Opm {
             // TODO: it should use const Wells or something else later.
             MultisegmentWells(const Wells* wells_arg,
                               const std::vector< const Well* >& wells_ecl,
-                              const int time_step,
-                              const Communication& comm=Communication());
+                              const int time_step);
 
             std::vector<WellMultiSegmentConstPtr> createMSWellVector(const Wells* wells_arg,
                                                                      const std::vector< const Well* >& wells_ecl,
@@ -312,7 +311,6 @@ namespace Opm {
         Vector well_perforation_densities_;
         Vector well_perforation_pressure_diffs_;
 
-        Communication comm_;
     };
 
 } // namespace Opm
