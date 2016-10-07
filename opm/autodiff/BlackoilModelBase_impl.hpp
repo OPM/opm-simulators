@@ -2486,6 +2486,9 @@ namespace detail {
                 }
             }
 
+            comm.sum(hcpv.data(), hcpv.size());
+            comm.sum(pres.data(), pres.size());
+
             sd_.fip[SimulatorData::FIP_PV] = V::Zero(nc);
             sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE] = V::Zero(nc);
 
@@ -2512,9 +2515,6 @@ namespace detail {
             {
                 comm.sum(values[reg].data(), values[reg].size());
             }
-
-            comm.sum(hcpv.data(), hcpv.size());
-            comm.sum(pres.data(), pres.size());
 #else
             // This should never happen!
             OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
