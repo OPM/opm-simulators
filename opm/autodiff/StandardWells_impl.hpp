@@ -71,8 +71,7 @@ namespace Opm
 
 
 
-StandardWells::StandardWells(const Wells* wells_arg,
-                             const Communication& comm)
+StandardWells::StandardWells(const Wells* wells_arg)
       : wells_active_(wells_arg!=nullptr)
       , wells_(wells_arg)
       , wops_(wells_arg)
@@ -83,7 +82,6 @@ StandardWells::StandardWells(const Wells* wells_arg,
       , well_perforation_densities_(Vector())
       , well_perforation_pressure_diffs_(Vector())
       , store_well_perforation_fluxes_(false)
-      , comm_(comm)
     {
     }
 
@@ -708,7 +706,7 @@ StandardWells::StandardWells(const Wells* wells_arg,
     StandardWells::
     updateWellControls(WellState& xw) const
     {
-        wellhelpers::WellSwitchingLogger logger(comm_);
+        wellhelpers::WellSwitchingLogger logger;
 
         if( !localWellsActive() ) return ;
 

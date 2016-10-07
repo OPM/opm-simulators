@@ -824,7 +824,7 @@ namespace Opm
     MultisegmentWells::
     updateWellControls(WellState& xw) const
     {
-        wellhelpers::WellSwitchingLogger logger(comm_);
+        wellhelpers::WellSwitchingLogger logger;
 
         if( msWells().empty() ) return ;
 

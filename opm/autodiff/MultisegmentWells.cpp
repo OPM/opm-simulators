@@ -142,7 +142,7 @@ namespace Opm {
     MultisegmentWells::
     MultisegmentWells(const Wells* wells_arg,
                       const std::vector< const Well* >& wells_ecl,
-                      const int time_step, const Communication& comm)
+                      const int time_step)
       : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
       , wops_ms_(wells_multisegment_)
       , num_phases_(wells_arg ? wells_arg->number_of_phases : 0)
@@ -158,7 +158,6 @@ namespace Opm {
       , segment_comp_surf_volume_current_(num_phases_, ADB::null())
       , segment_mass_flow_rates_(ADB::null())
       , segment_viscosities_(ADB::null())
-      , comm_(comm)
     {
         const int nw = wells_multisegment_.size();
         int nperf_total = 0;
