@@ -420,6 +420,10 @@ namespace Opm
                                                       const std::vector<double>& well_surfacerates_phase);
         int groupControlIndex() const;
 
+        bool isProducer() const;
+
+        bool isInjector() const;
+
     private:
         Wells* wells_;
         int self_index_;

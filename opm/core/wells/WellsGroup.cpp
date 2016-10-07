@@ -701,7 +701,7 @@ namespace Opm
         // Report on our rates.
         const int np = phaseUsage().num_phases;
         for (int phase = 0; phase < np; ++phase) {
-            if (wells_->type[self_index_] == INJECTOR) {
+            if (isInjector()) {
                 summed_phases.res_inj_rates[phase] = well_reservoirrates_phase[np*self_index_ + phase];
                 summed_phases.surf_inj_rates[phase] = well_surfacerates_phase[np*self_index_ + phase];
             } else {
@@ -711,7 +711,6 @@ namespace Opm
         }
 
         // Check constraints.
-        bool is_producer = (wells_->type[self_index_] == PRODUCER);
         const WellControls * ctrls = wells_->ctrls[self_index_];
         for (int ctrl_index = 0; ctrl_index < well_controls_get_num(ctrls); ++ctrl_index) {
             if (ctrl_index == well_controls_get_current(ctrls) || ctrl_index == group_control_index_) {
@@ -725,7 +724,7 @@ namespace Opm
             case BHP: {
                 const double my_well_bhp = well_bhp[self_index_];
                 const double my_target_bhp = well_controls_iget_target( ctrls , ctrl_index);
-                ctrl_violated = is_producer ? (my_target_bhp > my_well_bhp)
+                ctrl_violated = isProducer() ? (my_target_bhp > my_well_bhp)
                     : (my_target_bhp < my_well_bhp);
                 if (ctrl_violated) {
                     OpmLog::info("BHP limit violated for well " + name() + ":\n"
@@ -859,7 +858,7 @@ namespace Opm
         //      && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
         //     return;
         // }
-        if (wells_->type[self_index_] != INJECTOR) {
+        if ( !isInjector() ) {
             assert(target == 0.0);
             return;
         }
@@ -904,7 +903,7 @@ namespace Opm
     double WellNode::getTotalProductionFlow(const std::vector<double>& phase_flows,
                                             const BlackoilPhases::PhaseIndex phase)
     {
-        if (type() == INJECTOR) {
+        if (isInjector()) {
             return 0.0;
         }
         return phase_flows[self_index_*phaseUsage().num_phases + phaseUsage().phase_pos[phase]];
@@ -938,7 +937,7 @@ namespace Opm
             std::cout << "Returning" << std::endl;
             return;
         } */
-        if (wells_->type[self_index_] != PRODUCER) {
+        if ( !isProducer() ) {
             // assert(target == 0.0);
             return;
         }
@@ -1053,6 +1052,19 @@ namespace Opm
     int WellNode::groupControlIndex() const
     {
         return group_control_index_;
+    }
+
+
+    /// Returing whether the well is a producer
+    bool WellNode::isProducer() const
+    {
+        return (type() == PRODUCER);
+    }
+
+    /// Returing whether the well is a injector
+    bool WellNode::isInjector() const
+    {
+        return (type() == INJECTOR);
     }
 
 
