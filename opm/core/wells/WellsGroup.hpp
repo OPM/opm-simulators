@@ -325,7 +325,10 @@ namespace Opm
                                                       const std::vector<double>& well_surfacerates_phase);
 
         template <class WellState>
-        void updateWellTargets(const WellState& well_state);
+        void updateWellProductionTargets(const WellState& well_state);
+
+        template <class WellState>
+        void updateWellInjectionTargets(const WellState& well_state);
 
     private:
         std::vector<std::shared_ptr<WellsGroupInterface> > children_;

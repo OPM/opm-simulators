@@ -209,7 +209,7 @@ namespace Opm
                     any_should_update_node = true;
                 }
 
-                if (leaf_nodes_[i]->individualControl()) {
+                if (!leaf_nodes_[i]->individualControl()) {
                     any_group_control_node = true;
                 }
             }
@@ -228,7 +228,7 @@ namespace Opm
                     any_should_update_node = true;
                 }
 
-                if (leaf_nodes_[i]->individualControl()) {
+                if (!leaf_nodes_[i]->individualControl()) {
                     any_group_control_node = true;
                 }
             }
