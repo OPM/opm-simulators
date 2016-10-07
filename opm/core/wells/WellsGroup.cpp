@@ -1026,13 +1026,12 @@ namespace Opm
     {
         // Current understanding. Two ways might prevent to return the guide_rate here
         // 1. preventing the well from group control with keyword WGRUPCON
-        // 2. the well violating some limits and working under limits. We do not have strategy
-        // to handle this situation yet.
-        //  if (!only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
-        std::cout << "guide_rate for well " << name() << " is " << prodSpec().guide_rate_ << std::endl;
-        return prodSpec().guide_rate_;
-        // }
-        // return 0.0;
+        // 2. the well violating some limits and working under limits.
+        if (!only_group || !individual_control_) {
+            return prodSpec().guide_rate_;
+        } else {
+            return 0.0;
+        }
     }
 
     /// Calculates the injection guide rate for the group.
@@ -1040,10 +1039,11 @@ namespace Opm
     ///                       wells under group control
     double WellNode::injectionGuideRate(bool only_group)
     {
-        if (!only_group || injSpec().control_mode_ == InjectionSpecification::GRUP) {
+        if (!only_group || !individual_control_) {
             return injSpec().guide_rate_;
+        } else {
+            return 0.0;
         }
-        return 0.0;
     }
 
 
