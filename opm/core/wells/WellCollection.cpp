@@ -194,20 +194,49 @@ namespace Opm
     //TODO: later, it should be extended to update group targets
     bool WellCollection::needUpdateWellTargets() const
     {
+        return needUpdateInjectionTargets() || needUpdateProductionTargets();
+    }
+
+
+    bool WellCollection::needUpdateInjectionTargets() const
+    {
         bool any_group_control_node = false;
         bool any_should_update_node = false;
+
         for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
-            std::cout << " well " << leaf_nodes_[i]->name() << " under group control ? " << !leaf_nodes_[i]->individualControl() << " should update well target? " << leaf_nodes_[i]->shouldUpdateWellTargets() << std::endl;
-            if (leaf_nodes_[i]->shouldUpdateWellTargets()) {
-                any_should_update_node = true;
-            }
-            if (!leaf_nodes_[i]->individualControl()) {
-                any_group_control_node = true;
+            if (leaf_nodes_[i]->isInjector()) {
+                if (leaf_nodes_[i]->shouldUpdateWellTargets()) {
+                    any_should_update_node = true;
+                }
+
+                if (leaf_nodes_[i]->individualControl()) {
+                    any_group_control_node = true;
+                }
             }
         }
-        std::cout << " any_group_control_node " << any_group_control_node << " any_should_update_node " << any_should_update_node << std::endl;
+
         return (any_group_control_node && any_should_update_node);
     }
+
+    bool WellCollection::needUpdateProductionTargets() const {
+        bool any_group_control_node = false;
+        bool any_should_update_node = false;
+
+        for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
+            if (leaf_nodes_[i]->isProducer()) {
+                if (leaf_nodes_[i]->shouldUpdateWellTargets()) {
+                    any_should_update_node = true;
+                }
+
+                if (leaf_nodes_[i]->individualControl()) {
+                    any_group_control_node = true;
+                }
+            }
+        }
+
+        return (any_group_control_node && any_should_update_node);
+    }
+
 
 
     const size_t WellCollection::numNode() const

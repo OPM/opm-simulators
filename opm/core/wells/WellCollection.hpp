@@ -117,6 +117,9 @@ namespace Opm
         /// strategy might be required.
         bool needUpdateWellTargets() const;
 
+        bool needUpdateInjectionTargets() const;
+        bool needUpdateProductionTargets() const;
+
         const size_t numNode() const;
 
         WellNode* getNode(size_t i) const;
