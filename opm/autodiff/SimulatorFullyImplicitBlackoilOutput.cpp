@@ -31,7 +31,7 @@
 #include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/BackupRestore.hpp>

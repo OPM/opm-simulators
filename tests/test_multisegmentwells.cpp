@@ -47,7 +47,7 @@
 
 #include <opm/core/grid.h>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
