@@ -253,6 +253,9 @@ namespace Opm {
                 updateState(x,reservoir_state);
                 wellModel().updateWellState(xw, well_state);
 
+                // since the solution was changed, the cache for the intensive quantities
+                // are invalid
+                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
             const bool failed = false; // Not needed in this model.
             const int linear_iters = must_solve ? result.iterations : 0;
@@ -1012,7 +1015,6 @@ namespace Opm {
             ebosSimulator_.startNextEpisode( timer.currentStepLength() );
             ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
             ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
 
             static int prevEpisodeIdx = 10000;
