@@ -218,7 +218,8 @@ namespace Opm
         return (any_group_control_node && any_should_update_node);
     }
 
-    bool WellCollection::needUpdateProductionTargets() const {
+    bool WellCollection::needUpdateProductionTargets() const
+    {
         bool any_group_control_node = false;
         bool any_should_update_node = false;
 
@@ -251,12 +252,39 @@ namespace Opm
         return leaf_nodes_[i];
     }
 
-    bool WellCollection::justUpdateWellTargets() const {
+    bool WellCollection::justUpdateWellTargets() const
+    {
         return just_update_well_targets_;
     }
 
-    void WellCollection::setJustUpdateWellTargets(const bool flag) {
+    void WellCollection::setJustUpdateWellTargets(const bool flag)
+    {
         just_update_well_targets_ = flag;
+    }
+
+    void WellCollection::updateWellTargets(const std::vector<double> well_rates)
+    {
+        // TODO: currently, we only handle the level of the well groups for the moment, i.e. the level just above wells
+        // We believe the relations between groups are similar to the relations between different wells inside the same group.
+        // While there will be somre more complication invloved for sure.
+        for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
+            // find a node needs to update targets, then update targets for all the wellls inside the group.
+            // if (leaf_nodes_[i]->shouldUpdateWellTargets() && !leaf_nodes_[i]->individualControl()) {
+            if (!leaf_nodes_[i]->individualControl()) {
+                // TODO: will remove dynamic_cast with interface revision.
+                WellsGroup* parent_node = dynamic_cast<Opm::WellsGroup *>(leaf_nodes_[i]->getParent());
+                // update the target within this group.
+                if (leaf_nodes_[i]->isProducer()) {
+                    parent_node->updateWellProductionTargets(well_rates);
+                }
+
+                if (leaf_nodes_[i]->isInjector()) {
+                    parent_node->updateWellInjectionTargets(well_rates);
+                }
+            }
+        }
+
+        setJustUpdateWellTargets(true);
     }
 
 }

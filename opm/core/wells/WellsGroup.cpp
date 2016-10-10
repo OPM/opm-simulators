@@ -65,12 +65,12 @@ namespace Opm
                                              const InjectionSpecification& inje_spec,
                                              const PhaseUsage& phase_usage)
         : parent_(NULL),
+          should_update_well_targets_(false),
+          individual_control_(true), // always begin with individual control
           name_(myname),
           production_specification_(prod_spec),
           injection_specification_(inje_spec),
-          phase_usage_(phase_usage),
-          individual_control_(true), // always begin with individual control
-          should_update_well_targets_(false)
+          phase_usage_(phase_usage)
     {
     }
 
@@ -587,7 +587,7 @@ namespace Opm
     /// \param[in] phase            The phase for which to sum up.
 
     double WellsGroup::getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                             const BlackoilPhases::PhaseIndex phase)
+                                             const BlackoilPhases::PhaseIndex phase) const
     {
         double sum = 0.0;
         for (size_t i = 0; i < children_.size(); ++i) {
@@ -664,6 +664,57 @@ namespace Opm
                         true);
             }
 
+        }
+    }
+
+
+    void WellsGroup::updateWellProductionTargets(const std::vector<double>& well_rates)
+    {
+        // TODO: currently, we only handle the level of the well groups for the moment, i.e. the level just above wells
+        // We believe the relations between groups are similar to the relations between different wells inside the same group.
+        // While there will be somre more complication invloved for sure.
+        // Basically, we need to update the target rates for the wells still under group control.
+
+        ProductionSpecification::ControlMode control_mode = prodSpec().control_mode_;
+        double target_rate = prodSpec().liquid_max_rate_;
+
+        if (ProductionSpecification::toString(control_mode) == "FLD") {
+            auto* parent_node = getParent();
+            control_mode = parent_node->prodSpec().control_mode_;
+            target_rate = parent_node->prodSpec().liquid_max_rate_;
+        }
+
+        double rate_individual_control = 0.;
+
+        for (size_t i = 0; i < children_.size(); ++i) {
+            const std::shared_ptr<Opm::WellNode> well_node = std::dynamic_pointer_cast<Opm::WellNode>(children_[i]);
+            if (well_node->individualControl() && well_node->isProducer()) {
+                rate_individual_control += std::abs(well_node->getLiquidProductionRate(well_rates));
+            }
+        }
+
+        const double rate_for_group_control = target_rate - rate_individual_control;
+
+        const double my_guide_rate = productionGuideRate(true);
+
+        for (size_t i = 0; i < children_.size(); ++i) {
+            const std::shared_ptr<Opm::WellNode> well_node = std::dynamic_pointer_cast<Opm::WellNode>(children_[i]);
+            if (!well_node->individualControl() && well_node->isProducer()) {
+                const double children_guide_rate = well_node->productionGuideRate(true);
+                well_node->applyProdGroupControl(control_mode, (children_guide_rate/my_guide_rate) * rate_for_group_control, true);
+                well_node->setShouldUpdateWellTargets(false);
+            }
+        }
+    }
+
+    void WellsGroup::updateWellInjectionTargets(const std::vector<double>& well_rates)
+    {
+        // NOT doing anything yet.
+        // Will finish it when having an examples with more than one injection wells within same injection group.
+        for (size_t i = 0; i < children_.size(); ++i) {
+            if (!children_[i]->individualControl() && std::dynamic_pointer_cast<Opm::WellNode>(children_[i])->isInjector()) {
+                children_[i]->setShouldUpdateWellTargets(false);
+            }
         }
     }
 
@@ -901,7 +952,7 @@ namespace Opm
     /// \param[in] phase            The phase for which to sum up.
 
     double WellNode::getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                            const BlackoilPhases::PhaseIndex phase)
+                                            const BlackoilPhases::PhaseIndex phase) const
     {
         if (isInjector()) {
             return 0.0;
@@ -931,7 +982,6 @@ namespace Opm
                                          const double target,
                                          const bool only_group)
     {
-        // Not changing if we're not forced to change
         /* if (only_group && (prodSpec().control_mode_ != ProductionSpecification::GRUP
                         && prodSpec().control_mode_ != ProductionSpecification::NONE)) {
             std::cout << "Returning" << std::endl;
@@ -1065,6 +1115,25 @@ namespace Opm
     bool WellNode::isInjector() const
     {
         return (type() == INJECTOR);
+    }
+
+
+
+    double WellNode::getLiquidProductionRate(const std::vector<double>& well_rates) const
+    {
+        return ( getTotalProductionFlow(well_rates, BlackoilPhases::Liquid) +
+                 getTotalProductionFlow(well_rates, BlackoilPhases::Aqua) );
+
+    }
+
+    double WellNode::getOilProductionRate(const std::vector<double>& well_rates) const
+    {
+        return getTotalProductionFlow(well_rates, BlackoilPhases::Liquid);
+    }
+
+    double WellNode::getWaterProductionRate(const std::vector<double>& well_rates) const
+    {
+        return getTotalProductionFlow(well_rates, BlackoilPhases::Aqua);
     }
 
 

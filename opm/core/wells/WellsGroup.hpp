@@ -190,7 +190,7 @@ namespace Opm
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                              const BlackoilPhases::PhaseIndex phase) = 0;
+                                              const BlackoilPhases::PhaseIndex phase) const = 0;
 
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
@@ -311,7 +311,7 @@ namespace Opm
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                              const BlackoilPhases::PhaseIndex phase);
+                                              const BlackoilPhases::PhaseIndex phase) const;
 
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
@@ -325,11 +325,9 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
 
-        template <class WellState>
-        void updateWellProductionTargets(const WellState& well_state);
+        void updateWellProductionTargets(const std::vector<double>& well_rates);
 
-        template <class WellState>
-        void updateWellInjectionTargets(const WellState& well_state);
+        void updateWellInjectionTargets(const std::vector<double>& well_rates);
 
     private:
         std::vector<std::shared_ptr<WellsGroupInterface> > children_;
@@ -406,7 +404,7 @@ namespace Opm
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                              const BlackoilPhases::PhaseIndex phase);
+                                              const BlackoilPhases::PhaseIndex phase) const;
 
         /// Returns the type of the well.
         WellType type() const;
@@ -427,6 +425,12 @@ namespace Opm
         bool isProducer() const;
 
         bool isInjector() const;
+
+        double getLiquidProductionRate(const std::vector<double>& well_rates) const;
+
+        double getOilProductionRate(const std::vector<double>& well_rates) const;
+
+        double getWaterProductionRate(const std::vector<double>& well_rates) const;
 
     private:
         Wells* wells_;
@@ -450,6 +454,5 @@ namespace Opm
                                                                const PhaseUsage& phase_usage );
 }
 
-#include "WellsGroup_impl.hpp"
 #endif	/* OPM_WELLSGROUP_HPP */
 

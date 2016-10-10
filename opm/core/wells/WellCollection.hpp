@@ -124,8 +124,7 @@ namespace Opm
 
         WellNode* getNode(size_t i) const;
 
-        template <class WellState>
-        void updateWellTargets(const WellState& well_state);
+        void updateWellTargets(const std::vector<double> well_rates);
 
         bool justUpdateWellTargets() const;
 
@@ -145,6 +144,5 @@ namespace Opm
 
 } // namespace Opm
 
-#include "WellCollection_impl.hpp"
 #endif	/* OPM_WELLCOLLECTION_HPP */
 
