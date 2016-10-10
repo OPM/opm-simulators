@@ -1,4 +1,4 @@
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/grid/GridHelpers.hpp>
 
 #include <opm/common/ErrorMacros.hpp>

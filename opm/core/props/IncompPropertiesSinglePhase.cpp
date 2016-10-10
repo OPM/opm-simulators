@@ -22,7 +22,7 @@
 
 #include <opm/core/props/IncompPropertiesSinglePhase.hpp>
 #include <opm/core/grid.h>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
