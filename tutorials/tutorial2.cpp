@@ -46,7 +46,7 @@
 #include <opm/core/pressure/IncompTpfa.hpp>
 #include <opm/core/pressure/FlowBCManager.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/simulator/TwophaseState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 
@@ -85,7 +85,7 @@ try
     /// \details
     /// We define a fluid viscosity equal to 1 cP and density equal
     /// to 1000 kg/m^3.
-    /// The <opm/core/utility/Units.hpp> header contains support
+    /// The <opm/parser/eclipse/Units/Units.hpp> header contains support
     /// for common units and prefixes, in the namespaces Opm::unit
     /// and Opm::prefix.
     /// \snippet tutorial2.cpp fluid

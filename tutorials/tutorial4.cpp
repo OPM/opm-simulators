@@ -45,7 +45,7 @@
 #include <opm/core/simulator/WellState.hpp>
 
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/WellCollection.hpp>
 
