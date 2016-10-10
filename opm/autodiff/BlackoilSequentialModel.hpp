@@ -253,7 +253,6 @@ namespace Opm {
 
         /// Compute fluid in place.
         /// \param[in]    ReservoirState
-        /// \param[in]    WellState
         /// \param[in]    FIPNUM for active cells not global cells.
         /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
         std::vector<V>

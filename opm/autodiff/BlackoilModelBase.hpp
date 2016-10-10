@@ -131,9 +131,20 @@ namespace Opm {
 
         struct SimulatorData {
             SimulatorData(int num_phases);
+
+            enum FipId {
+                FIP_AQUA = Opm::Phases::Water,
+                FIP_LIQUID = Opm::Phases::Oil,
+                FIP_VAPOUR = Opm::Phases::Gas,
+                FIP_DISSOLVED_GAS = 3,
+                FIP_VAPORIZED_OIL = 4,
+                FIP_PV = 5,                    //< Pore volume
+                FIP_WEIGHTED_PRESSURE = 6
+            };
             std::vector<ReservoirResidualQuant> rq;
-            ADB rsSat;
-            ADB rvSat;
+            ADB rsSat; // Saturated gas-oil ratio
+            ADB rvSat; // Saturated oil-gas ratio
+            std::array<V, 7> fip;
         };
 
         typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
