@@ -242,7 +242,7 @@ namespace Opm
     }
 
 
-    bool WellsGroupInterface::setShouldUpdateWellTargets(const bool should_update_well_targets) {
+    void WellsGroupInterface::setShouldUpdateWellTargets(const bool should_update_well_targets) {
         should_update_well_targets_ = should_update_well_targets;
     }
 
@@ -323,12 +323,8 @@ namespace Opm
         if (!only_group || (prodSpec().control_mode_ == ProductionSpecification::FLD
                        || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
             const double my_guide_rate =  productionGuideRate(false);
-            std::cout << " only_group " << only_group << std::endl;
-            std::cout << " name " << name () << std::endl;
-            std::cout << " my_guide_rate is " << my_guide_rate << std::endl;
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
-                std::cout << "returning" << std::endl;
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
@@ -427,7 +423,6 @@ namespace Opm
                                   production_mode_violated).first->shutWell();
                 return false;
             case ProductionSpecification::RATE:
-                std::cout << "Applying group control" << std::endl;
                 applyProdGroupControl(production_mode_violated,
                                       getTarget(production_mode_violated),
                                       false);
@@ -487,7 +482,6 @@ namespace Opm
         {
             // const double my_guide_rate = productionGuideRate(true);
             const double my_guide_rate = productionGuideRate(false);
-            std::cout << "my_guide_rate of group " << name() << " is " << my_guide_rate << std::endl;
             if (my_guide_rate == 0) {
                 OPM_THROW(std::runtime_error, "Can't apply group control for group " << name() << " as the sum of guide rates for all group controlled wells is zero.");
             }
@@ -714,7 +708,7 @@ namespace Opm
         }
     }
 
-    void WellsGroup::updateWellInjectionTargets(const std::vector<double>& well_rates)
+    void WellsGroup::updateWellInjectionTargets(const std::vector<double>& /*well_rates*/)
     {
         // NOT doing anything yet.
         // Will finish it when having an examples with more than one injection wells within same injection group.
@@ -728,22 +722,30 @@ namespace Opm
 
     bool WellsGroup::isProducer() const
     {
+        return false;
     }
 
     bool WellsGroup::isInjector() const
     {
+        return false;
     }
 
     double WellsGroup::getLiquidProductionRate(const std::vector<double>& /*well_rates*/) const
     {
+        // TODO: to be implemented
+        return -1.e98;
     }
 
     double WellsGroup::getOilProductionRate(const std::vector<double>& /*well_rates*/) const
     {
+        // TODO: to be implemented
+        return -1.e98;
     }
 
     double WellsGroup::getWaterProductionRate(const std::vector<double>& /*well_rates*/) const
     {
+        // TODO: to be implemented
+        return -1.e98;
     }
 
 
@@ -920,16 +922,12 @@ namespace Opm
                                         const double target,
                                         const bool only_group)
     {
-        // Not changing if we're not forced to change
-        // It should be the well will under group control, if we prevent the well from group control
-        // with keyword WGRUPCON.
-        // It is just current undertstanding, while further change in the understanding will be possible.
-        // if (only_group
-        //      && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
-        //     return;
-        // }
         if ( !isInjector() ) {
             assert(target == 0.0);
+            return;
+        }
+
+        if (only_group && individualControl()) {
             return;
         }
 
@@ -1001,13 +999,12 @@ namespace Opm
                                          const double target,
                                          const bool only_group)
     {
-        /* if (only_group && (prodSpec().control_mode_ != ProductionSpecification::GRUP
-                        && prodSpec().control_mode_ != ProductionSpecification::NONE)) {
-            std::cout << "Returning" << std::endl;
-            return;
-        } */
         if ( !isProducer() ) {
-            // assert(target == 0.0);
+            assert(target == 0.0);
+            return;
+        }
+
+        if (only_group && individualControl()) {
             return;
         }
         // We're a producer, so we need to negate the input
@@ -1040,7 +1037,6 @@ namespace Opm
             distr[phase_pos[BlackoilPhases::Vapour]] = 1.0;
             break;
         case ProductionSpecification::LRAT:
-            std::cout << "applying rate" << std::endl;
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Liquid]) {
                 OPM_THROW(std::runtime_error, "Oil phase not active and LRAT control specified.");
@@ -1058,9 +1054,6 @@ namespace Opm
         default:
             OPM_THROW(std::runtime_error, "Group production control mode not handled: " << control_mode);
         }
-
-        std::cout << " well name " << name() << " group_control_index_ " << group_control_index_ << " ntarget " << ntarget
-             << std::endl;
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.

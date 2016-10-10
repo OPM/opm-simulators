@@ -215,7 +215,7 @@ namespace Opm
 
         virtual bool shouldUpdateWellTargets() const;
 
-        virtual bool setShouldUpdateWellTargets(const bool);
+        virtual void setShouldUpdateWellTargets(const bool);
 
         /// Whether it is a production well
         /// Should only appy for WellNode
