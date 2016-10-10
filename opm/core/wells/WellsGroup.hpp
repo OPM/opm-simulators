@@ -230,11 +230,6 @@ namespace Opm
 
         WellsGroupInterface* parent_;
 
-    private:
-        std::string name_;
-        ProductionSpecification production_specification_;
-        InjectionSpecification injection_specification_;
-        PhaseUsage phase_usage_;
         // when some well (mabye group also later), change status from group control
         // to individual control, or the other way, the targets for the wells in the group need to be redistributed.
         bool should_update_well_targets_;
@@ -242,6 +237,12 @@ namespace Opm
         // Current only consider one level of control.
         // So not putting it in the WellsGroupInterface yet.
         bool individual_control_;
+
+    private:
+        std::string name_;
+        ProductionSpecification production_specification_;
+        InjectionSpecification injection_specification_;
+        PhaseUsage phase_usage_;
     };
 
 

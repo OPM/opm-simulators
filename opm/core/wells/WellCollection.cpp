@@ -239,7 +239,7 @@ namespace Opm
 
 
 
-    const size_t WellCollection::numNode() const
+    size_t WellCollection::numNode() const
     {
         return leaf_nodes_.size();
     }
