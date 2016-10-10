@@ -271,8 +271,7 @@ namespace Opm
             // find a node needs to update targets, then update targets for all the wellls inside the group.
             // if (leaf_nodes_[i]->shouldUpdateWellTargets() && !leaf_nodes_[i]->individualControl()) {
             if (!leaf_nodes_[i]->individualControl()) {
-                // TODO: will remove dynamic_cast with interface revision.
-                WellsGroup* parent_node = dynamic_cast<Opm::WellsGroup *>(leaf_nodes_[i]->getParent());
+                WellsGroupInterface* parent_node = leaf_nodes_[i]->getParent();
                 // update the target within this group.
                 if (leaf_nodes_[i]->isProducer()) {
                     parent_node->updateWellProductionTargets(well_rates);

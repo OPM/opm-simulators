@@ -217,6 +217,25 @@ namespace Opm
 
         virtual bool setShouldUpdateWellTargets(const bool);
 
+        /// Whether it is a production well
+        /// Should only appy for WellNode
+        virtual bool isProducer() const = 0;
+
+        /// Whether it is an injection well
+        /// Should only appy for WellNode
+        virtual bool isInjector() const = 0;
+
+        virtual double getLiquidProductionRate(const std::vector<double>& well_rates) const = 0;
+
+        virtual double getOilProductionRate(const std::vector<double>& well_rates) const = 0;
+
+        virtual double getWaterProductionRate(const std::vector<double>& well_rates) const = 0;
+
+        virtual void updateWellProductionTargets(const std::vector<double>& well_rates) = 0;
+
+        virtual void updateWellInjectionTargets(const std::vector<double>& well_rates) = 0;
+
+
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
         double rateByMode(const double* res_rates,
@@ -325,9 +344,23 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
 
-        void updateWellProductionTargets(const std::vector<double>& well_rates);
+        virtual void updateWellProductionTargets(const std::vector<double>& well_rates);
 
-        void updateWellInjectionTargets(const std::vector<double>& well_rates);
+        virtual void updateWellInjectionTargets(const std::vector<double>& well_rates);
+
+        /// Whether it is a production well
+        /// Should only appy for WellNode
+        virtual bool isProducer() const;
+
+        /// Whether it is an injection well
+        /// Should only appy for WellNode
+        virtual bool isInjector() const;
+
+        virtual double getLiquidProductionRate(const std::vector<double>& well_rates) const;
+
+        virtual double getOilProductionRate(const std::vector<double>& well_rates) const;
+
+        virtual double getWaterProductionRate(const std::vector<double>& well_rates) const;
 
     private:
         std::vector<std::shared_ptr<WellsGroupInterface> > children_;
@@ -422,15 +455,20 @@ namespace Opm
                                                       const std::vector<double>& well_surfacerates_phase);
         int groupControlIndex() const;
 
-        bool isProducer() const;
+        virtual bool isProducer() const;
 
-        bool isInjector() const;
+        virtual bool isInjector() const;
 
-        double getLiquidProductionRate(const std::vector<double>& well_rates) const;
+        virtual double getLiquidProductionRate(const std::vector<double>& well_rates) const;
 
-        double getOilProductionRate(const std::vector<double>& well_rates) const;
+        virtual double getOilProductionRate(const std::vector<double>& well_rates) const;
 
-        double getWaterProductionRate(const std::vector<double>& well_rates) const;
+        virtual double getWaterProductionRate(const std::vector<double>& well_rates) const;
+
+        virtual void updateWellProductionTargets(const std::vector<double>& well_rates);
+
+        virtual void updateWellInjectionTargets(const std::vector<double>& well_rates);
+
 
     private:
         Wells* wells_;

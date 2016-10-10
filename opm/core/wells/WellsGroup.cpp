@@ -246,6 +246,15 @@ namespace Opm
         should_update_well_targets_ = should_update_well_targets;
     }
 
+    bool WellsGroupInterface::individualControl() const {
+        return individual_control_;
+    }
+
+    void WellsGroupInterface::setIndividualControl(const bool individual_control) {
+        individual_control_ = individual_control;
+    }
+
+
 
     // ==============   WellsGroup members =============
 
@@ -687,9 +696,8 @@ namespace Opm
         double rate_individual_control = 0.;
 
         for (size_t i = 0; i < children_.size(); ++i) {
-            const std::shared_ptr<Opm::WellNode> well_node = std::dynamic_pointer_cast<Opm::WellNode>(children_[i]);
-            if (well_node->individualControl() && well_node->isProducer()) {
-                rate_individual_control += std::abs(well_node->getLiquidProductionRate(well_rates));
+            if (children_[i]->individualControl() && children_[i]->isProducer()) {
+                rate_individual_control += std::abs(children_[i]->getLiquidProductionRate(well_rates));
             }
         }
 
@@ -698,11 +706,10 @@ namespace Opm
         const double my_guide_rate = productionGuideRate(true);
 
         for (size_t i = 0; i < children_.size(); ++i) {
-            const std::shared_ptr<Opm::WellNode> well_node = std::dynamic_pointer_cast<Opm::WellNode>(children_[i]);
-            if (!well_node->individualControl() && well_node->isProducer()) {
-                const double children_guide_rate = well_node->productionGuideRate(true);
-                well_node->applyProdGroupControl(control_mode, (children_guide_rate/my_guide_rate) * rate_for_group_control, true);
-                well_node->setShouldUpdateWellTargets(false);
+            if (!children_[i]->individualControl() && children_[i]->isProducer()) {
+                const double children_guide_rate = children_[i]->productionGuideRate(true);
+                children_[i]->applyProdGroupControl(control_mode, (children_guide_rate/my_guide_rate) * rate_for_group_control, true);
+                children_[i]->setShouldUpdateWellTargets(false);
             }
         }
     }
@@ -712,19 +719,31 @@ namespace Opm
         // NOT doing anything yet.
         // Will finish it when having an examples with more than one injection wells within same injection group.
         for (size_t i = 0; i < children_.size(); ++i) {
-            if (!children_[i]->individualControl() && std::dynamic_pointer_cast<Opm::WellNode>(children_[i])->isInjector()) {
+            if (!children_[i]->individualControl() && children_[i]->isInjector()) {
                 children_[i]->setShouldUpdateWellTargets(false);
             }
         }
     }
 
 
-    bool WellsGroupInterface::individualControl() const {
-        return individual_control_;
+    bool WellsGroup::isProducer() const
+    {
     }
 
-    void WellsGroupInterface::setIndividualControl(const bool individual_control) {
-        individual_control_ = individual_control;
+    bool WellsGroup::isInjector() const
+    {
+    }
+
+    double WellsGroup::getLiquidProductionRate(const std::vector<double>& /*well_rates*/) const
+    {
+    }
+
+    double WellsGroup::getOilProductionRate(const std::vector<double>& /*well_rates*/) const
+    {
+    }
+
+    double WellsGroup::getWaterProductionRate(const std::vector<double>& /*well_rates*/) const
+    {
     }
 
 
@@ -1136,6 +1155,13 @@ namespace Opm
         return getTotalProductionFlow(well_rates, BlackoilPhases::Aqua);
     }
 
+    void WellNode::updateWellProductionTargets(const std::vector<double>& /*well_rates*/)
+    {
+    }
+
+    void WellNode::updateWellInjectionTargets(const std::vector<double>& /*well_rates*/)
+    {
+    }
 
     namespace
     {
