@@ -1043,7 +1043,6 @@ namespace detail {
         int it  = 0;
         bool converged;
         do {
-            std::cout << "in solveWellEq " << std::endl;
             // bhp and Q for the wells
             std::vector<V> vars0;
             vars0.reserve(2);
@@ -1133,7 +1132,6 @@ namespace detail {
         }
         const bool failed = false; // Not needed in this method.
         const int linear_iters = 0; // Not needed in this method
-        std::cout << " end of solveWellEq " << std::endl;
         return IterationReport{failed, converged, linear_iters, it};
     }
 
@@ -1911,6 +1909,7 @@ namespace detail {
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
         converged_Well = converged_Well && (residualWell < tol_well_control);
+
         const bool converged = converged_MB && converged_CNV && converged_Well;
 
         // Residual in Pascal can have high values and still be ok.
