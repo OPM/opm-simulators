@@ -1,0 +1,17 @@
+#!/bin/bash
+
+ORIGDIR=`pwd`
+TOPDIR=`dirname $0`
+tmp=`mktemp -d`
+pushd .
+cd $TOPDIR/..
+git archive --prefix opm-simulators-$1/ -o $tmp/opm-simulators.tar.gz $2
+cd $tmp
+wget https://github.com/OPM/eigen3/archive/master.tar.gz -O eigen3-master.tar.gz
+tar zxvf opm-simulators.tar.gz
+cd opm-simulators-$1
+tar zxvf ../eigen3-master.tar.gz
+cd ..
+tar zcvf $ORIGDIR/opm-simulators-$1.tar.gz opm-simulators-$1/
+popd
+rm $tmp -Rf
