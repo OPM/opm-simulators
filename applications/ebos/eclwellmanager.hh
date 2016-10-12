@@ -294,6 +294,8 @@ public:
                     OPM_THROW(std::runtime_error,
                               "Not implemented: Well groups");
 
+                case Opm::WellProducer::NONE:
+                    // fall-through
                 case Opm::WellProducer::CMODE_UNDEFINED:
                     std::cout << "Warning: Control mode of production well " << well->name()
                               << " is undefined. Assuming well to be shut.";
