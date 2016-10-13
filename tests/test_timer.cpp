@@ -43,11 +43,11 @@
 BOOST_AUTO_TEST_CASE(CreateTimer)
 {
     const std::string filename1 = "TESTTIMER.DATA";
-    Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr parserDeck = parser->parseFile( filename1 , parseContext);
+    Opm::Parser parser;
+    Opm::Deck parserDeck = parser.parseFile( filename1 , parseContext);
 
-    Opm::TimeMapPtr timeMap(new Opm::TimeMap(parserDeck));
+    Opm::TimeMap timeMap( parserDeck );
     Opm::SimulatorTimer simtimer;
 
     boost::gregorian::date defaultStartDate( 2012, 1, 1); 

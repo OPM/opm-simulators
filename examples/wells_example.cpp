@@ -36,13 +36,13 @@ try
 
     // Read input file
     ParseContext parseContext;
-    Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck = parser->parseFile(file_name , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile(file_name , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     std::cout << "Done!" << std::endl;
 
     // Setup grid
-    GridManager grid(*eclipseState->getInputGrid());
+    GridManager grid(eclipseState.getInputGrid());
 
     // Define rock and fluid properties
     IncompPropertiesFromDeck incomp_properties(deck, eclipseState, *grid.c_grid());

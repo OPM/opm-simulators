@@ -49,17 +49,17 @@ namespace Opm
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-    void SimulatorTimer::init(Opm::TimeMapConstPtr timeMap, size_t report_step)
+    void SimulatorTimer::init(const TimeMap& timeMap, size_t report_step)
     {
-        total_time_ = timeMap->getTotalTime();
-        timesteps_.resize(timeMap->numTimesteps());
-        for ( size_t i = 0; i < timeMap->numTimesteps(); ++i ) {
-            timesteps_[i] = timeMap->getTimeStepLength(i);
+        total_time_ = timeMap.getTotalTime();
+        timesteps_.resize(timeMap.numTimesteps());
+        for ( size_t i = 0; i < timeMap.numTimesteps(); ++i ) {
+            timesteps_[i] = timeMap.getTimeStepLength(i);
         }
 
         setCurrentStepNum(report_step);
 
-        boost::posix_time::ptime start_time = timeMap->getStartTime(0);
+        boost::posix_time::ptime start_time = timeMap.getStartTime(0);
         start_date_ = start_time.date();
     }
 

@@ -47,7 +47,7 @@ namespace Opm
         void init(const parameter::ParameterGroup& param);
 
         /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-        void init(TimeMapConstPtr timeMap, size_t report_step = 0);
+        void init(const TimeMap& timeMap, size_t report_step = 0);
 
         /// Whether the current step is the first step.
         bool initialStep() const;
