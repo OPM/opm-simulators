@@ -24,12 +24,12 @@
 
 namespace Opm{
 
-    void RelpermDiagnostics::phaseCheck_(DeckConstPtr deck)
+    void RelpermDiagnostics::phaseCheck_(const Deck& deck)
     {
-        bool hasWater = deck->hasKeyword("WATER");
-        bool hasGas = deck->hasKeyword("GAS");
-        bool hasOil = deck->hasKeyword("OIL");
-        bool hasSolvent = deck->hasKeyword("SOLVENT");
+        bool hasWater = deck.hasKeyword("WATER");
+        bool hasGas = deck.hasKeyword("GAS");
+        bool hasOil = deck.hasKeyword("OIL");
+        bool hasSolvent = deck.hasKeyword("SOLVENT");
             
         if (hasWater && hasGas && !hasOil && !hasSolvent) {
             const std::string msg = "System:  Water-Gas system.";
@@ -62,9 +62,9 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::satFamilyCheck_(Opm::EclipseStateConstPtr eclState)
+    void RelpermDiagnostics::satFamilyCheck_(const Opm::EclipseState& eclState)
     {
-        const auto& tableManager = eclState->getTableManager();
+        const auto& tableManager = eclState.getTableManager();
         const TableContainer& swofTables = tableManager.getSwofTables();
         const TableContainer& slgofTables= tableManager.getSlgofTables();
         const TableContainer& sgofTables = tableManager.getSgofTables();
@@ -105,15 +105,15 @@ namespace Opm{
 
  
 
-    void RelpermDiagnostics::tableCheck_(EclipseStateConstPtr eclState, 
-                                         std::shared_ptr< const Deck > deck)
+    void RelpermDiagnostics::tableCheck_(const EclipseState& eclState,
+                                         const Deck& deck)
     {
-        const int numSatRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
+        const int numSatRegions = deck.getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
         {
             const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
             OpmLog::info(msg);
         }
-        const auto& tableManager = eclState->getTableManager();
+        const auto& tableManager = eclState.getTableManager();
         const TableContainer& swofTables    = tableManager.getSwofTables();
         const TableContainer& slgofTables   = tableManager.getSlgofTables();
         const TableContainer& sgofTables    = tableManager.getSgofTables();
@@ -129,46 +129,46 @@ namespace Opm{
         const TableContainer& msfnTables    = tableManager.getMsfnTables();
         
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
-            if (deck->hasKeyword("SWOF")) {
+            if (deck.hasKeyword("SWOF")) {
                 swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SGOF")) {
+            if (deck.hasKeyword("SGOF")) {
                 sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SLGOF")) {
+            if (deck.hasKeyword("SLGOF")) {
                 slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SWFN")) {
+            if (deck.hasKeyword("SWFN")) {
                 swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SGFN")) {
+            if (deck.hasKeyword("SGFN")) {
                 sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SOF3")) {
+            if (deck.hasKeyword("SOF3")) {
                 sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SOF2")) {
+            if (deck.hasKeyword("SOF2")) {
                 sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SGWFN")) {
+            if (deck.hasKeyword("SGWFN")) {
                 sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SGCWMIS")) {
+            if (deck.hasKeyword("SGCWMIS")) {
                 sgcwmisTableCheck_(sgcwmisTables.getTable<SgcwmisTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SORWMIS")) {
+            if (deck.hasKeyword("SORWMIS")) {
                 sorwmisTableCheck_(sorwmisTables.getTable<SorwmisTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("SSFN")) {
+            if (deck.hasKeyword("SSFN")) {
                 ssfnTableCheck_(ssfnTables.getTable<SsfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck->hasKeyword("MSFN")) {
+            if (deck.hasKeyword("MSFN")) {
                 msfnTableCheck_(msfnTables.getTable<MsfnTable>(satnumIdx), satnumIdx+1);
             }
         }
 
 
-        if (deck->hasKeyword("MISCIBLE")) {
+        if (deck.hasKeyword("MISCIBLE")) {
             const int numMiscNumIdx = miscTables.size();
             const std::string msg = "Number of misc regions: " + std::to_string(numMiscNumIdx) + "\n";
             OpmLog::info(msg);
@@ -586,14 +586,14 @@ namespace Opm{
 
 
 
-    void RelpermDiagnostics::unscaledEndPointsCheck_(DeckConstPtr deck,
-                                                     EclipseStateConstPtr eclState)
+    void RelpermDiagnostics::unscaledEndPointsCheck_(const Deck& deck,
+                                                     const EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        const int numSatRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
+        const int numSatRegions = deck.getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
         unscaledEpsInfo_.resize(numSatRegions);
 
-        const auto& tables = eclState->getTableManager();
+        const auto& tables = eclState.getTableManager();
         const TableContainer&  swofTables = tables.getSwofTables();
         const TableContainer&  sgofTables = tables.getSgofTables();
         const TableContainer& slgofTables = tables.getSlgofTables();

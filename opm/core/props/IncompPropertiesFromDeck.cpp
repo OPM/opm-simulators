@@ -27,8 +27,8 @@
 
 namespace Opm
 {
-    IncompPropertiesFromDeck::IncompPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                                       Opm::EclipseStateConstPtr eclState,
+    IncompPropertiesFromDeck::IncompPropertiesFromDeck(const Opm::Deck& deck,
+                                                       const Opm::EclipseState& eclState,
                                                        const UnstructuredGrid& grid)
     {
         rock_.init(eclState, grid.number_of_cells, grid.global_cell, grid.cartdims);

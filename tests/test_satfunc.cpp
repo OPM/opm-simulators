@@ -66,10 +66,10 @@ BOOST_AUTO_TEST_CASE (GwsegStandard)
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncStandard.DATA", parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile("satfuncStandard.DATA", parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -152,10 +152,10 @@ BOOST_AUTO_TEST_CASE (GwsegEPSBase)
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPSBase.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile("satfuncEPSBase.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -239,9 +239,9 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_A)
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
     Opm::ParseContext parseContext;
-    Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_A.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile("satfuncEPS_A.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -392,8 +392,8 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_B)
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
     Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_B.DATA");
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(deck));
+    const Opm::Deck& deck = parser->parseFile("satfuncEPS_B.DATA");
+    const Opm::EclipseState& eclipseState(new Opm::EclipseState(deck));
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = props.numPhases();
@@ -490,10 +490,10 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_C)
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_C.DATA", parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile("satfuncEPS_C.DATA", parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;
@@ -593,10 +593,10 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_D)
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("satfuncEPS_D.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile("satfuncEPS_D.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param, false);
     
     const int np = 3;

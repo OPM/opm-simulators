@@ -57,7 +57,7 @@ using namespace Opm;
   further semantic meaning.
 */
 
-void verify_norne_oil_pvt_region1(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclState) {
+void verify_norne_oil_pvt_region1(const Opm::Deck& deck, const Opm::EclipseState& eclState) {
     Opm::LiveOilPvt<double> oilPvt;
     oilPvt.initFromDeck(deck, eclState);
 
@@ -131,7 +131,7 @@ void verify_norne_oil_pvt_region1(Opm::DeckConstPtr deck, Opm::EclipseStateConst
 }
 
 
-void verify_norne_oil_pvt_region2(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclState) {
+void verify_norne_oil_pvt_region2(const Opm::Deck& deck, const Opm::EclipseState& eclState) {
     Opm::LiveOilPvt<double> oilPvt;
     oilPvt.initFromDeck(deck, eclState);
 
@@ -276,12 +276,11 @@ void verify_norne_oil_pvt_region2(Opm::DeckConstPtr deck, Opm::EclipseStateConst
 
 BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-    Opm::ParserPtr parser(new Parser());
+    Opm::Parser parser;
 
-    std::shared_ptr<const Deck> deck;
-    deck = parser->parseFile("norne_pvt.data", parseContext);
+    auto deck = parser.parseFile("norne_pvt.data", parseContext);
 
-    Opm::EclipseStateConstPtr eclState(new EclipseState(*deck, parseContext));
+    Opm::EclipseState eclState(deck, parseContext);
 
     verify_norne_oil_pvt_region1( deck, eclState );
     verify_norne_oil_pvt_region2( deck, eclState );

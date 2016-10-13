@@ -51,18 +51,18 @@ using namespace Opm;
 BOOST_AUTO_TEST_CASE(Processing)
 {
     const std::string filename="../tests/testPinch1.DATA";
-    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::Parser parser;
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-    Opm::DeckConstPtr deck = parser->parseFile(filename, parseContext);
-    std::shared_ptr<EclipseState> eclstate (new Opm::EclipseState(*deck, parseContext));
-    const auto& porv = eclstate->get3DProperties().getDoubleGridProperty("PORV").getData();
-    EclipseGridConstPtr eclgrid = eclstate->getInputGrid();
+    Opm::Deck deck = parser.parseFile(filename, parseContext);
+    EclipseState eclstate(deck, parseContext);
+    const auto& porv = eclstate.get3DProperties().getDoubleGridProperty("PORV").getData();
+    const auto& eclgrid = eclstate.getInputGrid();
 
-    BOOST_CHECK_EQUAL(eclgrid->getMinpvMode(), MinpvMode::EclSTD);
+    BOOST_CHECK_EQUAL(eclgrid.getMinpvMode(), MinpvMode::EclSTD);
 
-    const int nc_initial = eclgrid->getNumActive();
+    const int nc_initial = eclgrid.getNumActive();
 
-    Opm::GridManager gridM(*eclgrid, porv);
+    Opm::GridManager gridM(eclgrid, porv);
     typedef UnstructuredGrid Grid;
     const Grid& grid = *(gridM.c_grid());
     const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
@@ -74,16 +74,16 @@ BOOST_AUTO_TEST_CASE(Processing)
     Opm::RockFromDeck rock;
     rock.init(eclstate, nc, global_cell, cart_dims);
 
-    const double minpv = eclgrid->getMinpvValue();
+    const double minpv = eclgrid.getMinpvValue();
     BOOST_CHECK_EQUAL(minpv, 0.001);
 
-    const double thickness = eclgrid->getPinchThresholdThickness();
+    const double thickness = eclgrid.getPinchThresholdThickness();
     BOOST_CHECK_EQUAL(thickness, 0.001);
 
-    auto transMode = eclgrid->getPinchOption();
+    auto transMode = eclgrid.getPinchOption();
     BOOST_CHECK_EQUAL(transMode, PinchMode::ModeEnum::TOPBOT);
 
-    auto multzMode = eclgrid->getMultzOption();
+    auto multzMode = eclgrid.getMultzOption();
     BOOST_CHECK_EQUAL(multzMode, PinchMode::ModeEnum::TOP);
 
     PinchProcessor<Grid> pinch(minpv, thickness, transMode, multzMode);
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(Processing)
     std::vector<double> htrans(Opm::UgGridHelpers::numCellFaces(grid));
     Grid* ug = const_cast<Grid*>(& grid);
     tpfa_htrans_compute(ug, rock.permeability(), htrans.data());
-    const auto& transMult = eclstate->getTransMult();
+    const auto& transMult = eclstate.getTransMult();
     std::vector<double> multz(nc, 0.0);
     for (int i = 0; i < nc; ++i) {
         multz[i] = transMult.getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);

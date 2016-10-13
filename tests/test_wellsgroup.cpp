@@ -48,14 +48,14 @@
 using namespace Opm;
 
 BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
-    ParserPtr parser(new Parser());
     std::string scheduleFile("wells_group.data");
     ParseContext parseContext;
-    DeckConstPtr deck =  parser->parseFile(scheduleFile, parseContext);
-    EclipseStateConstPtr eclipseState(new EclipseState(*deck , parseContext));
+    Parser parser;
+    Deck deck =  parser.parseFile(scheduleFile, parseContext);
+    EclipseState eclipseState(deck , parseContext);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-    auto wells = eclipseState->getSchedule()->getWells();
+    auto wells = eclipseState.getSchedule().getWells();
 
     for (size_t i=0; i<wells.size(); i++) {
         const auto* well = wells[i];
@@ -81,17 +81,17 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
 
 
 BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
-    ParserPtr parser(new Parser());
+    Parser parser;
     ParseContext parseContext;
     std::string scheduleFile("wells_group.data");
-    DeckConstPtr deck =  parser->parseFile(scheduleFile, parseContext);
-    EclipseStateConstPtr eclipseState(new EclipseState(*deck , parseContext));
+    Deck deck =  parser.parseFile(scheduleFile, parseContext);
+    EclipseState eclipseState(deck , parseContext);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-    auto nodes = eclipseState->getSchedule()->getGroupTree(2).getNodes();
+    auto nodes = eclipseState.getSchedule().getGroupTree(2).getNodes();
 
     for (size_t i=0; i<nodes.size(); i++) {
-        const auto& group = eclipseState->getSchedule()->getGroup(nodes[i]->name());
+        const auto& group = eclipseState.getSchedule().getGroup(nodes[i]->name());
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, 2, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
         if (group.isInjectionGroup(2)) {

@@ -47,7 +47,7 @@ namespace Opm
         /// \param  global_cell     The mapping fom local to global cell indices.
         ///                         global_cell[i] is the corresponding global index of i.
         /// \param  cart_dims       The size of the underlying cartesian grid.
-        void init(Opm::EclipseStateConstPtr eclState,
+        void init(const Opm::EclipseState& eclState,
                   int number_of_cells, const int* global_cell,
                   const int* cart_dims);
 
@@ -78,10 +78,10 @@ namespace Opm
         }
 
     private:
-        void assignPorosity(Opm::EclipseStateConstPtr eclState,
+        void assignPorosity(const Opm::EclipseState& eclState,
                             int number_of_cells,
                             const int* global_cell);
-        void assignPermeability(Opm::EclipseStateConstPtr eclState,
+        void assignPermeability(const Opm::EclipseState& eclState,
                                 int number_of_cells,
                                 const int* global_cell,
                                 const int* cart_dims,

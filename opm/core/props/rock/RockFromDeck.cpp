@@ -50,12 +50,12 @@ namespace Opm
         typedef GridPropertyAccess::Compressed<PermArray, PermTag> PermComponent;
 
         PermComponent
-        extractPermComponent(EclipseStateConstPtr ecl,
+        extractPermComponent(const EclipseState& ecl,
                              const std::string&   kw,
                              const int*           global_cell);
 
         PermeabilityKind
-        fillTensor(EclipseStateConstPtr        eclState,
+        fillTensor(const EclipseState&         eclState,
                    const int*                  global_cell,
                    std::vector<PermComponent>& tensor,
                    std::array<int,9>&          kmap);
@@ -80,7 +80,7 @@ namespace Opm
     {
     }
 
-    void RockFromDeck::init(Opm::EclipseStateConstPtr eclState,
+    void RockFromDeck::init(const Opm::EclipseState& eclState,
                             int number_of_cells, const int* global_cell,
                             const int* cart_dims)
     {
@@ -91,7 +91,7 @@ namespace Opm
                            perm_threshold);
     }
 
-    void RockFromDeck::assignPorosity(Opm::EclipseStateConstPtr eclState,
+    void RockFromDeck::assignPorosity(const Opm::EclipseState& eclState,
                                       int number_of_cells, const int* global_cell)
     {
         typedef GridPropertyAccess::ArrayPolicy
@@ -106,7 +106,7 @@ namespace Opm
         }
     }
 
-    void RockFromDeck::assignPermeability(Opm::EclipseStateConstPtr eclState,
+    void RockFromDeck::assignPermeability(const Opm::EclipseState& eclState,
                                           int number_of_cells,
                                           const int* global_cell,
                                           const int* cartdims,
@@ -181,9 +181,9 @@ namespace Opm
         ///        TensorPerm     at least one cross-component given.
         ///        None           no components given.
         ///        Invalid        invalid set of components given.
-        PermeabilityKind classifyPermeability(Opm::EclipseStateConstPtr eclState)
+        PermeabilityKind classifyPermeability(const Opm::EclipseState& eclState)
         {
-            auto& props = eclState->get3DProperties();
+            auto& props = eclState.get3DProperties();
             const bool xx = props.hasDeckDoubleGridProperty("PERMX" );
             const bool xy = props.hasDeckDoubleGridProperty("PERMXY");
             const bool yx = xy;
@@ -290,7 +290,7 @@ namespace Opm
         /// @param [out] tensor
         /// @param [out] kmap
         PermeabilityKind
-        fillTensor(EclipseStateConstPtr        eclState,
+        fillTensor(const EclipseState&         eclState,
                    const int*                  global_cell,
                    std::vector<PermComponent>& tensor,
                    std::array<int,9>&          kmap)
@@ -310,7 +310,7 @@ namespace Opm
 
             // -----------------------------------------------------------
             // 1st row: [ kxx, kxy ], kxz handled in kzx
-            if (eclState->get3DProperties().hasDeckDoubleGridProperty("PERMX" )) {
+            if (eclState.get3DProperties().hasDeckDoubleGridProperty("PERMX" )) {
                 kmap[xx] = tensor.size();
                 tensor.push_back(extractPermComponent(eclState, "PERMX", global_cell));
 
@@ -323,7 +323,7 @@ namespace Opm
 
             // -----------------------------------------------------------
             // 2nd row: [ kyy, kyz ], kyx handled in kxy
-            if (eclState->get3DProperties().hasDeckDoubleGridProperty("PERMY" )) {
+            if (eclState.get3DProperties().hasDeckDoubleGridProperty("PERMY" )) {
                 kmap[yy] = tensor.size();
                 tensor.push_back(extractPermComponent(eclState, "PERMY", global_cell));
 
@@ -340,7 +340,7 @@ namespace Opm
                 kmap[zx] = kmap[xz] = tensor.size();  // Enforce symmetry.
                 tensor.push_back(extractPermComponent(eclState, "PERMZX", global_cell));
             }
-            if (eclState->get3DProperties().hasDeckDoubleGridProperty("PERMZ" )) {
+            if (eclState.get3DProperties().hasDeckDoubleGridProperty("PERMZ" )) {
                 kmap[zz] = tensor.size();
                 tensor.push_back(extractPermComponent(eclState, "PERMZ", global_cell));
 
@@ -351,7 +351,7 @@ namespace Opm
         }
 
         PermComponent
-        extractPermComponent(EclipseStateConstPtr ecl,
+        extractPermComponent(const EclipseState&  ecl,
                              const std::string&   kw,
                              const int*           global_cell)
         {

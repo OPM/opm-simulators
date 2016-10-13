@@ -66,7 +66,7 @@ namespace Opm
         /// Initialize from deck and MaterialLawManager.
         /// \param[in]  deck                Input deck
         /// \param[in]  materialLawManager  An initialized MaterialLawManager object
-        void init(Opm::DeckConstPtr deck,
+        void init(const Opm::Deck& deck,
                   std::shared_ptr<MaterialLawManager> materialLawManager)
         {
             init(Opm::phaseUsageFromDeck(deck), materialLawManager);

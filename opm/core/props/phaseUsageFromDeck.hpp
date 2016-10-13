@@ -33,12 +33,12 @@ namespace Opm
 
     /// Looks at presence of WATER, OIL and GAS keywords in state object
     /// to determine active phases.
-    inline PhaseUsage phaseUsageFromDeck(Opm::EclipseStateConstPtr eclipseState)
+    inline PhaseUsage phaseUsageFromDeck(const Opm::EclipseState& eclipseState)
     {
         PhaseUsage pu;
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
 
-        const auto& tm = eclipseState->getTableManager();
+        const auto& tm = eclipseState.getTableManager();
         // Discover phase usage.
         if (tm.hasPhase(Phase::PhaseEnum::WATER)) {
             pu.phase_used[BlackoilPhases::Aqua] = 1;
@@ -71,19 +71,19 @@ namespace Opm
 
     /// Looks at presence of WATER, OIL and GAS keywords in deck
     /// to determine active phases.
-    inline PhaseUsage phaseUsageFromDeck(Opm::DeckConstPtr deck)
+    inline PhaseUsage phaseUsageFromDeck(const Opm::Deck& deck)
     {
         PhaseUsage pu;
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
 
         // Discover phase usage.
-        if (deck->hasKeyword("WATER")) {
+        if (deck.hasKeyword("WATER")) {
             pu.phase_used[BlackoilPhases::Aqua] = 1;
         }
-        if (deck->hasKeyword("OIL")) {
+        if (deck.hasKeyword("OIL")) {
             pu.phase_used[BlackoilPhases::Liquid] = 1;
         }
-        if (deck->hasKeyword("GAS")) {
+        if (deck.hasKeyword("GAS")) {
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;

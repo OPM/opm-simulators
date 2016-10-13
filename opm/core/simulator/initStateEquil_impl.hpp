@@ -886,8 +886,8 @@ namespace Opm
     template<class Grid>
     void initStateEquil(const Grid& grid,
                         BlackoilPropertiesFromDeck& props,
-                        const Opm::DeckConstPtr deck,
-                        const Opm::EclipseStateConstPtr eclipseState,
+                        const Opm::Deck& deck,
+                        const Opm::EclipseState& eclipseState,
                         const double gravity,
                         BlackoilState& state)
     {

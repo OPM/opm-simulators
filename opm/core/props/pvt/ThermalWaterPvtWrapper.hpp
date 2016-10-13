@@ -41,8 +41,8 @@ namespace Opm
 
         /// set the tables which specify the temperature dependence of the water viscosity
         void initFromDeck(std::shared_ptr<const PvtInterface> isothermalPvt,
-                          Opm::DeckConstPtr deck,
-                          Opm::EclipseStateConstPtr eclipseState)
+                          const Opm::Deck& deck,
+                          const Opm::EclipseState& eclipseState)
         {
             isothermalPvt_ = isothermalPvt;
             watvisctTables_ = 0;

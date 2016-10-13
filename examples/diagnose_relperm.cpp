@@ -65,8 +65,7 @@ try
         exit(1);
     } 
     const char* eclipseFilename = argv[1];
-    EclipseStateConstPtr eclState; 
-    ParserPtr parser(new Opm::Parser);
+    Parser parser;
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }, 
                               { ParseContext::PARSE_UNKNOWN_KEYWORD, InputError::IGNORE},
                               { ParseContext::PARSE_RANDOM_TEXT, InputError::IGNORE},
@@ -75,10 +74,10 @@ try
                               { ParseContext::UNSUPPORTED_INITIAL_THPRES, InputError::IGNORE},
                               { ParseContext::INTERNAL_ERROR_UNINITIALIZED_THPRES, InputError::IGNORE}
                              });
-    Opm::DeckConstPtr deck(parser->parseFile(eclipseFilename, parseContext));
-    eclState.reset(new EclipseState(*deck, parseContext));
+    Opm::Deck deck = parser.parseFile(eclipseFilename, parseContext);
+    Opm::EclipseState eclState( deck, parseContext );
 
-    GridManager gm(*eclState->getInputGrid());
+    GridManager gm(eclState.getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
     using boost::filesystem::path; 
     path fpath(eclipseFilename);

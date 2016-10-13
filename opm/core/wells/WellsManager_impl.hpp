@@ -161,15 +161,13 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
         }
 
         {   // COMPDAT handling
-            auto completionSet = well->getCompletions(timeStep);
             // shut completions and open ones stored in this process will have 1 others 0.
 
-            for (size_t c=0; c<completionSet->size(); c++) {
-                CompletionConstPtr completion = completionSet->get(c);
-                if (completion->getState() == WellCompletion::OPEN) {
-                    int i = completion->getI();
-                    int j = completion->getJ();
-                    int k = completion->getK();
+            for(const auto& completion : well->getCompletions(timeStep)) {
+                if (completion.getState() == WellCompletion::OPEN) {
+                    int i = completion.getI();
+                    int j = completion.getJ();
+                    int k = completion.getK();
 
                     const int* cpgdim = cart_dims;
                     int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
@@ -195,12 +193,12 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                         PerfData pd;
                         pd.cell = cell;
                         {
-                            const Value<double>& transmissibilityFactor = completion->getConnectionTransmissibilityFactorAsValueObject();
-                            const double wellPi = completion ->getWellPi();
+                            const Value<double>& transmissibilityFactor = completion.getConnectionTransmissibilityFactorAsValueObject();
+                            const double wellPi = completion.getWellPi();
                             if (transmissibilityFactor.hasValue()) {
                                 pd.well_index = transmissibilityFactor.getValue();
                             } else {
-                                double radius = 0.5*completion->getDiameter();
+                                double radius = 0.5*completion.getDiameter();
                                 if (radius <= 0.0) {
                                     radius = 0.5*unit::feet;
                                     OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
@@ -217,8 +215,8 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                 const double* cell_perm = &permeability[dimensions*dimensions*cell];
                                 pd.well_index =
                                     WellsManagerDetail::computeWellIndex(radius, cubical, cell_perm,
-                                                                         completion->getSkinFactor(),
-                                                                         completion->getDirection(),
+                                                                         completion.getSkinFactor(),
+                                                                         completion.getDirection(),
                                                                          ntg[cell]);
                             }
                             pd.well_index *= wellPi;
@@ -226,8 +224,8 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                         wellperf_data[active_well_index].push_back(pd);
                     }
                 } else {
-                    if (completion->getState() != WellCompletion::SHUT) {
-                        OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion->getState() ) << " not handled");
+                    if (completion.getState() != WellCompletion::SHUT) {
+                        OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.getState() ) << " not handled");
                     }
                 }
             }
@@ -305,7 +303,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
 
 template <class C2F, class FC>
 WellsManager::
-WellsManager(const Opm::EclipseStateConstPtr eclipseState,
+WellsManager(const Opm::EclipseState& eclipseState,
              const size_t                    timeStep,
              int                             number_of_cells,
              const int*                      global_cell,
@@ -328,7 +326,7 @@ WellsManager(const Opm::EclipseStateConstPtr eclipseState,
 /// Construct wells from deck.
 template <class C2F, class FC>
 void
-WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
+WellsManager::init(const Opm::EclipseState& eclipseState,
                    const size_t                    timeStep,
                    int                             number_of_cells,
                    const int*                      global_cell,
@@ -347,7 +345,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
                   "the corresponding grid is 3-dimensional.");
     }
 
-    if (eclipseState->getSchedule()->numWells() == 0) {
+    if (eclipseState.getSchedule().numWells() == 0) {
         OPM_MESSAGE("No wells specified in Schedule section, "
                     "initializing no wells");
         return;
@@ -369,8 +367,8 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     // For easy lookup:
     std::map<std::string, int> well_names_to_index;
 
-    auto schedule = eclipseState->getSchedule();
-    auto wells       = schedule->getWells(timeStep);
+    const auto& schedule = eclipseState.getSchedule();
+    auto wells           = schedule.getWells(timeStep);
     std::vector<int> wells_on_proc;
 
     well_names.reserve(wells.size());
@@ -382,7 +380,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     DoubleArray ntg_glob(eclipseState, "NTG", 1.0);
     NTGArray    ntg(ntg_glob, global_cell);
 
-    EclipseGridConstPtr eclGrid = eclipseState->getInputGrid();
+    const auto& eclGrid = eclipseState.getInputGrid();
 
     // use cell thickness (dz) from eclGrid
     // dz overwrites values calculated by WellDetails::getCubeDim
@@ -390,7 +388,7 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     {
         std::vector<int> gc = compressedToCartesian(number_of_cells, global_cell);
         for (int cell = 0; cell < number_of_cells; ++cell) {
-            dz[cell] = eclGrid->getCellThicknes(gc[cell]);
+            dz[cell] = eclGrid.getCellThicknes(gc[cell]);
         }
     }
 
@@ -406,13 +404,13 @@ WellsManager::init(const Opm::EclipseStateConstPtr eclipseState,
     setupWellControls(wells, timeStep, well_names, pu, wells_on_proc, list_econ_limited);
 
     {
-        GroupTreeNodeConstPtr fieldNode =
-            schedule->getGroupTree(timeStep).getNode("FIELD");
+        const auto& fieldNode =
+            schedule.getGroupTree(timeStep).getNode("FIELD");
 
-        const auto& fieldGroup = schedule->getGroup(fieldNode->name());
+        const auto& fieldGroup = schedule.getGroup(fieldNode->name());
 
         well_collection_.addField(fieldGroup, timeStep, pu);
-        addChildGroups(fieldNode, schedule, timeStep, pu);
+        addChildGroups(*fieldNode, schedule, timeStep, pu);
     }
 
     for (auto w = wells.begin(), e = wells.end(); w != e; ++w) {

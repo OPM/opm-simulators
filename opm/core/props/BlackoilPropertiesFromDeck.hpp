@@ -50,8 +50,8 @@ namespace Opm
         /// \param[in]  grid     Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                   Opm::EclipseStateConstPtr eclState,
+        BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                   const Opm::EclipseState& eclState,
                                    const UnstructuredGrid& grid, bool init_rock=true );
 
         /// Initialize from deck, grid and parameters.
@@ -65,29 +65,29 @@ namespace Opm
         ///                        threephase_model("simple")  three-phase relperm model (accepts "simple" and "stone2").
         ///                      For both size parameters, a 0 or negative value indicates that no spline fitting is to
         ///                      be done, and the input fluid data used directly for linear interpolation.
-        BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                   Opm::EclipseStateConstPtr eclState,
+        BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                   const Opm::EclipseState& eclState,
                                    const UnstructuredGrid& grid,
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
-        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
-                                   Opm::EclipseStateConstPtr eclState,
+        BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                   const Opm::EclipseState& eclState,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
                                    bool init_rock=true);
 
-        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
-                                   Opm::EclipseStateConstPtr eclState,
+        BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                   const Opm::EclipseState& eclState,
                                    int number_of_cells,
                                    const int* global_cell,
                                    const int* cart_dims,
                                    const parameter::ParameterGroup& param,
                                    bool init_rock=true);
 
-        BlackoilPropertiesFromDeck(Opm::DeckConstPtr  deck,
-                                   Opm::EclipseStateConstPtr eclState,
+        BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                   const Opm::EclipseState& eclState,
                                    std::shared_ptr<MaterialLawManager> materialLawManager,
                                    int number_of_cells,
                                    const int* global_cell,
@@ -258,7 +258,7 @@ namespace Opm
             return pvtTableIdx[cellIdx];
         }
 
-        void initSurfaceDensities_(Opm::DeckConstPtr deck);
+        void initSurfaceDensities_(const Opm::Deck& deck);
 
         void compute_B_(const int n,
                         const double* p,
@@ -290,16 +290,16 @@ namespace Opm
                            double* R,
                            double* dRdp) const;
 
-        void init(Opm::DeckConstPtr deck,
-                  Opm::EclipseStateConstPtr eclState,
+        void init(const Opm::Deck& deck,
+                  const Opm::EclipseState& eclState,
                   std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
                   const int* cart_dims,
                   bool init_rock);
 
-        void init(Opm::DeckConstPtr deck,
-                  Opm::EclipseStateConstPtr eclState,
+        void init(const Opm::Deck& deck,
+                  const Opm::EclipseState& eclState,
                   std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,
