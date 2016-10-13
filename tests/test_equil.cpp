@@ -66,32 +66,32 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
 
     auto dd = DeckItem::make< double >( "datdep" );
     dd.push_back( datd  );
-    auto dd_dim = std::make_shared< Opm::Dimension >( "dddim", 1 );
+    Opm::Dimension dd_dim( "dddim", 1 );
     dd.push_backDimension( dd_dim, dd_dim );
 
     auto dp = DeckItem::make< double >( "datps" );
     dp.push_back( datp );
-    auto dp_dim = std::make_shared< Opm::Dimension >( "dpdim", 1 );
+    Opm::Dimension dp_dim( "dpdim", 1 );
     dp.push_backDimension( dp_dim, dp_dim );
 
     auto zw = DeckItem::make< double >( "zwoc" );
     zw.push_back( zwoc );
-    auto zw_dim = std::make_shared< Opm::Dimension >( "zwdim", 1 );
+    Opm::Dimension zw_dim( "zwdim", 1 );
     zw.push_backDimension( zw_dim, zw_dim );
 
     auto pcow = DeckItem::make< double >( "pcow" );
     pcow.push_back( pcow_woc );
-    auto pcow_dim = std::make_shared< Opm::Dimension >( "pcowdim", 1 );
+    Opm::Dimension pcow_dim( "pcowdim", 1 );
     pcow.push_backDimension( pcow_dim, pcow_dim );
 
     auto zg = DeckItem::make< double >( "zgoc" );
     zg.push_back( zgoc );
-    auto zg_dim = std::make_shared< Opm::Dimension >( "zgdim", 1 );
+    Opm::Dimension zg_dim( "zgdim", 1 );
     zg.push_backDimension( zg_dim, zg_dim );
 
     auto pcgo = DeckItem::make< double >( "pcgo" );
     pcgo.push_back( pcgo_goc );
-    auto pcgo_dim = std::make_shared< Opm::Dimension >( "pcgodim", 1 );
+    Opm::Dimension pcgo_dim( "pcgodim", 1 );
     pcgo.push_backDimension( pcgo_dim, pcgo_dim );
 
     auto i1 = DeckItem::make< int >( "i1" );
@@ -364,9 +364,9 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
     std::shared_ptr<UnstructuredGrid>
         grid(create_grid_cart3d(1, 1, 10), destroy_grid);
     Opm::ParseContext parseContext;
-    Opm::ParserPtr parser(new Opm::Parser() );
-    Opm::DeckConstPtr deck = parser->parseFile("deadfluids.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck, parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile("deadfluids.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck, parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, *grid, false);
     Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, *grid, 10.0);
     const auto& pressures = comp.press();
@@ -391,10 +391,10 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
     // Test setup.
     Opm::GridManager gm(1, 1, 40, 1.0, 1.0, 2.5);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::Parser parser;
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("capillary.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Deck deck = parser.parseFile("capillary.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
     // Test the capillary inversion for oil-water.
@@ -445,10 +445,10 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
 {
     Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::Parser parser;
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("capillary.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Deck deck = parser.parseFile("capillary.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
     Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 10.0);
@@ -486,10 +486,10 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
 {
     Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::Parser parser;
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("capillary_overlap.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Deck deck = parser.parseFile("capillary_overlap.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
     Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
@@ -549,10 +549,10 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
 {
     Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::Parser parser;
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("equil_liveoil.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Deck deck = parser.parseFile("equil_liveoil.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
     Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
@@ -629,10 +629,10 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
 {
     Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
+    Opm::Parser parser;
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("equil_livegas.DATA" , parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Deck deck = parser.parseFile("equil_livegas.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
     Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
@@ -712,10 +712,10 @@ BOOST_AUTO_TEST_CASE (DeckWithRSVDAndRVVD)
 {
     Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::ParserPtr parser(new Opm::Parser() );
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck = parser->parseFile("equil_rsvd_and_rvvd.DATA", parseContext);
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
+    Opm::Parser parser;
+    Opm::Deck deck = parser.parseFile("equil_rsvd_and_rvvd.DATA", parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
     Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
     Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
