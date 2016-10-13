@@ -82,6 +82,7 @@ namespace Opm
         case GuideRateType::OIL     : return "OIL"     ;
         case GuideRateType::GAS     : return "GAS"     ;
         case GuideRateType::WATER   : return "WATER"   ;
+        case GuideRateType::LIQ     : return "LIQ"     ;
         case GuideRateType::NONE_GRT: return "NONE_GRT";
         }
         OPM_THROW(std::domain_error, "Unknown guide rate type " << type << " encountered in production specification");

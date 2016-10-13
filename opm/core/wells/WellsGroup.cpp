@@ -680,23 +680,39 @@ namespace Opm
         // While there will be somre more complication invloved for sure.
         // Basically, we need to update the target rates for the wells still under group control.
 
-        ProductionSpecification::ControlMode control_mode = prodSpec().control_mode_;
-        double target_rate = prodSpec().liquid_max_rate_;
+        ProductionSpecification::ControlMode prod_mode = prodSpec().control_mode_;
+        double target_rate = -1.0;
 
-        if (ProductionSpecification::toString(control_mode) == "FLD") {
-            auto* parent_node = getParent();
-            control_mode = parent_node->prodSpec().control_mode_;
-            target_rate = parent_node->prodSpec().liquid_max_rate_;
+        switch(prod_mode) {
+        case ProductionSpecification::FLD :
+            {
+                auto* parent_node = getParent();
+                prod_mode = parent_node->prodSpec().control_mode_;
+                target_rate = parent_node->getTarget(prod_mode);
+                break;
+            }
+        case ProductionSpecification::LRAT :
+        case ProductionSpecification::ORAT :
+        case ProductionSpecification::GRAT :
+        case ProductionSpecification::WRAT :
+            target_rate = getTarget(prod_mode);
+            break;
+        default:
+            OPM_THROW(std::runtime_error, "Not supporting type " << ProductionSpecification::toString(prod_mode) <<
+                                          " when updating well targets ");
         }
 
+        // the rates contributed from wells under individual control due to their own limits.
+        // TODO: will handle wells specified not to join group control later.
         double rate_individual_control = 0.;
 
         for (size_t i = 0; i < children_.size(); ++i) {
             if (children_[i]->individualControl() && children_[i]->isProducer()) {
-                rate_individual_control += std::abs(children_[i]->getLiquidProductionRate(well_rates));
+                rate_individual_control += std::abs(children_[i]->getProductionRate(well_rates, prod_mode));
             }
         }
 
+        // the rates left for the wells under group control to split
         const double rate_for_group_control = target_rate - rate_individual_control;
 
         const double my_guide_rate = productionGuideRate(true);
@@ -704,7 +720,7 @@ namespace Opm
         for (size_t i = 0; i < children_.size(); ++i) {
             if (!children_[i]->individualControl() && children_[i]->isProducer()) {
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
-                children_[i]->applyProdGroupControl(control_mode, (children_guide_rate/my_guide_rate) * rate_for_group_control, true);
+                children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate/my_guide_rate) * rate_for_group_control, true);
                 children_[i]->setShouldUpdateWellTargets(false);
             }
         }
@@ -732,24 +748,12 @@ namespace Opm
         return false;
     }
 
-    double WellsGroup::getLiquidProductionRate(const std::vector<double>& /*well_rates*/) const
+    double WellsGroup::getProductionRate(const std::vector<double>& /* well_rates */,
+                                         const ProductionSpecification::ControlMode /* prod_mode */) const
     {
         // TODO: to be implemented
         return -1.e98;
     }
-
-    double WellsGroup::getOilProductionRate(const std::vector<double>& /*well_rates*/) const
-    {
-        // TODO: to be implemented
-        return -1.e98;
-    }
-
-    double WellsGroup::getWaterProductionRate(const std::vector<double>& /*well_rates*/) const
-    {
-        // TODO: to be implemented
-        return -1.e98;
-    }
-
 
     // ==============    WellNode members   ============
 
@@ -1133,21 +1137,23 @@ namespace Opm
 
 
 
-    double WellNode::getLiquidProductionRate(const std::vector<double>& well_rates) const
+    double WellNode::getProductionRate(const std::vector<double>& well_rates,
+                                       const ProductionSpecification::ControlMode prod_mode) const
     {
-        return ( getTotalProductionFlow(well_rates, BlackoilPhases::Liquid) +
-                 getTotalProductionFlow(well_rates, BlackoilPhases::Aqua) );
-
-    }
-
-    double WellNode::getOilProductionRate(const std::vector<double>& well_rates) const
-    {
-        return getTotalProductionFlow(well_rates, BlackoilPhases::Liquid);
-    }
-
-    double WellNode::getWaterProductionRate(const std::vector<double>& well_rates) const
-    {
-        return getTotalProductionFlow(well_rates, BlackoilPhases::Aqua);
+        switch(prod_mode) {
+        case ProductionSpecification::LRAT :
+            return ( getTotalProductionFlow(well_rates, BlackoilPhases::Liquid) +
+                     getTotalProductionFlow(well_rates, BlackoilPhases::Aqua) );
+        case ProductionSpecification::ORAT :
+            return getTotalProductionFlow(well_rates, BlackoilPhases::Liquid);
+        case ProductionSpecification::WRAT :
+            return getTotalProductionFlow(well_rates, BlackoilPhases::Aqua);
+        case ProductionSpecification::GRAT :
+            return getTotalProductionFlow(well_rates, BlackoilPhases::Vapour);
+        default:
+            OPM_THROW(std::runtime_error, "Not supporting type " << ProductionSpecification::toString(prod_mode) <<
+                                          " for production rate calculation ");
+        }
     }
 
     void WellNode::updateWellProductionTargets(const std::vector<double>& /*well_rates*/)
