@@ -32,8 +32,8 @@ namespace Opm
 
 
 
-    StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg)
-        : Base(wells_arg)
+    StandardWellsSolvent::StandardWellsSolvent(const Wells* wells_arg, WellCollection* well_collection)
+        : Base(wells_arg, well_collection)
         , solvent_props_(nullptr)
         , solvent_pos_(-1)
         , has_solvent_(false)

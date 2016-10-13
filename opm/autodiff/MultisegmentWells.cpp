@@ -141,10 +141,12 @@ namespace Opm {
 
     MultisegmentWells::
     MultisegmentWells(const Wells* wells_arg,
+                      WellCollection* well_collection,
                       const std::vector< const Well* >& wells_ecl,
                       const int time_step)
       : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
       , wops_ms_(wells_multisegment_)
+      , well_collection_(well_collection)
       , num_phases_(wells_arg ? wells_arg->number_of_phases : 0)
       , wells_(wells_arg)
       , fluid_(nullptr)
@@ -379,6 +381,16 @@ namespace Opm {
 
         assert(next == 2);
         return indices;
+    }
+
+
+
+
+
+    WellCollection*
+    MultisegmentWells::
+    wellCollection() const {
+        return well_collection_;
     }
 
 } // end of namespace Opm

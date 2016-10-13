@@ -1058,12 +1058,12 @@ namespace detail {
             converged = getWellConvergence(it);
 
             // When the well targets are just updated or need to be updated, we need at least one more iteration.
-            if (asImpl().wellModel().justUpdateWellTargets()) {
+            if (asImpl().wellModel().wellCollection()->justUpdateWellTargets()) {
                 converged = false;
-                asImpl().wellModel().setJustUpdateWellTargets(false);
+                asImpl().wellModel().wellCollection()->setJustUpdateWellTargets(false);
             }
 
-            if (converged && asImpl().wellModel().needUpdateWellTargets()) {
+            if (converged && asImpl().wellModel().wellCollection()->needUpdateWellTargets()) {
                 converged = false;
             }
 

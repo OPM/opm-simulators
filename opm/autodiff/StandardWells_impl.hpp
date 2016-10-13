@@ -1602,4 +1602,12 @@ namespace Opm
     }
 
 
+
+
+
+    WellCollection* StandardWells::wellCollection() const {
+        return well_collection_;
+    }
+
+
 } // namespace Opm

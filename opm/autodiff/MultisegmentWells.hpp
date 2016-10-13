@@ -32,6 +32,7 @@
 #include <cassert>
 
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/wells/WellCollection.hpp>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
@@ -89,6 +90,7 @@ namespace Opm {
             // TODO: using a vector of WellMultiSegmentConstPtr for now
             // TODO: it should use const Wells or something else later.
             MultisegmentWells(const Wells* wells_arg,
+                              WellCollection* well_collection,
                               const std::vector< const Well* >& wells_ecl,
                               const int time_step);
 
@@ -229,11 +231,16 @@ namespace Opm {
                                                 const std::vector<ADB>& kr_adb,
                                                 const std::vector<ADB>& fluid_density);
 
+            WellCollection* wellCollection() const;
+
     protected:
         // TODO: probably a wells_active_ will be required here.
         bool wells_active_;
         std::vector<WellMultiSegmentConstPtr> wells_multisegment_;
         MultisegmentWellOps wops_ms_;
+        // It will probably need to be updated during running time.
+        WellCollection* well_collection_;
+
         const int num_phases_;
         int nseg_total_;
         int nperf_total_;

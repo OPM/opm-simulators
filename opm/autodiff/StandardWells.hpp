@@ -191,23 +191,14 @@ namespace Opm {
                                   const WellState& well_state,
                                   DynamicListEconLimited& list_econ_limited) const;
 
-            bool justUpdateWellTargets() const {
-                return well_collection_->justUpdateWellTargets();
-            }
 
-            bool needUpdateWellTargets() const {
-                return well_collection_->needUpdateWellTargets();
-            }
-
-            void setJustUpdateWellTargets(const bool flag) const {
-                well_collection_->setJustUpdateWellTargets(flag);
-            }
+            WellCollection* wellCollection() const;
 
         protected:
             bool wells_active_;
             const Wells*   wells_;
             const WellOps  wops_;
-            // TODO: It will probably need to be updated during running time.
+            // It will probably need to be updated during running time.
             WellCollection* well_collection_;
 
             const BlackoilPropsAdInterface* fluid_;
