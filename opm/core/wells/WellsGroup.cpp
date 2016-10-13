@@ -293,8 +293,11 @@ namespace Opm
                                           const double target,
                                           const bool only_group)
     {
-        if (!only_group || injSpec().control_mode_ == InjectionSpecification::FLD
-            || injSpec().control_mode_ == InjectionSpecification::NONE) {
+        if (injSpec().control_mode_ == InjectionSpecification::NONE) {
+            return;
+        }
+
+        if (!only_group || injSpec().control_mode_ == InjectionSpecification::FLD) {
             const double my_guide_rate = injectionGuideRate(only_group);
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
@@ -320,8 +323,7 @@ namespace Opm
         if (prodSpec().control_mode_ == ProductionSpecification::NONE) {
             return;
         }
-        if (!only_group || (prodSpec().control_mode_ == ProductionSpecification::FLD
-                       || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
+        if (!only_group || prodSpec().control_mode_ == ProductionSpecification::FLD) {
             const double my_guide_rate =  productionGuideRate(false);
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
