@@ -828,7 +828,6 @@ namespace Opm
 
         if( msWells().empty() ) return ;
 
-        std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = numPhases();

@@ -21,6 +21,7 @@
 #ifndef OPM_WELLSWITCHINGLOGGER_HEADER_INCLUDED
 #define OPM_WELLSWITCHINGLOGGER_HEADER_INCLUDED
 
+#include <array>
 #include <map>
 #include <string>
 #include <vector>
