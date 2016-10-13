@@ -826,6 +826,17 @@ namespace Opm
     {
         wellhelpers::WellSwitchingLogger logger;
 
+        // if we need to update the well targets related to group control,
+        // we update them then re-run the simulation before updating the well control
+        if (well_collection_->needUpdateWellTargets() ) {
+            well_collection_->updateWellTargets(xw.wellRates());
+            for (size_t i = 0; i < well_collection_->numNode(); ++i) {
+                well_collection_->getNode(i)->setShouldUpdateWellTargets(false);
+            }
+            return;
+        }
+
+
         if( msWells().empty() ) return ;
 
         // Find, for each well, if any constraints are broken. If so,
@@ -866,6 +877,37 @@ namespace Opm
                                     well_controls_iget_type(wc, ctrl_index));
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
+
+                // not good practice, not easy to put groupControlIndex to WellsGroup.
+                // revising the interface for the better implementation later.
+                WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+
+                // When the wells swtiching back and forwards between individual control and group control
+                // The targets of the wells should be updated.
+                if (well_node->individualControl()) {
+                    if (ctrl_index == well_node->groupControlIndex()) {
+                        well_node->setIndividualControl(false);
+                    }
+                } else {
+                    if (ctrl_index != well_node->groupControlIndex()) {
+                        well_node->setIndividualControl(true);
+                    }
+                }
+                // TODO: double confirming the current strategy
+                well_node->setShouldUpdateWellTargets(true);
+            } else {
+                // no constraints got broken
+                // the wells running under group control should set to be under group control
+                // it is based on the fact that we begin with setting all the wells be be under individual control
+                // The wells switch to be under group control after breaking one of the group target/limit.
+                // It is the same philosophy with the current srategy of the well control changing.
+                WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+                if (well_node->individualControl()) {
+                    // the wells running under group control, meaning they are not under individual control
+                    if (current == well_node->groupControlIndex()) {
+                        well_node->setIndividualControl(false);
+                    }
+                }
             }
 
             // Get gravity for THP hydrostatic corrrection
