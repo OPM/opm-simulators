@@ -777,20 +777,19 @@ namespace Opm
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
 
-                // not good practice, revising the interface for the better implementation later.
-                auto* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+                // not good practice, not easy to put groupControlIndex to WellsGroup.
+                // revising the interface for the better implementation later.
+                WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
 
                 // When the wells swtiching back and forwards between individual control and group control
                 // The targets of the wells should be updated.
                 if (well_node->individualControl()) {
                     if (ctrl_index == well_node->groupControlIndex()) {
-                        std::cout << "well " << well_node->name() << " is switching from individual control to group control " << std::endl;
                         well_node->setIndividualControl(false);
                     }
                 } else {
                     if (ctrl_index != well_node->groupControlIndex()) {
                         well_node->setIndividualControl(true);
-                        std::cout << "well " << well_node->name() << " is switching from group control to individual control " << std::endl;
                     }
                 }
                 // TODO: double confirming the current strategy
@@ -798,7 +797,10 @@ namespace Opm
             } else {
                 // no constraints got broken
                 // the wells running under group control should set to be under group control
-                auto* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+                // it is based on the fact that we begin with setting all the wells be be under individual control
+                // The wells switch to be under group control after breaking one of the group target/limit.
+                // It is the same philosophy with the current srategy of the well control changing.
+                WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
                 if (well_node->individualControl()) {
                     // the wells running under group control, meaning they are not under individual control
                     if (current == well_node->groupControlIndex()) {

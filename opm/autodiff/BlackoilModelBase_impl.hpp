@@ -1057,14 +1057,13 @@ namespace detail {
             asImpl().wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = getWellConvergence(it);
 
+            // When the well targets are just updated or need to be updated, we need at least one more iteration.
             if (asImpl().wellModel().justUpdateWellTargets()) {
-                std::cout << "converged changed to false due to justUpdateWellTargets " << std::endl;
                 converged = false;
                 asImpl().wellModel().setJustUpdateWellTargets(false);
             }
 
             if (converged && asImpl().wellModel().needUpdateWellTargets()) {
-                std::cout << "converged changed to false due to needUpdateWellTargets " << std::endl;
                 converged = false;
             }
 
@@ -1089,9 +1088,7 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
-                std::cout << "after updateWellState " << std::endl;
                 asImpl().wellModel().updateWellControls(well_state);
-                std::cout << " justUpdateWellTargets " << asImpl().wellModel().justUpdateWellTargets() << std::endl;
             }
             // We have to update the well controls regardless whether there are local
             // wells active or not as parallel logging will take place that needs to
