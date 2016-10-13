@@ -72,8 +72,8 @@ namespace Opm
     template<class Grid>
     void initStateEquil(const Grid& grid,
                         const BlackoilPropertiesInterface& props,
-                        const Opm::DeckConstPtr deck,
-                        const Opm::EclipseStateConstPtr eclipseState,
+                        const Opm::Deck& deck,
+                        const Opm::EclipseState& eclipseState,
                         const double gravity,
                         BlackoilState& state);
 
@@ -213,16 +213,16 @@ namespace Opm
             template<class Grid>
             inline
             std::vector<int>
-            equilnum(const Opm::DeckConstPtr deck,
-                     const Opm::EclipseStateConstPtr eclipseState,
+            equilnum(const Opm::Deck& deck,
+                     const Opm::EclipseState& eclipseState,
                      const Grid&  G   )
             {
                 std::vector<int> eqlnum;
-                if (deck->hasKeyword("EQLNUM")) {
+                if (deck.hasKeyword("EQLNUM")) {
                     const int nc = UgGridHelpers::numCells(G);
                     eqlnum.resize(nc);
                     const std::vector<int>& e = 
-                        eclipseState->get3DProperties().getIntGridProperty("EQLNUM").getData();
+                        eclipseState.get3DProperties().getIntGridProperty("EQLNUM").getData();
                     const int* gc = UgGridHelpers::globalCell(G);
                     for (int cell = 0; cell < nc; ++cell) {
                         const int deck_pos = (gc == NULL) ? cell : gc[cell];
@@ -243,8 +243,8 @@ namespace Opm
             public:
                 template<class Grid>
                 InitialStateComputer(BlackoilPropertiesInterface& props,
-                                     const Opm::DeckConstPtr            deck,
-                                     const Opm::EclipseStateConstPtr eclipseState,
+                                     const Opm::Deck&             deck,
+                                     const Opm::EclipseState& eclipseState,
                                      const Grid&                        G    ,
                                      const double                       grav = unit::gravity)
                     : pp_(props.numPhases(),
@@ -255,14 +255,14 @@ namespace Opm
                       rv_(UgGridHelpers::numCells(G))
                 {
                     // Get the equilibration records.
-                    const std::vector<EquilRecord> rec = getEquil(*eclipseState);
-                    const auto& tables = eclipseState->getTableManager();
+                    const std::vector<EquilRecord> rec = getEquil(eclipseState);
+                    const auto& tables = eclipseState.getTableManager();
                     // Create (inverse) region mapping.
                     const RegionMapping<> eqlmap(equilnum(deck, eclipseState, G)); 
 
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
-                    if (deck->hasKeyword("DISGAS")) {                    
+                    if (deck.hasKeyword("DISGAS")) {
                         const TableContainer& rsvdTables = tables.getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             if (eqlmap.cells(i).empty())
@@ -300,7 +300,7 @@ namespace Opm
                     }                    
 
                     rv_func_.reserve(rec.size());
-                    if (deck->hasKeyword("VAPOIL")) {                    
+                    if (deck.hasKeyword("VAPOIL")) {
                         const TableContainer& rvvdTables = tables.getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             if (eqlmap.cells(i).empty())
@@ -342,8 +342,8 @@ namespace Opm
                     
 
                     // Check for presence of kw SWATINIT
-                    if (deck->hasKeyword("SWATINIT")) {
-                        const std::vector<double>& swat_init = eclipseState->
+                    if (deck.hasKeyword("SWATINIT")) {
+                        const std::vector<double>& swat_init = eclipseState.
                                 get3DProperties().getDoubleGridProperty("SWATINIT").getData();
                         const int nc = UgGridHelpers::numCells(G);
                         swat_init_.resize(nc);
