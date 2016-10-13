@@ -234,9 +234,9 @@ namespace Opm
             const int globalSize = dims[0] * dims[1] * dims[2];
             const auto& trans = this->transmissibility( );
 
-            data::CellData tranx = {"TRANX" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
-            data::CellData trany = {"TRANY" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
-            data::CellData tranz = {"TRANZ" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+            data::CellData tranx = {"TRANX" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), true};
+            data::CellData trany = {"TRANY" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), true};
+            data::CellData tranz = {"TRANZ" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), true};
 
             size_t num_faces = numFaces(grid);
             auto fc = faceCells(grid);
