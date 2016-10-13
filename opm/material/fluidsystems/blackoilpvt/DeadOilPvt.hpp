@@ -53,10 +53,10 @@ public:
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVDO ECL keyword.
      */
-    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        const auto& pvdoTables = eclState->getTableManager().getPvdoTables();
-        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        const auto& pvdoTables = eclState.getTableManager().getPvdoTables();
+        const auto& densityKeyword = deck.getKeyword("DENSITY");
 
         assert(pvdoTables.size() == densityKeyword.size());
 

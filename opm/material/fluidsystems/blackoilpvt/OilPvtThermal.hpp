@@ -65,8 +65,8 @@ public:
     /*!
      * \brief Implement the temperature part of the oil PVT properties.
      */
-    void initFromDeck(DeckConstPtr deck,
-                      EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck,
+                      const EclipseState& eclState)
     {
         //////
         // initialize the isothermal part
@@ -77,18 +77,18 @@ public:
         //////
         // initialize the thermal part
         //////
-        const auto& tables = eclState->getTableManager();
+        const auto& tables = eclState.getTableManager();
 
-        enableThermalDensity_ = deck->hasKeyword("THERMEX1");
-        enableThermalViscosity_ = deck->hasKeyword("VISCREF");
+        enableThermalDensity_ = deck.hasKeyword("THERMEX1");
+        enableThermalViscosity_ = deck.hasKeyword("VISCREF");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
 
         // viscosity
-        if (deck->hasKeyword("VISCREF")) {
+        if (deck.hasKeyword("VISCREF")) {
             const auto& oilvisctTables = tables.getOilvisctTables();
-            const auto& viscrefKeyword = deck->getKeyword("VISCREF");
+            const auto& viscrefKeyword = deck.getKeyword("VISCREF");
 
             assert(oilvisctTables.size() == numRegions);
             assert(viscrefKeyword.size() == numRegions);
@@ -119,14 +119,14 @@ public:
         // quantities required for density. note that we just always use the values
         // for the first EOS. (since EOS != PVT region.)
         refTemp_ = 0.0;
-        if (deck->hasKeyword("THERMEX1")) {
-            int oilCompIdx = deck->getKeyword("OCOMPIDX").getRecord(0).getItem("OIL_COMPONENT_INDEX").get< int >(0) - 1;
+        if (deck.hasKeyword("THERMEX1")) {
+            int oilCompIdx = deck.getKeyword("OCOMPIDX").getRecord(0).getItem("OIL_COMPONENT_INDEX").get< int >(0) - 1;
 
             // always use the values of the first EOS
-            refTemp_ = deck->getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(oilCompIdx);
-            refPress_ = deck->getKeyword("PREF").getRecord(0).getItem("PRESSURE").getSIDouble(oilCompIdx);
-            refC_ = deck->getKeyword("CREF").getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(oilCompIdx);
-            thermex1_ = deck->getKeyword("THERMEX1").getRecord(0).getItem("EXPANSION_COEFF").getSIDouble(oilCompIdx);
+            refTemp_ = deck.getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(oilCompIdx);
+            refPress_ = deck.getKeyword("PREF").getRecord(0).getItem("PRESSURE").getSIDouble(oilCompIdx);
+            refC_ = deck.getKeyword("CREF").getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(oilCompIdx);
+            thermex1_ = deck.getKeyword("THERMEX1").getRecord(0).getItem("EXPANSION_COEFF").getSIDouble(oilCompIdx);
         }
     }
 #endif // HAVE_OPM_PARSER

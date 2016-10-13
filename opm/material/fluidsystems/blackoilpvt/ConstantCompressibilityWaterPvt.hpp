@@ -56,10 +56,10 @@ public:
      * \brief Sets the pressure-dependent water viscosity and density
      *        using a table stemming from the Eclipse PVTW keyword.
      */
-    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr /*eclState*/)
+    void initFromDeck(const Deck& deck, const EclipseState& /*eclState*/)
     {
-        const auto& pvtwKeyword = deck->getKeyword("PVTW");
-        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        const auto& pvtwKeyword = deck.getKeyword("PVTW");
+        const auto& densityKeyword = deck.getKeyword("DENSITY");
 
         assert(pvtwKeyword.size() == densityKeyword.size());
 

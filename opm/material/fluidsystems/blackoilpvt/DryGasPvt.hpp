@@ -60,10 +60,10 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVDG keywords.
      */
-    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        const auto& pvdgTables = eclState->getTableManager().getPvdgTables();
-        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        const auto& pvdgTables = eclState.getTableManager().getPvdgTables();
+        const auto& densityKeyword = deck.getKeyword("DENSITY");
 
         assert(pvdgTables.size() == densityKeyword.size());
 

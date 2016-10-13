@@ -59,10 +59,10 @@ public:
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.
      */
-    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        const auto& pvtoTables = eclState->getTableManager().getPvtoTables();
-        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        const auto& pvtoTables = eclState.getTableManager().getPvtoTables();
+        const auto& densityKeyword = deck.getKeyword("DENSITY");
 
         assert(pvtoTables.size() == densityKeyword.size());
 
@@ -166,8 +166,8 @@ public:
         }
 
         vapPar2_ = 0.0;
-        if (deck->hasKeyword("VAPPARS")) {
-            const auto& vapParsKeyword = deck->getKeyword("VAPPARS");
+        if (deck.hasKeyword("VAPPARS")) {
+            const auto& vapParsKeyword = deck.getKeyword("VAPPARS");
             vapPar2_ = vapParsKeyword.getRecord(0).getItem("OIL_DENSITY_PROPENSITY").template get<double>(0);
         }
 

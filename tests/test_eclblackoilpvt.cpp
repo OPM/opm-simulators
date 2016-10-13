@@ -231,9 +231,9 @@ inline void testAll()
     Opm::ParseContext parseContext;
 
     auto deck = parser.parseString(deckString1, parseContext);
-    auto eclState = std::make_shared<Opm::EclipseState>(*deck, parseContext);
+    Opm::EclipseState eclState(deck, parseContext);
 
-    const auto& pvtwKeyword = deck->getKeyword("PVTW");
+    const auto& pvtwKeyword = deck.getKeyword("PVTW");
     size_t numPvtRegions = pvtwKeyword.size();
 
     if (numPvtRegions != 2)

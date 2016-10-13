@@ -65,8 +65,8 @@ public:
     /*!
      * \brief Implement the temperature part of the water PVT properties.
      */
-    void initFromDeck(DeckConstPtr deck,
-                      EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck,
+                      const EclipseState& eclState)
     {
         //////
         // initialize the isothermal part
@@ -77,16 +77,16 @@ public:
         //////
         // initialize the thermal part
         //////
-        const auto& tables = eclState->getTableManager();
+        const auto& tables = eclState.getTableManager();
 
-        enableThermalDensity_ = deck->hasKeyword("WATDENT");
-        enableThermalViscosity_ = deck->hasKeyword("VISCREF");
+        enableThermalDensity_ = deck.hasKeyword("WATDENT");
+        enableThermalViscosity_ = deck.hasKeyword("VISCREF");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
 
         if (enableThermalDensity_) {
-            const auto& watdentKeyword = deck->getKeyword("WATDENT");
+            const auto& watdentKeyword = deck.getKeyword("WATDENT");
 
             assert(watdentKeyword.size() == numRegions);
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
@@ -99,7 +99,7 @@ public:
         }
 
         if (enableThermalViscosity_) {
-            const auto& viscrefKeyword = deck->getKeyword("VISCREF");
+            const auto& viscrefKeyword = deck.getKeyword("VISCREF");
 
             const auto& watvisctTables = tables.getWatvisctTables();
 

@@ -178,14 +178,14 @@ public:
     /*!
      * \brief Initialize the fluid system using an ECL deck object
      */
-    static void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    static void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        auto densityKeyword = deck->getKeyword("DENSITY");
+        auto densityKeyword = deck.getKeyword("DENSITY");
         size_t numRegions = densityKeyword.size();
         initBegin(numRegions);
 
-        setEnableDissolvedGas(deck->hasKeyword("DISGAS"));
-        setEnableVaporizedOil(deck->hasKeyword("VAPOIL"));
+        setEnableDissolvedGas(deck.hasKeyword("DISGAS"));
+        setEnableVaporizedOil(deck.hasKeyword("VAPOIL"));
 
         // set the reference densities of all PVT regions
         for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {

@@ -115,19 +115,19 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVDG keywords.
      */
-    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        bool enableGas = deck->hasKeyword("GAS");
+        bool enableGas = deck.hasKeyword("GAS");
         if (!enableGas)
             return;
 
         if (enableThermal
-            && (deck->hasKeyword("TREF")
-                || deck->hasKeyword("GASVISCT")))
+            && (deck.hasKeyword("TREF")
+                || deck.hasKeyword("GASVISCT")))
             setApproach(ThermalGasPvt);
-        else if (deck->hasKeyword("PVTG"))
+        else if (deck.hasKeyword("PVTG"))
             setApproach(WetGasPvt);
-        else if (deck->hasKeyword("PVDG"))
+        else if (deck.hasKeyword("PVDG"))
             setApproach(DryGasPvt);
 
         OPM_GAS_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));

@@ -137,12 +137,12 @@ public:
      *
      * This requires that the opm-parser module is available.
      */
-    void initFromDeck(Opm::DeckConstPtr deck,
-                      Opm::EclipseStateConstPtr eclState,
+    void initFromDeck(const Opm::Deck& deck,
+                      const Opm::EclipseState& eclState,
                       Opm::EclTwoPhaseSystemType twoPhaseSystemType)
     {
         // find out if endpoint scaling is used in the first place
-        if (!deck->hasKeyword("ENDSCALE")) {
+        if (!deck.hasKeyword("ENDSCALE")) {
             // it is not used, i.e., just set all enable$Foo attributes to 0 and be done
             // with it.
             enableSatScaling_ = false;
@@ -158,9 +158,9 @@ public:
 
         // check if three-point scaling is to be used for the saturations of the relative
         // permeabilities
-        if (deck->hasKeyword("SCALECRS")) {
+        if (deck.hasKeyword("SCALECRS")) {
             // if the deck features the SCALECRS keyword, it must be set to 'YES'
-            const auto& scalecrsKeyword = deck->getKeyword("SCALECRS");
+            const auto& scalecrsKeyword = deck.getKeyword("SCALECRS");
             std::string scalecrsValue =
                 scalecrsKeyword.getRecord(0).getItem("VALUE").get< std::string >(0);
             // convert the value of the SCALECRS keyword to upper case, just to be sure
@@ -177,7 +177,7 @@ public:
         else
             enableThreePointKrSatScaling_ = false;
 
-        auto& props = eclState->get3DProperties();
+        auto& props = eclState.get3DProperties();
         // check if we are supposed to scale the Y axis of the capillary pressure
         if (twoPhaseSystemType == EclOilWaterSystem)
             enablePcScaling_ =

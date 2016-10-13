@@ -61,10 +61,10 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVTG keywords.
      */
-    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        const auto& pvtgTables = eclState->getTableManager().getPvtgTables();
-        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        const auto& pvtgTables = eclState.getTableManager().getPvtgTables();
+        const auto& densityKeyword = deck.getKeyword("DENSITY");
 
         assert(pvtgTables.size() == densityKeyword.size());
 
@@ -170,8 +170,8 @@ public:
         }
 
         vapPar1_ = 0.0;
-        if (deck->hasKeyword("VAPPARS")) {
-            const auto& vapParsKeyword = deck->getKeyword("VAPPARS");
+        if (deck.hasKeyword("VAPPARS")) {
+            const auto& vapParsKeyword = deck.getKeyword("VAPPARS");
             vapPar1_ = vapParsKeyword.getRecord(0).getItem("OIL_VAP_PROPENSITY").template get<double>(0);
         }
 
