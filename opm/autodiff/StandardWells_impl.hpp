@@ -796,10 +796,11 @@ namespace Opm
                 well_node->setShouldUpdateWellTargets(true);
             } else {
                 // no constraints got broken
-                // the wells running under group control should set to be under group control
-                // it is based on the fact that we begin with setting all the wells be be under individual control
-                // The wells switch to be under group control after breaking one of the group target/limit.
-                // It is the same philosophy with the current srategy of the well control changing.
+                // The wells running under group control should set to be under group control
+                // It is based on the fact that we begin with setting all the wells be be under individual control.
+                // The wells have been running from last time step under group control, will be reset to be under individual control
+                // when rebuilding WellsManager. They need to set to be under group control (non-individual control) when they keep
+                // running under group control.
                 WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
                 if (well_node->individualControl()) {
                     // the wells running under group control, meaning they are not under individual control
