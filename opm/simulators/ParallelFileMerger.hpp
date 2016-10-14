@@ -100,9 +100,10 @@ private:
     {
         if( fs::file_size(file) )
         {
-            std::cerr << "WARNING: There has been logging out by non-root process "
-                      << rank << std::endl<<"Please report this in the issue tracker!"
-                     << std::endl;
+            std::cerr << "WARNING: There has been logging to file "
+                      << file.string() <<" by process "
+                      << rank << std::endl;
+
             fs::ifstream in(file);
             of<<std::endl<< std::endl;
             of<<"=======================================================";
