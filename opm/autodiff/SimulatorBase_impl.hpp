@@ -112,7 +112,12 @@ namespace Opm
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
-            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+
+            if (param_.getDefault("use_TUNING", false)) {
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule->getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+            } else {
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+            }
         }
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
@@ -276,11 +281,14 @@ namespace Opm
             FIPUnitConvert(eclipse_state_->getUnits(), COIP);
             V OOIP_totals = FIPTotals(OOIP, state);
             V COIP_totals = FIPTotals(COIP, state);
-            outputFluidInPlace(OOIP_totals, COIP_totals,eclipse_state_->getUnits(), 0);
-            for (size_t reg = 0; reg < OOIP.size(); ++reg) {
-                outputFluidInPlace(OOIP[reg], COIP[reg], eclipse_state_->getUnits(), reg+1);
-            }
 
+            if ( terminal_output_ )
+            {
+                outputFluidInPlace(OOIP_totals, COIP_totals,eclipse_state_->getUnits(), 0);
+                for (size_t reg = 0; reg < OOIP.size(); ++reg) {
+                    outputFluidInPlace(OOIP[reg], COIP[reg], eclipse_state_->getUnits(), reg+1);
+                }
+            }
 
             // accumulate total time
             stime += st;
@@ -299,7 +307,11 @@ namespace Opm
                 step_report.total_newton_iterations = solver->nonlinearIterations();
                 step_report.total_linear_iterations = solver->linearIterations();
                 step_report.total_linearizations = solver->linearizations();
-                step_report.reportParam(tstep_os);
+
+                if ( output_writer_.isIORank() )
+                {
+                    step_report.reportParam(tstep_os);
+                }
             }
 
             // Increment timer, remember well state.
