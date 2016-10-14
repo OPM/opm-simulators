@@ -168,8 +168,8 @@ namespace Opm {
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
-        , isBeginReportStep_(false)
         , dx_old_(AutoDiffGrid::numCells(grid_))
+        , isBeginReportStep_(false)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
