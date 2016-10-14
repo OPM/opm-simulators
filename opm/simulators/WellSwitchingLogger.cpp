@@ -23,6 +23,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
+#include <numeric>
 
 namespace Opm
 {
@@ -115,18 +116,19 @@ void WellSwitchingLogger::unpackDataAndLog(std::vector<char>& recv_buffer,
                    well_name_lengths.data(), well_name_lengths.size(),
                    MPI_INT, MPI_COMM_WORLD);
 
+        std::vector<char> well_name;
         for ( int i = 0; i < no_switches; ++i )
         {
-            char well_name[well_name_lengths[i]] = {};
+            well_name.resize(well_name_lengths[i]);
             MPI_Unpack(recv_buffer.data(), recv_buffer.size(), &offset,
-                       well_name, well_name_lengths[i], MPI_CHAR,
+                       well_name.data(), well_name_lengths[i], MPI_CHAR,
                        MPI_COMM_WORLD);
 
             std::array<char,2> fromto{{}};
             MPI_Unpack(recv_buffer.data(), recv_buffer.size(), &offset,
                        fromto.data(), 2, MPI_CHAR, MPI_COMM_WORLD);
 
-            logSwitch(well_name, fromto, p);
+            logSwitch(well_name.data(), fromto, p);
         }
     }
 }
