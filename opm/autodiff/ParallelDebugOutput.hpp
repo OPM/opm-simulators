@@ -73,7 +73,7 @@ namespace Opm
 
     public:
         ParallelDebugOutput ( const GridImpl& grid,
-                              Opm::EclipseStateConstPtr /* eclipseState */,
+                              const EclipseState& /* eclipseState */,
                               const int,
                               const double* )
             : grid_( grid ) {}
@@ -229,7 +229,7 @@ namespace Opm
         enum { ioRank = 0 };
 
         ParallelDebugOutput( const Dune::CpGrid& otherGrid,
-                             Opm::EclipseStateConstPtr eclipseState,
+                             const EclipseState& eclipseState,
                              const int numPhases,
                              const double* permeability )
             : grid_(),
@@ -593,7 +593,7 @@ namespace Opm
 
     protected:
         std::unique_ptr< Dune::CpGrid >           grid_;
-        Opm::EclipseStateConstPtr                 eclipseState_;
+        const EclipseState&                       eclipseState_;
         const double*                             permeability_;
         P2PCommunicatorType                       toIORankComm_;
         IndexMapType                              globalIndex_;

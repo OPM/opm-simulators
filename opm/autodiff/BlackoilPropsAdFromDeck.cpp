@@ -44,8 +44,8 @@ namespace Opm
     typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
 
     /// Constructor wrapping an opm-core black oil interface.
-    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                                     Opm::EclipseStateConstPtr eclState,
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                                     const Opm::EclipseState& eclState,
                                                      std::shared_ptr<MaterialLawManager> materialLawManager,
                                                      const UnstructuredGrid& grid,
                                                      const bool init_rock)
@@ -56,8 +56,8 @@ namespace Opm
 
 #ifdef HAVE_OPM_GRID
     /// Constructor wrapping an opm-core black oil interface.
-    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                                     Opm::EclipseStateConstPtr eclState,
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                                     const Opm::EclipseState& eclState,
                                                      const Dune::CpGrid& grid,
                                                      const bool init_rock )
     {
@@ -75,8 +75,8 @@ namespace Opm
 #endif
 
     /// Constructor wrapping an opm-core black oil interface.
-    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                                     Opm::EclipseStateConstPtr eclState,
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                                     const Opm::EclipseState& eclState,
                                                      const UnstructuredGrid& grid,
                                                      const bool init_rock)
     {
@@ -97,8 +97,8 @@ namespace Opm
 
 #ifdef HAVE_OPM_GRID
     /// Constructor wrapping an opm-core black oil interface.
-    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                                     Opm::EclipseStateConstPtr eclState,
+    BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                                     const Opm::EclipseState& eclState,
                                                      std::shared_ptr<MaterialLawManager> materialLawManager,
                                                      const Dune::CpGrid& grid,
                                                      const bool init_rock )
@@ -141,8 +141,8 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 }
 
     /// Initializes the properties.
-    void BlackoilPropsAdFromDeck::init(Opm::DeckConstPtr deck,
-                                       Opm::EclipseStateConstPtr eclState,
+    void BlackoilPropsAdFromDeck::init(const Opm::Deck& deck,
+                                       const Opm::EclipseState& eclState,
                                        std::shared_ptr<MaterialLawManager> materialLawManager,
                                        int number_of_cells,
                                        const int* global_cell,
@@ -170,9 +170,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         waterPvt_->initFromDeck(deck, eclState);
 
         // Surface densities. Accounting for different orders in eclipse and our code.
-        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        const auto& densityKeyword = deck.getKeyword("DENSITY");
         int numRegions = densityKeyword.size();
-        auto tables = eclState->getTableManager();
+        auto tables = eclState.getTableManager();
 
         surfaceDensity_.resize(numRegions);
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
@@ -192,11 +192,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         // Oil vaporization controls (kw VAPPARS)
         vap1_ = vap2_ = 0.0;
-        if (deck->hasKeyword("VAPPARS") && deck->hasKeyword("VAPOIL") && deck->hasKeyword("DISGAS")) {
-            vap1_ = deck->getKeyword("VAPPARS").getRecord(0).getItem(0).get< double >(0);
-            vap2_ = deck->getKeyword("VAPPARS").getRecord(0).getItem(1).get< double >(0);
+        if (deck.hasKeyword("VAPPARS") && deck.hasKeyword("VAPOIL") && deck.hasKeyword("DISGAS")) {
+            vap1_ = deck.getKeyword("VAPPARS").getRecord(0).getItem(0).get< double >(0);
+            vap2_ = deck.getKeyword("VAPPARS").getRecord(0).getItem(1).get< double >(0);
             satOilMax_.resize(number_of_cells, 0.0);
-        } else if (deck->hasKeyword("VAPPARS")) {
+        } else if (deck.hasKeyword("VAPPARS")) {
             OPM_THROW(std::runtime_error, "Input has VAPPARS, but missing VAPOIL and/or DISGAS\n");
         }
 

@@ -38,7 +38,7 @@ namespace Opm
                                           const bool has_shrate,
                                           std::shared_ptr<EclipseState> eclipse_state,
                                           BlackoilOutputWriter& output_writer,
-                                          Opm::DeckConstPtr& deck,
+                                          std::shared_ptr< Deck > deck,
                                           const std::vector<double>& threshold_pressures_by_face)
     : BaseType(param,
                grid,
@@ -112,7 +112,7 @@ namespace Opm
             if (wells_manager.c_wells() == 0) {
                 OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
             }
-            polymer_inflow_ptr.reset(new PolymerInflowFromDeck(BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
+            polymer_inflow_ptr.reset(new PolymerInflowFromDeck(*BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
         } else {
             OPM_MESSAGE("Warning: simulating with no WPOLYMER in deck (no polymer will be injected).");
             polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
@@ -126,7 +126,7 @@ namespace Opm
         well_state.polymerInflow() = polymer_inflow_c;
 
         if (has_plyshlog_) {
-            computeRepRadiusPerfLength(BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_, wells_bore_diameter_);
+            computeRepRadiusPerfLength(*BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_, wells_bore_diameter_);
         }
     }
 
@@ -152,7 +152,7 @@ namespace Opm
 
     template <class GridT>
     void SimulatorFullyImplicitBlackoilPolymer<GridT>::
-    computeRepRadiusPerfLength(const Opm::EclipseStateConstPtr eclipseState,
+    computeRepRadiusPerfLength(const Opm::EclipseState&        eclipseState,
                                const size_t                    timeStep,
                                const GridT&                    grid,
                                std::vector<double>&            wells_rep_radius,
@@ -168,7 +168,7 @@ namespace Opm
         auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
         auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
 
-        if (eclipseState->getSchedule()->numWells() == 0) {
+        if (eclipseState.getSchedule().numWells() == 0) {
             OPM_MESSAGE("No wells specified in Schedule section, "
                         "initializing no wells");
             return;
@@ -189,8 +189,8 @@ namespace Opm
         setupCompressedToCartesian(global_cell, number_of_cells,
                                    cartesian_to_compressed);
 
-        ScheduleConstPtr schedule = eclipseState->getSchedule();
-        auto wells       = schedule->getWells(timeStep);
+        const auto& schedule = eclipseState.getSchedule();
+        auto wells           = schedule.getWells(timeStep);
 
         int well_index = 0;
 
@@ -201,13 +201,13 @@ namespace Opm
                  continue;
              }
              {   // COMPDAT handling
-                 CompletionSetConstPtr completionSet = well->getCompletions(timeStep);
-                 for (size_t c=0; c<completionSet->size(); c++) {
-                     CompletionConstPtr completion = completionSet->get(c);
-                     if (completion->getState() == WellCompletion::OPEN) {
-                         int i = completion->getI();
-                         int j = completion->getJ();
-                         int k = completion->getK();
+                 const auto& completionSet = well->getCompletions(timeStep);
+                 for (size_t c=0; c<completionSet.size(); c++) {
+                     const auto& completion = completionSet.get(c);
+                     if (completion.getState() == WellCompletion::OPEN) {
+                         int i = completion.getI();
+                         int j = completion.getJ();
+                         int k = completion.getK();
 
                          const int* cpgdim = cart_dims;
                          int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
@@ -219,7 +219,7 @@ namespace Opm
                          int cell = cgit->second;
 
                          {
-                             double radius = 0.5*completion->getDiameter();
+                             double radius = 0.5*completion.getDiameter();
                              if (radius <= 0.0) {
                                  radius = 0.5*unit::feet;
                                  OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
@@ -228,7 +228,7 @@ namespace Opm
                              const std::array<double, 3> cubical =
                              WellsManagerDetail::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
 
-                             WellCompletion::DirectionEnum direction = completion->getDirection();
+                             WellCompletion::DirectionEnum direction = completion.getDirection();
 
                              double re; // area equivalent radius of the grid block
                              double perf_length; // the length of the well perforation
@@ -256,8 +256,8 @@ namespace Opm
                              wells_bore_diameter.push_back(2. * radius);
                          }
                      } else {
-                         if (completion->getState() != WellCompletion::SHUT) {
-                             OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion->getState() ) << " not handled");
+                         if (completion.getState() != WellCompletion::SHUT) {
+                             OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.getState() ) << " not handled");
                          }
                      }
 

@@ -93,7 +93,7 @@ namespace Opm
         /// \param[in]  wells       Wells structure.
         /// \param[in]  num_cells   Number of cells in grid.
         /// \param[in]  currentStep Number of current simulation step.
-        PolymerInflowFromDeck(Opm::EclipseStateConstPtr eclipseState,
+        PolymerInflowFromDeck(const Opm::EclipseState& eclipseState,
                               const Wells& wells,
                               const int num_cells,
                               size_t currentStep);
@@ -110,7 +110,7 @@ namespace Opm
         SparseVector<double> sparse_inflow_;
         
         std::unordered_map<std::string, double> wellPolymerRate_;
-        void setInflowValues(Opm::EclipseStateConstPtr eclipseState,
+        void setInflowValues(const Opm::EclipseState& eclipseState,
                              size_t currentStep);
     };
 

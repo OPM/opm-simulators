@@ -68,11 +68,11 @@ namespace Opm
 
 
     void
-    PolymerInflowFromDeck::setInflowValues(Opm::EclipseStateConstPtr eclipseState,
+    PolymerInflowFromDeck::setInflowValues(const Opm::EclipseState& eclipseState,
                                            size_t currentStep)
     {
-        ScheduleConstPtr schedule = eclipseState->getSchedule();
-        for (const auto& well : schedule->getWells(currentStep)) {
+        const auto& schedule = eclipseState.getSchedule();
+        for (const auto& well : schedule.getWells(currentStep)) {
             WellInjectionProperties injection = well->getInjectionProperties(currentStep);
             WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
             if (well->isInjector(currentStep)) {
@@ -99,7 +99,7 @@ namespace Opm
 
     /// Constructor.
     /// @param[in]  deck     Input deck expected to contain WPOLYMER.
-    PolymerInflowFromDeck::PolymerInflowFromDeck(Opm::EclipseStateConstPtr eclipseState,
+    PolymerInflowFromDeck::PolymerInflowFromDeck(const Opm::EclipseState& eclipseState,
                                                  const Wells& wells,
                                                  const int num_cells,
                                                  size_t currentStep)

@@ -34,7 +34,7 @@ SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param
                                           const RockCompressibility* rock_comp_props,
                                           std::shared_ptr<EclipseState> eclipse_state,
                                           BlackoilOutputWriter& output_writer,
-                                          Opm::DeckConstPtr& deck,
+                                          std::shared_ptr< const Deck > deck,
                                           NewtonIterationBlackoilInterface& linsolver,
                                           const double* gravity)
 : BaseType(param,
@@ -86,7 +86,7 @@ handleAdditionalWellInflow(SimulatorTimer& timer,
         if (wells_manager.c_wells() == 0) {
             OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
         }
-        polymer_inflow_ptr.reset(new PolymerInflowFromDeck( BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
+        polymer_inflow_ptr.reset(new PolymerInflowFromDeck( *BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
     } else {
         polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
                                                         1.0*Opm::unit::day,
@@ -107,7 +107,7 @@ template <class GridT>
 void
 SimulatorFullyImplicitCompressiblePolymer<GridT>::
 updateListEconLimited(const std::unique_ptr<Solver>& /*solver*/,
-                      ScheduleConstPtr /*schedule*/,
+                      const Schedule& /*schedule*/,
                       const int /*current_step*/,
                       const Wells* /*wells*/,
                       const WellState& /*well_state*/,

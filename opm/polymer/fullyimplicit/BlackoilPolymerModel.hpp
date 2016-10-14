@@ -82,7 +82,7 @@ namespace Opm {
                              const PolymerPropsAd&                   polymer_props_ad,
                              const StandardWells&                    well_model,
                              const NewtonIterationBlackoilInterface& linsolver,
-                             EclipseStateConstPtr                    eclipse_state,
+                             std::shared_ptr< const EclipseState >   eclipseState,
                              const bool                              has_disgas,
                              const bool                              has_vapoil,
                              const bool                              has_polymer,

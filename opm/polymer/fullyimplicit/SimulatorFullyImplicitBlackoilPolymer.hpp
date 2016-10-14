@@ -124,7 +124,7 @@ namespace Opm
                                               const bool shrate,
                                               std::shared_ptr<EclipseState> eclipse_state,
                                               BlackoilOutputWriter& output_writer,
-                                              Opm::DeckConstPtr& deck,
+                                              std::shared_ptr< Deck > deck,
                                               const std::vector<double>& threshold_pressures_by_face);
 
         std::unique_ptr<Solver> createSolver(const WellModel& well_model);
@@ -143,7 +143,7 @@ namespace Opm
         bool has_plyshlog_;
         // flag for SHRATE keyword
         bool has_shrate_;
-        DeckConstPtr deck_;
+        std::shared_ptr< Deck > deck_;
 
         std::vector<double> wells_rep_radius_;
         std::vector<double> wells_perf_length_;
@@ -158,7 +158,7 @@ namespace Opm
         //  and store the wellbore diameters
         //  it will be used in the shear-thinning calcluation only.
         void
-        computeRepRadiusPerfLength(const Opm::EclipseStateConstPtr eclipseState,
+        computeRepRadiusPerfLength(const EclipseState&             eclipseState,
                                    const size_t                    timeStep,
                                    const GridT&                    grid,
                                    std::vector<double>&            wells_rep_radius,
