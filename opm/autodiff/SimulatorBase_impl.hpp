@@ -306,7 +306,11 @@ namespace Opm
                 step_report.total_newton_iterations = solver->nonlinearIterations();
                 step_report.total_linear_iterations = solver->linearIterations();
                 step_report.total_linearizations = solver->linearizations();
-                step_report.reportParam(tstep_os);
+
+                if ( output_writer_.isIORank() )
+                {
+                    step_report.reportParam(tstep_os);
+                }
             }
 
             // Increment timer, remember well state.
