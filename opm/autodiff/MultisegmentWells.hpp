@@ -22,6 +22,8 @@
 #ifndef OPM_MULTISEGMENTWELLS_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELLS_HEADER_INCLUDED
 
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
@@ -41,6 +43,7 @@
 
 #include <opm/autodiff/WellMultiSegment.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
+#include <opm/simulators/WellSwitchingLogger.hpp>
 
 
 
@@ -78,6 +81,9 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
+            using Communication =
+                Dune::CollectiveCommunication<typename Dune::MPIHelper
+                                              ::MPICommunicator>;
 
             // ---------  Public methods  ---------
             // TODO: using a vector of WellMultiSegmentConstPtr for now

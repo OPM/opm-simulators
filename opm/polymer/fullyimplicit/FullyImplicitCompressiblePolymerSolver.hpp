@@ -80,11 +80,23 @@ namespace Opm {
                 : rq(num_phases)
                 , rsSat(ADB::null())
                 , rvSat(ADB::null())
+                , fip()
             {
             }
+
+            enum FipId {
+                FIP_AQUA = BlackoilPropsAdInterface::Water,
+                FIP_LIQUID = BlackoilPropsAdInterface::Oil,
+                FIP_VAPOUR = BlackoilPropsAdInterface::Gas,
+                FIP_DISSOLVED_GAS = 3,
+                FIP_VAPORIZED_OIL = 4,
+                FIP_PV = 5,                    //< Pore volume
+                FIP_WEIGHTED_PRESSURE = 6
+            };
             std::vector<ReservoirResidualQuant> rq;
             ADB rsSat;
             ADB rvSat;
+            std::array<V, 7> fip;
         };
 
         /// Construct a solver. It will retain references to the

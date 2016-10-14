@@ -424,6 +424,7 @@ typedef Eigen::Array<double,
         : rq(num_phases)
         , rsSat(ADB::null())
         , rvSat(ADB::null())
+        , fip()
     {
     }
 
@@ -1011,12 +1012,19 @@ typedef Eigen::Array<double,
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
-                asImpl().wellModel().updateWellControls(well_state);
             }
+            // We have to update the well controls regardless whether there are local
+            // wells active or not as parallel logging will take place that needs to
+            // communicate with all processes.
+            asImpl().wellModel().updateWellControls(well_state);
         } while (it < 15);
 
         if (converged) {
-            OpmLog::note("well converged iter: " + std::to_string(it));
+            if (terminalOutputEnabled())
+            {
+                OpmLog::note("well converged iter: " + std::to_string(it));
+            }
+
             const int nw = wells().number_of_wells;
             {
                 // We will set the bhp primary variable to the new ones,
@@ -2164,21 +2172,18 @@ typedef Eigen::Array<double,
         const ADB pv_mult = poroMult(pressure);
         const V& pv = geo_.poreVolume();
         const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
-        std::vector<V> fip(5, V::Zero(nc));
         for (int phase = 0; phase < maxnp; ++phase) {
             if (active_[ phase ]) {
                 const int pos = pu.phase_pos[ phase ];
                 const auto& b = asImpl().fluidReciprocFVF(phase, canonical_phase_pressures[phase], temperature, rs, rv, cond);
-                fip[phase] = ((pv_mult * b * saturation[pos] * pv).value());
+                sd_.fip[phase] = ((pv_mult * b * saturation[pos] * pv).value());
             }
         }
 
         if (active_[ Oil ] && active_[ Gas ]) {
             // Account for gas dissolved in oil and vaporized oil
-            const int po = pu.phase_pos[Oil];
-            const int pg = pu.phase_pos[Gas];
-            fip[3] = rs.value() * fip[po];
-            fip[4] = rv.value() * fip[pg];
+            sd_.fip[SimulatorData::FIP_DISSOLVED_GAS] = rs.value() * sd_.fip[SimulatorData::FIP_LIQUID];
+            sd_.fip[SimulatorData::FIP_VAPORIZED_OIL] = rv.value() * sd_.fip[SimulatorData::FIP_VAPOUR];
         }
 
         // For a parallel run this is just a local maximum and needs to be updated later
@@ -2191,23 +2196,57 @@ typedef Eigen::Array<double,
 
         if ( !isParallel() )
         {
-            for (int i = 0; i < 5; ++i) {
+            //Accumulate phases for each region
+            for (int phase = 0; phase < maxnp; ++phase) {
                 for (int c = 0; c < nc; ++c) {
-                    if (fipnum[c] != 0) {
-                        values[fipnum[c]-1][i] += fip[i][c];
+                    const int region = fipnum[c] - 1;
+                    if (region != -1) {
+                        values[region][phase] += sd_.fip[phase][c];
                     }
                 }
             }
+
+            //Accumulate RS and RV-volumes for each region
+            if (active_[ Oil ] && active_[ Gas ]) {
+                for (int c = 0; c < nc; ++c) {
+                    const int region = fipnum[c] - 1;
+                    if (region != -1) {
+                        values[region][SimulatorData::FIP_DISSOLVED_GAS] += sd_.fip[SimulatorData::FIP_DISSOLVED_GAS][c];
+                        values[region][SimulatorData::FIP_VAPORIZED_OIL] += sd_.fip[SimulatorData::FIP_VAPORIZED_OIL][c];
+                    }
+                }
+            }
+
 
             hcpv = V::Zero(dims);
             pres = V::Zero(dims);
 
             for (int c = 0; c < nc; ++c) {
-                if (fipnum[c] != 0) {
-                    hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
-                    pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
-                    values[fipnum[c]-1][5] += pv[c];
-                    values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
+                const int region = fipnum[c] - 1;
+                if (region != -1) {
+                    hcpv[region] += pv[c] * hydrocarbon[c];
+                    pres[region] += pv[c] * pressure.value()[c];
+                }
+            }
+
+            sd_.fip[SimulatorData::FIP_PV] = V::Zero(nc);
+            sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE] = V::Zero(nc);
+
+            for (int c = 0; c < nc; ++c) {
+                const int region = fipnum[c] - 1;
+                if (region != -1) {
+                    sd_.fip[SimulatorData::FIP_PV][c] = pv[c];
+
+                    //Compute hydrocarbon pore volume weighted average pressure.
+                    //If we have no hydrocarbon in region, use pore volume weighted average pressure instead
+                    if (hcpv[region] != 0) {
+                        sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE][c] = pv[c] * pressure.value()[c] * hydrocarbon[c] / hcpv[region];
+                    } else {
+                        sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                    }
+
+                    values[region][SimulatorData::FIP_PV] += sd_.fip[SimulatorData::FIP_PV][c];
+                    values[region][SimulatorData::FIP_WEIGHTED_PRESSURE] += sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE][c];
                 }
             }
         }
@@ -2223,10 +2262,23 @@ typedef Eigen::Array<double,
             dims = comm.max(dims);
             values.resize(dims, V::Zero(7));
 
-            for (int i = 0; i < 5; ++i) {
+            //Accumulate phases for each region
+            for (int phase = 0; phase < maxnp; ++phase) {
                 for (int c = 0; c < nc; ++c) {
-                    if (fipnum[c] != 0 && mask[c]) {
-                        values[fipnum[c]-1][i] += fip[i][c];
+                    const int region = fipnum[c] - 1;
+                    if (region != -1 && mask[c]) {
+                        values[region][phase] += sd_.fip[phase][c];
+                    }
+                }
+            }
+
+            //Accumulate RS and RV-volumes for each region
+            if (active_[ Oil ] && active_[ Gas ]) {
+                for (int c = 0; c < nc; ++c) {
+                    const int region = fipnum[c] - 1;
+                    if (region != -1 && mask[c]) {
+                        values[region][SimulatorData::FIP_DISSOLVED_GAS] += sd_.fip[SimulatorData::FIP_DISSOLVED_GAS][c];
+                        values[region][SimulatorData::FIP_VAPORIZED_OIL] += sd_.fip[SimulatorData::FIP_VAPORIZED_OIL][c];
                     }
                 }
             }
@@ -2235,11 +2287,32 @@ typedef Eigen::Array<double,
             pres = V::Zero(dims);
 
             for (int c = 0; c < nc; ++c) {
-                if (fipnum[c] != 0 && mask[c]) {
-                    hcpv[fipnum[c]-1] += pv[c] * hydrocarbon[c];
-                    pres[fipnum[c]-1] += pv[c] * pressure.value()[c];
-                    values[fipnum[c]-1][5] += pv[c];
-                    values[fipnum[c]-1][6] += pv[c] * pressure.value()[c] * hydrocarbon[c];
+                const int region = fipnum[c] - 1;
+                if (region != -1 && mask[c]) {
+                    hcpv[region] += pv[c] * hydrocarbon[c];
+                    pres[region] += pv[c] * pressure.value()[c];
+                }
+            }
+
+            comm.sum(hcpv.data(), hcpv.size());
+            comm.sum(pres.data(), pres.size());
+
+            sd_.fip[SimulatorData::FIP_PV] = V::Zero(nc);
+            sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE] = V::Zero(nc);
+
+            for (int c = 0; c < nc; ++c) {
+                const int region = fipnum[c] - 1;
+                if (region != -1 && mask[c]) {
+                    sd_.fip[SimulatorData::FIP_PV][c] = pv[c];
+
+                    if (hcpv[region] != 0) {
+                        sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE][c] = pv[c] * pressure.value()[c] * hydrocarbon[c] / hcpv[region];
+                    } else {
+                        sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                    }
+
+                    values[region][SimulatorData::FIP_PV] += sd_.fip[SimulatorData::FIP_PV][c];
+                    values[region][SimulatorData::FIP_WEIGHTED_PRESSURE] += sd_.fip[SimulatorData::FIP_WEIGHTED_PRESSURE][c];
                 }
             }
 
@@ -2250,22 +2323,10 @@ typedef Eigen::Array<double,
             {
                 comm.sum(values[reg].data(), values[reg].size());
             }
-
-            comm.sum(hcpv.data(), hcpv.size());
-            comm.sum(pres.data(), pres.size());
 #else
             // This should never happen!
             OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
 #endif
-        }
-
-        // compute PAV and PORV for every regions.
-        for (int reg = 0; reg < dims; ++reg) {
-            if (hcpv[reg] != 0) {
-                values[reg][6] /= hcpv[reg];
-            } else {
-                values[reg][6] = pres[reg] / values[reg][5];
-            }
         }
 
         return values;

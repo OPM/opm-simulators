@@ -22,6 +22,8 @@
 #ifndef OPM_STANDARDWELLS_HEADER_INCLUDED
 #define OPM_STANDARDWELLS_HEADER_INCLUDED
 
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -40,7 +42,7 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-
+#include <opm/simulators/WellSwitchingLogger.hpp>
 
 namespace Opm {
 
@@ -58,7 +60,9 @@ namespace Opm {
             // ---------      Types      ---------
             using ADB = AutoDiffBlock<double>;
             using Vector = ADB::V;
-            using V = ADB::V;
+            using Communication =
+                Dune::CollectiveCommunication<typename Dune::MPIHelper
+                                              ::MPICommunicator>;
 
             // copied from BlackoilModelBase
             // should put to somewhere better

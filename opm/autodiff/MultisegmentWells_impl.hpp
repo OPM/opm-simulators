@@ -824,9 +824,10 @@ namespace Opm
     MultisegmentWells::
     updateWellControls(WellState& xw) const
     {
+        wellhelpers::WellSwitchingLogger logger;
+
         if( msWells().empty() ) return ;
 
-        std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = numPhases();
@@ -860,9 +861,9 @@ namespace Opm
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
                 // Each well is only active on one process. Therefore we always print the sitch info.
-                std::cout << "Switching control mode for well " << msWells()[w]->name()
-                          << " from " << modestring[well_controls_iget_type(wc, current)]
-                          << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                logger.wellSwitched(msWells()[w]->name(),
+                                    well_controls_iget_type(wc, current),
+                                    well_controls_iget_type(wc, ctrl_index));
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
             }

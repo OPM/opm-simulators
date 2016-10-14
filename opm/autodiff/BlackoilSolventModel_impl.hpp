@@ -625,6 +625,21 @@ namespace Opm {
 
         wellModel().updateWellState(dwells, dpMaxRel(), well_state);
 
+        for( auto w = 0; w < wells().number_of_wells; ++w ) {
+            if (wells().type[w] == INJECTOR) {
+                continue;
+            }
+
+            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf ) {
+                int wc = wells().well_cells[perf];
+                if ( (ss[wc] + sg[wc]) > 0) {
+                    well_state.solventFraction()[perf] = ss[wc] / (ss[wc] + sg[wc]);
+                }
+            }
+        }
+
+
+
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
     }

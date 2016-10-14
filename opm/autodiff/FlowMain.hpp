@@ -40,6 +40,7 @@
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
+#include <opm/simulators/ParallelFileMerger.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -84,6 +85,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -150,12 +152,23 @@ namespace Opm
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
             asImpl().createSimulator();
-
+            
             // Run.
-            return asImpl().runSimulator();
+            auto ret =  asImpl().runSimulator();
+
+            asImpl().mergeParallelLogFiles();
+
+            return ret;
         }
         catch (const std::exception &e) {
-            std::cerr << "Program threw an exception: " << e.what() << "\n";
+            std::ostringstream message;
+            message  << "Program threw an exception: " << e.what();
+
+            if( output_cout_ )
+            {
+                OpmLog::error(message.str());
+            }
+
             return EXIT_FAILURE;
         }
 
@@ -183,6 +196,7 @@ namespace Opm
         // members first occur.
 
         // setupParallelism()
+        int  mpi_rank_ = 0;
         bool output_cout_ = false;
         bool must_distribute_ = false;
         // setupParameters()
@@ -232,9 +246,9 @@ namespace Opm
             // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
             // be 0 and size 1.
             const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
-            const int mpi_rank = mpi_helper.rank();
+            mpi_rank_ = mpi_helper.rank();
             const int mpi_size = mpi_helper.size();
-            output_cout_ = ( mpi_rank == 0 );
+            output_cout_ = ( mpi_rank_ == 0 );
             must_distribute_ = ( mpi_size > 1 );
 
 #ifdef _OPENMP
@@ -253,7 +267,7 @@ namespace Opm
                 if (mpi_size == 1) {
                     std::cout << "OpenMP using " << num_omp_threads << " threads." << std::endl;
                 } else {
-                    std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank << "." << std::endl;
+                    std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank_ << "." << std::endl;
                 }
             }
 #endif
@@ -340,10 +354,14 @@ namespace Opm
         {
             // Write parameters used for later reference. (only if rank is zero)
             output_to_files_ = output_cout_ && param_.getDefault("output", true);
+            // Always read output_dir as it will be set unconditionally later.
+            // Not doing this might cause files to be created in the current
+            // directory.
+            output_dir_ =
+                param_.getDefault("output_dir", std::string("."));
+
             if (output_to_files_) {
                 // Create output directory if needed.
-                output_dir_ =
-                    param_.getDefault("output_dir", std::string("."));
                 boost::filesystem::path fpath(output_dir_);
                 if (!is_directory(fpath)) {
                     try {
@@ -370,36 +388,80 @@ namespace Opm
             using boost::filesystem::path; 
             path fpath(deck_filename);
             std::string baseName;
-            std::string debugFile;
+            std::ostringstream debugFileStream;
+            std::ostringstream logFileStream;
+
             if (boost::to_upper_copy(path(fpath.extension()).string()) == ".DATA") {
                 baseName = path(fpath.stem()).string();
             } else {
                 baseName = path(fpath.filename()).string();
             }
             if (param_.has("output_dir")) {
-                logFile_ = output_dir_ + "/" + baseName + ".PRT";
-                debugFile = output_dir_ + "/." + baseName + ".DEBUG";
-            } else {
-                logFile_ = baseName + ".PRT";
-                debugFile = "." + baseName + ".DEBUG";
+                logFileStream << output_dir_ << "/";
+                debugFileStream << output_dir_ + "/";
             }
-            std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes);
+
+            logFileStream << baseName;
+            debugFileStream << "." << baseName;
+
+            if ( must_distribute_ && mpi_rank_ != 0 )
+            {
+                // Added rank to log file for non-zero ranks.
+                // This prevents message loss.
+                debugFileStream << "."<< mpi_rank_;
+                // If the following file appears then there is a bug.
+                logFileStream << "." << mpi_rank_;
+            }
+            logFileStream << ".PRT";
+            debugFileStream << ".DEBUG";
+
+            std::string debugFile = debugFileStream.str();
+            logFile_ = logFileStream.str();
+
+            std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes, false, output_cout_);
             std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
             OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
             OpmLog::addBackend( "STREAMLOG", streamLog);
-            std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes);
+            std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
             OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
             prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
+
             // Read parameters.
-            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
+            if ( output_cout_ )
+            {
+                OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
+            }
         }
 
 
 
 
 
+        void mergeParallelLogFiles()
+        {
+            // force closing of all log files.
+            OpmLog::removeAllBackends();
+
+            if( mpi_rank_ != 0 || !must_distribute_ )
+            {
+                return;
+            }
+
+            namespace fs = boost::filesystem;
+            fs::path output_path(".");
+            if ( param_.has("output_dir") )
+            {
+                output_path = fs::path(output_dir_);
+            }
+
+            fs::path deck_filename(param_.get<std::string>("deck_filename"));
+
+            std::for_each(fs::directory_iterator(output_path),
+                          fs::directory_iterator(),
+                          detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
+        }
 
         // Parser the input and creates the Deck and EclipseState objects.
         // Writes to:
@@ -418,7 +480,12 @@ namespace Opm
                 ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
                 deck_ = parser->parseFile(deck_filename, parseContext);
                 checkDeck(deck_, parser);
-                MissingFeatures::checkKeywords(*deck_);
+
+                if ( output_cout_)
+                {
+                    MissingFeatures::checkKeywords(*deck_);
+                }
+
                 eclipse_state_.reset(new EclipseState(*deck_, parseContext));
                 auto ioConfig = eclipse_state_->getIOConfig();
                 ioConfig->setOutputDir(output_dir_);
@@ -619,6 +686,11 @@ namespace Opm
         //    OpmLog singleton.
         void extractMessages()
         {
+            if ( !output_cout_ )
+            {
+                return;
+            }
+
             auto extractMessage = [](const Message& msg) {
                 auto log_type = detail::convertMessageType(msg.mtype);
                 const auto& location = msg.location;
@@ -649,6 +721,11 @@ namespace Opm
         //   OpmLog singleton.
         void runDiagnostics()
         {
+            if( ! output_cout_ )
+            {
+                return;
+            }
+
             // Run relperm diagnostics
             RelpermDiagnostics diagnostic;
             diagnostic.diagnosis(eclipse_state_, deck_, grid_init_->grid());
