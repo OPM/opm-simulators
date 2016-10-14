@@ -273,6 +273,12 @@ namespace Opm
         /** \brief return true if output is enabled */
         bool output () const { return output_; }
 
+        /** \brief Whether this process does write to disk */
+        bool isIORank () const
+        {
+            parallelOutput_->isIORank();
+        }
+
         void restore(SimulatorTimerInterface& timer,
                      BlackoilState& state,
                      WellStateFullyImplicitBlackoil& wellState,
