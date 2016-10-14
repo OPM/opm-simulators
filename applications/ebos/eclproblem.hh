@@ -314,7 +314,7 @@ public:
         this->gravity_ = 0.0;
 
         // the "NOGRAV" keyword from Frontsim disables gravity...
-        Opm::DeckConstPtr deck = simulator.gridManager().deck();
+        auto deck = simulator.gridManager().deck();
         if (!deck->hasKeyword("NOGRAV") && EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
             this->gravity_[dim - 1] = 9.80665;
 
@@ -325,8 +325,8 @@ public:
         readInitialCondition_();
 
         // Set the start time of the simulation
-        Opm::TimeMapConstPtr timeMap = simulator.gridManager().schedule()->getTimeMap();
-        tm curTime = boost::posix_time::to_tm(timeMap->getStartTime(/*timeStepIdx=*/0));
+        const auto& timeMap = simulator.gridManager().schedule()->getTimeMap();
+        tm curTime = boost::posix_time::to_tm(timeMap.getStartTime(/*timeStepIdx=*/0));
 
         Scalar startTime = std::mktime(&curTime);
         simulator.setStartTime(startTime);
@@ -375,10 +375,10 @@ public:
     {
         // Proceed to the next report step
         Simulator& simulator = this->simulator();
-        Opm::EclipseStatePtr eclState = this->simulator().gridManager().eclState();
+        auto eclState = this->simulator().gridManager().eclState();
         const auto& schedule = eclState->getSchedule();
-        const auto& events = schedule->getEvents();
-        Opm::TimeMapConstPtr timeMap = schedule->getTimeMap();
+        const auto& events = schedule.getEvents();
+        const auto& timeMap = schedule.getTimeMap();
 
         // The first thing to do in the morning of an episode is update update the
         // eclState and the deck if they need to be changed.
@@ -392,7 +392,7 @@ public:
             // TODO (?): make grid topology changes possible (depending on what exactly
             // has changed, the grid may need be re-created which has some serious
             // implications on e.g., the solution of the simulation.)
-            const auto& miniDeck = schedule->getModifierDeck(nextEpisodeIdx);
+            const auto& miniDeck = schedule.getModifierDeck(nextEpisodeIdx);
             eclState->applyModifierDeck(*miniDeck);
 
             // re-compute all quantities which may possibly be affected.
@@ -402,17 +402,17 @@ public:
 
         // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
         // report steps) is one less!
-        int numReportSteps = timeMap->size() - 1;
+        int numReportSteps = timeMap.size() - 1;
 
         // start the next episode if there are additional report steps, else finish the
         // simulation
         while (nextEpisodeIdx < numReportSteps &&
-               simulator.time() >= timeMap->getTimePassedUntil(nextEpisodeIdx + 1)*(1 - 1e-10))
+               simulator.time() >= timeMap.getTimePassedUntil(nextEpisodeIdx + 1)*(1 - 1e-10))
         {
             ++ nextEpisodeIdx;
         }
 
-        Scalar episodeLength = timeMap->getTimeStepLength(nextEpisodeIdx);
+        Scalar episodeLength = timeMap.getTimeStepLength(nextEpisodeIdx);
         Scalar dt = episodeLength;
         if (nextEpisodeIdx == 0) {
             // allow the size of the initial time step to be set via an external parameter
@@ -499,11 +499,11 @@ public:
     void endEpisode()
     {
         auto& simulator = this->simulator();
-        Opm::EclipseStateConstPtr eclState = simulator.gridManager().eclState();
+        const auto& eclState = simulator.gridManager().eclState();
         int episodeIdx = simulator.episodeIndex();
 
-        Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
-        int numReportSteps = timeMap->size() - 1;
+        const auto& timeMap = eclState->getSchedule().getTimeMap();
+        int numReportSteps = timeMap.size() - 1;
         if (episodeIdx + 1 >= numReportSteps) {
             simulator.setFinished(true);
             return;
@@ -675,7 +675,7 @@ public:
      */
     unsigned pvtRegionIndex(unsigned elemIdx) const
     {
-        Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
+        auto deck = this->simulator().gridManager().deck();
 
         if (!deck->hasKeyword("PVTNUM"))
             return 0;
@@ -793,8 +793,8 @@ private:
 
     void readRockParameters_()
     {
-        Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
-        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
+        auto deck = this->simulator().gridManager().deck();
+        auto eclState = this->simulator().gridManager().eclState();
         const auto& gridManager = this->simulator().gridManager();
 
         // the ROCK keyword has not been specified, so we don't need
@@ -832,9 +832,8 @@ private:
     void readMaterialParameters_()
     {
         const auto& gridManager = this->simulator().gridManager();
-        Opm::DeckConstPtr deck = gridManager.deck();
-        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
-        Opm::EclipseGridConstPtr eclGrid = eclState->getInputGrid();
+        auto deck = gridManager.deck();
+        auto eclState = gridManager.eclState();
         const auto& props = eclState->get3DProperties();
 
         size_t numDof = this->model().numGridDof();
@@ -886,15 +885,15 @@ private:
             compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
 
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
-        materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
+        materialLawManager_->initFromDeck(*deck, *eclState, compressedToCartesianElemIdx);
         ////////////////////////////////
     }
 
     void updatePorosity_()
     {
         const auto& gridManager = this->simulator().gridManager();
-        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
-        Opm::EclipseGridConstPtr eclGrid = eclState->getInputGrid();
+        const auto& eclState = gridManager.eclState();
+        const auto& eclGrid = eclState->getInputGrid();
         const auto& props = eclState->get3DProperties();
 
         size_t numDof = this->model().numGridDof();
@@ -906,16 +905,16 @@ private:
         const std::vector<int> &actnumData =
             props.getIntGridProperty("ACTNUM").getData();
 
-        int nx = eclGrid->getNX();
-        int ny = eclGrid->getNY();
+        int nx = eclGrid.getNX();
+        int ny = eclGrid.getNY();
         for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
             unsigned cartElemIdx = gridManager.cartesianIndex(dofIdx);
             Scalar poreVolume = porvData[cartElemIdx];
 
             // sum up the pore volume of the active cell and all inactive ones above it
             // which were disabled due to their pore volume being too small
-            if (eclGrid->getMinpvMode() == Opm::MinpvMode::ModeEnum::OpmFIL) {
-                Scalar minPvValue = eclGrid->getMinpvValue();
+            if (eclGrid.getMinpvMode() == Opm::MinpvMode::ModeEnum::OpmFIL) {
+                Scalar minPvValue = eclGrid.getMinpvValue();
                 for (int aboveElemCartIdx = static_cast<int>(cartElemIdx) - nx*ny;
                      aboveElemCartIdx >= 0;
                      aboveElemCartIdx -= nx*ny)
@@ -925,7 +924,7 @@ private:
                         // equal to the minimum one
                         break;
 
-                    Scalar aboveElemVolume = eclGrid->getCellVolume(aboveElemCartIdx);
+                    Scalar aboveElemVolume = eclGrid.getCellVolume(aboveElemCartIdx);
                     if (actnumData[aboveElemCartIdx] == 0 && aboveElemVolume > 1e-3)
                         // stop at explicitly disabled elements, but only if their volume is
                         // greater than 10^-3 m^3
@@ -946,16 +945,16 @@ private:
 
     void initFluidSystem_()
     {
-        Opm::DeckConstPtr deck = this->simulator().gridManager().deck();
-        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
+        auto deck = this->simulator().gridManager().deck();
+        auto eclState = this->simulator().gridManager().eclState();
 
-        FluidSystem::initFromDeck(deck, eclState);
+        FluidSystem::initFromDeck(*deck, *eclState);
    }
 
     void readInitialCondition_()
     {
         const auto& gridManager = this->simulator().gridManager();
-        Opm::DeckConstPtr deck = gridManager.deck();
+        auto deck = gridManager.deck();
 
         if (!deck->hasKeyword("EQUIL"))
             readExplicitInitialCondition_();
@@ -989,8 +988,8 @@ private:
     void readExplicitInitialCondition_()
     {
         const auto& gridManager = this->simulator().gridManager();
-        Opm::DeckConstPtr deck = gridManager.deck();
-        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
+        auto deck = gridManager.deck();
+        auto eclState = gridManager.eclState();
 
         // since the values specified in the deck do not need to be consistent, we use an
         // initial condition that conserves the total mass specified by these values.

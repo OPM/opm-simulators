@@ -130,15 +130,15 @@ public:
         if (myRank == 0)
             std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
-        Opm::ParserPtr parser(new Opm::Parser());
+        Opm::Parser parser;
         typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
         typedef std::vector<ParseModePair> ParseModePairs;
         ParseModePairs tmp;
         tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_RANDOM_SLASH , Opm::InputError::IGNORE));
         Opm::ParseContext parseContext(tmp);
 
-        deck_ = parser->parseFile(fileName , parseContext);
-        eclState_.reset(new Opm::EclipseState(deck_, parseContext));
+        deck_ = std::make_shared< Opm::Deck >( parser.parseFile(fileName , parseContext) );
+        eclState_ =  std::make_shared< Opm::EclipseState >(*deck_, parseContext);
 
         asImp_().createGrids_();
 
@@ -148,26 +148,26 @@ public:
     /*!
      * \brief Return a pointer to the parsed ECL deck
      */
-    Opm::DeckConstPtr deck() const
+    std::shared_ptr< const Opm::Deck > deck() const
     { return deck_; }
 
-    Opm::DeckPtr deck()
+    std::shared_ptr< Opm::Deck > deck()
     { return deck_; }
 
     /*!
      * \brief Return a pointer to the internalized ECL deck
      */
-    Opm::EclipseStateConstPtr eclState() const
+    std::shared_ptr< const Opm::EclipseState > eclState() const
     { return eclState_; }
 
-    Opm::EclipseStatePtr eclState()
+    std::shared_ptr< Opm::EclipseState > eclState()
     { return eclState_; }
 
     /*!
      * \brief Return a pointer to the internalized schedule of the ECL deck
      */
-    Opm::ScheduleConstPtr schedule() const
-    { return eclState()->getSchedule(); }
+    const Opm::Schedule* schedule() const
+    { return &eclState()->getSchedule(); }
 
     /*!
      * \brief Return a pointer to the EclipseGrid object
@@ -176,8 +176,8 @@ public:
      * internalize the cornerpoint grid representation and, amongst others, can be used
      * to write EGRID files (which tends to be difficult with a plain Dune::CpGrid)
      */
-    Opm::EclipseGridConstPtr eclGrid() const
-    { return eclState()->getInputGrid(); }
+    const Opm::EclipseGrid* eclGrid() const
+    { return &eclState()->getInputGrid(); }
 
     /*!
      * \brief Returns the name of the case.
@@ -253,8 +253,8 @@ private:
     { return *static_cast<const Implementation*>(this); }
 
     std::string caseName_;
-    Opm::DeckPtr deck_;
-    Opm::EclipseStatePtr eclState_;
+    std::shared_ptr< Opm::Deck > deck_;
+    std::shared_ptr< Opm::EclipseState > eclState_;
 };
 
 } // namespace Ewoms

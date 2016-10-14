@@ -134,7 +134,7 @@ public:
             // consistency with the flow simulator, we use the element centers as
             // computed by opm-parser's Opm::EclipseGrid class for all axes.
             unsigned cartesianCellIdx = cartMapper.cartesianIndex(elemIdx);
-            const auto& centroid = eclGrid->getCellCenter(cartesianCellIdx);
+            const auto& centroid = eclGrid.getCellCenter(cartesianCellIdx);
             for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
                 for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
                     axisCentroids[axisIdx][elemIdx][dimIdx] = centroid[dimIdx];

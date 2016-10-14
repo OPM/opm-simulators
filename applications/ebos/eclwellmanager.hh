@@ -93,14 +93,14 @@ public:
      *
      * I.e., well positions, names etc...
      */
-    void init(Opm::EclipseStateConstPtr eclState)
+    void init(std::shared_ptr< const Opm::EclipseState > eclState)
     {
-        Opm::ScheduleConstPtr deckSchedule = eclState->getSchedule();
+        const auto& deckSchedule = eclState->getSchedule();
 
         // create the wells which intersect with the current process' grid
-        for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule->numWells(); ++deckWellIdx)
+        for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
-            const Opm::Well* deckWell = deckSchedule->getWells()[deckWellIdx];
+            const Opm::Well* deckWell = deckSchedule.getWells()[deckWellIdx];
             const std::string &wellName = deckWell->name();
 
             // set the name of the well but not much else. (i.e., if it is not completed,
@@ -119,11 +119,11 @@ public:
      * \brief This should be called the problem before each simulation
      *        episode to adapt the well controls.
      */
-    void beginEpisode(Opm::EclipseStateConstPtr eclState, bool wasRestarted=false)
+    void beginEpisode(std::shared_ptr< const Opm::EclipseState > eclState, bool wasRestarted=false)
     {
         unsigned episodeIdx = simulator_.episodeIndex();
 
-        Opm::ScheduleConstPtr deckSchedule = eclState->getSchedule();
+        const auto& deckSchedule = eclState->getSchedule();
         WellCompletionsMap wellCompMap;
         computeWellCompletionsMap_(episodeIdx, wellCompMap);
 
@@ -134,7 +134,7 @@ public:
         // linearized system of equations
         updateWellParameters_(episodeIdx, wellCompMap);
 
-        const std::vector<const Opm::Well*>& deckWells = deckSchedule->getWells(episodeIdx);
+        const std::vector<const Opm::Well*>& deckWells = deckSchedule.getWells(episodeIdx);
         // set the injection data for the respective wells.
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
             const Opm::Well* deckWell = deckWells[deckWellIdx];
@@ -568,17 +568,17 @@ public:
      * "Something" can either be the well topology (i.e., which grid blocks are contained
      * in which well) or it can be a well parameter like the bottom hole pressure...
      */
-    bool wellsChanged(Opm::EclipseStateConstPtr eclState, unsigned reportStepIdx) const
+    bool wellsChanged(std::shared_ptr< const Opm::EclipseState > eclState, unsigned reportStepIdx) const
     {
         if (wellTopologyChanged_(eclState, reportStepIdx))
             return true;
 
-        Opm::ScheduleConstPtr schedule = eclState->getSchedule();
-        if (schedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
+        const auto& schedule = eclState->getSchedule();
+        if (schedule.getTimeMap().numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const Opm::Events& events = schedule->getEvents();
+        const Opm::Events& events = schedule.getEvents();
         return events.hasEvent(Opm::ScheduleEvents::PRODUCTION_UPDATE |
                                Opm::ScheduleEvents::INJECTION_UPDATE |
                                Opm::ScheduleEvents::WELL_STATUS_CHANGE,
@@ -586,7 +586,7 @@ public:
     }
 
 protected:
-    bool wellTopologyChanged_(Opm::EclipseStateConstPtr eclState, unsigned reportStepIdx) const
+    bool wellTopologyChanged_(std::shared_ptr< const Opm::EclipseState > eclState, unsigned reportStepIdx) const
     {
         if (reportStepIdx == 0) {
             // the well topology has always been changed relative to before the
@@ -594,12 +594,12 @@ protected:
             return true;
         }
 
-        Opm::ScheduleConstPtr schedule = eclState->getSchedule();
-        if (schedule->getTimeMap()->numTimesteps() <= (unsigned) reportStepIdx)
+        const auto& schedule = eclState->getSchedule();
+        if (schedule.getTimeMap().numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
 
-        const Opm::Events& events = schedule->getEvents();
+        const Opm::Events& events = schedule.getEvents();
         return events.hasEvent(Opm::ScheduleEvents::NEW_WELL |
                                Opm::ScheduleEvents::COMPLETION_CHANGE,
                                reportStepIdx);
@@ -668,15 +668,15 @@ protected:
     void computeWellCompletionsMap_(unsigned reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
     {
         auto eclStatePtr = simulator_.gridManager().eclState();
-        auto deckSchedule = eclStatePtr->getSchedule();
-        auto eclGrid = eclStatePtr->getInputGrid();
+        const auto& deckSchedule = eclStatePtr->getSchedule();
+        const auto& eclGrid = eclStatePtr->getInputGrid();
 
-        assert( int(eclGrid->getNX()) == simulator_.gridManager().cartesianDimensions()[ 0 ] );
-        assert( int(eclGrid->getNY()) == simulator_.gridManager().cartesianDimensions()[ 1 ] );
+        assert( int(eclGrid.getNX()) == simulator_.gridManager().cartesianDimensions()[ 0 ] );
+        assert( int(eclGrid.getNY()) == simulator_.gridManager().cartesianDimensions()[ 1 ] );
 
         // compute the mapping from logically Cartesian indices to the well the
         // respective completion.
-        const std::vector<const Opm::Well*>& deckWells = deckSchedule->getWells(reportStepIdx);
+        const std::vector<const Opm::Well*>& deckWells = deckSchedule.getWells(reportStepIdx);
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {
             const Opm::Well* deckWell = deckWells[deckWellIdx];
             const std::string& wellName = deckWell->name();
@@ -696,12 +696,12 @@ protected:
 
             std::array<int, 3> cartesianCoordinate;
             // set the well parameters defined by the current set of completions
-            Opm::CompletionSetConstPtr completionSet = deckWell->getCompletions(reportStepIdx);
-            for (size_t complIdx = 0; complIdx < completionSet->size(); complIdx ++) {
-                Opm::CompletionConstPtr completion = completionSet->get(complIdx);
-                cartesianCoordinate[ 0 ] = completion->getI();
-                cartesianCoordinate[ 1 ] = completion->getJ();
-                cartesianCoordinate[ 2 ] = completion->getK();
+            const auto& completionSet = deckWell->getCompletions(reportStepIdx);
+            for (size_t complIdx = 0; complIdx < completionSet.size(); complIdx ++) {
+                const auto& completion = completionSet.get(complIdx);
+                cartesianCoordinate[ 0 ] = completion.getI();
+                cartesianCoordinate[ 1 ] = completion.getJ();
+                cartesianCoordinate[ 2 ] = completion.getK();
                 unsigned cartIdx = simulator_.gridManager().cartesianIndex( cartesianCoordinate );
 
                 // in this code we only support each cell to be part of at most a single
@@ -709,7 +709,7 @@ protected:
                 assert(cartesianIdxToCompletionMap.count(cartIdx) == 0);
 
                 auto eclWell = wells_[wellIndex(wellName)];
-                cartesianIdxToCompletionMap[cartIdx] = std::make_pair(&(*completion), eclWell);
+                cartesianIdxToCompletionMap[cartIdx] = std::make_pair(&completion, eclWell);
             }
         }
     }
@@ -717,8 +717,8 @@ protected:
     void updateWellParameters_(unsigned reportStepIdx, const WellCompletionsMap& wellCompletions)
     {
         auto eclStatePtr = simulator_.gridManager().eclState();
-        auto deckSchedule = eclStatePtr->getSchedule();
-        const std::vector<const Opm::Well*>& deckWells = deckSchedule->getWells(reportStepIdx);
+        const auto& deckSchedule = eclStatePtr->getSchedule();
+        const std::vector<const Opm::Well*>& deckWells = deckSchedule.getWells(reportStepIdx);
 
         // set the reference depth for all wells
         for (size_t deckWellIdx = 0; deckWellIdx < deckWells.size(); ++deckWellIdx) {

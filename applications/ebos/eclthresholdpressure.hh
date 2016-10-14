@@ -100,7 +100,7 @@ public:
         assert(simulator_.model().numGridDof() == numElements);
 
         const auto& gridManager = simulator_.gridManager();
-        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
+        const auto& eclState = gridManager.eclState();
         const auto& simConfig = eclState->getSimulationConfig();
 
         enableThresholdPressure_ = simConfig.hasThresholdPressure();
@@ -232,7 +232,7 @@ private:
         const auto& elementMapper = simulator_.model().elementMapper();
         const auto& eclState = simulator_.gridManager().eclState();
         const Opm::SimulationConfig& simConfig = eclState->getSimulationConfig();
-        Opm::ThresholdPressureConstPtr thpres = simConfig.getThresholdPressure();
+        const auto& thpres = simConfig.getThresholdPressure();
 
         // set the threshold pressures for all EQUIL region boundaries which have a
         // intersection in the grid
@@ -267,11 +267,11 @@ private:
 
                 unsigned equilRegionInside = elemEquilRegion_[insideElemIdx];
                 unsigned equilRegionOutside = elemEquilRegion_[outsideElemIdx];
-                if (thpres->hasRegionBarrier(equilRegionInside + 1, equilRegionOutside + 1)) {
+                if (thpres.hasRegionBarrier(equilRegionInside + 1, equilRegionOutside + 1)) {
                     Scalar pth = 0.0;
-                    if (thpres->hasThresholdPressure(equilRegionInside + 1, equilRegionOutside + 1)) {
+                    if (thpres.hasThresholdPressure(equilRegionInside + 1, equilRegionOutside + 1)) {
                         // threshold pressure explicitly specified
-                        pth = thpres->getThresholdPressure(equilRegionInside + 1, equilRegionOutside + 1);
+                        pth = thpres.getThresholdPressure(equilRegionInside + 1, equilRegionOutside + 1);
                     }
                     else {
                         // take the threshold pressure from the initial condition
