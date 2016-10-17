@@ -165,9 +165,6 @@ public:
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
-        const auto& schedule = eclState()->getSchedule();
-        const auto& events = schedule->getEvents();
-
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
@@ -284,20 +281,6 @@ public:
             }
 
             solver->model().endReportStep();
-
-            // update the derived geology (transmissibilities, pore volumes, etc) if the
-            // has geology changed for the next report step
-            const int nextTimeStepIdx = timer.currentStepNum() + 1;
-            if (nextTimeStepIdx < timer.numSteps()
-                && events.hasEvent(ScheduleEvents::GEO_MODIFIER, nextTimeStepIdx)) {
-                // bring the contents of the keywords to the current state of the SCHEDULE
-                // section
-                //
-                // TODO (?): handle the parallel case (maybe this works out of the box)
-                DeckConstPtr miniDeck = schedule->getModifierDeck(nextTimeStepIdx);
-                eclState()->applyModifierDeck(*miniDeck);
-                geo_.update(grid(), props_, eclState(), gravity_);
-            }
 
             // take time that was used to solve system for this reportStep
             solver_timer.stop();
