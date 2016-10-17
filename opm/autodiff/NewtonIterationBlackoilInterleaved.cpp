@@ -487,7 +487,11 @@ namespace Opm
 
             // Check for failure of linear solver.
             if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
-                OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver.");
+                const std::string msg("Convergence failure for linear solver.");
+                if (isRankZero(parallelInformation_)) {
+                    OpmLog::problem(msg);
+                }
+                OPM_THROW_NOLOG(LinearSolverProblem, msg);
             }
 
             // Copy solver output to dx.
@@ -658,7 +662,9 @@ namespace Opm
 
             // Check for failure of linear solver.
             if (!result.converged) {
-                OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver in computePressureIncrement().");
+                const std::string msg("Convergence failure for linear solver in computePressureIncrement().");
+                OpmLog::problem(msg);
+                OPM_THROW_NOLOG(LinearSolverProblem, msg);
             }
 
             // Copy solver output to dx.
