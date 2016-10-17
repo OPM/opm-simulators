@@ -24,7 +24,6 @@
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/output/Cells.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/autodiff/Compat.hpp>
@@ -63,14 +62,14 @@ namespace Opm
             std::unique_ptr< SimulatorTimerInterface > timer_;
             const SimulationDataContainer state_;
             const WellState wellState_;
-            std::vector<data::CellData> simProps_;
+            data::Solution simProps_;
             const bool substep_;
 
             explicit WriterCallEbos( BlackoilOutputWriterEbos& writer,
                                  const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& state,
                                  const WellState& wellState,
-                                 const std::vector<data::CellData>& simProps,
+                                 const data::Solution& simProps,
                                  bool substep )
                 : writer_( writer ),
                   timer_( timer.clone() ),
@@ -98,7 +97,7 @@ namespace Opm
                   const WellState& localWellState,
                   bool substep)
     {
-        std::vector<data::CellData> noCellProperties;
+        data::Solution noCellProperties;
         writeTimeStepWithCellProperties(timer, localState, localWellState, noCellProperties, substep);
     }
 
@@ -112,7 +111,7 @@ namespace Opm
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
                   const WellState& localWellState,
-                  const std::vector<data::CellData>& cellData,
+                  const data::Solution& sol,
                   bool substep)
     {
         bool isIORank = output_ ;
@@ -137,11 +136,11 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCallEbos( *this, timer, state, wellState, cellData, substep ) );
+                asyncOutput_->dispatch( detail::WriterCallEbos( *this, timer, state, wellState, sol, substep ) );
             }
             else {
                 // just write the data to disk
-                writeTimeStepSerial( timer, state, wellState, cellData, substep );
+                writeTimeStepSerial( timer, state, wellState, sol, substep );
             }
         }
     }
@@ -153,7 +152,7 @@ namespace Opm
     writeTimeStepSerial(const SimulatorTimerInterface& timer,
                         const SimulationDataContainer& state,
                         const WellState& wellState,
-                        const std::vector<data::CellData>& simProps,
+                        const data::Solution& sol,
                         bool substep)
     {
         // ECL output
@@ -167,8 +166,7 @@ namespace Opm
                                           substep,
                                           timer.simulationTimeElapsed(),
                                           simToSolution( state, phaseUsage_ ),
-                                          wellState.report(phaseUsage_),
-                                          simProps);
+                                          wellState.report(phaseUsage_));
             }
         }
 

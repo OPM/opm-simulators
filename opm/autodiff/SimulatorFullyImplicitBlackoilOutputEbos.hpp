@@ -30,7 +30,6 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
-#include <opm/output/Cells.hpp>
 #include <opm/output/eclipse/EclipseWriter.hpp>
 
 #include <opm/autodiff/Compat.hpp>
@@ -96,7 +95,7 @@ namespace Opm
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellState& wellState,
-                           const std::vector<data::CellData>& simProps,
+                           const data::Solution& sol,
                            bool substep = false);
 
         /*!
@@ -118,7 +117,7 @@ namespace Opm
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellState& wellState,
-                                 const std::vector<data::CellData>& simProps,
+                                 const data::Solution& simProps,
                                  bool substep);
 
         /** \brief return output directory */
@@ -262,7 +261,7 @@ namespace Opm
 
     namespace detail {
         template<class Model>
-        std::vector<data::CellData> getCellDataEbos(
+        Opm::data::Solution getOutputDataEbos(
                 const Opm::PhaseUsage& phaseUsage,
                 const Model& model,
                 const RestartConfig& restartConfig,
@@ -270,7 +269,7 @@ namespace Opm
         {
             typedef typename Model::FluidSystem FluidSystem;
 
-            std::vector<data::CellData> simProps;
+            Opm::data::Solution sol;
 
             //Get the value of each of the keys
             std::map<std::string, int> outKeywords = restartConfig.getRestartKeywords(reportStepNum);
@@ -278,15 +277,17 @@ namespace Opm
                 keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
             }
 
-            //Get shorthands for water, oil, gas
-            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
-            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
-            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
-
             const auto& ebosModel = model.ebosSimulator().model();
 
             // extract everything which can possibly be written to disk
             int numCells = ebosModel.numGridDof();
+
+            std::vector<double> pressureOil(numCells);
+            std::vector<double> temperature(numCells);
+
+            std::vector<double> satWater(numCells);
+            std::vector<double> satGas(numCells);
+
             std::vector<double> bWater(numCells);
             std::vector<double> bOil(numCells);
             std::vector<double> bGas(numCells);
@@ -305,14 +306,26 @@ namespace Opm
 
             std::vector<double> Rs(numCells);
             std::vector<double> Rv(numCells);
+            std::vector<double> RsSat(numCells);
+            std::vector<double> RvSat(numCells);
 
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
                 const auto& intQuants = *ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
+                pressureOil[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value;
+
+                temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value;
+
+                satWater[cellIdx] = fs.saturation(FluidSystem::waterPhaseIdx).value;
+                satGas[cellIdx] = fs.saturation(FluidSystem::gasPhaseIdx).value;
+
                 bWater[cellIdx] = fs.invB(FluidSystem::waterPhaseIdx).value;
                 bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value;
                 bGas[cellIdx] = fs.invB(FluidSystem::gasPhaseIdx).value;
+
+                Rs[cellIdx] = fs.Rs().value;
+                Rs[cellIdx] = fs.Rv().value;
 
                 rhoWater[cellIdx] = fs.density(FluidSystem::waterPhaseIdx).value;
                 rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value;
@@ -326,39 +339,85 @@ namespace Opm
                 krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value;
                 krGas[cellIdx] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value;
 
-                Rs[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
-                                                                      FluidSystem::oilPhaseIdx,
-                                                                      intQuants.pvtRegionIndex(),
-                                                                      /*maxOilSaturation=*/1.0).value;
-                Rv[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
-                                                                      FluidSystem::gasPhaseIdx,
-                                                                      intQuants.pvtRegionIndex(),
-                                                                      /*maxOilSaturation=*/1.0).value;
+                RsSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
+                                                                         FluidSystem::oilPhaseIdx,
+                                                                         intQuants.pvtRegionIndex(),
+                                                                         /*maxOilSaturation=*/1.0).value;
+                RvSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
+                                                                         FluidSystem::gasPhaseIdx,
+                                                                         intQuants.pvtRegionIndex(),
+                                                                         /*maxOilSaturation=*/1.0).value;
             }
+
+            /**
+             * Oil Pressures
+             */
+            outKeywords["PRESSURE"] = 0;
+            sol.insert("PRESSURE",
+                       UnitSystem::measure::pressure,
+                       std::move(pressureOil),
+                       data::TargetType::RESTART_SOLUTION);
+
+            /**
+             * Temperatures
+             */
+            outKeywords["TEMP"] = 0;
+            sol.insert("TEMP",
+                       UnitSystem::measure::temperature,
+                       std::move(temperature),
+                       data::TargetType::RESTART_SOLUTION);
+
+            /**
+             * Water and gas saturation.
+             */
+            outKeywords["SWAT"] = 0;
+            outKeywords["SGAS"] = 0;
+            sol.insert("SWAT",
+                       UnitSystem::measure::identity,
+                       std::move(satWater),
+                       data::TargetType::RESTART_SOLUTION);
+            sol.insert("SGAS",
+                       UnitSystem::measure::identity,
+                       std::move(satGas),
+                       data::TargetType::RESTART_SOLUTION);
+
+            /**
+             * the dissolution factors
+             */
+            outKeywords["RS"] = 0;
+            outKeywords["RV"] = 0;
+            sol.insert("RS",
+                       UnitSystem::measure::gas_oil_ratio,
+                       std::move(Rs),
+                       data::TargetType::RESTART_SOLUTION);
+            sol.insert("RV",
+                       UnitSystem::measure::oil_gas_ratio,
+                       std::move(Rv),
+                       data::TargetType::RESTART_SOLUTION);
 
             /**
              * Formation volume factors for water, oil, gas
              */
-            if (aqua_active && outKeywords["BW"] > 0) {
+            if (outKeywords["BW"] > 0) {
                 outKeywords["BW"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "1OVERBW",
-                        Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
-                        std::move(bWater)});
+                sol.insert("BW",
+                           Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
+                           std::move(bWater),
+                           data::TargetType::RESTART_AUXILLARY);
             }
-            if (liquid_active && outKeywords["BO"]  > 0) {
+            if (outKeywords["BO"]  > 0) {
                 outKeywords["BO"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "1OVERBO",
-                        Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
-                        std::move(bOil)});
+                sol.insert("BO",
+                           Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
+                           std::move(bOil),
+                           data::TargetType::RESTART_AUXILLARY);
             }
-            if (vapour_active && outKeywords["BG"] > 0) {
+            if (outKeywords["BG"] > 0) {
                 outKeywords["BG"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "1OVERBG",
-                        Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
-                        std::move(bGas)});
+                sol.insert("BG",
+                           Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
+                           std::move(bGas),
+                           data::TargetType::RESTART_AUXILLARY);
             }
 
             /**
@@ -366,24 +425,19 @@ namespace Opm
              */
             if (outKeywords["DEN"] > 0) {
                 outKeywords["DEN"] = 0;
-                if (aqua_active) {
-                    simProps.emplace_back(data::CellData{
-                            "WAT_DEN",
-                            Opm::UnitSystem::measure::density,
-                            std::move(rhoWater)});
-                }
-                if (liquid_active) {
-                    simProps.emplace_back(data::CellData{
-                            "OIL_DEN",
-                            Opm::UnitSystem::measure::density,
-                            std::move(rhoOil)});
-                }
-                if (vapour_active) {
-                    simProps.emplace_back(data::CellData{
-                            "GAS_DEN",
-                            Opm::UnitSystem::measure::density,
-                            std::move(rhoGas)});
-                }
+
+                sol.insert("WAT_DEN",
+                           Opm::UnitSystem::measure::density,
+                           std::move(rhoWater),
+                           data::TargetType::RESTART_AUXILLARY);
+                sol.insert("OIL_DEN",
+                           Opm::UnitSystem::measure::density,
+                           std::move(rhoOil),
+                           data::TargetType::RESTART_AUXILLARY);
+                sol.insert("GAS_DEN",
+                           Opm::UnitSystem::measure::density,
+                           std::move(rhoGas),
+                           data::TargetType::RESTART_AUXILLARY);
             }
 
             /**
@@ -391,78 +445,71 @@ namespace Opm
              */
             if (outKeywords["VISC"] > 0) {
                 outKeywords["VISC"] = 0;
-                if (aqua_active) {
-                    simProps.emplace_back(data::CellData{
-                            "WAT_VISC",
-                            Opm::UnitSystem::measure::viscosity,
-                            std::move(muWater)});
-                }
-                if (liquid_active) {
-                    simProps.emplace_back(data::CellData{
-                            "OIL_VISC",
-                            Opm::UnitSystem::measure::viscosity,
-                            std::move(muOil)});
-                }
-                if (vapour_active) {
-                    simProps.emplace_back(data::CellData{
-                            "GAS_VISC",
-                            Opm::UnitSystem::measure::viscosity,
-                            std::move(muGas)});
-                }
+                sol.insert("WAT_VISC",
+                           Opm::UnitSystem::measure::viscosity,
+                           std::move(muWater),
+                           data::TargetType::RESTART_AUXILLARY);
+                sol.insert("OIL_VISC",
+                           Opm::UnitSystem::measure::viscosity,
+                           std::move(muOil),
+                           data::TargetType::RESTART_AUXILLARY);
+                sol.insert("GAS_VISC",
+                           Opm::UnitSystem::measure::viscosity,
+                           std::move(muGas),
+                           data::TargetType::RESTART_AUXILLARY);
             }
 
             /**
              * Relative permeabilities for water, oil, gas
              */
-            if (aqua_active && outKeywords["KRW"] > 0) {
+            if (outKeywords["KRW"] > 0) {
                 outKeywords["KRW"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "WATKR",
-                        Opm::UnitSystem::measure::permeability,
-                        std::move(krWater)});
+                sol.insert("WATKR",
+                           Opm::UnitSystem::measure::identity,
+                           std::move(krWater),
+                           data::TargetType::RESTART_AUXILLARY);
             }
-            if (liquid_active && outKeywords["KRO"] > 0) {
+            if (outKeywords["KRO"] > 0) {
                 outKeywords["KRO"] = 0;
-                simProps.emplace_back(data::CellData{
-                         "OILKR",
-                         Opm::UnitSystem::measure::permeability,
-                         std::move(krOil)});
+                sol.insert("OILKR",
+                           Opm::UnitSystem::measure::identity,
+                           std::move(krOil),
+                           data::TargetType::RESTART_AUXILLARY);
             }
-            if (vapour_active && outKeywords["KRG"] > 0) {
+            if (outKeywords["KRG"] > 0) {
                 outKeywords["KRG"] = 0;
-                simProps.emplace_back(data::CellData{
-                          "GASKR",
-                          Opm::UnitSystem::measure::permeability,
-                          std::move(krGas)});
+                sol.insert("GASKR",
+                           Opm::UnitSystem::measure::identity,
+                           std::move(krGas),
+                           data::TargetType::RESTART_AUXILLARY);
             }
 
             /**
              * Vaporized and dissolved gas/oil ratio
              */
-            if (vapour_active && liquid_active && outKeywords["RSSAT"] > 0) {
+            if (outKeywords["RSSAT"] > 0) {
                 outKeywords["RSSAT"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "RSSAT",
-                        Opm::UnitSystem::measure::gas_oil_ratio,
-                        std::move(Rs)});
+                sol.insert("RSSAT",
+                           Opm::UnitSystem::measure::gas_oil_ratio,
+                           std::move(RsSat),
+                           data::TargetType::RESTART_AUXILLARY);
             }
-            if (vapour_active && liquid_active && outKeywords["RVSAT"] > 0) {
+            if (outKeywords["RVSAT"] > 0) {
                 outKeywords["RVSAT"] = 0;
-                simProps.emplace_back(data::CellData{
-                        "RVSAT",
-                        Opm::UnitSystem::measure::oil_gas_ratio,
-                        std::move(Rv)});
+                sol.insert("RVSAT",
+                           Opm::UnitSystem::measure::oil_gas_ratio,
+                           std::move(RvSat),
+                           data::TargetType::RESTART_AUXILLARY);
             }
 
 
             /**
              * Bubble point and dew point pressures
              */
-            if (vapour_active && liquid_active && outKeywords["PBPD"] > 0) {
-                outKeywords["PBPD"] = 0;
+            if (outKeywords["PBPD"] > 0) {
                 Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
-                        "Writing bubble points and dew points (PBPD) to file is unsupported, "
-                        "as the simulator does not use these internally.");
+                                     "Writing bubble points and dew points (PBPD) to file is unsupported, "
+                                     "as the simulator does not use these internally.");
             }
 
             //Warn for any unhandled keyword
@@ -475,7 +522,7 @@ namespace Opm
                 }
             }
 
-            return simProps;
+            return sol;
         }
     }
 
@@ -493,8 +540,8 @@ namespace Opm
     {
         const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
-        std::vector<data::CellData> cellData = detail::getCellDataEbos( phaseUsage_, physicalModel, restartConfig, reportStepNum );
-        writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
+        Opm::data::Solution sol = detail::getOutputDataEbos( phaseUsage_, physicalModel, restartConfig, reportStepNum );
+        writeTimeStepWithCellProperties(timer, localState, localWellState, sol, substep);
     }
 }
 #endif
