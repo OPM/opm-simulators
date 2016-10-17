@@ -22,6 +22,7 @@
 
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -286,6 +287,25 @@ namespace Opm
         b = L * total_residual.value().matrix();
     }
 
+
+
+
+    /// Return true if this is a serial run, or rank zero on an MPI run.
+    bool isRankZero(const boost::any& parallel_info)
+    {
+#if HAVE_MPI
+        if (parallel_info.type() == typeid(ParallelISTLInformation)) {
+            const ParallelISTLInformation& info =
+                boost::any_cast<const ParallelISTLInformation&>(parallel_info);
+            return info.communicator().rank() == 0;
+        } else {
+            return true;
+        }
+#else
+        static_cast<void>(parallel_info); // Suppress unused argument warning.
+        return true;
+#endif
+    }
 
 
 } // namespace Opm
