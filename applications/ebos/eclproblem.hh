@@ -74,6 +74,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -374,8 +375,30 @@ public:
     {
         // Proceed to the next report step
         Simulator& simulator = this->simulator();
-        Opm::EclipseStateConstPtr eclState = this->simulator().gridManager().eclState();
-        Opm::TimeMapConstPtr timeMap = eclState->getSchedule()->getTimeMap();
+        Opm::EclipseStatePtr eclState = this->simulator().gridManager().eclState();
+        const auto& schedule = eclState->getSchedule();
+        const auto& events = schedule->getEvents();
+        Opm::TimeMapConstPtr timeMap = schedule->getTimeMap();
+
+        // The first thing to do in the morning of an episode is update update the
+        // eclState and the deck if they need to be changed.
+        int nextEpisodeIdx = simulator.episodeIndex();
+        if (nextEpisodeIdx > 0 &&
+            events.hasEvent(Opm::ScheduleEvents::GEO_MODIFIER, nextEpisodeIdx))
+        {
+            // bring the contents of the keywords to the current state of the SCHEDULE
+            // section
+            //
+            // TODO (?): make grid topology changes possible (depending on what exactly
+            // has changed, the grid may need be re-created which has some serious
+            // implications on e.g., the solution of the simulation.)
+            const auto& miniDeck = schedule->getModifierDeck(nextEpisodeIdx);
+            eclState->applyModifierDeck(*miniDeck);
+
+            // re-compute all quantities which may possibly be affected.
+            transmissibilities_.update();
+            updatePorosity_();
+        }
 
         // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
         // report steps) is one less!
@@ -383,7 +406,6 @@ public:
 
         // start the next episode if there are additional report steps, else finish the
         // simulation
-        int nextEpisodeIdx = simulator.episodeIndex();
         while (nextEpisodeIdx < numReportSteps &&
                simulator.time() >= timeMap->getTimePassedUntil(nextEpisodeIdx + 1)*(1 - 1e-10))
         {
@@ -854,6 +876,29 @@ private:
 
         ////////////////////////////////
         // porosity
+        updatePorosity_();
+        ////////////////////////////////
+
+        ////////////////////////////////
+        // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
+        std::vector<int> compressedToCartesianElemIdx(numDof);
+        for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
+            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
+
+        materialLawManager_ = std::make_shared<EclMaterialLawManager>();
+        materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
+        ////////////////////////////////
+    }
+
+    void updatePorosity_()
+    {
+        const auto& gridManager = this->simulator().gridManager();
+        Opm::EclipseStateConstPtr eclState = gridManager.eclState();
+        Opm::EclipseGridConstPtr eclGrid = eclState->getInputGrid();
+        const auto& props = eclState->get3DProperties();
+
+        size_t numDof = this->model().numGridDof();
+
         porosity_.resize(numDof);
 
         const std::vector<double> &porvData =
@@ -897,17 +942,6 @@ private:
             assert(dofVolume > 0.0);
             porosity_[dofIdx] = poreVolume/dofVolume;
         }
-        ////////////////////////////////
-
-        ////////////////////////////////
-        // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
-        std::vector<int> compressedToCartesianElemIdx(numDof);
-        for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
-            compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
-
-        materialLawManager_ = std::make_shared<EclMaterialLawManager>();
-        materialLawManager_->initFromDeck(deck, eclState, compressedToCartesianElemIdx);
-        ////////////////////////////////
     }
 
     void initFluidSystem_()

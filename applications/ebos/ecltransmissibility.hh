@@ -90,6 +90,9 @@ public:
      * either but at least it seems to be much better.
      */
     void finishInit()
+    { update(); }
+
+    void update()
     {
         const auto& problem = simulator_.problem();
         const auto& gridManager = simulator_.gridManager();
@@ -141,6 +144,7 @@ public:
         // resizes are costly for hashmaps and there would be quite a few of them if we
         // would not have a rough idea of how large the final map will be (the rough idea
         // is a conforming Cartesian grid).
+        trans_.clear();
         trans_.reserve(numElements*3*1.05);
 
         // compute the transmissibilities for all intersections
