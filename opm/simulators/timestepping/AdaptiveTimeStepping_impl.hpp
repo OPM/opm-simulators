@@ -306,7 +306,7 @@ namespace Opm {
                     std::string msg;
                     msg = "Solver convergence failed, restarting solver with new time step ("
                         + std::to_string(unit::convert::to( newTimeStep, unit::day )) + " days).\n";
-                    OpmLog::error(msg);
+                    OpmLog::problem(msg);
 		}
                 // reset states
                 state      = last_state;
