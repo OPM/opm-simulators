@@ -610,10 +610,9 @@ namespace Opm
                                const std::string& output_dir)
         {
 #ifdef HAVE_ERT
-            using ds = data::Solution::key;
             data::Solution sol;
-            sol.insert( ds::PRESSURE, state.pressure() );
-            sol.insert( ds::SWAT, destripe( state.saturation(), 0, 2 ) );
+            sol.insert( "PRESSURE", UnitSystem::measure::pressure , state.pressure() , data::TargetType::RESTART_SOLUTION );
+            sol.insert( "SWAT", UnitSystem::measure::identity, destripe( state.saturation(), 0, 2 ) , data::TargetType::RESTART_SOLUTION);
 
             writeECLData( grid.cartdims[ 0 ],
                           grid.cartdims[ 1 ],
