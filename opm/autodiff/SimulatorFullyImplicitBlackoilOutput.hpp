@@ -277,7 +277,7 @@ namespace Opm
         /** \brief Whether this process does write to disk */
         bool isIORank () const
         {
-            parallelOutput_->isIORank();
+            return parallelOutput_->isIORank();
         }
 
         void restore(SimulatorTimerInterface& timer,
