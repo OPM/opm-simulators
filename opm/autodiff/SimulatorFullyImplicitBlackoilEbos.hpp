@@ -166,6 +166,7 @@ public:
         std::ofstream tstep_os(tstep_filename.c_str());
 
         const auto& schedule = eclState()->getSchedule();
+        const auto& events = schedule->getEvents();
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
