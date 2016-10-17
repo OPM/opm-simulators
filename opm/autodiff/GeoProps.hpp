@@ -33,7 +33,8 @@
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/core/grid/PinchProcessor.hpp>
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-#include <opm/output/Cells.hpp>
+#include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Solution.hpp>
 
 #include <Eigen/Eigen>
 
@@ -228,15 +229,15 @@ namespace Opm
         /// grid the whole TRAN keyword is quite meaningless.
 
         template <class Grid>
-        const std::vector<data::CellData> simProps( const Grid& grid ) const {
+        data::Solution simProps( const Grid& grid ) const {
             using namespace UgGridHelpers;
             const int* dims = cartDims( grid );
             const int globalSize = dims[0] * dims[1] * dims[2];
             const auto& trans = this->transmissibility( );
 
-            data::CellData tranx = {"TRANX" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
-            data::CellData trany = {"TRANY" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
-            data::CellData tranz = {"TRANZ" , UnitSystem::measure::transmissibility, std::vector<double>( globalSize )};
+            data::CellData tranx = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+            data::CellData trany = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+            data::CellData tranz = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
 
             size_t num_faces = numFaces(grid);
             auto fc = faceCells(grid);
@@ -263,12 +264,9 @@ namespace Opm
                 }
             }
 
-            std::vector<data::CellData> tran;
-            tran.push_back( std::move( tranx ));
-            tran.push_back( std::move( trany ));
-            tran.push_back( std::move( tranz ));
-
-            return tran;
+            return { {"TRANX" , tranx},
+                     {"TRANY" , trany} ,
+                     {"TRANZ" , tranz } };
         }
 
 

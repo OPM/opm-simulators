@@ -24,7 +24,7 @@
 #include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/output/Cells.hpp>
+#include <opm/output/data/Cells.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/autodiff/Compat.hpp>
@@ -262,14 +262,14 @@ namespace Opm
             std::unique_ptr< SimulatorTimerInterface > timer_;
             const SimulationDataContainer state_;
             const WellState wellState_;
-            std::vector<data::CellData> simProps_;
+            data::Solution simProps_;
             const bool substep_;
 
             explicit WriterCall( BlackoilOutputWriter& writer,
                                  const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& state,
                                  const WellState& wellState,
-                                 const std::vector<data::CellData>& simProps,
+                                 const data::Solution& simProps,
                                  bool substep )
                 : writer_( writer ),
                   timer_( timer.clone() ),
@@ -300,8 +300,7 @@ namespace Opm
                   const WellState& localWellState,
                   bool substep)
     {
-        std::vector<data::CellData> noCellProperties;
-        writeTimeStepWithCellProperties(timer, localState, localWellState, noCellProperties, substep);
+        writeTimeStepWithCellProperties(timer, localState, localWellState, {} , substep);
     }
 
 
@@ -314,7 +313,7 @@ namespace Opm
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
                   const WellState& localWellState,
-                  const std::vector<data::CellData>& cellData,
+                  const data::Solution& cellData,
                   bool substep)
     {
         // VTK output (is parallel if grid is parallel)
@@ -360,7 +359,7 @@ namespace Opm
     writeTimeStepSerial(const SimulatorTimerInterface& timer,
                         const SimulationDataContainer& state,
                         const WellState& wellState,
-                        const std::vector<data::CellData>& simProps,
+                        const data::Solution& simProps,
                         bool substep)
     {
         // Matlab output
@@ -379,8 +378,7 @@ namespace Opm
                                           substep,
                                           timer.simulationTimeElapsed(),
                                           simToSolution( state, phaseUsage_ ),
-                                          wellState.report(phaseUsage_),
-                                          simProps);
+                                          wellState.report(phaseUsage_));
             }
         }
 
