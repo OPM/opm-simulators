@@ -47,7 +47,7 @@
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
 #include <opm/core/grid/ColumnExtract.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/polymer/PolymerState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/polymer/TransportSolverTwophasePolymer.hpp>

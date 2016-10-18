@@ -30,7 +30,7 @@
 #include <opm/core/wells.h>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <boost/test/unit_test.hpp>
 
