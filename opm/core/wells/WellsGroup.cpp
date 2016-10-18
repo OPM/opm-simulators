@@ -322,7 +322,7 @@ namespace Opm
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
+                const double child_target = target / efficicencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
                 children_[i]->applyInjGroupControl(control_mode, child_target, false);
             }
             injSpec().control_mode_ = InjectionSpecification::FLD;
@@ -348,7 +348,7 @@ namespace Opm
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->productionGuideRate(only_group) / my_guide_rate;
+                const double child_target = target / efficicencyFactor() * children_[i]->productionGuideRate(only_group) / my_guide_rate;
                 children_[i]->applyProdGroupControl(control_mode, child_target, false);
             }
             prodSpec().control_mode_ = ProductionSpecification::FLD;
@@ -552,7 +552,7 @@ namespace Opm
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(false);
                 children_[i]->applyInjGroupControl(inj_mode,
-                        (children_guide_rate / my_guide_rate) * getTarget(inj_mode),
+                        (children_guide_rate / my_guide_rate) * getTarget(inj_mode) / efficicencyFactor(),
                         true);
             }
             return;
@@ -706,7 +706,7 @@ namespace Opm
             {
                 auto* parent_node = getParent();
                 prod_mode = parent_node->prodSpec().control_mode_;
-                target_rate = parent_node->getTarget(prod_mode);
+                target_rate = parent_node->getTarget(prod_mode) / parent_node->efficicencyFactor();
                 break;
             }
         case ProductionSpecification::LRAT :
@@ -720,13 +720,15 @@ namespace Opm
                                           " when updating well targets ");
         }
 
+        target_rate /= efficicencyFactor();
+
         // the rates contributed from wells under individual control due to their own limits.
         // TODO: will handle wells specified not to join group control later.
         double rate_individual_control = 0.;
 
         for (size_t i = 0; i < children_.size(); ++i) {
             if (children_[i]->individualControl() && children_[i]->isProducer()) {
-                rate_individual_control += std::abs(children_[i]->getProductionRate(well_rates, prod_mode));
+                rate_individual_control += std::abs(children_[i]->getProductionRate(well_rates, prod_mode) * children_[i]->efficicencyFactor());
             }
         }
 
@@ -738,7 +740,7 @@ namespace Opm
         for (size_t i = 0; i < children_.size(); ++i) {
             if (!children_[i]->individualControl() && children_[i]->isProducer()) {
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
-                children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate/my_guide_rate) * rate_for_group_control, true);
+                children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate / my_guide_rate) * rate_for_group_control, true);
                 children_[i]->setShouldUpdateWellTargets(false);
             }
         }
@@ -956,6 +958,9 @@ namespace Opm
             return;
         }
 
+        // considering the efficiency factor
+        const double effective_target = target / efficicencyFactor();
+
         const double distr[3] = { 1.0, 1.0, 1.0 };
         WellControlType wct;
         switch (control_mode) {
@@ -971,13 +976,13 @@ namespace Opm
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
-            append_well_controls(wct, target, invalid_alq, invalid_vfp, distr, self_index_, wells_);
+            append_well_controls(wct, effective_target, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
             well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , wct);
-            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ ,target);
+            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , effective_target);
             well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
@@ -1033,7 +1038,7 @@ namespace Opm
             return;
         }
         // We're a producer, so we need to negate the input
-        double ntarget = -target;
+        double ntarget = -target / efficicencyFactor();
 
         double distr[3] = { 0.0, 0.0, 0.0 };
         const int* phase_pos = phaseUsage().phase_pos;
