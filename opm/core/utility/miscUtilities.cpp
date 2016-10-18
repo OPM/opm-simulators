@@ -19,7 +19,7 @@
 
 #include "config.h"
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/grid.h>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>

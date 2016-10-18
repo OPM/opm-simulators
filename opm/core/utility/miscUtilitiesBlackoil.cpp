@@ -29,7 +29,7 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <algorithm>
 #include <cmath>

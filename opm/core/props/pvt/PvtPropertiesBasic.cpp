@@ -21,7 +21,7 @@
 
 #include "config.h"
 #include <opm/core/props/pvt/PvtPropertiesBasic.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 

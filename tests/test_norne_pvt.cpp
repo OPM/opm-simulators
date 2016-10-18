@@ -32,7 +32,7 @@
 #include <sstream>
 #include <iostream>
 
-#include <opm/parser/eclipse/Units/ConversionFactors.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
