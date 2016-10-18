@@ -61,12 +61,14 @@ namespace Opm
 
 
     WellsGroupInterface::WellsGroupInterface(const std::string& myname,
+                                             const double efficicency_factor,
                                              const ProductionSpecification& prod_spec,
                                              const InjectionSpecification& inje_spec,
                                              const PhaseUsage& phase_usage)
         : parent_(NULL),
           should_update_well_targets_(false),
           individual_control_(true), // always begin with individual control
+          efficicency_factor_(efficicency_factor),
           name_(myname),
           production_specification_(prod_spec),
           injection_specification_(inje_spec),
@@ -237,22 +239,37 @@ namespace Opm
     }
 
 
-    bool WellsGroupInterface::shouldUpdateWellTargets() const {
+    bool WellsGroupInterface::shouldUpdateWellTargets() const
+    {
         return should_update_well_targets_;
     }
 
 
-    void WellsGroupInterface::setShouldUpdateWellTargets(const bool should_update_well_targets) {
+    void WellsGroupInterface::setShouldUpdateWellTargets(const bool should_update_well_targets)
+    {
         should_update_well_targets_ = should_update_well_targets;
     }
 
-    bool WellsGroupInterface::individualControl() const {
+    bool WellsGroupInterface::individualControl() const
+    {
         return individual_control_;
     }
 
-    void WellsGroupInterface::setIndividualControl(const bool individual_control) {
+    void WellsGroupInterface::setIndividualControl(const bool individual_control)
+    {
         individual_control_ = individual_control;
     }
+
+    double WellsGroupInterface::efficicencyFactor() const
+    {
+        return efficicency_factor_;
+    }
+
+    void WellsGroupInterface::setEfficiencyFactor(const double efficicency_factor)
+    {
+        efficicency_factor_=efficicency_factor;
+    }
+
 
 
 
@@ -277,10 +294,11 @@ namespace Opm
 
 
     WellsGroup::WellsGroup(const std::string& myname,
+                           const double efficiency_factor,
                            const ProductionSpecification& prod_spec,
                            const InjectionSpecification& inj_spec,
                            const PhaseUsage& phase_usage)
-        : WellsGroupInterface(myname, prod_spec, inj_spec, phase_usage)
+        : WellsGroupInterface(myname, efficiency_factor, prod_spec, inj_spec, phase_usage)
     {
     }
 
@@ -760,10 +778,11 @@ namespace Opm
 
 
     WellNode::WellNode(const std::string& myname,
+                       const double efficiency_factor,
                        const ProductionSpecification& prod_spec,
                        const InjectionSpecification& inj_spec,
                        const PhaseUsage& phase_usage)
-        : WellsGroupInterface(myname, prod_spec, inj_spec, phase_usage),
+        : WellsGroupInterface(myname, efficiency_factor, prod_spec, inj_spec, phase_usage),
           wells_(0),
           self_index_(-1),
           group_control_index_(-1),
@@ -1315,7 +1334,9 @@ namespace Opm
                 production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(properties.controlMode));
             }
         }
-        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), production_specification, injection_specification, phase_usage));
+        // TODO: should be specified with WEFAC, while we do not have this keyword support yet.
+        const double efficiency_factor = 1.0;
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
     }
 }

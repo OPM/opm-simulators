@@ -55,6 +55,7 @@ namespace Opm
     {
     public:
         WellsGroupInterface(const std::string& name,
+                            const double efficicency_factor,
                             const ProductionSpecification& prod_spec,
                             const InjectionSpecification& inj_spec,
                             const PhaseUsage& phase_usage);
@@ -244,6 +245,9 @@ namespace Opm
                           const double* surf_rates,
                           const InjectionSpecification::ControlMode mode);
 
+        double efficicencyFactor() const;
+        void setEfficiencyFactor(const double efficicency_factor);
+
         WellsGroupInterface* parent_;
 
         // when some well (mabye group also later), change status from group control
@@ -253,6 +257,9 @@ namespace Opm
         // Current only consider one level of control.
         // So not putting it in the WellsGroupInterface yet.
         bool individual_control_;
+
+        // Efficiency factor
+        double efficicency_factor_;
 
     private:
         std::string name_;
@@ -267,6 +274,7 @@ namespace Opm
     {
     public:
         WellsGroup(const std::string& name,
+                   const double efficicency_factor,
                    const ProductionSpecification& prod_spec,
                    const InjectionSpecification& inj_spec,
                    const PhaseUsage& phase_usage);
@@ -366,6 +374,7 @@ namespace Opm
     {
     public:
         WellNode(const std::string& name,
+                 const double efficicency_factor,
                  const ProductionSpecification& prod_spec,
                  const InjectionSpecification& inj_spec,
                  const PhaseUsage& phase_usage);
