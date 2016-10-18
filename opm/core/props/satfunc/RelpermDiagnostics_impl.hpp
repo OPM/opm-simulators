@@ -66,7 +66,7 @@ namespace Opm {
             const std::string cellIdx = "(" + std::to_string(ijk[0]) + ", " + 
                                    std::to_string(ijk[1]) + ", " +
                                    std::to_string(ijk[2]) + ")";
-            scaledEpsInfo_[c].extractScaled(deck, eclState, epsGridProperties, cartIdx);
+            scaledEpsInfo_[c].extractScaled(epsGridProperties, cartIdx);
 
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
