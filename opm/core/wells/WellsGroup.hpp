@@ -233,6 +233,9 @@ namespace Opm
 
         virtual void updateWellInjectionTargets(const std::vector<double>& well_rates) = 0;
 
+        double efficicencyFactor() const;
+
+        void setEfficiencyFactor(const double efficicency_factor);
 
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
@@ -244,9 +247,6 @@ namespace Opm
         double rateByMode(const double* res_rates,
                           const double* surf_rates,
                           const InjectionSpecification::ControlMode mode);
-
-        double efficicencyFactor() const;
-        void setEfficiencyFactor(const double efficicency_factor);
 
         WellsGroupInterface* parent_;
 
@@ -469,6 +469,9 @@ namespace Opm
 
         virtual void updateWellInjectionTargets(const std::vector<double>& well_rates);
 
+        /// the efficiency factor for groups are muliplitive, this function return the resulted final efficiency factor
+        /// to the well in a multi-layer group structure.
+        double getAccumulativeEfficiencyFactor() const;
 
     private:
         Wells* wells_;

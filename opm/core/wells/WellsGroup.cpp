@@ -1295,7 +1295,9 @@ namespace Opm
             production_specification.reservoir_flow_max_rate_ = group.getReservoirVolumeTargetRate(timeStep);
         }
 
-        std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group.name(), production_specification, injection_specification, phase_usage));
+        const double efficiency_factor = group.getGroupEfficiencyFactor(timeStep);
+
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group.name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
     }
 
@@ -1339,4 +1341,21 @@ namespace Opm
         std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
     }
+
+
+
+
+    double WellNode::getAccumulativeEfficiencyFactor() const {
+        // TODO: not sure whether a well can be exempted from repsponding to the efficiency factor
+        // for the parent group.
+        double efficicency_factor = efficicencyFactor();
+        const WellsGroupInterface* parent_node = getParent();
+        while (parent_node != nullptr) {
+            efficicency_factor *= parent_node->efficicencyFactor();
+            parent_node = parent_node->getParent();
+        }
+
+        return efficicency_factor;
+    }
+
 }
