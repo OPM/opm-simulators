@@ -265,6 +265,7 @@ try
     well_group_prod_spec.control_mode_ = ProductionSpecification::RESV;
     /// \internal[production specification]
     /// \endinternal
+    const double group_efficiency_factor = 0.9;
 
     /// \page tutorial4
     /// \details Create our well group. We hand it an empty injection specification,
@@ -272,8 +273,8 @@ try
     ///          what the interface expects. The first argument is the (unique) name of the group.
     /// \snippet tutorial4.cpp injection specification
     /// \internal[injection specification]
-    std::shared_ptr<WellsGroupInterface> well_group(new WellsGroup("group", well_group_prod_spec, InjectionSpecification(),
-                                                                   phase_usage));
+    std::shared_ptr<WellsGroupInterface> well_group(new WellsGroup("group", group_efficiency_factor, well_group_prod_spec,
+                                                                   InjectionSpecification(), phase_usage));
     /// \internal[injection specification]
     /// \endinternal
 
@@ -297,8 +298,9 @@ try
         well_name << "well" << i;
         ProductionSpecification production_specification;
         production_specification.control_mode_ = ProductionSpecification::GRUP;
-        std::shared_ptr<WellsGroupInterface> well_leaf_node(new WellNode(well_name.str(), production_specification, InjectionSpecification(),
-                                                                         phase_usage));
+        const double efficiency_factor = 0.8;
+        std::shared_ptr<WellsGroupInterface> well_leaf_node(new WellNode(well_name.str(), efficiency_factor, production_specification,
+                                                                         InjectionSpecification(), phase_usage));
         well_collection.addChild(well_leaf_node, "group");
 
     }
