@@ -60,7 +60,7 @@ namespace Opm
                             AutoDiffBlock<double>::V& b);
 
     /// Return true if this is a serial run, or rank zero on an MPI run.
-    bool isRankZero(const boost::any& parallel_info);
+    bool isIORank(const boost::any& parallel_info);
 
 } // namespace Opm
 

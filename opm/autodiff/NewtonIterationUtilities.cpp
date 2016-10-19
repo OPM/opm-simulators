@@ -291,7 +291,7 @@ namespace Opm
 
 
     /// Return true if this is a serial run, or rank zero on an MPI run.
-    bool isRankZero(const boost::any& parallel_info)
+    bool isIORank(const boost::any& parallel_info)
     {
 #if HAVE_MPI
         if (parallel_info.type() == typeid(ParallelISTLInformation)) {
