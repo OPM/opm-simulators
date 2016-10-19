@@ -42,7 +42,8 @@ namespace Opm
     }
 
     RockCompressibility::RockCompressibility(const Opm::Deck& deck,
-                                             const Opm::EclipseState& eclipseState)
+                                             const Opm::EclipseState& eclipseState,
+                                             const bool is_io_rank)
         : pref_(0.0),
           rock_comp_(0.0)
     {
@@ -63,14 +64,14 @@ namespace Opm
         } else if (deck.hasKeyword("ROCK")) {
             const auto& rockKeyword = deck.getKeyword("ROCK");
             if (rockKeyword.size() != 1) {
-                // here it would be better not to use std::cout directly but to add the
-                // warning to some "warning list"...
-                OpmLog::warning("Can only handle a single region in ROCK ("
-                                + std::to_string(rockKeyword.size())
-                                + " regions specified)."
-                                + " Ignoring all except for the first.\n" 
-                                + "In file " + rockKeyword.getFileName()
-                                + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
+                if (is_io_rank) {
+                    OpmLog::warning("Can only handle a single region in ROCK ("
+                                    + std::to_string(rockKeyword.size())
+                                    + " regions specified)."
+                                    + " Ignoring all except for the first.\n"
+                                    + "In file " + rockKeyword.getFileName()
+                                    + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
+                }
             }
 
             pref_ = rockKeyword.getRecord(0).getItem("PREF").getSIDouble(0);
