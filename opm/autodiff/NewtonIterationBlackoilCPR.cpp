@@ -27,7 +27,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/NewtonIterationUtilities.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
