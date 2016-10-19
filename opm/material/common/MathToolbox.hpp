@@ -201,6 +201,14 @@ public:
     //! Exponentiation to an arbitrary base
     static Scalar pow(Scalar base, Scalar exp)
     { return std::pow(base, exp); }
+
+    //! Return true iff the argument's value and all its derivatives are finite values
+    static bool isfinite(Scalar arg)
+    { return std::isfinite(arg); }
+
+    //! Return true iff the argument's value or any of its derivatives are NaN values
+    static bool isnan(Scalar arg)
+    { return std::isnan(arg); }
 };
 
 template <class Eval1, class Eval2>
@@ -294,6 +302,14 @@ template <class Evaluation1, class Evaluation2>
 typename ReturnEval_<Evaluation1, Evaluation2>::type
 pow(const Evaluation1& base, const Evaluation2& exp)
 { return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::pow(base, exp); }
+
+template <class Evaluation>
+Evaluation isfinite(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::isfinite(value); }
+
+template <class Evaluation>
+Evaluation isnan(const Evaluation& value)
+{ return Opm::MathToolbox<Evaluation>::isnan(value); }
 
 } // namespace Opm
 

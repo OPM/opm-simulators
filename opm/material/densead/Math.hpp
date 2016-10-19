@@ -546,6 +546,30 @@ public:
 
     static Evaluation pow(const Evaluation& arg1, const Evaluation& arg2)
     { return Opm::DenseAd::pow(arg1, arg2); }
+
+    static bool isfinite(const Evaluation& arg)
+    {
+        if (!InnerToolbox::isfinite(arg.value))
+            return false;
+
+        for (int i = 0; i < numVars; ++i)
+            if (!InnerToolbox::isfinite(arg.derivatives[i]))
+                return false;
+
+        return true;
+    }
+
+    static bool isnan(const Evaluation& arg)
+    {
+        if (InnerToolbox::isnan(arg.value))
+            return true;
+
+        for (int i = 0; i < numVars; ++i)
+            if (InnerToolbox::isnan(arg.derivatives[i]))
+                return true;
+
+        return false;
+    }
 };
 
 }
