@@ -275,7 +275,7 @@ namespace detail {
                 for ( int idx = 0; idx < np; ++idx )
                 {
                     B_avg[idx] = B.col(idx).sum()/nc;
-                    //maxCoeff[idx] = tempV.col(idx).maxCoeff();
+                    maxCoeff[idx] = tempV.col(idx).maxCoeff();
                     R_sum[idx] = R.col(idx).sum();
 
                     assert(np >= np);
