@@ -272,6 +272,8 @@ namespace Opm {
         }
 
         assert(start_perforation == nperf_total_);
+
+        calculateEfficiencyFactors();
     }
 
 
@@ -392,6 +394,45 @@ namespace Opm {
     wellCollection() const {
         return well_collection_;
     }
+
+
+
+
+
+    void
+    MultisegmentWells::
+    calculateEfficiencyFactors()
+    {
+        if ( !localWellsActive() ) {
+            return;
+        }
+        // get efficiency factor for each well first
+        const int nw = wells_->number_of_wells;
+
+        Vector well_efficiency_factors = Vector::Ones(nw);
+
+        for (int w = 0; w < nw; ++w) {
+            const std::string well_name = wells_->name[w];
+            const WellNode* well_node = dynamic_cast<const WellNode *>(well_collection_->findNode(well_name));
+            well_efficiency_factors(w) = well_node->getAccumulativeEfficiencyFactor();
+        }
+
+        // map them to the perforation.
+        well_perforation_efficiency_factors_ = wellOps().w2p * well_efficiency_factors.matrix();
+    }
+
+
+
+
+
+    const
+    MultisegmentWells::Vector&
+    MultisegmentWells::
+    wellPerfEfficiencyFactors() const
+    {
+        return well_perforation_efficiency_factors_;
+    }
+
 
 } // end of namespace Opm
 

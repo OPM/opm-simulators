@@ -233,6 +233,11 @@ namespace Opm {
 
             WellCollection* wellCollection() const;
 
+            void calculateEfficiencyFactors();
+
+            const Vector& wellPerfEfficiencyFactors() const;
+
+
     protected:
         // TODO: probably a wells_active_ will be required here.
         bool wells_active_;
@@ -240,6 +245,11 @@ namespace Opm {
         MultisegmentWellOps wops_ms_;
         // It will probably need to be updated during running time.
         WellCollection* well_collection_;
+
+        // The efficiency factor for each connection
+        // It is specified based on wells and groups
+        // By default, they should all be one.
+        Vector well_perforation_efficiency_factors_;
 
         const int num_phases_;
         int nseg_total_;
