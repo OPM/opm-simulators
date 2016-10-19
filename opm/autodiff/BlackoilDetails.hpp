@@ -226,8 +226,7 @@ namespace detail {
             assert(nw * np == int(residual_well.size()));
 
             // Do the global reductions
-#if 0
-            HAVE_MPI
+#if 0 // HAVE_MPI
             if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
             {
                 const ParallelISTLInformation& info =

@@ -829,13 +829,14 @@ namespace Opm {
 
                         if (pu.phase_used[BlackoilPhases::Vapour]) {
                             int gaspos = pu.phase_pos[BlackoilPhases::Vapour] + perf * pu.num_phases;
+                            int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
 
                             if (pu.phase_used[BlackoilPhases::Liquid]) {
-                                int oilpos = pu.phase_pos[BlackoilPhases::Liquid] + perf * pu.num_phases;
-                                const double oilrate = std::abs(xw.wellRates()[oilpos]); //in order to handle negative rates in producers
+                                int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
+                                const double oilrate = std::abs(xw.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                                 rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                                 if (oilrate > 0) {
-                                    const double gasrate = std::abs(xw.wellRates()[gaspos]);
+                                    const double gasrate = std::abs(xw.wellRates()[gaspos_well]);
                                     double rv = 0.0;
                                     if (gasrate > 0) {
                                         rv = oilrate / gasrate;
@@ -855,12 +856,13 @@ namespace Opm {
 
                         if (pu.phase_used[BlackoilPhases::Liquid]) {
                             int oilpos = pu.phase_pos[BlackoilPhases::Liquid] + perf * pu.num_phases;
+                            int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
                             if (pu.phase_used[BlackoilPhases::Vapour]) {
                                 rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                                int gaspos = pu.phase_pos[BlackoilPhases::Vapour] + perf * pu.num_phases;
-                                const double gasrate = std::abs(xw.wellRates()[gaspos]);
+                                int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
+                                const double gasrate = std::abs(xw.wellRates()[gaspos_well]);
                                 if (gasrate > 0) {
-                                    const double oilrate = std::abs(xw.wellRates()[oilpos]);
+                                    const double oilrate = std::abs(xw.wellRates()[oilpos_well]);
                                     double rs = 0.0;
                                     if (oilrate > 0) {
                                         rs = gasrate / oilrate;
