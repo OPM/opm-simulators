@@ -48,8 +48,8 @@ public:
      * Henry coefficent See:
      * Stefan Finsterle, 1993
      * Inverse Modellierung zur Bestimmung hydrogeologischer Parameter eines Zweiphasensystems
-     * page 29 Formula (2.9) (nach Tchobanoglous & Schroeder, 1985)
-     *
+     * (fitted to data from the book "Tchobanoglous & Schroeder: Water Quality:
+     * Characteristics", Addison-Wesley, 1985)
      */
     template <class Evaluation>
     static Evaluation henry(const Evaluation& temperature)
