@@ -203,6 +203,7 @@ namespace detail {
         , terminal_output_ (terminal_output)
         , material_name_(0)
         , current_relaxation_(1.0)
+        , rate_converter_(fluid_, std::vector<int>(std::vector<int>(AutoDiffGrid::numCells(grid_),0)))
     {
         if (active_[Water]) {
             material_name_.push_back("Water");

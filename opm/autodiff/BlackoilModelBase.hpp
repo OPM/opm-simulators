@@ -32,6 +32,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
@@ -151,6 +152,11 @@ namespace Opm {
         typedef typename ModelTraits<Implementation>::WellState WellState;
         typedef typename ModelTraits<Implementation>::ModelParameters ModelParameters;
         typedef typename ModelTraits<Implementation>::SolutionState SolutionState;
+
+        // for the conversion between the surface volume rate and resrevoir voidage rate
+        // Due to the requirement of the grid information, put the converter in the model.
+        using RateConverterType = RateConverter::
+                                  SurfaceToReservoirVoidage<BlackoilPropsAdInterface, std::vector<int> >;
 
         // ---------  Public methods  ---------
 
@@ -359,6 +365,9 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         V dx_old_;
+
+        // rate converter between the surface volume rates and reservoir voidage rates
+        RateConverterType rate_converter_;
 
         // ---------  Protected methods  ---------
 
