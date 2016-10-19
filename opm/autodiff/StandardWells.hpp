@@ -194,7 +194,9 @@ namespace Opm {
 
             WellCollection* wellCollection() const;
 
-            void calculateEfficiencyFactor();
+            void calculateEfficiencyFactors();
+
+            const Vector& wellPerfEfficiencyFactors() const;
 
         protected:
             bool wells_active_;
@@ -206,7 +208,7 @@ namespace Opm {
             // The efficiency factor for each connection
             // It is specified based on wells and groups
             // By default, they should all be one.
-            Vector well_perforation_efficiency_factor_;
+            Vector well_perforation_efficiency_factors_;
 
             const BlackoilPropsAdInterface* fluid_;
             const std::vector<bool>*  active_;

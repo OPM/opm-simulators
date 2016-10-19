@@ -967,8 +967,10 @@ namespace detail {
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
+        const V& efficiency_factors = wellModel().wellPerfEfficiencyFactors();
         for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase], wellModel().wellOps().well_cells, nc);
+            residual_.material_balance_eq[phase] -= superset(efficiency_factors * cq_s[phase],
+                                                             wellModel().wellOps().well_cells, nc);
         }
     }
 

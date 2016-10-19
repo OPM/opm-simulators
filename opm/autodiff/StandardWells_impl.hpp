@@ -76,7 +76,7 @@ namespace Opm
       , wells_(wells_arg)
       , wops_(wells_arg)
       , well_collection_(well_collection)
-      , well_perforation_efficiency_factor_(Vector())
+      , well_perforation_efficiency_factors_(Vector())
       , fluid_(nullptr)
       , active_(nullptr)
       , phase_condition_(nullptr)
@@ -106,7 +106,7 @@ namespace Opm
         gravity_ = gravity_arg;
         perf_cell_depth_ = subset(depth_arg, wellOps().well_cells);;
 
-        calculateEfficiencyFactor();
+        calculateEfficiencyFactors();
     }
 
 
@@ -1609,7 +1609,8 @@ namespace Opm
 
 
 
-    WellCollection* StandardWells::wellCollection() const {
+    WellCollection* StandardWells::wellCollection() const
+    {
         return well_collection_;
     }
 
@@ -1617,23 +1618,31 @@ namespace Opm
 
 
 
-    void StandardWells::calculateEfficiencyFactor() {
+    void StandardWells::calculateEfficiencyFactors()
+    {
         if ( !localWellsActive() ) {
             return;
         }
         // get efficiency factor for each well first
         const int nw = wells_->number_of_wells;
 
-        Vector well_efficiency_factor = Vector::Ones(nw);
+        Vector well_efficiency_factors = Vector::Ones(nw);
 
         for (int w = 0; w < nw; ++w) {
             const std::string well_name = wells_->name[w];
             const WellNode* well_node = dynamic_cast<const WellNode *>(well_collection_->findNode(well_name));
-            well_efficiency_factor(w) = well_node->getAccumulativeEfficiencyFactor();
+            well_efficiency_factors(w) = well_node->getAccumulativeEfficiencyFactor();
         }
 
         // map them to the perforation.
-        well_perforation_efficiency_factor_ = wellOps().w2p * well_efficiency_factor.matrix();
+        well_perforation_efficiency_factors_ = wellOps().w2p * well_efficiency_factors.matrix();
+    }
+
+
+    const StandardWells::Vector&
+    StandardWells::wellPerfEfficiencyFactors() const
+    {
+        return well_perforation_efficiency_factors_;
     }
 
 
