@@ -45,72 +45,19 @@ class Evaluation;
 // provide some algebraic functions
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>& x)
-{
-    Evaluation<ValueType, numVars> result;
-
-    if (x.value < 0.0) {
-        result.value = -x.value;
-        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-            result.derivatives[curVarIdx] = -x.derivatives[curVarIdx];
-    }
-    else {
-        result.value = x.value;
-        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-            result.derivatives[curVarIdx] = x.derivatives[curVarIdx];
-    }
-
-    return result;
-}
+{ return (x > 0.0)?x:-x; }
 
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
-
-    if (x1.value < x2.value) {
-        result.value = x1.value;
-
-        std::copy(x1.derivatives.begin(),
-                  x1.derivatives.end(),
-                  result.derivatives.begin());
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
+{ return (x1 < x2)?x1:x2; }
 
 template <class Arg1ValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> min(const Arg1ValueType& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
+{ return (x1 < x2)?x1:x2; }
 
-    if (x1 < x2.value) {
-        result.value = x1;
-
-        std::fill(result.derivatives.begin(),
-                  result.derivatives.end(),
-                  0.0);
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
-
-template <class Arg2ValueType, class ValueType, int numVars>
+template <class ValueType, int numVars, class Arg2ValueType>
 Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
                                    const Arg2ValueType& x2)
 { return min(x2, x1); }
@@ -118,52 +65,14 @@ Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
-
-    if (x1.value > x2.value) {
-        result.value = x1.value;
-
-        std::copy(x1.derivatives.begin(),
-                  x1.derivatives.end(),
-                  result.derivatives.begin());
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
+{ return (x1 > x2)?x1:x2; }
 
 template <class Arg1ValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> max(const Arg1ValueType& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
+{ return (x1 > x2)?x1:x2; }
 
-    if (x1 > x2.value) {
-        result.value = x1;
-
-        std::fill(result.derivatives.begin(),
-                  result.derivatives.end(),
-                  0.0);
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
-
-template <class Arg2ValueType, class ValueType, int numVars>
+template <class ValueType, int numVars, class Arg2ValueType>
 Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
                                    const Arg2ValueType& x2)
 { return max(x2, x1); }
