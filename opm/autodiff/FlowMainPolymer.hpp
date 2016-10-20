@@ -84,7 +84,7 @@ namespace Opm
             Base::setupGridAndProps();
 
             if (Base::deck_->hasKeyword("POLYMER")) {
-                polymer_props_legacy_.reset(new PolymerProperties(Base::deck_, Base::eclipse_state_));
+                polymer_props_legacy_.reset(new PolymerProperties(*Base::deck_, *Base::eclipse_state_));
                 polymer_props_.reset(new PolymerPropsAd(*polymer_props_legacy_));
             }
         }

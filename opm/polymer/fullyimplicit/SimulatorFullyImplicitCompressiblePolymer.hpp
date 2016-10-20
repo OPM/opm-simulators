@@ -109,7 +109,7 @@ namespace Opm
                                                   const RockCompressibility* rock_comp_props,
                                                   std::shared_ptr<EclipseState> eclipse_state,
                                                   BlackoilOutputWriter& output_writer,
-                                                  Opm::DeckConstPtr& deck,
+                                                  std::shared_ptr< const Deck > deck,
                                                   NewtonIterationBlackoilInterface& linsolver,
                                                   const double* gravity);
 
@@ -121,13 +121,13 @@ namespace Opm
                                         const Wells* wells);
 
         void updateListEconLimited(const std::unique_ptr<Solver>& solver,
-                                   ScheduleConstPtr schedule,
+                                   const Schedule& schedule,
                                    const int current_step,
                                    const Wells* wells,
                                    const WellState& well_state,
                                    DynamicListEconLimited& list_econ_limited) const;
 private:
-        Opm::DeckConstPtr deck_;
+        std::shared_ptr< const Deck > deck_;
         const PolymerPropsAd& polymer_props_;
 
     };

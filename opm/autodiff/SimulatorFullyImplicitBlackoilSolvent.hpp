@@ -121,7 +121,7 @@ namespace Opm
                                               const bool vapoil,
                                               std::shared_ptr<EclipseState> eclipse_state,
                                               BlackoilOutputWriter& output_writer,
-                                              Opm::DeckConstPtr& deck,
+                                              std::shared_ptr< Deck > deck,
                                               const std::vector<double>& threshold_pressures_by_face,
                                               const bool solvent);
 
@@ -134,7 +134,7 @@ namespace Opm
 
     private:
         bool has_solvent_;
-        DeckConstPtr deck_;
+        std::shared_ptr< Deck > deck_;
         SolventPropsAdFromDeck solvent_props_;
         bool is_miscible_;
 

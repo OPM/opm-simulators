@@ -99,9 +99,9 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    EclipseStateConstPtr eclipseState;
+    std::shared_ptr< EclipseState > eclipseState;
 
-    Opm::DeckConstPtr deck;
+    std::shared_ptr< Deck > deck;
     std::unique_ptr<GridManager> grid;
     std::unique_ptr<IncompPropertiesInterface> props;
     std::unique_ptr<RockCompressibility> rock_comp;
@@ -110,30 +110,30 @@ try
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
     if (use_deck) {
-        ParserPtr parser(new Opm::Parser());
+        Parser parser;
         ParseContext parseContext;
 
         std::string deck_filename = param.get<std::string>("deck_filename");
-        deck = parser->parseFile(deck_filename , parseContext);
+        *deck = parser.parseFile(deck_filename , parseContext);
         eclipseState.reset( new EclipseState(*deck, parseContext));
         // Grid init
-        grid.reset(new GridManager(*eclipseState->getInputGrid()));
+        grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
             const UnstructuredGrid& ug_grid = *(grid->c_grid());
             // Rock and fluid init
-            props.reset(new IncompPropertiesFromDeck(deck, eclipseState, ug_grid));
+            props.reset(new IncompPropertiesFromDeck(*deck, *eclipseState, ug_grid));
 
             state.reset( new TwophaseState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid )));
 
             // Rock compressibility.
-            rock_comp.reset(new RockCompressibility(deck, eclipseState));
+            rock_comp.reset(new RockCompressibility(*deck, *eclipseState));
             // Gravity.
             gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
             // Init state variables (saturation and pressure).
             if (param.has("init_saturation")) {
                 initStateBasic(ug_grid, *props, param, gravity[2], *state);
             } else {
-                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
+                initStateFromDeck(ug_grid, *props, *deck, gravity[2], *state);
             }
         }
     } else {
@@ -249,11 +249,11 @@ try
         rep = simulator.run(simtimer, *state, well_state);
     } else {
         // With a deck, we may have more epochs etc.
-        Opm::TimeMapConstPtr timeMap = eclipseState->getSchedule()->getTimeMap();
+        const auto& timeMap = eclipseState->getSchedule().getTimeMap();
 
         std::cout << "\n\n================    Starting main simulation loop     ===============\n"
                   << "                        (number of report steps: "
-                  << timeMap->numTimesteps() << ")\n\n" << std::flush;
+                  << timeMap.numTimesteps() << ")\n\n" << std::flush;
         WellState well_state;
         int step = 0;
         SimulatorTimer simtimer;
@@ -273,7 +273,7 @@ try
             //           << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
+            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every report step,
             // since number of wells may change etc.

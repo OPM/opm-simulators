@@ -38,14 +38,14 @@ namespace Opm
 
     void WellMultiSegment::initMultiSegmentWell(const Well* well, size_t time_step, const Wells* wells) {
 
-        CompletionSetConstPtr completion_set = well->getCompletions(time_step);
+        const auto& completion_set = well->getCompletions(time_step);
 
         m_is_multi_segment_ = true;
-        SegmentSetConstPtr segment_set = well->getSegmentSet(time_step);
-        m_number_of_segments_ = segment_set->numberSegment();
-        m_number_of_perforations_ = completion_set->size();
-        m_comp_pressure_drop_ = segment_set->compPressureDrop();
-        m_multiphase_model_ = segment_set->multiPhaseModel();
+        const auto& segment_set = well->getSegmentSet(time_step);
+        m_number_of_segments_ = segment_set.numberSegment();
+        m_number_of_perforations_ = completion_set.size();
+        m_comp_pressure_drop_ = segment_set.compPressureDrop();
+        m_multiphase_model_ = segment_set.multiPhaseModel();
 
         m_outlet_segment_.resize(m_number_of_segments_);
         m_inlet_segments_.resize(m_number_of_segments_);
@@ -60,13 +60,13 @@ namespace Opm
         // we change the ID to location now for easier use later.
         for (int i = 0; i < m_number_of_segments_; ++i) {
             // The segment number for top segment is 0, the segment number of its outlet segment will be -1
-            m_outlet_segment_[i] = segment_set->numberToLocation((*segment_set)[i]->outletSegment());
-            m_segment_length_[i] = (*segment_set)[i]->totalLength();
-            m_segment_depth_[i] = (*segment_set)[i]->depth();
-            m_segment_internal_diameter_[i] = (*segment_set)[i]->internalDiameter();
-            m_segment_roughness_[i] = (*segment_set)[i]->roughness();
-            m_segment_cross_area_[i] = (*segment_set)[i]->crossArea();
-            m_segment_volume_[i] = (*segment_set)[i]->volume();
+            m_outlet_segment_[i] = segment_set.numberToLocation(segment_set[i].outletSegment());
+            m_segment_length_[i] = segment_set[i].totalLength();
+            m_segment_depth_[i] = segment_set[i].depth();
+            m_segment_internal_diameter_[i] = segment_set[i].internalDiameter();
+            m_segment_roughness_[i] = segment_set[i].roughness();
+            m_segment_cross_area_[i] = segment_set[i].crossArea();
+            m_segment_volume_[i] = segment_set[i].volume();
         }
 
         // update the completion related information
@@ -107,13 +107,13 @@ namespace Opm
         std::vector<double> temp_perf_depth;
         temp_perf_depth.resize(m_number_of_perforations_);
 
-        for (int i = 0; i < (int)completion_set->size(); ++i) {
-            int i_segment = completion_set->get(i)->getSegmentNumber();
+        for (int i = 0; i < (int)completion_set.size(); ++i) {
+            int i_segment = completion_set.get(i).getSegmentNumber();
             // using the location of the segment in the array as the segment number/id.
             // TODO: it can be helpful for output or postprocessing if we can keep the original number.
-            i_segment = segment_set->numberToLocation(i_segment);
+            i_segment = segment_set.numberToLocation(i_segment);
             m_segment_perforations_[i_segment].push_back(i);
-            temp_perf_depth[i] = completion_set->get(i)->getCenterDepth();
+            temp_perf_depth[i] = completion_set.get(i).getCenterDepth();
         }
 
         // reordering the perforation related informations
@@ -171,7 +171,7 @@ namespace Opm
 
     void WellMultiSegment::initNonMultiSegmentWell(const Well* well, size_t time_step, const Wells* wells) {
 
-        CompletionSetConstPtr completion_set = well->getCompletions(time_step);
+        const auto& completion_set = well->getCompletions(time_step);
 
         m_is_multi_segment_ = false;
         m_number_of_segments_ = 1;
@@ -225,7 +225,7 @@ namespace Opm
 
         for (int i = 0; i < m_number_of_perforations_; ++i) {
             m_segment_perforations_[0][i] = i;
-            m_perf_depth_[i] = completion_set->get(i)->getCenterDepth();
+            m_perf_depth_[i] = completion_set.get(i).getCenterDepth();
         }
 
         m_inlet_segments_.resize(m_number_of_segments_);
