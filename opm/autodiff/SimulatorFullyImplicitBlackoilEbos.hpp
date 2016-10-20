@@ -323,7 +323,7 @@ public:
                 computeWellPotentials(wells, well_state, well_potentials);
             }
 
-            updateListEconLimited(solver, eclState()->getSchedule(), timer.currentStepNum(), wells,
+            updateListEconLimited(solver, eclState().getSchedule(), timer.currentStepNum(), wells,
                                   well_state, dynamic_list_econ_limited);
         }
 
@@ -370,7 +370,7 @@ protected:
     {
         typedef SimFIBODetails::WellMap WellMap;
 
-        const auto w_ecl = eclState()->getSchedule()->getWells(step);
+        const auto w_ecl = eclState().getSchedule().getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
@@ -548,7 +548,7 @@ protected:
 
 
     void updateListEconLimited(const std::unique_ptr<Solver>& solver,
-                               ScheduleConstPtr schedule,
+                               const Schedule& schedule,
                                const int current_step,
                                const Wells* wells,
                                const WellState& well_state,
@@ -558,11 +558,11 @@ protected:
                                                           well_state, list_econ_limited);
     }
 
-    EclipseStateConstPtr eclState() const
-    { return ebosSimulator_.gridManager().eclState(); }
+    const EclipseState& eclState() const
+    { return *ebosSimulator_.gridManager().eclState(); }
 
-    EclipseStatePtr eclState()
-    { return ebosSimulator_.gridManager().eclState(); }
+    EclipseState& eclState()
+    { return *ebosSimulator_.gridManager().eclState(); }
 
     // Data.
     Simulator& ebosSimulator_;

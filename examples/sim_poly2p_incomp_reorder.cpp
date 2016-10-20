@@ -87,11 +87,11 @@ try
 
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
-    Opm::DeckConstPtr deck;
+    std::shared_ptr< Deck > deck;
     boost::scoped_ptr<GridManager> grid;
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
-    EclipseStateConstPtr eclipseState;
+    std::shared_ptr< EclipseState > eclipseState;
     std::unique_ptr<PolymerState> state;
     Opm::PolymerProperties poly_props;
     // bool check_well_controls = false;
@@ -100,33 +100,33 @@ try
     if (use_deck) {
         std::string deck_filename = param.get<std::string>("deck_filename");
         Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-        ParserPtr parser(new Opm::Parser());
-        deck = parser->parseFile(deck_filename , parseContext);
+        Parser parser;
+        *deck = parser.parseFile(deck_filename , parseContext);
 
         eclipseState.reset(new Opm::EclipseState(*deck , parseContext));
 
         // Grid init
-        grid.reset(new GridManager(*eclipseState->getInputGrid()));
+        grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
             const UnstructuredGrid& ug_grid = *(grid->c_grid());
             // Rock and fluid init
-            props.reset(new IncompPropertiesFromDeck(deck, eclipseState, ug_grid ));
+            props.reset(new IncompPropertiesFromDeck(*deck, *eclipseState, ug_grid ));
             // check_well_controls = param.getDefault("check_well_controls", false);
             // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
             state.reset( new PolymerState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid ), 2));
 
             // Rock compressibility.
-            rock_comp.reset(new RockCompressibility(deck, eclipseState));
+            rock_comp.reset(new RockCompressibility(*deck, *eclipseState));
             // Gravity.
             gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
             // Init state variables (saturation and pressure).
             if (param.has("init_saturation")) {
                 initStateBasic(ug_grid, *props, param, gravity[2], *state);
             } else {
-                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
+                initStateFromDeck(ug_grid, *props, *deck, gravity[2], *state);
             }
             // Init polymer properties.
-            poly_props.readFromDeck(deck, eclipseState);
+            poly_props.readFromDeck(*deck, *eclipseState);
         }
     } else {
         // Grid init.
@@ -299,7 +299,7 @@ try
 
         WellState well_state;
         int step = 0;
-        Opm::TimeMapPtr timeMap(new Opm::TimeMap(deck));
+        TimeMap timeMap(*deck);
         SimulatorTimer simtimer;
         simtimer.init(timeMap);
         // Check for WPOLYMER presence in last epoch to decide
@@ -311,7 +311,7 @@ try
                         "You seem to be trying to control it via parameter poly_start_days (etc.) as well.");
             }
         }
-        for (size_t reportStepIdx = 0; reportStepIdx < timeMap->numTimesteps(); ++reportStepIdx) {
+        for (size_t reportStepIdx = 0; reportStepIdx < timeMap.numTimesteps(); ++reportStepIdx) {
             simtimer.setCurrentStepNum(reportStepIdx);
 
             // Report on start of report step.
@@ -320,13 +320,13 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, polymer inflow controls.
-            WellsManager wells(eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
+            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {
                     OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
-                polymer_inflow.reset(new PolymerInflowFromDeck(eclipseState, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
+                polymer_inflow.reset(new PolymerInflowFromDeck(*eclipseState, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
             } else {
                 polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
                                                             param.getDefault("poly_end_days", 800.0)*Opm::unit::day,

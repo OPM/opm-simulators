@@ -1043,18 +1043,16 @@ VFPPROD \n\
 2 1 1 1 1.0 / \n\
 ";
 
-    Opm::DeckConstPtr deck;
-    std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newFIELD());
-
-    Opm::ParserPtr parser(new Opm::Parser());
+    auto units = Opm::UnitSystem::newFIELD();
+    Opm::Parser parser;
     Opm::ParseContext parse_mode;
-    deck = parser->parseString(table_str, parse_mode);
+    auto deck = parser.parseString(table_str, parse_mode);
 
-    BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
-    BOOST_CHECK_EQUAL(deck->count("VFPPROD"), 1);
+    BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
+    BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
 
     Opm::VFPProdTable table;
-    table.init(deck->getKeyword("VFPPROD", 0), *units);
+    table.init(deck.getKeyword("VFPPROD", 0), units);
 
     Opm::VFPProdProperties properties(&table);
 
@@ -1104,21 +1102,20 @@ VFPPROD \n\
  */
 BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 {
-    Opm::DeckConstPtr deck;
-    std::shared_ptr<Opm::UnitSystem> units(Opm::UnitSystem::newMETRIC());
+    auto units = Opm::UnitSystem::newMETRIC();
 
-    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::Parser parser;
     Opm::ParseContext parse_mode;
     boost::filesystem::path file("VFPPROD2");
 
-    deck = parser->parseFile(file.string(), parse_mode);
+    auto deck = parser.parseFile(file.string(), parse_mode);
     Opm::checkDeck(deck, parser);
 
-    BOOST_REQUIRE(deck->hasKeyword("VFPPROD"));
-    BOOST_CHECK_EQUAL(deck->count("VFPPROD"), 1);
+    BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
+    BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
 
     Opm::VFPProdTable table;
-    table.init(deck->getKeyword("VFPPROD", 0), *units);
+    table.init(deck.getKeyword("VFPPROD", 0), units);
 
     Opm::VFPProdProperties properties(&table);
 

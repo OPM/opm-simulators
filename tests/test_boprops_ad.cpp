@@ -46,13 +46,10 @@
 
 
 struct SetupSimple {
-    SetupSimple()
+    SetupSimple() :
+        deck( Opm::Parser{}.parseFile("fluid.data") ),
+        eclState( deck, Opm::ParseContext() )
     {
-        Opm::ParseContext parseContext;
-        Opm::ParserPtr parser(new Opm::Parser());
-        deck = parser->parseFile("fluid.data", parseContext);
-        eclState.reset(new Opm::EclipseState(*deck , parseContext));
-
         param.disableOutput();
         param.insertParameter("init_rock"       , "false" );
         param.insertParameter("threephase_model", "simple");
@@ -61,8 +58,8 @@ struct SetupSimple {
     }
 
     Opm::parameter::ParameterGroup  param;
-    Opm::DeckConstPtr               deck;
-    Opm::EclipseStateConstPtr       eclState;
+    Opm::Deck deck;
+    Opm::EclipseState eclState;
 };
 
 
@@ -71,7 +68,7 @@ struct TestFixture : public Setup
 {
     TestFixture()
         : Setup()
-        , grid (*eclState->getInputGrid())
+        , grid (eclState.getInputGrid())
         , boprops_ad(deck, eclState, *grid.c_grid(), param.getDefault("init_rock", false))
     {
     }
@@ -89,7 +86,7 @@ struct TestFixtureAd : public Setup
 {
     TestFixtureAd()
         : Setup()
-        , grid (*eclState->getInputGrid())
+        , grid (eclState.getInputGrid())
         , props(deck, eclState, *grid.c_grid(),
                 param.getDefault("init_rock", false))
     {

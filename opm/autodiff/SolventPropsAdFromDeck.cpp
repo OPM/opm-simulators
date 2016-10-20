@@ -39,20 +39,20 @@ typedef Eigen::DiagonalMatrix<double, Eigen::Dynamic> D;
 typedef SolventPropsAdFromDeck::V V;
 typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Block;
 
-SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
-                                                     EclipseStateConstPtr eclState,
+SolventPropsAdFromDeck::SolventPropsAdFromDeck(const Deck& deck,
+                                                     const EclipseState& eclState,
                                                      const int number_of_cells,
                                                      const int* global_cell)
 {
-    if (deck->hasKeyword("SOLVENT")) {
+    if (deck.hasKeyword("SOLVENT")) {
         // retrieve the cell specific PVT table index from the deck
         // and using the grid...
         extractPvtTableIndex(cellPvtRegionIdx_, eclState, number_of_cells, global_cell);
         extractTableIndex("SATNUM", eclState, number_of_cells, global_cell, cellSatNumRegionIdx_);
 
         // surface densities
-        if (deck->hasKeyword("SDENSITY")) {
-            const auto& densityKeyword = deck->getKeyword("SDENSITY");
+        if (deck.hasKeyword("SDENSITY")) {
+            const auto& densityKeyword = deck.getKeyword("SDENSITY");
             int numRegions = densityKeyword.size();
             solvent_surface_densities_.resize(numRegions);
             for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
@@ -63,7 +63,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
             OPM_THROW(std::runtime_error, "SDENSITY must be specified in SOLVENT runs\n");
         }
 
-        const auto& tables = eclState->getTableManager();
+        const auto& tables = eclState.getTableManager();
         // pvt
         const TableContainer& pvdsTables = tables.getPvdsTables();
         if (!pvdsTables.empty()) {
@@ -123,7 +123,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
         }
 
 
-        if (deck->hasKeyword("MISCIBLE") ) {
+        if (deck.hasKeyword("MISCIBLE") ) {
 
 
             // retrieve the cell specific Misc table index from the deck
@@ -254,14 +254,14 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
             }
 
-            if (deck->hasKeyword("TLMIXPAR")) {
-                const int numRegions = deck->getKeyword("TLMIXPAR").size();
+            if (deck.hasKeyword("TLMIXPAR")) {
+                const int numRegions = deck.getKeyword("TLMIXPAR").size();
 
                 // resize the attributes of the object
                 mix_param_viscosity_.resize(numRegions);
                 mix_param_density_.resize(numRegions);
                 for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-                    const auto& tlmixparRecord = deck->getKeyword("TLMIXPAR").getRecord(regionIdx);
+                    const auto& tlmixparRecord = deck.getKeyword("TLMIXPAR").getRecord(regionIdx);
                     const auto& mix_params_viscosity = tlmixparRecord.getItem("TL_VISCOSITY_PARAMETER").getSIDoubleData();
                     mix_param_viscosity_[regionIdx] = mix_params_viscosity[0];
                     const auto& mix_params_density = tlmixparRecord.getItem("TL_DENSITY_PARAMETER").getSIDoubleData();
@@ -276,7 +276,7 @@ SolventPropsAdFromDeck::SolventPropsAdFromDeck(DeckConstPtr deck,
                 }
             }
 
-            if (deck->hasKeyword("TLPMIXPA")) {
+            if (deck.hasKeyword("TLPMIXPA")) {
                 const TableContainer& tlpmixparTables = tables.getTlpmixpaTables();
                 if (!tlpmixparTables.empty()) {
 
@@ -492,12 +492,12 @@ ADB SolventPropsAdFromDeck::pressureMixingParameter(const ADB& po,
 }
 
 void SolventPropsAdFromDeck::extractTableIndex(const std::string& keyword,
-                                               Opm::EclipseStateConstPtr eclState,
+                                               const Opm::EclipseState& eclState,
                                                size_t numCompressed,
                                                const int* compressedToCartesianCellIdx,
                                                std::vector<int>& tableIdx) const {
     //Get the Region data
-    const auto& regionData = eclState->get3DProperties().getIntGridProperty(keyword).getData();
+    const auto& regionData = eclState.get3DProperties().getIntGridProperty(keyword).getData();
     // Convert this into an array of compressed cells
     // Eclipse uses Fortran-style indices which start at 1
     // instead of 0, we subtract 1.

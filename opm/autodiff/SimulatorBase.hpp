@@ -174,7 +174,7 @@ namespace Opm
                                    std::vector<double>& well_potentials);
 
         void updateListEconLimited(const std::unique_ptr<Solver>& solver,
-                                   ScheduleConstPtr schedule,
+                                   const Schedule& schedule,
                                    const int current_step,
                                    const Wells* wells,
                                    const WellState& well_state,

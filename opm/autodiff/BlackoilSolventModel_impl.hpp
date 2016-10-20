@@ -78,7 +78,7 @@ namespace Opm {
                                                      const SolventPropsAdFromDeck&           solvent_props,
                                                      const StandardWellsSolvent&             well_model,
                                                      const NewtonIterationBlackoilInterface& linsolver,
-                                                     const EclipseStateConstPtr              eclState,
+                                                     std::shared_ptr< const EclipseState >   eclState,
                                                      const bool                              has_disgas,
                                                      const bool                              has_vapoil,
                                                      const bool                              terminal_output,
