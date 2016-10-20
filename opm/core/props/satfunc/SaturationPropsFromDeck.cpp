@@ -93,10 +93,10 @@ namespace Opm
 
                 // copy the values calculated using opm-material to the target arrays
                 for (int krPhaseIdx = 0; krPhaseIdx < np; ++krPhaseIdx) {
-                    kr[np*i + krPhaseIdx] = relativePerms[krPhaseIdx].value;
+                    kr[np*i + krPhaseIdx] = relativePerms[krPhaseIdx].value();
 
                     for (int satPhaseIdx = 0; satPhaseIdx < np; ++satPhaseIdx)
-                        dkrds[np*np*i + satPhaseIdx*np + krPhaseIdx] = relativePerms[krPhaseIdx].derivatives[satPhaseIdx];
+                        dkrds[np*np*i + satPhaseIdx*np + krPhaseIdx] = relativePerms[krPhaseIdx].derivative(satPhaseIdx);
                 }
             }
         } else {
@@ -165,13 +165,13 @@ namespace Opm
                     // for two-phase problems i.e water for oil-water system,
                     // but for flow it is always oil. Add oil (liquid) capillary pressure value
                     // to shift the reference phase to oil
-                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].value + sign * capillaryPressures[canonicalPhaseIdx].value;
+                    pc[np*i + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].value() + sign * capillaryPressures[canonicalPhaseIdx].value();
                     for (int canonicalSatPhaseIdx = 0; canonicalSatPhaseIdx < BlackoilPhases::MaxNumPhases; ++canonicalSatPhaseIdx) {
                         if ( ! phaseUsage_.phase_used[canonicalSatPhaseIdx])
                             continue;
 
                         const int satPhaseIdx = phaseUsage_.phase_pos[canonicalSatPhaseIdx];
-                        dpcds[np*np*i + satPhaseIdx*np + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].derivatives[canonicalSatPhaseIdx] + sign * capillaryPressures[canonicalPhaseIdx].derivatives[canonicalSatPhaseIdx];
+                        dpcds[np*np*i + satPhaseIdx*np + pcPhaseIdx] = capillaryPressures[BlackoilPhases::Liquid].derivative(canonicalSatPhaseIdx) + sign * capillaryPressures[canonicalPhaseIdx].derivative(canonicalSatPhaseIdx);
                     }
                 }
             }

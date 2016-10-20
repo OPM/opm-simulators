@@ -72,10 +72,10 @@ public:
         // to be modified for these...
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!phaseUsage_.phase_used[phaseIdx]) {
-                saturation_[phaseIdx].value = 0.0;
+                saturation_[phaseIdx].setValue(0.0);
             }
             else {
-                saturation_[phaseIdx].value = globalSaturationArray_[np*arrayIdx + phaseUsage_.phase_pos[phaseIdx]];
+                saturation_[phaseIdx].setValue(globalSaturationArray_[np*arrayIdx + phaseUsage_.phase_pos[phaseIdx]]);
             }
         }
     }
