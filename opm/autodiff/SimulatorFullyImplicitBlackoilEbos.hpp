@@ -215,7 +215,8 @@ public:
                                        props_.permeability(),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
-                                       well_potentials);
+                                       well_potentials );
+
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
             well_state.init(wells, state, prev_well_state);

@@ -452,7 +452,7 @@ namespace Opm {
 
             /// Diff to bhp for each well perforation.
             std::vector<double> wellPerforationPressureDiffs() const
-            {               
+            {
                 return well_perforation_pressure_diffs_;
             }
 
@@ -683,9 +683,10 @@ namespace Opm {
                 const int nw = wells().number_of_wells;
                 std::vector<double> res(np*nw);
                 for( int p=0; p<np; ++p) {
+                    const int ebosCompIdx = flowPhaseToEbosCompIdx(p);
                     for (int i = 0; i < nw; ++i) {
                         int idx = i + nw*p;
-                        res[idx] = resWell_[i][flowPhaseToEbosCompIdx(p)];
+                        res[idx] = resWell_[ i ][ ebosCompIdx ];
                     }
                 }
                 return res;
@@ -1054,7 +1055,7 @@ namespace Opm {
                         }
                             break;
                         }
-                    } 
+                    }
                 }
             }
 

@@ -51,7 +51,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/core/utility/Units.hpp>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
@@ -104,10 +103,6 @@ namespace Opm {
         typedef BlackoilModelEbos ThisType;
     public:
         // ---------  Types and enums  ---------
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
-        typedef ADB::M M;
-
         typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoil WellState;
         typedef BlackoilModelParameters ModelParameters;
@@ -124,8 +119,8 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
         typedef double Scalar;
-        typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
+        typedef Dune::FieldVector<Scalar, 3    >        VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, 3, 3 >        MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
@@ -635,6 +630,8 @@ namespace Opm {
         /// \param[in]   iteration   current iteration number
         bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
         {
+            typedef std::vector< double > Vector;
+
             const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
             const double tol_cnv   = param_.tolerance_cnv_;
@@ -643,50 +640,56 @@ namespace Opm {
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
             const int np = numPhases();
 
-            const V& pv = geo_.poreVolume();
+            const auto& pv = geo_.poreVolume();
 
-            std::vector<double> R_sum(np);
-            std::vector<double> B_avg(np);
-            std::vector<double> maxCoeff(np);
-            std::vector<double> maxNormWell(np);
-            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
-            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
-            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R2(nc, np);
-            Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
+            Vector R_sum(np);
+            Vector B_avg(np);
+            Vector maxCoeff(np);
+            Vector maxNormWell(np);
 
-            auto ebosResid = ebosSimulator_.model().linearizer().residual();
+            std::vector< Vector > B( np, Vector( nc ) );
+            std::vector< Vector > R( np, Vector( nc ) );
+            std::vector< Vector > R2( np, Vector( nc ) );
+            std::vector< Vector > tempV( np, Vector( nc ) );
+
+            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+
             for ( int idx = 0; idx < np; ++idx )
             {
-                V b(nc);
-                V r(nc);
+                Vector& R2_idx = R2[ idx ];
+                Vector& B_idx  = B[ idx ];
+                const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
+                const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
+
                 for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
                     const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                     const auto& fs = intQuants.fluidState();
 
-                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
-                    int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
-
-                    b[cell_idx] = 1 / fs.invB(ebosPhaseIdx).value;
-                    r[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
-
+                    B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value;
+                    R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
                 }
-                R2.col(idx) = r;
-                B.col(idx) = b;
             }
 
             for ( int idx = 0; idx < np; ++idx )
             {
-                tempV.col(idx)   = R2.col(idx).abs()/pv;
+                //tempV.col(idx)   = R2.col(idx).abs()/pv;
+                Vector& tempV_idx = tempV[ idx ];
+                Vector& R2_idx    = R2[ idx ];
+                for( int cell_idx = 0; cell_idx < nc; ++cell_idx )
+                {
+                    tempV_idx[ cell_idx ] = std::abs( R2_idx[ cell_idx ] ) / pv[ cell_idx ];
+                }
             }
 
-            std::vector<double> pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
+            Vector pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
+            Vector wellResidual =  wellModel().residual();
             const double pvSum = detail::convergenceReduction(B, tempV, R2,
                                                       R_sum, maxCoeff, B_avg, maxNormWell,
-                                                      nc, np, pv_vector, wellModel().residual());
+                                                      nc, np, pv_vector, wellResidual );
 
-            std::vector<double> CNV(np);
-            std::vector<double> mass_balance_residual(np);
-            std::vector<double> well_flux_residual(np);
+            Vector CNV(np);
+            Vector mass_balance_residual(np);
+            Vector well_flux_residual(np);
 
             bool converged_MB = true;
             bool converged_CNV = true;
@@ -786,13 +789,6 @@ namespace Opm {
         { return ebosSimulator_; }
 
     protected:
-
-        // ---------  Types and enums  ---------
-
-        typedef Eigen::Array<double,
-                             Eigen::Dynamic,
-                             Eigen::Dynamic,
-                             Eigen::RowMajor> DataBlock;
 
         // ---------  Data members  ---------
 
