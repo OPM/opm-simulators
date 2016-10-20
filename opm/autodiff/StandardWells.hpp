@@ -185,7 +185,7 @@ namespace Opm {
             /// upate the dynamic lists related to economic limits
             template<class WellState>
             void
-            updateListEconLimited(ScheduleConstPtr schedule,
+            updateListEconLimited(const Schedule& schedule,
                                   const int current_step,
                                   const Wells* wells,
                                   const WellState& well_state,

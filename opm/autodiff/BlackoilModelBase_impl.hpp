@@ -103,7 +103,7 @@ typedef Eigen::Array<double,
                   const RockCompressibility*      rock_comp_props,
                   const WellModel&                well_model,
                   const NewtonIterationBlackoilInterface&    linsolver,
-                  Opm::EclipseStateConstPtr eclState,
+                  std::shared_ptr< const Opm::EclipseState > eclState,
                   const bool has_disgas,
                   const bool has_vapoil,
                   const bool terminal_output)

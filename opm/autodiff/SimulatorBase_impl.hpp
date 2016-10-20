@@ -106,7 +106,7 @@ namespace Opm
         std::ofstream tstep_os(tstep_filename.c_str());
 
         const auto& schedule = eclipse_state_->getSchedule();
-        const auto& events = schedule->getEvents();
+        const auto& events = schedule.getEvents();
 
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
@@ -114,7 +114,7 @@ namespace Opm
         {
 
             if (param_.getDefault("use_TUNING", false)) {
-                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule->getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule.getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
             }
@@ -164,7 +164,7 @@ namespace Opm
             }
 
             // Create wells and well state.
-            WellsManager wells_manager(eclipse_state_,
+            WellsManager wells_manager(*eclipse_state_,
                                        timer.currentStepNum(),
                                        Opm::UgGridHelpers::numCells(grid_),
                                        Opm::UgGridHelpers::globalCell(grid_),
@@ -260,9 +260,9 @@ namespace Opm
                 // section
                 //
                 // TODO (?): handle the parallel case (maybe this works out of the box)
-                DeckConstPtr miniDeck = schedule->getModifierDeck(nextTimeStepIdx);
+                const auto& miniDeck = schedule.getModifierDeck(nextTimeStepIdx);
                 eclipse_state_->applyModifierDeck(*miniDeck);
-                geo_.update(grid_, props_, eclipse_state_, gravity_);
+                geo_.update(grid_, props_, *eclipse_state_, gravity_);
             }
 
             // take time that was used to solve system for this reportStep
@@ -516,7 +516,7 @@ namespace Opm
     {
         typedef SimFIBODetails::WellMap WellMap;
 
-        const auto w_ecl = eclipse_state_->getSchedule()->getWells(step);
+        const auto w_ecl = eclipse_state_->getSchedule().getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
@@ -803,7 +803,7 @@ namespace Opm
     void
     SimulatorBase<Implementation>::
     updateListEconLimited(const std::unique_ptr<Solver>& solver,
-                          ScheduleConstPtr schedule,
+                          const Schedule& schedule,
                           const int current_step,
                           const Wells* wells,
                           const WellState& well_state,

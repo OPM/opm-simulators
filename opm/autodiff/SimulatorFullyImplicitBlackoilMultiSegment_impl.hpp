@@ -98,7 +98,7 @@ namespace Opm
             }
 
             // Create wells and well state.
-            WellsManager wells_manager(eclipse_state_,
+            WellsManager wells_manager(*eclipse_state_,
                                        timer.currentStepNum(),
                                        Opm::UgGridHelpers::numCells(grid_),
                                        Opm::UgGridHelpers::globalCell(grid_),
@@ -119,7 +119,7 @@ namespace Opm
             WellState well_state;
             // well_state.init(wells, state, prev_well_state);
 
-            const auto wells_ecl = eclipse_state_->getSchedule()->getWells(timer.currentStepNum());
+            const auto wells_ecl = eclipse_state_->getSchedule().getWells(timer.currentStepNum());
             const int current_time_step = timer.currentStepNum();
 
             const WellModel well_model(wells, wells_ecl, current_time_step);

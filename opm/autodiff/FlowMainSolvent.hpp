@@ -74,8 +74,8 @@ namespace Opm
             Base::setupGridAndProps();
 
             const Grid& grid = Base::grid_init_->grid();
-            solvent_props_.reset(new SolventPropsAdFromDeck(Base::deck_,
-                                                            Base::eclipse_state_,
+            solvent_props_.reset(new SolventPropsAdFromDeck(*Base::deck_,
+                                                            *Base::eclipse_state_,
                                                             UgGridHelpers::numCells(grid),
                                                             UgGridHelpers::globalCell(grid)));
         }

@@ -66,7 +66,7 @@ namespace Opm
         template <class Props, class Grid>
         DerivedGeology(const Grid&              grid,
                        const Props&             props ,
-                       Opm::EclipseStateConstPtr eclState,
+                       const EclipseState&       eclState,
                        const bool               use_local_perm,
                        const double*            grav = 0
 
@@ -84,7 +84,7 @@ namespace Opm
         template <class Props, class Grid>
         void update(const Grid&              grid,
                     const Props&             props ,
-                    Opm::EclipseStateConstPtr eclState,
+                    const EclipseState&      eclState,
                     const double*            grav)
 
         {
@@ -98,7 +98,7 @@ namespace Opm
 
             // get the pore volume multipliers from the EclipseState
             std::vector<double> multpv(numCartesianCells, 1.0);
-            const auto& eclProps = eclState->get3DProperties();
+            const auto& eclProps = eclState.get3DProperties();
             if (eclProps.hasDeckDoubleGridProperty("MULTPV")) {
                 multpv = eclProps.getDoubleGridProperty("MULTPV").getData();
             }
@@ -110,13 +110,13 @@ namespace Opm
             }
 
             // Get grid from parser.
-            EclipseGridConstPtr eclgrid = eclState->getInputGrid();
+            const auto& eclgrid = eclState.getInputGrid();
 
             // update the pore volume of all active cells in the grid
             computePoreVolume_(grid, eclState);
 
             // Non-neighbour connections.
-            nnc_ = eclState->getInputNNC();
+            nnc_ = eclState.getInputNNC();
 
             // Transmissibility
             Vector htrans(AutoDiffGrid::numCellFaces(grid));
@@ -134,7 +134,7 @@ namespace Opm
             // for MINPV. Note that the change does not effect the pore volume calculations
             // as the pore volume is currently defaulted to be comparable to ECLIPSE, but
             // only the transmissibility calculations.
-            bool opmfil = eclgrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
+            bool opmfil = eclgrid.getMinpvMode() == MinpvMode::ModeEnum::OpmFIL;
             // opmfil is hardcoded to be true. i.e the volume weighting is always used
             opmfil = true;
             if (opmfil) {
@@ -144,9 +144,9 @@ namespace Opm
             std::vector<double> mult;
             multiplyHalfIntersections_(grid, eclState, ntg, htrans, mult);
 
-            if (!opmfil && eclgrid->isPinchActive()) {
+            if (!opmfil && eclgrid.isPinchActive()) {
                 // opmfil is hardcoded to be true. i.e the pinch processor is never used
-                pinchProcess_(grid, *eclState, htrans, numCells);
+                pinchProcess_(grid, eclState, htrans, numCells);
             }
 
             // combine the half-face transmissibilites into the final face
@@ -273,40 +273,40 @@ namespace Opm
     private:
         template <class Grid>
         void multiplyHalfIntersections_(const Grid &grid,
-                                        Opm::EclipseStateConstPtr eclState,
+                                        const EclipseState& eclState,
                                         const std::vector<double> &ntg,
                                         Vector &halfIntersectTransmissibility,
                                         std::vector<double> &intersectionTransMult);
 
         template <class Grid>
         void tpfa_loc_trans_compute_(const Grid &grid,
-                                     Opm::EclipseGridConstPtr eclGrid,
+                                     const EclipseGrid& eclGrid,
                                      const double* perm,
                                      Vector &hTrans);
 
         template <class Grid>
         void minPvFillProps_(const Grid &grid,
-                             Opm::EclipseStateConstPtr eclState,
+                             const EclipseState& eclState,
                              std::vector<double> &ntg);
 
         template <class GridType>
         void computePoreVolume_(const GridType &grid,
-                                Opm::EclipseStateConstPtr eclState)
+                                const EclipseState& eclState)
         {
             int numCells = Opm::AutoDiffGrid::numCells(grid);
             const int* globalCell = Opm::UgGridHelpers::globalCell(grid);
-            EclipseGridConstPtr eclGrid = eclState->getInputGrid();
-            const int nx = eclGrid->getNX();
-            const int ny = eclGrid->getNY();
+            const auto& eclGrid = eclState.getInputGrid();
+            const int nx = eclGrid.getNX();
+            const int ny = eclGrid.getNY();
 
             // the "raw" pore volume.
             const std::vector<double>& porvData =
-                eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
+                eclState.get3DProperties().getDoubleGridProperty("PORV").getData();
             pvol_.resize(numCells);
 
             // the "activation number" grid property
             const std::vector<int>& actnumData =
-                eclState->get3DProperties().getIntGridProperty("ACTNUM").getData();
+                eclState.get3DProperties().getIntGridProperty("ACTNUM").getData();
 
 
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
@@ -314,20 +314,20 @@ namespace Opm
 
                 double cellPoreVolume = porvData[cellCartIdx];
 
-                if (eclGrid->getMinpvMode() == MinpvMode::ModeEnum::OpmFIL) {
+                if (eclGrid.getMinpvMode() == MinpvMode::ModeEnum::OpmFIL) {
                     // Sum the pore volumes of the cells above which have been deactivated
                     // because their volume less is less than the MINPV threshold
                     for (int aboveCellCartIdx = cellCartIdx - nx*ny;
                          aboveCellCartIdx >= 0;
                          aboveCellCartIdx -= nx*ny)
                     {
-                        if (porvData[aboveCellCartIdx] >= eclGrid->getMinpvValue()) {
+                        if (porvData[aboveCellCartIdx] >= eclGrid.getMinpvValue()) {
                             // stop if we encounter a cell which has a pore volume which is
                             // at least as large as the minimum one
                             break;
                         }
 
-                        const double aboveCellVolume = eclGrid->getCellVolume(aboveCellCartIdx);
+                        const double aboveCellVolume = eclGrid.getCellVolume(aboveCellCartIdx);
                         if (actnumData[aboveCellCartIdx] == 0 && aboveCellVolume > 1e-6) {
                             // stop at explicitly disabled cells, but only if their volume is
                             // greater than 10^-6 m^3
@@ -411,22 +411,22 @@ namespace Opm
 
     template <class GridType>
     inline void DerivedGeology::minPvFillProps_(const GridType &grid,
-                                                Opm::EclipseStateConstPtr eclState,
+                                                const EclipseState& eclState,
                                                 std::vector<double> &ntg)
     {
 
         int numCells = Opm::AutoDiffGrid::numCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
         const int* cartdims = Opm::UgGridHelpers::cartDims(grid);
-        EclipseGridConstPtr eclgrid = eclState->getInputGrid();
-        const auto& porv = eclState->get3DProperties().getDoubleGridProperty("PORV").getData();
-        const auto& actnum = eclState->get3DProperties().getIntGridProperty("ACTNUM").getData();
+        const auto& eclgrid = eclState.getInputGrid();
+        const auto& porv = eclState.get3DProperties().getDoubleGridProperty("PORV").getData();
+        const auto& actnum = eclState.get3DProperties().getIntGridProperty("ACTNUM").getData();
         for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             const int nx = cartdims[0];
             const int ny = cartdims[1];
             const int cartesianCellIdx = global_cell[cellIdx];
 
-            const double cellVolume = eclgrid->getCellVolume(cartesianCellIdx);
+            const double cellVolume = eclgrid.getCellVolume(cartesianCellIdx);
             ntg[cartesianCellIdx] *= cellVolume;
             double totalCellVolume = cellVolume;
 
@@ -435,10 +435,10 @@ namespace Opm
             int cartesianCellIdxAbove = cartesianCellIdx - nx*ny;
             while ( cartesianCellIdxAbove >= 0 &&
                  actnum[cartesianCellIdxAbove] > 0 &&
-                 porv[cartesianCellIdxAbove] < eclgrid->getMinpvValue() ) {
+                 porv[cartesianCellIdxAbove] < eclgrid.getMinpvValue() ) {
 
                 // Volume weighted arithmetic average of NTG
-                const double cellAboveVolume = eclgrid->getCellVolume(cartesianCellIdxAbove);
+                const double cellAboveVolume = eclgrid.getCellVolume(cartesianCellIdxAbove);
                 totalCellVolume += cellAboveVolume;
                 ntg[cartesianCellIdx] += ntg[cartesianCellIdxAbove]*cellAboveVolume;
                 cartesianCellIdxAbove -= nx*ny;
@@ -460,17 +460,17 @@ namespace Opm
         // opmfil being hardcoded to be true.
         auto  eclgrid = eclState.getInputGrid();
         auto& eclProps = eclState.get3DProperties();
-        const double minpv = eclgrid->getMinpvValue();
-        const double thickness = eclgrid->getPinchThresholdThickness();
-        auto transMode = eclgrid->getPinchOption();
-        auto multzMode = eclgrid->getMultzOption();
+        const double minpv = eclgrid.getMinpvValue();
+        const double thickness = eclgrid.getPinchThresholdThickness();
+        auto transMode = eclgrid.getPinchOption();
+        auto multzMode = eclgrid.getMultzOption();
         PinchProcessor<GridType> pinch(minpv, thickness, transMode, multzMode);
 
         std::vector<double> htrans_copy(htrans.size());
         std::copy_n(htrans.data(), htrans.size(), htrans_copy.begin());
 
         std::vector<int> actnum;
-        eclgrid->exportACTNUM(actnum);
+        eclgrid.exportACTNUM(actnum);
 
         const auto& transMult = eclState.getTransMult();
         std::vector<double> multz(numCells, 0.0);
@@ -490,7 +490,7 @@ namespace Opm
 
     template <class GridType>
     inline void DerivedGeology::multiplyHalfIntersections_(const GridType &grid,
-                                                           Opm::EclipseStateConstPtr eclState,
+                                                           const EclipseState& eclState,
                                                            const std::vector<double> &ntg,
                                                            Vector &halfIntersectTransmissibility,
                                                            std::vector<double> &intersectionTransMult)
@@ -501,7 +501,7 @@ namespace Opm
         intersectionTransMult.resize(numIntersections);
         std::fill(intersectionTransMult.begin(), intersectionTransMult.end(), 1.0);
 
-        const TransMult& multipliers = eclState->getTransMult();
+        const TransMult& multipliers = eclState.getTransMult();
         auto cell2Faces = Opm::UgGridHelpers::cell2Faces(grid);
         auto faceCells  = Opm::AutoDiffGrid::faceCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
@@ -579,7 +579,7 @@ namespace Opm
 
     template <class GridType>
     inline void DerivedGeology::tpfa_loc_trans_compute_(const GridType& grid,
-                                                        Opm::EclipseGridConstPtr eclGrid,
+                                                        const EclipseGrid& eclGrid,
                                                         const double* perm,
                                                         Vector& hTrans){
 
@@ -631,7 +631,7 @@ namespace Opm
 #endif
 
                 int cartesianCellIdx = AutoDiffGrid::globalCell(grid)[cellIdx];
-                auto cellCenter = eclGrid->getCellCenter(cartesianCellIdx);
+                auto cellCenter = eclGrid.getCellCenter(cartesianCellIdx);
                 for (int indx = 0; indx < dim; ++indx) {
                     const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] - cellCenter[indx];
                     dist += Ci*Ci;

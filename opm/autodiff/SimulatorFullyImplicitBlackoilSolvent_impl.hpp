@@ -36,7 +36,7 @@ namespace Opm
                                           const bool has_vapoil,
                                           std::shared_ptr<EclipseState> eclipse_state,
                                           BlackoilOutputWriter& output_writer,
-                                          Opm::DeckConstPtr& deck,
+                                          std::shared_ptr< Deck > deck,
                                           const std::vector<double>& threshold_pressures_by_face,
                                           const bool has_solvent)
     : BaseType(param,
@@ -105,9 +105,9 @@ namespace Opm
         std::vector<double> perfcells_fraction(wells->well_connpos[nw], 0.0);
 
         size_t currentStep = timer.currentStepNum();
-        ScheduleConstPtr schedule = BaseType::eclipse_state_->getSchedule();
+        const auto& schedule = BaseType::eclipse_state_->getSchedule();
 
-        for (const auto&  well_solvent : schedule->getWells( currentStep )) {
+        for (const auto&  well_solvent : schedule.getWells( currentStep )) {
             if (well_solvent->getStatus( currentStep ) == WellCommon::SHUT) {
                 continue;
             }

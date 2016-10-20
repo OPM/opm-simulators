@@ -205,7 +205,7 @@ namespace Opm
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
         // readDeckInput()
-        std::shared_ptr<const Deck> deck_;
+        std::shared_ptr<Deck> deck_;
         std::shared_ptr<EclipseState> eclipse_state_;
         // setupGridAndProps()
         std::unique_ptr<GridInit<Grid>> grid_init_;
@@ -473,13 +473,13 @@ namespace Opm
             std::string deck_filename = param_.get<std::string>("deck_filename");
 
             // Create Parser
-            ParserPtr parser(new Parser());
+            Parser parser;
 
             // Create Deck and EclipseState.
             try {
                 ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-                deck_ = parser->parseFile(deck_filename, parseContext);
-                checkDeck(deck_, parser);
+                deck_ = std::make_shared< Deck >( parser.parseFile(deck_filename, parseContext) );
+                checkDeck(*deck_, parser);
 
                 if ( output_cout_)
                 {
@@ -487,8 +487,8 @@ namespace Opm
                 }
 
                 eclipse_state_.reset(new EclipseState(*deck_, parseContext));
-                auto ioConfig = eclipse_state_->getIOConfig();
-                ioConfig->setOutputDir(output_dir_);
+                auto& ioConfig = eclipse_state_->getIOConfig();
+                ioConfig.setOutputDir(output_dir_);
             }
             catch (const std::invalid_argument& e) {
                 std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;
@@ -505,8 +505,8 @@ namespace Opm
             // Possible to force initialization only behavior (NOSIM).
             if (param_.has("nosim")) {
                 const bool nosim = param_.get<bool>("nosim");
-                IOConfigPtr ioConfig = eclipse_state_->getIOConfig();
-                ioConfig->overrideNOSIM( nosim );
+                auto& ioConfig = eclipse_state_->getIOConfig();
+                ioConfig.overrideNOSIM( nosim );
             }
         }
 
@@ -528,20 +528,20 @@ namespace Opm
             // Create grid.
             const std::vector<double>& porv =
                     eclipse_state_->get3DProperties().getDoubleGridProperty("PORV").getData();
-            grid_init_.reset(new GridInit<Grid>(eclipse_state_, porv));
+            grid_init_.reset(new GridInit<Grid>(*eclipse_state_, porv));
             const Grid& grid = grid_init_->grid();
 
             // Create material law manager.
             std::vector<int> compressedToCartesianIdx;
             Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
             material_law_manager_.reset(new MaterialLawManager());
-            material_law_manager_->initFromDeck(deck_, eclipse_state_, compressedToCartesianIdx);
+            material_law_manager_->initFromDeck(*deck_, *eclipse_state_, compressedToCartesianIdx);
 
             // Rock and fluid properties.
-            fluidprops_.reset(new BlackoilPropsAdFromDeck(deck_, eclipse_state_, material_law_manager_, grid));
+            fluidprops_.reset(new BlackoilPropsAdFromDeck(*deck_, *eclipse_state_, material_law_manager_, grid));
 
             // Rock compressibility.
-            rock_comp_.reset(new RockCompressibility(deck_, eclipse_state_));
+            rock_comp_.reset(new RockCompressibility(*deck_, *eclipse_state_));
 
             // Gravity.
             assert(UgGridHelpers::dimensions(grid) == 3);
@@ -552,7 +552,7 @@ namespace Opm
 
             // Geological properties
             use_local_perm_ = param_.getDefault("use_local_perm", use_local_perm_);
-            geoprops_.reset(new DerivedGeology(grid, *fluidprops_, eclipse_state_, use_local_perm_, gravity_.data()));
+            geoprops_.reset(new DerivedGeology(grid, *fluidprops_, *eclipse_state_, use_local_perm_, gravity_.data()));
         }
 
 
@@ -566,11 +566,11 @@ namespace Opm
         //   fluidprops_ (if SWATINIT is used)
         void setupState()
         {
-            const PhaseUsage pu = Opm::phaseUsageFromDeck(deck_);
+            const PhaseUsage pu = Opm::phaseUsageFromDeck(*deck_);
             const Grid& grid = grid_init_->grid();
 
             // Need old-style fluid object for init purposes (only).
-            BlackoilPropertiesFromDeck props( deck_, eclipse_state_, material_law_manager_,
+            BlackoilPropertiesFromDeck props( *deck_, *eclipse_state_, material_law_manager_,
                                               Opm::UgGridHelpers::numCells(grid),
                                               Opm::UgGridHelpers::globalCell(grid),
                                               Opm::UgGridHelpers::cartDims(grid),
@@ -614,7 +614,7 @@ namespace Opm
                                                   Opm::UgGridHelpers::numFaces(grid),
                                                   props.numPhases()));
 
-                initStateEquil(grid, props, deck_, eclipse_state_, gravity_[2], *state_);
+                initStateEquil(grid, props, *deck_, *eclipse_state_, gravity_[2], *state_);
                 //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
                 state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
@@ -627,14 +627,14 @@ namespace Opm
                                           Opm::UgGridHelpers::beginFaceCentroids(grid),
                                           Opm::UgGridHelpers::beginCellCentroids(grid),
                                           Opm::UgGridHelpers::dimensions(grid),
-                                          props, deck_, gravity_[2], *state_);
+                                          props, *deck_, gravity_[2], *state_);
             }
 
             // Threshold pressures.
             std::map<std::pair<int, int>, double> maxDp;
-            computeMaxDp(maxDp, deck_, eclipse_state_, grid_init_->grid(), *state_, props, gravity_[2]);
-            threshold_pressures_ = thresholdPressures(deck_, eclipse_state_, grid, maxDp);
-            std::vector<double> threshold_pressures_nnc = thresholdPressuresNNC(eclipse_state_, geoprops_->nnc(), maxDp);
+            computeMaxDp(maxDp, *deck_, *eclipse_state_, grid_init_->grid(), *state_, props, gravity_[2]);
+            threshold_pressures_ = thresholdPressures(*deck_, *eclipse_state_, grid, maxDp);
+            std::vector<double> threshold_pressures_nnc = thresholdPressuresNNC(*eclipse_state_, geoprops_->nnc(), maxDp);
             threshold_pressures_.insert(threshold_pressures_.end(), threshold_pressures_nnc.begin(), threshold_pressures_nnc.end());
 
             // The capillary pressure is scaled in fluidprops_ to match the scaled capillary pressure in props.
@@ -670,7 +670,7 @@ namespace Opm
             // and initilialize new properties and states for it.
             if (must_distribute_) {
                 defunct_well_names_ =
-                    distributeGridAndData(grid_init_->grid(), deck_, eclipse_state_,
+                    distributeGridAndData(grid_init_->grid(), *deck_, *eclipse_state_,
                                           *state_, *fluidprops_, *geoprops_,
                                           material_law_manager_, threshold_pressures_,
                                           parallel_information_, use_local_perm_);
@@ -728,7 +728,7 @@ namespace Opm
 
             // Run relperm diagnostics
             RelpermDiagnostics diagnostic;
-            diagnostic.diagnosis(eclipse_state_, deck_, grid_init_->grid());
+            diagnostic.diagnosis(*eclipse_state_, *deck_, grid_init_->grid());
         }
 
 
@@ -739,8 +739,8 @@ namespace Opm
             const Grid& grid = grid_init_->grid();
             if( output && output_ecl && output_cout_)
             {
-                const EclipseGrid& inputGrid = *eclipse_state_->getInputGrid();
-                EclipseWriter writer(eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid ));
+                const EclipseGrid& inputGrid = eclipse_state_->getInputGrid();
+                EclipseWriter writer(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid ));
                 writer.writeInitAndEgrid(geoprops_->simProps(grid),
                                          geoprops_->nonCartesianConnections());
             }
@@ -757,8 +757,8 @@ namespace Opm
             // the global view
             output_writer_.reset(new OutputWriter(grid_init_->grid(),
                                                   param_,
-                                                  eclipse_state_,
-                                                  Opm::phaseUsageFromDeck(deck_),
+                                                  *eclipse_state_,
+                                                  Opm::phaseUsageFromDeck(*deck_),
                                                   fluidprops_->permeability()));
         }
 
@@ -803,16 +803,16 @@ namespace Opm
         // Returns EXIT_SUCCESS if it does not throw.
         int runSimulator()
         {
-            Opm::ScheduleConstPtr schedule = eclipse_state_->getSchedule();
-            Opm::TimeMapConstPtr timeMap(schedule->getTimeMap());
-            std::shared_ptr<IOConfig> ioConfig = eclipse_state_->getIOConfig();
+            const auto& schedule = eclipse_state_->getSchedule();
+            const auto& timeMap = schedule.getTimeMap();
+            auto& ioConfig = eclipse_state_->getIOConfig();
             SimulatorTimer simtimer;
 
             // initialize variables
             const auto& initConfig = eclipse_state_->getInitConfig();
             simtimer.init(timeMap, (size_t)initConfig.getRestartStep());
 
-            if (!ioConfig->initOnly()) {
+            if (!ioConfig.initOnly()) {
                 if (output_cout_) {
                     std::string msg;
                     msg = "\n\n================ Starting main simulation loop ===============\n";

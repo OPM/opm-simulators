@@ -30,7 +30,7 @@
 #include <opm/output/vtk/writeVtkData.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/BackupRestore.hpp>
@@ -158,7 +158,7 @@ namespace Opm
         // ECL output
         if ( eclWriter_ )
         {
-            const auto& initConfig = eclipseState_->getInitConfig();
+            const auto& initConfig = eclipseState_.getInitConfig();
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
@@ -274,7 +274,7 @@ namespace Opm
 
 
     bool BlackoilOutputWriterEbos::isRestart() const {
-        const auto& initconfig = eclipseState_->getInitConfig();
+        const auto& initconfig = eclipseState_.getInitConfig();
         return initconfig.restartRequested();
     }
 }

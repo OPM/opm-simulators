@@ -68,7 +68,7 @@ namespace Opm
         template <class Grid>
         BlackoilOutputWriterEbos(const Grid& grid,
                                  const parameter::ParameterGroup& param,
-                                 Opm::EclipseStateConstPtr eclipseState,
+                                 const Opm::EclipseState& eclipseState,
                                  const Opm::PhaseUsage &phaseUsage,
                                  const double* permeability );
 
@@ -155,7 +155,7 @@ namespace Opm
         std::ofstream backupfile_;
         Opm::PhaseUsage phaseUsage_;
         std::unique_ptr< EclipseWriter > eclWriter_;
-        EclipseStateConstPtr eclipseState_;
+        const EclipseState& eclipseState_;
 
         std::unique_ptr< ThreadHandle > asyncOutput_;
     };
@@ -171,7 +171,7 @@ namespace Opm
     BlackoilOutputWriterEbos::
     BlackoilOutputWriterEbos(const Grid& grid,
                          const parameter::ParameterGroup& param,
-                         Opm::EclipseStateConstPtr eclipseState,
+                         const Opm::EclipseState& eclipseState,
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),
@@ -182,7 +182,7 @@ namespace Opm
         phaseUsage_( phaseUsage ),
         eclWriter_( output_ && parallelOutput_->isIORank() &&
                     param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , *eclipseState->getInputGrid()))
+                    new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , eclipseState.getInputGrid()))
                    : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()
@@ -235,7 +235,7 @@ namespace Opm
         // gives a dummy dynamic_list_econ_limited
         DynamicListEconLimited dummy_list_econ_limited;
         WellsManager wellsmanager(eclipseState_,
-                                  eclipseState_->getInitConfig().getRestartStep(),
+                                  eclipseState_.getInitConfig().getRestartStep(),
                                   Opm::UgGridHelpers::numCells(grid),
                                   Opm::UgGridHelpers::globalCell(grid),
                                   Opm::UgGridHelpers::cartDims(grid),
@@ -248,7 +248,7 @@ namespace Opm
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate); //Resize for restart step
         auto restarted = Opm::init_from_restart_file(
-                                *eclipseState_,
+                                eclipseState_,
                                 Opm::UgGridHelpers::numCells(grid) );
 
         solutionToSim( restarted.first, phaseusage, simulatorstate );
@@ -538,7 +538,7 @@ namespace Opm
                   const Model& physicalModel,
                   bool substep)
     {
-        const RestartConfig& restartConfig = eclipseState_->getRestartConfig();
+        const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
         const int reportStepNum = timer.reportStepNum();
         Opm::data::Solution sol = detail::getOutputDataEbos( phaseUsage_, physicalModel, restartConfig, reportStepNum );
         writeTimeStepWithCellProperties(timer, localState, localWellState, sol, substep);
