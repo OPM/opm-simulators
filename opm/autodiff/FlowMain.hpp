@@ -424,13 +424,13 @@ namespace Opm
             std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
             OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
             const auto& msgLimits = eclipse_state_->getSchedule()->getMessageLimits();
-            const std::map<int64_t, int> limits = {{Log::MessageType::Note, msgLimits.getMessagePrintLimit(0)},
+            const std::map<int64_t, int> limits = {{Log::MessageType::Note, msgLimits.getCommentPrintLimit(0)},
                                                    {Log::MessageType::Info, msgLimits.getMessagePrintLimit(0)},
                                                    {Log::MessageType::Warning, msgLimits.getWarningPrintLimit(0)},
                                                    {Log::MessageType::Error, msgLimits.getErrorPrintLimit(0)},
                                                    {Log::MessageType::Problem, msgLimits.getProblemPrintLimit(0)},
                                                    {Log::MessageType::Bug, msgLimits.getBugPrintLimit(0)}};
-            prtLog->setMessageLimiter(std::make_shared<MessageLimiter>(-1, limits));
+            prtLog->setMessageLimiter(std::make_shared<MessageLimiter>());
             prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10, limits));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
