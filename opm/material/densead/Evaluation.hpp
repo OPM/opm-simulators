@@ -55,15 +55,15 @@ public:
 
     enum { size = numVars };
 
-    Evaluation() : value(), derivatives()
+    Evaluation() : value_(), derivatives_()
     {}
 
     // copy other function evaluation
     Evaluation(const Evaluation& other)
     {
         // copy evaluated function value and derivatives
-        value = other.value;
-        std::copy(other.derivatives.begin(), other.derivatives.end(), derivatives.begin());
+        value_ = other.value_;
+        std::copy(other.derivatives_.begin(), other.derivatives_.end(), derivatives_.begin());
     }
 
     // create an evaluation which represents a constant function
@@ -73,8 +73,8 @@ public:
     template <class RhsValueType>
     Evaluation(const RhsValueType& c)
     {
-        value = c;
-        std::fill(derivatives.begin(), derivatives.end(), 0.0);
+        value_ = c;
+        std::fill(derivatives_.begin(), derivatives_.end(), 0.0);
     }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
@@ -88,9 +88,9 @@ public:
 
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
-        result.value = value;
-        std::fill(result.derivatives.begin(), result.derivatives.end(), 0.0);
-        result.derivatives[varPos] = 1.0;
+        result.value_ = value;
+        std::fill(result.derivatives_.begin(), result.derivatives_.end(), 0.0);
+        result.derivatives_[varPos] = 1.0;
 
         return result;
     }
@@ -101,19 +101,19 @@ public:
     static Evaluation createConstant(const RhsValueType& value)
     {
         Evaluation result;
-        result.value = value;
-        std::fill(result.derivatives.begin(), result.derivatives.end(), 0.0);
-        Valgrind::CheckDefined(result.value);
-        Valgrind::CheckDefined(result.derivatives);
+        result.value_ = value;
+        std::fill(result.derivatives_.begin(), result.derivatives_.end(), 0.0);
+        Valgrind::CheckDefined(result.value_);
+        Valgrind::CheckDefined(result.derivatives_);
         return result;
     }
 
     // print the value and the derivatives of the function evaluation
     void print(std::ostream& os = std::cout) const
     {
-        os << "v: " << value << " / d:";
-        for (int varIdx = 0; varIdx < derivatives.size(); ++varIdx)
-            os << " " << derivatives[varIdx];
+        os << "v: " << value_ << " / d:";
+        for (int varIdx = 0; varIdx < size; ++varIdx)
+            os << " " << derivatives_[varIdx];
     }
 
     void clearDerivatives()
@@ -129,9 +129,9 @@ public:
     Evaluation& operator+=(const Evaluation& other)
     {
         // value and derivatives are added
-        this->value += other.value;
+        this->value_ += other.value_;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            this->derivatives[varIdx] += other.derivatives[varIdx];
+            this->derivatives_[varIdx] += other.derivatives_[varIdx];
 
         return *this;
     }
@@ -140,7 +140,7 @@ public:
     Evaluation& operator+=(const RhsValueType& other)
     {
         // value is added, derivatives stay the same
-        this->value += other;
+        this->value_ += other;
 
         return *this;
     }
@@ -148,9 +148,9 @@ public:
     Evaluation& operator-=(const Evaluation& other)
     {
         // value and derivatives are subtracted
-        this->value -= other.value;
+        this->value_ -= other.value_;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            this->derivatives[varIdx] -= other.derivatives[varIdx];
+            this->derivatives_[varIdx] -= other.derivatives_[varIdx];
 
         return *this;
     }
@@ -159,7 +159,7 @@ public:
     Evaluation& operator-=(const RhsValueType& other)
     {
         // for constants, values are subtracted, derivatives stay the same
-        this->value -= other;
+        this->value_ -= other;
 
         return *this;
     }
@@ -168,15 +168,15 @@ public:
     {
         // while the values are multiplied, the derivatives follow the product rule,
         // i.e., (u*v)' = (v'u + u'v).
-        const ValueType& u = this->value;
-        const ValueType& v = other.value;
+        const ValueType& u = this->value_;
+        const ValueType& v = other.value_;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
-            const ValueType& uPrime = this->derivatives[varIdx];
-            const ValueType& vPrime = other.derivatives[varIdx];
+            const ValueType& uPrime = this->derivatives_[varIdx];
+            const ValueType& vPrime = other.derivatives_[varIdx];
 
-            this->derivatives[varIdx] = (v*uPrime + u*vPrime);
+            this->derivatives_[varIdx] = (v*uPrime + u*vPrime);
         }
-        this->value *= v;
+        this->value_ *= v;
 
         return *this;
     }
@@ -185,9 +185,9 @@ public:
     Evaluation& operator*=(RhsValueType other)
     {
         // values and derivatives are multiplied
-        this->value *= other;
+        this->value_ *= other;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            this->derivatives[varIdx] *= other;
+            this->derivatives_[varIdx] *= other;
 
         return *this;
     }
@@ -196,15 +196,15 @@ public:
     {
         // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u -
         // u'v)/v^2.
-        const ValueType& u = this->value;
-        const ValueType& v = other.value;
+        const ValueType& u = this->value_;
+        const ValueType& v = other.value_;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx) {
-            const ValueType& uPrime = this->derivatives[varIdx];
-            const ValueType& vPrime = other.derivatives[varIdx];
+            const ValueType& uPrime = this->derivatives_[varIdx];
+            const ValueType& vPrime = other.derivatives_[varIdx];
 
-            this->derivatives[varIdx] = (v*uPrime - u*vPrime)/(v*v);
+            this->derivatives_[varIdx] = (v*uPrime - u*vPrime)/(v*v);
         }
-        this->value /= v;
+        this->value_ /= v;
 
         return *this;
     }
@@ -214,9 +214,9 @@ public:
     {
         // values and derivatives are divided
         auto tmp = 1.0/other;
-        this->value *= tmp;
+        this->value_ *= tmp;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            this->derivatives[varIdx] *= tmp;
+            this->derivatives_[varIdx] *= tmp;
 
         return *this;
     }
@@ -255,9 +255,9 @@ public:
     Evaluation operator-() const
     {
         Evaluation result;
-        result.value = -this->value;
+        result.value_ = -this->value_;
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            result.derivatives[varIdx] = - this->derivatives[varIdx];
+            result.derivatives_[varIdx] = - this->derivatives_[varIdx];
 
         return result;
     }
@@ -295,30 +295,30 @@ public:
     template <class RhsValueType>
     Evaluation& operator=(const RhsValueType& other)
     {
-        this->value = other;
-        std::fill(this->derivatives.begin(), this->derivatives.end(), 0.0);
+        this->value_ = other;
+        std::fill(this->derivatives_.begin(), this->derivatives_.end(), 0.0);
         return *this;
     }
 
     // copy assignment from evaluation
     Evaluation& operator=(const Evaluation& other)
     {
-        this->value = other.value;
-        std::copy(other.derivatives.begin(), other.derivatives.end(), this->derivatives.begin());
+        this->value_ = other.value_;
+        std::copy(other.derivatives_.begin(), other.derivatives_.end(), this->derivatives_.begin());
         return *this;
     }
 
     template <class RhsValueType>
     bool operator==(const RhsValueType& other) const
-    { return this->value == other; }
+    { return this->value_ == other; }
 
     bool operator==(const Evaluation& other) const
     {
-        if (this->value != other.value)
+        if (this->value_ != other.value_)
             return false;
 
         for (unsigned varIdx = 0; varIdx < size; ++varIdx)
-            if (this->derivatives[varIdx] != other.derivatives[varIdx])
+            if (this->derivatives_[varIdx] != other.derivatives_[varIdx])
                 return false;
 
         return true;
@@ -329,35 +329,53 @@ public:
 
     template <class RhsValueType>
     bool operator>(RhsValueType other) const
-    { return this->value > other; }
+    { return this->value_ > other; }
 
     bool operator>(const Evaluation& other) const
-    { return this->value > other.value; }
+    { return this->value_ > other.value_; }
 
     template <class RhsValueType>
     bool operator<(RhsValueType other) const
-    { return this->value < other; }
+    { return this->value_ < other; }
 
     bool operator<(const Evaluation& other) const
-    { return this->value < other.value; }
+    { return this->value_ < other.value_; }
 
     template <class RhsValueType>
     bool operator>=(RhsValueType other) const
-    { return this->value >= other; }
+    { return this->value_ >= other; }
 
     bool operator>=(const Evaluation& other) const
-    { return this->value >= other.value; }
+    { return this->value_ >= other.value_; }
 
     template <class RhsValueType>
     bool operator<=(RhsValueType other) const
-    { return this->value <= other; }
+    { return this->value_ <= other; }
 
     bool operator<=(const Evaluation& other) const
-    { return this->value <= other.value; }
+    { return this->value_ <= other.value_; }
 
-    // maybe this should be made 'private'...
-    ValueType value;
-    std::array<ValueType, size> derivatives;
+    ValueType value() const
+    { return value_; }
+
+    void setValue(const ValueType& val)
+    { value_ = val; }
+
+    ValueType derivative(unsigned varIdx) const
+    {
+        assert(varIdx < numVars);
+        return derivatives_[varIdx];
+    }
+
+    void setDerivative(unsigned varIdx, const ValueType& derVal)
+    {
+        assert(varIdx < numVars);
+        derivatives_[varIdx] = derVal;
+    }
+
+private:
+    ValueType value_;
+    std::array<ValueType, size> derivatives_;
 };
 
 template <class RhsValueType, class ValueType, int numVars>
@@ -378,7 +396,7 @@ bool operator>=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 
 template <class RhsValueType, class ValueType, int numVars>
 bool operator!=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
-{ return a != b.value; }
+{ return a != b.value(); }
 
 template <class RhsValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
@@ -395,9 +413,9 @@ Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation
 {
     Evaluation<ValueType, numVars> result;
 
-    result.value = a - b.value;
+    result.setValue(a - b.value());
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
-        result.derivatives[varIdx] = - b.derivatives[varIdx];
+        result.setDerivative(varIdx, - b.derivative(varIdx));
 
     return result;
 }
@@ -407,12 +425,12 @@ Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation
 {
     Evaluation<ValueType, numVars> result;
 
-    result.value = a/b.value;
+    result.setValue(a/b.value());
 
     // outer derivative
-    const ValueType& df_dg = - a/(b.value*b.value);
+    const ValueType& df_dg = - a/(b.value()*b.value());
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
-        result.derivatives[varIdx] = df_dg*b.derivatives[varIdx];
+        result.setDerivative(varIdx, df_dg*b.derivative(varIdx));
 
     return result;
 }
@@ -422,9 +440,9 @@ Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation
 {
     Evaluation<ValueType, numVars> result;
 
-    result.value = a*b.value;
+    result.setValue(a*b.value());
     for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
-        result.derivatives[varIdx] = a*b.derivatives[varIdx];
+        result.setDerivative(varIdx, a*b.derivative(varIdx));
 
     return result;
 }
@@ -432,7 +450,7 @@ Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation
 template <class ValueType, int numVars>
 std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>& eval)
 {
-    os << eval.value;
+    os << eval.value();
     return os;
 }
 

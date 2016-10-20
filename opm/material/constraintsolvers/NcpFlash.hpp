@@ -209,9 +209,9 @@ public:
             // the linear system of equations.
             for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
                 for (unsigned pvIdx = 0; pvIdx < numEq; ++ pvIdx)
-                    J[eqIdx][pvIdx] = defect[eqIdx].derivatives[pvIdx];
+                    J[eqIdx][pvIdx] = defect[eqIdx].derivative(pvIdx);
 
-                b[eqIdx] = defect[eqIdx].value;
+                b[eqIdx] = defect[eqIdx].value();
             }
             Valgrind::CheckDefined(J);
             Valgrind::CheckDefined(b);
@@ -330,7 +330,7 @@ protected:
         FlashEval Slast = InputToolbox::createConstant(1.0);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
             FlashEval S = inputFluidState.saturation(phaseIdx);
-            S.derivatives[S0PvIdx + phaseIdx] = 1.0;
+            S.setDerivative(S0PvIdx + phaseIdx, 1.0);
 
             Slast -= S;
 
@@ -341,7 +341,7 @@ protected:
         // copy the pressures: the first pressure is the first primary variable, the
         // remaining ones are given as p_beta = p_alpha + p_calpha,beta
         FlashEval p0 = inputFluidState.pressure(0);
-        p0.derivatives[p0PvIdx] = 1.0;
+        p0.setDerivative(p0PvIdx, 1.0);
 
         std::array<FlashEval, numPhases> pc;
         MaterialLaw::capillaryPressures(pc, matParams, flashFluidState);
@@ -352,7 +352,7 @@ protected:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 FlashEval x = inputFluidState.moleFraction(phaseIdx, compIdx);
-                x.derivatives[x00PvIdx + phaseIdx*numComponents + compIdx] = 1.0;
+                x.setDerivative(x00PvIdx + phaseIdx*numComponents + compIdx, 1.0);
                 flashFluidState.setMoleFraction(phaseIdx, compIdx, x);
             }
         }
@@ -376,17 +376,17 @@ protected:
     static void assignOutputFluidState_(const FlashFluidState& flashFluidState,
                                         OutputFluidState& outputFluidState)
     {
-        outputFluidState.setTemperature(flashFluidState.temperature(/*phaseIdx=*/0).value);
+        outputFluidState.setTemperature(flashFluidState.temperature(/*phaseIdx=*/0).value());
 
         // copy the saturations, pressures and densities
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            const auto& S = flashFluidState.saturation(phaseIdx).value;
+            const auto& S = flashFluidState.saturation(phaseIdx).value();
             outputFluidState.setSaturation(phaseIdx, S);
 
-            const auto& p = flashFluidState.pressure(phaseIdx).value;
+            const auto& p = flashFluidState.pressure(phaseIdx).value();
             outputFluidState.setPressure(phaseIdx, p);
 
-            const auto& rho = flashFluidState.density(phaseIdx).value;
+            const auto& rho = flashFluidState.density(phaseIdx).value();
             outputFluidState.setDensity(phaseIdx, rho);
         }
 
@@ -394,11 +394,11 @@ protected:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 const auto& moleFrac =
-                    flashFluidState.moleFraction(phaseIdx, compIdx).value;
+                    flashFluidState.moleFraction(phaseIdx, compIdx).value();
                 outputFluidState.setMoleFraction(phaseIdx, compIdx, moleFrac);
 
                 const auto& fugCoeff =
-                    flashFluidState.fugacityCoefficient(phaseIdx, compIdx).value;
+                    flashFluidState.fugacityCoefficient(phaseIdx, compIdx).value();
                 outputFluidState.setFugacityCoefficient(phaseIdx, compIdx, fugCoeff);
             }
         }
@@ -493,8 +493,8 @@ protected:
             }
             else if (isPressureIdx_(pvIdx)) {
                 // dampen to at most 50% change in pressure per iteration
-                delta = InnerEvalToolbox::min(0.5*fluidState.pressure(0).value,
-                                              InnerEvalToolbox::max(-0.5*fluidState.pressure(0).value,
+                delta = InnerEvalToolbox::min(0.5*fluidState.pressure(0).value(),
+                                              InnerEvalToolbox::max(-0.5*fluidState.pressure(0).value(),
                                                                     delta));
             }
 
