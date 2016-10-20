@@ -65,8 +65,8 @@ public:
     /*!
      * \brief Implement the temperature part of the gas PVT properties.
      */
-    void initFromDeck(DeckConstPtr deck,
-                      EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck,
+                      const EclipseState& eclState)
     {
         //////
         // initialize the isothermal part
@@ -77,10 +77,10 @@ public:
         //////
         // initialize the thermal part
         //////
-        const auto& tables = eclState->getTableManager();
+        const auto& tables = eclState.getTableManager();
 
-        enableThermalDensity_ = deck->hasKeyword("TREF");
-        enableThermalViscosity_ = deck->hasKeyword("GASVISCT");
+        enableThermalDensity_ = deck.hasKeyword("TREF");
+        enableThermalViscosity_ = deck.hasKeyword("GASVISCT");
 
         unsigned numRegions = isothermalPvt_->numRegions();
         setNumRegions(numRegions);
@@ -88,7 +88,7 @@ public:
         // viscosity
         if (enableThermalViscosity_) {
             const auto& gasvisctTables = tables.getGasvisctTables();
-            int gasCompIdx = deck->getKeyword("GCOMPIDX").getRecord(0).getItem("GAS_COMPONENT_INDEX").get< int >(0) - 1;
+            int gasCompIdx = deck.getKeyword("GCOMPIDX").getRecord(0).getItem("GAS_COMPONENT_INDEX").get< int >(0) - 1;
             std::string gasvisctColumnName = "Viscosity"+std::to_string(static_cast<long long>(gasCompIdx));
 
             for (unsigned regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
@@ -102,7 +102,7 @@ public:
         // for the first EOS. (since EOS != PVT region.)
         refTemp_ = 0.0;
         if (enableThermalDensity_) {
-            refTemp_ = deck->getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(0);
+            refTemp_ = deck.getKeyword("TREF").getRecord(0).getItem("TEMPERATURE").getSIDouble(0);
         }
     }
 #endif // HAVE_OPM_PARSER

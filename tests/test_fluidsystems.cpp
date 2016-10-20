@@ -72,8 +72,8 @@ void ensureBlackoilApi()
     // that they compile
     while (false) {
 #if HAVE_OPM_PARSER
-        Opm::DeckConstPtr deck;
-        Opm::EclipseStateConstPtr eclState;
+        Opm::Deck deck;
+        Opm::EclipseState eclState(deck);
         FluidSystem::initFromDeck(deck, eclState);
 #endif
 

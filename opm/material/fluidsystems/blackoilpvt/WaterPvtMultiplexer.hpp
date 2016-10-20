@@ -90,17 +90,17 @@ public:
      *
      * This method assumes that the deck features valid DENSITY and PVDG keywords.
      */
-    void initFromDeck(DeckConstPtr deck, EclipseStateConstPtr eclState)
+    void initFromDeck(const Deck& deck, const EclipseState& eclState)
     {
-        bool enableWater = deck->hasKeyword("WATER");
+        bool enableWater = deck.hasKeyword("WATER");
         if (!enableWater)
             return;
 
         if (enableThermal
-            && (deck->hasKeyword("WATDENT")
-                || deck->hasKeyword("VISCREF")))
+            && (deck.hasKeyword("WATDENT")
+                || deck.hasKeyword("VISCREF")))
             setApproach(ThermalWaterPvt);
-        else if (deck->hasKeyword("PVTW"))
+        else if (deck.hasKeyword("PVTW"))
             setApproach(ConstantCompressibilityWaterPvt);
 
         OPM_WATER_PVT_MULTIPLEXER_CALL(pvtImpl.initFromDeck(deck, eclState));

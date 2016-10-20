@@ -112,20 +112,20 @@ public:
     EclMaterialLawManager()
     {}
 
-    void initFromDeck(Opm::DeckConstPtr deck,
-                      Opm::EclipseStateConstPtr eclState,
+    void initFromDeck(const Opm::Deck& deck,
+                      const Opm::EclipseState& eclState,
                       const std::vector<int>& compressedToCartesianElemIdx)
     {
         // get the number of saturation regions and the number of cells in the deck
-        int ntsFun = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get<int>(0);
+        int ntsFun = deck.getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get<int>(0);
         unsigned numSatRegions = static_cast<unsigned>(ntsFun);
         size_t numCompressedElems = compressedToCartesianElemIdx.size();
 
         // copy the SATNUM grid property. in some cases this is not necessary, but it
         // should not require much memory anyway...
         std::vector<int> satnumRegionArray(numCompressedElems);
-        if (eclState->get3DProperties().hasDeckIntGridProperty("SATNUM")) {
-            const auto& satnumRawData = eclState->get3DProperties().getIntGridProperty("SATNUM").getData();
+        if (eclState.get3DProperties().hasDeckIntGridProperty("SATNUM")) {
+            const auto& satnumRawData = eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
             for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
                 unsigned cartesianElemIdx = static_cast<unsigned>(compressedToCartesianElemIdx[elemIdx]);
                 satnumRegionArray[elemIdx] = satnumRawData[cartesianElemIdx] - 1;
@@ -268,26 +268,26 @@ public:
         return oilWaterScaledEpsInfoDrainage_[elemIdx];
     }
 private:
-    void readGlobalEpsOptions_(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclState)
+    void readGlobalEpsOptions_(const Opm::Deck& deck, const Opm::EclipseState& eclState)
     {
         oilWaterEclEpsConfig_ = std::make_shared<Opm::EclEpsConfig>();
         oilWaterEclEpsConfig_-> initFromDeck(deck, eclState, Opm::EclOilWaterSystem);
 
-        enableEndPointScaling_ = deck->hasKeyword("ENDSCALE");
+        enableEndPointScaling_ = deck.hasKeyword("ENDSCALE");
 
     }
 
-    void readGlobalHysteresisOptions_(Opm::DeckConstPtr deck)
+    void readGlobalHysteresisOptions_(const Opm::Deck& deck)
     {
         hysteresisConfig_ = std::make_shared<Opm::EclHysteresisConfig>();
         hysteresisConfig_->initFromDeck(deck);
     }
 
-    void readGlobalThreePhaseOptions_(Opm::DeckConstPtr deck)
+    void readGlobalThreePhaseOptions_(const Opm::Deck& deck)
     {
-        bool gasEnabled = deck->hasKeyword("GAS");
-        bool oilEnabled = deck->hasKeyword("OIL");
-        bool waterEnabled = deck->hasKeyword("WATER");
+        bool gasEnabled = deck.hasKeyword("GAS");
+        bool oilEnabled = deck.hasKeyword("OIL");
+        bool waterEnabled = deck.hasKeyword("WATER");
 
         int numEnabled =
             (gasEnabled?1:0)
@@ -311,18 +311,18 @@ private:
             assert(numEnabled == 3);
 
             threePhaseApproach_ = Opm::EclDefaultApproach;
-            if (deck->hasKeyword("STONE") || deck->hasKeyword("STONE2"))
+            if (deck.hasKeyword("STONE") || deck.hasKeyword("STONE2"))
                 threePhaseApproach_ = Opm::EclStone2Approach;
-            else if (deck->hasKeyword("STONE1"))
+            else if (deck.hasKeyword("STONE1"))
                 threePhaseApproach_ = Opm::EclStone1Approach;
         }
     }
 
-    void initParamsForElements_(DeckConstPtr deck, EclipseStateConstPtr eclState,
+    void initParamsForElements_(const Deck& deck, const EclipseState& eclState,
                                 const std::vector<int>& compressedToCartesianElemIdx,
                                 const std::vector<int>& satnumRegionArray)
     {
-        unsigned numSatRegions = static_cast<unsigned>(deck->getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get<int>(0));
+        unsigned numSatRegions = static_cast<unsigned>(deck.getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get<int>(0));
         unsigned numCompressedElems = static_cast<unsigned>(compressedToCartesianElemIdx.size());
 
         // read the end point scaling configuration. this needs to be done only once per
@@ -416,7 +416,7 @@ private:
             oilWaterImbParams.resize(numCompressedElems);
         }
 
-        const auto& imbnumData = eclState->get3DProperties().getIntGridProperty("IMBNUM").getData();
+        const auto& imbnumData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         assert(numCompressedElems == satnumRegionArray.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             unsigned satnumIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
@@ -505,9 +505,9 @@ private:
         FamilyII
     };
 
-    SaturationFunctionFamily getSaturationFunctionFamily(Opm::EclipseStateConstPtr eclState) const
+    SaturationFunctionFamily getSaturationFunctionFamily(const Opm::EclipseState& eclState) const
     {
-        const auto& tableManager = eclState->getTableManager();
+        const auto& tableManager = eclState.getTableManager();
         const TableContainer& swofTables = tableManager.getSwofTables();
         const TableContainer& slgofTables= tableManager.getSlgofTables();
         const TableContainer& sgofTables = tableManager.getSgofTables();
@@ -539,15 +539,15 @@ private:
 
     template <class Container>
     void readGasOilEffectiveParameters_(Container& dest,
-                                        Opm::DeckConstPtr deck,
-                                        Opm::EclipseStateConstPtr eclState,
+                                        const Opm::Deck& deck,
+                                        const Opm::EclipseState& eclState,
                                         unsigned satnumIdx)
     {
         dest[satnumIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
-        bool hasWater = deck->hasKeyword("WATER");
-        bool hasGas = deck->hasKeyword("GAS");
-        bool hasOil = deck->hasKeyword("OIL");
+        bool hasWater = deck.hasKeyword("WATER");
+        bool hasGas = deck.hasKeyword("GAS");
+        bool hasOil = deck.hasKeyword("OIL");
 
         auto& effParams = *dest[satnumIdx];
 
@@ -556,7 +556,7 @@ private:
         Scalar Swco = unscaledEpsInfo_[satnumIdx].Swl;
 
         // handle the twophase case
-        const auto& tableManager = eclState->getTableManager();
+        const auto& tableManager = eclState.getTableManager();
         if (!hasWater) {
             const TableContainer& sgofTables  = tableManager.getSgofTables();
             const TableContainer& slgofTables = tableManager.getSlgofTables();
@@ -673,17 +673,17 @@ private:
 
     template <class Container>
     void readOilWaterEffectiveParameters_(Container& dest,
-                                          Opm::DeckConstPtr deck,
-                                          Opm::EclipseStateConstPtr eclState,
+                                          const Opm::Deck& deck,
+                                          const Opm::EclipseState& eclState,
                                           unsigned satnumIdx)
     {
         dest[satnumIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
-        bool hasWater = deck->hasKeyword("WATER");
-        bool hasGas = deck->hasKeyword("GAS");
-        bool hasOil = deck->hasKeyword("OIL");
+        bool hasWater = deck.hasKeyword("WATER");
+        bool hasGas = deck.hasKeyword("GAS");
+        bool hasOil = deck.hasKeyword("OIL");
 
-        const auto& tableManager = eclState->getTableManager();
+        const auto& tableManager = eclState.getTableManager();
         auto& effParams = *dest[satnumIdx];
 
         // handle the twophase case
@@ -748,8 +748,8 @@ private:
     template <class Container>
     void readGasOilUnscaledPoints_(Container &dest,
                                    std::shared_ptr<EclEpsConfig> config,
-                                   Opm::DeckConstPtr /* deck */,
-                                   Opm::EclipseStateConstPtr /* eclState */,
+                                   const Opm::Deck& /* deck */,
+                                   const Opm::EclipseState& /* eclState */,
                                    unsigned satnumIdx)
     {
         dest[satnumIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
@@ -759,8 +759,8 @@ private:
     template <class Container>
     void readOilWaterUnscaledPoints_(Container &dest,
                                      std::shared_ptr<EclEpsConfig> config,
-                                     Opm::DeckConstPtr /* deck */,
-                                     Opm::EclipseStateConstPtr /* eclState */,
+                                     const Opm::Deck& /* deck */,
+                                     const Opm::EclipseState& /* eclState */,
                                      unsigned satnumIdx)
     {
         dest[satnumIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
@@ -801,8 +801,8 @@ private:
         destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclOilWaterSystem);
     }
 
-    void initThreePhaseParams_(Opm::DeckConstPtr deck,
-                               Opm::EclipseStateConstPtr /* eclState */,
+    void initThreePhaseParams_(const Opm::Deck& deck,
+                               const Opm::EclipseState& /* eclState */,
                                MaterialLawParams& materialParams,
                                unsigned satnumIdx,
                                const EclEpsScalingPointsInfo<Scalar>& epsInfo,
@@ -818,9 +818,9 @@ private:
             realParams.setOilWaterParams(oilWaterParams);
             realParams.setSwl(epsInfo.Swl);
 
-            if (deck->hasKeyword("STONE1EX")) {
+            if (deck.hasKeyword("STONE1EX")) {
                 Scalar eta =
-                    deck->getKeyword("STONE1EX").getRecord(satnumIdx).getItem(0).getSIDouble(0);
+                    deck.getKeyword("STONE1EX").getRecord(satnumIdx).getItem(0).getSIDouble(0);
                 realParams.setEta(eta);
             }
             else

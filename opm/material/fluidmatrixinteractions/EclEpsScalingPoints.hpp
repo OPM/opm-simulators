@@ -63,16 +63,16 @@ class EclEpsGridProperties
 
 public:
 #if HAVE_OPM_PARSER
-    void initFromDeck(Opm::DeckConstPtr /* deck */,
-                      Opm::EclipseStateConstPtr eclState,
+    void initFromDeck(const Opm::Deck& /* deck */,
+                      const Opm::EclipseState& eclState,
                       bool useImbibition)
     {
         std::string kwPrefix = useImbibition?"I":"";
 
         if (useImbibition)
-            satnum = &eclState->get3DProperties().getIntGridProperty("IMBNUM").getData();
+            satnum = &eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         else
-            satnum = &eclState->get3DProperties().getIntGridProperty("SATNUM").getData();
+            satnum = &eclState.get3DProperties().getIntGridProperty("SATNUM").getData();
 
         retrieveGridPropertyData_(&swl, eclState, kwPrefix+"SWL");
         retrieveGridPropertyData_(&sgl, eclState, kwPrefix+"SGL");
@@ -111,12 +111,12 @@ private:
     // this method makes sure that a grid property is not created if it is not explicitly
     // mentioned in the deck. (saves memory.)
     void retrieveGridPropertyData_(const DoubleData **data,
-                                   Opm::EclipseStateConstPtr eclState,
+                                   const Opm::EclipseState& eclState,
                                    const std::string& properyName)
     {
         (*data) = 0;
-        if (eclState->get3DProperties().hasDeckDoubleGridProperty(properyName))
-            (*data) = &eclState->get3DProperties().getDoubleGridProperty(properyName).getData();
+        if (eclState.get3DProperties().hasDeckDoubleGridProperty(properyName))
+            (*data) = &eclState.get3DProperties().getDoubleGridProperty(properyName).getData();
     }
 #endif
 };
@@ -188,12 +188,12 @@ struct EclEpsScalingPointsInfo
      * I.e., the values which are used for the nested Fluid-Matrix interactions and which
      * are produced by them.
      */
-    void extractUnscaled(Opm::DeckConstPtr deck,
-                         Opm::EclipseStateConstPtr eclState,
+    void extractUnscaled(const Opm::Deck& deck,
+                         const Opm::EclipseState& eclState,
                          unsigned satRegionIdx)
     {
         // TODO: support for the SOF2/SOF3 keyword family
-        const auto& tables = eclState->getTableManager();
+        const auto& tables = eclState.getTableManager();
         const TableContainer&  swofTables = tables.getSwofTables();
         const TableContainer&  sgofTables = tables.getSgofTables();
         const TableContainer& slgofTables = tables.getSlgofTables();
@@ -201,9 +201,9 @@ struct EclEpsScalingPointsInfo
         const TableContainer&  sgfnTables = tables.getSgfnTables();
         const TableContainer&  sof3Tables = tables.getSof3Tables();
 
-        bool hasWater = deck->hasKeyword("WATER");
-        bool hasGas = deck->hasKeyword("GAS");
-        bool hasOil = deck->hasKeyword("OIL");
+        bool hasWater = deck.hasKeyword("WATER");
+        bool hasGas = deck.hasKeyword("GAS");
+        bool hasOil = deck.hasKeyword("OIL");
 
         if (!hasWater) {
             Swl = 0.0;

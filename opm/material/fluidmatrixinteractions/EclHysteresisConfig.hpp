@@ -111,14 +111,14 @@ public:
      *
      * This requires that the opm-parser module is available.
      */
-    void initFromDeck(Opm::DeckConstPtr deck)
+    void initFromDeck(const Opm::Deck& deck)
     {
         enableHysteresis_ = false;
 
-        if (!deck->hasKeyword("SATOPTS"))
+        if (!deck.hasKeyword("SATOPTS"))
             return;
 
-        const auto& satoptsItem = deck->getKeyword("SATOPTS").getRecord(0).getItem(0);
+        const auto& satoptsItem = deck.getKeyword("SATOPTS").getRecord(0).getItem(0);
         for (unsigned i = 0; i < satoptsItem.size(); ++i) {
             std::string satoptsValue = satoptsItem.get< std::string >(0);
             std::transform(satoptsValue.begin(),
@@ -131,19 +131,19 @@ public:
         }
 
         // check for the (deprecated) HYST keyword
-        if (deck->hasKeyword("HYST"))
+        if (deck.hasKeyword("HYST"))
             enableHysteresis_ = true;
 
         if (!enableHysteresis_)
             return;
 
-        if (!deck->hasKeyword("EHYSTR"))
+        if (!deck.hasKeyword("EHYSTR"))
             OPM_THROW(std::runtime_error,
                       "Enabling hysteresis via the HYST parameter for SATOPTS requires the "
                       "presence of the EHYSTR keyword");
 
-        const auto& ehystrKeyword = deck->getKeyword("EHYSTR");
-        if (deck->hasKeyword("NOHYKR"))
+        const auto& ehystrKeyword = deck.getKeyword("EHYSTR");
+        if (deck.hasKeyword("NOHYKR"))
             krHysteresisModel_ = -1;
         else {
             krHysteresisModel_ = ehystrKeyword.getRecord(0).getItem("relative_perm_hyst").get< int >(0);
@@ -153,7 +153,7 @@ public:
                           " of the 'EHYSTR' keyword) is supported");
         }
 
-        if (deck->hasKeyword("NOHYPC"))
+        if (deck.hasKeyword("NOHYPC"))
             pcHysteresisModel_ = -1;
         else {
             // if capillary pressure hysteresis is enabled, Eclipse always uses the
