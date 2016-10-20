@@ -1400,30 +1400,30 @@ protected:
         typedef Opm::DenseAd::Evaluation<Scalar, 1> BhpEval;
 
         BhpEval bhpEval(bhpScalar);
-        bhpEval.derivatives[0] = 1.0;
+        bhpEval.setDerivative(0, 1.0);
         const Scalar tolerance = 1e3*std::numeric_limits<Scalar>::epsilon();
         for (int iterNum = 0; iterNum < 20; ++iterNum) {
             const auto& f = wellResidual_<BhpEval>(bhpEval);
 
-            if (std::abs(f.derivatives[0]) < 1e-20)
+            if (std::abs(f.derivative(0)) < 1e-20)
                 OPM_THROW(Opm::NumericalProblem,
                           "Cannot determine the bottom hole pressure for well " << name()
                           << ": Derivative of the well residual is too small");
-            Scalar delta = f.value/f.derivatives[0];
+            Scalar delta = f.value()/f.derivative(0);
 
-            bhpEval.value -= delta;
+            bhpEval.setValue(bhpEval.value() - delta);
             if (bhpEval < 1e5) {
-                bhpEval.value = 1e5;
+                bhpEval.setValue(1e5);
                 if (onBail)
-                    return bhpEval.value;
+                    return bhpEval.value();
                 else
                     onBail = true;
             }
             else
                 onBail = false;
 
-            if (std::abs(delta/bhpEval.value) < tolerance)
-                return bhpEval.value;
+            if (std::abs(delta/bhpEval.value()) < tolerance)
+                return bhpEval.value();
         }
 
         OPM_THROW(Opm::NumericalProblem,
