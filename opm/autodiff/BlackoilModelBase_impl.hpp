@@ -822,7 +822,7 @@ namespace detail {
         asImpl().wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
         }
         V aliveWells;
         std::vector<ADB> cq_s;
@@ -837,6 +837,7 @@ namespace detail {
             asImpl().makeConstantState(state0);
             asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
         }
+
         return iter_report;
     }
 
@@ -1020,6 +1021,7 @@ namespace detail {
     BlackoilModelBase<Grid, WellModel, Implementation>::
     solveWellEq(const std::vector<ADB>& mob_perfcells,
                 const std::vector<ADB>& b_perfcells,
+                const ReservoirState& reservoir_state,
                 SolutionState& state,
                 WellState& well_state)
     {
@@ -1060,6 +1062,14 @@ namespace detail {
             asImpl().wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = getWellConvergence(it);
 
+            // Enforce the VREP control
+            if (it == 0 && asImpl().wellModel().wellCollection()->havingVREPGroups()) {
+                std::vector<double> well_voidage_rates;
+                std::vector<double> voidage_conversion_coeffs;
+                computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
+                asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
+            }
+
             // When the well targets are just updated or need to be updated, we need at least one more iteration.
             if (asImpl().wellModel().wellCollection()->justUpdateWellTargets()) {
                 converged = false;
@@ -1091,6 +1101,14 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
+
+                // Enforce the VREP control
+                if (asImpl().wellModel().wellCollection()->havingVREPGroups()) {
+                    std::vector<double> well_voidage_rates;
+                    std::vector<double> voidage_conversion_coeffs;
+                    computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
+                    asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
+                }
             }
             // We have to update the well controls regardless whether there are local
             // wells active or not as parallel logging will take place that needs to
@@ -1510,6 +1528,13 @@ namespace detail {
 
 
         asImpl().wellModel().updateWellState(dwells, dpMaxRel(), well_state);
+
+        if (asImpl().wellModel().wellCollection()->havingVREPGroups()) {
+            std::vector<double> well_voidage_rates;
+            std::vector<double> voidage_conversion_coeffs;
+            computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
+            asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
+        }
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
@@ -2567,6 +2592,95 @@ namespace detail {
         }
 
         return values;
+    }
+
+
+
+
+
+    template <class Grid, class WellModel, class Implementation>
+    void
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    computeWellVoidageRates(const ReservoirState& reservoir_state,
+                            const WellState& well_state,
+                            std::vector<double>& well_voidage_rates,
+                            std::vector<double>& voidage_conversion_coeffs)
+    {
+        // TODO: for now, we store the voidage rates for all the production wells.
+        // For injection wells, the rates are stored as zero.
+        // Later, more delicate model will be implemented here.
+        // And for the moment, group control can only work for serial running.
+        const int nw = well_state.numWells();
+        const int np = numPhases();
+
+        const Wells* wells = asImpl().wellModel().wellsPointer();
+
+        // we calculate the voidage rate for each well, that means the sum of all the phases.
+        well_voidage_rates.resize(nw, 0);
+        // store the conversion coefficients, while only for the use of injection wells.
+        voidage_conversion_coeffs.resize(nw * np, 1.0);
+
+        int global_number_wells = nw;
+
+#if HAVE_MPI
+        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        {
+            const auto& info =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            global_number_wells = info.communicator().sum(global_number_wells);
+            if ( global_number_wells )
+            {
+                // At least one process has resv wells. Therefore rate converter needs
+                // to calculate averages over regions that might cross process
+                // borders. This needs to be done by all processes and therefore
+                // outside of the next if statement.
+                rate_converter_.defineState(reservoir_state, boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation()));
+            }
+        }
+        else
+#endif
+        {
+            if ( global_number_wells )
+            {
+                rate_converter_.defineState(reservoir_state);
+            }
+        }
+
+        std::vector<double> well_rates(np);
+        std::vector<double> convert_coeff(np);
+
+
+        if ( !well_voidage_rates.empty() ) {
+            for (int w = 0; w < nw; ++w) {
+                const bool is_producer = wells->type[w] == PRODUCER;
+
+                // not sure necessary to change all the value to be positive
+                if (is_producer) {
+                    std::transform(well_state.wellRates().begin() + np * w,
+                                   well_state.wellRates().begin() + np * (w + 1),
+                                   well_rates.begin(), std::negate<double>());
+
+                    const int fipreg = 0; // Not considering FIP for the moment.
+                    // We will need convert_coeff later actually.
+                    // They should all be the same, right?
+                    rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                    well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
+                                                               convert_coeff.begin(), 0.0);
+                } else {
+                    // TODO: it is possible we should use the distribution coeffs from
+                    // the well controls.
+                    // It will be problem if the rates are all zero here.
+                    // It also raises the question where we should call this function.
+                    std::copy(well_state.wellRates().begin() + np * w,
+                              well_state.wellRates().begin() + np * (w + 1),
+                              well_rates.begin());
+                    const int fipreg = 0; // Not considering FIP for the moment.
+                    rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                    std::copy(convert_coeff.begin(), convert_coeff.end(),
+                              voidage_conversion_coeffs.begin() + np * w);
+                }
+            }
+        }
     }
 
 } // namespace Opm

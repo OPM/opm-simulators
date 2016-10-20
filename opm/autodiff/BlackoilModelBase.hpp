@@ -312,6 +312,14 @@ namespace Opm {
         computeFluidInPlace(const ReservoirState& x,
                             const std::vector<int>& fipnum);
 
+        /// Function to compute the resevoir voidage for the production wells.
+        /// TODO: it is just prototyping, and not sure where is the best place to
+        /// put this function yet.
+        void computeWellVoidageRates(const ReservoirState& reservoir_state,
+                                     const WellState& well_state,
+                                     std::vector<double>& well_voidage_rates,
+                                     std::vector<double>& voidage_conversion_coeffs);
+
     protected:
 
         // ---------  Types and enums  ---------
@@ -427,6 +435,7 @@ namespace Opm {
         IterationReport
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
+                    const ReservoirState& reservoir_state,
                     SolutionState& state,
                     WellState& well_state);
 
