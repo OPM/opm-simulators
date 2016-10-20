@@ -669,10 +669,13 @@ protected:
     {
         auto eclStatePtr = simulator_.gridManager().eclState();
         const auto& deckSchedule = eclStatePtr->getSchedule();
-        const auto& eclGrid = eclStatePtr->getInputGrid();
 
+#ifndef NDEBUG
+        const auto& eclGrid = eclStatePtr->getInputGrid();
         assert( int(eclGrid.getNX()) == simulator_.gridManager().cartesianDimensions()[ 0 ] );
         assert( int(eclGrid.getNY()) == simulator_.gridManager().cartesianDimensions()[ 1 ] );
+        assert( int(eclGrid.getNZ()) == simulator_.gridManager().cartesianDimensions()[ 2 ] );
+#endif
 
         // compute the mapping from logically Cartesian indices to the well the
         // respective completion.
