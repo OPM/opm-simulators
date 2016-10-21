@@ -37,8 +37,8 @@ namespace Opm
 class SolventPropsAdFromDeck
 {
 public:
-    SolventPropsAdFromDeck(DeckConstPtr deck,
-                           EclipseStateConstPtr eclipseState,
+    SolventPropsAdFromDeck(const Deck& deck,
+                           const EclipseState& eclipseState,
                            const int number_of_cells,
                            const int* global_cell);
 
@@ -170,7 +170,7 @@ private:
     /// \param[in] compressedToCartesianCellIdx cartesianCellIdx for each cell in the grid
     /// \param[out] tableIdx table index for each compressed cell
     void extractTableIndex(const std::string& keyword,
-                           Opm::EclipseStateConstPtr eclState,
+                           const Opm::EclipseState& eclState,
                            size_t numCompressed,
                            const int* compressedToCartesianCellIdx,
                            std::vector<int>& tableIdx) const;

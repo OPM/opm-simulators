@@ -72,13 +72,13 @@ struct SetupMSW {
     SetupMSW()
     {
         Opm::ParseContext parse_context;
-        Opm::ParserPtr parser(new Opm::Parser());
-        Opm::DeckConstPtr deck = parser->parseFile("msw.data", parse_context);
-        Opm::EclipseStateConstPtr ecl_state(new Opm::EclipseState(*deck , parse_context));
+        Opm::Parser parser;
+        auto deck = parser.parseFile("msw.data", parse_context);
+        Opm::EclipseState ecl_state(deck , parse_context);
 
         // Create grid.
         const std::vector<double>& porv =
-                            ecl_state->get3DProperties().getDoubleGridProperty("PORV").getData();
+                            ecl_state.get3DProperties().getDoubleGridProperty("PORV").getData();
 
         std::unique_ptr<GridInit> grid_init(new GridInit(ecl_state, porv));
         const Grid& grid = grid_init->grid();
@@ -117,7 +117,7 @@ struct SetupMSW {
                                         std::unordered_set<std::string>());
 
         const Wells* wells = wells_manager.c_wells();
-        const auto wells_ecl = ecl_state->getSchedule()->getWells(current_timestep);
+        const auto wells_ecl = ecl_state.getSchedule().getWells(current_timestep);
 
         ms_wells.reset(new Opm::MultisegmentWells(wells, wells_ecl, current_timestep));
     };

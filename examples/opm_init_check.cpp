@@ -207,9 +207,9 @@ public:
 
 /*****************************************************************/
 
-void initOPMTrans(TransGraph& opmTrans, DeckConstPtr deck, std::shared_ptr<const EclipseState> eclipseState) {
-    std::shared_ptr<GridManager> grid = std::make_shared<GridManager>( *eclipseState->getInputGrid(),
-            eclipseState->get3DProperties().getDoubleGridProperty( "PORV" ).getData() );
+void initOPMTrans(TransGraph& opmTrans, const Deck& deck, const EclipseState& eclipseState) {
+    std::shared_ptr<GridManager> grid = std::make_shared<GridManager>( eclipseState.getInputGrid(),
+            eclipseState.get3DProperties().getDoubleGridProperty( "PORV" ).getData() );
     const struct UnstructuredGrid * cGrid = grid->c_grid();
     std::shared_ptr<BlackoilPropsAdInterface> props;
 
@@ -317,7 +317,7 @@ void initEclipseTrans(TransGraph& eclipseTrans , const ecl_grid_type * ecl_grid 
 
 
 
-void dump_transGraph( DeckConstPtr deck , std::shared_ptr<const EclipseState> eclipseState , const ecl_grid_type * ecl_grid , const ecl_file_type * ecl_init) {
+void dump_transGraph( const Deck& deck , const EclipseState& eclipseState , const ecl_grid_type * ecl_grid , const ecl_file_type * ecl_init) {
     int nx = ecl_grid_get_nx( ecl_grid );
     int ny = ecl_grid_get_ny( ecl_grid );
     int nz = ecl_grid_get_nz( ecl_grid );
@@ -344,12 +344,12 @@ int main(int argc, char** argv) {
     std::string init_file = argv[2];
     std::string grid_file = argv[3];
     
-    ParserPtr parser(new Parser());
+    Parser parser;
 
     ParseContext parseContext;
     std::cout << "Parsing input file ............: " << input_file << std::endl;
-    DeckConstPtr deck = parser->parseFile(input_file, parseContext);
-    std::shared_ptr<EclipseState> state = std::make_shared<EclipseState>( *deck , parseContext );
+    const Deck& deck = parser.parseFile(input_file, parseContext);
+    EclipseState state( deck , parseContext );
     
     std::cout << "Loading eclipse INIT file .....: " << init_file << std::endl;
     ecl_file_type * ecl_init = ecl_file_open( init_file.c_str() , 0 );

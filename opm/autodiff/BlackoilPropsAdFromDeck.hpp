@@ -85,8 +85,8 @@ namespace Opm
         /// \param grid The grid upon which the simulation is run on.
         /// \param init_rock If true the rock properties (rock compressibility and
         ///                  reference pressure) are read from the deck
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                Opm::EclipseStateConstPtr eclState,
+        BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                const Opm::EclipseState& eclState,
                                 std::shared_ptr<MaterialLawManager> materialLawManager,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
@@ -106,8 +106,8 @@ namespace Opm
         /// \param grid The grid upon which the simulation is run on.
         /// \param init_rock If true the rock properties (rock compressibility and
         ///                  reference pressure) are read from the deck
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                Opm::EclipseStateConstPtr eclState,
+        BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                const Opm::EclipseState& eclState,
                                 std::shared_ptr<MaterialLawManager> materialLawManager,
                                 const Dune::CpGrid& grid,
                                 const bool init_rock = true );
@@ -120,8 +120,8 @@ namespace Opm
         /// \param grid The grid upon which the simulation is run on.
         /// \param init_rock If true the rock properties (rock compressibility and
         ///                  reference pressure) are read from the deck
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                Opm::EclipseStateConstPtr eclState,
+        BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                const Opm::EclipseState& eclState,
                                 const UnstructuredGrid& grid,
                                 const bool init_rock = true );
 
@@ -133,8 +133,8 @@ namespace Opm
         /// \param grid The grid upon which the simulation is run on.
         /// \param init_rock If true the rock properties (rock compressibility and
         ///                  reference pressure) are read from the deck
-        BlackoilPropsAdFromDeck(Opm::DeckConstPtr deck,
-                                Opm::EclipseStateConstPtr eclState,
+        BlackoilPropsAdFromDeck(const Opm::Deck& deck,
+                                const Opm::EclipseState& eclState,
                                 const Dune::CpGrid& grid,
                                 const bool init_rock = true );
 #endif
@@ -383,8 +383,8 @@ namespace Opm
 
     private:
         /// Initializes the properties.
-        void init(Opm::DeckConstPtr deck,
-                  Opm::EclipseStateConstPtr eclState,
+        void init(const Opm::Deck& deck,
+                  const Opm::EclipseState& eclState,
                   std::shared_ptr<MaterialLawManager> materialLawManager,
                   int number_of_cells,
                   const int* global_cell,

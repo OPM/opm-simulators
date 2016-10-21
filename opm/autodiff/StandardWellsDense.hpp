@@ -1270,7 +1270,7 @@ namespace Opm {
             /// upate the dynamic lists related to economic limits
             template<class WellState>
             void
-            updateListEconLimited(ScheduleConstPtr schedule,
+            updateListEconLimited(const Schedule& schedule,
                                   const int current_step,
                                   const Wells* wells_struct,
                                   const WellState& well_state,
@@ -1282,7 +1282,7 @@ namespace Opm {
                     // flag to check if the mim oil/gas rate limit is violated
                     bool rate_limit_violated = false;
                     const std::string& well_name = wells_struct->name[w];
-                    const Well* well_ecl = schedule->getWell(well_name);
+                    const Well* well_ecl = schedule.getWell(well_name);
                     const WellEconProductionLimits& econ_production_limits = well_ecl->getEconProductionLimits(current_step);
 
                     // economic limits only apply for production wells.

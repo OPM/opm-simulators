@@ -45,8 +45,8 @@ namespace Opm
 /// \param[in] gravity        The gravity constant
 template <class Grid>
 void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
-                  const DeckConstPtr& deck,
-                  EclipseStateConstPtr eclipseState,
+                  const Deck& deck,
+                  const EclipseState& eclipseState,
                   const Grid& grid,
                   const BlackoilState& initialState,
                   const BlackoilPropertiesFromDeck& props,
@@ -55,12 +55,12 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
     const PhaseUsage& pu = props.phaseUsage();
 
-    const auto& eqlnum = eclipseState->get3DProperties().getIntGridProperty("EQLNUM");
+    const auto& eqlnum = eclipseState.get3DProperties().getIntGridProperty("EQLNUM");
     const auto& eqlnumData = eqlnum.getData();
 
     const int numPhases = initialState.numPhases();
     const int numCells = UgGridHelpers::numCells(grid);
-    const int numPvtRegions = deck->getKeyword("TABDIMS").getRecord(0).getItem("NTPVT").get< int >(0);
+    const int numPvtRegions = deck.getKeyword("TABDIMS").getRecord(0).getItem("NTPVT").get< int >(0);
 
     // retrieve the minimum (residual!?) and the maximum saturations for all cells
     std::vector<double> minSat(numPhases*numCells);
@@ -73,7 +73,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
     // retrieve the surface densities
     std::vector<std::vector<double> > surfaceDensity(numPvtRegions);
-    const auto& densityKw = deck->getKeyword("DENSITY");
+    const auto& densityKw = deck.getKeyword("DENSITY");
     for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx) {
         surfaceDensity[regionIdx].resize(numPhases);
 
@@ -100,7 +100,7 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
     // Fortran indices.
     const int* gc = UgGridHelpers::globalCell(grid);
     std::vector<int> pvtRegion(numCells);
-    const auto& cartPvtRegion = eclipseState->get3DProperties().getIntGridProperty("PVTNUM").getData();
+    const auto& cartPvtRegion = eclipseState.get3DProperties().getIntGridProperty("PVTNUM").getData();
     for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
         const int cartCellIdx = gc ? gc[cellIdx] : cellIdx;
         pvtRegion[cellIdx] = std::max(0, cartPvtRegion[cartCellIdx] - 1);
@@ -318,16 +318,16 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
 
     template <class Grid>
-    std::vector<double> thresholdPressures(const DeckConstPtr& /* deck */,
-                                           EclipseStateConstPtr eclipseState,
+    std::vector<double> thresholdPressures(const Deck& /* deck */,
+                                           const EclipseState& eclipseState,
                                            const Grid& grid,
                                            const std::map<std::pair<int, int>, double>& maxDp)
     {
-        const SimulationConfig& simulationConfig = eclipseState->getSimulationConfig();
+        const SimulationConfig& simulationConfig = eclipseState.getSimulationConfig();
         std::vector<double> thpres_vals;
         if (simulationConfig.hasThresholdPressure()) {
-            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig.getThresholdPressure();
-            const auto& eqlnum = eclipseState->get3DProperties().getIntGridProperty("EQLNUM");
+            const ThresholdPressure& thresholdPressure = simulationConfig.getThresholdPressure();
+            const auto& eqlnum = eclipseState.get3DProperties().getIntGridProperty("EQLNUM");
             const auto& eqlnumData = eqlnum.getData();
 
             // Set threshold pressure values for each cell face.
@@ -347,9 +347,9 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                 const int eq1 = eqlnumData[gc1];
                 const int eq2 = eqlnumData[gc2];
 
-                if (thresholdPressure->hasRegionBarrier(eq1,eq2)) {
-                    if (thresholdPressure->hasThresholdPressure(eq1,eq2)) {
-                        thpres_vals[face] = thresholdPressure->getThresholdPressure(eq1,eq2);
+                if (thresholdPressure.hasRegionBarrier(eq1,eq2)) {
+                    if (thresholdPressure.hasThresholdPressure(eq1,eq2)) {
+                        thpres_vals[face] = thresholdPressure.getThresholdPressure(eq1,eq2);
                     }
                     else {
                         // set the threshold pressure for faces of PVT regions where the third item
@@ -380,15 +380,15 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
     ///                           particular connection. An empty vector is
     ///                           returned if there is no THPRES
     ///                           feature used in the deck.
-     std::vector<double> thresholdPressuresNNC(EclipseStateConstPtr eclipseState,
+     std::vector<double> thresholdPressuresNNC(const EclipseState& eclipseState,
                                                const NNC& nnc,
                                                const std::map<std::pair<int, int>, double>& maxDp)
     {
-        const SimulationConfig& simulationConfig = eclipseState->getSimulationConfig();
+        const SimulationConfig& simulationConfig = eclipseState.getSimulationConfig();
         std::vector<double> thpres_vals;
         if (simulationConfig.hasThresholdPressure()) {
-            std::shared_ptr<const ThresholdPressure> thresholdPressure = simulationConfig.getThresholdPressure();
-            const auto& eqlnum = eclipseState->get3DProperties().getIntGridProperty("EQLNUM");
+            const ThresholdPressure& thresholdPressure = simulationConfig.getThresholdPressure();
+            const auto& eqlnum = eclipseState.get3DProperties().getIntGridProperty("EQLNUM");
             const auto& eqlnumData = eqlnum.getData();
 
             // Set values for each NNC
@@ -400,9 +400,9 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
                 const int eq1 = eqlnumData[gc1];
                 const int eq2 = eqlnumData[gc2];
 
-                if (thresholdPressure->hasRegionBarrier(eq1,eq2)) {
-                    if (thresholdPressure->hasThresholdPressure(eq1,eq2)) {
-                        thpres_vals[i] = thresholdPressure->getThresholdPressure(eq1,eq2);
+                if (thresholdPressure.hasRegionBarrier(eq1,eq2)) {
+                    if (thresholdPressure.hasThresholdPressure(eq1,eq2)) {
+                        thpres_vals[i] = thresholdPressure.getThresholdPressure(eq1,eq2);
                     } else {
                         // set the threshold pressure for NNC of PVT regions where the third item
                         // has been defaulted to the maximum pressure potential difference between

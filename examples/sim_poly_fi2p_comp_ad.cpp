@@ -142,7 +142,7 @@ try
 
     std::string logFile = output_dir + "/LOGFILE.txt";
     Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
-    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::Parser parser;
     {
         std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(logFile , Opm::Log::DefaultMessageTypes);
         std::shared_ptr<Opm::CounterLog> counterLog = std::make_shared<Opm::CounterLog>(Opm::Log::DefaultMessageTypes);
@@ -151,11 +151,11 @@ try
         Opm::OpmLog::addBackend( "COUNTER" , counterLog );
     }
 
-    Opm::DeckConstPtr deck;
+    std::shared_ptr< Deck > deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
-        deck = parser->parseFile(deck_filename , parseContext);
-        Opm::checkDeck(deck, parser);
+        *deck = parser.parseFile(deck_filename , parseContext);
+        Opm::checkDeck(*deck, parser);
         eclipseState.reset(new Opm::EclipseState(*deck , parseContext));
     }
     catch (const std::invalid_argument& e) {
@@ -168,12 +168,12 @@ try
 
     if (eclipseState->get3DProperties().hasDeckDoubleGridProperty("PORV")) {
         const auto& porv = eclipseState->get3DProperties().getDoubleGridProperty("PORV").getData();
-        grid.reset(new GridManager(*eclipseState->getInputGrid(), porv));
+        grid.reset(new GridManager(eclipseState->getInputGrid(), porv));
     } else {
-        grid.reset(new GridManager(*eclipseState->getInputGrid()));
+        grid.reset(new GridManager(eclipseState->getInputGrid()));
     }
     auto &cGrid = *grid->c_grid();
-    const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
+    const PhaseUsage pu = Opm::phaseUsageFromDeck(*deck);
 
     // Rock and fluid init
 
@@ -182,21 +182,21 @@ try
 
     typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
     auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    materialLawManager->initFromDeck(*deck, *eclipseState, compressedToCartesianIdx);
 
-    props.reset(new BlackoilPropertiesFromDeck( deck, eclipseState, materialLawManager,
+    props.reset(new BlackoilPropertiesFromDeck( *deck, *eclipseState, materialLawManager,
                                                 Opm::UgGridHelpers::numCells(cGrid),
                                                 Opm::UgGridHelpers::globalCell(cGrid),
                                                 Opm::UgGridHelpers::cartDims(cGrid),
                                                 param));
 
     state.reset( new PolymerBlackoilState( Opm::UgGridHelpers::numCells(cGrid), Opm::UgGridHelpers::numFaces(cGrid), 2));
-    new_props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, materialLawManager, cGrid));
-    PolymerProperties polymer_props(deck, eclipseState);
+    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *eclipseState, materialLawManager, cGrid));
+    PolymerProperties polymer_props(*deck, *eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
 
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(deck, eclipseState));
+    rock_comp.reset(new RockCompressibility(*deck, *eclipseState));
 
     // Gravity.
     gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
@@ -206,7 +206,7 @@ try
         initStateBasic(*grid->c_grid(), *props, param, gravity[2], *state);
         initBlackoilSurfvol(*grid->c_grid(), *props, *state);
     } else {
-        initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], *state);
+        initStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], *state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -219,7 +219,7 @@ try
         fis_solver.reset(new NewtonIterationBlackoilSimple(param));
     }
 
-    Opm::TimeMapConstPtr timeMap(eclipseState->getSchedule()->getTimeMap());
+    const auto timeMap = eclipseState->getSchedule().getTimeMap();
     SimulatorTimer simtimer;
     simtimer.init(timeMap);
 
@@ -240,12 +240,12 @@ try
               << std::flush;
 
     Opm::BlackoilOutputWriter
-        outputWriter(cGrid, param, eclipseState, pu,
+        outputWriter(cGrid, param, *eclipseState, pu,
                      new_props->permeability() );
 
     SimulatorReport fullReport;
     // Create and run simulator.
-    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, eclipseState, grav);
+    Opm::DerivedGeology geology(*grid->c_grid(), *new_props, *eclipseState, grav);
     SimulatorFullyImplicitCompressiblePolymer<UnstructuredGrid>
         simulator(param,
                   *grid->c_grid(),

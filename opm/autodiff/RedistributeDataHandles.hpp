@@ -38,8 +38,8 @@ namespace Opm
 template <class Grid>
 inline std::unordered_set<std::string>
 distributeGridAndData( Grid& ,
-                       Opm::DeckConstPtr ,
-                       EclipseStateConstPtr ,
+                       const Opm::Deck& ,
+                       const EclipseState& ,
                        BlackoilState& ,
                        BlackoilPropsAdFromDeck& ,
                        DerivedGeology&,
@@ -420,8 +420,8 @@ private:
 inline
 std::unordered_set<std::string>
 distributeGridAndData( Dune::CpGrid& grid,
-                       Opm::DeckConstPtr deck,
-                       EclipseStateConstPtr eclipseState,
+                       const Opm::Deck& deck,
+                       const EclipseState& eclipseState,
                        BlackoilState& state,
                        BlackoilPropsAdFromDeck& properties,
                        DerivedGeology& geology,
@@ -435,7 +435,7 @@ distributeGridAndData( Dune::CpGrid& grid,
 
     // distribute the grid and switch to the distributed view
     using std::get;
-    auto my_defunct_wells = get<1>(grid.loadBalance(eclipseState,
+    auto my_defunct_wells = get<1>(grid.loadBalance(&eclipseState,
                                             geology.transmissibility().data()));
     grid.switchToDistributedView();
     std::vector<int> compressedToCartesianIdx;

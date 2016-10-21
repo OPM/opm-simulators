@@ -92,7 +92,7 @@ namespace Opm
         {
         }
 
-        PolymerProperties(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclipseState)
+        PolymerProperties(const Opm::Deck& deck, const Opm::EclipseState& eclipseState)
         {
             readFromDeck(deck, eclipseState);
         }
@@ -127,12 +127,12 @@ namespace Opm
             shear_vrf_vals_ = shear_vrf_vals;
         }
 
-        void readFromDeck(Opm::DeckConstPtr deck, Opm::EclipseStateConstPtr eclipseState)
+        void readFromDeck(const Opm::Deck& deck, const Opm::EclipseState& eclipseState)
         {
             // We assume NTMISC=1
-            const auto& tables = eclipseState->getTableManager();
+            const auto& tables = eclipseState.getTableManager();
             const auto& plymaxTable = tables.getPlymaxTables().getTable<PlymaxTable>(0);
-            const auto& plmixparRecord = deck->getKeyword("PLMIXPAR").getRecord(0);
+            const auto& plmixparRecord = deck.getKeyword("PLMIXPAR").getRecord(0);
 
             // We also assume that each table has exactly one row...
             assert(plymaxTable.numRows() == 1);
@@ -165,8 +165,8 @@ namespace Opm
             c_vals_ads_ = plyadsTable.getPolymerConcentrationColumn().vectorCopy( );
             ads_vals_ = plyadsTable.getAdsorbedPolymerColumn().vectorCopy( );
 
-            has_plyshlog_ = deck->hasKeyword("PLYSHLOG");
-            has_shrate_ = deck->hasKeyword("SHRATE");
+            has_plyshlog_ = deck.hasKeyword("PLYSHLOG");
+            has_shrate_ = deck.hasKeyword("SHRATE");
 
             if (has_plyshlog_) {
                 // Assuming NTPVT == 1 always
@@ -176,11 +176,11 @@ namespace Opm
                 shear_vrf_vals_ = plyshlogTable.getShearMultiplierColumn().vectorCopy( );
 
                 // do the unit version here for the water_vel_vals_
-                Opm::UnitSystem unitSystem = deck->getActiveUnitSystem();
+                Opm::UnitSystem unitSystem = deck.getActiveUnitSystem();
                 double siFactor;
                 if (has_shrate_) {
-                    siFactor = unitSystem.parse("1/Time")->getSIScaling();
-                    const auto& shrateKeyword = deck->getKeyword("SHRATE");
+                    siFactor = unitSystem.parse("1/Time").getSIScaling();
+                    const auto& shrateKeyword = deck.getKeyword("SHRATE");
                     std::vector<double> shrate_readin = shrateKeyword.getSIDoubleData();
                     if (shrate_readin.size() == 1) {
                         shrate_ = shrate_readin[0];
@@ -190,7 +190,7 @@ namespace Opm
                         OPM_THROW(std::logic_error, "Only NTPVT == 1 is allowed for SHRATE keyword now !\n");
                     }
                 } else {
-                    siFactor = unitSystem.parse("Length/Time")->getSIScaling();
+                    siFactor = unitSystem.parse("Length/Time").getSIScaling();
                 }
 
                 for (size_t i = 0; i < water_vel_vals_.size(); ++i) {
