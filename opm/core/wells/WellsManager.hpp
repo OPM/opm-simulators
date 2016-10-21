@@ -94,8 +94,8 @@ namespace Opm
                      const double* permeability,
                      const DynamicListEconLimited& list_econ_limited,
                      bool is_parallel_run=false,
-                     const std::vector<double>& well_potentials={},
-                     const std::unordered_set<std::string>& deactivated_wells = {});
+                     const std::vector<double>& well_potentials=std::vector<double>(),
+                     const std::unordered_set<std::string>& deactivated_wells = std::unordered_set<std::string> ());
 
         WellsManager(const Opm::EclipseStateConstPtr eclipseState,
                      const size_t timeStep,
@@ -177,9 +177,9 @@ namespace Opm
 
         template<class C2F, class FC, class NTG>
         void createWellsFromSpecs( std::vector<const Well*>& wells, size_t timeStep,
-                                   const C2F& cell_to_faces, 
+                                   const C2F& cell_to_faces,
                                    const int* cart_dims,
-                                   FC begin_face_centroids, 
+                                   FC begin_face_centroids,
                                    int dimensions,
                                    std::vector<double>& dz,
                                    std::vector<std::string>& well_names,
