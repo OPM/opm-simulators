@@ -41,17 +41,17 @@ BOOST_AUTO_TEST_CASE(EqualsDifferentDeckReturnFalse) {
     const string filename2 = "testBlackoilState2.DATA";
 
     const auto es1 = Opm::Parser::parse(filename1);
-    auto eg1 = es1.getInputGridCopy();
+    auto eg1 = es1.getInputGrid();
     std::vector<int> actnum = get_testBlackoilStateActnum();
-    eg1->resetACTNUM(actnum.data());
+    eg1.resetACTNUM(actnum.data());
 
     const auto es2 = Opm::Parser::parse(filename2);
-    auto eg2 = es2.getInputGrid();
+    const auto& eg2 = es2.getInputGrid();
 
-    GridManager gridManager1(*eg1);
+    GridManager gridManager1(eg1);
     const UnstructuredGrid& grid1 = *gridManager1.c_grid();
 
-    GridManager gridManager2(*eg2);
+    GridManager gridManager2(eg2);
     const UnstructuredGrid& grid2 = *gridManager2.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid1 ) , UgGridHelpers::numFaces( grid1 ) , 3);
@@ -68,12 +68,12 @@ BOOST_AUTO_TEST_CASE(EqualsNumericalDifferenceReturnFalse) {
     const string filename = "testBlackoilState1.DATA";
 
     const auto es = Opm::Parser::parse(filename);
-    auto eg = es.getInputGridCopy();
+    auto eg = es.getInputGrid();
 
     std::vector<int> actnum = get_testBlackoilStateActnum();
-    eg->resetACTNUM(actnum.data());
+    eg.resetACTNUM(actnum.data());
 
-    GridManager gridManager(*eg);
+    GridManager gridManager(eg);
     const UnstructuredGrid& grid = *gridManager.c_grid();
 
     BlackoilState state1( UgGridHelpers::numCells( grid ) , UgGridHelpers::numFaces( grid ) , 3);

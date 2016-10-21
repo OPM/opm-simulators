@@ -41,8 +41,8 @@ namespace Opm
         /// extract the quantities needed specify the temperature dependence of the gas
         /// viscosity and density from the deck
         void initFromDeck(std::shared_ptr<const PvtInterface> isothermalPvt,
-                          Opm::DeckConstPtr deck,
-                          Opm::EclipseStateConstPtr eclipseState)
+                          const Opm::Deck& deck,
+                          const Opm::EclipseState& eclipseState)
         {
             isothermalPvt_ = isothermalPvt;
             auto tables = eclipseState->getTableManager();

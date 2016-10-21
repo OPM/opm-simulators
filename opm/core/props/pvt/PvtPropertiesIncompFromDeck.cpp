@@ -36,7 +36,7 @@ namespace Opm
     {
     }
 
-    void PvtPropertiesIncompFromDeck::init(Opm::DeckConstPtr deck)
+    void PvtPropertiesIncompFromDeck::init(const Opm::Deck& deck)
     {
         // So far, this class only supports a single PVT region. TODO?
         int region_number = 0;
@@ -49,8 +49,8 @@ namespace Opm
         }
 
         // Surface densities. Accounting for different orders in eclipse and our code.
-        if (deck->hasKeyword("DENSITY")) {
-            const auto& densityRecord = deck->getKeyword("DENSITY").getRecord(region_number);
+        if (deck.hasKeyword("DENSITY")) {
+            const auto& densityRecord = deck.getKeyword("DENSITY").getRecord(region_number);
             surface_density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = densityRecord.getItem("OIL").getSIDouble(0);
             surface_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = densityRecord.getItem("WATER").getSIDouble(0);
         } else {
@@ -62,8 +62,8 @@ namespace Opm
         reservoir_density_ = surface_density_;
 
         // Water viscosity.
-        if (deck->hasKeyword("PVTW")) {
-            const auto& pvtwRecord = deck->getKeyword("PVTW").getRecord(region_number);
+        if (deck.hasKeyword("PVTW")) {
+            const auto& pvtwRecord = deck.getKeyword("PVTW").getRecord(region_number);
             if (pvtwRecord.getItem("WATER_COMPRESSIBILITY").getSIDouble(0) != 0.0 ||
                 pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0) != 0.0) {
                 OPM_MESSAGE("Compressibility effects in PVTW are ignored.");
@@ -77,8 +77,8 @@ namespace Opm
         }
 
         // Oil viscosity.
-        if (deck->hasKeyword("PVCDO")) {
-            const auto& pvcdoRecord = deck->getKeyword("PVCDO").getRecord(region_number);
+        if (deck.hasKeyword("PVCDO")) {
+            const auto& pvcdoRecord = deck.getKeyword("PVCDO").getRecord(region_number);
 
             if (pvcdoRecord.getItem("OIL_COMPRESSIBILITY").getSIDouble(0) != 0.0 ||
                 pvcdoRecord.getItem("OIL_VISCOSIBILITY").getSIDouble(0) != 0.0) {

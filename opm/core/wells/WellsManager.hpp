@@ -83,7 +83,7 @@ namespace Opm
         ///        like shut wells. E.g. in a a parallel run these would be
         ///        the wells handeled by another process. Defaults to empty set.
         template<class F2C, class FC>
-        WellsManager(const Opm::EclipseStateConstPtr eclipseState,
+        WellsManager(const Opm::EclipseState& eclipseState,
                      const size_t timeStep,
                      int num_cells,
                      const int* global_cell,
@@ -97,7 +97,7 @@ namespace Opm
                      const std::vector<double>& well_potentials=std::vector<double>(),
                      const std::unordered_set<std::string>& deactivated_wells = std::unordered_set<std::string> ());
 
-        WellsManager(const Opm::EclipseStateConstPtr eclipseState,
+        WellsManager(const Opm::EclipseState& eclipseState,
                      const size_t timeStep,
                      const UnstructuredGrid& grid,
                      const double* permeability);
@@ -154,7 +154,7 @@ namespace Opm
 
     private:
         template<class C2F, class FC>
-        void init(const Opm::EclipseStateConstPtr eclipseState,
+        void init(const Opm::EclipseState& eclipseState,
                   const size_t timeStep,
                   int num_cells,
                   const int* global_cell,
@@ -193,7 +193,7 @@ namespace Opm
                                    const std::unordered_set<std::string>& deactivated_wells,
                                    const DynamicListEconLimited& list_econ_limited);
 
-        void addChildGroups(GroupTreeNodeConstPtr parentNode, std::shared_ptr< const Schedule > schedule, size_t timeStep, const PhaseUsage& phaseUsage);
+        void addChildGroups(const GroupTreeNode& parentNode, const Schedule& schedule, size_t timeStep, const PhaseUsage& phaseUsage);
         void setupGuideRates(std::vector<const Well*>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
                              const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials);
         // Data

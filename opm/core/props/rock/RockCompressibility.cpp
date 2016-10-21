@@ -41,12 +41,13 @@ namespace Opm
         rock_comp_ = param.getDefault("rock_compressibility", 0.0)/unit::barsa;
     }
 
-    RockCompressibility::RockCompressibility(Opm::DeckConstPtr deck,
-                                             Opm::EclipseStateConstPtr eclipseState)
+    RockCompressibility::RockCompressibility(const Opm::Deck& deck,
+                                             const Opm::EclipseState& eclipseState,
+                                             const bool is_io_rank)
         : pref_(0.0),
           rock_comp_(0.0)
     {
-        const auto& tables = eclipseState->getTableManager();
+        const auto& tables = eclipseState.getTableManager();
         const auto& rocktabTables = tables.getRocktabTables();
         if (rocktabTables.size() > 0) {
             const auto& rocktabTable = rocktabTables.getTable<RocktabTable>(0);
@@ -60,17 +61,17 @@ namespace Opm
             } else {
                 transmult_ =  rocktabTable.getColumn("PV_MULT_TRANX").vectorCopy();
             }
-        } else if (deck->hasKeyword("ROCK")) {
-            const auto& rockKeyword = deck->getKeyword("ROCK");
+        } else if (deck.hasKeyword("ROCK")) {
+            const auto& rockKeyword = deck.getKeyword("ROCK");
             if (rockKeyword.size() != 1) {
-                // here it would be better not to use std::cout directly but to add the
-                // warning to some "warning list"...
-                OpmLog::warning("Can only handle a single region in ROCK ("
-                                + std::to_string(rockKeyword.size())
-                                + " regions specified)."
-                                + " Ignoring all except for the first.\n" 
-                                + "In file " + rockKeyword.getFileName()
-                                + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
+                if (is_io_rank) {
+                    OpmLog::warning("Can only handle a single region in ROCK ("
+                                    + std::to_string(rockKeyword.size())
+                                    + " regions specified)."
+                                    + " Ignoring all except for the first.\n"
+                                    + "In file " + rockKeyword.getFileName()
+                                    + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
+                }
             }
 
             pref_ = rockKeyword.getRecord(0).getItem("PREF").getSIDouble(0);

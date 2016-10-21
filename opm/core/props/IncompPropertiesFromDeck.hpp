@@ -52,8 +52,8 @@ namespace Opm
         /// \param  grid         Grid to which property object applies, needed for the
         ///                      mapping from cell indices (typically from a processed grid)
         ///                      to logical cartesian indices consistent with the deck.
-        IncompPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                 Opm::EclipseStateConstPtr eclState,
+        IncompPropertiesFromDeck(const Opm::Deck& deck,
+                                 const Opm::EclipseState& eclState,
                                  const UnstructuredGrid& grid);
 
         /// Destructor.

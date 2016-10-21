@@ -35,8 +35,9 @@ namespace Opm
     public:
         /// Construct from input deck.
         /// Looks for the keywords ROCK and ROCKTAB.
-        RockCompressibility(Opm::DeckConstPtr deck,
-                            Opm::EclipseStateConstPtr eclipseState);
+        RockCompressibility(const Opm::Deck& deck,
+                            const Opm::EclipseState& eclipseState,
+                            const bool is_io_rank = true);
 
         /// Construct from parameters.
         /// Accepts the following parameters (with defaults).

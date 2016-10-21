@@ -177,12 +177,12 @@ void check_controls_epoch3(struct WellControls ** ctrls) {
 BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
     const std::string filename = "wells_manager_data.data";
-    Opm::ParserPtr parser(new Opm::Parser());
+    Opm::Parser parser;
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
+    Opm::Deck deck = parser.parseFile(filename, parseContext);
 
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck, parseContext));
-    Opm::GridManager gridManager(*eclipseState->getInputGrid());
+    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::GridManager gridManager(eclipseState.getInputGrid());
 
     {
         Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
@@ -214,12 +214,11 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
 
 BOOST_AUTO_TEST_CASE(WellsEqual) {
     const std::string filename = "wells_manager_data.data";
-    Opm::ParserPtr parser(new Opm::Parser());
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
-
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck, parseContext));
-    Opm::GridManager gridManager(*eclipseState->getInputGrid());
+    Opm::Parser parser;
+    Opm::Deck deck(parser.parseFile(filename, parseContext));
+    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::GridManager gridManager(eclipseState.getInputGrid());
 
     Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid(), NULL);
     Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid(), NULL);
@@ -231,11 +230,10 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
 BOOST_AUTO_TEST_CASE(ControlsEqual) {
     const std::string filename = "wells_manager_data.data";
     Opm::ParseContext parseContext;
-    Opm::ParserPtr parser(new Opm::Parser());
-    Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
-
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck, parseContext));
-    Opm::GridManager gridManager(*eclipseState->getInputGrid());
+    Opm::Parser parser;
+    Opm::Deck deck(parser.parseFile(filename, parseContext));
+    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::GridManager gridManager(eclipseState.getInputGrid());
 
     Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid(), NULL);
     Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid(), NULL);
@@ -253,12 +251,11 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
 
 BOOST_AUTO_TEST_CASE(WellShutOK) {
     const std::string filename = "wells_manager_data.data";
-    Opm::ParserPtr parser(new Opm::Parser());
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
-
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck, parseContext));
-    Opm::GridManager gridManager(*eclipseState->getInputGrid());
+    Opm::Parser parser;
+    Opm::Deck deck(parser.parseFile(filename, parseContext));
+    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::GridManager gridManager(eclipseState.getInputGrid());
 
     Opm::WellsManager wellsManager2(eclipseState, 2, *gridManager.c_grid(), NULL);
 
@@ -270,12 +267,11 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
 
 BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     const std::string filename = "wells_manager_data_wellSTOP.data";
-    Opm::ParserPtr parser(new Opm::Parser());
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck(parser->parseFile(filename, parseContext));
-
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck, parseContext));
-    Opm::GridManager gridManager(*eclipseState->getInputGrid());
+    Opm::Parser parser;
+    Opm::Deck deck(parser.parseFile(filename, parseContext));
+    Opm::EclipseState eclipseState(deck, parseContext);
+    Opm::GridManager gridManager(eclipseState.getInputGrid());
 
     Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
 

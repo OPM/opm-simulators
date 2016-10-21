@@ -43,12 +43,11 @@ using namespace Opm;
 BOOST_AUTO_TEST_CASE(TestStoppedWells)
 {
     const std::string filename = "wells_stopped.data";
-    Opm::ParserPtr parser(new Opm::Parser());
     Opm::ParseContext parseContext;
-    Opm::DeckConstPtr deck(parser->parseFile(filename , parseContext));
-
-    Opm::EclipseStateConstPtr eclipseState(new Opm::EclipseState(*deck , parseContext));
-    Opm::GridManager gridManager(*eclipseState->getInputGrid());
+    Opm::Parser parser;
+    Opm::Deck deck(parser.parseFile(filename , parseContext));
+    Opm::EclipseState eclipseState(deck , parseContext);
+    Opm::GridManager gridManager(eclipseState.getInputGrid());
 
     double target_surfacerate_inj;
     double target_surfacerate_prod;

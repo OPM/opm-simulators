@@ -58,8 +58,8 @@ namespace Opm {
         ///\param[in] deck      ecliplise data file.
         ///\param[in] grid      unstructured grid.
         template <class GridT>
-        void diagnosis(EclipseStateConstPtr eclState,
-                       DeckConstPtr deck,
+        void diagnosis(const EclipseState& eclState,
+                       const Deck& deck,
                        const GridT& grid);
 
     private:
@@ -86,22 +86,22 @@ namespace Opm {
 
 
         ///Check the phase that used.
-        void phaseCheck_(DeckConstPtr deck);
+        void phaseCheck_(const Deck& deck);
 
         ///Check saturation family I and II.
-        void satFamilyCheck_(EclipseStateConstPtr eclState);
+        void satFamilyCheck_(const EclipseState& eclState);
  
         ///Check saturation tables.
-        void tableCheck_(EclipseStateConstPtr eclState, 
-                         DeckConstPtr deck);
+        void tableCheck_(const EclipseState& eclState,
+                         const Deck& deck);
 
         ///Check endpoints in the saturation tables.
-        void unscaledEndPointsCheck_(DeckConstPtr deck,
-                                     EclipseStateConstPtr eclState);
+        void unscaledEndPointsCheck_(const Deck& deck,
+                                     const EclipseState& eclState);
 
         template <class GridT>
-        void scaledEndPointsCheck_(DeckConstPtr deck,
-                                   EclipseStateConstPtr eclState,
+        void scaledEndPointsCheck_(const Deck& deck,
+                                   const EclipseState& eclState,
                                    const GridT& grid);
 
         ///For every table, need to deal with case by case.

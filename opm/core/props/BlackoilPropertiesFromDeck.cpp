@@ -29,8 +29,8 @@
 
 namespace Opm
 {
-    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                                           Opm::EclipseStateConstPtr eclState,
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                                           const Opm::EclipseState& eclState,
                                                            const UnstructuredGrid& grid,
                                                            bool init_rock)
     {
@@ -44,8 +44,8 @@ namespace Opm
              init_rock);
     }
 
-    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                                           Opm::EclipseStateConstPtr eclState,
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                                           const Opm::EclipseState& eclState,
                                                            const UnstructuredGrid& grid,
                                                            const parameter::ParameterGroup& param,
                                                            bool init_rock)
@@ -59,8 +59,8 @@ namespace Opm
         init(deck, eclState, materialLawManager, grid.number_of_cells, grid.global_cell, grid.cartdims, param, init_rock);
     }
 
-    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                                           Opm::EclipseStateConstPtr eclState,
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                                           const Opm::EclipseState& eclState,
                                                            int number_of_cells,
                                                            const int* global_cell,
                                                            const int* cart_dims,
@@ -76,8 +76,8 @@ namespace Opm
              init_rock);
     }
 
-    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                                           Opm::EclipseStateConstPtr eclState,
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                                           const Opm::EclipseState& eclState,
                                                            int number_of_cells,
                                                            const int* global_cell,
                                                            const int* cart_dims,
@@ -100,8 +100,8 @@ namespace Opm
              init_rock);
     }
 
-    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(Opm::DeckConstPtr deck,
-                                                           Opm::EclipseStateConstPtr eclState,
+    BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Opm::Deck& deck,
+                                                           const Opm::EclipseState& eclState,
                                                            std::shared_ptr<MaterialLawManager> materialLawManager,
                                                            int number_of_cells,
                                                            const int* global_cell,
@@ -119,8 +119,8 @@ namespace Opm
              init_rock);
     }
 
-    inline void BlackoilPropertiesFromDeck::init(Opm::DeckConstPtr deck,
-                                                 Opm::EclipseStateConstPtr eclState,
+    inline void BlackoilPropertiesFromDeck::init(const Opm::Deck& deck,
+                                                 const Opm::EclipseState& eclState,
                                                  std::shared_ptr<MaterialLawManager> materialLawManager,
                                                  int number_of_cells,
                                                  const int* global_cell,
@@ -145,8 +145,8 @@ namespace Opm
         satprops_.reset(ptr);
     }
 
-    inline void BlackoilPropertiesFromDeck::init(Opm::DeckConstPtr deck,
-                                                 Opm::EclipseStateConstPtr eclState,
+    inline void BlackoilPropertiesFromDeck::init(const Opm::Deck& deck,
+                                                 const Opm::EclipseState& eclState,
                                                  std::shared_ptr<MaterialLawManager> materialLawManager,
                                                  int number_of_cells,
                                                  const int* global_cell,
@@ -170,7 +170,7 @@ namespace Opm
 
         // Unfortunate lack of pointer smartness here...
         std::string threephase_model = param.getDefault<std::string>("threephase_model", "gwseg");
-        if (deck->hasKeyword("ENDSCALE") && threephase_model != "gwseg") {
+        if (deck.hasKeyword("ENDSCALE") && threephase_model != "gwseg") {
             OPM_THROW(std::runtime_error, "Sorry, end point scaling currently available for the 'gwseg' model only.");
         }
 
@@ -690,17 +690,17 @@ namespace Opm
         return &surfaceDensities_[pvtRegionIdx*pu.num_phases];
     }
 
-    void BlackoilPropertiesFromDeck::initSurfaceDensities_(Opm::DeckConstPtr deck)
+    void BlackoilPropertiesFromDeck::initSurfaceDensities_(const Opm::Deck& deck)
     {
         const auto& pu = phaseUsage();
         int np = pu.num_phases;
         int numPvtRegions = 1;
-        if (deck->hasKeyword("TABDIMS")) {
-            const auto& tabdimsKeyword = deck->getKeyword("TABDIMS");
+        if (deck.hasKeyword("TABDIMS")) {
+            const auto& tabdimsKeyword = deck.getKeyword("TABDIMS");
             numPvtRegions = tabdimsKeyword.getRecord(0).getItem("NTPVT").template get<int>(0);
         }
 
-        const auto& densityKeyword = deck->getKeyword("DENSITY");
+        const auto& densityKeyword = deck.getKeyword("DENSITY");
 
         surfaceDensities_.resize(np*numPvtRegions);
         for (int pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++pvtRegionIdx) {

@@ -29,8 +29,8 @@
 namespace Opm {
 
     template <class GridT>
-    void RelpermDiagnostics::diagnosis(Opm::EclipseStateConstPtr eclState,
-                                       Opm::DeckConstPtr deck,
+    void RelpermDiagnostics::diagnosis(const Opm::EclipseState& eclState,
+                                       const Opm::Deck& deck,
                                        const GridT& grid)
     {
         OpmLog::info("\n***************Saturation Functions Diagnostics***************");
@@ -42,8 +42,8 @@ namespace Opm {
     }
 
     template <class GridT>
-    void RelpermDiagnostics::scaledEndPointsCheck_(DeckConstPtr deck,
-                                                   EclipseStateConstPtr eclState,
+    void RelpermDiagnostics::scaledEndPointsCheck_(const Deck& deck,
+                                                   const EclipseState& eclState,
                                                    const GridT& grid)
     {
         const int nc = Opm::UgGridHelpers::numCells(grid);
@@ -53,7 +53,7 @@ namespace Opm {
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties;
         epsGridProperties.initFromDeck(deck, eclState, /*imbibition=*/false);       
-        const auto& satnum = eclState->get3DProperties().getIntGridProperty("SATNUM");
+        const auto& satnum = eclState.get3DProperties().getIntGridProperty("SATNUM");
         
         const std::string tag = "Scaled endpoints";
         for (int c = 0; c < nc; ++c) {
@@ -66,7 +66,7 @@ namespace Opm {
             const std::string cellIdx = "(" + std::to_string(ijk[0]) + ", " + 
                                    std::to_string(ijk[1]) + ", " +
                                    std::to_string(ijk[2]) + ")";
-            scaledEpsInfo_[c].extractScaled(epsGridProperties, cartIdx);
+            scaledEpsInfo_[c].extractScaled(deck, eclState, epsGridProperties, cartIdx);
 
             // SGU <= 1.0 - SWL
             if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
@@ -80,7 +80,7 @@ namespace Opm {
                 OpmLog::warning(tag, msg);
             }
 
-            if (deck->hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
+            if (deck.hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
                 // Mobilility check.
                 if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";

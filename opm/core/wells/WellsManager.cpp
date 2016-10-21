@@ -326,7 +326,7 @@ namespace Opm
     }
 
     /// Construct wells from deck.
-    WellsManager::WellsManager(const Opm::EclipseStateConstPtr eclipseState,
+    WellsManager::WellsManager(const Opm::EclipseState& eclipseState,
                                const size_t timeStep,
                                const UnstructuredGrid& grid,
                                const double* permeability)
@@ -729,11 +729,11 @@ namespace Opm
 
     }
 
-    void WellsManager::addChildGroups(GroupTreeNodeConstPtr parentNode, ScheduleConstPtr schedule, size_t timeStep, const PhaseUsage& phaseUsage) {
-        for (auto childIter = parentNode->begin(); childIter != parentNode->end(); ++childIter) {
-            GroupTreeNodeConstPtr childNode = (*childIter).second;
-            well_collection_.addGroup(schedule->getGroup(childNode->name()), parentNode->name(), timeStep, phaseUsage);
-            addChildGroups(childNode, schedule, timeStep, phaseUsage);
+    void WellsManager::addChildGroups(const GroupTreeNode& parentNode, const Schedule& schedule, size_t timeStep, const PhaseUsage& phaseUsage) {
+        for (auto childIter = parentNode.begin(); childIter != parentNode.end(); ++childIter) {
+            const auto& childNode = (*childIter).second;
+            well_collection_.addGroup(schedule.getGroup(childNode->name()), parentNode.name(), timeStep, phaseUsage);
+            addChildGroups(*childNode, schedule, timeStep, phaseUsage);
         }
     }
 
