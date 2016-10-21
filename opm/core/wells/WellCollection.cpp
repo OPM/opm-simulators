@@ -52,6 +52,10 @@ namespace Opm
 
         std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
 
+        if (child->injSpec().control_mode_ == InjectionSpecification::VREP) {
+            having_vrep_groups_ = true;
+        }
+
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {
             OPM_THROW(std::runtime_error, "Trying to add child group to group named " << parent->name() << ", but it's not a group.");
@@ -191,6 +195,15 @@ namespace Opm
     }
 
 
+    void WellCollection::applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                                const std::vector<double>& conversion_coeffs)
+    {
+        for (size_t i = 0; i < roots_.size(); ++i) {
+            roots_[i]->applyVREPGroupControls(well_voidage_rates, conversion_coeffs);
+        }
+    }
+
+
     //TODO: later, it should be extended to update group targets
     bool WellCollection::needUpdateWellTargets() const
     {
@@ -284,6 +297,14 @@ namespace Opm
         }
 
         setJustUpdateWellTargets(true);
+    }
+
+    bool WellCollection::havingVREPGroups() const {
+        return having_vrep_groups_;
+    }
+
+    void WellCollection::setHavingVREPGroups(const bool vrep) {
+        having_vrep_groups_ = vrep;
     }
 
 }

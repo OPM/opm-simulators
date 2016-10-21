@@ -206,6 +206,17 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase) = 0;
 
+        /// TODO: prototyping a VREP enforcement function.
+        virtual void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs) = 0;
+
+        virtual void applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group) = 0;
+
+        virtual double getTotalVoidageRate(const std::vector<double>& well_voidage_rates) = 0;
+
         /// Return whether the well is running under group control target
         /// or under their own limit.
         /// True  under their own limit.
@@ -351,6 +362,17 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
 
+        /// TODO: prototyping a VREP enforcement function.
+        virtual void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs);
+
+        virtual void applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group);
+
+        virtual double getTotalVoidageRate(const std::vector<double>& well_voidage_rates);
+
         virtual void updateWellProductionTargets(const std::vector<double>& well_rates);
 
         virtual void updateWellInjectionTargets(const std::vector<double>& well_rates);
@@ -459,6 +481,18 @@ namespace Opm
         ///                         with all phase rates of a single well adjacent in the array.
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
+
+        /// TODO: prototyping a VREP enforcement function.
+        virtual void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs);
+
+        virtual void applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group);
+
+        virtual double getTotalVoidageRate(const std::vector<double>& well_voidage_rates);
+
         int groupControlIndex() const;
 
         virtual bool isProducer() const;

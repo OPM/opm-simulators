@@ -110,6 +110,12 @@ namespace Opm
         void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                               const std::vector<double>& well_surfacerates_phase);
 
+
+        // TODO: should have tried to use the above applyExplicitReinjectionControls
+        // For prototyping, make a new function here at the moment.
+        void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                    const std::vector<double>& conversion_coeffs);
+
         /// Checking whehter need to update the targets of the wells / or the groups later
         /// True  need to update well targets within this iteration, no switching control within this iteration.
         /// False no need to update well targets within this iteration, continuing as usual.
@@ -130,6 +136,10 @@ namespace Opm
 
         void setJustUpdateWellTargets(const bool flag);
 
+        bool havingVREPGroups() const;
+
+        void setHavingVREPGroups(const bool vrep);
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;
@@ -138,6 +148,7 @@ namespace Opm
         std::vector<WellNode*> leaf_nodes_;
 
         bool just_update_well_targets_;
+        bool having_vrep_groups_;
 
 
     };

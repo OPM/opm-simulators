@@ -563,6 +563,18 @@ namespace Opm
             return;
         }
         case InjectionSpecification::VREP:
+        {
+            // really not sure whether to give a initialized target will be a good idea. It can cause the initial guess too far
+            // from the reasonable result and numerical convergence failure.
+            // Let us try to see what will happen. We begin with 100 / day, which is about 0.001.
+            // const double my_guide_rate = injectionGuideRate(false);
+
+            /* for (size_t i = 0; i < children_.size(); ++i) {
+                const double children_guide_rate = children_[i] -> injectionGuideRate(false);
+                children_[i]->applyInjGroupControl(, inj_type,
+                        (children_guide_rate / my_guide_rate) * target / efficiencyFactor(), true);
+            } */
+        }
         case InjectionSpecification::REIN:
             std::cout << "Replacement keywords found, remember to call applyExplicitReinjectionControls." << std::endl;
             return;
@@ -620,6 +632,16 @@ namespace Opm
         double sum = 0.0;
         for (size_t i = 0; i < children_.size(); ++i) {
             sum += children_[i]->getTotalProductionFlow(phase_flows, phase);
+        }
+        return sum;
+    }
+
+
+    double WellsGroup::getTotalVoidageRate(const std::vector<double>& well_voidage_rates)
+    {
+        double sum = 0.0;
+        for (size_t i = 0; i < children_.size(); ++i) {
+            sum += children_[i]->getTotalVoidageRate(well_voidage_rates);
         }
         return sum;
     }
@@ -687,12 +709,69 @@ namespace Opm
                 // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->injectionGuideRate(true);
+                const double children_guide_rate = children_[i]->injectionGuideRate(false);
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV, injector_type,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().voidage_replacment_fraction_,
-                        true);
+                        false);
             }
 
+        }
+    }
+
+
+    void WellsGroup::applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs)
+    {
+        const InjectionSpecification::ControlMode inj_mode = injSpec().control_mode_;
+        switch (inj_mode) {
+        case InjectionSpecification::VREP:
+        {
+            const double total_reinjected = getTotalVoidageRate(well_voidage_rates);
+            // TODO: we might need the reservoir condition well potentials here
+            const double my_guide_rate = injectionGuideRate(false);
+            for (size_t i = 0; i < children_.size(); ++i ) {
+                const double child_guide_rate = children_[i]->injectionGuideRate(false);
+                const double child_target = child_guide_rate / my_guide_rate * total_reinjected * injSpec().voidage_replacment_fraction_;
+                children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
+            }
+        }
+        break;
+        default:
+        {
+            for (size_t i = 0; i < children_.size(); ++i ) {
+                children_[i]->applyVREPGroupControls(well_voidage_rates, conversion_coeffs);
+            }
+        }
+        }
+    }
+
+
+    // TODO: actually, it is not tested since it never get into this function.
+    void WellsGroup::applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group)
+    {
+        if (injSpec().control_mode_ == InjectionSpecification::NONE) {
+            // TODO: for multiple level of group control, it can be wrong to return here.
+            return;
+        }
+
+        // TODO: this condition will eventually be wrong.
+        if (!only_group || injSpec().control_mode_ == InjectionSpecification::FLD) {
+            // We should provide the well potentials under reservoir condition.
+            const double my_guide_rate = injectionGuideRate(only_group);
+            if (my_guide_rate == 0.0) {
+                // TODO: might not should return here
+                // Nothing to do here
+                return;
+            }
+            for (size_t i = 0; i < children_.size(); ++i) {
+                const double child_target = target * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
+                children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
+            }
+            // I do not know why here.
+            injSpec().control_mode_ = InjectionSpecification::FLD;
         }
     }
 
@@ -957,7 +1036,7 @@ namespace Opm
                                         const bool only_group)
     {
         if ( !isInjector() ) {
-            assert(target == 0.0);
+            // assert(target == 0.0);
             return;
         }
 
@@ -1019,7 +1098,7 @@ namespace Opm
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
         set_current_control(self_index_, group_control_index_, wells_);
-        // TODO: it might always be the case
+        // TODO: it might not always be the case
         setIndividualControl(false);
     }
 
@@ -1037,6 +1116,15 @@ namespace Opm
             return 0.0;
         }
         return phase_flows[self_index_*phaseUsage().num_phases + phaseUsage().phase_pos[phase]];
+    }
+
+    double WellNode::getTotalVoidageRate(const std::vector<double>& well_voidage_rates)
+    {
+        if (isProducer()) {
+            return well_voidage_rates[self_index_];
+        } else {
+            return 0;
+        }
     }
 
     WellType WellNode::type() const {
@@ -1057,6 +1145,63 @@ namespace Opm
     {
         // Do nothing at well level.
     }
+
+
+    void WellNode::applyVREPGroupControls(const std::vector<double>&,
+                                          const std::vector<double>&)
+    {
+        // It is the end, nothing should be done here.
+    }
+
+    void WellNode::applyVREPGroupControl(const double target,
+                                         const std::vector<double>& /*well_voidage_rates*/,
+                                         const std::vector<double>& conversion_coeffs,
+                                         const bool only_group)
+    {
+        if (!isInjector()) {
+            return;
+        }
+
+        if (only_group && individualControl()) {
+            return;
+        }
+
+        const int np = phaseUsage().num_phases;
+        // WellControls* ctrl = wells_->ctrls[self_index_];
+        // for this case, distr contains the FVF information
+        // which results in the previous implementation of RESV keywords.
+        std::vector<double> distr(np);
+        std::copy(conversion_coeffs.begin() + np * self_index_,
+                  conversion_coeffs.begin() + np * (self_index_ + 1),
+                  distr.begin());
+
+
+        const double invalid_alq = -std::numeric_limits<double>::max();
+        const int invalid_vfp = -std::numeric_limits<int>::max();
+
+        if (group_control_index_ < 0) {
+            append_well_controls(RESERVOIR_RATE, target, invalid_alq, invalid_vfp, &distr[0], self_index_, wells_);
+            // TODO: basically, on group control index is not enough eventually. There can be more than one sources for the
+            // group control
+            group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
+        } else {
+            well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , RESERVOIR_RATE);
+            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , target);
+            well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
+            well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , &distr[0]);
+        }
+
+        // the way in computeRESV from the SimulatorBase
+        // looks like they specify the control already, while without giving the distr.
+        // The target will look like alreay there.
+        // Here, we should create a new control here.
+        // In theory, there can be more than one RESV controls and more than one other same types of control,
+        // which will really mess up the multi-layer controls.
+        // When we update them the next time, we need to find this control then update the distr and target instead of adding one
+        // Basically, we need to store the control and the source of the control (from which group or the well, so we can still
+        // identify them and update the value later in case we specify the same control with different value again)
+    }
+
     void WellNode::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                          const double target,
                                          const bool only_group)
