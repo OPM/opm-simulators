@@ -20,6 +20,7 @@
 #ifndef OPM_WELLSTATE_HEADER_INCLUDED
 #define OPM_WELLSTATE_HEADER_INCLUDED
 
+#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/output/data/Wells.hpp>
@@ -34,8 +35,6 @@
 
 namespace Opm
 {
-    struct PhaseUsage;
-
     /// The state of a set of wells.
     class WellState
     {
@@ -224,14 +223,48 @@ namespace Opm
             return wellRates().size() / numWells();
         }
 
-        virtual data::Wells report(const PhaseUsage&) const
+        virtual data::Wells report(const PhaseUsage& pu) const
         {
-            return { { /* WellState offers no completion data, so that has to be added later */ },
-                this->bhp(),
-                this->temperature(),
-                this->wellRates(),
-                this->perfPress(),
-                this->perfRates() };
+            using rt = data::Rates::opt;
+
+            data::Wells dw;
+            for( const auto& itr : this->wellMap_ ) {
+                const auto well_index = itr.second[ 0 ];
+
+                auto& well = dw[ itr.first ];
+                well.bhp = this->bhp().at( well_index );
+                well.temperature = this->temperature().at( well_index );
+
+                const auto wellrate_index = well_index * pu.num_phases;
+                const auto& wv = this->wellRates();
+                if( pu.phase_used[BlackoilPhases::Aqua] ) {
+                    well.rates.set( rt::wat, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Aqua] ] );
+                }
+
+                if( pu.phase_used[BlackoilPhases::Liquid] ) {
+                    well.rates.set( rt::oil, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Liquid] ] );
+                }
+
+                if( pu.phase_used[BlackoilPhases::Vapour] ) {
+                    well.rates.set( rt::gas, wv[ wellrate_index + pu.phase_pos[BlackoilPhases::Vapour] ] );
+                }
+
+                const int num_perf_well = this->wells_->well_connpos[ well_index + 1 ]
+                                        - this->wells_->well_connpos[ well_index ];
+
+                for( int i = 0; i < num_perf_well; ++i ) {
+                    const auto wi = this->wells_->well_connpos[ well_index ] + i;
+                    const auto active_index = this->wells_->well_cells[ wi ];
+
+                    auto& completion = well.completions[ active_index ];
+                    completion.index = active_index;
+                    completion.pressure = this->perfPress()[ well_index + i ];
+                    completion.reservoir_rate = this->perfRates()[ well_index + i ];
+                }
+            }
+
+            return dw;
+
         }
 
         virtual ~WellState() {}
