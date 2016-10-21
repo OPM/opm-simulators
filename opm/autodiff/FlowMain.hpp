@@ -423,7 +423,7 @@ namespace Opm
             OpmLog::addBackend( "STREAMLOG", streamLog);
             std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
             OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
-            const auto& msgLimits = eclipse_state_->getSchedule()->getMessageLimits();
+            const auto& msgLimits = eclipse_state_->getSchedule().getMessageLimits();
             const std::map<int64_t, int> limits = {{Log::MessageType::Note, msgLimits.getCommentPrintLimit(0)},
                                                    {Log::MessageType::Info, msgLimits.getMessagePrintLimit(0)},
                                                    {Log::MessageType::Warning, msgLimits.getWarningPrintLimit(0)},
