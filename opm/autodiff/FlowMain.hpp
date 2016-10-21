@@ -548,7 +548,7 @@ namespace Opm
             fluidprops_.reset(new BlackoilPropsAdFromDeck(*deck_, *eclipse_state_, material_law_manager_, grid));
 
             // Rock compressibility.
-            rock_comp_.reset(new RockCompressibility(*deck_, *eclipse_state_));
+            rock_comp_.reset(new RockCompressibility(*deck_, *eclipse_state_, output_cout_));
 
             // Gravity.
             assert(UgGridHelpers::dimensions(grid) == 3);
