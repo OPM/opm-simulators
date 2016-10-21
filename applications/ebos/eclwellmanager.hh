@@ -730,6 +730,7 @@ protected:
 
             if( hasWell( wellName ) )
             {
+                wells_[wellIndex(wellName)]->clear();
                 wells_[wellIndex(wellName)]->setReferenceDepth(deckWell->getRefDepth());
             }
         }
@@ -763,6 +764,7 @@ protected:
                 const auto& compInfo = wellCompletions.at(cartesianDofIdx);
                 const Opm::Completion* completion = compInfo.first;
                 std::shared_ptr<Well> eclWell = compInfo.second;
+                eclWell->addDof(elemCtx, dofIdx);
 
                 // the catch is a hack for a ideosyncrasy of opm-parser with regard to
                 // defaults handling: if the deck did not specify a radius for the

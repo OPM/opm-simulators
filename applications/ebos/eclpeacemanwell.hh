@@ -39,6 +39,8 @@
 #include <dune/common/version.hh>
 #include <dune/geometry/referenceelements.hh>
 
+#include <boost/align/aligned_allocator.hpp>
+
 #include <map>
 
 namespace Ewoms {
@@ -361,7 +363,7 @@ public:
         ElementContext elemCtx(simulator_);
         for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
             unsigned gridDofIdx = wellDofIt->first;
-            const auto &dofVars = dofVariables_[gridDofIdx];
+            const auto &dofVars = *dofVariables_[gridDofIdx];
             DofVariables tmpDofVars(dofVars);
             auto priVars(curSol[gridDofIdx]);
 
@@ -412,7 +414,7 @@ public:
                 1e3
                 *std::numeric_limits<Scalar>::epsilon()
                 *std::max<Scalar>(1e5, actualBottomHolePressure_);
-            computeVolumetricDofRates_(resvRates, actualBottomHolePressure_ + eps, dofVariables_[gridDofIdx]);
+            computeVolumetricDofRates_(resvRates, actualBottomHolePressure_ + eps, *dofVariables_[gridDofIdx]);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
@@ -420,7 +422,7 @@ public:
             }
 
             // then, we subtract the source rates for a undisturbed well.
-            computeVolumetricDofRates_(resvRates, actualBottomHolePressure_, dofVariables_[gridDofIdx]);
+            computeVolumetricDofRates_(resvRates, actualBottomHolePressure_, *dofVariables_[gridDofIdx]);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
@@ -459,6 +461,7 @@ public:
     // reset the well to the initial state, i.e. remove all degrees of freedom...
     void clear()
     {
+        dofVarsStore_.clear();
         dofVariables_.clear();
     }
 
@@ -593,12 +596,15 @@ public:
 
         const auto &dofPos = context.pos(dofIdx, /*timeIdx=*/0);
 
-        DofVariables &dofVars = dofVariables_[globalDofIdx];
+        dofVarsStore_.push_back(DofVariables());
+        dofVariables_[globalDofIdx] = &dofVarsStore_.back();
+        DofVariables &dofVars = *dofVariables_[globalDofIdx];
         wellTotalVolume_ += context.model().dofTotalVolume(globalDofIdx);
 
         dofVars.elementPtr.reset(new ElementPointer(context.element()));
         dofVars.localDofIdx = dofIdx;
         dofVars.pvtRegionIdx = context.problem().pvtRegionIndex(context, dofIdx, /*timeIdx=*/0);
+        assert(dofVars.pvtRegionIdx == 0);
 
         // determine the size of the element
         dofVars.effectiveSize.fill(0.0);
@@ -714,7 +720,7 @@ public:
     void setConnectionTransmissibilityFactor(const Context &context, unsigned dofIdx, Scalar value)
     {
         unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-        dofVariables_[globalDofIdx].connectionTransmissibilityFactor = value;
+        dofVariables_[globalDofIdx]->connectionTransmissibilityFactor = value;
     }
 
     /*!
@@ -918,7 +924,7 @@ public:
     void setRadius(const Context &context, unsigned dofIdx, Scalar value)
     {
         unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-        dofVariables_[globalDofIdx].boreholeRadius = value;
+        dofVariables_[globalDofIdx]->boreholeRadius = value;
 
         computeConnectionTransmissibilityFactor_(globalDofIdx);
     }
@@ -927,7 +933,7 @@ public:
      * \brief Return the well's radius at a cell [m].
      */
     Scalar radius(unsigned gridDofIdx) const
-    { return dofVariables_.at(gridDofIdx).radius_; }
+    { return dofVariables_.at(gridDofIdx)->radius_; }
 
     /*!
      * \brief Informs the well that a time step has just begun.
@@ -991,7 +997,7 @@ public:
             if (!applies(globalDofIdx))
                 continue;
 
-            DofVariables &dofVars = dofVariables_.at(globalDofIdx);
+            DofVariables &dofVars = *dofVariables_.at(globalDofIdx);
             const auto& intQuants = context.intensiveQuantities(dofIdx, timeIdx);
 
             if (iterationIdx_ == 0)
@@ -1016,7 +1022,7 @@ public:
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
         // retrieve the bottom hole pressure from the global system of equations
-        actualBottomHolePressure_ = Toolbox::value(dofVariables_.begin()->second.pressure[0]);
+        actualBottomHolePressure_ = Toolbox::value(dofVariables_.begin()->second->pressure[0]);
         actualBottomHolePressure_ = computeRateEquivalentBhp_();
 
         sol[wellGlobalDof][0] = actualBottomHolePressure_;
@@ -1095,7 +1101,7 @@ public:
             return;
 
         // create a DofVariables object for the current evaluation point
-        DofVariables tmp(dofVariables_.at(globalDofIdx));
+        DofVariables tmp(*dofVariables_.at(globalDofIdx));
 
         tmp.update(context.intensiveQuantities(dofIdx, timeIdx));
 
@@ -1119,7 +1125,7 @@ protected:
     // of a connection, the radius of the borehole and the skin factor.
     void computeConnectionTransmissibilityFactor_(unsigned globalDofIdx)
     {
-        auto& dofVars = dofVariables_[globalDofIdx];
+        auto& dofVars = *dofVariables_[globalDofIdx];
 
         const auto& D = dofVars.effectiveSize;
         const auto& K = dofVars.permeability;
@@ -1317,7 +1323,7 @@ protected:
             if (dofVarsIt->first == globalEvalDofIdx)
                 tmp = evalDofVars;
             else
-                tmp = &dofVarsIt->second;
+                tmp = dofVarsIt->second;
 
             computeVolumetricDofRates_<Scalar, Scalar>(volumetricReservoirRates, bottomHolePressure, *tmp);
 
@@ -1443,7 +1449,7 @@ protected:
         const auto &dofVarsEndIt = dofVariables_.end();
         for (; dofVarsIt != dofVarsEndIt; ++ dofVarsIt) {
             std::array<BhpEval, numPhases> resvRates;
-            const DofVariables *dofVars = &dofVarsIt->second;
+            const DofVariables *dofVars = dofVarsIt->second;
             if (replacedGridIdx == dofVarsIt->first)
                 dofVars = replacementDofVars;
             computeVolumetricDofRates_(resvRates, bhp, *dofVars);
@@ -1509,7 +1515,8 @@ protected:
 
     std::string name_;
 
-    std::map<int, DofVariables> dofVariables_;
+    std::vector<DofVariables, boost::alignment::aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
+    std::map<int, DofVariables*> dofVariables_;
 
     // the number of times beginIteration*() was called for the current time step
     unsigned iterationIdx_;
