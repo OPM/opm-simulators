@@ -43,6 +43,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
+#include <opm/material/common/Means.hpp>
+
 #include <array>
 #include <string>
 #include <iostream>
@@ -87,6 +89,18 @@ public:
         retrieveGridPropertyData_(&krw, eclState, kwPrefix+"KRW");
         retrieveGridPropertyData_(&kro, eclState, kwPrefix+"KRO");
         retrieveGridPropertyData_(&krg, eclState, kwPrefix+"KRG");
+
+        // _may_ be needed to calculate the Leverett capillary pressure scaling factor
+        const auto& ecl3dProps = eclState.get3DProperties();
+        poro = &ecl3dProps.getDoubleGridProperty("PORO").getData();
+
+        if (ecl3dProps.hasDeckDoubleGridProperty("PERMX")) {
+            permx = &ecl3dProps.getDoubleGridProperty("PERMX").getData();
+            permy = permx;
+        }
+
+        if (ecl3dProps.hasDeckDoubleGridProperty("PERMY"))
+            permy = &ecl3dProps.getDoubleGridProperty("PERMY").getData();
     }
 #endif
 
@@ -105,6 +119,9 @@ public:
     const DoubleData* krw;
     const DoubleData* kro;
     const DoubleData* krg;
+    const DoubleData* poro;
+    const DoubleData* permx;
+    const DoubleData* permy;
 
 private:
 #if HAVE_OPM_PARSER
@@ -153,6 +170,11 @@ struct EclEpsScalingPointsInfo
     Scalar maxPcow; // maximum capillary pressure of the oil-water system
     Scalar maxPcgo; // maximum capillary pressure of the gas-oil system
 
+    // the Leverett capillary pressure scaling factors. (those only make sense for the
+    // scaled points, for the unscaled ones they are 1.0.)
+    Scalar pcowLeverettFactor;
+    Scalar pcgoLeverettFactor;
+
     // maximum relative permabilities
     Scalar maxKrw; // maximum relative permability of water
     Scalar maxKrow; // maximum relative permability of oil in the oil-water system
@@ -175,6 +197,8 @@ struct EclEpsScalingPointsInfo
                   << "    Sogu: " << Sogu << "\n"
                   << "    maxPcow: " << maxPcow << "\n"
                   << "    maxPcgo: " << maxPcgo << "\n"
+                  << "    pcowLeverettFactor: " << pcowLeverettFactor << "\n"
+                  << "    pcgoLeverettFactor: " << pcgoLeverettFactor << "\n"
                   << "    maxKrw: " << maxKrw << "\n"
                   << "    maxKrg: " << maxKrg << "\n"
                   << "    maxKrow: " << maxKrow << "\n"
@@ -257,15 +281,20 @@ struct EclEpsScalingPointsInfo
             throw std::domain_error("No valid saturation keyword family specified");
         }
 
+        // there are no "unscaled" Leverett factors, so we just set them to 1.0
+        pcowLeverettFactor = 1.0;
+        pcgoLeverettFactor = 1.0;
     }
-#endif
 
     /*!
      * \brief Extract the values of the scaled scaling parameters.
      *
      * I.e., the values which are "seen" by the physical model.
      */
-    void extractScaled(const EclEpsGridProperties& epsProperties, unsigned cartesianCellIdx)
+    void extractScaled(const Opm::Deck& deck,
+                       const Opm::EclipseState& /*eclState*/,
+                       const EclEpsGridProperties& epsProperties,
+                       unsigned cartesianCellIdx)
     {
         // overwrite the unscaled values with the values for the cell if it is
         // explicitly specified by the corresponding keyword.
@@ -287,7 +316,75 @@ struct EclEpsScalingPointsInfo
         // quite likely that's wrong!
         extractGridPropertyValue_(maxKrow, epsProperties.kro, cartesianCellIdx);
         extractGridPropertyValue_(maxKrog, epsProperties.kro, cartesianCellIdx);
+
+        // compute the Leverett capillary pressure scaling factors if applicable.  note
+        // that this needs to be done using non-SI units to make it correspond to the
+        // documentation.
+        pcowLeverettFactor = 1.0;
+        pcgoLeverettFactor = 1.0;
+        if (deck.hasKeyword("JFUNC")) {
+            const auto& jfuncKeyword = deck.getKeyword("JFUNC");
+            const auto& jfuncRecord = jfuncKeyword.getRecord(0);
+            const std::string& jfuncFlag = jfuncRecord.getItem("FLAG").template get<std::string>(0);
+            const std::string& jfuncDir =
+                jfuncRecord.getItem("DIRECTION").template get<std::string>(0);
+
+            Scalar perm;
+            if (jfuncDir == "X")
+                perm =
+                    (*epsProperties.permx)[cartesianCellIdx];
+            else if (jfuncDir == "Y")
+                perm =
+                    (*epsProperties.permy)[cartesianCellIdx];
+            else if (jfuncDir == "XY")
+                // TODO: verify that this really is the arithmetic mean. (the
+                // documentation just says that the "average" should be used, IMO the
+                // harmonic mean would be more appropriate because that's what's usually
+                // applied when calculating the fluxes.)
+                perm =
+                    Opm::arithmeticMean((*epsProperties.permx)[cartesianCellIdx],
+                                        (*epsProperties.permy)[cartesianCellIdx]);
+            else
+                OPM_THROW(std::runtime_error, "Illegal direction indicator for the JFUNC "
+                          "keyword ('"<<jfuncDir<<"')");
+
+            // convert permeability from m^2 to mD
+            perm *= 1.01325e15;
+
+            Scalar poro = (*epsProperties.poro)[cartesianCellIdx];
+            Scalar alpha = jfuncRecord.getItem("ALPHA_FACTOR").template get<double>(0);
+            Scalar beta = jfuncRecord.getItem("BETA_FACTOR").template get<double>(0);
+
+            // the part of the Leverett capillary pressure which does not depend on
+            // surface tension.
+            Scalar commonFactor = std::pow(poro, alpha)/std::pow(perm, beta);
+
+            // multiply the documented constant by 10^5 because we want the pressures
+            // in [Pa], not in [bar]
+            const Scalar Uconst = 0.318316 * 1e5;
+
+            // compute the oil-water Leverett factor.
+            if (jfuncFlag == "WATER" || jfuncFlag == "BOTH") {
+                // note that we use the surface tension in terms of [dyn/cm]
+                Scalar gamma =
+                    jfuncRecord.getItem("OW_SURFACE_TENSION").getSIDouble(0)
+                    * (/*dyn/N=*/1e5 * /*m/cm=*/1e-2);
+
+                pcowLeverettFactor = commonFactor*gamma*Uconst;
+            }
+
+            // compute the gas-oil Leverett factor.
+            if (jfuncFlag == "GAS" || jfuncFlag == "BOTH") {
+                // note that we use the surface tension in terms of [dyn/cm]
+                Scalar gamma =
+                    jfuncRecord.getItem("GO_SURFACE_TENSION").getSIDouble(0)
+                    * (/*dyn/N=*/1e5 * /*m/cm=*/1e-2);
+
+                pcgoLeverettFactor = commonFactor*gamma*Uconst;
+            }
+        }
     }
+#endif
 
 private:
 #if HAVE_OPM_PARSER
@@ -538,7 +635,10 @@ public:
                 saturationKrnPoints_[0] = epsInfo.Swl + epsInfo.Sgl;
             }
 
-            maxPcnw_ = epsInfo.maxPcow;
+            if (config.enableLeverettScaling())
+                maxPcnwOrLeverettFactor_ = epsInfo.pcowLeverettFactor;
+            else
+                maxPcnwOrLeverettFactor_ = epsInfo.maxPcow;
             maxKrw_ = epsInfo.maxKrw;
             maxKrn_ = epsInfo.maxKrow;
         }
@@ -574,7 +674,11 @@ public:
                 saturationKrnPoints_[0] = 1.0 - epsInfo.Sgu;
             }
 
-            maxPcnw_ = epsInfo.maxPcgo;
+            if (config.enableLeverettScaling())
+                maxPcnwOrLeverettFactor_ = epsInfo.pcgoLeverettFactor;
+            else
+                maxPcnwOrLeverettFactor_ = epsInfo.maxPcgo;
+
             maxKrw_ = epsInfo.maxKrog;
             maxKrn_ = epsInfo.maxKrg;
         }
@@ -620,13 +724,25 @@ public:
      * \brief Sets the maximum capillary pressure
      */
     void setMaxPcnw(Scalar value)
-    { maxPcnw_ = value; }
+    { maxPcnwOrLeverettFactor_ = value; }
 
     /*!
      * \brief Returns the maximum capillary pressure
      */
     Scalar maxPcnw() const
-    { return maxPcnw_; }
+    { return maxPcnwOrLeverettFactor_; }
+
+    /*!
+     * \brief Sets the Leverett scaling factor for capillary pressure
+     */
+    void setLeverettFactor(Scalar value)
+    { maxPcnwOrLeverettFactor_ = value; }
+
+    /*!
+     * \brief Returns the Leverett scaling factor for capillary pressure
+     */
+    Scalar leverettFactor() const
+    { return maxPcnwOrLeverettFactor_; }
 
     /*!
      * \brief Sets the maximum wetting phase relative permeability
@@ -661,7 +777,7 @@ public:
 
 private:
     // The the points used for the "y-axis" scaling of capillary pressure
-    Scalar maxPcnw_;
+    Scalar maxPcnwOrLeverettFactor_;
 
     // The the points used for the "y-axis" scaling of wetting phase relative permability
     Scalar maxKrw_;
