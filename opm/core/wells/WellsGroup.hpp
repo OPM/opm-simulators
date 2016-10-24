@@ -55,7 +55,7 @@ namespace Opm
     {
     public:
         WellsGroupInterface(const std::string& name,
-                            const double efficicency_factor,
+                            const double efficiency_factor,
                             const ProductionSpecification& prod_spec,
                             const InjectionSpecification& inj_spec,
                             const PhaseUsage& phase_usage);
@@ -234,9 +234,9 @@ namespace Opm
 
         virtual void updateWellInjectionTargets(const std::vector<double>& well_rates) = 0;
 
-        double efficicencyFactor() const;
+        double efficiencyFactor() const;
 
-        void setEfficiencyFactor(const double efficicency_factor);
+        void setEfficiencyFactor(const double efficiency_factor);
 
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
@@ -260,7 +260,7 @@ namespace Opm
         bool individual_control_;
 
         // Efficiency factor
-        double efficicency_factor_;
+        double efficiency_factor_;
 
     private:
         std::string name_;
@@ -275,7 +275,7 @@ namespace Opm
     {
     public:
         WellsGroup(const std::string& name,
-                   const double efficicency_factor,
+                   const double efficiency_factor,
                    const ProductionSpecification& prod_spec,
                    const InjectionSpecification& inj_spec,
                    const PhaseUsage& phase_usage);
@@ -376,7 +376,7 @@ namespace Opm
     {
     public:
         WellNode(const std::string& name,
-                 const double efficicency_factor,
+                 const double efficiency_factor,
                  const ProductionSpecification& prod_spec,
                  const InjectionSpecification& inj_spec,
                  const PhaseUsage& phase_usage);

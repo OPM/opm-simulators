@@ -61,14 +61,14 @@ namespace Opm
 
 
     WellsGroupInterface::WellsGroupInterface(const std::string& myname,
-                                             const double efficicency_factor,
+                                             const double efficiency_factor,
                                              const ProductionSpecification& prod_spec,
                                              const InjectionSpecification& inje_spec,
                                              const PhaseUsage& phase_usage)
         : parent_(NULL),
           should_update_well_targets_(false),
           individual_control_(true), // always begin with individual control
-          efficicency_factor_(efficicency_factor),
+          efficiency_factor_(efficiency_factor),
           name_(myname),
           production_specification_(prod_spec),
           injection_specification_(inje_spec),
@@ -260,14 +260,14 @@ namespace Opm
         individual_control_ = individual_control;
     }
 
-    double WellsGroupInterface::efficicencyFactor() const
+    double WellsGroupInterface::efficiencyFactor() const
     {
-        return efficicency_factor_;
+        return efficiency_factor_;
     }
 
-    void WellsGroupInterface::setEfficiencyFactor(const double efficicency_factor)
+    void WellsGroupInterface::setEfficiencyFactor(const double efficiency_factor)
     {
-        efficicency_factor_=efficicency_factor;
+        efficiency_factor_=efficiency_factor;
     }
 
 
@@ -324,7 +324,7 @@ namespace Opm
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target / efficicencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
+                const double child_target = target / efficiencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
                 children_[i]->applyInjGroupControl(control_mode, injector_type, child_target, false);
             }
             injSpec().control_mode_ = InjectionSpecification::FLD;
@@ -350,7 +350,7 @@ namespace Opm
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target / efficicencyFactor() * children_[i]->productionGuideRate(only_group) / my_guide_rate;
+                const double child_target = target / efficiencyFactor() * children_[i]->productionGuideRate(only_group) / my_guide_rate;
                 children_[i]->applyProdGroupControl(control_mode, child_target, false);
             }
             prodSpec().control_mode_ = ProductionSpecification::FLD;
@@ -557,7 +557,7 @@ namespace Opm
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(false);
                 children_[i]->applyInjGroupControl(inj_mode, inj_type,
-                        (children_guide_rate / my_guide_rate) * getTarget(inj_mode) / efficicencyFactor(),
+                        (children_guide_rate / my_guide_rate) * getTarget(inj_mode) / efficiencyFactor(),
                         false);
             }
             return;
@@ -712,7 +712,7 @@ namespace Opm
             {
                 auto* parent_node = getParent();
                 prod_mode = parent_node->prodSpec().control_mode_;
-                target_rate = parent_node->getTarget(prod_mode) / parent_node->efficicencyFactor();
+                target_rate = parent_node->getTarget(prod_mode) / parent_node->efficiencyFactor();
                 break;
             }
         case ProductionSpecification::LRAT :
@@ -726,7 +726,7 @@ namespace Opm
                                           " when updating well targets ");
         }
 
-        target_rate /= efficicencyFactor();
+        target_rate /= efficiencyFactor();
 
         // the rates contributed from wells under individual control due to their own limits.
         // TODO: will handle wells specified not to join group control later.
@@ -734,7 +734,7 @@ namespace Opm
 
         for (size_t i = 0; i < children_.size(); ++i) {
             if (children_[i]->individualControl() && children_[i]->isProducer()) {
-                rate_individual_control += std::abs(children_[i]->getProductionRate(well_rates, prod_mode) * children_[i]->efficicencyFactor());
+                rate_individual_control += std::abs(children_[i]->getProductionRate(well_rates, prod_mode) * children_[i]->efficiencyFactor());
             }
         }
 
@@ -966,7 +966,7 @@ namespace Opm
         }
 
         // considering the efficiency factor
-        const double effective_target = target / efficicencyFactor();
+        const double effective_target = target / efficiencyFactor();
 
         const int* phase_pos = phaseUsage().phase_pos;
         const int* phase_used = phaseUsage().phase_used;
@@ -1070,7 +1070,7 @@ namespace Opm
             return;
         }
         // We're a producer, so we need to negate the input
-        double ntarget = -target / efficicencyFactor();
+        double ntarget = -target / efficiencyFactor();
 
         double distr[3] = { 0.0, 0.0, 0.0 };
         const int* phase_pos = phaseUsage().phase_pos;
@@ -1385,14 +1385,14 @@ namespace Opm
     double WellNode::getAccumulativeEfficiencyFactor() const {
         // TODO: not sure whether a well can be exempted from repsponding to the efficiency factor
         // for the parent group.
-        double efficicency_factor = efficicencyFactor();
+        double efficiency_factor = efficiencyFactor();
         const WellsGroupInterface* parent_node = getParent();
         while (parent_node != nullptr) {
-            efficicency_factor *= parent_node->efficicencyFactor();
+            efficiency_factor *= parent_node->efficiencyFactor();
             parent_node = parent_node->getParent();
         }
 
-        return efficicency_factor;
+        return efficiency_factor;
     }
 
 }
