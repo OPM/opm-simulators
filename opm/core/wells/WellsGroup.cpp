@@ -308,10 +308,12 @@ namespace Opm
     /// \param[in] only_group    if true, only children that are under group control will be changed.
     ///                          otherwise, all children will be set under group control
     void WellsGroup::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
                                           const bool only_group)
     {
         if (injSpec().control_mode_ == InjectionSpecification::NONE) {
+            // TODO: for multiple level of group control, it can be wrong to return here.
             return;
         }
 
@@ -323,7 +325,7 @@ namespace Opm
             }
             for (size_t i = 0; i < children_.size(); ++i) {
                 const double child_target = target / efficicencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
-                children_[i]->applyInjGroupControl(control_mode, child_target, false);
+                children_[i]->applyInjGroupControl(control_mode, injector_type, child_target, false);
             }
             injSpec().control_mode_ = InjectionSpecification::FLD;
         }
@@ -361,6 +363,8 @@ namespace Opm
                                    const std::vector<double>& well_surfacerates_phase,
                                    WellPhasesSummed& summed_phases)
     {
+        // TODO: adding here for compilation, not sure everything will work correctly.
+        const InjectionSpecification::InjectorType injector_type = injSpec().injector_type_;
         // Check children's constraints recursively.
         WellPhasesSummed child_phases_summed;
         for (size_t i = 0; i < children_.size(); ++i) {
@@ -395,7 +399,7 @@ namespace Opm
                                     + " target not met for group " + name() + "\n"
                                     + "target = " + std::to_string(target_rate) + "\n"
                                     + "rate   = " + std::to_string(my_rate));
-                    applyInjGroupControl(mode, target_rate, false);
+                    applyInjGroupControl(mode, injector_type, target_rate, false);
                     injSpec().control_mode_ = mode;
                     return false;
                 }
@@ -531,6 +535,7 @@ namespace Opm
     void WellsGroup::applyInjGroupControls()
     {
         InjectionSpecification::ControlMode inj_mode = injSpec().control_mode_;
+        InjectionSpecification::InjectorType inj_type = injSpec().injector_type_;
         switch (inj_mode) {
         case InjectionSpecification::RATE:
             // need to be careful in the future.
@@ -551,9 +556,9 @@ namespace Opm
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(false);
-                children_[i]->applyInjGroupControl(inj_mode,
+                children_[i]->applyInjGroupControl(inj_mode, inj_type,
                         (children_guide_rate / my_guide_rate) * getTarget(inj_mode) / efficicencyFactor(),
-                        true);
+                        false);
             }
             return;
         }
@@ -631,6 +636,7 @@ namespace Opm
     void WellsGroup::applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase)
     {
+        const InjectionSpecification::InjectorType injector_type = injSpec().injector_type_;
         if (injSpec().control_mode_ == InjectionSpecification::REIN) {
             // Defaulting to water to satisfy -Wmaybe-uninitialized
             BlackoilPhases::PhaseIndex phase = BlackoilPhases::Aqua;
@@ -658,7 +664,7 @@ namespace Opm
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
                         true);
 #else
-                children_[i]->applyInjGroupControl(InjectionSpecification::RATE,
+                children_[i]->applyInjGroupControl(InjectionSpecification::RATE, injector_type,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
                         true);
 #endif
@@ -682,7 +688,7 @@ namespace Opm
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
                 const double children_guide_rate = children_[i]->injectionGuideRate(true);
-                children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
+                children_[i]->applyInjGroupControl(InjectionSpecification::RESV, injector_type,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().voidage_replacment_fraction_,
                         true);
             }
@@ -946,6 +952,7 @@ namespace Opm
     }
 
     void WellNode::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                        const InjectionSpecification::InjectorType injector_type,
                                         const double target,
                                         const bool only_group)
     {
@@ -961,7 +968,32 @@ namespace Opm
         // considering the efficiency factor
         const double effective_target = target / efficicencyFactor();
 
-        const double distr[3] = { 1.0, 1.0, 1.0 };
+        const int* phase_pos = phaseUsage().phase_pos;
+        const int* phase_used = phaseUsage().phase_used;
+        double distr[3] = { 0.0, 0.0, 0.0 };
+        switch(injector_type) {
+        case InjectionSpecification::WATER:
+            if (!phase_used[BlackoilPhases::Aqua]) {
+                OPM_THROW(std::runtime_error, "Water phase not active while WATER phase injection specified.");
+            }
+            distr[phase_pos[BlackoilPhases::Aqua]] = 1.0;
+            break;
+        case InjectionSpecification::OIL:
+            if (!phase_used[BlackoilPhases::Liquid]) {
+                OPM_THROW(std::runtime_error, "Oil phase not active while OIL phase injection specified.");
+            }
+            distr[phase_pos[BlackoilPhases::Liquid]] = 1.0;
+            break;
+        case InjectionSpecification::GAS:
+            if (!phase_used[BlackoilPhases::Vapour]) {
+                OPM_THROW(std::runtime_error, "Gas phase not active while GAS phase injection specified.");
+            }
+            distr[phase_pos[BlackoilPhases::Vapour]] = 1.0;
+            break;
+        default:
+            OPM_THROW(std::runtime_error, "Group injection phase not handled: " << InjectionSpecification::toString(injector_type));
+        }
+
         WellControlType wct;
         switch (control_mode) {
         case InjectionSpecification::RATE:

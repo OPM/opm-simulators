@@ -134,6 +134,7 @@ namespace Opm
         /// \param[in] only_group    if true, only children that are under group control will be changed.
         //                           otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
                                           const bool only_group) = 0;
         /// Sets the current active control to the provided one for all producers within the group.
@@ -299,6 +300,7 @@ namespace Opm
         /// \param[in] only_group    if true, only children that are under group control will be changed.
         //                           otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
                                           bool only_group);
 
@@ -404,6 +406,7 @@ namespace Opm
         /// \param[in] only_group    if true, only children that are under group control will be changed.
         ///                          otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
                                           bool only_group);
 
