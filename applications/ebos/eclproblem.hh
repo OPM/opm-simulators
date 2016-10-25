@@ -319,6 +319,7 @@ public:
             this->gravity_[dim - 1] = 9.80665;
 
         initFluidSystem_();
+        updateElementDepths_();
         readRockParameters_();
         readMaterialParameters_();
         transmissibilities_.finishInit();
@@ -614,6 +615,19 @@ public:
     }
 
     /*!
+     * \brief Returns the depth of an degree of freedom [m]
+     *
+     * For ECL problems this is defined as the average of the depth of an element and is
+     * thus slightly different from the depth of an element's centroid.
+     */
+    template <class Context>
+    Scalar dofCenterDepth(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    {
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return elementCenterDepth_[globalSpaceIdx];
+    }
+
+    /*!
      * \copydoc BlackoilProblem::rockCompressibility
      */
     template <class Context>
@@ -790,6 +804,29 @@ public:
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
+
+    void updateElementDepths_()
+    {
+        const auto& gridManager = this->simulator().gridManager();
+        const auto& grid = gridManager.grid();
+        const auto& gridView = gridManager.gridView();
+        const auto& elemMapper = this->elementMapper();;
+
+        int numElements = gridView.size(/*codim=*/0);
+        elementCenterDepth_.resize(numElements);
+
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+            unsigned elemIdx = elemMapper.index(*elemIt);
+#else
+            unsigned elemIdx = elemMapper.map(*elemIt);
+#endif
+
+            elementCenterDepth_[elemIdx] = grid.cellCenterDepth(elemIdx);
+        }
+    }
 
     void readRockParameters_()
     {
@@ -1186,6 +1223,7 @@ private:
     }
 
     std::vector<Scalar> porosity_;
+    std::vector<Scalar> elementCenterDepth_;
     std::vector<DimMatrix> intrinsicPermeability_;
     EclTransmissibility<TypeTag> transmissibilities_;
 
