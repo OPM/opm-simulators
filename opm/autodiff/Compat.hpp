@@ -27,7 +27,7 @@
 #include <opm/common/data/SimulationDataContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/simulator/WellState.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
@@ -172,7 +172,7 @@ inline void solutionToSim( const data::Solution& sol,
 
 inline void wellsToState( const data::Wells& wells,
                           PhaseUsage phases,
-                          WellState& state ) {
+                          WellStateFullyImplicitBlackoil& state ) {
 
     using rt = data::Rates::opt;
 
@@ -197,6 +197,7 @@ inline void wellsToState( const data::Wells& wells,
 
         state.bhp()[ well_index ] = well.bhp;
         state.temperature()[ well_index ] = well.temperature;
+        state.currentControls()[ well_index ] = well.control;
 
         const auto wellrate_index = well_index * np;
         for( size_t i = 0; i < phs.size(); ++i ) {
@@ -204,13 +205,12 @@ inline void wellsToState( const data::Wells& wells,
             state.wellRates()[ wellrate_index + i ] = well.rates.get( phs[ i ] );
         }
 
-        using PerfPairTypeAlias = decltype( *well.completions.begin() );
-        const auto perforation_pressure = []( const PerfPairTypeAlias& p ) {
-            return p.second.pressure;
+        const auto perforation_pressure = []( const data::Completion& comp ) {
+            return comp.pressure;
         };
 
-        const auto perforation_reservoir_rate = []( const PerfPairTypeAlias& p ) {
-            return p.second.reservoir_rate;
+        const auto perforation_reservoir_rate = []( const data::Completion& comp ) {
+            return comp.reservoir_rate;
         };
 
         std::transform( well.completions.begin(),
@@ -222,6 +222,15 @@ inline void wellsToState( const data::Wells& wells,
                         well.completions.end(),
                         state.perfRates().begin() + wm.second[ 1 ],
                         perforation_reservoir_rate );
+
+        int local_comp_index = 0;
+        for (const data::Completion& comp : well.completions) {
+            const int global_comp_index = wm.second[1] + local_comp_index;
+            for (int phase_index = 0; phase_index < np; ++phase_index) {
+                state.perfPhaseRates()[global_comp_index*np + phase_index] = comp.rates.get(phs[phase_index]);
+            }
+            ++local_comp_index;
+        }
     }
 }
 

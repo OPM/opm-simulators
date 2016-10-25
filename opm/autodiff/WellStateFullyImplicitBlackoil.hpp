@@ -227,16 +227,17 @@ namespace Opm
                 well.control = this->currentControls()[ w ];
 
                 int local_comp_index = 0;
-                for( auto& cpair : well.completions ) {
+                for( auto& comp : well.completions ) {
                     const auto rates = this->perfPhaseRates().begin()
                                      + (np * wt.second[ 1 ])
                                      + (np * local_comp_index);
                     ++local_comp_index;
 
                     for( int i = 0; i < np; ++i ) {
-                        cpair.second.rates.set( phs[ i ], *(rates + i) );
+                        comp.rates.set( phs[ i ], *(rates + i) );
                     }
                 }
+                assert(local_comp_index == this->wells_->well_connpos[ w + 1 ] - this->wells_->well_connpos[ w ]);
             }
 
             return res;
