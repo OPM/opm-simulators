@@ -210,7 +210,6 @@ protected:
         Valgrind::SetUndefined(*this);
 
         const auto& problem = elemCtx.problem();
-        const auto& grid = elemCtx.simulator().gridManager().grid();
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
 
@@ -237,8 +236,8 @@ protected:
         // grids). The "good" solution would be to take the Z coordinate of the element
         // centers, but since ECL seems to like to be inconsistent on that front, it
         // needs to be done like here...
-        Scalar zIn = grid.cellCenterDepth(I);
-        Scalar zEx = grid.cellCenterDepth(J);
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx_, timeIdx);
+        Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx_, timeIdx);
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)

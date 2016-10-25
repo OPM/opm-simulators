@@ -319,6 +319,7 @@ public:
             this->gravity_[dim - 1] = 9.80665;
 
         initFluidSystem_();
+        updateElementDepths_();
         readRockParameters_();
         readMaterialParameters_();
         transmissibilities_.finishInit();
@@ -614,6 +615,19 @@ public:
     }
 
     /*!
+     * \brief Returns the depth of an degree of freedom [m]
+     *
+     * For ECL problems this is defined as the average of the depth of an element and is
+     * thus slightly different from the depth of an element's centroid.
+     */
+    template <class Context>
+    Scalar dofCenterDepth(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    {
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return elementCenterDepth_[globalSpaceIdx];
+    }
+
+    /*!
      * \copydoc BlackoilProblem::rockCompressibility
      */
     template <class Context>
@@ -790,6 +804,45 @@ public:
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
+
+    Scalar cellCenterDepth( const Element& element ) const
+    {
+        typedef typename Element :: Geometry Geometry;
+        static constexpr int zCoord = Geometry ::dimension - 1;
+        Scalar zz = 0.0;
+
+        const Geometry geometry = element.geometry();
+
+        const int corners = geometry.corners();
+        for (int i=0; i<corners; ++i)
+        {
+            zz += geometry.corner( i )[ zCoord ];
+        }
+        return zz/Scalar(corners);
+    }
+
+    void updateElementDepths_()
+    {
+        const auto& gridManager = this->simulator().gridManager();
+        const auto& gridView = gridManager.gridView();
+        const auto& elemMapper = this->elementMapper();;
+
+        int numElements = gridView.size(/*codim=*/0);
+        elementCenterDepth_.resize(numElements);
+
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+            const unsigned int elemIdx = elemMapper.index(element);
+#else
+            const unsigned int elemIdx = elemMapper.map(element);
+#endif
+
+            elementCenterDepth_[elemIdx] = cellCenterDepth( element );
+        }
+    }
 
     void readRockParameters_()
     {
@@ -1186,6 +1239,7 @@ private:
     }
 
     std::vector<Scalar> porosity_;
+    std::vector<Scalar> elementCenterDepth_;
     std::vector<DimMatrix> intrinsicPermeability_;
     EclTransmissibility<TypeTag> transmissibilities_;
 
