@@ -301,9 +301,12 @@ protected:
             // of threshold pressure is a quite big hack that only makes sense for ECL
             // datasets. (and even there its physical justification is quite
             // questionable IMO.)
-            if (std::abs(Toolbox::value(pressureDifference_[phaseIdx])) > thpres_)
-                pressureDifference_[phaseIdx] -=
-                    Ewoms::signum(pressureDifference_[phaseIdx])*thpres_;
+            if (std::abs(Toolbox::value(pressureDifference_[phaseIdx])) > thpres_) {
+                if (pressureDifference_[phaseIdx] < 0.0)
+                    pressureDifference_[phaseIdx] += thpres_;
+                else
+                    pressureDifference_[phaseIdx] -= thpres_;
+            }
             else {
                 pressureDifference_[phaseIdx] = 0.0;
                 volumeFlux_[phaseIdx] = 0.0;
