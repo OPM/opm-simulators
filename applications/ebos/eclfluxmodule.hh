@@ -245,6 +245,14 @@ protected:
         Scalar distZ = zIn - zEx;
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            // check shortcut: if the mobility of the phase is zero in the interior as
+            // well as the exterior DOF, we can skip looking at the phase.
+            if (intQuantsIn.mobility(phaseIdx) < 1e-18 && intQuantsEx.mobility(phaseIdx) < 1e-18) {
+                pressureDifference_[phaseIdx] = 0.0;
+                volumeFlux_[phaseIdx] = 0.0;
+                continue;
+            }
+
             // do the gravity correction: compute the hydrostatic pressure for the
             // external at the depth of the internal one
             const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
