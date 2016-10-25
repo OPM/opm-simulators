@@ -805,10 +805,25 @@ private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
 
+    Scalar cellCenterDepth( const Element& element ) const
+    {
+        typedef typename Element :: Geometry Geometry;
+        static constexpr int zCoord = Geometry ::dimension - 1;
+        Scalar zz = 0.0;
+
+        const Geometry geometry = element.geometry();
+
+        const int corners = geometry.corners();
+        for (int i=0; i<corners; ++i)
+        {
+            zz += geometry.corner( i )[ zCoord ];
+        }
+        return zz/Scalar(corners);
+    }
+
     void updateElementDepths_()
     {
         const auto& gridManager = this->simulator().gridManager();
-        const auto& grid = gridManager.grid();
         const auto& gridView = gridManager.gridView();
         const auto& elemMapper = this->elementMapper();;
 
@@ -818,13 +833,14 @@ private:
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& element = *elemIt;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-            unsigned elemIdx = elemMapper.index(*elemIt);
+            const unsigned int elemIdx = elemMapper.index(element);
 #else
-            unsigned elemIdx = elemMapper.map(*elemIt);
+            const unsigned int elemIdx = elemMapper.map(element);
 #endif
 
-            elementCenterDepth_[elemIdx] = grid.cellCenterDepth(elemIdx);
+            elementCenterDepth_[elemIdx] = cellCenterDepth( element );
         }
     }
 
