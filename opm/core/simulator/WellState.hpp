@@ -251,16 +251,18 @@ namespace Opm
 
                 const int num_perf_well = this->wells_->well_connpos[ well_index + 1 ]
                                         - this->wells_->well_connpos[ well_index ];
+                well.completions.resize(num_perf_well);
 
                 for( int i = 0; i < num_perf_well; ++i ) {
                     const auto wi = this->wells_->well_connpos[ well_index ] + i;
                     const auto active_index = this->wells_->well_cells[ wi ];
 
-                    auto& completion = well.completions[ active_index ];
+                    auto& completion = well.completions[ i ];
                     completion.index = active_index;
                     completion.pressure = this->perfPress()[ well_index + i ];
                     completion.reservoir_rate = this->perfRates()[ well_index + i ];
                 }
+                assert(num_perf_well == int(well.completions.size()));
             }
 
             return dw;
