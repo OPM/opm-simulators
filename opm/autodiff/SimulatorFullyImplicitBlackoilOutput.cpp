@@ -374,10 +374,12 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
+                data::Solution combined_sol = simToSolution(state, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...)
+                combined_sol.insert(simProps.begin(), simProps.end());           // ... insert "extra" data (KR, VISC, ...)
                 eclWriter_->writeTimeStep(timer.reportStepNum(),
                                           substep,
                                           timer.simulationTimeElapsed(),
-                                          simToSolution( state, phaseUsage_ ),
+                                          combined_sol,
                                           wellState.report(phaseUsage_));
             }
         }
