@@ -344,14 +344,14 @@ namespace Opm
             return;
         }
         if (!only_group || prodSpec().control_mode_ == ProductionSpecification::FLD) {
-            const double my_guide_rate =  productionGuideRate(false);
+            const double my_guide_rate =  productionGuideRate(only_group);
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
                 const double child_target = target / efficiencyFactor() * children_[i]->productionGuideRate(only_group) / my_guide_rate;
-                children_[i]->applyProdGroupControl(control_mode, child_target, false);
+                children_[i]->applyProdGroupControl(control_mode, child_target, only_group);
             }
             prodSpec().control_mode_ = ProductionSpecification::FLD;
         }
