@@ -771,12 +771,7 @@ namespace Opm
                 logger.wellSwitched(wells().name[w],
                                     well_controls_iget_type(wc, current),
                                     well_controls_iget_type(wc, ctrl_index));
-                std::ostringstream ss;
-                ss << "Switching control mode for well " << wells().name[w]
-                   << " from " << modestring[well_controls_iget_type(wc, current)]
-                   << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
 
-                OpmLog::info(ss.str());
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
 
