@@ -30,6 +30,7 @@
 
 #include <ewoms/aux/baseauxiliarymodule.hh>
 #include <ewoms/common/propertysystem.hh>
+#include <ewoms/common/alignedallocator.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
@@ -38,8 +39,6 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 #include <dune/geometry/referenceelements.hh>
-
-#include <boost/align/aligned_allocator.hpp>
 
 #include <map>
 
@@ -1515,7 +1514,7 @@ protected:
 
     std::string name_;
 
-    std::vector<DofVariables, boost::alignment::aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
+    std::vector<DofVariables, Ewoms::aligned_allocator<DofVariables, alignof(DofVariables)> > dofVarsStore_;
     std::map<int, DofVariables*> dofVariables_;
 
     // the number of times beginIteration*() was called for the current time step
