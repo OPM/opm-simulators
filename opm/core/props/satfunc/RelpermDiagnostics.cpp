@@ -18,6 +18,7 @@
 */
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SgwfnTable.hpp>
@@ -64,6 +65,8 @@ namespace Opm{
 
     void RelpermDiagnostics::satFamilyCheck_(const Opm::EclipseState& eclState)
     {
+        const PhaseUsage pu = phaseUsageFromDeck(eclState);
+
         const auto& tableManager = eclState.getTableManager();
         const TableContainer& swofTables = tableManager.getSwofTables();
         const TableContainer& slgofTables= tableManager.getSlgofTables();
@@ -74,9 +77,26 @@ namespace Opm{
         const TableContainer& sof2Tables = tableManager.getSof2Tables();
         const TableContainer& sgwfnTables= tableManager.getSgwfnTables();
 
-        
-        bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
-        bool family2 = ((!swfnTables.empty() && !sgfnTables.empty()) || !sgwfnTables.empty()) && (!sof3Tables.empty() || !sof2Tables.empty());
+        // Family I test.
+        bool family1 = pu.phase_used[BlackoilPhases::Liquid];
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            family1 = family1 && !swofTables.empty();
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            family1 = family1 && (!sgofTables.empty() || !slgofTables.empty());
+        }
+
+        // Family II test.
+        bool family2 = true;
+        if (pu.phase_used[BlackoilPhases::Aqua]) {
+            family2 = family2 && (!swfnTables.empty() || !sgwfnTables.empty());
+        }
+        if (pu.phase_used[BlackoilPhases::Liquid]) {
+            family2 = family2 && (!sof3Tables.empty() || !sof2Tables.empty());
+        }
+        if (pu.phase_used[BlackoilPhases::Vapour]) {
+            family2 = family2 && (!sgfnTables.empty() || !sgwfnTables.empty());
+        }
 
         if (family1 && family2) {
             const std::string msg = "Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
