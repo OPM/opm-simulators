@@ -2413,10 +2413,12 @@ namespace detail {
         {
             //Accumulate phases for each region
             for (int phase = 0; phase < maxnp; ++phase) {
-                for (int c = 0; c < nc; ++c) {
-                    const int region = fipnum[c] - 1;
-                    if (region != -1) {
-                        values[region][phase] += sd_.fip[phase][c];
+                if (active_[ phase ]) {
+                    for (int c = 0; c < nc; ++c) {
+                        const int region = fipnum[c] - 1;
+                        if (region != -1) {
+                            values[region][phase] += sd_.fip[phase][c];
+                        }
                     }
                 }
             }
