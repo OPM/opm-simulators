@@ -34,6 +34,26 @@ validateResults() {
     exit 1
 }
 
+# this function clips the help message printed by an ewoms simulation
+# to what is actually printed, throwing away all garbage which is
+# printed before or after the "meat"
+clipToHelpMessage()
+{
+    STATUS="not started"
+    while read CUR_LINE; do
+        if echo $CUR_LINE | grep -q "Usage: "; then
+            STATUS="started"
+        elif test "$STATUS" = "started" && echo $CUR_LINE | grep -q "^--"; then
+            STATUS="params"
+        elif test "$STATUS" = "params" && echo $CUR_LINE | grep -q "^[^-]"; then
+            STATUS="stopped"
+        fi
+
+        if test "$STATUS" != "not started" && test "$STATUS" != "stopped"; then
+            echo "$CUR_LINE"
+        fi
+    done
+}
 
 TEST_TYPE="$1"
 TEST_NAME="$2"
@@ -163,12 +183,12 @@ case "$TEST_TYPE" in
         ;;        
 
     "--parameters")
-        HELP_MSG="$($TEST_BINARY --help)"
+        HELP_MSG="$($TEST_BINARY --help | clipToHelpMessage)"
         if test "$(echo "$HELP_MSG" | grep -i usage)" == ''; then
             echo "$TEST_BINARY did not accept '--help' parameter"
             exit 1
         fi
-        HELP_MSG2="$($TEST_BINARY -h)"
+        HELP_MSG2="$($TEST_BINARY -h | clipToHelpMessage)"
         if test "$HELP_MSG" != "$HELP_MSG2"; then
             echo "Output of $TEST_BINARY different when passing '--help' and '-h'"
             exit 1
