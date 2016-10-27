@@ -83,6 +83,38 @@ inline bool CheckDefined(const T& value OPM_UNUSED)
 #endif
 }
 
+
+
+/*!
+ * \ingroup Valgrind
+ * \brief Make valgrind complain if any of the memory occupied by an object
+ *        is not addressable.
+ *
+ * Example:
+ *
+ * \code
+ * int* i = NULL;
+ * Opm::Valgrind::CheckAddressable(*i); // Valgrind complains!
+ * \endcode
+ *
+ * \tparam T The type of the object which ought to be checked
+ *
+ * \param value the object which valgrind should check
+ *
+ * \return true iff there are no unadressable bytes in the memory
+ *         occupied by the object.
+ */
+template <class T>
+inline bool CheckAddressable(const T& value OPM_UNUSED)
+{
+#if !defined NDEBUG && HAVE_VALGRIND
+    auto tmp = VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&value, sizeof(T));
+    return tmp == 0;
+#else
+    return true;
+#endif
+}
+
 /*!
  * \ingroup Valgrind
  * \brief Make valgrind complain if any of the the memory occupied
