@@ -62,7 +62,7 @@ inline bool IsRunning()
  *
  * \code
  * int i;
- * Opm::Valgrind::CheckDefined(i); // Valgrind complains!
+ * Valgrind::CheckDefined(i); // Valgrind complains!
  * \endcode
  *
  * \tparam T The type of the object which ought to be checked
@@ -94,7 +94,7 @@ inline bool CheckDefined(const T& value OPM_UNUSED)
  *
  * \code
  * int* i = NULL;
- * Opm::Valgrind::CheckAddressable(*i); // Valgrind complains!
+ * Valgrind::CheckAddressable(*i); // Valgrind complains!
  * \endcode
  *
  * \tparam T The type of the object which ought to be checked
@@ -129,7 +129,7 @@ inline bool CheckAddressable(const T& value OPM_UNUSED)
  *
  * \code
  * int i[2];
- * Opm::Valgrind::CheckDefined(i, 2); // Valgrind complains!
+ * Valgrind::CheckDefined(i, 2); // Valgrind complains!
  * \endcode
  *
  * \tparam T The type of the object which ought to be checked
@@ -160,8 +160,8 @@ inline bool CheckDefined(const T* value OPM_UNUSED, int size OPM_UNUSED)
  *
  * \code
  * int i = 0;
- * Opm::Valgrind::SetUndefined(i);
- * Opm::Valgrind::CheckDefined(i); // Valgrind complains!
+ * Valgrind::SetUndefined(i);
+ * Valgrind::CheckDefined(i); // Valgrind complains!
  * \endcode
  *
  * \tparam T The type of the object which ought to be set to undefined
@@ -185,8 +185,8 @@ inline void SetUndefined(const T &value OPM_UNUSED)
  *
  * \code
  * int i[3] = {0, 1, 3};
- * Opm::Valgrind::SetUndefined(&i[1], 2);
- * Opm::Valgrind::CheckDefined(i, 3); // Valgrind complains!
+ * Valgrind::SetUndefined(&i[1], 2);
+ * Valgrind::CheckDefined(i, 3); // Valgrind complains!
  * \endcode
  *
  * \tparam T The type of the object which ought to be set to undefined
@@ -210,8 +210,8 @@ inline void SetUndefined(const T* value OPM_UNUSED, int size OPM_UNUSED)
  *
  * \code
  * int i;
- * Opm::Valgrind::SetDefined(i);
- * Opm::Valgrind::CheckDefined(i); // Valgrind does not complain!
+ * Valgrind::SetDefined(i);
+ * Valgrind::CheckDefined(i); // Valgrind does not complain!
  * \endcode
  *
  * \tparam T The type of the object which valgrind should consider as defined
@@ -235,8 +235,8 @@ inline void SetDefined(const T& value OPM_UNUSED)
  *
  * \code
  * int i[3];
- * Opm::Valgrind::SetDefined(i, 3);
- * Opm::Valgrind::CheckDefined(i, 3); // Valgrind does not complain!
+ * Valgrind::SetDefined(i, 3);
+ * Valgrind::CheckDefined(i, 3); // Valgrind does not complain!
  * \endcode
  *
  * \tparam T The type of the object which valgrind should consider as defined
@@ -260,7 +260,7 @@ inline void SetDefined(const T *value OPM_UNUSED, int n OPM_UNUSED)
  *
  * \code
  * int i = 1;
- * Opm::Valgrind::SetNoAccess(i);
+ * Valgrind::SetNoAccess(i);
  * int j = i; // Valgrind complains!
  * \endcode
  *
@@ -285,7 +285,7 @@ inline void SetNoAccess(const T &value OPM_UNUSED)
  *
  * \code
  * int i[3] = {0, 1, 2};
- * Opm::Valgrind::SetNoAccess(i, 2);
+ * Valgrind::SetNoAccess(i, 2);
  * int j = i[1]; // Valgrind complains!
  * \endcode
  *
