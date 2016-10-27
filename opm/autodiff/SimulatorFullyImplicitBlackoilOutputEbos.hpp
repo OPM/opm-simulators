@@ -313,40 +313,40 @@ namespace Opm
                 const auto& intQuants = *ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                pressureOil[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value;
+                pressureOil[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value();
 
-                temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value;
+                temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
-                satWater[cellIdx] = fs.saturation(FluidSystem::waterPhaseIdx).value;
-                satGas[cellIdx] = fs.saturation(FluidSystem::gasPhaseIdx).value;
+                satWater[cellIdx] = fs.saturation(FluidSystem::waterPhaseIdx).value();
+                satGas[cellIdx] = fs.saturation(FluidSystem::gasPhaseIdx).value();
 
-                bWater[cellIdx] = fs.invB(FluidSystem::waterPhaseIdx).value;
-                bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value;
-                bGas[cellIdx] = fs.invB(FluidSystem::gasPhaseIdx).value;
+                bWater[cellIdx] = fs.invB(FluidSystem::waterPhaseIdx).value();
+                bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value();
+                bGas[cellIdx] = fs.invB(FluidSystem::gasPhaseIdx).value();
 
-                Rs[cellIdx] = fs.Rs().value;
-                Rs[cellIdx] = fs.Rv().value;
+                Rs[cellIdx] = fs.Rs().value();
+                Rs[cellIdx] = fs.Rv().value();
 
-                rhoWater[cellIdx] = fs.density(FluidSystem::waterPhaseIdx).value;
-                rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value;
-                rhoGas[cellIdx] = fs.density(FluidSystem::gasPhaseIdx).value;
+                rhoWater[cellIdx] = fs.density(FluidSystem::waterPhaseIdx).value();
+                rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value();
+                rhoGas[cellIdx] = fs.density(FluidSystem::gasPhaseIdx).value();
 
-                muWater[cellIdx] = fs.viscosity(FluidSystem::waterPhaseIdx).value;
-                muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value;
-                muGas[cellIdx] = fs.viscosity(FluidSystem::gasPhaseIdx).value;
+                muWater[cellIdx] = fs.viscosity(FluidSystem::waterPhaseIdx).value();
+                muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
+                muGas[cellIdx] = fs.viscosity(FluidSystem::gasPhaseIdx).value();
 
-                krWater[cellIdx] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value;
-                krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value;
-                krGas[cellIdx] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value;
+                krWater[cellIdx] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value();
+                krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
+                krGas[cellIdx] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value();
 
                 RsSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
                                                                          FluidSystem::oilPhaseIdx,
                                                                          intQuants.pvtRegionIndex(),
-                                                                         /*maxOilSaturation=*/1.0).value;
+                                                                         /*maxOilSaturation=*/1.0).value();
                 RvSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
                                                                          FluidSystem::gasPhaseIdx,
                                                                          intQuants.pvtRegionIndex(),
-                                                                         /*maxOilSaturation=*/1.0).value;
+                                                                         /*maxOilSaturation=*/1.0).value();
             }
 
             /**
