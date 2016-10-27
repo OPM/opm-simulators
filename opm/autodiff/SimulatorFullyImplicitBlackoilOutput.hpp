@@ -691,24 +691,26 @@ namespace Opm
                               data::TargetType::SUMMARY );
             }
             if (liquid_active) {
+                const ADB::V& oipl = sd.fip[Model::SimulatorData::FIP_LIQUID];
+                const ADB::V& oipg = vapour_active ? sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL] : ADB::V();
+                const ADB::V& oip = vapour_active ? oipl + oipg : oipl;
+
                 //Oil in place (liquid phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPL")) {
                     output.insert("OIPL",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_LIQUID]),
+                                  adbVToDoubleVector(oipl),
                                   data::TargetType::SUMMARY );
                 }
                 //Oil in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPG")) {
                     output.insert("OIPG",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL]),
+                                  adbVToDoubleVector(oipg),
                                   data::TargetType::SUMMARY );
                 }
                 // Oil in place (in liquid and gas phases)
                 if (hasFRBKeyword(summaryConfig, "OIP")) {
-                    ADB::V oip = sd.fip[Model::SimulatorData::FIP_LIQUID] +
-                                 sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL];
                     output.insert("OIP",
                                   Opm::UnitSystem::measure::volume,
                                   adbVToDoubleVector(oip),
@@ -716,24 +718,26 @@ namespace Opm
                 }
             }
             if (vapour_active) {
+                const ADB::V& gipg = sd.fip[Model::SimulatorData::FIP_VAPOUR];
+                const ADB::V& gipl = liquid_active ? sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS] : ADB::V();
+                const ADB::V& gip = liquid_active ? gipg + gipl : gipg;
+
                 // Gas in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "GIPG")) {
                     output.insert("GIPG",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_VAPOUR]),
+                                  adbVToDoubleVector(gipg),
                                   data::TargetType::SUMMARY );
                 }
                 // Gas in place (liquid phase only)
                 if (hasFRBKeyword(summaryConfig, "GIPL")) {
                     output.insert("GIPL",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS]),
+                                  adbVToDoubleVector(gipl),
                                   data::TargetType::SUMMARY );
                 }
                 // Gas in place (in both liquid and gas phases)
                 if (hasFRBKeyword(summaryConfig, "GIP")) {
-                    ADB::V gip = sd.fip[Model::SimulatorData::FIP_VAPOUR] +
-                                 sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS];
                     output.insert("GIP",
                                   Opm::UnitSystem::measure::volume,
                                   adbVToDoubleVector(gip),

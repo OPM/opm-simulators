@@ -247,7 +247,7 @@ namespace Opm {
         /// Return the well model
         const WellModel& wellModel() const
         {
-            return pressure_model_->wellModel();
+            return pressure_solver_.model().wellModel();
         }
 
 
@@ -265,7 +265,7 @@ namespace Opm {
 
         /// Return reservoir simulation data (for output functionality)
         const SimulatorData& getSimulatorData() const {
-            return transport_model_->getSimulatorData();
+            return transport_solver_.model().getSimulatorData();
         }
 
 
