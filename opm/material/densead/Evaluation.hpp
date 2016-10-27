@@ -116,6 +116,15 @@ public:
             os << " " << derivatives[varIdx];
     }
 
+    void clearDerivatives()
+    { std::fill(derivatives_.begin(), derivatives_.end(), 0.0); }
+
+    void copyDerivatives(const Evaluation& other)
+    {
+        std::copy(other.derivatives_.begin(),
+                  other.derivatives_.end(),
+                  derivatives_.begin());
+    }
 
     Evaluation& operator+=(const Evaluation& other)
     {

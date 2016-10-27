@@ -66,6 +66,34 @@ void testOperators(const Scalar tolerance)
     const Eval xEval = Eval::createVariable(x, 0);
     const Eval yEval = Eval::createVariable(y, 1);
 
+    Eval xyEval = xEval;
+    Eval yxEval = yEval;
+
+    xyEval.copyDerivatives(yxEval);
+    yxEval.clearDerivatives();
+
+    for (int i = 0; i < numVars; ++i) {
+        if (i == 0 && xEval.derivative(i) != 1.0)
+            throw std::logic_error("oops: createVariable");
+        else if (i == 1 && yEval.derivative(i) != 1.0)
+            throw std::logic_error("oops: createVariable");
+        else if (i == 1 && xyEval.derivative(i) != 1.0)
+            throw std::logic_error("oops: copyDerivatives");
+        else continue;
+
+        // the remaining derivatives must be zero
+        if (xEval.derivative(i) != 0.0)
+            throw std::logic_error("oops: createVariable");
+        if (yEval.derivative(i) != 0.0)
+            throw std::logic_error("oops: createVariable");
+        if (cEval.derivative(i) != 0.0)
+            throw std::logic_error("oops: createConstant");
+        if (xyEval.derivative(i) != 0.0)
+            throw std::logic_error("oops: copyDerivatives");
+        if (xyEval.derivative(i) != 0.0)
+            throw std::logic_error("oops: clearDerivatives");
+    }
+
     // test the non-inplace operators
     {
         Eval a = xEval + yEval;
