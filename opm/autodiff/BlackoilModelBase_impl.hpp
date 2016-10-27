@@ -1064,7 +1064,7 @@ typedef Eigen::Array<double,
                 ADB::V total_residual_v = total_residual.value();
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
-                asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
+                asImpl().wellModel().updateWellState(dx.array(), dbhpMaxRel(), well_state);
             }
             // We have to update the well controls regardless whether there are local
             // wells active or not as parallel logging will take place that needs to
@@ -1141,6 +1141,7 @@ typedef Eigen::Array<double,
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
+        const V ones = V::Constant(nc,1.0);
 
         // Extract parts of dx corresponding to each part.
         const V dp = subset(dx, Span(nc));
@@ -1164,7 +1165,6 @@ typedef Eigen::Array<double,
         const V dp_limited = sign(dp) * dp.abs().min(absdpmax);
         const V p = (p_old - dp_limited).max(zero);
         std::copy(&p[0], &p[0] + nc, reservoir_state.pressure().begin());
-
 
         // Saturation updates.
         const Opm::PhaseUsage& pu = fluid_.phaseUsage();
@@ -1213,7 +1213,6 @@ typedef Eigen::Array<double,
             so = so_old - step * dso;
         }
 
-        // Appleyard chop process.
         if (active_[Gas]) {
             auto ixg = sg < 0;
             for (int c = 0; c < nc; ++c) {
@@ -1255,45 +1254,23 @@ typedef Eigen::Array<double,
             }
         }
 
-        //const V sumSat = sw + so + sg;
-        //sw = sw / sumSat;
-        //so = so / sumSat;
-        //sg = sg / sumSat;
-
-        // Update the reservoir_state
-        if (active_[Water]) {
-            for (int c = 0; c < nc; ++c) {
-                reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
-            }
-        }
-
-        if (active_[Gas]) {
-            for (int c = 0; c < nc; ++c) {
-                reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
-            }
-        }
-
-        if (active_[ Oil ]) {
-            for (int c = 0; c < nc; ++c) {
-                reservoir_state.saturation()[c*np + pu.phase_pos[ Oil ]] = so[c];
-            }
-        }
-
         // Update rs and rv
         const double drmaxrel = drMaxRel();
         V rs;
         if (has_disgas_) {
             const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
             const V drs = isRs_ * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
+            const V drs_limited = sign(drs) * drs.abs().min( (rs_old.abs()*drmaxrel).max( ones*1e-6));
             rs = rs_old - drs_limited;
+            rs = rs.max(zero);
         }
         V rv;
         if (has_vapoil_) {
             const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             const V drv = isRv_ * dxvar;
-            const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
+            const V drv_limited = sign(drv) * drv.abs().min( (rv_old.abs()*drmaxrel).max( ones*1e-6));
             rv = rv_old - drv_limited;
+            rv = rv.max(zero);
         }
 
         // Sg is used as primal variable for water only cells.
@@ -1318,11 +1295,16 @@ typedef Eigen::Array<double,
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) {
                     rs[c] = rsSat[c];
+                    if (watOnly[c]) {
+                        so[c] = 0;
+                        sg[c] = 0;
+                        rs[c] = 0;
+                    }
                 } else {
                     hydroCarbonState[c] = HydroCarbonState::OilOnly;
                 }
             }
-
+            rs = rs.min(rsSat);
         }
 
         // phase transitions so <-> rv
@@ -1345,14 +1327,37 @@ typedef Eigen::Array<double,
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) {
                     rv[c] = rvSat[c];
+                    if (watOnly[c]) {
+                        so[c] = 0;
+                        sg[c] = 0;
+                        rv[c] = 0;
+                    }
                 } else {
                     hydroCarbonState[c] = HydroCarbonState::GasOnly;
                 }
             }
-
+            rv = rv.min(rvSat);
         }
 
         // Update the reservoir_state
+        if (active_[Water]) {
+            for (int c = 0; c < nc; ++c) {
+                reservoir_state.saturation()[c*np + pu.phase_pos[ Water ]] = sw[c];
+            }
+        }
+
+        if (active_[Gas]) {
+            for (int c = 0; c < nc; ++c) {
+                reservoir_state.saturation()[c*np + pu.phase_pos[ Gas ]] = sg[c];
+            }
+        }
+
+        if (active_[ Oil ]) {
+            for (int c = 0; c < nc; ++c) {
+                reservoir_state.saturation()[c*np + pu.phase_pos[ Oil ]] = so[c];
+            }
+        }
+
         if (has_disgas_) {
             std::copy(&rs[0], &rs[0] + nc, reservoir_state.gasoilratio().begin());
         }
@@ -1361,8 +1366,7 @@ typedef Eigen::Array<double,
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
-
-        asImpl().wellModel().updateWellState(dwells, dpMaxRel(), well_state);
+        asImpl().wellModel().updateWellState(dwells, dbhpMaxRel(), well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);

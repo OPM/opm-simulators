@@ -19,8 +19,6 @@
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
-
 
 namespace Opm
 {
@@ -44,6 +42,7 @@ namespace Opm
         dp_max_rel_  = param.getDefault("dp_max_rel", dp_max_rel_);
         ds_max_      = param.getDefault("ds_max", ds_max_);
         dr_max_rel_  = param.getDefault("dr_max_rel", dr_max_rel_);
+        dbhp_max_rel_=  param.getDefault("dbhp_max_rel", dbhp_max_rel_);
         max_residual_allowed_ = param.getDefault("max_residual_allowed", max_residual_allowed_);
         tolerance_mb_    = param.getDefault("tolerance_mb", tolerance_mb_);
         tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
@@ -64,9 +63,10 @@ namespace Opm
     void BlackoilModelParameters::reset()
     {
         // default values for the solver parameters
-        dp_max_rel_      = 1.0e9;
+        dp_max_rel_      = 0.2;
         ds_max_          = 0.2;
         dr_max_rel_      = 1.0e9;
+        dbhp_max_rel_    = 1.0;
         max_residual_allowed_ = 1e7;
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;

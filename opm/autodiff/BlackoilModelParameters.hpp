@@ -36,6 +36,8 @@ namespace Opm
         double ds_max_;
         /// Max relative change in gas-oil or oil-gas ratio in single iteration.
         double dr_max_rel_;
+        /// Max relative change in bhp in single iteration.
+        double dbhp_max_rel_;
         /// Absolute max limit for residuals.
         double max_residual_allowed_;
         /// Relative mass balance tolerance (total mass balance error).
