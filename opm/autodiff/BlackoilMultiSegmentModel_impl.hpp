@@ -198,7 +198,7 @@ namespace Opm {
         wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
         }
 
         // the perforation flux here are different
@@ -221,10 +221,11 @@ namespace Opm {
     IterationReport
     BlackoilMultiSegmentModel<Grid>::solveWellEq(const std::vector<ADB>& mob_perfcells,
                                                  const std::vector<ADB>& b_perfcells,
+                                                 const ReservoirState& reservoir_state,
                                                  SolutionState& state,
                                                  WellState& well_state)
     {
-        IterationReport iter_report = Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+        IterationReport iter_report = Base::solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
 
         if (iter_report.converged) {
             // We must now update the state.segp and state.segqs members,
