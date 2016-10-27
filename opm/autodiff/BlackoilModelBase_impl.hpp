@@ -2630,10 +2630,6 @@ namespace detail {
             global_number_wells = info.communicator().sum(global_number_wells);
             if ( global_number_wells )
             {
-                // At least one process has resv wells. Therefore rate converter needs
-                // to calculate averages over regions that might cross process
-                // borders. This needs to be done by all processes and therefore
-                // outside of the next if statement.
                 rate_converter_.defineState(reservoir_state, boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation()));
             }
         }
@@ -2646,8 +2642,8 @@ namespace detail {
             }
         }
 
-        std::vector<double> well_rates(np);
-        std::vector<double> convert_coeff(np);
+        std::vector<double> well_rates(np, 0.0);
+        std::vector<double> convert_coeff(np, 1.0);
 
 
         if ( !well_voidage_rates.empty() ) {
@@ -2661,16 +2657,13 @@ namespace detail {
                                    well_rates.begin(), std::negate<double>());
 
                     const int fipreg = 0; // Not considering FIP for the moment.
-                    // We will need convert_coeff later actually.
-                    // They should all be the same, right?
+
                     rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
                     well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
                                                                convert_coeff.begin(), 0.0);
                 } else {
-                    // TODO: it is possible we should use the distribution coeffs from
-                    // the well controls.
-                    // It will be problem if the rates are all zero here.
-                    // It also raises the question where we should call this function.
+                    // TODO: Not sure whether will encounter situation with all zero rates
+                    // and whether it will cause problem here.
                     std::copy(well_state.wellRates().begin() + np * w,
                               well_state.wellRates().begin() + np * (w + 1),
                               well_rates.begin());

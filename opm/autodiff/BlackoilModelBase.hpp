@@ -153,8 +153,7 @@ namespace Opm {
         typedef typename ModelTraits<Implementation>::ModelParameters ModelParameters;
         typedef typename ModelTraits<Implementation>::SolutionState SolutionState;
 
-        // for the conversion between the surface volume rate and resrevoir voidage rate
-        // Due to the requirement of the grid information, put the converter in the model.
+        // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
                                   SurfaceToReservoirVoidage<BlackoilPropsAdInterface, std::vector<int> >;
 
@@ -313,8 +312,8 @@ namespace Opm {
                             const std::vector<int>& fipnum);
 
         /// Function to compute the resevoir voidage for the production wells.
-        /// TODO: it is just prototyping, and not sure where is the best place to
-        /// put this function yet.
+        /// TODO: Probably should go to well model, while we then have duplications there.
+        /// With time, it looks like probably the time to introduce a base class for Well Models.
         void computeWellVoidageRates(const ReservoirState& reservoir_state,
                                      const WellState& well_state,
                                      std::vector<double>& well_voidage_rates,

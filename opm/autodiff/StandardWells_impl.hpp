@@ -779,7 +779,7 @@ namespace Opm
                 // revising the interface for the better implementation later.
                 WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
 
-                // When the wells swtiching back and forwards between individual control and group control
+                // When the wells switching back and forwards between individual control and group control
                 // The targets of the wells should be updated.
                 if (well_node->individualControl()) {
                     if (ctrl_index == well_node->groupControlIndex()) {
