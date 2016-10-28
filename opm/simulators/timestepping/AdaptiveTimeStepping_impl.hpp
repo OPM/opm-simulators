@@ -104,7 +104,7 @@ namespace Opm {
         , solver_restart_max_( param.getDefault("solver.restart", int(10) ) )
         , solver_verbose_( param.getDefault("solver.verbose", bool(true) ) && terminal_output )
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) && terminal_output )
-        , suggested_next_timestep_( -1.0 )
+        , suggested_next_timestep_( unit::convert::from(param.getDefault("timestep.initial_timestep_in_days", -1.0 ), unit::day) )
         , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
     {
         init(param);
