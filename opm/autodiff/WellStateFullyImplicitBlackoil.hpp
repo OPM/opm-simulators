@@ -280,9 +280,23 @@ namespace Opm
             data::Wells res = WellState::report(pu);
 
             const int nw = this->numWells();
-            // If there are now wells numPhases throws a floating point
-            // exception.
-            const int np = nw ? this->numPhases() : -1;
+            if( nw == 0 ) return res;
+            const int np = pu.num_phases;
+
+
+            using rt = data::Rates::opt;
+            std::vector< rt > phs( np );
+            if( pu.phase_used[BlackoilPhases::Aqua] ) {
+                phs.at( pu.phase_pos[BlackoilPhases::Aqua] ) = rt::wat;
+            }
+
+            if( pu.phase_used[BlackoilPhases::Liquid] ) {
+                phs.at( pu.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
+            }
+
+            if( pu.phase_used[BlackoilPhases::Vapour] ) {
+                phs.at( pu.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
+            }
 
             /* this is a reference or example on **how** to convert from
              * WellState to something understood by opm-output. it is intended
@@ -291,42 +305,23 @@ namespace Opm
              * representations.
              */
 
-            for( auto w = 0; w < nw; ++w ) {
-                using rt = data::Rates::opt;
-                std::map< size_t, data::Completion > completions;
+            for( const auto& wt : this->wellMap() ) {
+                const auto w = wt.second[ 0 ];
+                auto& well = res.at( wt.first );
+                well.control = this->currentControls()[ w ];
 
-                // completions aren't supported yet
-                //const auto* begin = wells_->well_connpos + w;
-                //const auto* end = wells_->well_connpos + w + 1;
-                //for( auto* i = begin; i != end; ++i ) {
-                //    const auto perfrate = this->perfPhaseRates().begin() + *i;
-                //    data::Rates perfrates;
-                //    perfrates.set( rt::wat, *(perfrate + 0) );
-                //    perfrates.set( rt::oil, *(perfrate + 1) );
-                //    perfrates.set( rt::gas, *(perfrate + 2) );
+                int local_comp_index = 0;
+                for( auto& comp : well.completions ) {
+                    const auto rates = this->perfPhaseRates().begin()
+                                     + (np * wt.second[ 1 ])
+                                     + (np * local_comp_index);
+                    ++local_comp_index;
 
-                //    const size_t active_index = wells_->well_cells[ *i ];
-
-                //    completions.emplace( active_index,
-                //        data::Completion{ active_index, perfrates } );
-                //}
-
-                const auto wellrate_index = np * w;
-                const auto& wv = this->wellRates();
-
-                data::Rates wellrates;
-                if( np == 3 ) {
-                    /* only write if 3-phase solution */
-                    wellrates.set( rt::wat, wv[ wellrate_index + 0 ] );
-                    wellrates.set( rt::oil, wv[ wellrate_index + 1 ] );
-                    wellrates.set( rt::gas, wv[ wellrate_index + 2 ] );
+                    for( int i = 0; i < np; ++i ) {
+                        comp.rates.set( phs[ i ], *(rates + i) );
+                    }
                 }
-
-                const double bhp  = this->bhp()[ w ];
-                const double thp  = this->thp()[ w ];
-
-                res.emplace( wells_->name[ w ],
-                    data::Well { wellrates, bhp, thp, std::move( completions ) } );
+                assert(local_comp_index == this->wells_->well_connpos[ w + 1 ] - this->wells_->well_connpos[ w ]);
             }
 
             return res;

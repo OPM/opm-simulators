@@ -252,7 +252,7 @@ namespace Opm
                                 Opm::UgGridHelpers::numCells(grid) );
 
         solutionToSim( restarted.first, phaseusage, simulatorstate );
-        wellsToState( restarted.second, wellstate );
+        wellsToState( restarted.second, phaseusage, wellstate );
     }
 
 
