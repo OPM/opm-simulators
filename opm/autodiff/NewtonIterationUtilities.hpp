@@ -21,6 +21,7 @@
 #define OPM_NEWTONITERATIONUTILITIES_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <boost/any.hpp>
 #include <vector>
 
 namespace Opm
@@ -58,6 +59,8 @@ namespace Opm
                             Eigen::SparseMatrix<double, Eigen::RowMajor>& A,
                             AutoDiffBlock<double>::V& b);
 
+    /// Return true if this is a serial run, or rank zero on an MPI run.
+    bool isIORank(const boost::any& parallel_info);
 
 } // namespace Opm
 
