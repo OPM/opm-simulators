@@ -1,0 +1,29 @@
+Changes in opm-material 2016.04
+===============================
+
+- Improvements to the ECL/Black-Oil related functionality:
+ - Support for Leverett-like capillary pressure scaling. (The "JFUNC"
+   keyword.)
+ - Support for dissolution limits based on the maximum observed
+   saturation of the oil phase. (The "VAPPARS" keyword.)
+ - Most (all?) consistency checks for saturation functions have been
+   removed. They are now supposed to be done by higher-level modules
+   like opm-simulators.
+ - The BlackoilFluidSystem can now be queried about which components dissolve 
+   in which phases.
+- Various improvements related to the dense automatic differentiation code:
+ - The namespace which contains that functionality was changed from
+   "Opm::LocalAd" to "Opm::DenseAd".
+ - Toolbox::toLhs() has been renamed to Toolbox::decay().
+ - The isnan() and isfinite() functions have been added for Evaluations.
+ - A briefer alternative syntax for calling mathematical functions for
+   Evaluations has been added: e.g. Opm::sqrt(x) can be now used instead of
+   Opm::MathToolbox<Eval>::sqrt(x).
+ - Various smaller bugfixes; e.g., calling pow() with a base of 0.0
+   does not produce NaNs anymore.
+- Fluid states can now specify whether a phase should be assumed to be present 
+  independently of the phase's saturation.
+- Better support for single precision floating point scalars has been
+  added: "Extremely large" values are now expressed using 10^30
+  instead of 10^100 since the latter is too large to be represented by
+  single-precision IEEE-754 floating point objects.
