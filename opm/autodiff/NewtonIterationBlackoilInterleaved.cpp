@@ -174,6 +174,7 @@ namespace Opm
                                                const boost::any& parallelInformation_arg=boost::any())
         : iterations_( 0 ),
           parallelInformation_(parallelInformation_arg),
+          isIORank_(isIORank(parallelInformation_arg)),
           parameters_( param )
         {
         }
@@ -487,7 +488,11 @@ namespace Opm
 
             // Check for failure of linear solver.
             if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
-                OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver.");
+                const std::string msg("Convergence failure for linear solver.");
+                if (isIORank_) {
+                    OpmLog::problem(msg);
+                }
+                OPM_THROW_NOLOG(LinearSolverProblem, msg);
             }
 
             // Copy solver output to dx.
@@ -509,6 +514,7 @@ namespace Opm
     protected:
         mutable int iterations_;
         boost::any parallelInformation_;
+        bool isIORank_;
 
         NewtonIterationBlackoilInterleavedParameters parameters_;
     }; // end NewtonIterationBlackoilInterleavedImpl
@@ -657,7 +663,9 @@ namespace Opm
 
             // Check for failure of linear solver.
             if (!result.converged) {
-                OPM_THROW(LinearSolverProblem, "Convergence failure for linear solver in computePressureIncrement().");
+                const std::string msg("Convergence failure for linear solver in computePressureIncrement().");
+                OpmLog::problem(msg);
+                OPM_THROW_NOLOG(LinearSolverProblem, msg);
             }
 
             // Copy solver output to dx.

@@ -1744,16 +1744,28 @@ typedef Eigen::Array<double,
             if (std::isnan(mass_balance_residual[idx])
                 || std::isnan(CNV[idx])
                 || (idx < np && std::isnan(well_flux_residual[idx]))) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
+                const auto msg = std::string("NaN residual for phase ") +  materialName(idx);
+                if (terminal_output_) {
+                    OpmLog::problem(msg);
+                }
+                OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
             }
             if (mass_balance_residual[idx] > maxResidualAllowed()
                 || CNV[idx] > maxResidualAllowed()
                 || (idx < np && well_flux_residual[idx] > maxResidualAllowed())) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
+                const auto msg = std::string("Too large residual for phase ") +  materialName(idx);
+                if (terminal_output_) {
+                    OpmLog::problem(msg);
+                }
+                OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
             }
         }
         if (std::isnan(residualWell) || residualWell > maxWellResidualAllowed) {
-            OPM_THROW(Opm::NumericalProblem, "NaN or too large residual for well control equation");
+            const auto msg = std::string("NaN or too large residual for well control equation");
+            if (terminal_output_) {
+                OpmLog::problem(msg);
+            }
+            OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
         }
 
         return converged;
@@ -1809,10 +1821,18 @@ typedef Eigen::Array<double,
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
         for (int idx = 0; idx < np; ++idx) {
             if (std::isnan(well_flux_residual[idx])) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << materialName(idx));
+                const auto msg = std::string("NaN residual for phase ") +  materialName(idx);
+                if (terminal_output_) {
+                    OpmLog::problem(msg);
+                }
+                OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
             }
             if (well_flux_residual[idx] > maxResidualAllowed()) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << materialName(idx));
+                const auto msg = std::string("Too large residual for phase ") +  materialName(idx);
+                if (terminal_output_) {
+                    OpmLog::problem(msg);
+                }
+                OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
             }
         }
 
@@ -2198,10 +2218,12 @@ typedef Eigen::Array<double,
         {
             //Accumulate phases for each region
             for (int phase = 0; phase < maxnp; ++phase) {
-                for (int c = 0; c < nc; ++c) {
-                    const int region = fipnum[c] - 1;
-                    if (region != -1) {
-                        values[region][phase] += sd_.fip[phase][c];
+                if (active_[ phase ]) {
+                    for (int c = 0; c < nc; ++c) {
+                        const int region = fipnum[c] - 1;
+                        if (region != -1) {
+                            values[region][phase] += sd_.fip[phase][c];
+                        }
                     }
                 }
             }
