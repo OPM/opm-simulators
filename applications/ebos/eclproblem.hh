@@ -59,6 +59,7 @@
 #include "eclfluxmodule.hh"
 #include "ecldeckunits.hh"
 
+#include <ewoms/common/pffgridvector.hh>
 #include <ewoms/models/blackoil/blackoilmodel.hh>
 #include <ewoms/disc/ecfv/ecfvdiscretization.hh>
 
@@ -227,6 +228,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+    typedef typename GET_PROP_TYPE(TypeTag, Stencil) Stencil;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
     // Grid and world dimension
@@ -296,6 +298,7 @@ public:
         , deckUnits_(simulator)
         , eclWriter_(simulator)
         , summaryWriter_(simulator)
+        , pffDofData_(simulator.gridView())
     {
         // add the output module for the Ecl binary output
         simulator.model().addOutputModule(new Ewoms::EclOutputBlackOilModule<TypeTag>(simulator));
@@ -339,6 +342,8 @@ public:
         simulator.setEpisodeIndex(-1);
         simulator.setEpisodeLength(0.0);
         simulator.setTimeStepSize(0.0);
+
+        updatePffDofData_();
     }
 
     /*!
@@ -600,9 +605,8 @@ public:
                             unsigned fromDofLocalIdx,
                             unsigned toDofLocalIdx) const
     {
-        unsigned I = context.globalSpaceIndex(fromDofLocalIdx, /*timeIdx=*/0);
-        unsigned J = context.globalSpaceIndex(toDofLocalIdx, /*timeIdx=*/0);
-        return transmissibilities_.transmissibility(I, J);
+        assert(fromDofLocalIdx == 0);
+        return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility;
     }
 
     /*!
@@ -1262,6 +1266,33 @@ private:
         }
     }
 
+    struct PffDofData_
+    {
+        Scalar transmissibility;
+    };
+
+    // update the prefetch friendly data object
+    void updatePffDofData_()
+    {
+        const auto &distFn =
+            [this](PffDofData_& dofData,
+                   const Stencil& stencil,
+                   unsigned localDofIdx)
+            -> void
+        {
+            const auto& elementMapper = this->model().elementMapper();
+
+            unsigned globalElemIdx = elementMapper.index(stencil.entity(localDofIdx));
+
+            if (localDofIdx != 0) {
+                unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
+                dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
+            }
+        };
+
+        pffDofData_.update(distFn);
+    }
+
     std::vector<Scalar> porosity_;
     std::vector<Scalar> elementCenterDepth_;
     std::vector<DimMatrix> intrinsicPermeability_;
@@ -1284,6 +1315,8 @@ private:
 
     EclWriter<TypeTag> eclWriter_;
     EclSummaryWriter summaryWriter_;
+
+    PffGridVector<GridView, Stencil, PffDofData_> pffDofData_;
 };
 } // namespace Ewoms
 
