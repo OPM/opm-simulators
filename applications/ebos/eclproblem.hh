@@ -689,15 +689,10 @@ public:
      */
     unsigned pvtRegionIndex(unsigned elemIdx) const
     {
-        auto deck = this->simulator().gridManager().deck();
-
-        if (!deck->hasKeyword("PVTNUM"))
+        if (pvtnum_.empty())
             return 0;
 
-        const auto& gridManager = this->simulator().gridManager();
-
-        unsigned cartesianDofIdx = gridManager.cartesianIndex(elemIdx);
-        return deck->getKeyword("PVTNUM").getIntData()[cartesianDofIdx] - 1;
+        return pvtnum_[elemIdx];
     }
 
     /*!
@@ -890,6 +885,9 @@ private:
         const auto& props = eclState->get3DProperties();
 
         size_t numDof = this->model().numGridDof();
+
+        // the PVT region number
+        updatePvtnum_();
 
         ////////////////////////////////
         // intrinsic permeability
@@ -1238,6 +1236,25 @@ private:
         return true;
     }
 
+    void updatePvtnum_()
+    {
+        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclProps = eclState->get3DProperties();
+
+        if (!eclProps.hasDeckIntGridProperty("PVTNUM"))
+            return;
+
+        const auto& pvtnumData = eclProps.getIntGridProperty("PVTNUM").getData();
+        const auto& gridManager = this->simulator().gridManager();
+
+        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        pvtnum_.resize(numElems);
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            pvtnum_[elemIdx] = pvtnumData[cartElemIdx] - 1;
+        }
+    }
+
     std::vector<Scalar> porosity_;
     std::vector<Scalar> elementCenterDepth_;
     std::vector<DimMatrix> intrinsicPermeability_;
@@ -1247,6 +1264,7 @@ private:
 
     EclThresholdPressure<TypeTag> thresholdPressures_;
 
+    std::vector<unsigned short> pvtnum_;
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 
