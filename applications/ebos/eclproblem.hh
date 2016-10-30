@@ -595,8 +595,15 @@ public:
     /*!
      * \copydoc BlackOilBaseProblem::transmissibility
      */
-    Scalar transmissibility(unsigned elem1Idx, unsigned elem2Idx) const
-    { return transmissibilities_.transmissibility(elem1Idx, elem2Idx); }
+    template <class Context>
+    Scalar transmissibility(const Context &context,
+                            unsigned fromDofLocalIdx,
+                            unsigned toDofLocalIdx) const
+    {
+        unsigned I = context.globalSpaceIndex(fromDofLocalIdx, /*timeIdx=*/0);
+        unsigned J = context.globalSpaceIndex(toDofLocalIdx, /*timeIdx=*/0);
+        return transmissibilities_.transmissibility(I, J);
+    }
 
     /*!
      * \copydoc BlackOilBaseProblem::thresholdPressure

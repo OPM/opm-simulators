@@ -219,7 +219,7 @@ protected:
 
         unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
         unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
-        trans_ = problem.transmissibility(I, J);
+        trans_ = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
         faceArea_ = scvf.area();
         thpres_ = problem.thresholdPressure(I, J);
 
