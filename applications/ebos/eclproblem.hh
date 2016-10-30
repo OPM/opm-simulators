@@ -1293,7 +1293,11 @@ private:
 #endif
 
             if (localDofIdx != 0) {
-                unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+                unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(localDofIdx));
+#else
+                unsigned globalCenterElemIdx = elementMapper.map(stencil.entity(localDofIdx));
+#endif
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
             }
         };
