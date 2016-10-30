@@ -253,6 +253,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GridView::template Codim<0>::Entity Element;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager EclMaterialLawManager;
+    typedef typename GET_PROP_TYPE(TypeTag, DofMapper) DofMapper;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
@@ -298,7 +299,7 @@ public:
         , deckUnits_(simulator)
         , eclWriter_(simulator)
         , summaryWriter_(simulator)
-        , pffDofData_(simulator.gridView())
+        , pffDofData_(simulator.gridView(), simulator.model().dofMapper())
     {
         // add the output module for the Ecl binary output
         simulator.model().addOutputModule(new Ewoms::EclOutputBlackOilModule<TypeTag>(simulator));
@@ -1323,7 +1324,7 @@ private:
     EclWriter<TypeTag> eclWriter_;
     EclSummaryWriter summaryWriter_;
 
-    PffGridVector<GridView, Stencil, PffDofData_> pffDofData_;
+    PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
 };
 } // namespace Ewoms
 
