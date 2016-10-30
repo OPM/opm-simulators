@@ -1294,9 +1294,9 @@ private:
 
             if (localDofIdx != 0) {
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(localDofIdx));
+                unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
 #else
-                unsigned globalCenterElemIdx = elementMapper.map(stencil.entity(localDofIdx));
+                unsigned globalCenterElemIdx = elementMapper.map(stencil.entity(/*dofIdx=*/0));
 #endif
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
             }
