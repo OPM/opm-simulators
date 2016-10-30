@@ -113,7 +113,10 @@ void writeTetrahedronSubControlVolumes(const Grid &grid)
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
     typedef Ewoms::VcfvStencil<Scalar, GridView> Stencil;
-    Stencil stencil(gridView);
+    typedef typename Stencil :: Mapper Mapper;
+
+    Mapper mapper( gridView );
+    Stencil stencil(gridView, mapper);
 
     auto eIt = gridView.template begin<0>();
     const auto &eEndIt = gridView.template end<0>();
@@ -298,7 +301,10 @@ void testQuadrature()
     Scalar result = 0;
     // instanciate a stencil
     typedef Ewoms::VcfvStencil<Scalar, GridView> Stencil;
-    Stencil stencil(gridView);
+    typedef typename Stencil :: Mapper Mapper;
+
+    Mapper mapper( gridView );
+    Stencil stencil(gridView, mapper);
     for (; eIt != eEndIt; ++eIt) {
         const auto &elemGeom = eIt->geometry();
 

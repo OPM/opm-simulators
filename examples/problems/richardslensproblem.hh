@@ -122,12 +122,12 @@ SET_STRING_PROP(RichardsLensProblem, GridFile, "./data/richardslens_24x16.dgf");
  *        embedded into a high-permeability domain.
  *
  * The domain is rectangular. The left and right boundaries are
- * free-flow boundaries with fixed water pressure which corrosponds to
+ * free-flow boundaries with fixed water pressure which corresponds to
  * a fixed saturation of \f$S_w = 0\f$ in the Richards model, the
  * bottom boundary is closed. The top boundary is also closed except
  * for an infiltration section, where water is infiltrating into an
  * initially unsaturated porous medium. This problem is very similar
- * the the \c LensProblem, with the main difference being that the domain
+ * the \c LensProblem, with the main difference being that the domain
  * is initally fully saturated by gas instead of water and water
  * instead of a \c DNAPL infiltrates from the top.
  */
@@ -218,7 +218,7 @@ public:
         outerK_ = this->toDimMatrix_(5e-12);
 
         // determine which degrees of freedom are in the lens
-        Stencil stencil(this->gridView());
+        Stencil stencil(this->gridView(), this->simulator().model().dofMapper() );
         auto elemIt = this->gridView().template begin</*codim=*/0>();
         auto elemEndIt = this->gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
