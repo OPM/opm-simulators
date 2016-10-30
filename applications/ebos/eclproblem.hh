@@ -1285,7 +1285,11 @@ private:
         {
             const auto& elementMapper = this->model().elementMapper();
 
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
             unsigned globalElemIdx = elementMapper.index(stencil.entity(localDofIdx));
+#else
+            unsigned globalElemIdx = elementMapper.map(stencil.entity(localDofIdx));
+#endif
 
             if (localDofIdx != 0) {
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
