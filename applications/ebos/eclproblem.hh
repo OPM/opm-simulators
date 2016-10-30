@@ -346,6 +346,9 @@ public:
         updatePffDofData_();
     }
 
+    void prefetch(const Element& elem) const
+    { pffDofData_.prefetch(elem); }
+
     /*!
      * \brief This method restores the complete state of the well
      *        from disk.

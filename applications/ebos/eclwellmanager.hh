@@ -407,11 +407,8 @@ public:
 #endif
         {
             ElementContext elemCtx(simulator_);
-            auto elemIt = simulator_.gridManager().gridView().template begin</*codim=*/0>();
-            for (threadedElemIt.beginParallel(elemIt);
-                 !threadedElemIt.isFinished(elemIt);
-                 threadedElemIt.increment(elemIt))
-            {
+            auto elemIt = threadedElemIt.beginParallel();
+            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 const Element& elem = *elemIt;
                 if (elem.partitionType() != Dune::InteriorEntity)
                     continue;
