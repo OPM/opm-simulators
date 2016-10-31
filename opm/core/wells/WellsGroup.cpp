@@ -643,7 +643,7 @@ namespace Opm
         for (size_t i = 0; i < children_.size(); ++i) {
             sum += children_[i]->getTotalVoidageRate(well_voidage_rates);
         }
-        return sum;
+        return sum * efficiencyFactor();
     }
 
     /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
@@ -731,7 +731,8 @@ namespace Opm
             const double my_guide_rate = injectionGuideRate(false);
             for (size_t i = 0; i < children_.size(); ++i ) {
                 const double child_guide_rate = children_[i]->injectionGuideRate(false);
-                const double child_target = child_guide_rate / my_guide_rate * total_reinjected * injSpec().voidage_replacment_fraction_;
+                const double child_target = child_guide_rate / my_guide_rate * total_reinjected / efficiencyFactor()
+                                          * injSpec().voidage_replacment_fraction_;
                 children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
             }
         }
@@ -767,7 +768,7 @@ namespace Opm
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
+                const double child_target = target / efficiencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
                 children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
             }
             // I do not know why here.
@@ -1121,7 +1122,7 @@ namespace Opm
     double WellNode::getTotalVoidageRate(const std::vector<double>& well_voidage_rates)
     {
         if (isProducer()) {
-            return well_voidage_rates[self_index_];
+            return well_voidage_rates[self_index_] * efficiencyFactor();
         } else {
             return 0;
         }
@@ -1166,6 +1167,9 @@ namespace Opm
             return;
         }
 
+        // applying the efficiency factor
+        const double ntarget = target / efficiencyFactor();
+
         const int np = phaseUsage().num_phases;
         // WellControls* ctrl = wells_->ctrls[self_index_];
         // for this case, distr contains the FVF information
@@ -1180,13 +1184,13 @@ namespace Opm
         const int invalid_vfp = -std::numeric_limits<int>::max();
 
         if (group_control_index_ < 0) {
-            append_well_controls(RESERVOIR_RATE, target, invalid_alq, invalid_vfp, &distr[0], self_index_, wells_);
+            append_well_controls(RESERVOIR_RATE, ntarget, invalid_alq, invalid_vfp, &distr[0], self_index_, wells_);
             // TODO: basically, on group control index is not enough eventually. There can be more than one sources for the
             // group control
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
         } else {
             well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , RESERVOIR_RATE);
-            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , target);
+            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , ntarget);
             well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , &distr[0]);
         }
