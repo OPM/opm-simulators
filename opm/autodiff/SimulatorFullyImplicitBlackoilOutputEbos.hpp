@@ -36,7 +36,7 @@
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/ParallelDebugOutput.hpp>
 
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include <opm/autodiff/ThreadHandle.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
@@ -128,7 +128,7 @@ namespace Opm
 
         void restore(SimulatorTimerInterface& timer,
                      BlackoilState& state,
-                     WellStateFullyImplicitBlackoil& wellState,
+                     WellStateFullyImplicitBlackoilDense& wellState,
                      const std::string& filename,
                      const int desiredReportStep);
 
@@ -138,7 +138,7 @@ namespace Opm
                                  const double* permeability,
                                  const Grid& grid,
                                  SimulationDataContainer& simulatorstate,
-                                 WellStateFullyImplicitBlackoil& wellstate);
+                                 WellStateFullyImplicitBlackoilDense& wellstate);
 
         bool isRestart() const;
 
@@ -230,7 +230,7 @@ namespace Opm
                          const double* permeability,
                          const Grid& grid,
                          SimulationDataContainer& simulatorstate,
-                         WellStateFullyImplicitBlackoil& wellstate)
+                         WellStateFullyImplicitBlackoilDense& wellstate)
     {
         // gives a dummy dynamic_list_econ_limited
         DynamicListEconLimited dummy_list_econ_limited;

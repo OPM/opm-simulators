@@ -204,7 +204,7 @@ namespace Opm
     BlackoilOutputWriterEbos::
     restore(SimulatorTimerInterface& timer,
             BlackoilState& state,
-            WellStateFullyImplicitBlackoil& wellState,
+            WellStateFullyImplicitBlackoilDense& wellState,
             const std::string& filename,
             const int desiredResportStep )
     {

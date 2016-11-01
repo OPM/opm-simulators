@@ -40,7 +40,6 @@
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/simulators/WellSwitchingLogger.hpp>
 

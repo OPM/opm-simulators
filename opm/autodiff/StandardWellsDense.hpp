@@ -26,8 +26,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
-#include <Eigen/Eigen>
-#include <Eigen/Sparse>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 #include <cassert>
@@ -37,8 +35,6 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
-#include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
@@ -49,7 +45,7 @@
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
-
+#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
@@ -66,29 +62,16 @@ namespace Opm {
         public:
 
             // ---------      Types      ---------
-            using ADB = AutoDiffBlock<double>;
-
             typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
-            typedef WellStateFullyImplicitBlackoil WellState;
+            typedef WellStateFullyImplicitBlackoilDense WellState;
             typedef BlackoilModelParameters ModelParameters;
 
-            //typedef AutoDiffBlock<double> ADB;
-            using Vector = ADB::V;
-            using V = ADB::V;
-            typedef ADB::M M;
             typedef double Scalar;
-            typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
-            typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
-            typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
-            typedef Dune::BlockVector<VectorBlockType>      BVector;
+            typedef Dune::FieldVector<Scalar, 3    > VectorBlockType;
+            typedef Dune::FieldMatrix<Scalar, 3, 3 > MatrixBlockType;
+            typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+            typedef Dune::BlockVector<VectorBlockType> BVector;
 
-
-            // copied from BlackoilModelBase
-            // should put to somewhere better
-            using DataBlock =  Eigen::Array<double,
-                                            Eigen::Dynamic,
-                                            Eigen::Dynamic,
-                                            Eigen::RowMajor>;
             // ---------  Public methods  ---------
             StandardWellsDense(const Wells* wells_arg,
                                const ModelParameters& param,
@@ -697,36 +680,41 @@ namespace Opm {
             bool getWellConvergence(Simulator& ebosSimulator,
                                     const int iteration)
             {
+                typedef std::vector< double > Vector;
                 const int np = numPhases();
                 const int nc = numCells();
                 const double tol_wells = param_.tolerance_wells_;
                 const double maxResidualAllowed = param_.max_residual_allowed_;
 
-                std::vector<double> R_sum(np);
-                std::vector<double> B_avg(np);
-                std::vector<double> maxCoeff(np);
-                std::vector<double> maxNormWell(np);
-                Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> B(nc, np);
-                Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> R(nc, np);
-                Eigen::Array<V::Scalar, Eigen::Dynamic, Eigen::Dynamic> tempV(nc, np);
+                Vector R_sum(np);
+                Vector B_avg(np);
+                Vector maxCoeff(np);
+                Vector maxNormWell(np);
+
+                std::vector< Vector > B( np, Vector( nc ) );
+                std::vector< Vector > R2( np, Vector( nc ) );
+                std::vector< Vector > tempV( np, Vector( nc ) );
 
                 for ( int idx = 0; idx < np; ++idx )
                 {
-                    V b(nc);
+                    Vector& B_idx  = B[ idx ];
+                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
+
                     for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
                         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                         const auto& fs = intQuants.fluidState();
 
-                        int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
-
-                        b[cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
+                        B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
                     }
-                    B.col(idx) = b;
                 }
 
-                detail::convergenceReduction(B, tempV, R, R_sum, maxCoeff, B_avg, maxNormWell, nc, np, pv_, residual());
+                detail::convergenceReduction(B, tempV, R2,
+                                             R_sum, maxCoeff, B_avg, maxNormWell,
+                                             nc, np, pv_, residual() );
 
-                std::vector<double> well_flux_residual(np);
+
+                Vector well_flux_residual(np);
+
                 bool converged_Well = true;
                 // Finish computation
                 for ( int idx = 0; idx < np; ++idx )
@@ -1732,7 +1720,4 @@ namespace Opm {
 
 
 } // namespace Opm
-
-#include "StandardWellsDense_impl.hpp"
-
 #endif

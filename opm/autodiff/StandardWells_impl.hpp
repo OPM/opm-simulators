@@ -21,7 +21,6 @@
 
 #include <opm/autodiff/StandardWells.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
-#include <opm/autodiff/BlackoilModelEnums.hpp>
 
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
