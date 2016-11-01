@@ -106,16 +106,16 @@ VFPInjProperties::EvalWell VFPInjProperties::bhp(const int table_id,
     if (table != nullptr) {
         //First, find the values to interpolate between
         //Value of FLO is negative in OPM for producers, but positive in VFP table
-        auto flo_i = detail::findInterpData(flo.value, table->getFloAxis());
+        auto flo_i = detail::findInterpData(flo.value(), table->getFloAxis());
         auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
 
         detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
 
         bhp = bhp_val.dflo * flo;
-        bhp.value = bhp_val.value; // thp is assumed constant i.e.
+        bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
     }
     else {
-        bhp.value = -1e100; //Signal that this value has not been calculated properly, due to "missing" table
+        bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
     }
     return bhp;
 }
