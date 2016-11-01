@@ -25,7 +25,7 @@
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
 
 
 namespace Opm
@@ -38,15 +38,15 @@ namespace Opm
         PhaseUsage pu;
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
 
-        const auto& tm = eclipseState.getTableManager();
+        const auto& phase = eclipseState.runspec().phases();
         // Discover phase usage.
-        if (tm.hasPhase(Phase::PhaseEnum::WATER)) {
+        if (phase.active(Phase::WATER)) {
             pu.phase_used[BlackoilPhases::Aqua] = 1;
         }
-        if (tm.hasPhase(Phase::PhaseEnum::OIL)) {
+        if (phase.active(Phase::OIL)) {
             pu.phase_used[BlackoilPhases::Liquid] = 1;
         }
-        if (tm.hasPhase(Phase::PhaseEnum::GAS)) {
+        if (phase.active(Phase::GAS)) {
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;
@@ -76,14 +76,17 @@ namespace Opm
         PhaseUsage pu;
         std::fill(pu.phase_used, pu.phase_used + BlackoilPhases::MaxNumPhases, 0);
 
+        Runspec runspec( deck );
+        const auto& phase = runspec.phases();
+
         // Discover phase usage.
-        if (deck.hasKeyword("WATER")) {
+        if (phase.active( Phase::WATER )) {
             pu.phase_used[BlackoilPhases::Aqua] = 1;
         }
-        if (deck.hasKeyword("OIL")) {
+        if (phase.active( Phase::OIL )) {
             pu.phase_used[BlackoilPhases::Liquid] = 1;
         }
-        if (deck.hasKeyword("GAS")) {
+        if (phase.active( Phase::GAS )) {
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;
