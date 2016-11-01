@@ -1732,7 +1732,4 @@ namespace Opm {
 
 
 } // namespace Opm
-
-#include "StandardWellsDense_impl.hpp"
-
 #endif
