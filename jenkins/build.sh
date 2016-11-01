@@ -7,7 +7,8 @@ upstreams=(opm-common
            opm-output
            opm-material
            opm-core
-           opm-grid)
+           opm-grid
+           ewoms)
 
 declare -A upstreamRev
 upstreamRev[opm-common]=master
@@ -17,6 +18,7 @@ upstreamRev[opm-material]=master
 upstreamRev[opm-core]=master
 upstreamRev[opm-grid]=master
 upstreamRev[opm-output]=master
+upstreamRev[ewoms]=master
 
 if grep -q "opm-common=" <<< $ghprbCommentBody
 then
