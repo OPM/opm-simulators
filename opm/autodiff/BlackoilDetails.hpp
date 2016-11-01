@@ -291,6 +291,91 @@ namespace detail {
             }
         }
 
+
+        template <class Scalar>
+        inline
+        double
+        convergenceReduction(const std::vector< std::vector< Scalar > >& B,
+                             const std::vector< std::vector< Scalar > >& tempV,
+                             const std::vector< std::vector< Scalar > >& R,
+                             std::vector< Scalar >& R_sum,
+                             std::vector< Scalar >& maxCoeff,
+                             std::vector< Scalar >& B_avg,
+                             std::vector< Scalar >& maxNormWell,
+                             const int nc,
+                             const int np,
+                             const std::vector< Scalar >& pv,
+                             const std::vector< Scalar >& residual_well)
+        {
+            const int nw = residual_well.size() / np;
+            assert(nw * np == int(residual_well.size()));
+
+            // Do the global reductions
+#if 0 // HAVE_MPI
+            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+            {
+                const ParallelISTLInformation& info =
+                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+
+                // Compute the global number of cells and porevolume
+                std::vector<int> v(nc, 1);
+                auto nc_and_pv = std::tuple<int, double>(0, 0.0);
+                auto nc_and_pv_operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
+                                                           Opm::Reduction::makeGlobalSumFunctor<double>());
+                auto nc_and_pv_containers  = std::make_tuple(v, pv);
+                info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
+
+                for ( int idx = 0; idx < np; ++idx )
+                {
+                    auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
+                    auto containers = std::make_tuple(B.col(idx),
+                                                      tempV.col(idx),
+                                                      R.col(idx));
+                    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
+                                                      Opm::Reduction::makeGlobalMaxFunctor<double>(),
+                                                      Opm::Reduction::makeGlobalSumFunctor<double>());
+                    info.computeReduction(containers, operators, values);
+                    B_avg[idx]       = std::get<0>(values)/std::get<0>(nc_and_pv);
+                    maxCoeff[idx]    = std::get<1>(values);
+                    R_sum[idx]       = std::get<2>(values);
+                    assert(np >= np);
+                    if (idx < np) {
+                        maxNormWell[idx] = 0.0;
+                        for ( int w = 0; w < nw; ++w ) {
+                            maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
+                        }
+                    }
+                }
+                info.communicator().max(maxNormWell.data(), np);
+                // Compute pore volume
+                return std::get<1>(nc_and_pv);
+            }
+            else
+#endif
+            {
+                B_avg.resize(np);
+                maxCoeff.resize(np);
+                R_sum.resize(np);
+                maxNormWell.resize(np);
+                for ( int idx = 0; idx < np; ++idx )
+                {
+                    B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(), 0.0 ) / nc;
+                    R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(), 0.0 );
+                    maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
+
+                    assert(np >= np);
+                    if (idx < np) {
+                        maxNormWell[idx] = 0.0;
+                        for ( int w = 0; w < nw; ++w ) {
+                            maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
+                        }
+                    }
+                }
+                // Compute total pore volume
+                return std::accumulate(pv.begin(), pv.end(), 0.0);
+            }
+        }
+
         /// \brief Compute the L-infinity norm of a vector representing a well equation.
         /// \param a The container to compute the infinity norm on.
         /// \param info In a parallel this holds the information about the data distribution.
