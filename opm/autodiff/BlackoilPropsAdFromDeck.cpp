@@ -306,17 +306,17 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval pEval = 0.0;
         Eval TEval = 0.0;
 
-        pEval.derivatives[0] = 1.0;
+        pEval.setDerivative(0, 1.0);
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = pw.value()[i];
-            TEval.value = T.value()[i];
+            pEval.setValue(pw.value()[i]);
+            TEval.setValue(T.value()[i]);
 
             const Eval& muEval = waterPvt_->viscosity(pvtRegionIdx, TEval, pEval);
 
-            mu[i] = muEval.value;
-            dmudp[i] = muEval.derivatives[0];
+            mu[i] = muEval.value();
+            dmudp[i] = muEval.derivative(0);
         }
 
         if (pw.derivative().empty()) {
@@ -360,28 +360,28 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval TEval = 0.0;
         Eval RsEval = 0.0;
 
-        pEval.derivatives[0] = 1.0;
-        RsEval.derivatives[1] = 1.0;
+        pEval.setDerivative(0, 1.0);
+        RsEval.setDerivative(1, 1.0);
 
         Eval muEval;
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = po.value()[i];
-            TEval.value = T.value()[i];
+            pEval.setValue(po.value()[i]);
+            TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeGas()) {
                 muEval = oilPvt_->saturatedViscosity(pvtRegionIdx, TEval, pEval);
             }
             else {
                 if (phase_usage_.phase_used[Gas]) {
-                    RsEval.value = rs.value()[i];
+                    RsEval.setValue(rs.value()[i]);
                 }
                 muEval = oilPvt_->viscosity(pvtRegionIdx, TEval, pEval, RsEval);
             }
 
-            mu[i] = muEval.value;
-            dmudp[i] = muEval.derivatives[0];
-            dmudr[i] = muEval.derivatives[1];
+            mu[i] = muEval.value();
+            dmudp[i] = muEval.derivative(0);
+            dmudr[i] = muEval.derivative(1);
         }
 
         ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
@@ -428,25 +428,25 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval RvEval = 0.0;
         Eval muEval;
 
-        pEval.derivatives[0] = 1.0;
-        RvEval.derivatives[1] = 1.0;
+        pEval.setDerivative(0, 1.0);
+        RvEval.setDerivative(1, 1.0);
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = pg.value()[i];
-            TEval.value = T.value()[i];
+            pEval.setValue(pg.value()[i]);
+            TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeOil()) {
                 muEval = gasPvt_->saturatedViscosity(pvtRegionIdx, TEval, pEval);
             }
             else {
-                RvEval.value = rv.value()[i];
+                RvEval.setValue(rv.value()[i]);
                 muEval = gasPvt_->viscosity(pvtRegionIdx, TEval, pEval, RvEval);
             }
 
-            mu[i] = muEval.value;
-            dmudp[i] = muEval.derivatives[0];
-            dmudr[i] = muEval.derivatives[1];
+            mu[i] = muEval.value();
+            dmudp[i] = muEval.derivative(0);
+            dmudr[i] = muEval.derivative(1);
         }
 
         ADB::M dmudp_diag(dmudp.matrix().asDiagonal());
@@ -490,16 +490,16 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval pEval = 0.0;
         Eval TEval = 0.0;
 
-        pEval.derivatives[0] = 1.0;
+        pEval.setDerivative(0, 1.0);
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = pw.value()[i];
-            TEval.value = T.value()[i];
+            pEval.setValue(pw.value()[i]);
+            TEval.setValue(T.value()[i]);
 
             const Eval& bEval = waterPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
 
-            b[i] = bEval.value;
-            dbdp[i] = bEval.derivatives[0];
+            b[i] = bEval.value();
+            dbdp[i] = bEval.derivative(0);
         }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
@@ -541,13 +541,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval RsEval = 0.0;
         Eval bEval;
 
-        pEval.derivatives[0] = 1.0;
-        RsEval.derivatives[1] = 1.0;
+        pEval.setDerivative(0, 1.0);
+        RsEval.setDerivative(1, 1.0);
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = po.value()[i];
-            TEval.value = T.value()[i];
+            pEval.setValue(po.value()[i]);
+            TEval.setValue(T.value()[i]);
 
             //RS/RV only makes sense when gas phase is active
             if (cond[i].hasFreeGas()) {
@@ -555,17 +555,17 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             }
             else {
                 if (rs.size() == 0) {
-                    RsEval.value = 0.0;
+                    RsEval.setValue(0.0);
                 }
                 else {
-                    RsEval.value = rs.value()[i];
+                    RsEval.setValue(rs.value()[i]);
                 }
                 bEval = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RsEval);
             }
 
-            b[i] = bEval.value;
-            dbdp[i] = bEval.derivatives[0];
-            dbdr[i] = bEval.derivatives[1];
+            b[i] = bEval.value();
+            dbdp[i] = bEval.derivative(0);
+            dbdr[i] = bEval.derivative(1);
         }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
@@ -614,25 +614,25 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval RvEval = 0.0;
         Eval bEval;
 
-        pEval.derivatives[0] = 1.0;
-        RvEval.derivatives[1] = 1.0;
+        pEval.setDerivative(0, 1.0);
+        RvEval.setDerivative(1, 1.0);
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = pg.value()[i];
-            TEval.value = T.value()[i];
+            pEval.setValue(pg.value()[i]);
+            TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeOil()) {
                 bEval = gasPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
             }
             else {
-                RvEval.value = rv.value()[i];
+                RvEval.setValue(rv.value()[i]);
                 bEval = gasPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RvEval);
             }
 
-            b[i] = bEval.value;
-            dbdp[i] = bEval.derivatives[0];
-            dbdr[i] = bEval.derivatives[1];
+            b[i] = bEval.value();
+            dbdp[i] = bEval.derivative(0);
+            dbdr[i] = bEval.derivative(1);
         }
 
         ADB::M dbdp_diag(dbdp.matrix().asDiagonal());
@@ -672,16 +672,16 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval pEval = 0.0;
         Eval TEval = 293.15; // temperature is not supported by this API!
 
-        pEval.derivatives[0] = 1.0;
+        pEval.setDerivative(0, 1.0);
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = po.value()[i];
+            pEval.setValue(po.value()[i]);
 
             const Eval& RsEval = oilPvt_->saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
 
-            rbub[i] = RsEval.value;
-            drbubdp[i] = RsEval.derivatives[0];
+            rbub[i] = RsEval.value();
+            drbubdp[i] = RsEval.derivative(0);
         }
 
         ADB::M drbubdp_diag(drbubdp.matrix().asDiagonal());
@@ -729,16 +729,16 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         Eval pEval = 0.0;
         Eval TEval = 293.15; // temperature is not supported by this API!
 
-        pEval.derivatives[0] = 1.0;
+        pEval.setDerivative(0, 1.0);
 
         for (int i = 0; i < n; ++i) {
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
-            pEval.value = pg.value()[i];
+            pEval.setValue(pg.value()[i]);
 
             const Eval& RvEval = gasPvt_->saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
 
-            rv[i] = RvEval.value;
-            drvdp[i] = RvEval.derivatives[0];
+            rv[i] = RvEval.value();
+            drvdp[i] = RvEval.derivative(0);
         }
 
         ADB::M drvdp_diag(drvdp.matrix().asDiagonal());
