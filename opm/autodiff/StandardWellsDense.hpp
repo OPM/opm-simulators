@@ -238,24 +238,24 @@ namespace Opm {
 
                             if (!only_wells) {
                                 // subtract sum of phase fluxes in the reservoir equation.
-                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value;
+                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value();
                             }
 
                             // subtract sum of phase fluxes in the well equations.
-                            resWell_[w][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value;
+                            resWell_[w][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value();
 
                             // assemble the jacobians
                             for (int p2 = 0; p2 < np; ++p2) {
                                 if (!only_wells) {
-                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivatives[p2];
-                                    duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].derivatives[p2+3]; // intput in transformed matrix
-                                    duneC_[w][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivatives[p2];
+                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
+                                    duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].derivative(p2+3); // intput in transformed matrix
+                                    duneC_[w][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
                                 }
-                                invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivatives[p2+3];
+                                invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2+3);
                             }
 
                             // Store the perforation phase flux for later usage.
-                            well_state.perfPhaseRates()[perf*np + p1] = cq_s[p1].value;
+                            well_state.perfPhaseRates()[perf*np + p1] = cq_s[p1].value();
                         }
                         // Store the perforation pressure for later usage.
                         well_state.perfPress()[perf] = well_state.bhp()[w] + wellPerforationPressureDiffs()[perf];
@@ -266,9 +266,9 @@ namespace Opm {
                         EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
                         resWell_loc += getQs(w, p1);
                         for (int p2 = 0; p2 < np; ++p2) {
-                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivatives[p2+3];
+                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivative(p2+3);
                         }
-                        resWell_[w][flowPhaseToEbosCompIdx(p1)] += resWell_loc.value;
+                        resWell_[w][flowPhaseToEbosCompIdx(p1)] += resWell_loc.value();
                     }
                 }
 
@@ -295,10 +295,10 @@ namespace Opm {
                     EvalWell well_pressure = bhp + wellPerforationPressureDiffs()[perf];
                     EvalWell drawdown = pressure - well_pressure;
 
-                    if ( drawdown.value < 0 && wells().type[w] == INJECTOR)  {
+                    if ( drawdown.value() < 0 && wells().type[w] == INJECTOR)  {
                         return false;
                     }
-                    if ( drawdown.value > 0 && wells().type[w] == PRODUCER)  {
+                    if ( drawdown.value() > 0 && wells().type[w] == PRODUCER)  {
                         return false;
                     }
                 }
@@ -460,9 +460,9 @@ namespace Opm {
             typedef DenseAd::Evaluation<double, /*size=*/3> Eval;
             EvalWell extendEval(Eval in) const {
                 EvalWell out = 0.0;
-                out.value = in.value;
+                out.setValue(in.value());
                 for(int i = 0;i<3;++i) {
-                    out.derivatives[i] = in.derivatives[flowToEbosPvIdx(i)];
+                    out.setDerivative(i, in.derivative(flowToEbosPvIdx(i)));
                 }
                 return out;
             }
@@ -474,16 +474,16 @@ namespace Opm {
                 for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
                     for (int w = 0; w < nw; ++w) {
                         wellVariables_[w + nw*phaseIdx] = 0.0;
-                        wellVariables_[w + nw*phaseIdx].value = xw.wellSolutions()[w + nw* phaseIdx];
-                        wellVariables_[w + nw*phaseIdx].derivatives[np + phaseIdx] = 1.0;
+                        wellVariables_[w + nw*phaseIdx].setValue(xw.wellSolutions()[w + nw* phaseIdx]);
+                        wellVariables_[w + nw*phaseIdx].setDerivative(np + phaseIdx, 1.0);
                     }
                 }
             }
 
             void print(EvalWell in) const {
-                std::cout << in.value << std::endl;
-                for (int i = 0; i < in.derivatives.size(); ++i) {
-                    std::cout << in.derivatives[i] << std::endl;
+                std::cout << in.value() << std::endl;
+                for (int i = 0; i < in.size; ++i) {
+                    std::cout << in.derivative(i) << std::endl;
                 }
             }
 
@@ -493,7 +493,7 @@ namespace Opm {
                 const int nw = wells().number_of_wells;
                 for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
                     for (int w = 0; w < nw; ++w) {
-                        F0_[w + nw * phaseIdx] = wellVolumeFraction(w,phaseIdx).value;
+                        F0_[w + nw * phaseIdx] = wellVolumeFraction(w,phaseIdx).value();
                     }
                 }
             }
@@ -529,7 +529,7 @@ namespace Opm {
                 EvalWell drawdown = pressure - well_pressure;
 
                 // injection perforations
-                if ( drawdown.value > 0 )  {
+                if ( drawdown.value() > 0 )  {
 
                     //Do nothing if crossflow is not allowed
                     if (!allow_cf && wells().type[w] == INJECTOR)
@@ -586,16 +586,16 @@ namespace Opm {
                         if (cmix_s[gaspos] > 0)
                             rvPerf = cmix_s[oilpos] / cmix_s[gaspos];
 
-                        if (rvPerf.value > rvSatEval.value) {
+                        if (rvPerf.value() > rvSatEval.value()) {
                             rvPerf = rvSatEval;
-                            //rvPerf.value = rvSatEval.value;
+                            //rvPerf.setValue(rvSatEval.value());
                         }
 
                         EvalWell rsPerf = 0.0;
                         if (cmix_s[oilpos] > 0)
                             rsPerf = cmix_s[gaspos] / cmix_s[oilpos];
 
-                        if (rsPerf.value > rsSatEval.value) {
+                        if (rsPerf.value() > rsSatEval.value()) {
                             //rsPerf = 0.0;
                             rsPerf= rsSatEval;
                         }
@@ -719,7 +719,7 @@ namespace Opm {
 
                         int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
 
-                        b[cell_idx] = 1 / fs.invB(ebosPhaseIdx).value;
+                        b[cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
                     }
                     B.col(idx) = b;
                 }
@@ -821,7 +821,7 @@ namespace Opm {
 
                         const double p_above = perf == wells().well_connpos[w] ? xw.bhp()[w] : xw.perfPress()[perf - 1];
                         const double p_avg = (xw.perfPress()[perf] + p_above)/2;
-                        double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value;
+                        double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
                         if (pu.phase_used[BlackoilPhases::Aqua]) {
                             b_perf[ pu.phase_pos[BlackoilPhases::Aqua] + perf * pu.num_phases] =
@@ -1426,7 +1426,7 @@ namespace Opm {
                 if (well_controls_get_current_type(wc) == BHP) {
                     EvalWell bhp = 0.0;
                     const double target_rate = well_controls_get_current_target(wc);
-                    bhp.value = target_rate;
+                    bhp.setValue(target_rate);
                     return bhp;
                 } else if (well_controls_get_current_type(wc) == THP) {
                     const int control = well_controls_get_current(wc);
@@ -1483,7 +1483,7 @@ namespace Opm {
                     if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
                         return wellVariables_[wellIdx];
                     }
-                    qs.value = target_rate;
+                    qs.setValue(target_rate);
                     return qs;
                 }
 
@@ -1495,7 +1495,7 @@ namespace Opm {
                     const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
 
                     if (comp_frac == 1.0) {
-                        qs.value = target_rate;
+                        qs.setValue(target_rate);
                         return qs;
                     }
                     int currentControlIdx = 0;

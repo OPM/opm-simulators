@@ -666,7 +666,7 @@ namespace Opm {
                     const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                     const auto& fs = intQuants.fluidState();
 
-                    B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value;
+                    B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
                     R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
                 }
             }
