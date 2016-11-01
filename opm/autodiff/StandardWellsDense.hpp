@@ -49,7 +49,7 @@
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
-
+#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
@@ -69,7 +69,7 @@ namespace Opm {
             using ADB = AutoDiffBlock<double>;
 
             typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
-            typedef WellStateFullyImplicitBlackoil WellState;
+            typedef WellStateFullyImplicitBlackoilDense WellState;
             typedef BlackoilModelParameters ModelParameters;
 
             //typedef AutoDiffBlock<double> ADB;

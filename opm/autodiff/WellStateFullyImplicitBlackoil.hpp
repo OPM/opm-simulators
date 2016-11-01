@@ -24,7 +24,6 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
-#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <vector>
@@ -107,68 +106,12 @@ namespace Opm
             well_potentials_.clear();
             well_potentials_.resize(nperf * np, 0.0);
 
-            well_solutions_.clear();
-            well_solutions_.resize(nw * np, 0.0);
-            std::vector<double> g = {1.0,1.0,0.01};
-            for (int w = 0; w < nw; ++w) {
-                const WellControls* wc = wells->ctrls[w];
-
-                // The current control in the well state overrides
-                // the current control set in the Wells struct, which
-                // is instead treated as a default.
-                const int current = current_controls_[w];
-                const WellType& well_type = wells->type[w];
-
-                switch (well_controls_iget_type(wc, current)) {
-                case THP: // Intentional fall-through
-                case BHP:
-                {
-                    if (well_type == INJECTOR) {
-                        for (int p = 0; p < np; ++p)  {
-                            well_solutions_[w] += wellRates()[np*w + p] * wells->comp_frac[np*w + p];
-                        }
-                    } else {
-                        for (int p = 0; p < np; ++p) {
-                            well_solutions_[w] += g[p] * wellRates()[np*w + p];
-                        }
-                    }
-                }
-                    break;
-
-
-                case RESERVOIR_RATE: // Intentional fall-through
-                case SURFACE_RATE:
-                {
-                    wellSolutions()[w] = bhp()[w];
-
-                }
-                    break;
-                }
-                assert(np == 3);
-                double total_rates = 0.0;
-                for (int p = 0; p < np; ++p)  {
-                    total_rates += g[p] * wellRates()[np*w + p];
-                }
-
-                if(std::abs(total_rates) > 0) {
-                    wellSolutions()[nw + w] = g[Water] * wellRates()[np*w + Water] / total_rates; //wells->comp_frac[np*w + Water]; // Water;
-                    wellSolutions()[2*nw + w] = g[Gas] * wellRates()[np*w + Gas] / total_rates ; //wells->comp_frac[np*w + Gas]; //Gas
-                } else {
-                    wellSolutions()[nw + w] = wells->comp_frac[np*w + Water];
-                    wellSolutions()[2*nw + w] = wells->comp_frac[np*w + Gas];
-                }
-
-
-            }
-
-
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if( ! prevState.wellMap().empty() )
             {
                 typedef typename WellMapType :: const_iterator const_iterator;
                 const_iterator end = prevState.wellMap().end();
-                int nw_old = prevState.bhp().size();
                 for (int w = 0; w < nw; ++w) {
                     std::string name( wells->name[ w ] );
                     const_iterator it = prevState.wellMap().find( name );
@@ -181,30 +124,10 @@ namespace Opm
                         bhp()[ newIndex ] = prevState.bhp()[ oldIndex ];
 
                         // wellrates
-                        double total_well_rates = 0.0;
-                        for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
-                        {
-                            total_well_rates += prevState.wellRates()[ oldidx ];
-                        }
-
-                        //if (std::abs(total_well_rates) > 0) {
-
                         for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
                         {
                             wellRates()[ idx ] = prevState.wellRates()[ oldidx ];
                         }
-
-                        // wellSolutions
-                        //if (std::abs(total_well_rates) > 0.0) {
-                            //wellSolutions()[ 0*nw + newIndex ] = prevState.wellSolutions()[0 * nw_old + oldIndex ];
-                            //if (wells->type[w] == PRODUCER) {
-                        for( int i = 0;  i < np; ++i)
-                        {
-                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
-                        }
-                            //}
-
-                        //}
 
                         // perfPhaseRates
                         int oldPerf_idx = (*it).second[ 1 ];
@@ -243,9 +166,6 @@ namespace Opm
                             // If the set of controls have changed, this may not be identical
                             // to the last control, but it must be a valid control.
                             currentControls()[ newIndex ] = old_control_index;
-                            WellControls* wc = wells->ctrls[newIndex];
-                            well_controls_set_current( wc, old_control_index);
-
                         }
 
                     }
@@ -272,11 +192,7 @@ namespace Opm
         std::vector<double>& wellPotentials() { return well_potentials_; }
         const std::vector<double>& wellPotentials() const { return well_potentials_; }
 
-        /// One rate per phase and well connection.
-        std::vector<double>& wellSolutions() { return well_solutions_; }
-        const std::vector<double>& wellSolutions() const { return well_solutions_; }
-
-        data::Wells report(const PhaseUsage& pu) const override {
+        data::Wells report(const PhaseUsage &pu) const override {
             data::Wells res = WellState::report(pu);
 
             const int nw = this->numWells();
@@ -327,31 +243,10 @@ namespace Opm
             return res;
         }
 
-        WellStateFullyImplicitBlackoil() = default;
-        WellStateFullyImplicitBlackoil( const WellStateFullyImplicitBlackoil& rhs ) :
-            BaseType(rhs),
-            perfphaserates_( rhs.perfphaserates_ ),
-            current_controls_( rhs.current_controls_ ),
-            well_potentials_( rhs.well_potentials_ ),
-            well_solutions_( rhs.well_solutions_ )
-        {}
-
-         WellStateFullyImplicitBlackoil& operator=( const WellStateFullyImplicitBlackoil& rhs ) {
-
-             BaseType::operator =(rhs);
-             this->perfPhaseRates() = rhs.perfPhaseRates();
-             this->currentControls() = rhs.currentControls();
-             this->wellPotentials() = rhs.wellPotentials();
-             this->wellSolutions() = rhs.wellSolutions();
-             return *this;
-         }
-
-
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
         std::vector<double> well_potentials_;
-        std::vector<double> well_solutions_;
     };
 
 } // namespace Opm

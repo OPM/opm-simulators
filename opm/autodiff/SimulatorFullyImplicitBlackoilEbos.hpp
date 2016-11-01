@@ -27,7 +27,7 @@
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include <opm/autodiff/StandardWellsDense.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/SimFIBODetails.hpp>
@@ -54,7 +54,7 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
 
-    typedef WellStateFullyImplicitBlackoil WellState;
+    typedef WellStateFullyImplicitBlackoilDense WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriterEbos OutputWriter;
     typedef BlackoilModelEbos Model;
