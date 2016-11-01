@@ -45,72 +45,19 @@ class Evaluation;
 // provide some algebraic functions
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>& x)
-{
-    Evaluation<ValueType, numVars> result;
-
-    if (x.value < 0.0) {
-        result.value = -x.value;
-        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-            result.derivatives[curVarIdx] = -x.derivatives[curVarIdx];
-    }
-    else {
-        result.value = x.value;
-        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-            result.derivatives[curVarIdx] = x.derivatives[curVarIdx];
-    }
-
-    return result;
-}
+{ return (x > 0.0)?x:-x; }
 
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
-
-    if (x1.value < x2.value) {
-        result.value = x1.value;
-
-        std::copy(x1.derivatives.begin(),
-                  x1.derivatives.end(),
-                  result.derivatives.begin());
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
+{ return (x1 < x2)?x1:x2; }
 
 template <class Arg1ValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> min(const Arg1ValueType& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
+{ return (x1 < x2)?x1:x2; }
 
-    if (x1 < x2.value) {
-        result.value = x1;
-
-        std::fill(result.derivatives.begin(),
-                  result.derivatives.end(),
-                  0.0);
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
-
-template <class Arg2ValueType, class ValueType, int numVars>
+template <class ValueType, int numVars, class Arg2ValueType>
 Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
                                    const Arg2ValueType& x2)
 { return min(x2, x1); }
@@ -118,52 +65,14 @@ Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
 template <class ValueType, int numVars>
 Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
-
-    if (x1.value > x2.value) {
-        result.value = x1.value;
-
-        std::copy(x1.derivatives.begin(),
-                  x1.derivatives.end(),
-                  result.derivatives.begin());
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
+{ return (x1 > x2)?x1:x2; }
 
 template <class Arg1ValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> max(const Arg1ValueType& x1,
                                    const Evaluation<ValueType, numVars>& x2)
-{
-    Evaluation<ValueType, numVars> result;
+{ return (x1 > x2)?x1:x2; }
 
-    if (x1 > x2.value) {
-        result.value = x1;
-
-        std::fill(result.derivatives.begin(),
-                  result.derivatives.end(),
-                  0.0);
-    }
-    else  {
-        result.value = x2.value;
-
-        std::copy(x2.derivatives.begin(),
-                  x2.derivatives.end(),
-                  result.derivatives.begin());
-    }
-
-    return result;
-}
-
-template <class Arg2ValueType, class ValueType, int numVars>
+template <class ValueType, int numVars, class Arg2ValueType>
 Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
                                    const Arg2ValueType& x2)
 { return max(x2, x1); }
@@ -175,13 +84,13 @@ Evaluation<ValueType, numVars> tan(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    const ValueType& tmp = ValueTypeToolbox::tan(x.value);
-    result.value = tmp;
+    const ValueType& tmp = ValueTypeToolbox::tan(x.value());
+    result.setValue(tmp);
 
     // derivatives use the chain rule
     const ValueType& df_dx = 1 + tmp*tmp;
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -193,12 +102,12 @@ Evaluation<ValueType, numVars> atan(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    result.value = ValueTypeToolbox::atan(x.value);
+    result.setValue(ValueTypeToolbox::atan(x.value()));
 
     // derivatives use the chain rule
-    const ValueType& df_dx = 1/(1 + x.value*x.value);
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    const ValueType& df_dx = 1/(1 + x.value()*x.value());
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -211,15 +120,14 @@ Evaluation<ValueType, numVars> atan2(const Evaluation<ValueType, numVars>& x,
 
     Evaluation<ValueType, numVars> result;
 
-    result.value = ValueTypeToolbox::atan2(x.value, y.value);
+    result.setValue(ValueTypeToolbox::atan2(x.value(), y.value()));
 
     // derivatives use the chain rule
-    const ValueType& alpha = 1/(1 + (x.value*x.value)/(y.value*y.value));
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
-        result.derivatives[curVarIdx] =
-            alpha
-            /(y.value*y.value)
-            *(x.derivatives[curVarIdx]*y.value - x.value*y.derivatives[curVarIdx]);
+    const ValueType& alpha = 1/(1 + (x.value()*x.value())/(y.value()*y.value()));
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx) {
+        result.setDerivative(curVarIdx,
+                             alpha/(y.value()*y.value())
+                             *(x.derivative(curVarIdx)*y.value() - x.value()*y.derivative(curVarIdx)));
     }
 
     return result;
@@ -232,12 +140,12 @@ Evaluation<ValueType, numVars> sin(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    result.value = ValueTypeToolbox::sin(x.value);
+    result.setValue(ValueTypeToolbox::sin(x.value()));
 
     // derivatives use the chain rule
-    const ValueType& df_dx = ValueTypeToolbox::cos(x.value);
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    const ValueType& df_dx = ValueTypeToolbox::cos(x.value());
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -249,12 +157,12 @@ Evaluation<ValueType, numVars> asin(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    result.value = ValueTypeToolbox::asin(x.value);
+    result.setValue(ValueTypeToolbox::asin(x.value()));
 
     // derivatives use the chain rule
-    const ValueType& df_dx = 1.0/ValueTypeToolbox::sqrt(1 - x.value*x.value);
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    const ValueType& df_dx = 1.0/ValueTypeToolbox::sqrt(1 - x.value()*x.value());
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -266,12 +174,12 @@ Evaluation<ValueType, numVars> cos(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    result.value = ValueTypeToolbox::cos(x.value);
+    result.setValue(ValueTypeToolbox::cos(x.value()));
 
     // derivatives use the chain rule
-    const ValueType& df_dx = -ValueTypeToolbox::sin(x.value);
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    const ValueType& df_dx = -ValueTypeToolbox::sin(x.value());
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -283,12 +191,12 @@ Evaluation<ValueType, numVars> acos(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    result.value = ValueTypeToolbox::acos(x.value);
+    result.setValue(ValueTypeToolbox::acos(x.value()));
 
     // derivatives use the chain rule
-    const ValueType& df_dx = - 1.0/ValueTypeToolbox::sqrt(1 - x.value*x.value);
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    const ValueType& df_dx = - 1.0/ValueTypeToolbox::sqrt(1 - x.value()*x.value());
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -300,13 +208,13 @@ Evaluation<ValueType, numVars> sqrt(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    const ValueType& sqrt_x = ValueTypeToolbox::sqrt(x.value);
-    result.value = sqrt_x;
+    const ValueType& sqrt_x = ValueTypeToolbox::sqrt(x.value());
+    result.setValue(sqrt_x);
 
     // derivatives use the chain rule
     ValueType df_dx = 0.5/sqrt_x;
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx) {
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
     }
 
     return result;
@@ -318,13 +226,13 @@ Evaluation<ValueType, numVars> exp(const Evaluation<ValueType, numVars>& x)
     typedef MathToolbox<ValueType> ValueTypeToolbox;
     Evaluation<ValueType, numVars> result;
 
-    const ValueType& exp_x = ValueTypeToolbox::exp(x.value);
-    result.value = exp_x;
+    const ValueType& exp_x = ValueTypeToolbox::exp(x.value());
+    result.setValue(exp_x);
 
     // derivatives use the chain rule
     const ValueType& df_dx = exp_x;
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -337,8 +245,8 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
     typedef MathToolbox<ValueType> ValueTypeToolbox;
     Evaluation<ValueType, numVars> result;
 
-    const ValueType& pow_x = ValueTypeToolbox::pow(base.value, exp);
-    result.value = pow_x;
+    const ValueType& pow_x = ValueTypeToolbox::pow(base.value(), exp);
+    result.setValue(pow_x);
 
     if (base == 0.0) {
         // we special case the base 0 case because 0.0 is in the valid range of the
@@ -347,9 +255,9 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
     }
     else {
         // derivatives use the chain rule
-        const ValueType& df_dx = pow_x/base.value*exp;
-        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-            result.derivatives[curVarIdx] = df_dx*base.derivatives[curVarIdx];
+        const ValueType& df_dx = pow_x/base.value()*exp;
+        for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+            result.setDerivative(curVarIdx, df_dx*base.derivative(curVarIdx));
     }
 
     return result;
@@ -371,12 +279,12 @@ Evaluation<ValueType, numVars> pow(const BaseType& base,
     }
     else {
         const ValueType& lnBase = ValueTypeToolbox::log(base);
-        result.value = ValueTypeToolbox::exp(lnBase*exp.value);
+        result.setValue(ValueTypeToolbox::exp(lnBase*exp.value()));
 
         // derivatives use the chain rule
-        const ValueType& df_dx = lnBase*result.value;
-        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-            result.derivatives[curVarIdx] = df_dx*exp.derivatives[curVarIdx];
+        const ValueType& df_dx = lnBase*result.value();
+        for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+            result.setDerivative(curVarIdx, df_dx*exp.derivative(curVarIdx));
     }
 
     return result;
@@ -398,18 +306,18 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
         result = 0.0;
     }
     else {
-        ValueType valuePow = ValueTypeToolbox::pow(base.value, exp.value);
-        result.value = valuePow;
+        ValueType valuePow = ValueTypeToolbox::pow(base.value(), exp.value());
+        result.setValue(valuePow);
 
         // use the chain rule for the derivatives. since both, the base and the exponent can
         // potentially depend on the variable set, calculating these is quite elaborate...
-        const ValueType& f = base.value;
-        const ValueType& g = exp.value;
+        const ValueType& f = base.value();
+        const ValueType& g = exp.value();
         const ValueType& logF = ValueTypeToolbox::log(f);
-        for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx) {
-            const ValueType& fPrime = base.derivatives[curVarIdx];
-            const ValueType& gPrime = exp.derivatives[curVarIdx];
-            result.derivatives[curVarIdx] = (g*fPrime/f + logF*gPrime) * valuePow;
+        for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx) {
+            const ValueType& fPrime = base.derivative(curVarIdx);
+            const ValueType& gPrime = exp.derivative(curVarIdx);
+            result.setDerivative(curVarIdx, (g*fPrime/f + logF*gPrime) * valuePow);
         }
     }
 
@@ -423,12 +331,12 @@ Evaluation<ValueType, numVars> log(const Evaluation<ValueType, numVars>& x)
 
     Evaluation<ValueType, numVars> result;
 
-    result.value = ValueTypeToolbox::log(x.value);
+    result.setValue(ValueTypeToolbox::log(x.value()));
 
     // derivatives use the chain rule
-    const ValueType& df_dx = 1/x.value;
-    for (unsigned curVarIdx = 0; curVarIdx < result.derivatives.size(); ++curVarIdx)
-        result.derivatives[curVarIdx] = df_dx*x.derivatives[curVarIdx];
+    const ValueType& df_dx = 1/x.value();
+    for (unsigned curVarIdx = 0; curVarIdx < result.size; ++curVarIdx)
+        result.setDerivative(curVarIdx, df_dx*x.derivative(curVarIdx));
 
     return result;
 }
@@ -448,10 +356,10 @@ public:
     typedef Opm::DenseAd::Evaluation<ValueType, numVars> Evaluation;
 
     static ValueType value(const Evaluation& eval)
-    { return eval.value; }
+    { return eval.value(); }
 
     static decltype(InnerToolbox::scalarValue(0.0)) scalarValue(const Evaluation& eval)
-    { return InnerToolbox::scalarValue(eval.value); }
+    { return InnerToolbox::scalarValue(eval.value()); }
 
     static Evaluation createConstant(ValueType value)
     { return Evaluation::createConstant(value); }
@@ -475,7 +383,7 @@ public:
     static typename std::enable_if<std::is_floating_point<LhsEval>::value,
                                    LhsEval>::type
     decay(const Evaluation& eval)
-    { return eval.value; }
+    { return eval.value(); }
 
     // comparison
     static bool isSame(const Evaluation& a, const Evaluation& b, Scalar tolerance)
@@ -483,12 +391,12 @@ public:
         typedef MathToolbox<ValueType> ValueTypeToolbox;
 
         // make sure that the value of the evaluation is identical
-        if (!ValueTypeToolbox::isSame(a.value, b.value, tolerance))
+        if (!ValueTypeToolbox::isSame(a.value(), b.value(), tolerance))
             return false;
 
         // make sure that the derivatives are identical
         for (unsigned curVarIdx = 0; curVarIdx < numVars; ++curVarIdx)
-            if (!ValueTypeToolbox::isSame(a.derivatives[curVarIdx], b.derivatives[curVarIdx], tolerance))
+            if (!ValueTypeToolbox::isSame(a.derivative(curVarIdx), b.derivative(curVarIdx), tolerance))
                 return false;
 
         return true;
