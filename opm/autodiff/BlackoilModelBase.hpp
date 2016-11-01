@@ -133,9 +133,9 @@ namespace Opm {
             SimulatorData(int num_phases);
 
             enum FipId {
-                FIP_AQUA = Opm::Phases::Water,
-                FIP_LIQUID = Opm::Phases::Oil,
-                FIP_VAPOUR = Opm::Phases::Gas,
+                FIP_AQUA = Opm::Water,
+                FIP_LIQUID = Opm::Oil,
+                FIP_VAPOUR = Opm::Gas,
                 FIP_DISSOLVED_GAS = 3,
                 FIP_VAPORIZED_OIL = 4,
                 FIP_PV = 5,                    //< Pore volume
