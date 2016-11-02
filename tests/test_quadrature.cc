@@ -30,6 +30,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/grid/common/mcmgmapper.hh>
 
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
@@ -196,7 +197,9 @@ void writeCubeSubControlVolumes(const Grid &grid)
 
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
-    Stencil stencil(gridView);
+    typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout> VertexMapper;
+    VertexMapper vertexMapper(gridView);
+    Stencil stencil(gridView, vertexMapper);
     auto eIt = gridView.template begin<0>();
     const auto &eEndIt = gridView.template end<0>();
     for (; eIt != eEndIt; ++eIt) {
