@@ -354,7 +354,7 @@ public:
     void endTimeStep()
     {
 #ifndef NDEBUG
-        Scalar tol = this->model().newtonMethod().tolerance()*5e2;
+        Scalar tol = this->model().newtonMethod().tolerance()*1e5;
         this->model().checkConservativeness(tol);
 
         // Calculate storage terms
