@@ -77,6 +77,15 @@ namespace Opm
             }
         }
 
+        // Setup linear solver.
+        // Writes to:
+        //   fis_solver_
+        void setupLinearSolver()
+        {
+            typedef typename BlackoilModelEbos :: ISTLSolverType ISTLSolverType;
+            Base::fis_solver_.reset( new ISTLSolverType( Base::param_, Base::parallel_information_ ) );
+        }
+
         /// This is the main function of Flow.
         // Create simulator instance.
         // Writes to:

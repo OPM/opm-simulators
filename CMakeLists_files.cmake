@@ -176,6 +176,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/GridHelpers.hpp
   opm/autodiff/GridInit.hpp
   opm/autodiff/ImpesTPFAAD.hpp
+  opm/autodiff/ISTLSolver.hpp
   opm/autodiff/moduleVersion.hpp
   opm/autodiff/NewtonIterationBlackoilCPR.hpp
   opm/autodiff/NewtonIterationBlackoilInterface.hpp
