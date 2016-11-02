@@ -47,6 +47,10 @@
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 #include <ewoms/disc/common/restrictprolong.hh>
 
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#endif
+
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -61,6 +65,16 @@ class FingerProblem;
 
 namespace Properties {
 NEW_TYPE_TAG(FingerBaseProblem, INHERITS_FROM(StructuredGridManager));
+
+#if HAVE_DUNE_ALUGRID
+// use dune-alugrid if available
+SET_TYPE_PROP(FingerBaseProblem,
+              Grid,
+              Dune::ALUGrid</*dim=*/2,
+                            /*dimWorld=*/2,
+                            Dune::cube,
+                            Dune::nonconforming>);
+#endif
 
 // declare the properties used by the finger problem
 NEW_PROP_TAG(InitialWaterSaturation);
