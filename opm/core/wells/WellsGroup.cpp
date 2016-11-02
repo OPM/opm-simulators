@@ -538,23 +538,14 @@ namespace Opm
         InjectionSpecification::InjectorType inj_type = injSpec().injector_type_;
         switch (inj_mode) {
         case InjectionSpecification::RATE:
-            // need to be careful in the future.
-            // pay attention to the phase under control and the phase for the guide rate
-            // they can be different, and more delicate situatioin can happen here.
         case InjectionSpecification::RESV:
         {
-            // very hacky way here.
-            // The logic of the code is that only a well is specified under GRUP control, it is under group control.
-            // Which is not the case observed from the result.
-            // From the result, if we specify group control with GCONPROD and WCONPROD for a well, it looks like
-            // the well will be under group control.
-            // TODO: make the logic correct here instead of using `false here`.
+            // all the wells will be assinged a group control target.
+            // TODO: when we consider WGRUPCON and well groups not responding to higher level group control
             const double my_guide_rate = injectionGuideRate(false);
 
             for (size_t i = 0; i < children_.size(); ++i) {
-                // Apply for all children.
-                // Note, we do _not_ want to call the applyProdGroupControl in this object,
-                // as that would check if we're under group control, something we're not.
+                // Apply group control to all children.
                 const double children_guide_rate = children_[i]->injectionGuideRate(false);
                 children_[i]->applyInjGroupControl(inj_mode, inj_type,
                         (children_guide_rate / my_guide_rate) * getTarget(inj_mode) / efficiencyFactor(),
@@ -563,18 +554,6 @@ namespace Opm
             return;
         }
         case InjectionSpecification::VREP:
-        {
-            // really not sure whether to give a initialized target will be a good idea. It can cause the initial guess too far
-            // from the reasonable result and numerical convergence failure.
-            // Let us try to see what will happen. We begin with 100 / day, which is about 0.001.
-            // const double my_guide_rate = injectionGuideRate(false);
-
-            /* for (size_t i = 0; i < children_.size(); ++i) {
-                const double children_guide_rate = children_[i] -> injectionGuideRate(false);
-                children_[i]->applyInjGroupControl(, inj_type,
-                        (children_guide_rate / my_guide_rate) * target / efficiencyFactor(), true);
-            } */
-        }
         case InjectionSpecification::REIN:
             std::cout << "Replacement keywords found, remember to call applyExplicitReinjectionControls." << std::endl;
             return;

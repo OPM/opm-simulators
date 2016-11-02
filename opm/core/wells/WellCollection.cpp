@@ -204,7 +204,7 @@ namespace Opm
     }
 
 
-    //TODO: later, it should be extended to update group targets
+    // TODO: later, it should be extended to update group targets
     bool WellCollection::needUpdateWellTargets() const
     {
         return needUpdateInjectionTargets() || needUpdateProductionTargets();
@@ -213,6 +213,9 @@ namespace Opm
 
     bool WellCollection::needUpdateInjectionTargets() const
     {
+        // TODO: it should based on individual group
+        // With current approach, it will potentially result in more update,
+        // thus more iterations, while it will not cause result wrong.
         bool any_group_control_node = false;
         bool any_should_update_node = false;
 
@@ -233,6 +236,9 @@ namespace Opm
 
     bool WellCollection::needUpdateProductionTargets() const
     {
+        // TODO: it should based on individual group
+        // With current approach, it will potentially result in more update,
+        // thus more iterations, while it will not cause result wrong.
         bool any_group_control_node = false;
         bool any_should_update_node = false;
 

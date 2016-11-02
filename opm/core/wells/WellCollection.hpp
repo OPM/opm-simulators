@@ -111,33 +111,42 @@ namespace Opm
                                               const std::vector<double>& well_surfacerates_phase);
 
 
-        // TODO: should have tried to use the above applyExplicitReinjectionControls
-        // For prototyping, make a new function here at the moment.
+        /// applying VREP group control based on calculated voidage rates
         void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
                                     const std::vector<double>& conversion_coeffs);
 
-        /// Checking whehter need to update the targets of the wells / or the groups later
+        /// Checking whether need to update the targets of the wells / or the groups later
         /// True  need to update well targets within this iteration, no switching control within this iteration.
         /// False no need to update well targets within this iteration, continuing as usual.
-        /// TODO: currently return true whenever a wellNode needs to be updated. Later some more sophiscated
-        /// strategy might be required.
         bool needUpdateWellTargets() const;
 
+        /// Checking whether need to update the targets for the injection wells.
         bool needUpdateInjectionTargets() const;
+
+        /// Checking whehter need to update the targets for the production wells.
         bool needUpdateProductionTargets() const;
 
+        /// Number of the well nodes.
         size_t numNode() const;
 
+        /// Getting the ith well node.
         WellNode* getNode(size_t i) const;
 
+        /// Updating the well targets based on the well rates.
         void updateWellTargets(const std::vector<double> well_rates);
 
+        /// True right after updating the well targets due to wells switching between individual control and group control.
+        /// It is used to force the simulation continue for another iteration in case that update the well targets are updated,
+        /// at the same time, the simulation is ended because of achieving the convergence with previous well targets.
         bool justUpdateWellTargets() const;
 
+        /// Setting the value for just_update_well_targets_
         void setJustUpdateWellTargets(const bool flag);
 
+        /// When we have VREP group, we need to update the targets based on the updated production voidage rates for each iteration.
         bool havingVREPGroups() const;
 
+        /// Setting the VREP group flag when creating the well collection.
         void setHavingVREPGroups(const bool vrep);
 
     private:
