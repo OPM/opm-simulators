@@ -1063,11 +1063,8 @@ namespace detail {
             converged = getWellConvergence(it);
 
             // Enforce the VREP control
-            if (it == 0 && asImpl().wellModel().wellCollection()->havingVREPGroups()) {
-                std::vector<double> well_voidage_rates;
-                std::vector<double> voidage_conversion_coeffs;
-                computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
-                asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
+            if (it == 0) {
+                applyVREPGroupControl(reservoir_state, well_state);
             }
 
             // When the well targets are just updated or need to be updated, we need at least one more iteration.
@@ -1103,12 +1100,7 @@ namespace detail {
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
 
                 // Enforce the VREP control
-                if (asImpl().wellModel().wellCollection()->havingVREPGroups()) {
-                    std::vector<double> well_voidage_rates;
-                    std::vector<double> voidage_conversion_coeffs;
-                    computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
-                    asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
-                }
+                applyVREPGroupControl(reservoir_state, well_state);
             }
             // We have to update the well controls regardless whether there are local
             // wells active or not as parallel logging will take place that needs to
@@ -1529,12 +1521,8 @@ namespace detail {
 
         asImpl().wellModel().updateWellState(dwells, dpMaxRel(), well_state);
 
-        if (asImpl().wellModel().wellCollection()->havingVREPGroups()) {
-            std::vector<double> well_voidage_rates;
-            std::vector<double> voidage_conversion_coeffs;
-            computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
-            asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
-        }
+        // enforce VREP control when necessary.
+        applyVREPGroupControl(reservoir_state, well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
@@ -2674,6 +2662,24 @@ namespace detail {
                               voidage_conversion_coeffs.begin() + np * w);
                 }
             }
+        }
+    }
+
+
+
+
+
+    template <class Grid, class WellModel, class Implementation>
+    void
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    applyVREPGroupControl(const ReservoirState& reservoir_state,
+                          const WellState& well_state)
+    {
+        if (asImpl().wellModel().wellCollection()->havingVREPGroups()) {
+            std::vector<double> well_voidage_rates;
+            std::vector<double> voidage_conversion_coeffs;
+            computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
+            asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
         }
     }
 

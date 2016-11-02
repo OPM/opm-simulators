@@ -319,6 +319,10 @@ namespace Opm {
                                      std::vector<double>& well_voidage_rates,
                                      std::vector<double>& voidage_conversion_coeffs);
 
+
+        void applyVREPGroupControl(const ReservoirState& reservoir_state,
+                                   const WellState& well_state);
+
     protected:
 
         // ---------  Types and enums  ---------
