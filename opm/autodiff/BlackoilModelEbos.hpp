@@ -719,17 +719,21 @@ namespace Opm {
                 // Only rank 0 does print to std::cout
                 if (iteration == 0) {
                     std::string msg = "Iter";
+
+                    std::vector< std::string > key( np );
                     for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
                         const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        msg += "   MB(" + phaseName + ") ";
+                        key[ phaseIdx ] = std::toupper( phaseName.front() );
+                    }
+
+                    for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                        msg += "    MB(" + key[ phaseIdx ] + ")  ";
                     }
                     for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        msg += "    CNV(" + phaseName + ") ";
+                        msg += "    CNV(" + key[ phaseIdx ] + ") ";
                     }
                     for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        msg += "  W-FLUX(" + phaseName + ")";
+                        msg += "  W-FLUX(" + key[ phaseIdx ] + ")";
                     }
                     OpmLog::note(msg);
                 }
