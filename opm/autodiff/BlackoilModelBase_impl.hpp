@@ -2608,6 +2608,7 @@ namespace detail {
     {
         // TODO: for now, we store the voidage rates for all the production wells.
         // For injection wells, the rates are stored as zero.
+        // We only store the conversion coefficients for all the injection wells.
         // Later, more delicate model will be implemented here.
         // And for the moment, group control can only work for serial running.
         const int nw = well_state.numWells();

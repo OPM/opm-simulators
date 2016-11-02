@@ -312,8 +312,8 @@ namespace Opm {
                             const std::vector<int>& fipnum);
 
         /// Function to compute the resevoir voidage for the production wells.
-        /// TODO: Probably should go to well model, while we then have duplications there.
-        /// With time, it looks like probably the time to introduce a base class for Well Models.
+        /// TODO: Probably should go to well model, while we then have duplications there for two Well Models.
+        /// With time, it looks like probably we will introduce a base class for Well Models.
         void computeWellVoidageRates(const ReservoirState& reservoir_state,
                                      const WellState& well_state,
                                      std::vector<double>& well_voidage_rates,
