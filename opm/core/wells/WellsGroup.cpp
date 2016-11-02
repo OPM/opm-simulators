@@ -1004,6 +1004,17 @@ namespace Opm
         }
 
 
+        InjectionSpecification::InjectorType toInjectorType( Phase p )
+        {
+            switch( p ) {
+                case Phase::OIL:   return InjectionSpecification::OIL;
+                case Phase::WATER: return InjectionSpecification::WATER;
+                case Phase::GAS:   return InjectionSpecification::GAS;
+            }
+            OPM_THROW(std::logic_error, "Invalid state." );
+        }
+
+
 #define HANDLE_ICM(x)                           \
         if (type == #x) {                       \
             return InjectionSpecification::x;   \
@@ -1069,7 +1080,7 @@ namespace Opm
         InjectionSpecification injection_specification;
         ProductionSpecification production_specification;
         if (group.isInjectionGroup(timeStep)) {
-            injection_specification.injector_type_ = toInjectorType(Phase::PhaseEnum2String(group.getInjectionPhase(timeStep)));
+            injection_specification.injector_type_ = toInjectorType(group.getInjectionPhase(timeStep));
             injection_specification.control_mode_ = toInjectionControlMode(GroupInjection::ControlEnum2String(group.getInjectionControlMode(timeStep)));
             injection_specification.surface_flow_max_rate_ = group.getSurfaceMaxRate(timeStep);
             injection_specification.reservoir_flow_max_rate_ = group.getReservoirMaxRate(timeStep);
