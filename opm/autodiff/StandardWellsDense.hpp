@@ -152,6 +152,10 @@ namespace Opm {
                 }
 
                 resWell_.resize( nw );
+
+                // resize temporary class variables
+                Cx_.resize( duneC_.N() );
+                invDrw_.resize( invDuneD_.N() );
             }
 
 
@@ -311,9 +315,10 @@ namespace Opm {
                     return;
                 }
 
-                BVector invDrw(invDuneD_.N());
-                invDuneD_.mv(resWell_,invDrw);
-                duneB_.mmtv(invDrw, r);
+                assert( invDrw_.size() == invDuneD_.N() );
+
+                invDuneD_.mv(resWell_,invDrw_);
+                duneB_.mmtv(invDrw_, r);
             }
 
             // subtract B*inv(D)*C * x from A*x
@@ -321,10 +326,13 @@ namespace Opm {
                 if ( ! localWellsActive() ) {
                     return;
                 }
-                BVector Cx(duneC_.N());
-                duneC_.mv(x, Cx);
-                BVector invDCx(invDuneD_.N());
-                invDuneD_.mv(Cx, invDCx);
+                assert( Cx_.size() == duneC_.N() );
+
+                BVector& invDCx = invDrw_;
+                assert( invDCx.size() == invDuneD_.N());
+
+                duneC_.mv(x, Cx_);
+                invDuneD_.mv(Cx_, invDCx);
                 duneB_.mmtv(invDCx,Ax);
             }
 
@@ -1407,6 +1415,9 @@ namespace Opm {
             Mat invDuneD_;
 
             BVector resWell_;
+
+            mutable BVector Cx_;
+            mutable BVector invDrw_;
 
             // protected methods
             EvalWell getBhp(const int wellIdx) const {
