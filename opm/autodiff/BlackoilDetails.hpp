@@ -311,47 +311,6 @@ namespace detail {
             assert(nw * np == int(residual_well.size()));
 
             // Do the global reductions
-#if 0 // HAVE_MPI
-            if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
-
-                // Compute the global number of cells and porevolume
-                std::vector<int> v(nc, 1);
-                auto nc_and_pv = std::tuple<int, double>(0, 0.0);
-                auto nc_and_pv_operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<int>(),
-                                                           Opm::Reduction::makeGlobalSumFunctor<double>());
-                auto nc_and_pv_containers  = std::make_tuple(v, pv);
-                info.computeReduction(nc_and_pv_containers, nc_and_pv_operators, nc_and_pv);
-
-                for ( int idx = 0; idx < np; ++idx )
-                {
-                    auto values     = std::tuple<double,double,double>(0.0 ,0.0 ,0.0);
-                    auto containers = std::make_tuple(B.col(idx),
-                                                      tempV.col(idx),
-                                                      R.col(idx));
-                    auto operators  = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
-                                                      Opm::Reduction::makeGlobalMaxFunctor<double>(),
-                                                      Opm::Reduction::makeGlobalSumFunctor<double>());
-                    info.computeReduction(containers, operators, values);
-                    B_avg[idx]       = std::get<0>(values)/std::get<0>(nc_and_pv);
-                    maxCoeff[idx]    = std::get<1>(values);
-                    R_sum[idx]       = std::get<2>(values);
-                    assert(np >= np);
-                    if (idx < np) {
-                        maxNormWell[idx] = 0.0;
-                        for ( int w = 0; w < nw; ++w ) {
-                            maxNormWell[idx]  = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
-                        }
-                    }
-                }
-                info.communicator().max(maxNormWell.data(), np);
-                // Compute pore volume
-                return std::get<1>(nc_and_pv);
-            }
-            else
-#endif
             {
                 B_avg.resize(np);
                 maxCoeff.resize(np);

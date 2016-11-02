@@ -175,7 +175,9 @@ namespace Opm {
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
             well_model_.init(&fluid_, &active_, &vfp_properties_, gravity, depth, pv);
             wellModel().setWellsActive( localWellsActive() );
-            global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
+            global_nc_ =  Opm::AutoDiffGrid::numCells(grid_);
+            // compute global sum of number of cells
+            global_nc_ = grid_.comm().sum( global_nc_ );
 
             if( ! istlSolver_ )
             {
@@ -679,6 +681,90 @@ namespace Opm {
             return terminal_output_;
         }
 
+        template <class CollectiveCommunication>
+        double convergenceReduction(const CollectiveCommunication& comm,
+                                    const long int ncGlobal,
+                                    const int np,
+                                    const std::vector< std::vector< Scalar > >& B,
+                                    const std::vector< std::vector< Scalar > >& tempV,
+                                    const std::vector< std::vector< Scalar > >& R,
+                                    const std::vector< Scalar >& pv,
+                                    const std::vector< Scalar >& residual_well,
+                                    std::vector< Scalar >& R_sum,
+                                    std::vector< Scalar >& maxCoeff,
+                                    std::vector< Scalar >& B_avg,
+                                    std::vector< Scalar >& maxNormWell )
+        {
+            const int nw = residual_well.size() / np;
+            assert(nw * np == int(residual_well.size()));
+
+            // Do the global reductions
+            B_avg.resize(np);
+            maxCoeff.resize(np);
+            R_sum.resize(np);
+            maxNormWell.resize(np);
+
+            // computation
+            for ( int idx = 0; idx < np; ++idx )
+            {
+                B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(), 0.0 ) / double(ncGlobal);
+                R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(), 0.0 );
+                maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
+
+                assert(np >= np);
+                if (idx < np) {
+                    maxNormWell[idx] = 0.0;
+                    for ( int w = 0; w < nw; ++w ) {
+                        maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
+                    }
+                }
+            }
+
+            // Compute total pore volume
+            double pvSum = std::accumulate(pv.begin(), pv.end(), 0.0);
+
+            if( comm.size() > 1 )
+            {
+                // global reduction
+                std::vector< Scalar > sumBuffer;
+                std::vector< Scalar > maxBuffer;
+                sumBuffer.reserve( B_avg.size() + R_sum.size() + 1 );
+                maxBuffer.reserve( maxCoeff.size() + maxNormWell.size() );
+                for( int idx = 0; idx < np; ++idx )
+                {
+                    sumBuffer.push_back( B_avg[ idx ] );
+                    sumBuffer.push_back( R_sum[ idx ] );
+                    maxBuffer.push_back( maxCoeff[ idx ] );
+                    maxBuffer.push_back( maxNormWell[ idx ] );
+                }
+
+                // Compute total pore volume
+                sumBuffer.push_back( pvSum );
+
+                // compute global sum
+                comm.sum( sumBuffer.data(), sumBuffer.size() );
+
+                // compute global max
+                comm.max( maxBuffer.data(), maxBuffer.size() );
+
+                // restore values to local variables
+                for( int idx = 0, buffIdx = 0; idx < np; ++idx, ++buffIdx )
+                {
+                    B_avg[ idx ]    = sumBuffer[ buffIdx ];
+                    maxCoeff[ idx ] = maxBuffer[ buffIdx ];
+                    ++buffIdx;
+
+                    R_sum[ idx ]       = sumBuffer[ buffIdx ];
+                    maxNormWell[ idx ] = maxBuffer[ buffIdx ];
+                }
+
+                // restore global pore volume
+                pvSum = sumBuffer.back();
+            }
+
+            // return global pore volume
+            return pvSum;
+        }
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
@@ -740,9 +826,10 @@ namespace Opm {
 
             Vector pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             Vector wellResidual =  wellModel().residual();
-            const double pvSum = detail::convergenceReduction(B, tempV, R2,
-                                                      R_sum, maxCoeff, B_avg, maxNormWell,
-                                                      nc, np, pv_vector, wellResidual );
+
+            const double pvSum = convergenceReduction(grid_.comm(), global_nc_, np,
+                                                      B, tempV, R2, pv_vector, wellResidual,
+                                                      R_sum, maxCoeff, B_avg, maxNormWell );
 
             Vector CNV(np);
             Vector mass_balance_residual(np);
@@ -880,7 +967,7 @@ namespace Opm {
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
         /// \brief The number of cells of the global grid.
-        int global_nc_;
+        long int global_nc_;
 
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
