@@ -203,7 +203,11 @@ namespace detail {
         , terminal_output_ (terminal_output)
         , material_name_(0)
         , current_relaxation_(1.0)
-        , rate_converter_(fluid_, std::vector<int>(std::vector<int>(AutoDiffGrid::numCells(grid_),0)))
+        // only one region 0 used, which means average reservoir hydrocarbon conditions in
+        // the field will be calculated.
+        // TODO: more delicate implementation will be required if we want to handle different
+        // FIP regions specified from the well specifications.
+        , rate_converter_(fluid_, std::vector<int>(AutoDiffGrid::numCells(grid_),0))
     {
         if (active_[Water]) {
             material_name_.push_back("Water");
@@ -2645,6 +2649,7 @@ namespace detail {
                                    well_state.wellRates().begin() + np * (w + 1),
                                    well_rates.begin(), std::negate<double>());
 
+                    // the average hydrocarbon conditions of the whole field will be used
                     const int fipreg = 0; // Not considering FIP for the moment.
 
                     rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
@@ -2656,6 +2661,7 @@ namespace detail {
                     std::copy(well_state.wellRates().begin() + np * w,
                               well_state.wellRates().begin() + np * (w + 1),
                               well_rates.begin());
+                    // the average hydrocarbon conditions of the whole field will be used
                     const int fipreg = 0; // Not considering FIP for the moment.
                     rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
                     std::copy(convert_coeff.begin(), convert_coeff.end(),
