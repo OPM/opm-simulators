@@ -878,9 +878,10 @@ namespace Opm
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
 
-                // not good practice, not easy to put groupControlIndex to WellsGroup.
-                // revising the interface for the better implementation later.
-                WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+                WellNode* well_node =  well_collection_->findWellNode(std::string(wells().name[w]));
+                if (well_node == nullptr) {
+                    OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
+                }
 
                 // When the wells swtiching back and forwards between individual control and group control
                 // The targets of the wells should be updated.

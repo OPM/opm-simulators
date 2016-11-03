@@ -724,7 +724,6 @@ namespace Opm
             return;
         }
 
-        std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
@@ -775,9 +774,11 @@ namespace Opm
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
 
-                // not good practice, not easy to put groupControlIndex to WellsGroup.
-                // revising the interface for the better implementation later.
-                WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+                WellNode* well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+                // maybe should put this if in function findWellNode()
+                if (well_node == nullptr) {
+                    OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
+                }
 
                 // When the wells switching back and forwards between individual control and group control
                 // The targets of the wells should be updated.
@@ -799,7 +800,11 @@ namespace Opm
                 // The wells have been running from last time step under group control, will be reset to be under individual control
                 // when rebuilding WellsManager. They need to set to be under group control (non-individual control) when they keep
                 // running under group control.
-                WellNode* well_node =  dynamic_cast<Opm::WellNode *>(well_collection_->findNode(std::string(wells().name[w])));
+                WellNode* well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+                if (well_node == nullptr) {
+                    OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
+                }
+
                 if (well_node->individualControl()) {
                     // the wells running under group control, meaning they are not under individual control
                     if (current == well_node->groupControlIndex()) {
@@ -1625,7 +1630,11 @@ namespace Opm
 
         for (int w = 0; w < nw; ++w) {
             const std::string well_name = wells_->name[w];
-            const WellNode* well_node = dynamic_cast<const WellNode *>(well_collection_->findNode(well_name));
+            const WellNode* well_node = well_collection_->findWellNode(well_name);
+            if (well_node == nullptr) {
+                OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
+            }
+
             well_efficiency_factors(w) = well_node->getAccumulativeEfficiencyFactor();
         }
 
