@@ -1,5 +1,14 @@
 #!/bin/bash
 
+function dotest {
+  $compareECL $reffile $opmfile 1.0 $1 -k SGAS
+  test $? -eq 0 || exit 1
+  $compareECL $reffile $opmfile $2 1.0 -k SWAT
+  test $? -eq 0 || exit 1
+  $compareECL $reffile $opmfile $2 1.0 -k PRESSURE
+  test $? -eq 0 || exit 1
+}
+
 pushd .
 cd deps/opm-data
 
@@ -17,20 +26,39 @@ $WORKSPACE/$configuration/build-opm-simulators/bin/flow max_iter=50 deck_filenam
 test $? -eq 0 || exit 1
 cd ..
 
+compareECL=$WORKSPACE/$configuration/install/bin/compareECL
+
 # Compare OPM with eclipse reference
-PYTHONPATH=$WORKSPACE/$configuration/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe1/eclipse-simulation/ spe1/ SPE1CASE2 0.01 0.01
+reffile=spe1/eclipse-simulation/SPE1CASE2
+opmfile=spe1/SPE1CASE2
+dotest 0.01 0.01
+refffile=spe1/opm-simulation-reference/SPE1CASE2
 test $? -eq 0 || exit 1
-PYTHONPATH=$WORKSPACE/$configuration/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe3/eclipse-simulation/ spe3/ SPE3CASE1 0.02 0.02
+
+reffile=spe3/eclipse-simulation/SPE3CASE1
+opmfile=spe3/SPE3CASE1
+dotest 0.02 0.02
 test $? -eq 0 || exit 1
-PYTHONPATH=$WORKSPACE/$configuration/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe9/eclipse-simulation/ spe9/ SPE9_CP 0.002 0.001
+
+reffile=spe9/eclipse-simulation/SPE9_CP
+opmfile=spe9/SPE9_CP
+dotest 0.002 0.001
 test $? -eq 0 || exit 1
 
 # Compare OPM with OPM reference
-PYTHONPATH=$WORKSPACE/$configuration/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe1/opm-simulation-reference/ spe1/ SPE1CASE2 0.001 0.001
+reffile=spe1/opm-simulation-reference/SPE1CASE2
+opmfile=spe1/SPE1CASE2
+dotest 0.001 0.001
 test $? -eq 0 || exit 1
-PYTHONPATH=$WORKSPACE/$configuration/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe3/opm-simulation-reference/ spe3/ SPE3CASE1 0.001 0.001
+
+reffile=spe3/opm-simulation-reference/SPE3CASE1
+opmfile=spe3/SPE3CASE1
+dotest 0.001 0.001
 test $? -eq 0 || exit 1
-PYTHONPATH=$WORKSPACE/$configuration/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py spe9/opm-simulation-reference/ spe9/ SPE9_CP 0.002 0.007
+
+reffile=spe9/opm-simulation-reference/SPE9_CP
+opmfile=spe9/SPE9_CP
+dotest 0.002 0.007
 test $? -eq 0 || exit 1
 
 popd

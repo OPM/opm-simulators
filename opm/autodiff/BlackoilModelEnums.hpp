@@ -26,12 +26,10 @@
 namespace Opm
 {
 
-    enum Phases {
-        Water        = BlackoilPropsAdInterface::Water,
-        Oil          = BlackoilPropsAdInterface::Oil  ,
-        Gas          = BlackoilPropsAdInterface::Gas  ,
-        MaxNumPhases = BlackoilPropsAdInterface::MaxNumPhases
-    };
+    constexpr const auto Water        = BlackoilPropsAdInterface::Water;
+    constexpr const auto Oil          = BlackoilPropsAdInterface::Oil;
+    constexpr const auto Gas          = BlackoilPropsAdInterface::Gas;
+    constexpr const auto MaxNumPhases = BlackoilPropsAdInterface::MaxNumPhases;
 
     enum PrimalVariables {
         Sg = 0,

@@ -10,7 +10,14 @@ test $? -eq 0 || exit 1
 cd ../..
 
 # Compare OPM with eclipse reference
-PYTHONPATH=$WORKSPACE/$configuration/install/lib/python2.7/dist-packages/ python output_comparator/src/compare_eclipse.py polymer_test_suite/simple2D/eclipse-simulation/ polymer_test_suite/simple2D/opm-simulation/ 2D_THREEPHASE_POLY_HETER 0.0006 0.004
+compareECL=$WORKSPACE/$configuration/install/bin/compareECL
+reffile=polymer_test_suite/simple2D/eclipse-simulation/2D_THREEPHASE_POLY_HETER
+opmfile=polymer_test_suite/simple2D/opm-simulation/2D_THREEPHASE_POLY_HETER
+$compareECL $reffile $opmfile 1.0 0.004 -k SGAS
+test $? -eq 0 || exit 1
+$compareECL $reffile $opmfile 1.0 0.004 -k SWAT
+test $? -eq 0 || exit 1
+$compareECL $reffile $opmfile 0.0006 1.0 -k PRESSURE
 test $? -eq 0 || exit 1
 
 popd
