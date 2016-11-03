@@ -59,7 +59,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
-#include <dune/istl/solvers.hh>
+#include <opm/autodiff/ISTLSolver.hpp>
 
 #include <opm/common/data/SimulationDataContainer.hpp>
 #include <cassert>
@@ -124,6 +124,8 @@ namespace Opm {
         typedef Dune::FieldMatrix<Scalar, 3, 3 >        MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
+
+        typedef ISTLSolver< MatrixBlockType, VectorBlockType >  ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
@@ -146,17 +148,17 @@ namespace Opm {
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
-                          const StandardWellsDense<FluidSystem, BlackoilIndices>&                well_model,
+                          const StandardWellsDense<FluidSystem, BlackoilIndices>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.gridManager().grid())
+        , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
         , fluid_ (fluid)
         , geo_   (geo)
         , vfp_properties_(
             eclState().getTableManager().getVFPInjTables(),
             eclState().getTableManager().getVFPProdTables())
-        , linsolver_ (linsolver)
         , active_(detail::activePhases(fluid.phaseUsage()))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
@@ -173,7 +175,14 @@ namespace Opm {
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
             well_model_.init(&fluid_, &active_, &vfp_properties_, gravity, depth, pv);
             wellModel().setWellsActive( localWellsActive() );
-            global_nc_    =  Opm::AutoDiffGrid::numCells(grid_);
+            global_nc_ =  Opm::AutoDiffGrid::numCells(grid_);
+            // compute global sum of number of cells
+            global_nc_ = grid_.comm().sum( global_nc_ );
+
+            if( ! istlSolver_ )
+            {
+                OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
+            }
         }
 
         const EclipseState& eclState() const
@@ -222,7 +231,6 @@ namespace Opm {
             isRestart_ = must_solve && (iteration == nonlinear_solver.maxIter());
             // don't solve if we have reached the maximum number of iteration.
             must_solve = must_solve && (iteration < nonlinear_solver.maxIter());
-            Dune::InverseOperatorResult result;
             if (must_solve) {
                 // enable single precision for solvers when dt is smaller then 20 days
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
@@ -232,7 +240,7 @@ namespace Opm {
                 const int nw = wellModel().wells().number_of_wells;
                 BVector x(nc);
                 BVector xw(nw);
-                solveJacobianSystem(result, x, xw);
+                solveJacobianSystem(x, xw);
 
                 // Stabilize the nonlinear update.
                 bool isOscillate = false;
@@ -262,7 +270,7 @@ namespace Opm {
                 isRestart_ = false;
             }
             const bool failed = false; // Not needed in this model.
-            const int linear_iters = must_solve ? result.iterations : 0;
+            const int linear_iters = must_solve ? linearIterationsLastSolve() : 0;
             return IterationReport{ failed, converged, linear_iters, iter_report.well_iterations };
         }
         void printIf(int c, double x, double y, double eps, std::string type) {
@@ -335,16 +343,16 @@ namespace Opm {
             }
 
             // compute || u^n - u^n+1 ||
-            const double stateOld  = detail::euclidianNormSquared( p0.begin(),   p0.end(), 1, linsolver_.parallelInformation() ) +
+            const double stateOld  = detail::euclidianNormSquared( p0.begin(),   p0.end(), 1, istlSolver().parallelInformation() ) +
                 detail::euclidianNormSquared( sat0.begin(), sat0.end(),
                                               current.numPhases(),
-                                              linsolver_.parallelInformation() );
+                                              istlSolver().parallelInformation() );
 
             // compute || u^n+1 ||
-            const double stateNew  = detail::euclidianNormSquared( current.pressure().begin(),   current.pressure().end(), 1, linsolver_.parallelInformation() ) +
+            const double stateNew  = detail::euclidianNormSquared( current.pressure().begin(),   current.pressure().end(), 1, istlSolver().parallelInformation() ) +
                 detail::euclidianNormSquared( current.saturation().begin(), current.saturation().end(),
                                               current.numPhases(),
-                                              linsolver_.parallelInformation() );
+                                              istlSolver().parallelInformation() );
 
             if( stateNew > 0.0 ) {
                 return stateOld / stateNew ;
@@ -366,7 +374,7 @@ namespace Opm {
         /// Number of linear iterations used in last call to solveJacobianSystem().
         int linearIterationsLastSolve() const
         {
-            return linsolver_.iterations();
+            return istlSolver().iterations();
         }
 
         template <class X, class Y>
@@ -378,35 +386,33 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        void solveJacobianSystem(Dune::InverseOperatorResult& result, BVector& x, BVector& xw) const
+        void solveJacobianSystem(BVector& x, BVector& xw) const
         {
-
-            typedef double Scalar;
-            typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
-            typedef Dune::FieldMatrix<Scalar, 3, 3 >      MatrixBlockType;
-            typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
-            typedef Dune::BlockVector<VectorBlockType>      BVector;
-
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            typedef WellModelMatrixAdapter<Mat,BVector,BVector, ThisType> Operator;
-            Operator opA(ebosJac, const_cast< ThisType&  > (*this));
-            const double relax = 0.9;
-            typedef Dune::SeqILU0<Mat, BVector, BVector> SeqPreconditioner;
-            SeqPreconditioner precond(opA.getmat(), relax);
-            Dune::SeqScalarProduct<BVector> sp;
+            typedef OverlappingWellModelMatrixAdapter<Mat,BVector,BVector, ThisType> Operator;
+            Operator opA(ebosJac, const_cast< ThisType& > (*this), istlSolver().parallelInformation() );
 
             // apply well residual to the residual.
             wellModel().apply(ebosResid);
 
-            Dune::BiCGSTABSolver<BVector> linsolve(opA, sp, precond,
-                                                   0.01,
-                                                   100,
-                                                   false);
-            // Solve system.
+            // set initial guess
             x = 0.0;
-            linsolve.apply(x, ebosResid, result);
+
+            typedef typename Operator :: communication_type Comm;
+            Comm* comm = opA.comm();
+            // Solve system.
+            if( comm )
+            {
+                istlSolver().solve( opA, x, ebosResid, *comm );
+            }
+            else
+            {
+                typedef WellModelMatrixAdapter<Mat,BVector,BVector, ThisType> SequentialOperator;
+                SequentialOperator& sOpA = static_cast< SequentialOperator& > (opA);
+                istlSolver().solve( sOpA, x, ebosResid );
+            }
 
             // recover wells.
             xw = 0.0;
@@ -423,32 +429,84 @@ namespace Opm {
            Adapts a matrix to the assembled linear operator interface
          */
         template<class M, class X, class Y, class WellModel>
-        class WellModelMatrixAdapter : public Dune::MatrixAdapter<M,X,Y>
+        class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
         {
-          typedef Dune::MatrixAdapter<M,X,Y> BaseType;
+          typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
+
         public:
-          //! export types
           typedef M matrix_type;
           typedef X domain_type;
           typedef Y range_type;
           typedef typename X::field_type field_type;
 
+          typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
+
+          enum {
+            //! \brief The solver category.
+            category=Dune::SolverCategory::sequential
+          };
+
           //! constructor: just store a reference to a matrix
-          explicit WellModelMatrixAdapter (const M& A, WellModel& wellMod ) : BaseType( A ), wellMod_( wellMod ) {}
-
-          //! apply operator to x:  \f$ y = A(x) \f$
-          virtual void apply (const X& x, Y& y) const
+          WellModelMatrixAdapter (const M& A, WellModel& wellMod, const boost::any& parallelInformation )
+              : A_( A ), wellMod_( wellMod ), comm_()
           {
-            BaseType::apply( x, y );
-
-            wellMod_.applyWellModel(x, y );
+#if HAVE_MPI
+            if( parallelInformation.type() == typeid(ParallelISTLInformation) )
+            {
+              const ParallelISTLInformation& info =
+                  boost::any_cast<const ParallelISTLInformation&>( parallelInformation);
+              comm_.reset( new communication_type( info.communicator() ) );
+            }
+#endif
           }
 
-        private:
+          virtual void apply( const X& x, Y& y ) const
+          {
+            A_.mv( x, y );
+            wellMod_.applyWellModel(x, y );
+
+            if( comm_ )
+              comm_->project( y );
+          }
+
+          virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
+          {
+            A_.usmv(alpha,x,y);
+            wellMod_.applyWellModel(x, y );
+
+            if( comm_ )
+              comm_->project( y );
+          }
+
+          virtual const matrix_type& getmat() const { return A_; }
+
+          communication_type* comm()
+          {
+              return comm_.operator->();
+          }
+
+        protected:
+          const matrix_type& A_ ;
           WellModel& wellMod_;
+          std::unique_ptr< communication_type > comm_;
         };
 
-        /** @} end documentation */
+        template<class M, class X, class Y, class WellModel>
+        class OverlappingWellModelMatrixAdapter : public WellModelMatrixAdapter<M,X,Y,WellModel>
+        {
+        public:
+          typedef WellModelMatrixAdapter< M,X,Y,WellModel > BaseType;
+
+          enum {
+            //! \brief The solver category.
+            category=Dune::SolverCategory::overlapping
+          };
+
+          //! constructor: just store a reference to a matrix
+          OverlappingWellModelMatrixAdapter(const M& A, WellModel& wellMod, const boost::any& parallelInformation )
+              : BaseType( A, wellMod, parallelInformation )
+          {}
+        };
 
 
         /// Apply an update to the primary variables, chopped if appropriate.
@@ -623,6 +681,90 @@ namespace Opm {
             return terminal_output_;
         }
 
+        template <class CollectiveCommunication>
+        double convergenceReduction(const CollectiveCommunication& comm,
+                                    const long int ncGlobal,
+                                    const int np,
+                                    const std::vector< std::vector< Scalar > >& B,
+                                    const std::vector< std::vector< Scalar > >& tempV,
+                                    const std::vector< std::vector< Scalar > >& R,
+                                    const std::vector< Scalar >& pv,
+                                    const std::vector< Scalar >& residual_well,
+                                    std::vector< Scalar >& R_sum,
+                                    std::vector< Scalar >& maxCoeff,
+                                    std::vector< Scalar >& B_avg,
+                                    std::vector< Scalar >& maxNormWell )
+        {
+            const int nw = residual_well.size() / np;
+            assert(nw * np == int(residual_well.size()));
+
+            // Do the global reductions
+            B_avg.resize(np);
+            maxCoeff.resize(np);
+            R_sum.resize(np);
+            maxNormWell.resize(np);
+
+            // computation
+            for ( int idx = 0; idx < np; ++idx )
+            {
+                B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(), 0.0 ) / double(ncGlobal);
+                R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(), 0.0 );
+                maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
+
+                assert(np >= np);
+                if (idx < np) {
+                    maxNormWell[idx] = 0.0;
+                    for ( int w = 0; w < nw; ++w ) {
+                        maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
+                    }
+                }
+            }
+
+            // Compute total pore volume
+            double pvSum = std::accumulate(pv.begin(), pv.end(), 0.0);
+
+            if( comm.size() > 1 )
+            {
+                // global reduction
+                std::vector< Scalar > sumBuffer;
+                std::vector< Scalar > maxBuffer;
+                sumBuffer.reserve( B_avg.size() + R_sum.size() + 1 );
+                maxBuffer.reserve( maxCoeff.size() + maxNormWell.size() );
+                for( int idx = 0; idx < np; ++idx )
+                {
+                    sumBuffer.push_back( B_avg[ idx ] );
+                    sumBuffer.push_back( R_sum[ idx ] );
+                    maxBuffer.push_back( maxCoeff[ idx ] );
+                    maxBuffer.push_back( maxNormWell[ idx ] );
+                }
+
+                // Compute total pore volume
+                sumBuffer.push_back( pvSum );
+
+                // compute global sum
+                comm.sum( sumBuffer.data(), sumBuffer.size() );
+
+                // compute global max
+                comm.max( maxBuffer.data(), maxBuffer.size() );
+
+                // restore values to local variables
+                for( int idx = 0, buffIdx = 0; idx < np; ++idx, ++buffIdx )
+                {
+                    B_avg[ idx ]    = sumBuffer[ buffIdx ];
+                    maxCoeff[ idx ] = maxBuffer[ buffIdx ];
+                    ++buffIdx;
+
+                    R_sum[ idx ]       = sumBuffer[ buffIdx ];
+                    maxNormWell[ idx ] = maxBuffer[ buffIdx ];
+                }
+
+                // restore global pore volume
+                pvSum = sumBuffer.back();
+            }
+
+            // return global pore volume
+            return pvSum;
+        }
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
         /// residual mass balance (tol_cnv).
@@ -684,9 +826,10 @@ namespace Opm {
 
             Vector pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             Vector wellResidual =  wellModel().residual();
-            const double pvSum = detail::convergenceReduction(B, tempV, R2,
-                                                      R_sum, maxCoeff, B_avg, maxNormWell,
-                                                      nc, np, pv_vector, wellResidual );
+
+            const double pvSum = convergenceReduction(grid_.comm(), global_nc_, np,
+                                                      B, tempV, R2, pv_vector, wellResidual,
+                                                      R_sum, maxCoeff, B_avg, maxNormWell );
 
             Vector CNV(np);
             Vector mass_balance_residual(np);
@@ -719,17 +862,21 @@ namespace Opm {
                 // Only rank 0 does print to std::cout
                 if (iteration == 0) {
                     std::string msg = "Iter";
+
+                    std::vector< std::string > key( np );
                     for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
                         const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        msg += "   MB(" + phaseName + ") ";
+                        key[ phaseIdx ] = std::toupper( phaseName.front() );
+                    }
+
+                    for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                        msg += "    MB(" + key[ phaseIdx ] + ")  ";
                     }
                     for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        msg += "    CNV(" + phaseName + ") ";
+                        msg += "    CNV(" + key[ phaseIdx ] + ") ";
                     }
                     for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                        msg += "  W-FLUX(" + phaseName + ")";
+                        msg += "  W-FLUX(" + key[ phaseIdx ] + ")";
                     }
                     OpmLog::note(msg);
                 }
@@ -789,16 +936,22 @@ namespace Opm {
         const Simulator& ebosSimulator() const
         { return ebosSimulator_; }
 
-    protected:
+      protected:
+        const ISTLSolverType& istlSolver() const
+        {
+            assert( istlSolver_ );
+            return *istlSolver_;
+        }
+
 
         // ---------  Data members  ---------
 
         Simulator& ebosSimulator_;
-        const Grid&         grid_;
+        const Grid&            grid_;
+        const ISTLSolverType*  istlSolver_;
         const BlackoilPropsAdInterface& fluid_;
         const DerivedGeology&           geo_;
         VFPProperties                   vfp_properties_;
-        const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active phases. Maps active -> canonical phase indices.
@@ -814,7 +967,7 @@ namespace Opm {
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
         /// \brief The number of cells of the global grid.
-        int global_nc_;
+        long int global_nc_;
 
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
@@ -825,7 +978,6 @@ namespace Opm {
         // ---------  Protected methods  ---------
 
     public:
-
 
         /// return the StandardWells object
         StandardWellsDense<FluidSystem, BlackoilIndices>& wellModel() { return well_model_; }
