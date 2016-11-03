@@ -95,6 +95,10 @@ namespace Opm
         /// \return the pointer to the group if found, NULL otherwise
         const WellsGroupInterface* findNode(const std::string& name) const;
 
+
+        WellNode* findWellNode(const std::string& name) const;
+
+
         /// Applies all group controls (injection and production)
         void applyGroupControls();
 
