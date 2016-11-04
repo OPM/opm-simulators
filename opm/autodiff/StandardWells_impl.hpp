@@ -716,13 +716,13 @@ namespace Opm
 
         // if we need to update the well targets related to group control,
         // we update them then re-run the simulation before updating the well control
-        if (well_collection_->needUpdateWellTargets() ) {
+        /* if (well_collection_->needUpdateWellTargets() ) {
             well_collection_->updateWellTargets(xw.wellRates());
             for (size_t i = 0; i < well_collection_->numNode(); ++i) {
                 well_collection_->getNode(i)->setShouldUpdateWellTargets(false);
             }
             return;
-        }
+        } */
 
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.

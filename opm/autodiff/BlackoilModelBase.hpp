@@ -321,7 +321,7 @@ namespace Opm {
 
 
         void applyVREPGroupControl(const ReservoirState& reservoir_state,
-                                   const WellState& well_state);
+                                   WellState& well_state);
 
     protected:
 

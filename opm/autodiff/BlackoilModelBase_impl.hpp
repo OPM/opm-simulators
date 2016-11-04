@@ -793,6 +793,8 @@ namespace detail {
         // enforce VREP control when necessary.
         applyVREPGroupControl(reservoir_state, well_state);
 
+        asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
@@ -1069,20 +1071,7 @@ namespace detail {
             asImpl().wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = getWellConvergence(it);
 
-            // Enforce the VREP control
-            if (it == 0) {
-                applyVREPGroupControl(reservoir_state, well_state);
-            }
-
             // When the well targets are just updated or need to be updated, we need at least one more iteration.
-            if (asImpl().wellModel().wellCollection()->justUpdateWellTargets()) {
-                converged = false;
-                asImpl().wellModel().wellCollection()->setJustUpdateWellTargets(false);
-            }
-
-            if (converged && asImpl().wellModel().wellCollection()->needUpdateWellTargets()) {
-                converged = false;
-            }
 
             if (converged) {
                 break;
@@ -1112,6 +1101,7 @@ namespace detail {
             asImpl().wellModel().updateWellControls(well_state);
             // Enforce the VREP control
             applyVREPGroupControl(reservoir_state, well_state);
+            asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
         } while (it < 15);
 
         if (converged) {
@@ -2678,13 +2668,23 @@ namespace detail {
     void
     BlackoilModelBase<Grid, WellModel, Implementation>::
     applyVREPGroupControl(const ReservoirState& reservoir_state,
-                          const WellState& well_state)
+                          WellState& well_state)
     {
         if (asImpl().wellModel().wellCollection()->havingVREPGroups()) {
             std::vector<double> well_voidage_rates;
             std::vector<double> voidage_conversion_coeffs;
             computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
             asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
+
+            // for the wells under group control, update the currentControls for the well_state
+            const size_t number_node = asImpl().wellModel().wellCollection()->numNode();
+            for (size_t w = 0; w < number_node; ++w) {
+                const WellNode* well_node = asImpl().wellModel().wellCollection()->getNode(w);
+                if (well_node->isInjector() && !well_node->individualControl()) {
+                    const int well_index = well_node->selfIndex();
+                    well_state.currentControls()[well_index] = well_node->groupControlIndex();
+                }
+            }
         }
     }
 
