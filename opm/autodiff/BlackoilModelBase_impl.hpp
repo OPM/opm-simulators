@@ -790,6 +790,9 @@ namespace detail {
         // get reasonable initial conditions for the wells
         asImpl().wellModel().updateWellControls(well_state);
 
+        // enforce VREP control when necessary.
+        applyVREPGroupControl(reservoir_state, well_state);
+
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
@@ -1102,14 +1105,13 @@ namespace detail {
                 const Eigen::VectorXd& dx = solver.solve(total_residual_v.matrix());
                 assert(dx.size() == total_residual_v.size());
                 asImpl().wellModel().updateWellState(dx.array(), dpMaxRel(), well_state);
-
-                // Enforce the VREP control
-                applyVREPGroupControl(reservoir_state, well_state);
             }
             // We have to update the well controls regardless whether there are local
             // wells active or not as parallel logging will take place that needs to
             // communicate with all processes.
             asImpl().wellModel().updateWellControls(well_state);
+            // Enforce the VREP control
+            applyVREPGroupControl(reservoir_state, well_state);
         } while (it < 15);
 
         if (converged) {
@@ -1524,9 +1526,6 @@ namespace detail {
 
 
         asImpl().wellModel().updateWellState(dwells, dpMaxRel(), well_state);
-
-        // enforce VREP control when necessary.
-        applyVREPGroupControl(reservoir_state, well_state);
 
         // Update phase conditions used for property calculations.
         updatePhaseCondFromPrimalVariable(reservoir_state);
