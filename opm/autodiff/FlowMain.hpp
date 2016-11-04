@@ -166,7 +166,14 @@ namespace Opm
 
             if( output_cout_ )
             {
-                OpmLog::error(message.str());
+                // in some cases exceptions are thrown before the logging system is set
+                // up.
+                if (OpmLog::hasBackend("STREAMLOG")) {
+                    OpmLog::error(message.str());
+                }
+                else {
+                    std::cout << message.str() << "\n";
+                }
             }
 
             return EXIT_FAILURE;
