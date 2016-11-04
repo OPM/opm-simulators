@@ -139,14 +139,6 @@ namespace Opm
         /// Updating the well targets based on the well rates.
         void updateWellTargets(const std::vector<double> well_rates);
 
-        /// True right after updating the well targets due to wells switching between individual control and group control.
-        /// It is used to force the simulation continue for another iteration in case that update the well targets are updated,
-        /// at the same time, the simulation is ended because of achieving the convergence with previous well targets.
-        bool justUpdateWellTargets() const;
-
-        /// Setting the value for just_update_well_targets_
-        void setJustUpdateWellTargets(const bool flag);
-
         /// When we have VREP group, we need to update the targets based on the updated production voidage rates for each iteration.
         bool havingVREPGroups() const;
 

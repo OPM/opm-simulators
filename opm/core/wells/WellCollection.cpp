@@ -231,45 +231,47 @@ namespace Opm
         // TODO: it should based on individual group
         // With current approach, it will potentially result in more update,
         // thus more iterations, while it will not cause result wrong.
+        // If the group control and individual control is mixed, then it need to
+        // update the well targets
         bool any_group_control_node = false;
-        bool any_should_update_node = false;
+        bool any_individual_control_node = false;
 
         for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
             if (leaf_nodes_[i]->isInjector()) {
-                if (leaf_nodes_[i]->shouldUpdateWellTargets()) {
-                    any_should_update_node = true;
-                }
-
-                if (!leaf_nodes_[i]->individualControl()) {
+                if (leaf_nodes_[i]->individualControl()) {
+                    any_individual_control_node = true;
+                } else {
                     any_group_control_node = true;
                 }
             }
         }
 
-        return (any_group_control_node && any_should_update_node);
+        return (any_group_control_node && any_individual_control_node);
     }
 
+
+    // These two functions should be made one
     bool WellCollection::needUpdateProductionTargets() const
     {
         // TODO: it should based on individual group
         // With current approach, it will potentially result in more update,
         // thus more iterations, while it will not cause result wrong.
+        // If the group control and individual control is mixed, then it need to
+        // update the well targets
         bool any_group_control_node = false;
-        bool any_should_update_node = false;
+        bool any_individual_control_node = false;
 
         for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
             if (leaf_nodes_[i]->isProducer()) {
-                if (leaf_nodes_[i]->shouldUpdateWellTargets()) {
-                    any_should_update_node = true;
-                }
-
-                if (!leaf_nodes_[i]->individualControl()) {
+                if (leaf_nodes_[i]->individualControl()) {
+                    any_individual_control_node = true;
+                } else {
                     any_group_control_node = true;
                 }
             }
         }
 
-        return (any_group_control_node && any_should_update_node);
+        return (any_group_control_node && any_individual_control_node);
     }
 
 
@@ -284,16 +286,6 @@ namespace Opm
     {
         assert( i< numNode());
         return leaf_nodes_[i];
-    }
-
-    bool WellCollection::justUpdateWellTargets() const
-    {
-        return just_update_well_targets_;
-    }
-
-    void WellCollection::setJustUpdateWellTargets(const bool flag)
-    {
-        just_update_well_targets_ = flag;
     }
 
     void WellCollection::updateWellTargets(const std::vector<double> well_rates)
@@ -316,8 +308,6 @@ namespace Opm
                 }
             }
         }
-
-        setJustUpdateWellTargets(true);
     }
 
     bool WellCollection::havingVREPGroups() const {

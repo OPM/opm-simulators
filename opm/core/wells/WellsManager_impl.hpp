@@ -412,7 +412,6 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
         well_collection_.setHavingVREPGroups(false);
         well_collection_.addField(fieldGroup, timeStep, pu);
         addChildGroups(*fieldNode, schedule, timeStep, pu);
-        well_collection_.setJustUpdateWellTargets(false);
     }
 
     for (auto w = wells.begin(), e = wells.end(); w != e; ++w) {

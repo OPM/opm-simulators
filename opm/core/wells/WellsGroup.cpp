@@ -555,7 +555,6 @@ namespace Opm
         }
         case InjectionSpecification::VREP:
         case InjectionSpecification::REIN:
-            std::cout << "Replacement keywords found, remember to call applyExplicitReinjectionControls." << std::endl;
             return;
         case InjectionSpecification::FLD:
         case InjectionSpecification::NONE:
@@ -1069,6 +1068,8 @@ namespace Opm
             // The well only had its own controls, no group controls.
             append_well_controls(wct, effective_target, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
+            // It will possibly be changed when initializing WellState
+            // set_current_control(self_index_, group_control_index_, wells_);
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
@@ -1077,9 +1078,6 @@ namespace Opm
             well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
-        set_current_control(self_index_, group_control_index_, wells_);
-        // TODO: it might not always be the case
-        setIndividualControl(false);
     }
 
 
@@ -1167,6 +1165,8 @@ namespace Opm
             // TODO: basically, on group control index is not enough eventually. There can be more than one sources for the
             // group control
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
+            // it should only apply for nodes with GRUP injeciton control
+            individual_control_ = false;
         } else {
             well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , RESERVOIR_RATE);
             well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , ntarget);
@@ -1249,6 +1249,8 @@ namespace Opm
             // The well only had its own controls, no group controls.
             append_well_controls(wct, ntarget, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
+            // It will possibly be changed when initializing WellState.
+            // set_current_control(self_index_, group_control_index_, wells_);
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
@@ -1257,7 +1259,6 @@ namespace Opm
             well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
-        set_current_control(self_index_, group_control_index_, wells_);
     }
 
 
@@ -1521,6 +1522,11 @@ namespace Opm
         }
 
         return efficiency_factor;
+    }
+
+
+    int WellNode::selfIndex() const {
+        return self_index_;
     }
 
 }

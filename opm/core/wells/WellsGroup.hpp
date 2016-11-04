@@ -510,6 +510,8 @@ namespace Opm
         /// to the well in a multi-layer group structure.
         double getAccumulativeEfficiencyFactor() const;
 
+        int selfIndex() const;
+
     private:
         Wells* wells_;
         int self_index_;
