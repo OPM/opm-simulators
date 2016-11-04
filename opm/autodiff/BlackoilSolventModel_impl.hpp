@@ -401,6 +401,7 @@ namespace Opm {
         const V null;
         assert(null.size() == 0);
         const V zero = V::Zero(nc);
+        const V ones = V::Constant(nc,1.0);
 
         // Extract parts of dx corresponding to each part.
         const V dp = subset(dx, Span(nc));
@@ -459,6 +460,9 @@ namespace Opm {
             }
             if (has_solvent_){
                 maxVal = dss.abs().max(maxVal);
+                // solvent is not added note that the so calculated
+                // here is overwritten later
+                //dso = dso - dss;
             }
 
             maxVal = dso.abs().max(maxVal);
@@ -488,6 +492,7 @@ namespace Opm {
             so = so_old - step * dso;
         }
 
+        // solvent is not included in the adjustment for negative saturation
         auto ixg = sg < 0;
         for (int c = 0; c < nc; ++c) {
             if (ixg[c]) {
@@ -515,10 +520,18 @@ namespace Opm {
             }
         }
 
+        auto ixs = ss < 0;
+        for (int c = 0; c < nc; ++c) {
+            if (ixs[c]) {
+                ss[c] = 0;
+            }
+        }
+
+
         // The oil saturation is defined to
         // fill the rest of the pore space.
         // For convergence reasons oil saturations
-        // is included in the appelyard chopping.
+        // is included in the appelyard chopping
         so = V::Constant(nc,1.0) - sw - sg - ss;
 
         // Update rs and rv
@@ -527,15 +540,17 @@ namespace Opm {
         if (has_disgas_) {
             const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
             const V drs = Base::isRs_ * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min(rs_old.abs()*drmaxrel);
+            const V drs_limited = sign(drs) * drs.abs().min( (rs_old.abs()*drmaxrel).max( ones*1.0));
             rs = rs_old - drs_limited;
+            rs = rs.max(zero);
         }
         V rv;
         if (has_vapoil_) {
             const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             const V drv = Base::isRv_ * dxvar;
-            const V drv_limited = sign(drv) * drv.abs().min(rv_old.abs()*drmaxrel);
+            const V drv_limited = sign(drv) * drv.abs().min( (rv_old.abs()*drmaxrel).max( ones*1e-6));
             rv = rv_old - drv_limited;
+            rv = rv.max(zero);
         }
 
         // Sg is used as primal variable for water only cells.
@@ -560,11 +575,18 @@ namespace Opm {
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) {
                     rs[c] = rsSat[c];
+                    if (watOnly[c]) {
+                        so[c] = 0;
+                        sg[c] = 0;
+                        ss[c] = 0;
+                        rs[c] = 0;
+                    }
+
                 } else {
                     hydroCarbonState[c] = HydroCarbonState::OilOnly;
                 }
             }
-
+            rs = rs.min(rsSat);
         }
 
         // phase transitions so <-> rv
@@ -587,10 +609,19 @@ namespace Opm {
             for (int c = 0; c < nc; ++c) {
                 if (useSg[c]) {
                     rv[c] = rvSat[c];
+                    if (watOnly[c]) {
+                        so[c] = 0;
+                        sg[c] = 0;
+                        ss[c] = 0;
+                        rv[c] = 0;
+                    }
+
                 } else {
                     hydroCarbonState[c] = HydroCarbonState::GasOnly;
                 }
             }
+            rv = rv.min(rvSat);
+
         }
 
         // Update the reservoir_state
@@ -623,7 +654,7 @@ namespace Opm {
             std::copy(&rv[0], &rv[0] + nc, reservoir_state.rv().begin());
         }
 
-        wellModel().updateWellState(dwells, dpMaxRel(), well_state);
+        wellModel().updateWellState(dwells, Base::dbhpMaxRel(), well_state);
 
         for( auto w = 0; w < wells().number_of_wells; ++w ) {
             if (wells().type[w] == INJECTOR) {
