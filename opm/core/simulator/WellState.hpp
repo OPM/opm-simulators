@@ -259,8 +259,8 @@ namespace Opm
 
                     auto& completion = well.completions[ i ];
                     completion.index = active_index;
-                    completion.pressure = this->perfPress()[ well_index + i ];
-                    completion.reservoir_rate = this->perfRates()[ well_index + i ];
+                    completion.pressure = this->perfPress()[ itr.second[1] + i ];
+                    completion.reservoir_rate = this->perfRates()[ itr.second[1] + i ];
                 }
                 assert(num_perf_well == int(well.completions.size()));
             }
