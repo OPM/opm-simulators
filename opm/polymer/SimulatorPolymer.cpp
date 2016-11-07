@@ -63,10 +63,6 @@
 #include <fstream>
 #include <iostream>
 
-#ifdef HAVE_ERT
-#include <opm/output/eclipse/writeECLData.hpp>
-#endif
-
 
 namespace Opm
 {
@@ -79,10 +75,6 @@ namespace Opm
                             const Opm::PolymerState& state,
                             const int step,
                             const std::string& output_dir);
-        void outputStateBinary(const UnstructuredGrid& grid,
-                               const Opm::PolymerState& state,
-                               const SimulatorTimer& simtimer,
-                               const std::string& output_dir);
         void outputStateMatlab(const UnstructuredGrid& grid,
                                const Opm::PolymerState& state,
                                const int step,
@@ -123,7 +115,6 @@ namespace Opm
         // Parameters for output.
         bool output_;
         bool output_vtk_;
-        bool output_binary_;
         std::string output_dir_;
         int output_interval_;
         // Parameters for well control
@@ -218,12 +209,6 @@ namespace Opm
         output_ = param.getDefault("output", true);
         if (output_) {
             output_vtk_ = param.getDefault("output_vtk", true);
-            output_binary_ = param.getDefault("output_binary", false);
-#ifndef HAVE_ERT
-            if (output_binary_) {
-                OPM_THROW(std::runtime_error, "Cannot make binary output without ert library support. Reconfigure opm-core and opm-polymer with --with-ert and recompile.");
-            }
-#endif
             output_dir_ = param.getDefault("output_dir", std::string("output"));
             // Ensure that output dir exists
             boost::filesystem::path fpath(output_dir_);
@@ -322,9 +307,6 @@ namespace Opm
         if (output_ && (timer.currentStepNum() % output_interval_ == 0)) {
             if (output_vtk_) {
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
-            }
-            if (output_binary_) {
-                outputStateBinary(grid_, state, timer, output_dir_);
             }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
         }
@@ -510,9 +492,6 @@ namespace Opm
             if (output_vtk_) {
                 outputStateVtk(grid_, state, timer.currentStepNum(), output_dir_);
             }
-            if (output_binary_) {
-                outputStateBinary(grid_, state, timer, output_dir_);
-            }
             outputStateMatlab(grid_, state, timer.currentStepNum(), output_dir_);
             outputWaterCut(watercut, output_dir_);
             if (wells_) {
@@ -604,29 +583,6 @@ namespace Opm
             }
         }
 
-        void outputStateBinary(const UnstructuredGrid& grid,
-                               const Opm::PolymerState& state,
-                               const SimulatorTimer& simtimer,
-                               const std::string& output_dir)
-        {
-#ifdef HAVE_ERT
-            data::Solution sol;
-            sol.insert( "PRESSURE", UnitSystem::measure::pressure , state.pressure() , data::TargetType::RESTART_SOLUTION );
-            sol.insert( "SWAT", UnitSystem::measure::identity, destripe( state.saturation(), 0, 2 ) , data::TargetType::RESTART_SOLUTION);
-
-            writeECLData( grid.cartdims[ 0 ],
-                          grid.cartdims[ 1 ],
-                          grid.cartdims[ 2 ],
-                          grid.number_of_cells,
-                          sol,
-                          simtimer.currentStepNum(),
-                          simtimer.simulationTimeElapsed(),
-                          simtimer.currentPosixTime(),
-                          output_dir, "polymer_ecl");
-#else
-        OPM_THROW(std::runtime_error, "Cannot call outputStateBinary() without ert library support. Reconfigure with --with-ert and recompile.");
-#endif
-        }
 
         void outputWaterCut(const Opm::Watercut& watercut,
                             const std::string& output_dir)
