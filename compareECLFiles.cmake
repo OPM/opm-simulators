@@ -64,3 +64,4 @@ add_test_compareECLFiles(spe9 SPE9_CP_SHORT)
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
 add_test_compareECLRestartFiles(spe9 SPE9_CP_SHORT)
+add_test_compareECLRestartFiles(spe1 SPE1CASE2_ACTNUM)
