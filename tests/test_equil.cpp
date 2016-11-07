@@ -64,39 +64,39 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
                                        double zgoc, double pcgo_goc ) {
     using namespace Opm;
 
-    auto dd = DeckItem::make< double >( "datdep" );
+    DeckItem dd( "datdep", double() );
     dd.push_back( datd  );
     Opm::Dimension dd_dim( "dddim", 1 );
     dd.push_backDimension( dd_dim, dd_dim );
 
-    auto dp = DeckItem::make< double >( "datps" );
+    DeckItem dp( "datps", double() );
     dp.push_back( datp );
     Opm::Dimension dp_dim( "dpdim", 1 );
     dp.push_backDimension( dp_dim, dp_dim );
 
-    auto zw = DeckItem::make< double >( "zwoc" );
+    DeckItem zw( "zwoc", double() );
     zw.push_back( zwoc );
     Opm::Dimension zw_dim( "zwdim", 1 );
     zw.push_backDimension( zw_dim, zw_dim );
 
-    auto pcow = DeckItem::make< double >( "pcow" );
+    DeckItem pcow( "pcow", double() );
     pcow.push_back( pcow_woc );
     Opm::Dimension pcow_dim( "pcowdim", 1 );
     pcow.push_backDimension( pcow_dim, pcow_dim );
 
-    auto zg = DeckItem::make< double >( "zgoc" );
+    DeckItem zg( "zgoc", double() );
     zg.push_back( zgoc );
     Opm::Dimension zg_dim( "zgdim", 1 );
     zg.push_backDimension( zg_dim, zg_dim );
 
-    auto pcgo = DeckItem::make< double >( "pcgo" );
+    DeckItem pcgo( "pcgo", double() );
     pcgo.push_back( pcgo_goc );
     Opm::Dimension pcgo_dim( "pcgodim", 1 );
     pcgo.push_backDimension( pcgo_dim, pcgo_dim );
 
-    auto i1 = DeckItem::make< int >( "i1" );
-    auto i2 = DeckItem::make< int >( "i2" );
-    auto i3 = DeckItem::make< int >( "i3" );
+    DeckItem i1( "i1", int() );
+    DeckItem i2( "i2", int() );
+    DeckItem i3( "i3", int() );
     i1.push_back( 0 );
     i2.push_back( 0 );
     i3.push_back( 0 );
