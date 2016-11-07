@@ -94,7 +94,7 @@ public:
      * This is the file format used by the commercial ECLiPSE simulator. Usually it uses
      * a cornerpoint description of the grid.
      */
-    EclBaseGridManager(Simulator &simulator)
+    EclBaseGridManager(Simulator& simulator)
         : ParentType(simulator)
     {
         int myRank = 0;

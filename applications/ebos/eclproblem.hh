@@ -72,10 +72,12 @@
 #include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
-
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -291,7 +293,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    EclProblem(Simulator &simulator)
+    EclProblem(Simulator& simulator)
         : ParentType(simulator)
         , transmissibilities_(simulator)
         , thresholdPressures_(simulator)
@@ -361,7 +363,7 @@ public:
      * \param res The deserializer object
      */
     template <class Restarter>
-    void deserialize(Restarter &res)
+    void deserialize(Restarter& res)
     {
         // reload the current episode/report step from the deck
         beginEpisode(/*isOnRestart=*/true);
@@ -375,7 +377,7 @@ public:
      *        to the harddisk.
      */
     template <class Restarter>
-    void serialize(Restarter &res)
+    void serialize(Restarter& res)
     { wellManager_.serialize(res); }
 
     /*!
@@ -584,7 +586,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context,
+    const DimMatrix& intrinsicPermeability(const Context& context,
                                            unsigned spaceIdx,
                                            unsigned timeIdx) const
     {
@@ -598,14 +600,14 @@ public:
      *
      * Its main (only?) usage is the ECL transmissibility calculation code...
      */
-    const DimMatrix &intrinsicPermeability(unsigned globalElemIdx) const
+    const DimMatrix& intrinsicPermeability(unsigned globalElemIdx) const
     { return intrinsicPermeability_[globalElemIdx]; }
 
     /*!
      * \copydoc BlackOilBaseProblem::transmissibility
      */
     template <class Context>
-    Scalar transmissibility(const Context &context,
+    Scalar transmissibility(const Context& context,
                             unsigned fromDofLocalIdx,
                             unsigned toDofLocalIdx) const
     {
@@ -623,7 +625,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return porosity_[globalSpaceIdx];
@@ -636,7 +638,7 @@ public:
      * thus slightly different from the depth of an element's centroid.
      */
     template <class Context>
-    Scalar dofCenterDepth(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar dofCenterDepth(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return elementCenterDepth_[globalSpaceIdx];
@@ -646,7 +648,7 @@ public:
      * \copydoc BlackoilProblem::rockCompressibility
      */
     template <class Context>
-    Scalar rockCompressibility(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar rockCompressibility(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         if (rockParams_.empty())
             return 0.0;
@@ -664,7 +666,7 @@ public:
      * \copydoc BlackoilProblem::rockReferencePressure
      */
     template <class Context>
-    Scalar rockReferencePressure(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar rockReferencePressure(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         if (rockParams_.empty())
             return 1e5;
@@ -682,7 +684,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context,
+    const MaterialLawParams& materialLawParams(const Context& context,
                                                unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
@@ -696,7 +698,7 @@ public:
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
     template <class Context>
-    unsigned pvtRegionIndex(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    unsigned pvtRegionIndex(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     { return pvtRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
 
     /*!
@@ -720,7 +722,7 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         // use the temporally constant temperature, i.e. use the initial temperature of
         // the DOF
@@ -734,8 +736,8 @@ public:
      * ECLiPSE uses no-flow conditions for all boundaries. \todo really?
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     { values.setNoFlow(); }
@@ -747,7 +749,7 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
@@ -785,8 +787,8 @@ public:
      * For this problem, the source term of all components is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
+    void source(RateVector& rate,
+                const Context& context,
                 unsigned spaceIdx,
                 unsigned timeIdx) const
     {
@@ -913,7 +915,7 @@ private:
         // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
         // opm-grid CpGrid object might remove a few elements...
         if (props.hasDeckDoubleGridProperty("PERMX")) {
-                const std::vector<double> &permxData =
+                const std::vector<double>& permxData =
                 props.getDoubleGridProperty("PERMX").getData();
             std::vector<double> permyData(permxData);
             if (props.hasDeckDoubleGridProperty("PERMY"))
@@ -966,9 +968,9 @@ private:
 
         porosity_.resize(numDof);
 
-        const std::vector<double> &porvData =
+        const std::vector<double>& porvData =
             props.getDoubleGridProperty("PORV").getData();
-        const std::vector<int> &actnumData =
+        const std::vector<int>& actnumData =
             props.getIntGridProperty("ACTNUM").getData();
 
         int nx = eclGrid.getNX();
@@ -1046,7 +1048,7 @@ private:
         size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto &elemFluidState = initialFluidStates_[elemIdx];
+            auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
     }
@@ -1100,7 +1102,7 @@ private:
         if (enableVapoil)
             rvData = &deck->getKeyword("RV").getSIDoubleData();
         // initial reservoir temperature
-        const std::vector<double> &tempiData =
+        const std::vector<double>& tempiData =
             eclState->get3DProperties().getDoubleGridProperty("TEMPI").getData();
 
         // make sure that the size of the data arrays is correct
@@ -1118,7 +1120,7 @@ private:
 
         // calculate the initial fluid states
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-            auto &dofFluidState = initialFluidStates_[dofIdx];
+            auto& dofFluidState = initialFluidStates_[dofIdx];
 
             int pvtRegionIdx = pvtRegionIndex(dofIdx);
             size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
@@ -1278,7 +1280,7 @@ private:
     // update the prefetch friendly data object
     void updatePffDofData_()
     {
-        const auto &distFn =
+        const auto& distFn =
             [this](PffDofData_& dofData,
                    const Stencil& stencil,
                    unsigned localDofIdx)

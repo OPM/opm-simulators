@@ -38,6 +38,8 @@
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <dune/grid/common/gridenums.hh>
 #include <dune/common/version.hh>
@@ -177,10 +179,10 @@ private:
                 continue;
 
             elemCtx.updateAll(elem);
-            const auto &stencil = elemCtx.stencil(/*timeIdx=*/0);
+            const auto& stencil = elemCtx.stencil(/*timeIdx=*/0);
 
             for (unsigned scvfIdx = 0; scvfIdx < stencil.numInteriorFaces(); ++ scvfIdx) {
-                const auto &face = stencil.interiorFace(scvfIdx);
+                const auto& face = stencil.interiorFace(scvfIdx);
 
                 unsigned i = face.interiorIndex();
                 unsigned j = face.exteriorIndex();

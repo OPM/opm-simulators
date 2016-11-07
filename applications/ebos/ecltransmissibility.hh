@@ -34,6 +34,8 @@
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -303,7 +305,7 @@ private:
         return x;
     }
 
-    void applyMultipliers_(Scalar &trans, unsigned faceIdx, unsigned cartElemIdx,
+    void applyMultipliers_(Scalar& trans, unsigned faceIdx, unsigned cartElemIdx,
                            const Opm::TransMult& transMult) const
     {
         // apply multiplyer for the transmissibility of the face. (the
@@ -333,7 +335,7 @@ private:
         }
     }
 
-    void applyNtg_(Scalar &trans, unsigned faceIdx, unsigned cartElemIdx,
+    void applyNtg_(Scalar& trans, unsigned faceIdx, unsigned cartElemIdx,
                    const std::vector<double>& ntg) const
     {
         // apply multiplyer for the transmissibility of the face. (the

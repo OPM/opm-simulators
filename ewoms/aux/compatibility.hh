@@ -74,7 +74,7 @@ namespace Dune
       typedef Dune::cpgrid::Entity< codim >   EntityType;
       typedef EntityType                      GridEntityType;
 
-      static const GridEntityType &gridEntity ( const EntityType &entity )
+      static const GridEntityType& gridEntity ( const EntityType& entity )
       {
         return entity;
       }
@@ -88,7 +88,7 @@ namespace Dune
 #if HAVE_QUAD
     template< class Traits >
     inline OutStreamInterface< Traits > &
-      operator<< ( OutStreamInterface< Traits > &out,
+      operator<< ( OutStreamInterface< Traits >& out,
                    const __float128 value )
     {
       double val = double( value );
@@ -98,7 +98,7 @@ namespace Dune
 
     template< class Traits >
     inline InStreamInterface< Traits > &
-      operator>> ( InStreamInterface< Traits > &in,
+      operator>> ( InStreamInterface< Traits >& in,
                    __float128& value )
     {
       double val;

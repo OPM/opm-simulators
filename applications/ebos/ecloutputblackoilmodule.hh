@@ -31,9 +31,10 @@
 #include "ecldeckunits.hh"
 
 #include <ewoms/io/baseoutputmodule.hh>
-
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/parametersystem.hh>
+
+#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -96,7 +97,7 @@ class EclOutputBlackOilModule : public BaseOutputModule<TypeTag>
     typedef typename ParentType::ScalarBuffer ScalarBuffer;
 
 public:
-    EclOutputBlackOilModule(const Simulator &simulator)
+    EclOutputBlackOilModule(const Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -158,7 +159,7 @@ public:
      * \brief Modify the internal buffers according to the intensive quanties relevant
      *        for an element
      */
-    void processElement(const ElementContext &elemCtx)
+    void processElement(const ElementContext& elemCtx)
     {
         if (!EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput))
             return;
@@ -169,7 +170,7 @@ public:
             return;
 
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            const auto &fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
+            const auto& fs = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0).fluidState();
             typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
@@ -213,7 +214,7 @@ public:
     /*!
      * \brief Add all buffers to the VTK output writer.
      */
-    void commitBuffers(BaseOutputWriter &writer)
+    void commitBuffers(BaseOutputWriter& writer)
     {
         if (!std::is_same<Discretization, Ewoms::EcfvDiscretization<TypeTag> >::value)
             return;

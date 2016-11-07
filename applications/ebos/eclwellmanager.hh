@@ -39,6 +39,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/parallel/threadedentityiterator.hh>
@@ -84,7 +86,7 @@ class EclWellManager
     typedef Dune::FieldVector<Evaluation, numEq> EvalEqVector;
 
 public:
-    EclWellManager(Simulator &simulator)
+    EclWellManager(Simulator& simulator)
         : simulator_(simulator)
     { }
 
@@ -101,7 +103,7 @@ public:
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
         {
             const Opm::Well* deckWell = deckSchedule.getWells()[deckWellIdx];
-            const std::string &wellName = deckWell->name();
+            const std::string& wellName = deckWell->name();
 
             // set the name of the well but not much else. (i.e., if it is not completed,
             // the well primarily serves as a placeholder.) The big rest of the well is
@@ -168,7 +170,7 @@ public:
             if (deckWell->isInjector(episodeIdx)) {
                 well->setWellType(Well::Injector);
 
-                const Opm::WellInjectionProperties &injectProperties =
+                const Opm::WellInjectionProperties& injectProperties =
                     deckWell->getInjectionProperties(episodeIdx);
 
                 switch (injectProperties.injectorType) {
@@ -244,7 +246,7 @@ public:
             if (deckWell->isProducer(episodeIdx)) {
                 well->setWellType(Well::Producer);
 
-                const Opm::WellProductionProperties &producerProperties =
+                const Opm::WellProductionProperties& producerProperties =
                     deckWell->getProductionProperties(episodeIdx);
 
                 switch (producerProperties.controlMode) {
@@ -321,7 +323,7 @@ public:
     /*!
      * \brief Return if a given well name is known to the wells manager
      */
-    bool hasWell(const std::string &wellName) const
+    bool hasWell(const std::string& wellName) const
     {
         return wellNameToIndex_.find( wellName ) != wellNameToIndex_.end();
     }
@@ -337,10 +339,10 @@ public:
      *
      * A std::runtime_error will be thrown if the well name is unknown.
      */
-    unsigned wellIndex(const std::string &wellName) const
+    unsigned wellIndex(const std::string& wellName) const
     {
         assert( hasWell( wellName ) );
-        const auto &it = wellNameToIndex_.find(wellName);
+        const auto& it = wellNameToIndex_.find(wellName);
         if (it == wellNameToIndex_.end())
         {
             OPM_THROW(std::runtime_error,
@@ -354,7 +356,7 @@ public:
      *
      * A std::runtime_error will be thrown if the well name is unknown.
      */
-    std::shared_ptr<const Well> well(const std::string &wellName) const
+    std::shared_ptr<const Well> well(const std::string& wellName) const
     { return wells_[wellIndex(wellName)]; }
 
     /*!
@@ -362,7 +364,7 @@ public:
      *
      * A std::runtime_error will be thrown if the well name is unknown.
      */
-    std::shared_ptr<Well> well(const std::string &wellName)
+    std::shared_ptr<Well> well(const std::string& wellName)
     { return wells_[wellIndex(wellName)]; }
 
     /*!
@@ -513,8 +515,8 @@ public:
      *        freedom.
      */
     template <class Context>
-    void computeTotalRatesForDof(EvalEqVector &q,
-                                 const Context &context,
+    void computeTotalRatesForDof(EvalEqVector& q,
+                                 const Context& context,
                                  unsigned dofIdx,
                                  unsigned timeIdx) const
     {
@@ -540,7 +542,7 @@ public:
      *        to the hard disk.
      */
     template <class Restarter>
-    void serialize(Restarter &res)
+    void serialize(Restarter& res)
     {
         /* do nothing: Everything which we need here is provided by the deck->.. */
     }
@@ -552,7 +554,7 @@ public:
      * It is the inverse of the serialize() method.
      */
     template <class Restarter>
-    void deserialize(Restarter &res)
+    void deserialize(Restarter& res)
     {
         // initialize the wells for the current episode
         beginEpisode(simulator_.gridManager().eclState(), /*wasRestarted=*/true);
@@ -791,7 +793,7 @@ protected:
         }
     }
 
-    Simulator &simulator_;
+    Simulator& simulator_;
 
     std::vector<std::shared_ptr<Well> > wells_;
     std::vector<bool> gridDofIsPenetrated_;

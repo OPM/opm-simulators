@@ -142,7 +142,7 @@ public:
         initialFluidStates_.resize(numCartesianElems);
         for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
             unsigned cartesianElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
-            auto &fluidState = initialFluidStates_[cartesianElemIdx];
+            auto& fluidState = initialFluidStates_[cartesianElemIdx];
 
             // get the PVT region index of the current element
             unsigned regionIdx = simulator_.problem().pvtRegionIndex(equilElemIdx);

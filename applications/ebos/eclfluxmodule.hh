@@ -34,6 +34,10 @@
 #include <ewoms/disc/common/fvbaseproperties.hh>
 #include <ewoms/common/signum.hh>
 
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
+
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
@@ -87,7 +91,7 @@ class EclTransIntensiveQuantities
 {
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
 protected:
-    void update_(const ElementContext &elemCtx, unsigned dofIdx, unsigned timeIdx)
+    void update_(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     { }
 };
 
@@ -205,7 +209,7 @@ protected:
     /*!
      * \brief Update the required gradients for interior faces
      */
-    void calculateGradients_(const ElementContext &elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
         Valgrind::SetUndefined(*this);
 
@@ -228,8 +232,8 @@ protected:
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
         Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
 
-        const auto &intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
-        const auto &intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx_, timeIdx);
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
+        const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx_, timeIdx);
 
         // this is quite hacky because the dune grid interface does not provide a
         // cellCenterDepth() method (so we ask the problem to provide it). The "good"
@@ -338,7 +342,7 @@ protected:
     /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
-    void calculateFluxes_(const ElementContext &elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    void calculateFluxes_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     { }
 
     // transmissibility [m^3 s]

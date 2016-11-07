@@ -35,6 +35,9 @@
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
@@ -240,7 +243,7 @@ public:
         Shut
     };
 
-    EclPeacemanWell(const Simulator &simulator)
+    EclPeacemanWell(const Simulator& simulator)
         : simulator_(simulator)
     {
         // set the initial status of the well
@@ -304,7 +307,7 @@ public:
         // add the grid DOFs which are influenced by the well, and add the well dof to
         // the ones neighboring the grid ones
         auto wellDofIt = dofVariables_.begin();
-        const auto &wellDofEndIt = dofVariables_.end();
+        const auto& wellDofEndIt = dofVariables_.end();
         for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
             neighbors[wellGlobalDof].insert(wellDofIt->first);
             neighbors[wellDofIt->first].insert(wellGlobalDof);
@@ -316,7 +319,7 @@ public:
      */
     virtual void applyInitial()
     {
-        auto &sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
+        auto& sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
 
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         sol[wellGlobalDof] = 0.0;
@@ -332,7 +335,7 @@ public:
         unsigned wellGlobalDofIdx = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
         residual[wellGlobalDofIdx] = 0.0;
 
-        auto &diagBlock = matrix[wellGlobalDofIdx][wellGlobalDofIdx];
+        auto& diagBlock = matrix[wellGlobalDofIdx][wellGlobalDofIdx];
         diagBlock = 0.0;
         for (unsigned i = 0; i < numModelEq; ++ i)
             diagBlock[i][i] = 1.0;
@@ -342,7 +345,7 @@ public:
             // matrix: the main diagonal is already set to the identity matrix, the
             // off-diagonal matrix entries must be set to 0.
             auto wellDofIt = dofVariables_.begin();
-            const auto &wellDofEndIt = dofVariables_.end();
+            const auto& wellDofEndIt = dofVariables_.end();
             for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
                 matrix[wellGlobalDofIdx][wellDofIt->first] = 0.0;
                 matrix[wellDofIt->first][wellGlobalDofIdx] = 0.0;
@@ -357,18 +360,18 @@ public:
         // account for the effect of the grid DOFs which are influenced by the well on
         // the well equation and the effect of the well on the grid DOFs
         auto wellDofIt = dofVariables_.begin();
-        const auto &wellDofEndIt = dofVariables_.end();
+        const auto& wellDofEndIt = dofVariables_.end();
 
         ElementContext elemCtx(simulator_);
         for (; wellDofIt != wellDofEndIt; ++ wellDofIt) {
             unsigned gridDofIdx = wellDofIt->first;
-            const auto &dofVars = *dofVariables_[gridDofIdx];
+            const auto& dofVars = *dofVariables_[gridDofIdx];
             DofVariables tmpDofVars(dofVars);
             auto priVars(curSol[gridDofIdx]);
 
             /////////////
             // influence of grid on well
-            auto &curBlock = matrix[wellGlobalDofIdx][gridDofIdx];
+            auto& curBlock = matrix[wellGlobalDofIdx][gridDofIdx];
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
             elemCtx.updateStencil(*dofVars.elementPtr);
 #else
@@ -439,7 +442,7 @@ public:
             // of a problem...
             assert(numModelEq == numComponents);
             Valgrind::CheckDefined(q);
-            auto &matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
+            auto& matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
             matrixEntry = 0.0;
             for (unsigned eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
                 matrixEntry[eqIdx][0] = - Toolbox::value(q[eqIdx])/dofVars.totalVolume;
@@ -573,31 +576,31 @@ public:
      *
      * Well, let's say "readable by some humans".
      */
-    const std::string &name() const
+    const std::string& name() const
     { return name_; }
 
     /*!
      * \brief Set the human-readable name of the well
      */
-    void setName(const std::string &newName)
+    void setName(const std::string& newName)
     { name_ = newName; }
 
     /*!
      * \brief Add a degree of freedom to the well.
      */
     template <class Context>
-    void addDof(const Context &context, unsigned dofIdx)
+    void addDof(const Context& context, unsigned dofIdx)
     {
         unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         if (applies(globalDofIdx))
             // we already have this DOF in the well!
             return;
 
-        const auto &dofPos = context.pos(dofIdx, /*timeIdx=*/0);
+        const auto& dofPos = context.pos(dofIdx, /*timeIdx=*/0);
 
         dofVarsStore_.push_back(DofVariables());
         dofVariables_[globalDofIdx] = &dofVarsStore_.back();
-        DofVariables &dofVars = *dofVariables_[globalDofIdx];
+        DofVariables& dofVars = *dofVariables_[globalDofIdx];
         wellTotalVolume_ += context.model().dofTotalVolume(globalDofIdx);
 
         dofVars.elementPtr.reset(new ElementPointer(context.element()));
@@ -616,15 +619,15 @@ public:
         assert(context.element().template count</*codim=*/dimWorld>() == 8);
 #endif
 
-        const auto &refElem = Dune::ReferenceElements<Scalar, /*dim=*/3>::cube();
+        const auto& refElem = Dune::ReferenceElements<Scalar, /*dim=*/3>::cube();
 
         // determine the current element's effective size
-        const auto &elem = context.element();
+        const auto& elem = context.element();
         unsigned faceIdx = 0;
         unsigned numFaces = refElem.size(/*codim=*/1);
         for (; faceIdx < numFaces; ++faceIdx) {
-            const auto &faceCenterLocal = refElem.position(faceIdx, /*codim=*/1);
-            const auto &faceCenter = elem.geometry().global(faceCenterLocal);
+            const auto& faceCenterLocal = refElem.position(faceIdx, /*codim=*/1);
+            const auto& faceCenter = elem.geometry().global(faceCenterLocal);
 
             switch (faceIdx) {
             case 0:
@@ -716,7 +719,7 @@ public:
      * \brief Set the connection transmissibility factor for a given degree of freedom.
      */
     template <class Context>
-    void setConnectionTransmissibilityFactor(const Context &context, unsigned dofIdx, Scalar value)
+    void setConnectionTransmissibilityFactor(const Context& context, unsigned dofIdx, Scalar value)
     {
         unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx]->connectionTransmissibilityFactor = value;
@@ -734,7 +737,7 @@ public:
      *       be called after setEffectivePermeability()!
      */
     template <class Context>
-    void setEffectivePermeability(const Context &context, unsigned dofIdx, Scalar value)
+    void setEffectivePermeability(const Context& context, unsigned dofIdx, Scalar value)
     {
         unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx].effectivePermeability = value;
@@ -898,7 +901,7 @@ public:
      *       be called after setSkinFactor()!
      */
     template <class Context>
-    void setSkinFactor(const Context &context, unsigned dofIdx, Scalar value)
+    void setSkinFactor(const Context& context, unsigned dofIdx, Scalar value)
     {
         unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx].skinFactor = value;
@@ -920,7 +923,7 @@ public:
      *       be called after setRadius()!
      */
     template <class Context>
-    void setRadius(const Context &context, unsigned dofIdx, Scalar value)
+    void setRadius(const Context& context, unsigned dofIdx, Scalar value)
     {
         unsigned globalDofIdx = context.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         dofVariables_[globalDofIdx]->boreholeRadius = value;
@@ -986,7 +989,7 @@ public:
      * \brief Do the DOF specific part at the beginning of each iteration
      */
     template <class Context>
-    void beginIterationAccumulate(Context &context, unsigned timeIdx)
+    void beginIterationAccumulate(Context& context, unsigned timeIdx)
     {
         if (wellStatus() == Shut)
             return;
@@ -996,7 +999,7 @@ public:
             if (!applies(globalDofIdx))
                 continue;
 
-            DofVariables &dofVars = *dofVariables_.at(globalDofIdx);
+            DofVariables& dofVars = *dofVariables_.at(globalDofIdx);
             const auto& intQuants = context.intensiveQuantities(dofIdx, timeIdx);
 
             if (iterationIdx_ == 0)
@@ -1017,7 +1020,7 @@ public:
         if (wellStatus() == Shut)
             return;
 
-        auto &sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
+        auto& sol = const_cast<SolutionVector&>(simulator_.model().solution(/*timeIdx=*/0));
         int wellGlobalDof = AuxModule::localToGlobalDof(/*localDofIdx=*/0);
 
         // retrieve the bottom hole pressure from the global system of equations
@@ -1088,8 +1091,8 @@ public:
      * \brief Computes the source term for a degree of freedom.
      */
     template <class Context>
-    void computeTotalRatesForDof(RateVector &q,
-                                 const Context &context,
+    void computeTotalRatesForDof(RateVector& q,
+                                 const Context& context,
                                  unsigned dofIdx,
                                  unsigned timeIdx) const
     {
@@ -1109,7 +1112,7 @@ public:
 
         // convert to mass rates
         RateVector modelRate;
-        const auto &intQuants = context.intensiveQuantities(dofIdx, timeIdx);
+        const auto& intQuants = context.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             modelRate.setVolumetricRate(intQuants.fluidState(), phaseIdx, volumetricRates[phaseIdx]);
             for (unsigned eqIdx = 0; eqIdx < q.size(); ++eqIdx)
@@ -1230,7 +1233,7 @@ protected:
      * setVolumetricPhaseWeights()
      */
     template <class Eval>
-    Eval computeWeightedRate_(const std::array<Eval, numPhases> &volRates) const
+    Eval computeWeightedRate_(const std::array<Eval, numPhases>& volRates) const
     {
         Eval result = 0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -1245,8 +1248,8 @@ protected:
      * thus the applicable fluid state.
      */
     template <class Eval>
-    void computeSurfaceRates_(std::array<Eval, numPhases> &surfaceRates,
-                              const std::array<Eval, numPhases> &reservoirRate,
+    void computeSurfaceRates_(std::array<Eval, numPhases>& surfaceRates,
+                              const std::array<Eval, numPhases>& reservoirRate,
                               const DofVariables& dofVars) const
     {
         // the array for the surface rates and the one for the reservoir rates must not
@@ -1315,7 +1318,7 @@ protected:
         }
 
         auto dofVarsIt = dofVariables_.begin();
-        const auto &dofVarsEndIt = dofVariables_.end();
+        const auto& dofVarsEndIt = dofVariables_.end();
         for (; dofVarsIt != dofVarsEndIt; ++ dofVarsIt) {
             std::array<Scalar, numPhases> volumetricReservoirRates;
             const DofVariables *tmp;
@@ -1344,7 +1347,7 @@ protected:
      */
     Scalar computeOverallWeightedSurfaceRate_(Scalar bottomHolePressure,
                                               std::array<Scalar, numPhases>& overallSurfaceRates,
-                                              const DofVariables &evalDofVars,
+                                              const DofVariables& evalDofVars,
                                               int globalEvalDofIdx) const
 
     {
@@ -1445,7 +1448,7 @@ protected:
         std::fill(totalSurfaceRates.begin(), totalSurfaceRates.end(), 0.0);
 
         auto dofVarsIt = dofVariables_.begin();
-        const auto &dofVarsEndIt = dofVariables_.end();
+        const auto& dofVarsEndIt = dofVariables_.end();
         for (; dofVarsIt != dofVarsEndIt; ++ dofVarsIt) {
             std::array<BhpEval, numPhases> resvRates;
             const DofVariables *dofVars = dofVarsIt->second;
@@ -1510,7 +1513,7 @@ protected:
         return scalingFactor*result;
     }
 
-    const Simulator &simulator_;
+    const Simulator& simulator_;
 
     std::string name_;
 
