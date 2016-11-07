@@ -28,7 +28,9 @@
 #define EWOMS_STOKES_2C_TEST_PROBLEM_HH
 
 #include <ewoms/models/stokes/stokesmodel.hh>
+
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -126,7 +128,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    Stokes2cTestProblem(Simulator &simulator)
+    Stokes2cTestProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -181,7 +183,9 @@ public:
      * This problem assumes a temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& OPM_UNUSED context,
+                       unsigned OPM_UNUSED spaceIdx,
+                       unsigned OPM_UNUSED timeIdx) const
     { return 273.15 + 10; /* -> 10 deg C */ }
 
     // \}
@@ -199,21 +203,21 @@ public:
      * upper edge.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  unsigned spaceIdx, unsigned timeIdx) const
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLowerBoundary_(pos))
             values.setOutFlow(context, spaceIdx, timeIdx);
-        else if (onUpperBoundary_(pos)) {
+        else if (onUpperBoundary_(pos))
             // upper boundary is constraint!
             values = 0.0;
-        }
-        else {
+        else
             // left and right boundaries
             values.setNoFlow(context, spaceIdx, timeIdx);
-        }
     }
 
     //! \}
@@ -231,10 +235,12 @@ public:
      * 0.5% is set.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+    void initial(PrimaryVariables& values,
+                 const Context& context,
+                 unsigned spaceIdx,
                  unsigned timeIdx) const
     {
-        const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& globalPos = context.pos(spaceIdx, timeIdx);
         values = 0.0;
 
         // parabolic profile
@@ -266,8 +272,10 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -277,10 +285,12 @@ public:
      * initial conditions.
      */
     template <class Context>
-    void constraints(Constraints &constraints, const Context &context,
-                     unsigned spaceIdx, unsigned timeIdx) const
+    void constraints(Constraints& constraints,
+                     const Context& context,
+                     unsigned spaceIdx,
+                     unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos)) {
             constraints.setActive(true);
@@ -290,16 +300,16 @@ public:
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &globalPos) const
+    bool onLeftBoundary_(const GlobalPosition& globalPos) const
     { return globalPos[0] < this->boundingBoxMin()[0] + eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &globalPos) const
+    bool onRightBoundary_(const GlobalPosition& globalPos) const
     { return globalPos[0] > this->boundingBoxMax()[0] - eps_; }
 
-    bool onLowerBoundary_(const GlobalPosition &globalPos) const
+    bool onLowerBoundary_(const GlobalPosition& globalPos) const
     { return globalPos[1] < this->boundingBoxMin()[1] + eps_; }
 
-    bool onUpperBoundary_(const GlobalPosition &globalPos) const
+    bool onUpperBoundary_(const GlobalPosition& globalPos) const
     { return globalPos[1] > this->boundingBoxMax()[1] - eps_; }
 
     Scalar eps_;

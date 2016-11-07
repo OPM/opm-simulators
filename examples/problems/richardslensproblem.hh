@@ -36,6 +36,7 @@
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -174,7 +175,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    RichardsLensProblem(Simulator &simulator)
+    RichardsLensProblem(Simulator& simulator)
         : ParentType(simulator)
         , pnRef_(1e5)
     {
@@ -270,21 +271,21 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
 
-    Scalar temperature(unsigned globalSpaceIdx, unsigned timeIdx) const
+    Scalar temperature(unsigned OPM_UNUSED globalSpaceIdx, unsigned OPM_UNUSED timeIdx) const
     { return 273.15 + 10; } // -> 10°C
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context,
+    const DimMatrix& intrinsicPermeability(const Context& context,
                                            unsigned spaceIdx,
                                            unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
         if (isInLens_(pos))
             return lensK_;
         return outerK_;
@@ -294,14 +295,16 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& OPM_UNUSED context,
+                    unsigned OPM_UNUSED spaceIdx,
+                    unsigned OPM_UNUSED timeIdx) const
     { return 0.4; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context,
+    const MaterialLawParams& materialLawParams(const Context& context,
                                                unsigned spaceIdx,
                                                unsigned timeIdx) const
     {
@@ -309,7 +312,8 @@ public:
         return materialLawParams(globalSpaceIdx, timeIdx);
     }
 
-    const MaterialLawParams& materialLawParams(unsigned globalSpaceIdx, unsigned timeIdx) const
+    const MaterialLawParams& materialLawParams(unsigned globalSpaceIdx,
+                                               unsigned OPM_UNUSED timeIdx) const
     {
         if (dofIsInLens_[globalSpaceIdx])
             return lensMaterialParams_;
@@ -322,14 +326,15 @@ public:
      * \copydetails Doxygen::contextParams
      */
     template <class Context>
-    Scalar referencePressure(const Context &context,
+    Scalar referencePressure(const Context& context,
                              unsigned spaceIdx,
                              unsigned timeIdx) const
     { return referencePressure(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
 
     // the Richards model does not have an element context available at all places
     // where the reference pressure is required...
-    Scalar referencePressure(unsigned globalSpaceIdx, unsigned timeIdx) const
+    Scalar referencePressure(unsigned OPM_UNUSED globalSpaceIdx,
+                             unsigned OPM_UNUSED timeIdx) const
     { return pnRef_; }
 
     //! \}
@@ -343,15 +348,15 @@ public:
      * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values,
-                  const Context &context,
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
-            const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
+            const auto& materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
             Scalar Sw = 0.0;
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
@@ -388,12 +393,12 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values,
-                 const Context &context,
+    void initial(PrimaryVariables& values,
+                 const Context& context,
                  unsigned spaceIdx,
                  unsigned timeIdx) const
     {
-        const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
+        const auto& materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
         Scalar Sw = 0.0;
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
@@ -412,35 +417,35 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate,
-                const Context &context,
-                unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &pos) const
+    bool onLeftBoundary_(const GlobalPosition& pos) const
     { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
+    bool onRightBoundary_(const GlobalPosition& pos) const
     { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
-    bool onLowerBoundary_(const GlobalPosition &pos) const
+    bool onLowerBoundary_(const GlobalPosition& pos) const
     { return pos[1] < this->boundingBoxMin()[1] + eps_; }
 
-    bool onUpperBoundary_(const GlobalPosition &pos) const
+    bool onUpperBoundary_(const GlobalPosition& pos) const
     { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
-    bool onInlet_(const GlobalPosition &pos) const
+    bool onInlet_(const GlobalPosition& pos) const
     {
         Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
         Scalar lambda = (this->boundingBoxMax()[0] - pos[0]) / width;
         return onUpperBoundary_(pos) && 0.5 < lambda && lambda < 2.0 / 3.0;
     }
 
-    bool isInLens_(const GlobalPosition &pos) const
+    bool isInLens_(const GlobalPosition& pos) const
     {
         for (unsigned i = 0; i < dimWorld; ++i) {
             if (pos[i] < lensLowerLeft_[i] || pos[i] > lensUpperRight_[i])

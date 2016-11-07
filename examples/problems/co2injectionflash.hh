@@ -50,11 +50,11 @@ public:
      * \brief Guess initial values for all quantities.
      */
     template <class FluidState, class ComponentVector>
-    static void guessInitial(FluidState &fluidState, const ComponentVector &globalMolarities)
+    static void guessInitial(FluidState& fluidState, const ComponentVector& globalMolarities)
     {
         ParentType::guessInitial(fluidState, globalMolarities);
 
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // pressure. use something close to the reservoir pressure as initial guess
             fluidState.setPressure(phaseIdx, 100e5);
         }

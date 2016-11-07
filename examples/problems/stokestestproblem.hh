@@ -32,6 +32,7 @@
 
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/fluidsystems/GasPhase.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -132,7 +133,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    StokesTestProblem(Simulator &simulator)
+    StokesTestProblem(Simulator& simulator)
         : ParentType(simulator)
     { eps_ = 1e-6; }
 
@@ -175,7 +176,9 @@ public:
      * This problem assumes a constant temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& OPM_UNUSED context,
+                       unsigned OPM_UNUSED spaceIdx,
+                       unsigned OPM_UNUSED timeIdx) const
     { return 273.15 + 10; } // -> 10 deg C
 
     //! \}
@@ -193,10 +196,10 @@ public:
      * a parabolic velocity profile via constraints.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
+    void boundary(BoundaryRateVector& values, const Context& context,
                   unsigned spaceIdx, unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         Scalar y = pos[1] - this->boundingBoxMin()[1];
         Scalar height = this->boundingBoxMax()[1] - this->boundingBoxMin()[1];
@@ -234,10 +237,10 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+    void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx,
                  unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
 
         Scalar y = pos[1] - this->boundingBoxMin()[1];
         Scalar height = this->boundingBoxMax()[1] - this->boundingBoxMin()[1];
@@ -264,8 +267,10 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -275,10 +280,12 @@ public:
      * velocity profile using constraints.
      */
     template <class Context>
-    void constraints(Constraints &constraints, const Context &context,
-                     unsigned spaceIdx, unsigned timeIdx) const
+    void constraints(Constraints& constraints,
+                     const Context& context,
+                     unsigned spaceIdx,
+                     unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
             constraints.setActive(true);
@@ -289,19 +296,19 @@ public:
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &pos) const
+    bool onLeftBoundary_(const GlobalPosition& pos) const
     { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
+    bool onRightBoundary_(const GlobalPosition& pos) const
     { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
-    bool onLowerBoundary_(const GlobalPosition &pos) const
+    bool onLowerBoundary_(const GlobalPosition& pos) const
     { return pos[1] < this->boundingBoxMin()[1] + eps_; }
 
-    bool onUpperBoundary_(const GlobalPosition &pos) const
+    bool onUpperBoundary_(const GlobalPosition& pos) const
     { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
-    bool onBoundary_(const GlobalPosition &pos) const
+    bool onBoundary_(const GlobalPosition& pos) const
     {
         return onLeftBoundary_(pos) || onRightBoundary_(pos)
                || onLowerBoundary_(pos) || onUpperBoundary_(pos);

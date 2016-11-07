@@ -28,6 +28,9 @@
 #ifndef EWOMS_POWER_INJECTION_PROBLEM_HH
 #define EWOMS_POWER_INJECTION_PROBLEM_HH
 
+#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <ewoms/io/cubegridmanager.hh>
+
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
@@ -36,10 +39,9 @@
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/components/Air.hpp>
-#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
-#include <ewoms/io/cubegridmanager.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -193,7 +195,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    PowerInjectionProblem(Simulator &simulator)
+    PowerInjectionProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -269,38 +271,46 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
-                                           unsigned timeIdx) const
+    const DimMatrix& intrinsicPermeability(const Context& OPM_UNUSED context,
+                                           unsigned OPM_UNUSED spaceIdx,
+                                           unsigned OPM_UNUSED timeIdx) const
     { return K_; }
 
     /*!
      * \copydoc ForchheimerBaseProblem::ergunCoefficient
      */
     template <class Context>
-    Scalar ergunCoefficient(const Context &context, unsigned spaceIdx,
-                            unsigned timeIdx) const
+    Scalar ergunCoefficient(const Context& OPM_UNUSED context,
+                            unsigned OPM_UNUSED spaceIdx,
+                            unsigned OPM_UNUSED timeIdx) const
     { return 0.3866; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& OPM_UNUSED context,
+                    unsigned OPM_UNUSED spaceIdx,
+                    unsigned OPM_UNUSED timeIdx) const
     { return 0.558; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context,
-                                               unsigned spaceIdx, unsigned timeIdx) const
+    const MaterialLawParams&
+    materialLawParams(const Context& OPM_UNUSED context,
+                      unsigned OPM_UNUSED spaceIdx,
+                      unsigned OPM_UNUSED timeIdx) const
     { return materialParams_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& OPM_UNUSED context,
+                       unsigned OPM_UNUSED spaceIdx,
+                       unsigned OPM_UNUSED timeIdx) const
     { return temperature_; }
 
     //! \}
@@ -317,10 +327,12 @@ public:
      * left and a free-flow boundary on the right.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  unsigned spaceIdx, unsigned timeIdx) const
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos)) {
             RateVector massRate(0.0);
@@ -348,8 +360,10 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
-                 unsigned timeIdx) const
+    void initial(PrimaryVariables& values,
+                 const Context& OPM_UNUSED context,
+                 unsigned OPM_UNUSED spaceIdx,
+                 unsigned OPM_UNUSED timeIdx) const
     {
         // assign the primary variables
         values.assignNaive(initialFluidState_);
@@ -362,17 +376,19 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &pos) const
+    bool onLeftBoundary_(const GlobalPosition& pos) const
     { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
+    bool onRightBoundary_(const GlobalPosition& pos) const
     { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     void setupInitialFluidState_()
