@@ -15,8 +15,8 @@ def compare_files( flow_file , ref_file):
         flow_kw = flow[kw][-1]
         ref_kw = ref[kw][-1]
 
-        if not flow_kw.equal_numeric( ref_kw , abs_epsilon = 0, rel_epsilon = 1e-3 ):
-            first_different = flow_kw.firstDifferent( ref_kw , abs_epsilon = 0, rel_epsilon = 1e-3 )
+        if not flow_kw.equal_numeric( ref_kw , abs_epsilon = 0, rel_epsilon = 2.5e-2 ):
+            first_different = flow_kw.firstDifferent( ref_kw , abs_epsilon = 0, rel_epsilon = 2.5e-2 )
             sys.exit("Keyword:%s was different in flow simulation and reference. First difference in index:%d" % (kw , first_different))
 
 

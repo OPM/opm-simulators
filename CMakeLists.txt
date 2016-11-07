@@ -141,7 +141,7 @@ if (HAVE_OPM_DATA)
 
         opm_add_python_test( check_RESTART_SPE1CASE2
                              ${PROJECT_SOURCE_DIR}/tests/check_RESTART.py
-                             $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/spe1/SPE1CASE2.DATA ${OPM_DATA_ROOT}/spe1/SPE1CASE2_RESTART.DATA )
+                             $<TARGET_FILE:flow> ${OPM_DATA_ROOT}/spe1/SPE1CASE2_ACTNUM.DATA ${OPM_DATA_ROOT}/spe1/SPE1CASE2_ACTNUM_RESTART.DATA )
     endif()
 
    include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
