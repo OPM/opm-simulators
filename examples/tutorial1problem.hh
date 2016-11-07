@@ -167,7 +167,7 @@ class Tutorial1Problem
 public:
     //! The constructor of the problem. This only _allocates_ the memory required by the
     //! problem. The constructor is supposed to _never ever_ throw an exception.
-    Tutorial1Problem(Simulator &simulator)
+    Tutorial1Problem(Simulator& simulator)
         : ParentType(simulator)
         , eps_(3e-6)
     { }
@@ -200,36 +200,37 @@ public:
 
     //! Returns the temperature at a given position.
     template <class Context>
-    Scalar temperature(const Context &context, int spaceIdx, int timeIdx) const
+    Scalar temperature(const Context& /*context*/,
+                       unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     { return 283.15; }
 
     //! Returns the intrinsic permeability tensor [m^2] at a position.
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, /*@\label{tutorial1:permeability}@*/
-                                           int spaceIdx, int timeIdx) const
+    const DimMatrix& intrinsicPermeability(const Context& /*context*/, /*@\label{tutorial1:permeability}@*/
+                                           unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     { return K_; }
 
     //! Defines the porosity [-] of the medium at a given position
     template <class Context>
-    Scalar porosity(const Context &context,
-                    int spaceIdx, int timeIdx) const /*@\label{tutorial1:porosity}@*/
+    Scalar porosity(const Context& /*context*/,
+                    unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const /*@\label{tutorial1:porosity}@*/
     { return 0.2; }
 
     //! Returns the parameter object for the material law at a given position
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context, /*@\label{tutorial1:matLawParams}@*/
-                                               int spaceIdx, int timeIdx) const
+    const MaterialLawParams& materialLawParams(const Context& /*context*/, /*@\label{tutorial1:matLawParams}@*/
+                                               unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     { return materialParams_; }
 
     //! Evaluates the boundary conditions.
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  int spaceIdx, int timeIdx) const
+    void boundary(BoundaryRateVector& values, const Context& context,
+                  unsigned spaceIdx, unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
         if (pos[0] < eps_) {
             // Free-flow conditions on left boundary
-            const auto &materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
+            const auto& materialParams = this->materialLawParams(context, spaceIdx, timeIdx);
 
             Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
             Scalar Sw = 1.0;
@@ -261,8 +262,8 @@ public:
     //! position of the domain [kg/(m^3 * s)]. Positive values mean that
     //! mass is created.
     template <class Context>
-    void source(RateVector &source, const Context &context, int spaceIdx,
-                int timeIdx) const
+    void source(RateVector& source, const Context& /*context*/,
+                unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     {
         source[contiWettingEqIdx] = 0.0;
         source[contiNonWettingEqIdx] = 0.0;
@@ -270,8 +271,8 @@ public:
 
     //! Evaluates the initial value at a given position in the domain.
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, int spaceIdx,
-                 int timeIdx) const
+    void initial(PrimaryVariables& values, const Context& context,
+                 unsigned spaceIdx, unsigned timeIdx) const
     {
         Opm::ImmiscibleFluidState<Scalar, FluidSystem> fs;
 
@@ -285,8 +286,7 @@ public:
 
         // set pressure of the wetting phase to 200 kPa = 2 bar
         Scalar pC[numPhases];
-        MaterialLaw::capillaryPressures(pC, materialLawParams(context, spaceIdx,
-                                                              timeIdx),
+        MaterialLaw::capillaryPressures(pC, materialLawParams(context, spaceIdx, timeIdx),
                                         fs);
         fs.setPressure(wettingPhaseIdx, 200e3);
         fs.setPressure(nonWettingPhaseIdx, 200e3 + pC[nonWettingPhaseIdx] - pC[nonWettingPhaseIdx]);

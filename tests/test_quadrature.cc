@@ -41,6 +41,14 @@
 
 #include <ewoms/disc/vcfv/vcfvstencil.hh>
 
+#include <opm/material/common/Unused.hpp>
+
+#if HAVE_DUNE_ALUGRID
+#define EWOMS_NO_ALUGRID_UNUSED
+#else
+#define EWOMS_NO_ALUGRID_UNUSED OPM_UNUSED
+#endif
+
 const unsigned dim = 3;
 typedef double Scalar;
 typedef Ewoms::QuadrialteralQuadratureGeometry<Scalar, dim> QuadratureGeom;
@@ -102,7 +110,7 @@ void testIdenityMapping()
 }
 
 template <class Grid>
-void writeTetrahedronSubControlVolumes(const Grid &grid)
+void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 {
 #if HAVE_DUNE_ALUGRID
     typedef typename Grid::LeafGridView GridView;
@@ -134,14 +142,14 @@ void writeTetrahedronSubControlVolumes(const Grid &grid)
         }
     }
 
-    int cornerOffset = 0;
+    unsigned cornerOffset = 0;
     eIt = gridView.template begin<0>();
     for (; eIt != eEndIt; ++eIt) {
         stencil.update(*eIt);
         for (unsigned scvIdx = 0; scvIdx < stencil.numDof(); ++scvIdx) {
             const auto &scvLocalGeom = stencil.subControlVolume(scvIdx).localGeometry();
 
-            std::vector<unsigned int> vertexIndices;
+            std::vector<unsigned> vertexIndices;
             for (unsigned i = 0; i < scvLocalGeom.numCorners; ++i) {
                 vertexIndices.push_back(cornerOffset);
                 ++cornerOffset;
@@ -185,7 +193,7 @@ void testTetrahedron()
 }
 
 template <class Grid>
-void writeCubeSubControlVolumes(const Grid &grid)
+void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
 {
 #if HAVE_DUNE_ALUGRID
     typedef typename Grid::LeafGridView GridView;
@@ -215,7 +223,7 @@ void writeCubeSubControlVolumes(const Grid &grid)
         }
     }
 
-    int cornerOffset = 0;
+    unsigned cornerOffset = 0;
     eIt = gridView.template begin<0>();
     for (; eIt != eEndIt; ++eIt) {
         stencil.update(*eIt);
@@ -318,7 +326,7 @@ void testQuadrature()
             const auto &scvLocalGeom = stencil.subControlVolume(scvIdx).localGeometry();
 
             Dune::GeometryType geomType = scvLocalGeom.type();
-            static const int quadratureOrder = 2;
+            static const unsigned quadratureOrder = 2;
             const auto &rule
                 = Dune::QuadratureRules<Scalar, dim>::rule(geomType,
                                                            quadratureOrder);

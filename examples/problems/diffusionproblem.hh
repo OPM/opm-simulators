@@ -30,7 +30,6 @@
 
 #include <ewoms/models/ncp/ncpproperties.hh>
 
-#include <dune/grid/yaspgrid.hh>
 #include <ewoms/io/cubegridmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
@@ -38,7 +37,9 @@
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
+#include <opm/material/common/Unused.hpp>
 
+#include <dune/grid/yaspgrid.hh>
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -174,7 +175,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    DiffusionProblem(Simulator &simulator)
+    DiffusionProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -237,30 +238,37 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
-                                           unsigned timeIdx) const
+    const DimMatrix& intrinsicPermeability(const Context& OPM_UNUSED context,
+                                           unsigned OPM_UNUSED spaceIdx,
+                                           unsigned OPM_UNUSED timeIdx) const
     { return K_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& OPM_UNUSED context,
+                    unsigned OPM_UNUSED spaceIdx,
+                    unsigned OPM_UNUSED timeIdx) const
     { return 0.35; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context,
-                                               unsigned spaceIdx, unsigned timeIdx) const
+    const MaterialLawParams&
+    materialLawParams(const Context& OPM_UNUSED context,
+                      unsigned OPM_UNUSED spaceIdx,
+                      unsigned OPM_UNUSED timeIdx) const
     { return materialParams_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& OPM_UNUSED context,
+                       unsigned OPM_UNUSED spaceIdx,
+                       unsigned OPM_UNUSED timeIdx) const
     { return temperature_; }
 
     //! \}
@@ -276,8 +284,10 @@ public:
      * This problem sets no-flow boundaries everywhere.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  unsigned spaceIdx, unsigned timeIdx) const
+    void boundary(BoundaryRateVector& values,
+                  const Context& OPM_UNUSED context,
+                  unsigned OPM_UNUSED spaceIdx,
+                  unsigned OPM_UNUSED timeIdx) const
     { values.setNoFlow(); }
 
     //! \}
@@ -291,10 +301,12 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+    void initial(PrimaryVariables& values,
+                 const Context& context,
+                 unsigned spaceIdx,
                  unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
         if (onLeftSide_(pos))
             values.assignNaive(leftInitialFluidState_);
         else
@@ -308,14 +320,16 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
-    bool onLeftSide_(const GlobalPosition &pos) const
+    bool onLeftSide_(const GlobalPosition& pos) const
     { return pos[0] < (this->boundingBoxMin()[0] + this->boundingBoxMax()[0]) / 2; }
 
     void setupInitialFluidStates_()
