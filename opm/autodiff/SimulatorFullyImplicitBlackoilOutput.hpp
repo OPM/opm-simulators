@@ -214,6 +214,7 @@ namespace Opm
         BlackoilOutputWriter(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              const Opm::EclipseState& eclipseState,
+                             std::unique_ptr<EclipseWriter>& eclWriter,
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability );
 
@@ -328,6 +329,7 @@ namespace Opm
     BlackoilOutputWriter(const Grid& grid,
                          const parameter::ParameterGroup& param,
                          const Opm::EclipseState& eclipseState,
+                         std::unique_ptr<EclipseWriter>& eclWriter,
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),
@@ -343,7 +345,7 @@ namespace Opm
                      new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
         eclWriter_( output_ && parallelOutput_->isIORank() &&
                     param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , eclipseState.getInputGrid()))
+                    eclWriter.release()
                    : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()

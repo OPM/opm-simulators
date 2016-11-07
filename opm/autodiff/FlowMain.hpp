@@ -228,6 +228,7 @@ namespace Opm
         // distributeData()
         boost::any parallel_information_;
         // setupOutputWriter()
+        std::unique_ptr<EclipseWriter> eclipse_writer_;
         std::unique_ptr<BlackoilOutputWriter> output_writer_;
         // setupLinearSolver
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
@@ -754,9 +755,9 @@ namespace Opm
             if( output && output_ecl && output_cout_)
             {
                 const EclipseGrid& inputGrid = eclipse_state_->getInputGrid();
-                EclipseWriter writer(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid ));
-                writer.writeInitAndEgrid(geoprops_->simProps(grid),
-                                         geoprops_->nonCartesianConnections());
+                eclipse_writer_.reset(new EclipseWriter(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid )));
+                eclipse_writer_->writeInitAndEgrid(geoprops_->simProps(grid),
+                                                  geoprops_->nonCartesianConnections());
             }
         }
 
@@ -772,6 +773,7 @@ namespace Opm
             output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
                                                           param_,
                                                           *eclipse_state_,
+                                                          eclipse_writer_,
                                                           Opm::phaseUsageFromDeck(*deck_),
                                                           fluidprops_->permeability()));
         }
