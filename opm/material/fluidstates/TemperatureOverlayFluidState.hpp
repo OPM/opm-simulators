@@ -173,7 +173,7 @@ public:
     /*!
      * \brief The temperature of a fluid phase [K]
      */
-    const Scalar& temperature(int /*phaseIdx*/) const
+    const Scalar& temperature(unsigned /*phaseIdx*/) const
     { return temperature_; }
 
     /*!

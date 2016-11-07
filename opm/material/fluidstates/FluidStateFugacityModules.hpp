@@ -43,8 +43,8 @@ namespace Opm {
  *        phase fugacity coefficients explicitly.
  */
 template <class Scalar,
-          int numPhases,
-          int numComponents,
+          unsigned numPhases,
+          unsigned numComponents,
           class Implementation>
 class FluidStateExplicitFugacityModule
 {
@@ -111,12 +111,12 @@ protected:
  *        fugacity coefficients explicitly assuming immiscibility.
  */
 template <class Scalar,
-          int numPhases,
-          int numComponents,
+          unsigned numPhases,
+          unsigned numComponents,
           class Implementation>
 class FluidStateImmiscibleFugacityModule
 {
-    static_assert((int) numPhases == (int) numComponents,
+    static_assert(numPhases == numComponents,
                   "The number of phases must be the same as the number of (pseudo-) components if you assume immiscibility");
 
 public:
@@ -187,13 +187,13 @@ public:
     /*!
      * \brief The fugacity coefficient of a component in a phase []
      */
-    const Scalar& fugacityCoefficient(int /* phaseIdx */, int /* compIdx */) const
+    const Scalar& fugacityCoefficient(unsigned /* phaseIdx */, unsigned /* compIdx */) const
     { OPM_THROW(std::logic_error, "Fugacity coefficients are not provided by this fluid state"); }
 
     /*!
      * \brief The fugacity of a component in a phase [Pa]
      */
-    const Scalar& fugacity(int /* phaseIdx */, int /* compIdx */) const
+    const Scalar& fugacity(unsigned /* phaseIdx */, unsigned /* compIdx */) const
     { OPM_THROW(std::logic_error, "Fugacities coefficients are not provided by this fluid state"); }
 
     /*!

@@ -42,7 +42,7 @@ namespace Opm {
  *       pressures explicitly.
  */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateExplicitPressureModule
 {
@@ -108,7 +108,7 @@ public:
     /*!
      * \brief The pressure of a fluid phase [Pa]
      */
-    const Scalar& pressure(int /* phaseIdx */) const
+    const Scalar& pressure(unsigned /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Pressure is not provided by this fluid state"); }
 
 

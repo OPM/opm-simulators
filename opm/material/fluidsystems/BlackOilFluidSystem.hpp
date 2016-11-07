@@ -119,7 +119,7 @@ public:
         typedef EvaluationT Evaluation;
 
     public:
-        ParameterCache(Scalar maxOilSat = 1.0, int regionIdx=0)
+        ParameterCache(Scalar maxOilSat = 1.0, unsigned regionIdx=0)
         {
             maxOilSat_ = maxOilSat;
             regionIdx_ = regionIdx;
@@ -308,14 +308,14 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numPhases
-    static const int numPhases = 3;
+    static const unsigned numPhases = 3;
 
     //! Index of the water phase
-    static const int waterPhaseIdx = 0;
+    static const unsigned waterPhaseIdx = 0;
     //! Index of the oil phase
-    static const int oilPhaseIdx = 1;
+    static const unsigned oilPhaseIdx = 1;
     //! Index of the gas phase
-    static const int gasPhaseIdx = 2;
+    static const unsigned gasPhaseIdx = 2;
 
     //! The pressure at the surface
     static const Scalar surfacePressure;
@@ -344,14 +344,14 @@ public:
      ****************************************/
 
     //! \copydoc BaseFluidSystem::numComponents
-    static const int numComponents = 3;
+    static const unsigned numComponents = 3;
 
     //! Index of the oil component
-    static const int oilCompIdx = 0;
+    static const unsigned oilCompIdx = 0;
     //! Index of the water component
-    static const int waterCompIdx = 1;
+    static const unsigned waterCompIdx = 1;
     //! Index of the gas component
-    static const int gasCompIdx = 2;
+    static const unsigned gasCompIdx = 2;
 
 protected:
     static const int phaseToSolventCompIdx_[3];
@@ -359,12 +359,12 @@ protected:
 
 public:
     //! \brief returns the index of "primary" component of a phase (solvent)
-    static constexpr int solventComponentIndex(unsigned phaseIdx)
-    { return phaseToSolventCompIdx_[phaseIdx]; }
+    static constexpr unsigned solventComponentIndex(unsigned phaseIdx)
+    { return static_cast<unsigned>(phaseToSolventCompIdx_[phaseIdx]); }
 
     //! \brief returns the index of "secondary" component of a phase (solute)
-    static constexpr int soluteComponentIndex(unsigned phaseIdx)
-    { return phaseToSoluteCompIdx_[phaseIdx]; }
+    static constexpr unsigned soluteComponentIndex(unsigned phaseIdx)
+    { return static_cast<unsigned>(phaseToSoluteCompIdx_[phaseIdx]); }
 
     //! \copydoc BaseFluidSystem::componentName
     static const char *componentName(unsigned compIdx)

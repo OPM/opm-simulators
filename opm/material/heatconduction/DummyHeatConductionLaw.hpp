@@ -54,8 +54,8 @@ public:
      * If this method is called an exception is thrown at run time.
      */
     template <class FluidState, class Evaluation = Scalar>
-    static Scalar heatConductivity(const Params &params,
-                                   const FluidState &fluidState)
+    static Scalar heatConductivity(const Params& OPM_UNUSED params,
+                                   const FluidState& OPM_UNUSED fluidState)
     {
         OPM_THROW(std::logic_error,
                    "No heat conduction law specified!");

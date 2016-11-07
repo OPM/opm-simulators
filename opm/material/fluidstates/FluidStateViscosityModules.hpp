@@ -42,7 +42,7 @@ namespace Opm {
  *       viscosities explicitly.
  */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateExplicitViscosityModule
 {
@@ -98,7 +98,7 @@ protected:
  *        viscosities but throws std::logic_error instead.
  */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateNullViscosityModule
 {
@@ -109,7 +109,7 @@ public:
     /*!
      * \brief The viscosity of a fluid phase [-]
      */
-    const Scalar& viscosity(int /* phaseIdx */) const
+    const Scalar& viscosity(unsigned /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Viscosity is not provided by this fluid state"); }
 
     /*!

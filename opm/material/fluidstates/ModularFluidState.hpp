@@ -50,8 +50,8 @@ namespace Opm {
  * set of requested thermodynamic quantities.
  */
 template <class ScalarT,
-          int numPhasesV,
-          int numComponentsV,
+          unsigned numPhasesV,
+          unsigned numComponentsV,
           class PressureModule,
           class TemperatureModule,
           class CompositionModule,

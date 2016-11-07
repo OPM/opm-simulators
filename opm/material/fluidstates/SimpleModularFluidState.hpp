@@ -63,8 +63,8 @@ namespace Opm {
  * ModularFluidState. Except for this, it is identical.
  */
 template <class ScalarT,
-          int numPhasesV,
-          int numComponentsV,
+          unsigned numPhasesV,
+          unsigned numComponentsV,
           class FluidSystem, // only needed if the compositional stuff enabled
           bool storePressure,
           bool storeTemperature,

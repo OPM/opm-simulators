@@ -33,6 +33,12 @@
 #include <valgrind/memcheck.h>
 #endif
 
+#if HAVE_VALGRIND
+#define OPM_VALGRIND_OPTIM_UNUSED OPM_OPTIM_UNUSED
+#else
+#define OPM_VALGRIND_OPTIM_UNUSED OPM_UNUSED
+#endif
+
 namespace Valgrind
 {
 /*!
@@ -73,7 +79,7 @@ inline bool IsRunning()
  *         occupied by the object.
  */
 template <class T>
-inline bool CheckDefined(const T& value OPM_UNUSED)
+inline bool CheckDefined(const T& value OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
     auto tmp = VALGRIND_CHECK_MEM_IS_DEFINED(&value, sizeof(T));
@@ -105,7 +111,7 @@ inline bool CheckDefined(const T& value OPM_UNUSED)
  *         occupied by the object.
  */
 template <class T>
-inline bool CheckAddressable(const T& value OPM_UNUSED)
+inline bool CheckAddressable(const T& value OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
     auto tmp = VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&value, sizeof(T));
@@ -141,7 +147,7 @@ inline bool CheckAddressable(const T& value OPM_UNUSED)
  *         occupied by the array.
  */
 template <class T>
-inline bool CheckDefined(const T* value OPM_UNUSED, int size OPM_UNUSED)
+inline bool CheckDefined(const T* value OPM_VALGRIND_OPTIM_UNUSED, int size OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
     auto tmp = VALGRIND_CHECK_MEM_IS_DEFINED(value, size*sizeof(T));
@@ -169,10 +175,10 @@ inline bool CheckDefined(const T* value OPM_UNUSED, int size OPM_UNUSED)
  * \param value The object which's memory valgrind should be told is undefined
  */
 template <class T>
-inline void SetUndefined(const T &value OPM_UNUSED)
+inline void SetUndefined(const T &value OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(&value, sizeof(T));
+    VALGRIND_MAKE_MEM_UNDEFINED(&value, sizeof(T));
 #endif
 }
 
@@ -195,10 +201,10 @@ inline void SetUndefined(const T &value OPM_UNUSED)
  * \param size The size of the array in number of objects
  */
 template <class T>
-inline void SetUndefined(const T* value OPM_UNUSED, int size OPM_UNUSED)
+inline void SetUndefined(const T* value OPM_VALGRIND_OPTIM_UNUSED, int size OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_UNDEFINED(value, size*sizeof(T));
+    VALGRIND_MAKE_MEM_UNDEFINED(value, size*sizeof(T));
 #endif
 }
 
@@ -219,10 +225,10 @@ inline void SetUndefined(const T* value OPM_UNUSED, int size OPM_UNUSED)
  * \param value The object which's memory valgrind should consider as defined
  */
 template <class T>
-inline void SetDefined(const T& value OPM_UNUSED)
+inline void SetDefined(const T& value OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(&value, sizeof(T));
+    VALGRIND_MAKE_MEM_DEFINED(&value, sizeof(T));
 #endif
 }
 
@@ -245,10 +251,10 @@ inline void SetDefined(const T& value OPM_UNUSED)
  * \param n The size of the array in number of objects
  */
 template <class T>
-inline void SetDefined(const T *value OPM_UNUSED, int n OPM_UNUSED)
+inline void SetDefined(const T *value OPM_VALGRIND_OPTIM_UNUSED, int n OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_DEFINED(value, n*sizeof(T));
+    VALGRIND_MAKE_MEM_DEFINED(value, n*sizeof(T));
 #endif
 }
 
@@ -269,10 +275,10 @@ inline void SetDefined(const T *value OPM_UNUSED, int n OPM_UNUSED)
  * \param value The object which's memory valgrind should complain if accessed
  */
 template <class T>
-inline void SetNoAccess(const T &value OPM_UNUSED)
+inline void SetNoAccess(const T &value OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(&value, sizeof(T));
+    VALGRIND_MAKE_MEM_NOACCESS(&value, sizeof(T));
 #endif
 }
 
@@ -293,10 +299,10 @@ inline void SetNoAccess(const T &value OPM_UNUSED)
  * \param size The size of the array in number of objects
  */
 template <class T>
-inline void SetNoAccess(const T *value OPM_UNUSED, int size OPM_UNUSED)
+inline void SetNoAccess(const T *value OPM_VALGRIND_OPTIM_UNUSED, int size OPM_VALGRIND_OPTIM_UNUSED)
 {
 #if !defined NDEBUG && HAVE_VALGRIND
-    auto OPM_UNUSED result = VALGRIND_MAKE_MEM_NOACCESS(value, size*sizeof(T));
+    VALGRIND_MAKE_MEM_NOACCESS(value, size*sizeof(T));
 #endif
 }
 

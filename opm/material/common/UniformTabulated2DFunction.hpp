@@ -198,10 +198,14 @@ public:
         Evaluation alpha = xToI(x);
         Evaluation beta = yToJ(y);
 
-        int i = std::max<int>(0, std::min(static_cast<int>(numX()) - 2,
-                                          static_cast<int>(Toolbox::scalarValue(alpha))));
-        int j = std::max<int>(0, std::min(static_cast<int>(numY()) - 2,
-                                          static_cast<int>(Toolbox::scalarValue(beta))));
+        unsigned i =
+            static_cast<unsigned>(
+                std::max(0, std::min(static_cast<int>(numX()) - 2,
+                                     static_cast<int>(Toolbox::scalarValue(alpha)))));
+        unsigned j =
+            static_cast<unsigned>(
+                std::max(0, std::min(static_cast<int>(numY()) - 2,
+                                     static_cast<int>(Toolbox::scalarValue(beta)))));
 
         alpha -= i;
         beta -= j;
