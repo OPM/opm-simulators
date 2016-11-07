@@ -47,33 +47,14 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     EclipseState eclipseState(deck, parseContext);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-    const auto& field=eclipseState.getSchedule().getGroupTree(2).getNode("FIELD");
-    const auto& g1=eclipseState.getSchedule().getGroupTree(2).getNode("G1");
-    const auto& g2=eclipseState.getSchedule().getGroupTree(2).getNode("G2");
-
     WellCollection collection;
 
     // Add groups to WellCollection
-    const auto& fieldGroup =  eclipseState.getSchedule().getGroup(field->name());
+    const auto& fieldGroup =  eclipseState.getSchedule().getGroup("FIELD");
     collection.addField(fieldGroup, 2, pu);
 
-    for (auto iter = field->begin(); iter != field->end(); ++iter) {
-        const auto& childGroupNode = eclipseState.getSchedule().getGroup((*iter).second->name());
-        collection.addGroup(childGroupNode, fieldGroup.name(), 2, pu);
-    }
-
-    const auto& g1Group = eclipseState.getSchedule().getGroup(g1->name());
-    for (auto iter = g1->begin(); iter != g1->end(); ++iter) {
-        const auto& childGroupNode = eclipseState.getSchedule().getGroup((*iter).second->name());
-        collection.addGroup(childGroupNode, g1Group.name(), 2, pu);
-    }
-
-
-    const auto& g2Group =  eclipseState.getSchedule().getGroup(g2->name());
-    for (auto iter = g2->begin(); iter != g2->end(); ++iter) {
-        const auto& childGroupNode = eclipseState.getSchedule().getGroup((*iter).second->name());
-        collection.addGroup(childGroupNode, g2Group.name(), 2, pu);
-    }
+    collection.addGroup( eclipseState.getSchedule().getGroup( "G1" ), fieldGroup.name(), 2, pu);
+    collection.addGroup( eclipseState.getSchedule().getGroup( "G2" ), fieldGroup.name(), 2, pu);
 
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("FIELD")->name());
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("G1")->getParent()->name());

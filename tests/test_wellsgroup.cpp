@@ -88,10 +88,12 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     EclipseState eclipseState(deck , parseContext);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
 
-    auto nodes = eclipseState.getSchedule().getGroupTree(2).getNodes();
+    const auto& nodes = eclipseState.getSchedule().getGroupTree(2);
 
-    for (size_t i=0; i<nodes.size(); i++) {
-        const auto& group = eclipseState.getSchedule().getGroup(nodes[i]->name());
+    for( const auto& grp : eclipseState.getSchedule().getGroups() ) {
+        if( !nodes.exists( grp->name() ) ) continue;
+        const auto& group = *grp;
+
         std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, 2, pu);
         BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
         if (group.isInjectionGroup(2)) {

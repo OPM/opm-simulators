@@ -193,7 +193,6 @@ namespace Opm
                                    const std::unordered_set<std::string>& deactivated_wells,
                                    const DynamicListEconLimited& list_econ_limited);
 
-        void addChildGroups(const GroupTreeNode& parentNode, const Schedule& schedule, size_t timeStep, const PhaseUsage& phaseUsage);
         void setupGuideRates(std::vector<const Well*>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
                              const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials);
         // Data

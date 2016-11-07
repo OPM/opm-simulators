@@ -729,15 +729,6 @@ namespace Opm
 
     }
 
-    void WellsManager::addChildGroups(const GroupTreeNode& parentNode, const Schedule& schedule, size_t timeStep, const PhaseUsage& phaseUsage) {
-        for (auto childIter = parentNode.begin(); childIter != parentNode.end(); ++childIter) {
-            const auto& childNode = (*childIter).second;
-            well_collection_.addGroup(schedule.getGroup(childNode->name()), parentNode.name(), timeStep, phaseUsage);
-            addChildGroups(*childNode, schedule, timeStep, phaseUsage);
-        }
-    }
-
-
     void WellsManager::setupGuideRates(std::vector< const Well* >& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
                                        const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials)
     {

@@ -404,13 +404,23 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     setupWellControls(wells, timeStep, well_names, pu, wells_on_proc, list_econ_limited);
 
     {
-        const auto& fieldNode =
-            schedule.getGroupTree(timeStep).getNode("FIELD");
-
-        const auto& fieldGroup = schedule.getGroup(fieldNode->name());
-
+        const auto& fieldGroup = schedule.getGroup( "FIELD" );
         well_collection_.addField(fieldGroup, timeStep, pu);
-        addChildGroups(*fieldNode, schedule, timeStep, pu);
+
+        const auto& grouptree = schedule.getGroupTree( timeStep );
+        std::vector< std::string > group_stack = { "FIELD" };
+
+        do {
+            auto parent = group_stack.back();
+            group_stack.pop_back();
+            const auto& children = grouptree.children( parent );
+            group_stack.insert( group_stack.end(), children.begin(), children.end() );
+
+            for( const auto& child : children ) {
+                well_collection_.addGroup( schedule.getGroup( child ), parent, timeStep, pu );
+            }
+
+        } while( !group_stack.empty() );
     }
 
     for (auto w = wells.begin(), e = wells.end(); w != e; ++w) {
