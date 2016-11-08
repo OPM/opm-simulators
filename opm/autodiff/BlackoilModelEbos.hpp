@@ -131,6 +131,19 @@ namespace Opm {
         typedef ISTLSolver< MatrixBlockType, VectorBlockType >  ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
+        struct FIPData {
+            enum FipId {
+                FIP_AQUA = Opm::Water,
+                FIP_LIQUID = Opm::Oil,
+                FIP_VAPOUR = Opm::Gas,
+                FIP_DISSOLVED_GAS = 3,
+                FIP_VAPORIZED_OIL = 4,
+                FIP_PV = 5,                    //< Pore volume
+                FIP_WEIGHTED_PRESSURE = 6
+            };
+            std::array<std::vector<double>, 7> fip;
+        };
+
         // ---------  Public methods  ---------
 
         /// Construct the model. It will retain references to the
@@ -187,6 +200,26 @@ namespace Opm {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
             }
         }
+
+        bool
+        isParallel() const
+        {
+    #if HAVE_MPI
+            if ( linsolver_.parallelInformation().type() !=
+                 typeid(ParallelISTLInformation) )
+            {
+                return false;
+            }
+            else
+            {
+                const auto& comm =boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation()).communicator();
+                return  comm.size() > 1;
+            }
+    #else
+            return false;
+    #endif
+        }
+
 
         const EclipseState& eclState() const
         { return *ebosSimulator_.gridManager().eclState(); }
@@ -937,12 +970,190 @@ namespace Opm {
         }
 
         std::vector<std::vector<double> >
-        computeFluidInPlace(const ReservoirState& x,
-                            const std::vector<int>& fipnum) const
+        computeFluidInPlace(const std::vector<int>& fipnum) const
         {
-            OPM_THROW(std::logic_error,
-                      "computeFluidInPlace() not implemented by BlackoilModelEbos!");
+            using namespace Opm::AutoDiffGrid;
+            const int nc = numCells(grid_);
+            //const ADB pv_mult = poroMult(pressure);
+            const auto& pv = geo_.poreVolume();
+            const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
+
+            for (int i = 0; i<7; i++) {
+                fip_.fip[i].resize(nc,0.0);
+            }
+
+            for (int c = 0; c < nc; ++c) {
+                const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+
+                for (int phase = 0; phase < maxnp; ++phase) {
+                    const double& b = fs.invB(flowPhaseToEbosPhaseIdx(phase)).value();
+                    const double& s = fs.saturation(flowPhaseToEbosPhaseIdx(phase)).value();
+                    const double pv_mult = 1.0; //todo
+                    fip_.fip[phase][c] = pv_mult * b * s * pv[c];
+                }
+
+                if (active_[ Oil ] && active_[ Gas ]) {
+                    // Account for gas dissolved in oil and vaporized oil
+                    fip_.fip[FIPData::FIP_DISSOLVED_GAS][c] = fs.Rs().value() * fip_.fip[FIPData::FIP_LIQUID][c];
+                    fip_.fip[FIPData::FIP_VAPORIZED_OIL][c] = fs.Rv().value() * fip_.fip[FIPData::FIP_VAPOUR][c];
+                }
+            }
+
+            // For a parallel run this is just a local maximum and needs to be updated later
+            int dims = *std::max_element(fipnum.begin(), fipnum.end());
+            std::vector<std::vector<double>> values(dims, std::vector<double>(7,0.0));
+
+            std::vector<double> hcpv(dims, 0.0);
+            std::vector<double> pres(dims, 0.0);
+
+            if ( !isParallel() )
+            {
+                //Accumulate phases for each region
+                for (int phase = 0; phase < maxnp; ++phase) {
+                    if (active_[ phase ]) {
+                        for (int c = 0; c < nc; ++c) {
+                            const int region = fipnum[c] - 1;
+                            if (region != -1) {
+                                values[region][phase] += fip_.fip[phase][c];
+                            }
+                        }
+                    }
+                }
+
+                //Accumulate RS and RV-volumes for each region
+                if (active_[ Oil ] && active_[ Gas ]) {
+                    for (int c = 0; c < nc; ++c) {
+                        const int region = fipnum[c] - 1;
+                        if (region != -1) {
+                            values[region][FIPData::FIP_DISSOLVED_GAS] += fip_.fip[FIPData::FIP_DISSOLVED_GAS][c];
+                            values[region][FIPData::FIP_VAPORIZED_OIL] += fip_.fip[FIPData::FIP_VAPORIZED_OIL][c];
+                        }
+                    }
+                }
+
+                for (int c = 0; c < nc; ++c) {
+                    const int region = fipnum[c] - 1;
+                    if (region != -1) {
+                        const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
+                        const auto& fs = intQuants.fluidState();
+                        const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+                        hcpv[region] += pv[c] * hydrocarbon;
+                        pres[region] += pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value();
+                    }
+                }
+                for (int c = 0; c < nc; ++c) {
+                    const int region = fipnum[c] - 1;
+                    if (region != -1) {
+
+                        fip_.fip[FIPData::FIP_PV][c] = pv[c];
+                        const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
+                        const auto& fs = intQuants.fluidState();
+                        const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+
+                        //Compute hydrocarbon pore volume weighted average pressure.
+                        //If we have no hydrocarbon in region, use pore volume weighted average pressure instead
+                        if (hcpv[region] != 0) {
+                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
+                        } else {
+                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                        }
+
+                        values[region][FIPData::FIP_PV] += fip_.fip[FIPData::FIP_PV][c];
+                        values[region][FIPData::FIP_WEIGHTED_PRESSURE] += fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c];
+                    }
+                }
+            }
+            else
+            {
+#if HAVE_MPI
+                // mask[c] is 1 if we need to compute something in parallel
+                const auto & pinfo =
+                        boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+                const auto& mask = pinfo.getOwnerMask();
+                auto comm = pinfo.communicator();
+                // Compute the global dims value and resize values accordingly.
+                dims = comm.max(dims);
+                values.resize(dims, std::vector<double>(7,0.0));
+
+                //Accumulate phases for each region
+                for (int phase = 0; phase < maxnp; ++phase) {
+                    for (int c = 0; c < nc; ++c) {
+                        const int region = fipnum[c] - 1;
+                        if (region != -1 && mask[c]) {
+                            values[region][phase] += fip_.fip[phase][c];
+                        }
+                    }
+                }
+
+                //Accumulate RS and RV-volumes for each region
+                if (active_[ Oil ] && active_[ Gas ]) {
+                    for (int c = 0; c < nc; ++c) {
+                        const int region = fipnum[c] - 1;
+                        if (region != -1 && mask[c]) {
+                            values[region][FIPData::FIP_DISSOLVED_GAS] += fip_.fip[FIPData::FIP_DISSOLVED_GAS][c];
+                            values[region][FIPData::FIP_VAPORIZED_OIL] += fip_.fip[FIPData::FIP_VAPORIZED_OIL][c];
+                        }
+                    }
+                }
+
+                hcpv = V::Zero(dims);
+                pres = V::Zero(dims);
+
+                for (int c = 0; c < nc; ++c) {
+                    const int region = fipnum[c] - 1;
+                    if (region != -1 && mask[c]) {
+                        const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
+                        const auto& fs = intQuants.fluidState();
+                        const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+                        hcpv[region] += pv[c] * hydrocarbon;
+                        pres[region] += pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value();
+                    }
+                }
+
+                comm.sum(hcpv.data(), hcpv.size());
+                comm.sum(pres.data(), pres.size());
+
+                for (int c = 0; c < nc; ++c) {
+                    const int region = fipnum[c] - 1;
+                    if (region != -1 && mask[c]) {
+                        fip_.fip[FIPData::FIP_PV][c] = pv[c];
+                        const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
+                        const auto& fs = intQuants.fluidState();
+                        const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+
+                        if (hcpv[region] != 0) {
+                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
+                        } else {
+                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                        }
+
+                        values[region][FIPData::FIP_PV] += fip_.fip[FIPData::FIP_PV][c];
+                        values[region][FIPData::FIP_WEIGHTED_PRESSURE] += fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c];
+                    }
+                }
+
+                // For the frankenstein branch we hopefully can turn values into a vanilla
+                // std::vector<double>, use some index magic above, use one communication
+                // to sum up the vector entries instead of looping over the regions.
+                for(int reg=0; reg < dims; ++reg)
+                {
+                    comm.sum(values[reg].data(), values[reg].size());
+                }
+#else
+                // This should never happen!
+                OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
+#endif
+            }
+
+            return values;
         }
+
+        const FIPData& getFIPData() const {
+            return fip_;
+        }
+
+
 
         const Simulator& ebosSimulator() const
         { return ebosSimulator_; }
@@ -983,6 +1194,7 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         BVector dx_old_;
+        mutable FIPData fip_;
 
 
 
