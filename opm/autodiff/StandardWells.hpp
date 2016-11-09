@@ -276,6 +276,12 @@ namespace Opm {
                                                   const WellState& well_state,
                                                   const WellMapEntryType& map_entry) const;
 
+            template <class WellState>
+            void updateWellStateWithTarget(const WellControls* wc,
+                                           const int current,
+                                           const int well_index,
+                                           WellState& xw) const;
+
         };
 
 
