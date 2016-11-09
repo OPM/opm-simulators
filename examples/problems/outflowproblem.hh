@@ -31,6 +31,7 @@
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/H2ON2LiquidPhaseFluidSystem.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -135,7 +136,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    OutflowProblem(Simulator &simulator)
+    OutflowProblem(Simulator& simulator)
         : ParentType(simulator)
         , eps_(1e-6)
     { }
@@ -194,7 +195,9 @@ public:
      * This problem assumes a temperature.
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& OPM_UNUSED context,
+                       unsigned OPM_UNUSED spaceIdx,
+                       unsigned OPM_UNUSED timeIdx) const
     { return temperature_; } // in [K]
 
     /*!
@@ -203,8 +206,9 @@ public:
      * This problem uses a constant intrinsic permeability.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
-                                           unsigned timeIdx) const
+    const DimMatrix& intrinsicPermeability(const Context& OPM_UNUSED context,
+                                           unsigned OPM_UNUSED spaceIdx,
+                                           unsigned OPM_UNUSED timeIdx) const
     { return perm_; }
 
     /*!
@@ -213,7 +217,9 @@ public:
      * This problem uses a constant porosity.
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& OPM_UNUSED context,
+                    unsigned OPM_UNUSED spaceIdx,
+                    unsigned OPM_UNUSED timeIdx) const
     { return porosity_; }
 
 #if 0
@@ -222,7 +228,7 @@ public:
      *
      */
     template <class Context>
-    Scalar tortuosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar tortuosity(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     { return tortuosity_; }
 
     /*!
@@ -230,7 +236,7 @@ public:
      *
      */
     template <class Context>
-    Scalar dispersivity(const Context &context,
+    Scalar dispersivity(const Context& context,
                         unsigned spaceIdx, unsigned timeIdx) const
     { return 0; }
 #endif
@@ -246,10 +252,10 @@ public:
      * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
+    void boundary(BoundaryRateVector& values, const Context& context,
                   unsigned spaceIdx, unsigned timeIdx) const
     {
-        const GlobalPosition &globalPos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& globalPos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(globalPos)) {
             Opm::CompositionalFluidState<Scalar, FluidSystem,
@@ -288,7 +294,9 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+    void initial(PrimaryVariables& values,
+                 const Context& context,
+                 unsigned spaceIdx,
                  unsigned timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> fs;
@@ -304,21 +312,23 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &pos) const
+    bool onLeftBoundary_(const GlobalPosition& pos) const
     { return pos[0] < eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
+    bool onRightBoundary_(const GlobalPosition& pos) const
     { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
     template <class FluidState, class Context>
-    void initialFluidState_(FluidState &fs, const Context &context,
+    void initialFluidState_(FluidState& fs, const Context& context,
                             unsigned spaceIdx, unsigned timeIdx) const
     {
         Scalar T = temperature(context, spaceIdx, timeIdx);

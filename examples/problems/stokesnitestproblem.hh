@@ -29,7 +29,9 @@
 
 #include <ewoms/models/stokes/stokesmodel.hh>
 #include <ewoms/io/simplexgridmanager.hh>
+
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -138,7 +140,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    StokesNiTestProblem(Simulator &simulator)
+    StokesNiTestProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -199,10 +201,10 @@ public:
      * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
+    void boundary(BoundaryRateVector& values, const Context& context,
                   unsigned spaceIdx, unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos))
             values.setOutFlow(context, spaceIdx, timeIdx);
@@ -227,10 +229,10 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+    void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx,
                  unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         Scalar moleFrac[numComponents];
 
@@ -276,8 +278,10 @@ public:
      * is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     /*!
@@ -287,10 +291,12 @@ public:
      * adjacent to the inlet.
      */
     template <class Context>
-    void constraints(Constraints &constraints, const Context &context,
-                     unsigned spaceIdx, unsigned timeIdx) const
+    void constraints(Constraints& constraints,
+                     const Context& context,
+                     unsigned spaceIdx,
+                     unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLowerBoundary_(pos) || onUpperBoundary_(pos)) {
             constraints.setActive(true);
@@ -301,25 +307,25 @@ public:
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &pos) const
+    bool onLeftBoundary_(const GlobalPosition& pos) const
     { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
+    bool onRightBoundary_(const GlobalPosition& pos) const
     { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
-    bool onLowerBoundary_(const GlobalPosition &pos) const
+    bool onLowerBoundary_(const GlobalPosition& pos) const
     { return pos[1] < this->boundingBoxMin()[1] + eps_; }
 
-    bool onUpperBoundary_(const GlobalPosition &pos) const
+    bool onUpperBoundary_(const GlobalPosition& pos) const
     { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
-    bool onBoundary_(const GlobalPosition &pos) const
+    bool onBoundary_(const GlobalPosition& pos) const
     {
         return onLeftBoundary_(pos) || onRightBoundary_(pos)
                || onLowerBoundary_(pos) || onUpperBoundary_(pos);
     }
 
-    bool inLens_(const GlobalPosition &pos) const
+    bool inLens_(const GlobalPosition& pos) const
     { return pos[0] < 0.75 && pos[0] > 0.25 && pos[1] < 0.75 && pos[1] > 0.25; }
 
     Scalar eps_;

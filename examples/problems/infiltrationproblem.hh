@@ -35,6 +35,8 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
 #include <opm/material/heatconduction/Somerton.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -189,7 +191,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    InfiltrationProblem(Simulator &simulator)
+    InfiltrationProblem(Simulator& simulator)
         : ParentType(simulator)
         , eps_(1e-6)
     { }
@@ -277,17 +279,21 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& OPM_UNUSED context,
+                       unsigned OPM_UNUSED spaceIdx,
+                       unsigned OPM_UNUSED timeIdx) const
     { return temperature_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
-                                           unsigned timeIdx) const
+    const DimMatrix&
+    intrinsicPermeability(const Context& context,
+                          unsigned spaceIdx,
+                          unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
             return fineK_;
         return coarseK_;
@@ -297,15 +303,19 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& OPM_UNUSED context,
+                    unsigned OPM_UNUSED spaceIdx,
+                    unsigned OPM_UNUSED timeIdx) const
     { return porosity_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context,
-                                               unsigned spaceIdx, unsigned timeIdx) const
+    const MaterialLawParams&
+    materialLawParams(const Context& OPM_UNUSED context,
+                      unsigned OPM_UNUSED spaceIdx,
+                      unsigned OPM_UNUSED timeIdx) const
     { return materialParams_; }
 
     /*!
@@ -314,8 +324,9 @@ public:
      * In this case, we assume the rock-matrix to be quartz.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context &context, unsigned spaceIdx,
-                             unsigned timeIdx) const
+    Scalar heatCapacitySolid(const Context& OPM_UNUSED context,
+                             unsigned OPM_UNUSED spaceIdx,
+                             unsigned OPM_UNUSED timeIdx) const
     {
         return 850.     // specific heat capacity [J / (kg K)]
                * 2650.; // density of sand [kg/m^3]
@@ -332,10 +343,12 @@ public:
      * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  unsigned spaceIdx, unsigned timeIdx) const
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
     {
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos)) {
             Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
@@ -366,14 +379,16 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
+    void initial(PrimaryVariables& values,
+                 const Context& context,
+                 unsigned spaceIdx,
                  unsigned timeIdx) const
     {
         Opm::CompositionalFluidState<Scalar, FluidSystem> fs;
 
         initialFluidState_(fs, context, spaceIdx, timeIdx);
 
-        const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
+        const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
         values.assignMassConservative(fs, matParams, /*inEquilibrium=*/true);
         Valgrind::CheckDefined(values);
     }
@@ -385,30 +400,32 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &pos) const
+    bool onLeftBoundary_(const GlobalPosition& pos) const
     { return pos[0] < eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
+    bool onRightBoundary_(const GlobalPosition& pos) const
     { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
-    bool onLowerBoundary_(const GlobalPosition &pos) const
+    bool onLowerBoundary_(const GlobalPosition& pos) const
     { return pos[1] < eps_; }
 
-    bool onUpperBoundary_(const GlobalPosition &pos) const
+    bool onUpperBoundary_(const GlobalPosition& pos) const
     { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
-    bool onInlet_(const GlobalPosition &pos) const
+    bool onInlet_(const GlobalPosition& pos) const
     { return onUpperBoundary_(pos) && 50 < pos[0] && pos[0] < 75; }
 
     template <class FluidState, class Context>
-    void initialFluidState_(FluidState &fs, const Context &context,
+    void initialFluidState_(FluidState& fs, const Context& context,
                             unsigned spaceIdx, unsigned timeIdx) const
     {
         const GlobalPosition pos = context.pos(spaceIdx, timeIdx);
@@ -421,7 +438,7 @@ private:
             pc = 0.0;
 
         // set pressures
-        const auto &matParams = materialLawParams(context, spaceIdx, timeIdx);
+        const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
         Scalar Sw = matParams.Swr();
         Scalar Swr = matParams.Swr();
         Scalar Sgr = matParams.Sgr();
@@ -466,7 +483,7 @@ private:
                            1 - fs.moleFraction(waterPhaseIdx, H2OIdx));
     }
 
-    bool isFineMaterial_(const GlobalPosition &pos) const
+    bool isFineMaterial_(const GlobalPosition& pos) const
     {  return 70. <= pos[0] && pos[0] <= 85. && 7.0 <= pos[1] && pos[1] <= 7.50; }
 
     DimMatrix fineK_;
