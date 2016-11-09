@@ -28,9 +28,6 @@
 #ifndef EWOMS_FINGER_PROBLEM_HH
 #define EWOMS_FINGER_PROBLEM_HH
 
-// uncomment to run problem in 3d
-// #define GRIDDIM 3
-
 #include <ewoms/io/structuredgridmanager.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
@@ -219,7 +216,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    FingerProblem(Simulator &simulator)
+    FingerProblem(Simulator& simulator)
         : ParentType(simulator),
           materialParams_( simulator.gridManager().grid(), codim )
     {
@@ -332,15 +329,15 @@ public:
         ElementContext elemCtx(this->simulator());
 
         auto elemIt = this->gridView().template begin<0>();
-        const auto &elemEndIt = this->gridView().template end<0>();
+        const auto& elemEndIt = this->gridView().template end<0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
             elemCtx.updateAll( elem );
-            const int numDofs = elemCtx.numDof(/*timeIdx=*/0);
-            for (int scvIdx = 0; scvIdx < numDofs; ++scvIdx)
+            size_t numDofs = elemCtx.numDof(/*timeIdx=*/0);
+            for (unsigned scvIdx = 0; scvIdx < numDofs; ++scvIdx)
             {
                 MaterialLawParams& materialParam = materialLawParams( elemCtx, scvIdx, /*timeIdx=*/0 );
-                const auto &fs = elemCtx.intensiveQuantities(scvIdx, /*timeIdx=*/0).fluidState();
+                const auto& fs = elemCtx.intensiveQuantities(scvIdx, /*timeIdx=*/0).fluidState();
                 ParkerLenhard::update(materialParam, fs);
             }
         }
@@ -357,46 +354,45 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& /*context*/, unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     { return temperature_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
-                                           unsigned timeIdx) const
+    const DimMatrix& intrinsicPermeability(const Context& /*context*/, unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     { return K_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& /*context*/, unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     { return 0.4; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    MaterialLawParams &materialLawParams(const Context &context,
-                                         const int spaceIdx, const int timeIdx)
+    MaterialLawParams& materialLawParams(const Context& context,
+                                         unsigned spaceIdx, unsigned timeIdx)
     {
-        const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
-        assert( materialParams_[ entity ] );
-        return *(materialParams_[ entity ] );
+        const auto& entity = context.stencil(timeIdx).entity(spaceIdx);
+        assert(materialParams_[entity]);
+        return *materialParams_[entity];
     }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context,
-                                               const int spaceIdx, const int timeIdx) const
+    const MaterialLawParams& materialLawParams(const Context& context,
+                                               unsigned spaceIdx, unsigned timeIdx) const
     {
         const auto& entity = context.stencil(timeIdx).entity( spaceIdx );
-        assert( materialParams_[ entity ] );
-        return *(materialParams_[ entity ] );
+        assert(materialParams_[entity]);
+        return *materialParams_[entity];
     }
 
     //! \}
@@ -410,10 +406,10 @@ public:
      * \copydoc FvBaseProblem::boundary
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
+    void boundary(BoundaryRateVector& values, const Context& context,
                   unsigned spaceIdx, unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLeftBoundary_(pos) || onRightBoundary_(pos) || onLowerBoundary_(pos))
             values.setNoFlow();
@@ -441,8 +437,7 @@ public:
      * \copydoc FvBaseProblem::initial
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx,
-                 unsigned timeIdx) const
+    void initial(PrimaryVariables& values, const Context& /*context*/, unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     {
         // assign the primary variables
         values.assignNaive(initialFluidState_);
@@ -452,10 +447,10 @@ public:
      * \copydoc FvBaseProblem::constraints
      */
     template <class Context>
-    void constraints(Constraints &constraints, const Context &context,
+    void constraints(Constraints& constraints, const Context& context,
                      unsigned spaceIdx, unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos) && !onInlet_(pos)) {
             constraints.setActive(true);
@@ -474,25 +469,25 @@ public:
      * everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate, const Context& /*context*/,
+                unsigned /*spaceIdx*/, unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
     //! \}
 
 private:
-    bool onLeftBoundary_(const GlobalPosition &pos) const
+    bool onLeftBoundary_(const GlobalPosition& pos) const
     { return pos[0] < this->boundingBoxMin()[0] + eps_; }
 
-    bool onRightBoundary_(const GlobalPosition &pos) const
+    bool onRightBoundary_(const GlobalPosition& pos) const
     { return pos[0] > this->boundingBoxMax()[0] - eps_; }
 
-    bool onLowerBoundary_(const GlobalPosition &pos) const
+    bool onLowerBoundary_(const GlobalPosition& pos) const
     { return pos[1] < this->boundingBoxMin()[1] + eps_; }
 
-    bool onUpperBoundary_(const GlobalPosition &pos) const
+    bool onUpperBoundary_(const GlobalPosition& pos) const
     { return pos[1] > this->boundingBoxMax()[1] - eps_; }
 
-    bool onInlet_(const GlobalPosition &pos) const
+    bool onInlet_(const GlobalPosition& pos) const
     {
         Scalar width = this->boundingBoxMax()[0] - this->boundingBoxMin()[0];
         Scalar lambda = (this->boundingBoxMax()[0] - pos[0]) / width;
@@ -512,7 +507,7 @@ private:
 
     void setupInitialFluidState_()
     {
-        auto &fs = initialFluidState_;
+        auto& fs = initialFluidState_;
         fs.setPressure(wettingPhaseIdx, /*pressure=*/1e5);
 
         Scalar Sw = EWOMS_GET_PARAM(TypeTag, Scalar, InitialWaterSaturation);

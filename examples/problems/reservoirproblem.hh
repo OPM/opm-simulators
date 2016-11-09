@@ -35,10 +35,10 @@
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
-
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
+#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -201,7 +201,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    ReservoirProblem(Simulator &simulator)
+    ReservoirProblem(Simulator& simulator)
         : ParentType(simulator)
     { }
 
@@ -351,10 +351,10 @@ public:
         const auto& eEndIt = this->simulator().gridView().template end<0>();
         for (; eIt != eEndIt; ++eIt) {
             elemCtx.updateStencil(*eIt);
-            int nDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
-            for (int dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
-                int globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-                const GlobalPosition &pos = elemCtx.pos(dofIdx, /*timeIdx=*/0);
+            size_t nDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
+            for (unsigned dofIdx = 0; dofIdx < nDof; ++ dofIdx) {
+                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                const GlobalPosition& pos = elemCtx.pos(dofIdx, /*timeIdx=*/0);
 
                 if (isFineMaterial_(pos))
                     materialParams_[globalDofIdx] = &fineMaterialParams_;
@@ -431,10 +431,10 @@ public:
      * above one with low permeability.
      */
     template <class Context>
-    const DimMatrix &intrinsicPermeability(const Context &context, unsigned spaceIdx,
+    const DimMatrix& intrinsicPermeability(const Context& context, unsigned spaceIdx,
                                            unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
             return fineK_;
         return coarseK_;
@@ -444,9 +444,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar porosity(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        const GlobalPosition &pos = context.pos(spaceIdx, timeIdx);
+        const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
         if (isFineMaterial_(pos))
             return finePorosity_;
         return coarsePorosity_;
@@ -456,14 +456,14 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams &materialLawParams(const Context &context,
+    const MaterialLawParams& materialLawParams(const Context& context,
                                                unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return *materialParams_[globalIdx];
     }
 
-    const MaterialLawParams &materialLawParams(unsigned globalIdx) const
+    const MaterialLawParams& materialLawParams(unsigned globalIdx) const
     { return *materialParams_[globalIdx]; }
 
     /*!
@@ -481,7 +481,9 @@ public:
      * will need it one day?
      */
     template <class Context>
-    Scalar temperature(const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    Scalar temperature(const Context& OPM_UNUSED context,
+                       unsigned OPM_UNUSED spaceIdx,
+                       unsigned OPM_UNUSED timeIdx) const
     { return temperature_; }
 
     // \}
@@ -498,8 +500,10 @@ public:
      * extraction and production wells, so all boundaries are no-flow.
      */
     template <class Context>
-    void boundary(BoundaryRateVector &values, const Context &context,
-                  unsigned spaceIdx, unsigned timeIdx) const
+    void boundary(BoundaryRateVector& values,
+                  const Context& OPM_UNUSED context,
+                  unsigned OPM_UNUSED spaceIdx,
+                  unsigned OPM_UNUSED timeIdx) const
     {
         // no flow on top and bottom
         values.setNoFlow();
@@ -519,7 +523,10 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables &values, const Context &context, unsigned spaceIdx, unsigned timeIdx) const
+    void initial(PrimaryVariables& values,
+                 const Context& OPM_UNUSED context,
+                 unsigned OPM_UNUSED spaceIdx,
+                 unsigned OPM_UNUSED timeIdx) const
     {
         values.assignNaive(initialFluidState_);
 
@@ -538,13 +545,13 @@ public:
      * saturated with a lower pressure than the remaining reservoir.
      */
     template <class Context>
-    void constraints(Constraints &constraints, const Context &context,
+    void constraints(Constraints& constraints, const Context& context,
                      unsigned spaceIdx, unsigned timeIdx) const
     {
         if (this->simulator().episodeIndex() == 1)
             return; // no constraints during the "settle down" episode
 
-        const auto &pos = context.pos(spaceIdx, timeIdx);
+        const auto& pos = context.pos(spaceIdx, timeIdx);
         if (isInjector_(pos)) {
             constraints.setActive(true);
             constraints.assignNaive(injectorFluidState_);
@@ -561,8 +568,10 @@ public:
      * For this problem, the source term of all components is 0 everywhere.
      */
     template <class Context>
-    void source(RateVector &rate, const Context &context, unsigned spaceIdx,
-                unsigned timeIdx) const
+    void source(RateVector& rate,
+                const Context& OPM_UNUSED context,
+                unsigned OPM_UNUSED spaceIdx,
+                unsigned OPM_UNUSED timeIdx) const
     { rate = Scalar(0.0); }
 
     //! \}
@@ -570,7 +579,7 @@ public:
 private:
     void initFluidState_()
     {
-        auto &fs = initialFluidState_;
+        auto& fs = initialFluidState_;
 
         //////
         // set temperatures
@@ -590,7 +599,7 @@ private:
         Scalar pw = pReservoir_;
 
         PhaseVector pC;
-        const auto &matParams = fineMaterialParams_;
+        const auto& matParams = fineMaterialParams_;
         MaterialLaw::capillaryPressures(pC, matParams, fs);
 
         fs.setPressure(oilPhaseIdx, pw + (pC[oilPhaseIdx] - pC[waterPhaseIdx]));
@@ -643,8 +652,8 @@ private:
         injFs.setSaturation(gasPhaseIdx, 0.0);
 
         // set the composition of the phases to immiscible
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                 injFs.setMoleFraction(phaseIdx, compIdx, 0.0);
 
         injFs.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0);
@@ -676,7 +685,7 @@ private:
                     /*setEnthalpies=*/false);
     }
 
-    bool isProducer_(const GlobalPosition &pos) const
+    bool isProducer_(const GlobalPosition& pos) const
     {
         Scalar x = pos[0] - this->boundingBoxMin()[0];
         Scalar y = pos[dim - 1] - this->boundingBoxMin()[dim - 1];
@@ -691,7 +700,7 @@ private:
         return width/2.0 - width*1e-5 < x && x < width/2.0 + width*(wellWidth_ + 1e-5);
     }
 
-    bool isInjector_(const GlobalPosition &pos) const
+    bool isInjector_(const GlobalPosition& pos) const
     {
         Scalar x = pos[0] - this->boundingBoxMin()[0];
         Scalar y = pos[dim - 1] - this->boundingBoxMin()[dim - 1];
@@ -706,7 +715,7 @@ private:
         return x < width*wellWidth_ - width*1e-5 || x > width*(1.0 - wellWidth_) + width*1e-5;
     }
 
-    bool isFineMaterial_(const GlobalPosition &pos) const
+    bool isFineMaterial_(const GlobalPosition& pos) const
     { return pos[dim - 1] > layerBottom_; }
 
     DimMatrix fineK_;
