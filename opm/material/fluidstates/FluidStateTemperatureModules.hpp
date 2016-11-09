@@ -44,7 +44,7 @@ namespace Opm {
  *       temperatures explicitly.
  */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateExplicitTemperatureModule
 {
@@ -98,7 +98,7 @@ protected:
  *        temperatures explicitly and assumes thermal equilibrium.
  */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateEquilibriumTemperatureModule
 {

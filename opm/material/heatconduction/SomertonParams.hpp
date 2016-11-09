@@ -35,7 +35,7 @@ namespace Opm {
  * \brief The default implementation of a parameter object for the
  *        Somerton heatconduction law.
  */
-template <int numPhases, class ScalarT>
+template <unsigned numPhases, class ScalarT>
 class SomertonParams
 {
     // do not copy!
@@ -55,7 +55,7 @@ public:
      * In this context "fully saturated" means that the whole pore
      * space of the porous medium is filled by a given fluid phase.
      */
-    Scalar fullySaturatedLambda(int phaseIdx) const
+    Scalar fullySaturatedLambda(unsigned phaseIdx) const
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -69,7 +69,7 @@ public:
      * In this context "fully saturated" means that the whole pore
      * space of the porous medium is filled by a given fluid phase.
      */
-    void setFullySaturatedLambda(int phaseIdx, Scalar value)
+    void setFullySaturatedLambda(unsigned phaseIdx, Scalar value)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         assert(value > 0);

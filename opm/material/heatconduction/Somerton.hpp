@@ -95,7 +95,7 @@ public:
         Valgrind::CheckDefined(params.vacuumLambda());
 
         Evaluation lambda = 0;
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             Valgrind::CheckDefined(params.fullySaturatedLambda(phaseIdx));
 
             if (FluidSystem::isLiquid(phaseIdx)) {

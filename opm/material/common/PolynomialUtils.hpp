@@ -48,9 +48,9 @@ namespace Opm {
  * \param b The coefficient for the constant term
  */
 template <class Scalar, class SolContainer>
-int invertLinearPolynomial(SolContainer &sol,
-                           Scalar a,
-                           Scalar b)
+unsigned invertLinearPolynomial(SolContainer &sol,
+                                Scalar a,
+                                Scalar b)
 {
     typedef MathToolbox<Scalar> Toolbox;
     if (std::abs(Toolbox::scalarValue(a)) < 1e-30)
@@ -77,10 +77,10 @@ int invertLinearPolynomial(SolContainer &sol,
  * \param c The coefficient for the constant term
  */
 template <class Scalar, class SolContainer>
-int invertQuadraticPolynomial(SolContainer &sol,
-                              Scalar a,
-                              Scalar b,
-                              Scalar c)
+unsigned invertQuadraticPolynomial(SolContainer &sol,
+                                   Scalar a,
+                                   Scalar b,
+                                   Scalar c)
 {
     typedef MathToolbox<Scalar> Toolbox;
 
@@ -150,11 +150,11 @@ void invertCubicPolynomialPostProcess_(SolContainer &sol,
  * \param d The coefficient for the constant term
  */
 template <class Scalar, class SolContainer>
-int invertCubicPolynomial(SolContainer *sol,
-                          Scalar a,
-                          Scalar b,
-                          Scalar c,
-                          Scalar d)
+unsigned invertCubicPolynomial(SolContainer *sol,
+                               Scalar a,
+                               Scalar b,
+                               Scalar c,
+                               Scalar d)
 {
     typedef MathToolbox<Scalar> Toolbox;
 

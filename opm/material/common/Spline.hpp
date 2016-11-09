@@ -476,7 +476,7 @@ public:
         setNumSamples_(points.size());
         typename XYContainer::const_iterator it = points.begin();
         typename XYContainer::const_iterator endIt = points.end();
-        for (int i = 0; it != endIt; ++i, ++it) {
+        for (unsigned i = 0; it != endIt; ++i, ++it) {
             xPos_[i] = std::get<0>(*it);
             yPos_[i] = std::get<1>(*it);
         }
@@ -721,13 +721,13 @@ public:
     /*!
      * \brief Return the x value of a given sampling point.
      */
-    Scalar xAt(int sampleIdx) const
+    Scalar xAt(size_t sampleIdx) const
     { return x_(sampleIdx); }
 
     /*!
      * \brief Return the x value of a given sampling point.
      */
-    Scalar valueAt(int sampleIdx) const
+    Scalar valueAt(size_t sampleIdx) const
     { return y_(sampleIdx); }
 
     /*!
@@ -807,10 +807,11 @@ public:
                 Scalar y0 = y_(0);
                 return y0 + m*(x - xAt(0));
             }
-            else if (x > xAt(numSamples() - 1)) {
-                Scalar m = evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples()-2);
-                Scalar y0 = y_(numSamples() - 1);
-                return y0 + m*(x - xAt(numSamples() - 1));
+            else if (x > xAt(static_cast<size_t>(static_cast<long int>(numSamples()) - 1))) {
+                Scalar m = evalDerivative_(xAt(static_cast<size_t>(numSamples() - 1)),
+                                           /*segmentIdx=*/static_cast<size_t>(numSamples()-2));
+                Scalar y0 = y_(static_cast<size_t>(numSamples() - 1));
+                return y0 + m*(x - xAt(static_cast<size_t>(numSamples() - 1)));
             }
         }
 
@@ -1169,14 +1170,14 @@ protected:
                                DestVector &destY,
                                const SourceVector &srcX,
                                const SourceVector &srcY,
-                               int nSamples)
+                               unsigned nSamples)
     {
         assert(nSamples >= 2);
 
         // copy sample points, make sure that the first x value is
         // smaller than the last one
-        for (int i = 0; i < nSamples; ++i) {
-            int idx = i;
+        for (unsigned i = 0; i < nSamples; ++i) {
+            unsigned idx = i;
             if (srcX[0] > srcX[nSamples - 1])
                 idx = nSamples - i - 1;
             destX[i] = srcX[idx];
@@ -1189,7 +1190,7 @@ protected:
                               DestVector &destY,
                               const ListIterator &srcBegin,
                               const ListIterator &srcEnd,
-                              int nSamples)
+                              unsigned nSamples)
     {
         assert(nSamples >= 2);
 
@@ -1202,8 +1203,8 @@ protected:
         --it;
 
         // loop over all sampling points
-        for (int i = 0; it != srcEnd; ++i, ++it) {
-            int idx = i;
+        for (unsigned i = 0; it != srcEnd; ++i, ++it) {
+            unsigned idx = i;
             if (reverse)
                 idx = nSamples - i - 1;
             destX[i] = (*it)[0];
@@ -1223,7 +1224,7 @@ protected:
                               DestVector &destY,
                               ListIterator srcBegin,
                               ListIterator srcEnd,
-                              int nSamples)
+                              unsigned nSamples)
     {
         assert(nSamples >= 2);
 
@@ -1239,8 +1240,8 @@ protected:
         --it;
 
         // loop over all sampling points
-        for (int i = 0; it != srcEnd; ++i, ++it) {
-            int idx = i;
+        for (unsigned i = 0; it != srcEnd; ++i, ++it) {
+            unsigned idx = i;
             if (reverse)
                 idx = nSamples - i - 1;
             destX[i] = std::get<0>(*it);
@@ -1708,17 +1709,18 @@ protected:
                              const Evaluation& d,
                              Scalar x0 = -1e30, Scalar x1 = 1e30) const
     {
-        int n = Opm::invertCubicPolynomial(sol,
-                                           a_(segIdx) - a,
-                                           b_(segIdx) - b,
-                                           c_(segIdx) - c,
-                                           d_(segIdx) - d);
+        unsigned n =
+            Opm::invertCubicPolynomial(sol,
+                                       a_(segIdx) - a,
+                                       b_(segIdx) - b,
+                                       c_(segIdx) - c,
+                                       d_(segIdx) - d);
         x0 = std::max(x_(segIdx), x0);
         x1 = std::min(x_(segIdx+1), x1);
 
         // filter the intersections outside of the specified interval
         size_t k = 0;
-        for (int j = 0; j < n; ++j) {
+        for (unsigned j = 0; j < n; ++j) {
             if (x0 <= sol[j] && sol[j] <= x1) {
                 sol[k] = sol[j];
                 ++k;

@@ -42,7 +42,7 @@ namespace Opm {
  *       enthalpies explicitly.
  */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateExplicitEnthalpyModule
 {
@@ -108,7 +108,7 @@ protected:
  *
  * Also, the returned values are marked as undefined in Valgrind... */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateNullEnthalpyModule
 {
@@ -119,7 +119,7 @@ public:
     /*!
      * \brief The specific internal energy of a fluid phase [J/kg]
      */
-    const Scalar& internalEnergy(int /* phaseIdx */) const
+    const Scalar& internalEnergy(unsigned /* phaseIdx */) const
     {
         static Scalar tmp = 0;
         Valgrind::SetUndefined(tmp);
@@ -129,7 +129,7 @@ public:
     /*!
      * \brief The specific enthalpy of a fluid phase [J/kg]
      */
-    const Scalar& enthalpy(int /* phaseIdx */) const
+    const Scalar& enthalpy(unsigned /* phaseIdx */) const
     {
         static Scalar tmp = 0;
         Valgrind::SetUndefined(tmp);

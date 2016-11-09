@@ -52,7 +52,7 @@ public:
     typedef typename Traits::Scalar Scalar;
 
     //! The number of fluid phases
-    static const int numPhases = Traits::numPhases;
+    static const unsigned numPhases = Traits::numPhases;
 
     //! Specify whether this material law implements the two-phase
     //! convenience API
@@ -93,7 +93,7 @@ public:
                                    const Params &/*params*/,
                                    const FluidState &/*fluidState*/)
     {
-        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             values[phaseIdx] = 0.0;
     }
 

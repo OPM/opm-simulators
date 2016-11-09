@@ -43,7 +43,7 @@ namespace Opm {
  *       saturations explicitly.
  */
 template <class Scalar,
-          int numPhases,
+          unsigned numPhases,
           class Implementation>
 class FluidStateExplicitSaturationModule
 {
@@ -60,7 +60,7 @@ public:
     /*!
      * \brief Returns true iff a fluid phase shall be assumed to be present.
      */
-    bool phaseIsPresent(int phaseIdx) const
+    bool phaseIsPresent(unsigned phaseIdx) const
     { return saturation_[phaseIdx] > 0.0; }
 
     /*!
@@ -114,13 +114,13 @@ public:
     /*!
      * \brief The saturation of a fluid phase [-]
      */
-    const Scalar& saturation(int /* phaseIdx */) const
+    const Scalar& saturation(unsigned /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "Saturation is not provided by this fluid state"); }
 
     /*!
      * \brief Returns true iff a fluid phase shall be assumed to be present.
      */
-    bool phaseIsPresent(int /* phaseIdx */) const
+    bool phaseIsPresent(unsigned /* phaseIdx */) const
     { OPM_THROW(std::runtime_error, "phaseIsPresent() is not provided by this fluid state"); }
 
     /*!

@@ -39,45 +39,45 @@
 namespace Opm {
 namespace DenseAd {
 // forward declaration of the Evaluation template class
-template <class ValueT, int numVars>
+template <class ValueT, unsigned numVars>
 class Evaluation;
 
 // provide some algebraic functions
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>& x)
 { return (x > 0.0)?x:-x; }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
                                    const Evaluation<ValueType, numVars>& x2)
 { return (x1 < x2)?x1:x2; }
 
-template <class Arg1ValueType, class ValueType, int numVars>
+template <class Arg1ValueType, class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> min(const Arg1ValueType& x1,
                                    const Evaluation<ValueType, numVars>& x2)
 { return (x1 < x2)?x1:x2; }
 
-template <class ValueType, int numVars, class Arg2ValueType>
+template <class ValueType, unsigned numVars, class Arg2ValueType>
 Evaluation<ValueType, numVars> min(const Evaluation<ValueType, numVars>& x1,
                                    const Arg2ValueType& x2)
 { return min(x2, x1); }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
                                    const Evaluation<ValueType, numVars>& x2)
 { return (x1 > x2)?x1:x2; }
 
-template <class Arg1ValueType, class ValueType, int numVars>
+template <class Arg1ValueType, class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> max(const Arg1ValueType& x1,
                                    const Evaluation<ValueType, numVars>& x2)
 { return (x1 > x2)?x1:x2; }
 
-template <class ValueType, int numVars, class Arg2ValueType>
+template <class ValueType, unsigned numVars, class Arg2ValueType>
 Evaluation<ValueType, numVars> max(const Evaluation<ValueType, numVars>& x1,
                                    const Arg2ValueType& x2)
 { return max(x2, x1); }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> tan(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -95,7 +95,7 @@ Evaluation<ValueType, numVars> tan(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> atan(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -112,7 +112,7 @@ Evaluation<ValueType, numVars> atan(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> atan2(const Evaluation<ValueType, numVars>& x,
                                      const Evaluation<ValueType, numVars>& y)
 {
@@ -133,7 +133,7 @@ Evaluation<ValueType, numVars> atan2(const Evaluation<ValueType, numVars>& x,
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> sin(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -150,7 +150,7 @@ Evaluation<ValueType, numVars> sin(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> asin(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -167,7 +167,7 @@ Evaluation<ValueType, numVars> asin(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> cos(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -184,7 +184,7 @@ Evaluation<ValueType, numVars> cos(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> acos(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -201,7 +201,7 @@ Evaluation<ValueType, numVars> acos(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> sqrt(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -220,7 +220,7 @@ Evaluation<ValueType, numVars> sqrt(const Evaluation<ValueType, numVars>& x)
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> exp(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -238,7 +238,7 @@ Evaluation<ValueType, numVars> exp(const Evaluation<ValueType, numVars>& x)
 }
 
 // exponentiation of arbitrary base with a fixed constant
-template <class ValueType, int numVars, class ExpType>
+template <class ValueType, unsigned numVars, class ExpType>
 Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
                                    const ExpType& exp)
 {
@@ -264,7 +264,7 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
 }
 
 // exponentiation of constant base with an arbitrary exponent
-template <class BaseType, class ValueType, int numVars>
+template <class BaseType, class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> pow(const BaseType& base,
                                    const Evaluation<ValueType, numVars>& exp)
 {
@@ -292,7 +292,7 @@ Evaluation<ValueType, numVars> pow(const BaseType& base,
 
 // this is the most expensive power function. Computationally it is pretty expensive, so
 // one of the above two variants above should be preferred if possible.
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
                                    const Evaluation<ValueType, numVars>& exp)
 {
@@ -324,7 +324,7 @@ Evaluation<ValueType, numVars> pow(const Evaluation<ValueType, numVars>& base,
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> log(const Evaluation<ValueType, numVars>& x)
 {
     typedef MathToolbox<ValueType> ValueTypeToolbox;
@@ -345,7 +345,7 @@ Evaluation<ValueType, numVars> log(const Evaluation<ValueType, numVars>& x)
 
 // a kind of traits class for the automatic differentiation case. (The toolbox for the
 // scalar case is provided by the MathToolbox.hpp header file.)
-template <class ValueT, int numVars>
+template <class ValueT, unsigned numVars>
 struct MathToolbox<Opm::DenseAd::Evaluation<ValueT, numVars> >
 {
 private:
@@ -364,7 +364,7 @@ public:
     static Evaluation createConstant(ValueType value)
     { return Evaluation::createConstant(value); }
 
-    static Evaluation createVariable(ValueType value, int varIdx)
+    static Evaluation createVariable(ValueType value, unsigned varIdx)
     { return Evaluation::createVariable(value, varIdx); }
 
     template <class LhsEval>
@@ -457,11 +457,11 @@ public:
 
     static bool isfinite(const Evaluation& arg)
     {
-        if (!InnerToolbox::isfinite(arg.value))
+        if (!InnerToolbox::isfinite(arg.value()))
             return false;
 
-        for (int i = 0; i < numVars; ++i)
-            if (!InnerToolbox::isfinite(arg.derivatives[i]))
+        for (unsigned i = 0; i < numVars; ++i)
+            if (!InnerToolbox::isfinite(arg.derivative(i)))
                 return false;
 
         return true;
@@ -469,11 +469,11 @@ public:
 
     static bool isnan(const Evaluation& arg)
     {
-        if (InnerToolbox::isnan(arg.value))
+        if (InnerToolbox::isnan(arg.value()))
             return true;
 
-        for (int i = 0; i < numVars; ++i)
-            if (InnerToolbox::isnan(arg.derivatives[i]))
+        for (unsigned i = 0; i < numVars; ++i)
+            if (InnerToolbox::isnan(arg.derivative(i)))
                 return true;
 
         return false;

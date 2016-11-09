@@ -108,7 +108,7 @@ public:
      * regard to x. For scalars (which do not consider derivatives), this method does
      * nothing.
      */
-    static Scalar createVariable(Scalar value, int /*varIdx*/)
+    static Scalar createVariable(Scalar value, unsigned /*varIdx*/)
     { return value; }
 
     /*!
@@ -225,7 +225,7 @@ Evaluation constant(const Scalar& value)
 { return Opm::MathToolbox<Evaluation>::createConstant(value); }
 
 template <class Evaluation, class Scalar>
-Evaluation variable(const Scalar& value, int idx)
+Evaluation variable(const Scalar& value, unsigned idx)
 { return Opm::MathToolbox<Evaluation>::createVariable(value, idx); }
 
 template <class ResultEval, class Evaluation>

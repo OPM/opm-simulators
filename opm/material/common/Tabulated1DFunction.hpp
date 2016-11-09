@@ -191,7 +191,7 @@ public:
         resizeArrays_(points.size());
         typename XYContainer::const_iterator it = points.begin();
         typename XYContainer::const_iterator endIt = points.end();
-        for (int i = 0; it != endIt; ++i, ++it) {
+        for (unsigned i = 0; it != endIt; ++i, ++it) {
             xValues_[i] = std::get<0>(*it);
             yValues_[i] = std::get<1>(*it);
         }
@@ -285,7 +285,7 @@ public:
     template <class Evaluation>
     Evaluation evalDerivative(const Evaluation& x, bool /*extrapolate*/=false) const
     {
-        int segIdx = findSegmentIndex_(x);
+        unsigned segIdx = findSegmentIndex_(x);
 
         return evalDerivative(x, segIdx);
     }
@@ -423,7 +423,7 @@ public:
      "function.csv" using 1:3 w l ti "Derivative"
      ----------- snap -----------
     */
-    void printCSV(Scalar xi0, Scalar xi1, int k, std::ostream &os = std::cout) const
+    void printCSV(Scalar xi0, Scalar xi1, unsigned k, std::ostream &os = std::cout) const
     {
         Scalar x0 = std::min(xi0, xi1);
         Scalar x1 = std::max(xi0, xi1);
@@ -484,7 +484,7 @@ private:
     }
 
     template <class Evaluation>
-    Evaluation evalDerivative_(OPM_UNUSED const Evaluation& x, int segIdx) const
+    Evaluation evalDerivative_(OPM_UNUSED const Evaluation& x, size_t segIdx) const
     {
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
@@ -501,9 +501,9 @@ private:
     //
     // 3: function is constant within interval [x0, x1]
     // 1: function is monotonously increasing in the specified interval
-    // 9: function is not monotonic in the specified interval
+    // 0: function is not monotonic in the specified interval
     // -1: function is monotonously decreasing in the specified interval
-    int updateMonotonicity_(int i, int &r) const
+    int updateMonotonicity_(size_t i, int &r) const
     {
         if (yValues_[i] < yValues_[i + 1]) {
             // monotonically increasing?

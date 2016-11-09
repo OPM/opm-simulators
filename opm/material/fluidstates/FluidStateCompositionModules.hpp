@@ -185,7 +185,7 @@ class FluidStateImmiscibleCompositionModule
 
 public:
     enum { numComponents = FluidSystem::numComponents };
-    static_assert((int) numPhases == (int) numComponents,
+    static_assert(static_cast<int>(numPhases) == static_cast<int>(numComponents),
                   "The number of phases must be the same as the number of (pseudo-) components if you assume immiscibility");
 
     FluidStateImmiscibleCompositionModule()
@@ -266,13 +266,13 @@ public:
     /*!
      * \brief The mole fraction of a component in a phase []
      */
-    Scalar moleFraction(int /* phaseIdx */, int /* compIdx */) const
+    Scalar moleFraction(unsigned /* phaseIdx */, unsigned /* compIdx */) const
     { OPM_THROW(std::logic_error, "Mole fractions are not provided by this fluid state"); }
 
     /*!
      * \brief The mass fraction of a component in a phase []
      */
-    Scalar massFraction(int /* phaseIdx */, int /* compIdx */) const
+    Scalar massFraction(unsigned /* phaseIdx */, unsigned /* compIdx */) const
     { OPM_THROW(std::logic_error, "Mass fractions are not provided by this fluid state"); }
 
     /*!
@@ -283,7 +283,7 @@ public:
      * component's molar masses weighted by the current mole fraction:
      * \f[ \bar M_\alpha = \sum_\kappa M^\kappa x_\alpha^\kappa \f]
      */
-    Scalar averageMolarMass(int /* phaseIdx */) const
+    Scalar averageMolarMass(unsigned /* phaseIdx */) const
     { OPM_THROW(std::logic_error, "Mean molar masses are not provided by this fluid state"); }
 
     /*!
@@ -295,7 +295,7 @@ public:
      *
      * http://en.wikipedia.org/wiki/Concentration
      */
-    Scalar molarity(int /* phaseIdx */, int /* compIdx */) const
+    Scalar molarity(unsigned /* phaseIdx */, unsigned /* compIdx */) const
     { OPM_THROW(std::logic_error, "Molarities are not provided by this fluid state"); }
 
     /*!

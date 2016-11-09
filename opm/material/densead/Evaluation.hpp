@@ -47,7 +47,7 @@ namespace DenseAd {
  * \brief Represents a function evaluation and its derivatives w.r.t. a fixed set of
  *        variables.
  */
-template <class ValueT, int numVars>
+template <class ValueT, unsigned numVars>
 class Evaluation
 {
 public:
@@ -55,18 +55,18 @@ public:
     typedef ValueT ValueType;
 
     //! number of derivatives
-    static constexpr int size = numVars;
+    static constexpr unsigned size = numVars;
 
 protected:
     //! length of internal data vector
-    static constexpr int length_ = numVars + 1 ;
+    static constexpr unsigned length_ = numVars + 1 ;
 
     //! position index for value
-    static constexpr int valuepos_ = 0;
+    static constexpr unsigned valuepos_ = 0;
     //! start index for derivatives
-    static constexpr int dstart_   = 1;
+    static constexpr unsigned dstart_   = 1;
     //! end+1 index for derivatives
-    static constexpr int dend_     = length_ ;
+    static constexpr unsigned dend_     = length_ ;
 public:
 
     //! default constructor
@@ -95,29 +95,27 @@ public:
     // i.e., f(x) = c. this implies an evaluation with the given value and all
     // derivatives being zero.
     template <class RhsValueType>
-    Evaluation(const RhsValueType& c, const int varPos)
+    Evaluation(const RhsValueType& c, unsigned varPos)
     {
         setValue( c );
         clearDerivatives();
         // The variable position must be in represented by the given variable descriptor
         assert(0 <= varPos && varPos < numVars);
 
-        data_[ varPos + dstart_ ] = 1.0;
-        Valgrind::CheckDefined( data_ );
+        data_[varPos + dstart_] = 1.0;
+        Valgrind::CheckDefined(data_);
     }
 
     // set all derivatives to zero
     void clearDerivatives()
     {
-        for( int i=dstart_; i<dend_; ++i )
-        {
+        for (unsigned i = dstart_; i < dend_; ++i)
             data_[ i ] = 0.0;
-        }
     }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
     template <class RhsValueType>
-    static Evaluation createVariable(const RhsValueType& value, const int varPos)
+    static Evaluation createVariable(const RhsValueType& value, unsigned varPos)
     {
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
@@ -138,18 +136,15 @@ public:
         // print value
         os << "v: " << value() << " / d:";
         // print derivatives
-        for (int varIdx = 0; varIdx < numVars; ++varIdx) {
+        for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
             os << " " << derivative(varIdx);
-        }
     }
 
     // copy all derivatives from other
     void copyDerivatives(const Evaluation& other)
     {
-        for( int varIdx = dstart_; varIdx < dend_; ++varIdx )
-        {
+        for (unsigned varIdx = dstart_; varIdx < dend_; ++varIdx)
             data_[ varIdx ] = other.data_[ varIdx ];
-        }
     }
 
 
@@ -157,7 +152,7 @@ public:
     Evaluation& operator+=(const Evaluation& other)
     {
         // value and derivatives are added
-        for( int varIdx = 0 ; varIdx < length_ ; ++ varIdx )
+        for (unsigned varIdx = 0; varIdx < length_; ++ varIdx)
             data_[ varIdx ] += other.data_[ varIdx ];
 
         return *this;
@@ -168,7 +163,7 @@ public:
     Evaluation& operator+=(const RhsValueType& other)
     {
         // value is added, derivatives stay the same
-        data_[ valuepos_ ] += other;
+        data_[valuepos_] += other;
         return *this;
     }
 
@@ -176,8 +171,8 @@ public:
     Evaluation& operator-=(const Evaluation& other)
     {
         // value and derivatives are subtracted
-        for( int varIdx = 0 ; varIdx < length_ ; ++ varIdx )
-            data_[ varIdx ] -= other.data_[ varIdx ];
+        for (unsigned idx = 0 ; idx < length_ ; ++ idx)
+            data_[idx] -= other.data_[idx];
 
         return *this;
     }
@@ -199,11 +194,11 @@ public:
         // i.e., (u*v)' = (v'u + u'v).
         ValueType& u = data_[ valuepos_ ];
         const ValueType& v = other.value();
-        for (int varIdx = dstart_; varIdx < dend_; ++varIdx) {
-            const ValueType& uPrime = data_[varIdx];
-            const ValueType& vPrime = other.data_[varIdx];
+        for (unsigned idx = dstart_; idx < dend_; ++idx) {
+            const ValueType& uPrime = data_[idx];
+            const ValueType& vPrime = other.data_[idx];
 
-            data_[varIdx] = (v*uPrime + u*vPrime);
+            data_[idx] = (v*uPrime + u*vPrime);
         }
         u *= v;
 
@@ -215,8 +210,8 @@ public:
     Evaluation& operator*=(RhsValueType other)
     {
         // values and derivatives are multiplied
-        for( int varIdx = 0 ; varIdx < length_ ; ++ varIdx )
-            data_[ varIdx ] *= other;
+        for (unsigned idx = 0 ; idx < length_ ; ++ idx)
+            data_[idx] *= other;
 
         return *this;
     }
@@ -228,11 +223,11 @@ public:
         // u'v)/v^2.
         ValueType& u = data_[ valuepos_ ];
         const ValueType& v = other.value();
-        for (int varIdx = dstart_; varIdx < dend_; ++varIdx) {
-            const ValueType& uPrime = data_[varIdx];
-            const ValueType& vPrime = other.data_[varIdx];
+        for (unsigned idx = dstart_; idx < dend_; ++idx) {
+            const ValueType& uPrime = data_[idx];
+            const ValueType& vPrime = other.data_[idx];
 
-            data_[varIdx] = (v*uPrime - u*vPrime)/(v*v);
+            data_[idx] = (v*uPrime - u*vPrime)/(v*v);
         }
         u /= v;
 
@@ -245,8 +240,8 @@ public:
     {
         // values and derivatives are divided
         ValueType factor = (1.0/other);
-        for( int varIdx = 0 ; varIdx < length_ ; ++ varIdx )
-            data_[ varIdx ] *= factor;
+        for (unsigned idx = 0; idx < length_; ++idx)
+            data_[idx] *= factor;
 
         return *this;
     }
@@ -290,8 +285,8 @@ public:
     {
         Evaluation result;
         // set value and derivatives to negative
-        for (int varIdx = 0; varIdx < length_; ++varIdx)
-            result.data_[varIdx] = - data_[varIdx];
+        for (unsigned idx = 0; idx < length_; ++idx)
+            result.data_[idx] = - data_[idx];
 
         return result;
     }
@@ -347,8 +342,8 @@ public:
 
     bool operator==(const Evaluation& other) const
     {
-        for (int varIdx = 0; varIdx < length_; ++varIdx)
-            if (data_[ varIdx] != other.data_[varIdx])
+        for (unsigned idx = 0; idx < length_; ++idx)
+            if (data_[idx] != other.data_[idx])
                 return false;
 
         return true;
@@ -387,51 +382,51 @@ public:
 
     // return value of variable
     const ValueType& value() const
-    { return data_[ valuepos_ ]; }
+    { return data_[valuepos_]; }
 
     // set value of variable
     void setValue(const ValueType& val)
-    { data_[ valuepos_ ] = val; }
+    { data_[valuepos_] = val; }
 
     // return varIdx'th derivative
-    const ValueType& derivative(const int varIdx) const
+    const ValueType& derivative(unsigned varIdx) const
     {
         assert(varIdx < numVars);
-        return data_[ varIdx + dstart_ ];
+        return data_[varIdx + dstart_];
     }
 
     // set derivative at position varIdx
-    void setDerivative(const int varIdx, const ValueType& derVal)
+    void setDerivative(unsigned varIdx, const ValueType& derVal)
     {
         assert(varIdx < numVars);
-        data_[ varIdx + dstart_ ] = derVal;
+        data_[varIdx + dstart_] = derVal;
     }
 
 protected:
-    std::array< ValueType, length_ > data_;
+    std::array<ValueType, length_> data_;
 };
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 bool operator<(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b > a; }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 bool operator>(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b < a; }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 bool operator<=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b >= a; }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 bool operator>=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return b <= a; }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 bool operator!=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 { return a != b.value(); }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
     Evaluation<ValueType, numVars> result(b);
@@ -441,19 +436,19 @@ Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation
     return result;
 }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
     Evaluation<ValueType, numVars> result;
 
     result.setValue(a - b.value());
-    for (int varIdx = 0; varIdx < numVars; ++varIdx)
+    for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.setDerivative(varIdx, - b.derivative(varIdx));
 
     return result;
 }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
     Evaluation<ValueType, numVars> result;
@@ -462,25 +457,25 @@ Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation
 
     // outer derivative
     const ValueType& df_dg = - a/(b.value()*b.value());
-    for (int varIdx = 0; varIdx < numVars; ++varIdx)
+    for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.setDerivative(varIdx, df_dg*b.derivative(varIdx));
 
     return result;
 }
 
-template <class RhsValueType, class ValueType, int numVars>
+template <class RhsValueType, class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
 {
     Evaluation<ValueType, numVars> result;
 
     result.setValue(a*b.value());
-    for (int varIdx = 0; varIdx < numVars; ++varIdx)
+    for (unsigned varIdx = 0; varIdx < numVars; ++varIdx)
         result.setDerivative(varIdx, a*b.derivative(varIdx));
 
     return result;
 }
 
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>& eval)
 {
     os << eval.value();
@@ -516,12 +511,12 @@ std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>&
 
 namespace Opm {
 namespace DenseAd {
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>&);
 }}
 
 namespace std {
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 const Opm::DenseAd::Evaluation<ValueType, numVars> abs(const Opm::DenseAd::Evaluation<ValueType, numVars>& x)
 { return Opm::DenseAd::abs(x); }
 
@@ -540,7 +535,7 @@ const Opm::DenseAd::Evaluation<ValueType, numVars> abs(const Opm::DenseAd::Evalu
 #include <dune/common/ftraits.hh>
 
 namespace Dune {
-template <class ValueType, int numVars>
+template <class ValueType, unsigned numVars>
 struct FieldTraits<Opm::DenseAd::Evaluation<ValueType, numVars> >
 {
 public:

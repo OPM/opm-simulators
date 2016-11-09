@@ -184,7 +184,7 @@ public:
      */
     Scalar at(size_t rowIdx, size_t colIdx) const
     {
-        int n = size();
+        size_t n = size();
 
         // special cases
         if (rowIdx == 0 && colIdx == n - 1)
@@ -192,7 +192,7 @@ public:
         if (rowIdx == n - 1 && colIdx == 0)
             return diag_[0][n - 1];
 
-        int diagIdx = 1 + colIdx - rowIdx;
+        size_t diagIdx = 1 + colIdx - rowIdx;
         // make sure that the requested column is in range
         assert(0 <= diagIdx && diagIdx < 3);
         return diag_[diagIdx][colIdx];
@@ -203,7 +203,7 @@ public:
      */
     TridiagonalMatrix &operator=(const TridiagonalMatrix &source)
     {
-        for (int diagIdx = 0; diagIdx < 3; ++ diagIdx)
+        for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx)
             diag_[diagIdx] = source.diag_[diagIdx];
 
         return *this;
@@ -214,7 +214,7 @@ public:
      */
     TridiagonalMatrix &operator=(Scalar value)
     {
-        for (int diagIdx = 0; diagIdx < 3; ++ diagIdx)
+        for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx)
             diag_[diagIdx].assign(size(), value);
 
         return *this;
@@ -255,9 +255,9 @@ public:
      */
     TridiagonalMatrix &operator*=(Scalar alpha)
     {
-        int n = size();
-        for (int diagIdx = 0; diagIdx < 3; ++ diagIdx) {
-            for (int i = 0; i < n; ++i) {
+        unsigned n = size();
+        for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx) {
+            for (unsigned i = 0; i < n; ++i) {
                 diag_[diagIdx][i] *= alpha;
             }
         }
@@ -271,9 +271,9 @@ public:
     TridiagonalMatrix &operator/=(Scalar alpha)
     {
         alpha = 1.0/alpha;
-        int n = size();
-        for (int diagIdx = 0; diagIdx < 3; ++ diagIdx) {
-            for (int i = 0; i < n; ++i) {
+        unsigned n = size();
+        for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx) {
+            for (unsigned i = 0; i < n; ++i) {
                 diag_[diagIdx][i] *= alpha;
             }
         }
@@ -311,9 +311,9 @@ public:
     {
         assert(size() == other.size());
 
-        int n = size();
-        for (int diagIdx = 0; diagIdx < 3; ++ diagIdx)
-            for (int i = 0; i < n; ++ i)
+        unsigned n = size();
+        for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx)
+            for (unsigned i = 0; i < n; ++ i)
                 diag_[diagIdx][i] += alpha * other[diagIdx][i];
 
         return *this;
@@ -339,8 +339,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] =
                 diag_[0][i - 1]*source[i-1] +
                 diag_[1][i]*source[i] +
@@ -379,8 +379,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] +=
                 diag_[0][i - 1]*source[i-1] +
                 diag_[1][i]*source[i] +
@@ -419,8 +419,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] -=
                 diag_[0][i - 1]*source[i-1] +
                 diag_[1][i]*source[i] +
@@ -459,8 +459,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] +=
                 alpha*(
                     diag_[0][i - 1]*source[i-1] +
@@ -502,8 +502,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] =
                 diag_[2][i + 1]*source[i-1] +
                 diag_[1][i]*source[i] +
@@ -542,8 +542,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] +=
                 diag_[2][i + 1]*source[i-1] +
                 diag_[1][i]*source[i] +
@@ -582,8 +582,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] -=
                 diag_[2][i + 1]*source[i-1] +
                 diag_[1][i]*source[i] +
@@ -622,8 +622,8 @@ public:
         assert(size() > 1);
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             dest[i] +=
                 alpha*(
                     diag_[2][i + 1]*source[i-1] +
@@ -663,9 +663,9 @@ public:
     {
         Scalar result = 0;
 
-        int n = size();
-        for (int i = 0; i < n; ++ i)
-            for (int diagIdx = 0; diagIdx < 3; ++ diagIdx)
+        unsigned n = size();
+        for (unsigned i = 0; i < n; ++ i)
+            for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx)
                 result += diag_[diagIdx][i];
 
         return result;
@@ -681,8 +681,8 @@ public:
         Scalar result=0;
 
         // deal with rows 1 .. n-2
-        int n = size();
-        for (int i = 1; i < n - 1; ++ i) {
+        unsigned n = size();
+        for (unsigned i = 1; i < n - 1; ++ i) {
             result = std::max(result,
                               std::abs(diag_[0][i - 1]) +
                               std::abs(diag_[1][i]) +
@@ -724,7 +724,7 @@ public:
      */
     void print(std::ostream &os = std::cout) const
     {
-        int n = size();
+        size_t n = size();
 
         // row 0
         os << at(0, 0) << "\t"
@@ -737,7 +737,7 @@ public:
         os << "\n";
 
         // row 1 .. n - 2
-        for (int rowIdx = 1; rowIdx < n-1; ++rowIdx) {
+        for (unsigned rowIdx = 1; rowIdx < n-1; ++rowIdx) {
             if (rowIdx > 1)
                 os << "\t";
             if (rowIdx == n - 2)
