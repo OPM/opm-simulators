@@ -105,8 +105,6 @@ inline std::vector< double >& stripe( const std::vector< double >& v,
         sol.insert( "SSOL", UnitSystem::measure::identity, reservoir.getCellData( BlackoilSolventState::SSOL ) , data::TargetType::RESTART_SOLUTION );
     }
 
-    sol.sdc = &reservoir;
-
     return sol;
 }
 
