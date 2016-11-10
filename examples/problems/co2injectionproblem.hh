@@ -307,7 +307,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh,
                              "The upper temperature [K] for tabulation of the "
                              "fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumTemperature,
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, FluidSystemNumTemperature,
                              "The number of intervals between the lower and "
                              "upper temperature");
 
@@ -317,7 +317,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureHigh,
                              "The upper pressure [Pa] for tabulation of the "
                              "fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, int, FluidSystemNumPressure,
+        EWOMS_REGISTER_PARAM(TypeTag, unsigned, FluidSystemNumPressure,
                              "The number of intervals between the lower and "
                              "upper pressure");
 
