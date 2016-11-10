@@ -245,7 +245,7 @@ try
                                              ::createEclipseGrid( cGrid ,
                                                                   eclipseState->getInputGrid())));
     Opm::BlackoilOutputWriter
-        outputWriter(cGrid, param, *eclipseState, eclipseWriter, pu,
+        outputWriter(cGrid, param, *eclipseState, std::move(eclipseWriter), pu,
                      new_props->permeability() );
 
     SimulatorReport fullReport;

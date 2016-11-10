@@ -773,7 +773,7 @@ namespace Opm
             output_writer_.reset(new BlackoilOutputWriter(grid_init_->grid(),
                                                           param_,
                                                           *eclipse_state_,
-                                                          eclipse_writer_,
+                                                          std::move(eclipse_writer_),
                                                           Opm::phaseUsageFromDeck(*deck_),
                                                           fluidprops_->permeability()));
         }
