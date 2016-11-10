@@ -785,16 +785,56 @@ namespace Opm
                   const Model& physicalModel,
                   bool substep)
     {
+        data::Solution cellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
+        
+        if( output_ && !parallelOutput_->isParallel() )
+        {
 
-        data::Solution cellData;
-        detail::getRestartData( cellData, phaseUsage_, physicalModel,
-                                restartConfig, reportStepNum, logMessages );
-        detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
+            detail::getRestartData( cellData, phaseUsage_, physicalModel,
+                                    restartConfig, reportStepNum, logMessages );
+            detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
+        }
+        else
+        {
+            if ( logMessages )
+            {
+                std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
+                std::vector<const char*> keywords = 
+                    { "WIP", "OIPL", "OIPG", "OIP", "GIPG", "GIPL", "GIP",
+                      "RPV", "FRPH", "RPRH"};
+                
+                std::ostringstream str;
+                str << "Output of restart/summary config not supported in parallel. Requested keywords were ";
+                std::size_t no_kw = 0;
+                    
+                auto func = [&] (const char* kw)
+                    {
+                        if ( detail::hasFRBKeyword(summaryConfig, kw) )
+                        {
+                            str << kw << " ";
+                            ++ no_kw;
+                        }
+                    };
 
+                std::for_each(keywords.begin(), keywords.end(), func);
+
+                for (auto& keyValue : rstKeywords)
+                {
+                        str << keyValue.first << " ";
+                        ++ no_kw;
+                }
+
+                if ( no_kw )
+                {
+                    Opm::OpmLog::warning("Unhandled ouput request", str.str());
+                }
+            }
+        }        
+        
         writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }
