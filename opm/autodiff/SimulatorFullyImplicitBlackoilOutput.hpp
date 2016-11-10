@@ -338,49 +338,58 @@ namespace Opm
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
-        vtkWriter_( output_ && param.getDefault("output_vtk",false) ?
-                     new BlackoilVTKWriter< Grid >( grid, outputDir_ ) : 0 ),
-        matlabWriter_( output_ && parallelOutput_->isIORank() &&
-                       param.getDefault("output_matlab", false) ?
-                     new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
-        eclWriter_( output_ && parallelOutput_->isIORank() &&
-                    param.getDefault("output_ecl", true) ?
-                    std::move(eclWriter)
-                    : std::move(std::unique_ptr<EclipseWriter>()) ),
         eclipseState_(eclipseState),
         asyncOutput_()
     {
         // For output.
-        if (output_ && parallelOutput_->isIORank() ) {
-            // Ensure that output dir exists
-            boost::filesystem::path fpath(outputDir_);
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+        if ( output_ )
+        {
+            if ( param.getDefault("output_vtk",false) )
+            {
+                vtkWriter_
+                    .reset(new BlackoilVTKWriter< Grid >( grid, outputDir_ ));
             }
 
-            // create output thread if enabled and rank is I/O rank
-            // async output is enabled by default if pthread are enabled
-#if HAVE_PTHREAD
-            const bool asyncOutputDefault = false;
-#else
-            const bool asyncOutputDefault = false;
-#endif
-            if( param.getDefault("async_output", asyncOutputDefault ) )
-            {
-#if HAVE_PTHREAD
-                asyncOutput_.reset( new ThreadHandle() );
-#else
-                OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");
-#endif
-            }
+            if( parallelOutput_->isIORank() ) {
 
-            std::string backupfilename = param.getDefault("backupfile", std::string("") );
-            if( ! backupfilename.empty() )
-            {
-                backupfile_.open( backupfilename.c_str() );
+                if ( param.getDefault("output_matlab", false ) )
+                {
+                    matlabWriter_
+                        .reset(new BlackoilMatlabWriter< Grid >( grid, outputDir_ ));
+                }
+
+                eclWriter_ = std::move(eclWriter);
+
+                // Ensure that output dir exists
+                boost::filesystem::path fpath(outputDir_);
+                try {
+                    create_directories(fpath);
+                }
+                catch (...) {
+                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                }
+
+                // create output thread if enabled and rank is I/O rank
+                // async output is enabled by default if pthread are enabled
+#if HAVE_PTHREAD
+                const bool asyncOutputDefault = false;
+#else
+                const bool asyncOutputDefault = false;
+#endif
+                if( param.getDefault("async_output", asyncOutputDefault ) )
+                {
+#if HAVE_PTHREAD
+                    asyncOutput_.reset( new ThreadHandle() );
+#else
+                    OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");
+#endif
+                }
+
+                std::string backupfilename = param.getDefault("backupfile", std::string("") );
+                if( ! backupfilename.empty() )
+                {
+                    backupfile_.open( backupfilename.c_str() );
+                }
             }
         }
     }
