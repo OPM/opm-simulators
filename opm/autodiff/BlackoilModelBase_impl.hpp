@@ -2034,7 +2034,13 @@ namespace detail {
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
+<<<<<<< 002439c5b12c64e112f06d48c747da47031c3852
         converged_Well = converged_Well && (residualWell < tol_well_control);
+=======
+        // Hard-coded residual for well control equations.
+        converged_Well = converged_Well && (residualWell < 1.e-7);
+        // converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
+>>>>>>> checking and outputing the residuals for the well equations.
         const bool converged = converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
