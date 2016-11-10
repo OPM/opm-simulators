@@ -150,6 +150,11 @@ namespace Opm {
         // get reasonable initial conditions for the wells
         wellModel().updateWellControls(well_state);
 
+        // enforce VREP control when necessary.
+        Base::applyVREPGroupControl(reservoir_state, well_state);
+
+        asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
 

@@ -1071,8 +1071,6 @@ namespace detail {
             asImpl().wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
             converged = getWellConvergence(it);
 
-            // When the well targets are just updated or need to be updated, we need at least one more iteration.
-
             if (converged) {
                 break;
             }

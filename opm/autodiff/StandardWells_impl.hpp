@@ -714,16 +714,6 @@ namespace Opm
 
         if( !localWellsActive() ) return ;
 
-        // if we need to update the well targets related to group control,
-        // we update them then re-run the simulation before updating the well control
-        /* if (well_collection_->needUpdateWellTargets() ) {
-            well_collection_->updateWellTargets(xw.wellRates());
-            for (size_t i = 0; i < well_collection_->numNode(); ++i) {
-                well_collection_->getNode(i)->setShouldUpdateWellTargets(false);
-            }
-            return;
-        } */
-
         // Find, for each well, if any constraints are broken. If so,
         // switch control to first broken constraint.
         const int np = wells().number_of_phases;
@@ -754,22 +744,6 @@ namespace Opm
                     break;
                 }
             }
-            // TODO: when constraints got broken. For a well under group control, we need to change it to individual control
-            // We need to check the controls in the same group. If there is still some wells under group control,
-            // we need to update their group share targets. If no well is under group control, it means the group target
-            // will not be able to meet. We need to give a message there.
-            // It is better to wait until after the limit check loop. We need to record whose control status changed
-            // from group control to individual control here.
-            // Not sure exactly how the well go back from the individual control to group control.
-            // A guess is that the target is not updated. It works as a limit. When it got broken again, it switch back to
-            // group control. Then we also need to do something there.
-
-            // get the pointer to the well node in the well collection
-            WellNode* well_node = well_collection_->findWellNode(std::string(wells().name[w]));
-            // maybe should put this if in function findWellNode()
-            if (well_node == nullptr) {
-                 OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
-            }
 
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
@@ -781,9 +755,6 @@ namespace Opm
 
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
-
-                // TODO: double confirming the current strategy
-                well_node->setShouldUpdateWellTargets(true);
             }
 
             // Updating well state and primary variables.
@@ -879,6 +850,13 @@ namespace Opm
 
 
                 break;
+            }
+
+            // get the pointer to the well node in the well collection
+            WellNode* well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+            // maybe should put this if in function findWellNode()
+            if (well_node == nullptr) {
+                 OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
             }
 
             // update whehter the well is under group control or individual control
