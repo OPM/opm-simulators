@@ -238,18 +238,6 @@ namespace Opm
         return target;
     }
 
-
-    bool WellsGroupInterface::shouldUpdateWellTargets() const
-    {
-        return should_update_well_targets_;
-    }
-
-
-    void WellsGroupInterface::setShouldUpdateWellTargets(const bool should_update_well_targets)
-    {
-        should_update_well_targets_ = should_update_well_targets;
-    }
-
     bool WellsGroupInterface::individualControl() const
     {
         return individual_control_;
@@ -805,7 +793,6 @@ namespace Opm
             if (!children_[i]->individualControl() && children_[i]->isProducer()) {
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
                 children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate / my_guide_rate) * rate_for_group_control, true);
-                children_[i]->setShouldUpdateWellTargets(false);
             }
         }
     }
@@ -814,11 +801,6 @@ namespace Opm
     {
         // NOT doing anything yet.
         // Will finish it when having an examples with more than one injection wells within same injection group.
-        for (size_t i = 0; i < children_.size(); ++i) {
-            if (!children_[i]->individualControl() && children_[i]->isInjector()) {
-                children_[i]->setShouldUpdateWellTargets(false);
-            }
-        }
     }
 
 

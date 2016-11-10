@@ -226,10 +226,6 @@ namespace Opm
         /// Update the status for individual contrl
         void setIndividualControl(const bool);
 
-        virtual bool shouldUpdateWellTargets() const;
-
-        virtual void setShouldUpdateWellTargets(const bool);
-
         /// Whether it is a production well
         /// Should only appy for WellNode
         virtual bool isProducer() const = 0;
