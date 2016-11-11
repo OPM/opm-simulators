@@ -239,8 +239,13 @@ try
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << std::flush;
 
+    std::unique_ptr<Opm::EclipseWriter>
+        eclipseWriter(new Opm::EclipseWriter(*eclipseState,
+                                             UgGridHelpers
+                                             ::createEclipseGrid( cGrid ,
+                                                                  eclipseState->getInputGrid())));
     Opm::BlackoilOutputWriter
-        outputWriter(cGrid, param, *eclipseState, pu,
+        outputWriter(cGrid, param, *eclipseState, std::move(eclipseWriter), pu,
                      new_props->permeability() );
 
     SimulatorReport fullReport;

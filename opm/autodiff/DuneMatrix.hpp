@@ -91,7 +91,11 @@ namespace Opm
             nnz = ia[rows];
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
+    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
+            this->allocationSize_ = nnz;
+    #else
             this->allocationSize = nnz;
+    #endif
             this->avg = 0;
             this->overflowsize = -1.0;
 #endif
