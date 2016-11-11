@@ -24,7 +24,7 @@
 #ifndef OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 
-#include <applications/ebos/eclproblem.hh>
+#include <ebos/eclproblem.hh>
 #include <ewoms/common/start.hh>
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
