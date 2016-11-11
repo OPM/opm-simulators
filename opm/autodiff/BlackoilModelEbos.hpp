@@ -60,8 +60,11 @@
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/autodiff/ISTLSolver.hpp>
-
 #include <opm/common/data/SimulationDataContainer.hpp>
+
+#include <dune/istl/owneroverlapcopy.hh>
+#include <dune/common/parallel/collectivecommunication.hh>
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -439,7 +442,11 @@ namespace Opm {
           typedef Y range_type;
           typedef typename X::field_type field_type;
 
+#if HAVE_MPI
           typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
+#else
+          typedef Dune::CollectiveCommunication<int> communication_type;
+#endif
 
           enum {
             //! \brief The solver category.
@@ -465,8 +472,10 @@ namespace Opm {
             A_.mv( x, y );
             wellMod_.applyWellModel(x, y );
 
+#if HAVE_MPI
             if( comm_ )
               comm_->project( y );
+#endif
           }
 
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
@@ -474,8 +483,10 @@ namespace Opm {
             A_.usmv(alpha,x,y);
             wellMod_.applyWellModel(x, y );
 
+#if HAVE_MPI
             if( comm_ )
               comm_->project( y );
+#endif
           }
 
           virtual const matrix_type& getmat() const { return A_; }
