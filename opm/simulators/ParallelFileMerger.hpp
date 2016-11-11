@@ -83,10 +83,10 @@ public:
                 }
                 else
                 {
-                    OPM_THROW(std::runtime_error,
-                              "Unrecognized file with name "
+                    std::cerr << "WARNING: Unrecognized file with name "
                               << filename
-                              << " from parallel run.");
+                              << " that might stem from a  parallel run."
+                              << std::endl;
                 }
             }
         }
