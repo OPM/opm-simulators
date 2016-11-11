@@ -214,6 +214,7 @@ namespace Opm
         BlackoilOutputWriter(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              const Opm::EclipseState& eclipseState,
+                             std::unique_ptr<EclipseWriter>&& eclWriter,
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability );
 
@@ -328,6 +329,7 @@ namespace Opm
     BlackoilOutputWriter(const Grid& grid,
                          const parameter::ParameterGroup& param,
                          const Opm::EclipseState& eclipseState,
+                         std::unique_ptr<EclipseWriter>&& eclWriter,
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),
@@ -336,49 +338,58 @@ namespace Opm
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
-        vtkWriter_( output_ && param.getDefault("output_vtk",false) ?
-                     new BlackoilVTKWriter< Grid >( grid, outputDir_ ) : 0 ),
-        matlabWriter_( output_ && parallelOutput_->isIORank() &&
-                       param.getDefault("output_matlab", false) ?
-                     new BlackoilMatlabWriter< Grid >( grid, outputDir_ ) : 0 ),
-        eclWriter_( output_ && parallelOutput_->isIORank() &&
-                    param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , eclipseState.getInputGrid()))
-                   : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()
     {
         // For output.
-        if (output_ && parallelOutput_->isIORank() ) {
-            // Ensure that output dir exists
-            boost::filesystem::path fpath(outputDir_);
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+        if ( output_ )
+        {
+            if ( param.getDefault("output_vtk",false) )
+            {
+                vtkWriter_
+                    .reset(new BlackoilVTKWriter< Grid >( grid, outputDir_ ));
             }
 
-            // create output thread if enabled and rank is I/O rank
-            // async output is enabled by default if pthread are enabled
-#if HAVE_PTHREAD
-            const bool asyncOutputDefault = false;
-#else
-            const bool asyncOutputDefault = false;
-#endif
-            if( param.getDefault("async_output", asyncOutputDefault ) )
-            {
-#if HAVE_PTHREAD
-                asyncOutput_.reset( new ThreadHandle() );
-#else
-                OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");
-#endif
-            }
+            if( parallelOutput_->isIORank() ) {
 
-            std::string backupfilename = param.getDefault("backupfile", std::string("") );
-            if( ! backupfilename.empty() )
-            {
-                backupfile_.open( backupfilename.c_str() );
+                if ( param.getDefault("output_matlab", false ) )
+                {
+                    matlabWriter_
+                        .reset(new BlackoilMatlabWriter< Grid >( grid, outputDir_ ));
+                }
+
+                eclWriter_ = std::move(eclWriter);
+
+                // Ensure that output dir exists
+                boost::filesystem::path fpath(outputDir_);
+                try {
+                    create_directories(fpath);
+                }
+                catch (...) {
+                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                }
+
+                // create output thread if enabled and rank is I/O rank
+                // async output is enabled by default if pthread are enabled
+#if HAVE_PTHREAD
+                const bool asyncOutputDefault = false;
+#else
+                const bool asyncOutputDefault = false;
+#endif
+                if( param.getDefault("async_output", asyncOutputDefault ) )
+                {
+#if HAVE_PTHREAD
+                    asyncOutput_.reset( new ThreadHandle() );
+#else
+                    OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");
+#endif
+                }
+
+                std::string backupfilename = param.getDefault("backupfile", std::string("") );
+                if( ! backupfilename.empty() )
+                {
+                    backupfile_.open( backupfilename.c_str() );
+                }
             }
         }
     }
@@ -774,16 +785,56 @@ namespace Opm
                   const Model& physicalModel,
                   bool substep)
     {
+        data::Solution cellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
+        
+        if( output_ && !parallelOutput_->isParallel() )
+        {
 
-        data::Solution cellData;
-        detail::getRestartData( cellData, phaseUsage_, physicalModel,
-                                restartConfig, reportStepNum, logMessages );
-        detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
+            detail::getRestartData( cellData, phaseUsage_, physicalModel,
+                                    restartConfig, reportStepNum, logMessages );
+            detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
+        }
+        else
+        {
+            if ( logMessages )
+            {
+                std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
+                std::vector<const char*> keywords = 
+                    { "WIP", "OIPL", "OIPG", "OIP", "GIPG", "GIPL", "GIP",
+                      "RPV", "FRPH", "RPRH"};
+                
+                std::ostringstream str;
+                str << "Output of restart/summary config not supported in parallel. Requested keywords were ";
+                std::size_t no_kw = 0;
+                    
+                auto func = [&] (const char* kw)
+                    {
+                        if ( detail::hasFRBKeyword(summaryConfig, kw) )
+                        {
+                            str << kw << " ";
+                            ++ no_kw;
+                        }
+                    };
 
+                std::for_each(keywords.begin(), keywords.end(), func);
+
+                for (auto& keyValue : rstKeywords)
+                {
+                        str << keyValue.first << " ";
+                        ++ no_kw;
+                }
+
+                if ( no_kw )
+                {
+                    Opm::OpmLog::warning("Unhandled ouput request", str.str());
+                }
+            }
+        }        
+        
         writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }
