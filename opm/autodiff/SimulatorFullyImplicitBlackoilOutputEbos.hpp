@@ -49,6 +49,7 @@
 #include <iomanip>
 #include <fstream>
 #include <thread>
+#include <memory>
 
 #include <boost/filesystem.hpp>
 
@@ -68,7 +69,8 @@ namespace Opm
         template <class Grid>
         BlackoilOutputWriterEbos(const Grid& grid,
                                  const parameter::ParameterGroup& param,
-                                 const Opm::EclipseState& eclipseState,
+                                 const EclipseState& eclipseState,
+                                 std::unique_ptr<EclipseWriter>&& eclWriter,
                                  const Opm::PhaseUsage &phaseUsage,
                                  const double* permeability );
 
@@ -154,7 +156,7 @@ namespace Opm
 
         std::ofstream backupfile_;
         Opm::PhaseUsage phaseUsage_;
-        std::unique_ptr< EclipseWriter > eclWriter_;
+        std::unique_ptr<EclipseWriter> eclWriter_;
         const EclipseState& eclipseState_;
 
         std::unique_ptr< ThreadHandle > asyncOutput_;
@@ -170,25 +172,24 @@ namespace Opm
     inline
     BlackoilOutputWriterEbos::
     BlackoilOutputWriterEbos(const Grid& grid,
-                         const parameter::ParameterGroup& param,
-                         const Opm::EclipseState& eclipseState,
-                         const Opm::PhaseUsage &phaseUsage,
-                         const double* permeability )
+                             const parameter::ParameterGroup& param,
+                             const Opm::EclipseState& eclipseState,
+                             std::unique_ptr<EclipseWriter>&& eclWriter,
+                             const Opm::PhaseUsage &phaseUsage,
+                             const double* permeability )
       : output_( param.getDefault("output", true) ),
         parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, permeability ) : 0 ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
-        eclWriter_( output_ && parallelOutput_->isIORank() &&
-                    param.getDefault("output_ecl", true) ?
-                    new EclipseWriter(eclipseState,UgGridHelpers::createEclipseGrid( grid , eclipseState.getInputGrid()))
-                   : 0 ),
         eclipseState_(eclipseState),
         asyncOutput_()
     {
         // For output.
         if (output_ && parallelOutput_->isIORank() ) {
+            eclWriter_ = std::move(eclWriter);
+
             // Ensure that output dir exists
             boost::filesystem::path fpath(outputDir_);
             try {
@@ -524,10 +525,125 @@ namespace Opm
 
             return sol;
         }
+
+        /**
+         * Checks if the summaryConfig has a keyword with the standardized field, region, or block prefixes.
+         */
+        inline bool hasFRBKeyword(const SummaryConfig& summaryConfig, const std::string keyword) {
+            std::string field_kw = "F" + keyword;
+            std::string region_kw = "R" + keyword;
+            std::string block_kw = "B" + keyword;
+            return summaryConfig.hasKeyword(field_kw)
+                    || summaryConfig.hasKeyword(region_kw)
+                    || summaryConfig.hasKeyword(block_kw);
+        }
+
+        /**
+         * Returns the data as asked for in the summaryConfig
+         */
+        template<class Model>
+        void getSummaryData(data::Solution& output,
+                            const Opm::PhaseUsage& phaseUsage,
+                            const Model& physicalModel,
+                            const SummaryConfig& summaryConfig)
+        {
+            //Get shorthands for water, oil, gas
+            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
+            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
+            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
+
+#warning "TODO: fluid in place"
+#if 0
+#warning "TODO"
+            const int numFip = 0;
+
+            /**
+             * Now process all of the summary config files
+             */
+            // Water in place
+            if (aqua_active && hasFRBKeyword(summaryConfig, "WIP")) {
+#warning "TODO"
+                const std::vector<double> wip(numFip, 0.0);
+                output.insert("WIP",
+                              Opm::UnitSystem::measure::volume,
+                              wip,
+                              data::TargetType::SUMMARY );
+            }
+            if (liquid_active) {
+#warning "TODO"
+                const std::vector<double> oipl(numFip, 0.0);
+                const std::vector<double> oipg(numFip, 0.0);
+                const std::vector<double> oip(numFip, 0.0);
+
+                //Oil in place (liquid phase only)
+                if (hasFRBKeyword(summaryConfig, "OIPL")) {
+                    output.insert("OIPL",
+                                  Opm::UnitSystem::measure::volume,
+                                  oipl,
+                                  data::TargetType::SUMMARY );
+                }
+                //Oil in place (gas phase only)
+                if (hasFRBKeyword(summaryConfig, "OIPG")) {
+                    output.insert("OIPG",
+                                  Opm::UnitSystem::measure::volume,
+                                  oipg,
+                                  data::TargetType::SUMMARY );
+                }
+                // Oil in place (in liquid and gas phases)
+                if (hasFRBKeyword(summaryConfig, "OIP")) {
+                    output.insert("OIP",
+                                  Opm::UnitSystem::measure::volume,
+                                  oip,
+                                  data::TargetType::SUMMARY );
+                }
+            }
+            if (vapour_active) {
+#warning "TODO"
+                const std::vector<double> gipl(numFip, 0.0);
+                const std::vector<double> gipg(numFip, 0.0);
+                const std::vector<double> gip(numFip, 0.0);
+
+                // Gas in place (gas phase only)
+                if (hasFRBKeyword(summaryConfig, "GIPG")) {
+                    output.insert("GIPG",
+                                  Opm::UnitSystem::measure::volume,
+                                  gipg,
+                                  data::TargetType::SUMMARY );
+                }
+                // Gas in place (liquid phase only)
+                if (hasFRBKeyword(summaryConfig, "GIPL")) {
+                    output.insert("GIPL",
+                                  Opm::UnitSystem::measure::volume,
+                                  gipl,
+                                  data::TargetType::SUMMARY );
+                }
+                // Gas in place (in both liquid and gas phases)
+                if (hasFRBKeyword(summaryConfig, "GIP")) {
+                    output.insert("GIP",
+                                  Opm::UnitSystem::measure::volume,
+                                  gip,
+                                  data::TargetType::SUMMARY );
+                }
+            }
+            // Cell pore volume in reservoir conditions
+            if (hasFRBKeyword(summaryConfig, "RPV")) {
+                const std::vector<double> pv(numFip, 0.0);
+                output.insert("RPV",
+                              Opm::UnitSystem::measure::volume,
+                              pv,
+                              data::TargetType::SUMMARY );
+            }
+            // Pressure averaged value (hydrocarbon pore volume weighted)
+            if (summaryConfig.hasKeyword("FPRH") || summaryConfig.hasKeyword("RPRH")) {
+                const std::vector<double> prh(numFip, 0.0);
+                output.insert("PRH",
+                              Opm::UnitSystem::measure::pressure,
+                              prh,
+                              data::TargetType::SUMMARY );
+            }
+#endif
+        }
     }
-
-
-
 
     template<class Model>
     inline void
@@ -538,10 +654,56 @@ namespace Opm
                   const Model& physicalModel,
                   bool substep)
     {
+        data::Solution cellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
+        const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
-        Opm::data::Solution sol = detail::getOutputDataEbos( phaseUsage_, physicalModel, restartConfig, reportStepNum );
-        writeTimeStepWithCellProperties(timer, localState, localWellState, sol, substep);
+        bool logMessages = output_ && parallelOutput_->isIORank();
+
+        if( output_ && !parallelOutput_->isParallel() )
+        {
+            //detail::getRestartData( cellData, phaseUsage_, physicalModel,
+            //                        restartConfig, reportStepNum, logMessages );
+            detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
+        }
+        else
+        {
+            if ( logMessages )
+            {
+                std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
+                std::vector<const char*> keywords =
+                    { "WIP", "OIPL", "OIPG", "OIP", "GIPG", "GIPL", "GIP",
+                      "RPV", "FRPH", "RPRH"};
+
+                std::ostringstream str;
+                str << "Output of restart/summary config not supported in parallel. Requested keywords were ";
+                std::size_t no_kw = 0;
+
+                auto func = [&] (const char* kw)
+                    {
+                        if ( detail::hasFRBKeyword(summaryConfig, kw) )
+                        {
+                            str << kw << " ";
+                            ++ no_kw;
+                        }
+                    };
+
+                std::for_each(keywords.begin(), keywords.end(), func);
+
+                for (auto& keyValue : rstKeywords)
+                {
+                        str << keyValue.first << " ";
+                        ++ no_kw;
+                }
+
+                if ( no_kw )
+                {
+                    Opm::OpmLog::warning("Unhandled ouput request", str.str());
+                }
+            }
+        }
+
+        writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
     }
 }
 #endif

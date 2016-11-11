@@ -152,7 +152,7 @@ namespace Opm
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
             asImpl().createSimulator();
-
+            
             // Run.
             auto ret =  asImpl().runSimulator();
 
@@ -229,6 +229,7 @@ namespace Opm
         // distributeData()
         boost::any parallel_information_;
         // setupOutputWriter()
+        std::unique_ptr<EclipseWriter> eclipse_writer_;
         std::unique_ptr<OutputWriter> output_writer_;
         // setupLinearSolver
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
@@ -387,12 +388,12 @@ namespace Opm
 
 
 
-        // Setup OpmLog backend with output_dir.
+        // Setup OpmLog backend with output_dir. 
         void setupLogging()
         {
             std::string deck_filename = param_.get<std::string>("deck_filename");
             // create logFile
-            using boost::filesystem::path;
+            using boost::filesystem::path; 
             path fpath(deck_filename);
             std::string baseName;
             std::ostringstream debugFileStream;
@@ -755,9 +756,9 @@ namespace Opm
             if( output && output_ecl && output_cout_)
             {
                 const EclipseGrid& inputGrid = eclipse_state_->getInputGrid();
-                EclipseWriter writer(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid ));
-                writer.writeInitAndEgrid(geoprops_->simProps(grid),
-                                         geoprops_->nonCartesianConnections());
+                eclipse_writer_.reset(new EclipseWriter(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid )));
+                eclipse_writer_->writeInitAndEgrid(geoprops_->simProps(grid),
+                                                  geoprops_->nonCartesianConnections());
             }
         }
 
@@ -773,6 +774,7 @@ namespace Opm
             output_writer_.reset(new OutputWriter(grid_init_->grid(),
                                                   param_,
                                                   *eclipse_state_,
+                                                  std::move(eclipse_writer_),
                                                   Opm::phaseUsageFromDeck(*deck_),
                                                   fluidprops_->permeability()));
         }
