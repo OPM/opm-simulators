@@ -152,7 +152,6 @@ namespace Opm
         // This will be used to traverse the bottom nodes.
         std::vector<WellNode*> leaf_nodes_;
 
-        bool just_update_well_targets_;
         bool having_vrep_groups_;
 
 

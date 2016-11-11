@@ -66,7 +66,6 @@ namespace Opm
                                              const InjectionSpecification& inje_spec,
                                              const PhaseUsage& phase_usage)
         : parent_(NULL),
-          should_update_well_targets_(false),
           individual_control_(true), // always begin with individual control
           efficiency_factor_(efficiency_factor),
           name_(myname),
@@ -1144,7 +1143,7 @@ namespace Opm
 
         if (group_control_index_ < 0) {
             append_well_controls(RESERVOIR_RATE, ntarget, invalid_alq, invalid_vfp, &distr[0], self_index_, wells_);
-            // TODO: basically, on group control index is not enough eventually. There can be more than one sources for the
+            // TODO: basically, one group control index is not enough eventually. There can be more than one sources for the
             // group control
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
             // it should only apply for nodes with GRUP injeciton control

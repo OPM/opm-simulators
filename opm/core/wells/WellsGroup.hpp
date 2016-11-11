@@ -258,9 +258,6 @@ namespace Opm
 
         WellsGroupInterface* parent_;
 
-        // when some well (mabye group also later), change status from group control
-        // to individual control, or the other way, the targets for the wells in the group need to be redistributed.
-        bool should_update_well_targets_;
         // Whether well is running under the group control target.
         // Current only consider one level of control.
         // So not putting it in the WellsGroupInterface yet.
