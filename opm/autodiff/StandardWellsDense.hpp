@@ -1502,7 +1502,8 @@ namespace Opm {
                         currentControlIdx += wells().comp_frac[np*wellIdx + i] * i;
                     }
 
-                    if (wellVolumeFractionScaled(wellIdx,currentControlIdx) == 0) {
+                    const double eps = 1e-6;
+                    if (wellVolumeFractionScaled(wellIdx,currentControlIdx) < eps) {
                         return qs;
                     }
                     return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx,currentControlIdx));

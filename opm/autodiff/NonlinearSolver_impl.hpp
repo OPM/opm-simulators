@@ -248,7 +248,7 @@ namespace Opm
             stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
         }
 
-        oscillate = (oscillatePhase > 1);
+        oscillate = (oscillatePhase > 0);
     }
 
 
