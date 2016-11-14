@@ -52,6 +52,7 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+    typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
 
     typedef WellStateFullyImplicitBlackoilDense WellState;
@@ -248,16 +249,30 @@ public:
 
             auto solver = createSolver(well_model);
 
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+
+                // calculate Intensive Quantities
+                const auto& gridManager = ebosSimulator_.gridManager();
+                const auto& gridView = gridManager.gridView();
+                auto elemIt = gridView.template begin<0>();
+                auto elemEndIt = gridView.template end<0>();
+                ElementContext elemCtx(ebosSimulator_);
+                for (; elemIt != elemEndIt; ++ elemIt) {
+                    // this is convenient, but slightly inefficient: one only needs to update
+                    // the primary intensive quantities
+                    elemCtx.updateAll(*elemIt);
+                }
+
+                // TODO:: fiz seg_fault
+                //output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+            }
+
             // Compute orignal FIP;
-            if (!timer.initialStep() && !ooip_computed) {
+            if (!ooip_computed) {
                 OOIP = solver->computeFluidInPlace(fipnum);
                 FIPUnitConvert(eclState().getUnits(), OOIP);
                 ooip_computed = true;
-            }
-
-            // write the inital state at the report stage
-            if (timer.initialStep()) {
-                //output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
             }
 
             if( terminal_output_ )
