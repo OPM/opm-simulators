@@ -532,11 +532,13 @@ namespace Opm {
             const int nc = numCells(grid_);
 
             for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
-                double dp = dx[cell_idx][flowPhaseToEbosCompIdx(0)];
+                const double& dp = dx[cell_idx][flowPhaseToEbosCompIdx(0)];
                 //reservoir_state.pressure()[cell_idx] -= dp;
                 double& p = reservoir_state.pressure()[cell_idx];
-                p -= dp;
-                p = std::max(p, 1e5);
+                const double& dp_rel_max = dpMaxRel();
+                const int sign_dp = dp > 0 ? 1: -1;
+                p -= sign_dp * std::min(std::abs(dp), std::abs(p)*dp_rel_max);
+                p = std::max(p, 0.0);
 
                 // Saturation updates.
                 const double dsw = active_[Water] ? dx[cell_idx][flowPhaseToEbosCompIdx(1)] : 0.0;
@@ -623,7 +625,7 @@ namespace Opm {
                         reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
                         sg = 0;
                         so = 1.0 - sw - sg;
-                        double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                         double& rs = reservoir_state.gasoilratio()[cell_idx];
                         rs = rsSat*(1-epsilon);
                     } else if (so <= 0.0 && has_vapoil_) {
@@ -632,7 +634,7 @@ namespace Opm {
                         sg = 1.0 - sw - so;
                         double& rv = reservoir_state.rv()[cell_idx];
                         // use gas pressure?
-                        double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        const double& rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                         rv = rvSat*(1-epsilon);
                     }
                     break;
@@ -650,7 +652,7 @@ namespace Opm {
 
 
 
-                    double rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                     if (rs > ( rsSat * (1+epsilon) ) ) {
                         reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
                         sg = epsilon;
@@ -668,7 +670,7 @@ namespace Opm {
                         //std::cout << "watonly rv -> sg" << cell_idx << std::endl;
                         break;
                     }
-                    double rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                    const double& rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                     if (rv > rvSat * (1+epsilon) ) {
                         reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
                         so = epsilon;
