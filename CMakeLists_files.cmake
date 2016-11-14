@@ -126,6 +126,7 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
+  examples/flow_ebos.cpp
   examples/flow_legacy.cpp
   examples/flow_sequential.cpp
   examples/flow_solvent.cpp
