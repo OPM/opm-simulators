@@ -195,7 +195,7 @@ namespace Opm {
             // compute global sum of number of cells
             global_nc_ = grid_.comm().sum( global_nc_ );
 
-            if( ! istlSolver_ )
+            if (!istlSolver_)
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
             }
@@ -205,14 +205,14 @@ namespace Opm {
         isParallel() const
         {
     #if HAVE_MPI
-            if ( linsolver_.parallelInformation().type() !=
+            if ( istlSolver().parallelInformation().type() !=
                  typeid(ParallelISTLInformation) )
             {
                 return false;
             }
             else
             {
-                const auto& comm =boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation()).communicator();
+                const auto& comm =boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation()).communicator();
                 return  comm.size() > 1;
             }
     #else
@@ -1069,7 +1069,7 @@ namespace Opm {
 #if HAVE_MPI
                 // mask[c] is 1 if we need to compute something in parallel
                 const auto & pinfo =
-                        boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+                        boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation());
                 const auto& mask = pinfo.getOwnerMask();
                 auto comm = pinfo.communicator();
                 // Compute the global dims value and resize values accordingly.
@@ -1097,8 +1097,8 @@ namespace Opm {
                     }
                 }
 
-                hcpv = V::Zero(dims);
-                pres = V::Zero(dims);
+                hcpv = std::vector<double>(dims, 0.0);
+                pres = std::vector<double>(dims, 0.0);
 
                 for (int c = 0; c < nc; ++c) {
                     const int region = fipnum[c] - 1;
