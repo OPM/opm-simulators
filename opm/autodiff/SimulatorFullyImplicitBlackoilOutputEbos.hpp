@@ -538,6 +538,7 @@ namespace Opm
                     || summaryConfig.hasKeyword(block_kw);
         }
 
+
         /**
          * Returns the data as asked for in the summaryConfig
          */
@@ -545,35 +546,34 @@ namespace Opm
         void getSummaryData(data::Solution& output,
                             const Opm::PhaseUsage& phaseUsage,
                             const Model& physicalModel,
-                            const SummaryConfig& summaryConfig)
-        {
+                            const SummaryConfig& summaryConfig) {
+
+            const typename Model::FIPData& fip = physicalModel.getFIPData();
+
             //Get shorthands for water, oil, gas
             const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
             const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
             const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
-
-#warning "TODO: fluid in place"
-#if 0
-#warning "TODO"
-            const int numFip = 0;
 
             /**
              * Now process all of the summary config files
              */
             // Water in place
             if (aqua_active && hasFRBKeyword(summaryConfig, "WIP")) {
-#warning "TODO"
-                const std::vector<double> wip(numFip, 0.0);
                 output.insert("WIP",
                               Opm::UnitSystem::measure::volume,
-                              wip,
+                              fip.fip[Model::FIPData::FIP_AQUA],
                               data::TargetType::SUMMARY );
             }
             if (liquid_active) {
-#warning "TODO"
-                const std::vector<double> oipl(numFip, 0.0);
-                const std::vector<double> oipg(numFip, 0.0);
-                const std::vector<double> oip(numFip, 0.0);
+                const std::vector<double>& oipl = fip.fip[Model::FIPData::FIP_LIQUID];
+                const int size = oipl.size();
+
+                const std::vector<double>& oipg = vapour_active ? fip.fip[Model::FIPData::FIP_VAPORIZED_OIL] : std::vector<double>(size,0.0);
+                std::vector<double> oip = oipl;
+                if (vapour_active) {
+                    oip.insert(oip.end(), oipg.begin(), oipg.end());
+                }
 
                 //Oil in place (liquid phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPL")) {
@@ -582,6 +582,7 @@ namespace Opm
                                   oipl,
                                   data::TargetType::SUMMARY );
                 }
+
                 //Oil in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPG")) {
                     output.insert("OIPG",
@@ -596,12 +597,19 @@ namespace Opm
                                   oip,
                                   data::TargetType::SUMMARY );
                 }
+
+
+
             }
             if (vapour_active) {
-#warning "TODO"
-                const std::vector<double> gipl(numFip, 0.0);
-                const std::vector<double> gipg(numFip, 0.0);
-                const std::vector<double> gip(numFip, 0.0);
+                const std::vector<double>& gipg = fip.fip[Model::FIPData::FIP_VAPOUR];
+                const int size = gipg.size();
+
+                const std::vector<double>& gipl= liquid_active ? fip.fip[Model::FIPData::FIP_DISSOLVED_GAS] : std::vector<double>(size,0.0);
+                std::vector<double> gip = gipg;
+                if (liquid_active) {
+                    gip.insert(gip.end(), gipl.begin(), gipl.end());
+                }
 
                 // Gas in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "GIPG")) {
@@ -627,23 +635,24 @@ namespace Opm
             }
             // Cell pore volume in reservoir conditions
             if (hasFRBKeyword(summaryConfig, "RPV")) {
-                const std::vector<double> pv(numFip, 0.0);
                 output.insert("RPV",
                               Opm::UnitSystem::measure::volume,
-                              pv,
+                              fip.fip[Model::FIPData::FIP_PV],
                               data::TargetType::SUMMARY );
             }
             // Pressure averaged value (hydrocarbon pore volume weighted)
             if (summaryConfig.hasKeyword("FPRH") || summaryConfig.hasKeyword("RPRH")) {
-                const std::vector<double> prh(numFip, 0.0);
                 output.insert("PRH",
                               Opm::UnitSystem::measure::pressure,
-                              prh,
+                              fip.fip[Model::FIPData::FIP_WEIGHTED_PRESSURE],
                               data::TargetType::SUMMARY );
             }
-#endif
         }
+
     }
+
+
+
 
     template<class Model>
     inline void

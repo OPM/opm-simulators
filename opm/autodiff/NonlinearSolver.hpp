@@ -143,6 +143,12 @@ namespace Opm {
             return model_->computeFluidInPlace(x, fipnum);
         }
 
+        std::vector<std::vector<double>>
+        computeFluidInPlace(const std::vector<int>& fipnum) const
+        {
+            return model_->computeFluidInPlace(fipnum);
+        }
+
 
         /// Reference to physical model.
         const PhysicalModel& model() const;
