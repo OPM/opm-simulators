@@ -23,7 +23,9 @@
 #include <opm/core/linalg/LinearSolverPetsc.hpp>
 #include <unordered_map>
 #define PETSC_CLANGUAGE_CXX 1 //enable CHKERRXX macro.
+#include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <petsc.h>
+#include <opm/common/utility/platform_dependent/reenable_warnings.h>
 #include <opm/common/ErrorMacros.hpp>
 
 namespace Opm
@@ -180,11 +182,11 @@ namespace{
         VecRestoreArray( v, &vec );
     }
 
-    Mat to_petsc_mat( const int size, const int nonzeros,
+    Mat to_petsc_mat( const int size, const int /* nonzeros */,
             const int* ia, const int* ja, const double* sa ) {
 
         Mat A;
-        auto err = MatCreateSeqAIJWithArrays( PETSC_COMM_WORLD, size, size, (int*)ia, (int*)ja, (double*)sa, &A );
+        auto err = MatCreateSeqAIJWithArrays( PETSC_COMM_WORLD, size, size, const_cast<int*>(ia), const_cast<int*>(ja), (double*)sa, &A );
         CHKERRXX( err );
         return A;
     }
