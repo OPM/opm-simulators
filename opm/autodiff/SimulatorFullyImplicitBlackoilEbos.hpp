@@ -633,7 +633,7 @@ protected:
 
     std::vector<double> FIPTotals(const std::vector<std::vector<double>>& fip, const ReservoirState& state)
     {
-        std::vector<double> totals(6,0.0);
+        std::vector<double> totals(7,0.0);
         for (int i = 0; i < 5; ++i) {
             for (size_t reg = 0; reg < fip.size(); ++reg) {
                 totals[i] += fip[reg][i];
