@@ -23,9 +23,10 @@
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
-
 #include <opm/autodiff/FlowMain.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
+
+#include <ewoms/version.hh>
 
 namespace Opm
 {
@@ -39,6 +40,31 @@ namespace Opm
 
         typedef typename TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
+
+        // Print startup message if on output rank.
+        void printStartupMessage()
+        {
+            if (output_cout_) {
+                const int lineLen = 70;
+                const std::string version = moduleVersionName();
+                const std::string banner = "This is flow_ebos (version "+version+")";
+                const std::string ewomsVersion = "(eWoms version: " + Ewoms::versionString() + ")";
+                const int bannerPreLen = (lineLen - 2 - banner.size())/2;
+                const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
+                const int eVPreLen = (lineLen - 2 - ewomsVersion.size())/2;
+                const int eVPostLen = eVPreLen + (lineLen - 2 - ewomsVersion.size())%2;
+                std::cout << "**********************************************************************\n";
+                std::cout << "*                                                                    *\n";
+                std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";
+                std::cout << "*" << std::string(eVPreLen, ' ') << ewomsVersion << std::string(eVPostLen, ' ') << "*\n";
+                std::cout << "*                                                                    *\n";
+                std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
+                std::cout << "*            and is part of OPM. For more information see:           *\n";
+                std::cout << "*                       http://opm-project.org                       *\n";
+                std::cout << "*                                                                    *\n";
+                std::cout << "**********************************************************************\n\n";
+            }
+        }
 
         // Parser the input and creates the Deck and EclipseState objects.
         // Writes to:
