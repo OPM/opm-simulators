@@ -1645,6 +1645,7 @@ typedef Eigen::Array<double,
         const double tol_mb    = param_.tolerance_mb_;
         const double tol_cnv   = param_.tolerance_cnv_;
         const double tol_wells = param_.tolerance_wells_;
+        const double tol_well_control = param_.tolerance_well_control_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
@@ -1698,7 +1699,7 @@ typedef Eigen::Array<double,
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
-        converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
+        converged_Well = converged_Well && (residualWell < tol_well_control);
         const bool converged = converged_MB && converged_CNV && converged_Well;
 
         // Residual in Pascal can have high values and still be ok.
@@ -1718,6 +1719,7 @@ typedef Eigen::Array<double,
                 for (int idx = 0; idx < np; ++idx) {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
+                msg += "  WELL-CONT";
                 // std::cout << "  WELL-CONT ";
                 OpmLog::note(msg);
             }
@@ -1734,6 +1736,7 @@ typedef Eigen::Array<double,
             for (int idx = 0; idx < np; ++idx) {
                 ss << std::setw(11) << well_flux_residual[idx];
             }
+            ss << std::setw(11) << residualWell;
             // std::cout << std::setw(11) << residualWell;
             ss.precision(oprec);
             ss.flags(oflags);
@@ -1781,6 +1784,7 @@ typedef Eigen::Array<double,
     getWellConvergence(const int iteration)
     {
         const double tol_wells = param_.tolerance_wells_;
+        const double tol_well_control = param_.tolerance_well_control_;
 
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
@@ -1815,7 +1819,7 @@ typedef Eigen::Array<double,
 
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
-        converged_Well = converged_Well && (residualWell < Opm::unit::barsa);
+        converged_Well = converged_Well && (residualWell < tol_well_control);
         const bool converged = converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
@@ -1845,6 +1849,7 @@ typedef Eigen::Array<double,
                 for (int idx = 0; idx < np; ++idx) {
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
+                msg += "  WELL-CONT";
                 OpmLog::note(msg);
             }
             std::ostringstream ss;
@@ -1854,6 +1859,7 @@ typedef Eigen::Array<double,
             for (int idx = 0; idx < np; ++idx) {
                 ss << std::setw(11) << well_flux_residual[idx];
             }
+            ss << std::setw(11) << residualWell;
             ss.precision(oprec);
             ss.flags(oflags);
             OpmLog::note(ss.str());
