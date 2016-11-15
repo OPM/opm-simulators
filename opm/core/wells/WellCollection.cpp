@@ -290,6 +290,10 @@ namespace Opm
 
     void WellCollection::updateWellTargets(const std::vector<double> well_rates)
     {
+        if ( !needUpdateWellTargets() ) {
+            return;
+        }
+
         // TODO: currently, we only handle the level of the well groups for the moment, i.e. the level just above wells
         // We believe the relations between groups are similar to the relations between different wells inside the same group.
         // While there will be somre more complication invloved for sure.
