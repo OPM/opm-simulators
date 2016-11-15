@@ -44,6 +44,9 @@ namespace Opm
         double tolerance_cnv_;
         /// Well convergence tolerance.
         double tolerance_wells_;
+        /// Tolerance for the well control equations
+        //  TODO: it might need to distinguish between rate control and pressure control later
+        double tolerance_well_control_;
 
         /// Solve well equation initially
         bool solve_welleq_initially_;

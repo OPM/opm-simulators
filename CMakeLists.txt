@@ -149,10 +149,7 @@ if (HAVE_OPM_DATA)
  endif()
 
  # create a symbolic link from flow to flow_legacy
+message("create symlink")
 ADD_CUSTOM_TARGET(flow ALL
-	COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_legacy" "${CMAKE_BINARY_DIR}/bin/flow")
-install(
-	FILES "${CMAKE_BINARY_DIR}/bin/flow"
-	DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-	)
+	                COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_legacy" "${CMAKE_BINARY_DIR}/bin/flow")
 
