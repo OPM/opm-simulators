@@ -244,7 +244,14 @@ namespace Opm
                                   Opm::UgGridHelpers::cell2Faces(grid),
                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
                                   permeability,
-                                  dummy_list_econ_limited);
+                                  dummy_list_econ_limited
+                                  // We need to pass the optionaly arguments
+                                  // as we get the following error otherwise
+                                  // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
+                                  // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructo
+                                  , false,
+                                  std::vector<double>(),
+                                  std::unordered_set<std::string>());
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate); //Resize for restart step
@@ -262,15 +269,14 @@ namespace Opm
 
     namespace detail {
         template<class Model>
-        Opm::data::Solution getOutputDataEbos(
-                const Opm::PhaseUsage& phaseUsage,
-                const Model& model,
-                const RestartConfig& restartConfig,
-                const int reportStepNum)
-        {
+    void getOutputDataEbos(data::Solution& output,
+                           const Opm::PhaseUsage& phaseUsage,
+                           const Model& model,
+                           const RestartConfig& restartConfig,
+                           const int reportStepNum,
+                           const bool log)
+    {
             typedef typename Model::FluidSystem FluidSystem;
-
-            Opm::data::Solution sol;
 
             //Get the value of each of the keys
             std::map<std::string, int> outKeywords = restartConfig.getRestartKeywords(reportStepNum);
@@ -354,7 +360,7 @@ namespace Opm
              * Oil Pressures
              */
             outKeywords["PRESSURE"] = 0;
-            sol.insert("PRESSURE",
+            output.insert("PRESSURE",
                        UnitSystem::measure::pressure,
                        std::move(pressureOil),
                        data::TargetType::RESTART_SOLUTION);
@@ -363,7 +369,7 @@ namespace Opm
              * Temperatures
              */
             outKeywords["TEMP"] = 0;
-            sol.insert("TEMP",
+            output.insert("TEMP",
                        UnitSystem::measure::temperature,
                        std::move(temperature),
                        data::TargetType::RESTART_SOLUTION);
@@ -373,11 +379,11 @@ namespace Opm
              */
             outKeywords["SWAT"] = 0;
             outKeywords["SGAS"] = 0;
-            sol.insert("SWAT",
+            output.insert("SWAT",
                        UnitSystem::measure::identity,
                        std::move(satWater),
                        data::TargetType::RESTART_SOLUTION);
-            sol.insert("SGAS",
+            output.insert("SGAS",
                        UnitSystem::measure::identity,
                        std::move(satGas),
                        data::TargetType::RESTART_SOLUTION);
@@ -387,11 +393,11 @@ namespace Opm
              */
             outKeywords["RS"] = 0;
             outKeywords["RV"] = 0;
-            sol.insert("RS",
+            output.insert("RS",
                        UnitSystem::measure::gas_oil_ratio,
                        std::move(Rs),
                        data::TargetType::RESTART_SOLUTION);
-            sol.insert("RV",
+            output.insert("RV",
                        UnitSystem::measure::oil_gas_ratio,
                        std::move(Rv),
                        data::TargetType::RESTART_SOLUTION);
@@ -401,21 +407,21 @@ namespace Opm
              */
             if (outKeywords["BW"] > 0) {
                 outKeywords["BW"] = 0;
-                sol.insert("BW",
+                output.insert("BW",
                            Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
                            std::move(bWater),
                            data::TargetType::RESTART_AUXILLARY);
             }
             if (outKeywords["BO"]  > 0) {
                 outKeywords["BO"] = 0;
-                sol.insert("BO",
+                output.insert("BO",
                            Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
                            std::move(bOil),
                            data::TargetType::RESTART_AUXILLARY);
             }
             if (outKeywords["BG"] > 0) {
                 outKeywords["BG"] = 0;
-                sol.insert("BG",
+                output.insert("BG",
                            Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
                            std::move(bGas),
                            data::TargetType::RESTART_AUXILLARY);
@@ -427,15 +433,15 @@ namespace Opm
             if (outKeywords["DEN"] > 0) {
                 outKeywords["DEN"] = 0;
 
-                sol.insert("WAT_DEN",
+                output.insert("WAT_DEN",
                            Opm::UnitSystem::measure::density,
                            std::move(rhoWater),
                            data::TargetType::RESTART_AUXILLARY);
-                sol.insert("OIL_DEN",
+                output.insert("OIL_DEN",
                            Opm::UnitSystem::measure::density,
                            std::move(rhoOil),
                            data::TargetType::RESTART_AUXILLARY);
-                sol.insert("GAS_DEN",
+                output.insert("GAS_DEN",
                            Opm::UnitSystem::measure::density,
                            std::move(rhoGas),
                            data::TargetType::RESTART_AUXILLARY);
@@ -446,15 +452,15 @@ namespace Opm
              */
             if (outKeywords["VISC"] > 0) {
                 outKeywords["VISC"] = 0;
-                sol.insert("WAT_VISC",
+                output.insert("WAT_VISC",
                            Opm::UnitSystem::measure::viscosity,
                            std::move(muWater),
                            data::TargetType::RESTART_AUXILLARY);
-                sol.insert("OIL_VISC",
+                output.insert("OIL_VISC",
                            Opm::UnitSystem::measure::viscosity,
                            std::move(muOil),
                            data::TargetType::RESTART_AUXILLARY);
-                sol.insert("GAS_VISC",
+                output.insert("GAS_VISC",
                            Opm::UnitSystem::measure::viscosity,
                            std::move(muGas),
                            data::TargetType::RESTART_AUXILLARY);
@@ -465,21 +471,21 @@ namespace Opm
              */
             if (outKeywords["KRW"] > 0) {
                 outKeywords["KRW"] = 0;
-                sol.insert("WATKR",
+                output.insert("WATKR",
                            Opm::UnitSystem::measure::identity,
                            std::move(krWater),
                            data::TargetType::RESTART_AUXILLARY);
             }
             if (outKeywords["KRO"] > 0) {
                 outKeywords["KRO"] = 0;
-                sol.insert("OILKR",
+                output.insert("OILKR",
                            Opm::UnitSystem::measure::identity,
                            std::move(krOil),
                            data::TargetType::RESTART_AUXILLARY);
             }
             if (outKeywords["KRG"] > 0) {
                 outKeywords["KRG"] = 0;
-                sol.insert("GASKR",
+                output.insert("GASKR",
                            Opm::UnitSystem::measure::identity,
                            std::move(krGas),
                            data::TargetType::RESTART_AUXILLARY);
@@ -490,14 +496,14 @@ namespace Opm
              */
             if (outKeywords["RSSAT"] > 0) {
                 outKeywords["RSSAT"] = 0;
-                sol.insert("RSSAT",
+                output.insert("RSSAT",
                            Opm::UnitSystem::measure::gas_oil_ratio,
                            std::move(RsSat),
                            data::TargetType::RESTART_AUXILLARY);
             }
             if (outKeywords["RVSAT"] > 0) {
                 outKeywords["RVSAT"] = 0;
-                sol.insert("RVSAT",
+                output.insert("RVSAT",
                            Opm::UnitSystem::measure::oil_gas_ratio,
                            std::move(RvSat),
                            data::TargetType::RESTART_AUXILLARY);
@@ -523,7 +529,6 @@ namespace Opm
                 }
             }
 
-            return sol;
         }
 
         /**
@@ -671,8 +676,9 @@ namespace Opm
 
         if( output_ && !parallelOutput_->isParallel() )
         {
-            //detail::getRestartData( cellData, phaseUsage_, physicalModel,
-            //                        restartConfig, reportStepNum, logMessages );
+
+            detail::getOutputDataEbos( cellData, phaseUsage_, physicalModel,
+                                    restartConfig, reportStepNum, logMessages );
             detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
         }
         else
