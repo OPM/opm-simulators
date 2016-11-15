@@ -830,7 +830,7 @@ namespace Opm
 
                 if ( no_kw )
                 {
-                    Opm::OpmLog::warning("Unhandled ouput request", str.str());
+                    Opm::OpmLog::warning("Unhandled output request in parallel", str.str());
                 }
             }
         }        
