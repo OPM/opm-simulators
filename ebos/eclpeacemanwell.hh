@@ -145,6 +145,9 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         {
             const auto& fs = intQuants.fluidState();
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
                 pressure[phaseIdx] = fs.pressure(phaseIdx);
                 density[phaseIdx] = fs.density(phaseIdx);
                 mobility[phaseIdx] = intQuants.mobility(phaseIdx);
@@ -418,6 +421,9 @@ public:
                 *std::max<Scalar>(1e5, actualBottomHolePressure_);
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_ + eps, *dofVariables_[gridDofIdx]);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     q[compIdx] += modelRate[compIdx];
@@ -426,6 +432,9 @@ public:
             // then, we subtract the source rates for a undisturbed well.
             computeVolumetricDofRates_(resvRates, actualBottomHolePressure_, *dofVariables_[gridDofIdx]);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
                 modelRate.setVolumetricRate(fluidState, phaseIdx, resvRates[phaseIdx]);
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                     q[compIdx] -= modelRate[compIdx];
@@ -1114,6 +1123,9 @@ public:
         RateVector modelRate;
         const auto& intQuants = context.intensiveQuantities(dofIdx, timeIdx);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
             modelRate.setVolumetricRate(intQuants.fluidState(), phaseIdx, volumetricRates[phaseIdx]);
             for (unsigned eqIdx = 0; eqIdx < q.size(); ++eqIdx)
                 q[eqIdx] += modelRate[eqIdx];
@@ -1176,6 +1188,9 @@ protected:
         Scalar g = simulator_.problem().gravity()[dimWorld - 1];
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
             // well model due to Peaceman; see Chen et al., p. 449
 
             // phase pressure in grid cell
@@ -1198,8 +1213,12 @@ protected:
                 // there should only be injected phase present, so its mobility should be
                 // 1/viscosity...
                 lambda = 0.0;
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                    lambda += DofVarsToolbox::template decay<DofEval>(dofVars.mobility[phaseIdx]);
+                for (unsigned phase2Idx = 0; phase2Idx < numPhases; ++phase2Idx) {
+                    if (!FluidSystem::phaseIsActive(phase2Idx))
+                        continue;
+
+                    lambda += DofVarsToolbox::template decay<DofEval>(dofVars.mobility[phase2Idx]);
+                }
             }
             else
                 OPM_THROW(std::logic_error,
@@ -1236,8 +1255,12 @@ protected:
     Eval computeWeightedRate_(const std::array<Eval, numPhases>& volRates) const
     {
         Eval result = 0;
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
             result += volRates[phaseIdx]*volumetricWeight_[phaseIdx];
+        }
         return result;
     }
 
@@ -1265,38 +1288,41 @@ protected:
         Scalar rhoWaterSurface = FluidSystem::referenceDensity(waterPhaseIdx, regionIdx);
 
         // oil
-        surfaceRates[oilPhaseIdx] =
-            // oil in gas phase
-            reservoirRate[gasPhaseIdx]
-            * Toolbox::value(dofVars.density[gasPhaseIdx])
-            * Toolbox::value(dofVars.gasMassFraction[oilCompIdx])
-            / rhoOilSurface
-            +
-            // oil in oil phase
-            reservoirRate[oilPhaseIdx]
-            * Toolbox::value(dofVars.density[oilPhaseIdx])
-            * Toolbox::value(dofVars.oilMassFraction[oilCompIdx])
-            / rhoOilSurface;
+        if (FluidSystem::phaseIsActive(oilPhaseIdx))
+            surfaceRates[oilPhaseIdx] =
+                // oil in gas phase
+                reservoirRate[gasPhaseIdx]
+                * Toolbox::value(dofVars.density[gasPhaseIdx])
+                * Toolbox::value(dofVars.gasMassFraction[oilCompIdx])
+                / rhoOilSurface
+                +
+                // oil in oil phase
+                reservoirRate[oilPhaseIdx]
+                * Toolbox::value(dofVars.density[oilPhaseIdx])
+                * Toolbox::value(dofVars.oilMassFraction[oilCompIdx])
+                / rhoOilSurface;
 
         // gas
-        surfaceRates[gasPhaseIdx] =
-            // gas in gas phase
-            reservoirRate[gasPhaseIdx]
-            * Toolbox::value(dofVars.density[gasPhaseIdx])
-            * Toolbox::value(dofVars.gasMassFraction[gasCompIdx])
-            / rhoGasSurface
-            +
-            // gas in oil phase
-            reservoirRate[oilPhaseIdx]
-            * Toolbox::value(dofVars.density[oilPhaseIdx])
-            * Toolbox::value(dofVars.oilMassFraction[gasCompIdx])
-            / rhoGasSurface;
+        if (FluidSystem::phaseIsActive(gasPhaseIdx))
+            surfaceRates[gasPhaseIdx] =
+                // gas in gas phase
+                reservoirRate[gasPhaseIdx]
+                * Toolbox::value(dofVars.density[gasPhaseIdx])
+                * Toolbox::value(dofVars.gasMassFraction[gasCompIdx])
+                / rhoGasSurface
+                +
+                // gas in oil phase
+                reservoirRate[oilPhaseIdx]
+                * Toolbox::value(dofVars.density[oilPhaseIdx])
+                * Toolbox::value(dofVars.oilMassFraction[gasCompIdx])
+                / rhoGasSurface;
 
         // water
-        surfaceRates[waterPhaseIdx] =
-            reservoirRate[waterPhaseIdx]
-            * Toolbox::value(dofVars.density[waterPhaseIdx])
-            / rhoWaterSurface;
+        if (FluidSystem::phaseIsActive(waterPhaseIdx))
+            surfaceRates[waterPhaseIdx] =
+                reservoirRate[waterPhaseIdx]
+                * Toolbox::value(dofVars.density[waterPhaseIdx])
+                / rhoWaterSurface;
     }
 
     /*!
@@ -1333,6 +1359,9 @@ protected:
             computeSurfaceRates_(volumetricSurfaceRates, volumetricReservoirRates, *tmp);
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
                 overallResvRates[phaseIdx] += volumetricReservoirRates[phaseIdx];
                 overallSurfaceRates[phaseIdx] += volumetricSurfaceRates[phaseIdx];
             }
@@ -1459,8 +1488,12 @@ protected:
             std::array<BhpEval, numPhases> surfaceRates;
             computeSurfaceRates_(surfaceRates, resvRates, *dofVars);
 
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
                 totalSurfaceRates[phaseIdx] += surfaceRates[phaseIdx];
+            }
 
             resvRate += computeWeightedRate_(resvRates);
         }
@@ -1486,8 +1519,12 @@ protected:
             // fluids are produced on the surface...
             maxSurfaceRate = 0.0;
             surfaceRate = 0.0;
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
                 surfaceRate += totalSurfaceRates[phaseIdx];
+            }
 
             // don't care about the reservoir rate...
             maxResvRate = 1e30;

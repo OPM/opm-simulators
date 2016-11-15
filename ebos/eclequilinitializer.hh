@@ -126,9 +126,10 @@ public:
 
         assert( gridManager.grid().size(/*codim=*/0) == static_cast<int>(numEquilElems) );
         // initialize the boiler plate of opm-core the state structure.
+        const auto opmPhaseUsage = opmBlackoilProps.phaseUsage();
         Opm::BlackoilState opmBlackoilState(numEquilElems,
                                             /*numFaces=*/0, // we don't care here
-                                            numPhases);
+                                            opmPhaseUsage.num_phases);
 
         // do the actual computation.
         Opm::initStateEquil(equilGrid,
@@ -149,7 +150,27 @@ public:
 
             // set the phase saturations
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                Scalar S = opmBlackoilState.saturation()[equilElemIdx*numPhases + phaseIdx];
+                Scalar S;
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    S = 0.0;
+                else {
+                    unsigned opmPhasePos = 10000;
+                    switch (phaseIdx) {
+                    case oilPhaseIdx:
+                        opmPhasePos = opmPhaseUsage.phase_pos[Opm::BlackoilPhases::Liquid];
+                        break;
+
+                    case gasPhaseIdx:
+                        opmPhasePos = opmPhaseUsage.phase_pos[Opm::BlackoilPhases::Vapour];
+                        break;
+
+                    case waterPhaseIdx:
+                        opmPhasePos = opmPhaseUsage.phase_pos[Opm::BlackoilPhases::Aqua];
+                        break;
+                    }
+                    S = opmBlackoilState.saturation()[equilElemIdx*opmPhaseUsage.num_phases
+                                                      + opmPhasePos];
+                }
                 fluidState.setSaturation(phaseIdx, S);
             }
 
@@ -179,7 +200,7 @@ public:
             // water component.
             fluidState.setMoleFraction(waterPhaseIdx, waterCompIdx, 1.0);
 
-            if (gridManager.deck()->hasKeyword("DISGAS")) {
+            if (FluidSystem::enableDissolvedGas()) {
                 // for gas and oil we have to translate surface volumes to mole fractions
                 // before we can set the composition in the fluid state
                 Scalar Rs = opmBlackoilState.gasoilratio()[equilElemIdx];
@@ -197,7 +218,7 @@ public:
             }
 
             // retrieve the surface volume of vaporized gas
-            if (gridManager.deck()->hasKeyword("VAPOIL")) {
+            if (FluidSystem::enableVaporizedOil()) {
                 Scalar Rv = opmBlackoilState.rv()[equilElemIdx];
                 Scalar RvSat = FluidSystem::saturatedDissolutionFactor(fluidState, gasPhaseIdx, regionIdx);
 

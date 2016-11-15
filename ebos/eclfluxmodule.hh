@@ -102,6 +102,7 @@ protected:
 template <class TypeTag>
 class EclTransExtensiveQuantities
 {
+    typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
@@ -248,6 +249,9 @@ protected:
         Scalar distZ = zIn - zEx;
 
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+
             // check shortcut: if the mobility of the phase is zero in the interior as
             // well as the exterior DOF, we can skip looking at the phase.
             if (intQuantsIn.mobility(phaseIdx) < 1e-18 && intQuantsEx.mobility(phaseIdx) < 1e-18) {

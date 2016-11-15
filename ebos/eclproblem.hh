@@ -1069,25 +1069,26 @@ private:
         // initial condition that conserves the total mass specified by these values.
         useMassConservativeInitialCondition_ = true;
 
-        bool enableDisgas = deck->hasKeyword("DISGAS");
-        bool enableVapoil = deck->hasKeyword("VAPOIL");
-
         // make sure all required quantities are enables
-         if (!deck->hasKeyword("SWAT") ||
-             !deck->hasKeyword("SGAS"))
-             OPM_THROW(std::runtime_error,
-                      "The ECL input file requires the presence of the SWAT "
-                      "and SGAS keywords if the model is initialized explicitly");
-         if (!deck->hasKeyword("PRESSURE"))
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && !deck->hasKeyword("SWAT"))
+            OPM_THROW(std::runtime_error,
+                      "The ECL input file requires the presence of the SWAT keyword if "
+                      "the water phase is active");
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) && !deck->hasKeyword("SGAS"))
+            OPM_THROW(std::runtime_error,
+                      "The ECL input file requires the presence of the SGAS keyword if "
+                      "the gas phase is active");
+
+        if (!deck->hasKeyword("PRESSURE"))
              OPM_THROW(std::runtime_error,
                       "The ECL input file requires the presence of the PRESSURE "
                       "keyword if the model is initialized explicitly");
-         if (enableDisgas && !deck->hasKeyword("RS"))
-             OPM_THROW(std::runtime_error,
+        if (FluidSystem::enableDissolvedGas() && !deck->hasKeyword("RS"))
+            OPM_THROW(std::runtime_error,
                       "The ECL input file requires the RS keyword to be present if"
                       " dissolved gas is enabled");
-         if (enableVapoil && !deck->hasKeyword("RV"))
-             OPM_THROW(std::runtime_error,
+        if (FluidSystem::enableVaporizedOil() && !deck->hasKeyword("RV"))
+            OPM_THROW(std::runtime_error,
                       "The ECL input file requires the RV keyword to be present if"
                       " vaporized oil is enabled");
 
@@ -1095,17 +1096,28 @@ private:
 
         initialFluidStates_.resize(numDof);
 
-        const std::vector<double>& waterSaturationData =
-            deck->getKeyword("SWAT").getSIDoubleData();
-        const std::vector<double>& gasSaturationData =
-            deck->getKeyword("SGAS").getSIDoubleData();
+        const auto& cartSize = this->simulator().gridManager().cartesianDimensions();
+        size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
+
+        std::vector<double> waterSaturationData;
+        if (FluidSystem::phaseIsActive(waterPhaseIdx))
+            waterSaturationData = deck->getKeyword("SWAT").getSIDoubleData();
+        else
+            waterSaturationData.resize(numCartesianCells, 0.0);
+
+        std::vector<double> gasSaturationData;
+        if (FluidSystem::phaseIsActive(gasPhaseIdx))
+            gasSaturationData = deck->getKeyword("SGAS").getSIDoubleData();
+        else
+            gasSaturationData.resize(numCartesianCells, 0.0);
+
         const std::vector<double>& pressureData =
             deck->getKeyword("PRESSURE").getSIDoubleData();
         const std::vector<double> *rsData = 0;
-        if (enableDisgas)
+        if (FluidSystem::enableDissolvedGas())
             rsData = &deck->getKeyword("RS").getSIDoubleData();
         const std::vector<double> *rvData = 0;
-        if (enableVapoil)
+        if (FluidSystem::enableVaporizedOil())
             rvData = &deck->getKeyword("RV").getSIDoubleData();
         // initial reservoir temperature
         const std::vector<double>& tempiData =
@@ -1113,14 +1125,12 @@ private:
 
         // make sure that the size of the data arrays is correct
 #ifndef NDEBUG
-        const auto& cartSize = this->simulator().gridManager().cartesianDimensions();
-        size_t numCartesianCells = cartSize[0] * cartSize[1] * cartSize[2];
         assert(waterSaturationData.size() == numCartesianCells);
         assert(gasSaturationData.size() == numCartesianCells);
         assert(pressureData.size() == numCartesianCells);
-        if (enableDisgas)
+        if (FluidSystem::enableDissolvedGas())
             assert(rsData->size() == numCartesianCells);
-        if (enableVapoil)
+        if (FluidSystem::enableVaporizedOil())
             assert(rvData->size() == numCartesianCells);
 #endif
 
@@ -1182,7 +1192,7 @@ private:
             dofFluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1.0);
             dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0);
 
-            if (enableDisgas) {
+            if (FluidSystem::enableDissolvedGas()) {
                 Scalar RsSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, oilPhaseIdx, pvtRegionIdx);
                 Scalar RsReal = (*rsData)[cartesianDofIdx];
 
@@ -1207,7 +1217,7 @@ private:
                 dofFluidState.setMoleFraction(oilPhaseIdx, oilCompIdx, 1.0 - xoGReal);
             }
 
-            if (enableVapoil) {
+            if (FluidSystem::enableVaporizedOil()) {
                 Scalar RvSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, gasPhaseIdx, pvtRegionIdx);
                 Scalar RvReal = (*rvData)[cartesianDofIdx];
 
