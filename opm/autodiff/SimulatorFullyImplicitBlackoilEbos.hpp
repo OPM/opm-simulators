@@ -264,8 +264,9 @@ public:
                     elemCtx.updateAll(*elemIt);
                 }
 
-                // TODO:: fiz seg_fault
-                //output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+                // No per cell data is written for initial step, but will be
+                // for subsequent steps, when we have started simulating
+                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
             }
 
             // Compute orignal FIP;
