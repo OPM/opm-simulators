@@ -241,6 +241,8 @@ namespace Opm
 
         virtual void updateWellInjectionTargets(const std::vector<double>& well_rates) = 0;
 
+        virtual void setTargetUpdated(const bool flag) = 0;
+
         double efficiencyFactor() const;
 
         void setEfficiencyFactor(const double efficiency_factor);
@@ -369,6 +371,8 @@ namespace Opm
         virtual void updateWellProductionTargets(const std::vector<double>& well_rates);
 
         virtual void updateWellInjectionTargets(const std::vector<double>& well_rates);
+
+        virtual void setTargetUpdated(const bool flag);
 
         /// Whether it is a production well
         /// Should only appy for WellNode
@@ -505,11 +509,17 @@ namespace Opm
 
         int selfIndex() const;
 
+        bool targetUpdated() const;
+
+        virtual void setTargetUpdated(const bool flag);
+
     private:
         Wells* wells_;
         int self_index_;
         int group_control_index_;
         bool shut_well_;
+        // TODO: used when updating well targets
+        bool target_updated_;
     };
 
     /// Creates the WellsGroupInterface for the given well

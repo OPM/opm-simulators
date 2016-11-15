@@ -792,6 +792,7 @@ namespace Opm
             if (!children_[i]->individualControl() && children_[i]->isProducer()) {
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
                 children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate / my_guide_rate) * rate_for_group_control, true);
+                children_[i]->setTargetUpdated(true);
             }
         }
     }
@@ -800,6 +801,11 @@ namespace Opm
     {
         // NOT doing anything yet.
         // Will finish it when having an examples with more than one injection wells within same injection group.
+    }
+
+    void WellsGroup::setTargetUpdated(const bool /* flag */)
+    {
+        // do nothing
     }
 
 
@@ -833,7 +839,8 @@ namespace Opm
           wells_(0),
           self_index_(-1),
           group_control_index_(-1),
-          shut_well_(true) // This is default for now
+          shut_well_(true), // This is default for now
+          target_updated_(false) // This is default for now, not sure whether to use the default value
     {
     }
 
@@ -1508,6 +1515,16 @@ namespace Opm
 
     int WellNode::selfIndex() const {
         return self_index_;
+    }
+
+
+    bool WellNode::targetUpdated() const {
+        return target_updated_;
+    }
+
+
+    void WellNode::setTargetUpdated(const bool flag) {
+        target_updated_ = flag;
     }
 
 }

@@ -294,13 +294,18 @@ namespace Opm
             return;
         }
 
+        // set the target_updated to be false
+        for (WellNode* well_node : leaf_nodes_) {
+            well_node->setTargetUpdated(false);
+        }
+
         // TODO: currently, we only handle the level of the well groups for the moment, i.e. the level just above wells
         // We believe the relations between groups are similar to the relations between different wells inside the same group.
         // While there will be somre more complication invloved for sure.
         for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
             // find a node needs to update targets, then update targets for all the wellls inside the group.
             // if (leaf_nodes_[i]->shouldUpdateWellTargets() && !leaf_nodes_[i]->individualControl()) {
-            if (!leaf_nodes_[i]->individualControl()) {
+            if (!leaf_nodes_[i]->individualControl() && !leaf_nodes_[i]->targetUpdated()) {
                 WellsGroupInterface* parent_node = leaf_nodes_[i]->getParent();
                 // update the target within this group.
                 if (leaf_nodes_[i]->isProducer()) {
