@@ -184,6 +184,27 @@ public:
         size_t numRegions = densityKeyword.size();
         initBegin(numRegions);
 
+        numActivePhases_ = 0;
+        std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], false);
+
+        if (deck.hasKeyword("OIL")) {
+            phaseIsActive_[oilPhaseIdx] = true;
+            ++ numActivePhases_;
+        }
+
+        if (deck.hasKeyword("GAS")) {
+            phaseIsActive_[gasPhaseIdx] = true;
+            ++ numActivePhases_;
+        }
+
+        if (deck.hasKeyword("WATER")) {
+            phaseIsActive_[waterPhaseIdx] = true;
+            ++ numActivePhases_;
+        }
+
+        // this fluidsystem only supports two or three phases
+        assert(numActivePhases_ >= 2 && numActivePhases_ <= 3);
+
         setEnableDissolvedGas(deck.hasKeyword("DISGAS"));
         setEnableVaporizedOil(deck.hasKeyword("VAPOIL"));
 
@@ -196,14 +217,20 @@ public:
                                   regionIdx);
         }
 
-        gasPvt_ = std::make_shared<GasPvt>();
-        gasPvt_->initFromDeck(deck, eclState);
+        if (phaseIsActive(gasPhaseIdx)) {
+            gasPvt_ = std::make_shared<GasPvt>();
+            gasPvt_->initFromDeck(deck, eclState);
+        }
 
-        oilPvt_ = std::make_shared<OilPvt>();
-        oilPvt_->initFromDeck(deck, eclState);
+        if (phaseIsActive(oilPhaseIdx)) {
+            oilPvt_ = std::make_shared<OilPvt>();
+            oilPvt_->initFromDeck(deck, eclState);
+        }
 
-        waterPvt_ = std::make_shared<WaterPvt>();
-        waterPvt_->initFromDeck(deck, eclState);
+        if (phaseIsActive(waterPhaseIdx)) {
+            waterPvt_ = std::make_shared<WaterPvt>();
+            waterPvt_->initFromDeck(deck, eclState);
+        }
 
         initEnd();
     }
@@ -221,6 +248,9 @@ public:
     {
         enableDissolvedGas_ = true;
         enableVaporizedOil_ = false;
+
+        numActivePhases_ = numPhases;
+        std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], true);
 
         resizeArrays_(numPvtRegions);
     }
@@ -291,14 +321,18 @@ public:
             // water is simple: 18 g/mol
             molarMass_[regionIdx][waterCompIdx] = 18e-3;
 
-            // for gas, we take the density at standard conditions and assume it to be ideal
-            Scalar p = surfacePressure;
-            Scalar T = surfaceTemperature;
-            Scalar rho_g = referenceDensity_[/*regionIdx=*/0][gasPhaseIdx];
-            molarMass_[regionIdx][gasCompIdx] = Opm::Constants<Scalar>::R*T*rho_g / p;
+            if (phaseIsActive(gasPhaseIdx)) {
+                // for gas, we take the density at standard conditions and assume it to be ideal
+                Scalar p = surfacePressure;
+                Scalar T = surfaceTemperature;
+                Scalar rho_g = referenceDensity_[/*regionIdx=*/0][gasPhaseIdx];
+                molarMass_[regionIdx][gasCompIdx] = Opm::Constants<Scalar>::R*T*rho_g / p;
+            }
+            else
+                // hydrogen gas. we just set this do avoid NaNs later
+                molarMass_[regionIdx][gasCompIdx] = 2e-3;
 
-            // finally, for oil phase, we take the molar mass from the
-            // spe9 paper
+            // finally, for oil phase, we take the molar mass from the spe9 paper
             molarMass_[regionIdx][oilCompIdx] = 175e-3; // kg/mol
         }
     }
@@ -357,7 +391,21 @@ protected:
     static const int phaseToSolventCompIdx_[3];
     static const int phaseToSoluteCompIdx_[3];
 
+    static unsigned char numActivePhases_;
+    static bool phaseIsActive_[numPhases];
+
 public:
+    //! \brief Returns the number of active fluid phases (i.e., usually three)
+    static unsigned numActivePhases()
+    { return numActivePhases_; }
+
+    //! \brief Returns whether a fluid phase is active
+    static unsigned phaseIsActive(unsigned phaseIdx)
+    {
+        assert(phaseIdx < numPhases);
+        return phaseIsActive_[phaseIdx];
+    }
+
     //! \brief returns the index of "primary" component of a phase (solvent)
     static constexpr unsigned solventComponentIndex(unsigned phaseIdx)
     { return static_cast<unsigned>(phaseToSolventCompIdx_[phaseIdx]); }
@@ -1142,6 +1190,12 @@ const int BlackOil<Scalar>::phaseToSoluteCompIdx_[3] =
     gasCompIdx, // oil phase
     oilCompIdx // gas phase
 };
+
+template <class Scalar>
+unsigned char BlackOil<Scalar>::numActivePhases_;
+
+template <class Scalar>
+bool BlackOil<Scalar>::phaseIsActive_[numPhases];
 
 template <class Scalar>
 const Scalar
