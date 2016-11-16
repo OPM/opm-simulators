@@ -896,12 +896,15 @@ namespace Opm
             for (int col = 0; col < np; ++col) {
                 z[0] += A_a[0 + np*col]*s[col];
                 z[1] += A_l[1 + np*col]*s[col];
-                z[2] += A_v[2 + np*col]*s[col];
+                if (np > 2)
+                    z[2] += A_v[2 + np*col]*s[col];
 
             }
-            double ztmp = z[2];
-            z[2] += z[1]*rs[c];
-            z[1] += ztmp*rv[c];
+            if (np > 2) {
+                double ztmp = z[2];
+                z[2] += z[1]*rs[c];
+                z[1] += ztmp*rv[c];
+            }
 
         }
     }
