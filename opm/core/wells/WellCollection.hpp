@@ -130,12 +130,6 @@ namespace Opm
         /// Checking whehter need to update the targets for the production wells.
         bool needUpdateProductionTargets() const;
 
-        /// Number of the well nodes.
-        size_t numNode() const;
-
-        /// Getting the ith well node.
-        WellNode* getNode(size_t i) const;
-
         /// Updating the well targets based on the well rates.
         void updateWellTargets(const std::vector<double>& well_rates);
 

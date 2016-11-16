@@ -275,19 +275,6 @@ namespace Opm
     }
 
 
-
-    size_t WellCollection::numNode() const
-    {
-        return leaf_nodes_.size();
-    }
-
-
-    WellNode* WellCollection::getNode(size_t i) const
-    {
-        assert( i< numNode());
-        return leaf_nodes_[i];
-    }
-
     void WellCollection::updateWellTargets(const std::vector<double>& well_rates)
     {
         if ( !needUpdateWellTargets() ) {
@@ -318,6 +305,7 @@ namespace Opm
             }
         }
     }
+
 
     bool WellCollection::havingVREPGroups() const {
         return having_vrep_groups_;

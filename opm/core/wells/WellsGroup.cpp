@@ -778,7 +778,7 @@ namespace Opm
         double rate_individual_control = 0.;
 
         for (size_t i = 0; i < children_.size(); ++i) {
-            if (children_[i]->individualControl() && children_[i]->isProducer()) {
+            if (children_[i]->individualControl()) {
                 rate_individual_control += std::abs(children_[i]->getProductionRate(well_rates, prod_mode) * children_[i]->efficiencyFactor());
             }
         }
@@ -789,7 +789,7 @@ namespace Opm
         const double my_guide_rate = productionGuideRate(true);
 
         for (size_t i = 0; i < children_.size(); ++i) {
-            if (!children_[i]->individualControl() && children_[i]->isProducer()) {
+            if (!children_[i]->individualControl()) {
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
                 children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate / my_guide_rate) * rate_for_group_control, true);
                 children_[i]->setTargetUpdated(true);
@@ -808,22 +808,14 @@ namespace Opm
         // do nothing
     }
 
-
-    bool WellsGroup::isProducer() const
+    double WellsGroup::getProductionRate(const std::vector<double>& well_rates,
+                                         const ProductionSpecification::ControlMode prod_mode) const
     {
-        return false;
-    }
-
-    bool WellsGroup::isInjector() const
-    {
-        return false;
-    }
-
-    double WellsGroup::getProductionRate(const std::vector<double>& /* well_rates */,
-                                         const ProductionSpecification::ControlMode /* prod_mode */) const
-    {
-        // TODO: to be implemented
-        return -1.e98;
+        double total_production_rate = 0.0;
+        for (const std::shared_ptr<const WellsGroupInterface>& child_node : children_) {
+            total_production_rate += child_node->getProductionRate(well_rates, prod_mode);
+        }
+        return total_production_rate;
     }
 
     // ==============    WellNode members   ============
@@ -1268,7 +1260,7 @@ namespace Opm
         // Current understanding. Two ways might prevent to return the guide_rate here
         // 1. preventing the well from group control with keyword WGRUPCON
         // 2. the well violating some limits and working under limits.
-        if (!only_group || !individualControl()) {
+        if ( (!only_group || !individualControl()) && isProducer() ) {
             return prodSpec().guide_rate_;
         } else {
             return 0.0;
@@ -1280,7 +1272,7 @@ namespace Opm
     ///                       wells under group control
     double WellNode::injectionGuideRate(bool only_group)
     {
-        if (!only_group || !individualControl()) {
+        if ( (!only_group || !individualControl()) && isInjector() ) {
             return injSpec().guide_rate_;
         } else {
             return 0.0;

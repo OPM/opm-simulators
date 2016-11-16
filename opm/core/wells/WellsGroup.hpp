@@ -226,14 +226,6 @@ namespace Opm
         /// Update the status for individual contrl
         void setIndividualControl(const bool);
 
-        /// Whether it is a production well
-        /// Should only appy for WellNode
-        virtual bool isProducer() const = 0;
-
-        /// Whether it is an injection well
-        /// Should only appy for WellNode
-        virtual bool isInjector() const = 0;
-
         virtual double getProductionRate(const std::vector<double>& well_rates,
                                          const ProductionSpecification::ControlMode prod_mode) const = 0;
 
@@ -374,14 +366,6 @@ namespace Opm
 
         virtual void setTargetUpdated(const bool flag);
 
-        /// Whether it is a production well
-        /// Should only appy for WellNode
-        virtual bool isProducer() const;
-
-        /// Whether it is an injection well
-        /// Should only appy for WellNode
-        virtual bool isInjector() const;
-
         virtual double getProductionRate(const std::vector<double>& well_rates,
                                          const ProductionSpecification::ControlMode prod_mode) const;
 
@@ -492,10 +476,6 @@ namespace Opm
 
         int groupControlIndex() const;
 
-        virtual bool isProducer() const;
-
-        virtual bool isInjector() const;
-
         virtual double getProductionRate(const std::vector<double>& well_rates,
                                          const ProductionSpecification::ControlMode prod_mode) const;
 
@@ -506,6 +486,10 @@ namespace Opm
         /// the efficiency factor for groups are muliplitive, this function return the resulted final efficiency factor
         /// to the well in a multi-layer group structure.
         double getAccumulativeEfficiencyFactor() const;
+
+        bool isProducer() const;
+
+        bool isInjector() const;
 
         int selfIndex() const;
 
