@@ -594,6 +594,7 @@ namespace Opm
 
                 const Wells* wells = wells_manager.c_wells();
                 globalWellState_.init(wells, *globalReservoirState_, globalWellState_ );
+                globalCellData_->clear();
             }
 
             PackUnPackSimulationDataContainer packUnpack( localReservoirState, *globalReservoirState_,
