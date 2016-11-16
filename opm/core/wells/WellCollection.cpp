@@ -117,18 +117,19 @@ namespace Opm
     }
 
 
-    WellNode* WellCollection::findWellNode(const std::string& name) const
+    WellNode& WellCollection::findWellNode(const std::string& name) const
     {
         auto well_node = std::find_if(leaf_nodes_.begin(), leaf_nodes_.end(),
                     [&] ( WellNode* w) {
                     return w->name() == name;
                     });
 
-        if (well_node != leaf_nodes_.end()) {
-            return *well_node;
-        } else {
-            return nullptr;
+        // Does not find the well
+        if (well_node == leaf_nodes_.end()) {
+            OPM_THROW(std::runtime_error, "Could not find well " << name << " in the well collection!\n");
         }
+
+        return *(*well_node);
     }
 
     /// Adds the child to the collection

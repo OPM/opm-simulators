@@ -96,7 +96,7 @@ namespace Opm
         const WellsGroupInterface* findNode(const std::string& name) const;
 
 
-        WellNode* findWellNode(const std::string& name) const;
+        WellNode& findWellNode(const std::string& name) const;
 
 
         /// Applies all group controls (injection and production)
