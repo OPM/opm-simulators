@@ -137,13 +137,10 @@ namespace Opm
         WellNode* getNode(size_t i) const;
 
         /// Updating the well targets based on the well rates.
-        void updateWellTargets(const std::vector<double> well_rates);
+        void updateWellTargets(const std::vector<double>& well_rates);
 
         /// When we have VREP group, we need to update the targets based on the updated production voidage rates for each iteration.
         bool havingVREPGroups() const;
-
-        /// Setting the VREP group flag when creating the well collection.
-        void setHavingVREPGroups(const bool vrep);
 
     private:
         // To account for the possibility of a forest
@@ -152,7 +149,7 @@ namespace Opm
         // This will be used to traverse the bottom nodes.
         std::vector<WellNode*> leaf_nodes_;
 
-        bool having_vrep_groups_;
+        bool having_vrep_groups_ = false;
 
 
     };

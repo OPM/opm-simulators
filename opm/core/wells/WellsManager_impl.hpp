@@ -409,7 +409,6 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
 
         const auto& fieldGroup = schedule.getGroup(fieldNode->name());
 
-        well_collection_.setHavingVREPGroups(false);
         well_collection_.addField(fieldGroup, timeStep, pu);
         addChildGroups(*fieldNode, schedule, timeStep, pu);
     }

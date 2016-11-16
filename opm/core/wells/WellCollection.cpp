@@ -288,7 +288,7 @@ namespace Opm
         return leaf_nodes_[i];
     }
 
-    void WellCollection::updateWellTargets(const std::vector<double> well_rates)
+    void WellCollection::updateWellTargets(const std::vector<double>& well_rates)
     {
         if ( !needUpdateWellTargets() ) {
             return;
@@ -321,10 +321,6 @@ namespace Opm
 
     bool WellCollection::havingVREPGroups() const {
         return having_vrep_groups_;
-    }
-
-    void WellCollection::setHavingVREPGroups(const bool vrep) {
-        having_vrep_groups_ = vrep;
     }
 
 }
