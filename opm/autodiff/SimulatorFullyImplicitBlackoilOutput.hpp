@@ -237,8 +237,8 @@ namespace Opm
         void writeTimeStepWithCellProperties(
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
+                           const data::Solution& cellData,
                            const Opm::WellState& wellState,
-                           const data::Solution& solution,
                            bool substep = false);
 
         /*!
@@ -260,7 +260,7 @@ namespace Opm
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellState& wellState,
-                                 const data::Solution& cellData,
+                                 const data::Solution& simProps,
                                  bool substep);
 
         /** \brief return output directory */
@@ -327,7 +327,7 @@ namespace Opm
                          const Opm::PhaseUsage &phaseUsage,
                          const double* permeability )
       : output_( param.getDefault("output", true) ),
-        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, permeability ) : 0 ),
+        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, permeability, phaseUsage ) : 0 ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
@@ -787,57 +787,21 @@ namespace Opm
                   const Model& physicalModel,
                   bool substep)
     {
-        data::Solution cellData{};
+        data::Solution localCellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
         
-        if( output_ && !parallelOutput_->isParallel() )
+        if( output_ )
         {
-
-            detail::getRestartData( cellData, phaseUsage_, physicalModel,
+            localCellData = simToSolution(localState, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
+            detail::getRestartData( localCellData, phaseUsage_, physicalModel,
                                     restartConfig, reportStepNum, logMessages );
-            detail::getSummaryData( cellData, phaseUsage_, physicalModel, summaryConfig );
+            detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig );
         }
-        else
-        {
-            if ( logMessages )
-            {
-                std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
-                std::vector<const char*> keywords = 
-                    { "WIP", "OIPL", "OIPG", "OIP", "GIPG", "GIPL", "GIP",
-                      "RPV", "FRPH", "RPRH"};
-                
-                std::ostringstream str;
-                str << "Output of restart/summary config not supported in parallel. Requested keywords were ";
-                std::size_t no_kw = 0;
-                    
-                auto func = [&] (const char* kw)
-                    {
-                        if ( detail::hasFRBKeyword(summaryConfig, kw) )
-                        {
-                            str << kw << " ";
-                            ++ no_kw;
-                        }
-                    };
-
-                std::for_each(keywords.begin(), keywords.end(), func);
-
-                for (auto& keyValue : rstKeywords)
-                {
-                        str << keyValue.first << " ";
-                        ++ no_kw;
-                }
-
-                if ( no_kw )
-                {
-                    Opm::OpmLog::warning("Unhandled ouput request", str.str());
-                }
-            }
-        }        
         
-        writeTimeStepWithCellProperties(timer, localState, localWellState, cellData, substep);
+        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, substep);
     }
 }
 #endif

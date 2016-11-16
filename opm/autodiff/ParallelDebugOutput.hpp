@@ -48,13 +48,19 @@ namespace Opm
         virtual ~ParallelDebugOutputInterface() {}
 
         //! \brief gather solution to rank 0 for EclipseWriter
+        //! \param localReservoirState The reservoir state
         //! \param localWellState      The well state
+        //! \param localCellData       The cell data used for eclipse output
+        //!                            (needs to include the cell data of
+        //!                            localReservoirState)
         //! \param wellStateStepNumber The step number of the well state.
         virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
                                       const WellState& localWellState,
+                                      const data::Solution& localCellData,
                                       const int wellStateStepNumber ) = 0;
 
         virtual const SimulationDataContainer& globalReservoirState() const = 0 ;
+        virtual const data::Solution& globalCellData() const = 0 ;
         virtual const WellState& globalWellState() const = 0 ;
         virtual bool isIORank() const = 0;
         virtual bool isParallel() const = 0;
@@ -70,25 +76,33 @@ namespace Opm
 
         const SimulationDataContainer* globalState_;
         const WellState*      wellState_;
+        const data::Solution* globalCellData_;
 
     public:
         ParallelDebugOutput ( const GridImpl& grid,
                               const EclipseState& /* eclipseState */,
                               const int,
-                              const double* )
+                              const double*,
+                              const Opm::PhaseUsage& )
             : grid_( grid ) {}
 
         // gather solution to rank 0 for EclipseWriter
         virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
                                       const WellState& localWellState,
+                                      const data::Solution& localCellData,
                                       const int /* wellStateStepNumber */)
         {
             globalState_ = &localReservoirState;
             wellState_   = &localWellState;
+            globalCellData_ = &localCellData;
             return true ;
         }
 
         virtual const SimulationDataContainer& globalReservoirState() const { return *globalState_; }
+        virtual const data::Solution& globalCellData() const
+        {
+            return *globalCellData_;
+        }
         virtual const WellState& globalWellState() const { return *wellState_; }
         virtual bool isIORank () const { return true; }
         virtual bool isParallel () const { return false; }
@@ -231,12 +245,16 @@ namespace Opm
         ParallelDebugOutput( const Dune::CpGrid& otherGrid,
                              const EclipseState& eclipseState,
                              const int numPhases,
-                             const double* permeability )
+                             const double* permeability,
+                             const Opm::PhaseUsage& phaseUsage)
             : grid_(),
               eclipseState_( eclipseState ),
               permeability_( permeability ),
               toIORankComm_( otherGrid.comm() ),
-              isIORank_( otherGrid.comm().rank() == ioRank )
+              globalCellData_(new data::Solution),
+              isIORank_( otherGrid.comm().rank() == ioRank ),
+              phaseUsage_(phaseUsage)
+
         {
             const CollectiveCommunication& comm = otherGrid.comm();
             if( comm.size() > 1 )
@@ -321,6 +339,8 @@ namespace Opm
         {
             const SimulationDataContainer& localState_;
             SimulationDataContainer& globalState_;
+            const data::Solution& localCellData_;
+            data::Solution& globalCellData_;
             const WellState& localWellState_;
             WellState& globalWellState_;
             const IndexMapType& localIndexMap_;
@@ -328,14 +348,18 @@ namespace Opm
 
         public:
             PackUnPackSimulationDataContainer( const SimulationDataContainer& localState,
-                                      SimulationDataContainer& globalState,
-                                      const WellState& localWellState,
-                                      WellState& globalWellState,
-                                      const IndexMapType& localIndexMap,
-                                      const IndexMapStorageType& indexMaps,
-                                      const bool isIORank )
+                                               SimulationDataContainer& globalState,
+                                               const data::Solution& localCellData,
+                                               data::Solution& globalCellData,
+                                               const WellState& localWellState,
+                                               WellState& globalWellState,
+                                               const IndexMapType& localIndexMap,
+                                               const IndexMapStorageType& indexMaps,
+                                               const bool isIORank )
             : localState_( localState ),
               globalState_( globalState ),
+              localCellData_( localCellData ),
+              globalCellData_( globalCellData ),
               localWellState_( localWellState ),
               globalWellState_( globalWellState ),
               localIndexMap_( localIndexMap ),
@@ -349,6 +373,16 @@ namespace Opm
                         if (!globalState_.hasCellData( key )) {
 			    globalState_.registerCellData( key , localState.numCellDataComponents( key ));
                         }
+                    }
+
+                    // add missing data to global cell data
+                    for (const auto& pair : localCellData_) {
+                        const std::string& key = pair.first;
+                        std::size_t container_size = globalState_.numCells() *
+                            pair.second.data.size() / localState_.numCells();
+                        globalCellData_.insert(key, pair.second.dim,
+                                                std::vector<double>(container_size),
+                                                pair.second.target);
                     }
 
                     MessageBufferType buffer;
@@ -367,10 +401,10 @@ namespace Opm
                 }
 
                 // write all cell data registered in local state
-		for (const auto& pair : localState_.cellData()) {
+                for (const auto& pair : localCellData_) {
 		    const std::string& key = pair.first;
-                    const auto& data = pair.second;
-                    const size_t stride = localState_.numCellDataComponents( key );
+                    const auto& data = pair.second.data;
+                    const size_t stride = data.size()/localState_.numCells();
 
                     for( size_t i=0; i<stride; ++i )
                     {
@@ -388,10 +422,11 @@ namespace Opm
                 // write all cell data registered in local state
                 // we loop over the data of the local state as
                 // its order governs the order the data got received.
-                for (auto& pair : localState_.cellData()) {
+                for (auto& pair : localCellData_) {
                     const std::string& key = pair.first;
-                    auto& data = globalState_.getCellData(key);
-                    const size_t stride = globalState_.numCellDataComponents( key );
+
+                    auto& data = globalCellData_.data(key);
+                    const size_t stride = data.size() / globalState_.numCells();
 
                     for( size_t i=0; i<stride; ++i )
                     {
@@ -525,6 +560,7 @@ namespace Opm
         // gather solution to rank 0 for EclipseWriter
         bool collectToIORank( const SimulationDataContainer& localReservoirState,
                               const WellState& localWellState,
+                              const data::Solution& localCellData,
                               const int wellStateStepNumber )
         {
             if( isIORank() )
@@ -559,19 +595,32 @@ namespace Opm
             }
 
             PackUnPackSimulationDataContainer packUnpack( localReservoirState, *globalReservoirState_,
-                                                 localWellState, globalWellState_,
-                                                 localIndexMap_, indexMaps_, isIORank() );
+                                                          localCellData, *globalCellData_,
+                                                          localWellState, globalWellState_,
+                                                          localIndexMap_, indexMaps_,
+                                                          isIORank() );
 
             //toIORankComm_.exchangeCached( packUnpack );
             toIORankComm_.exchange( packUnpack );
 #ifndef NDEBUG
-            // mkae sure every process is on the same page
+            // make sure every process is on the same page
             toIORankComm_.barrier();
 #endif
+            if( isIORank() )
+            {
+                // Update values in the globalReservoirState
+                solutionToSim(*globalCellData_, phaseUsage_, *globalReservoirState_);
+            }
             return isIORank();
         }
 
         const SimulationDataContainer& globalReservoirState() const { return *globalReservoirState_; }
+
+        const data::Solution& globalCellData() const
+        {
+            return *globalCellData_;
+        }
+
         const WellState& globalWellState() const { return globalWellState_; }
 
         bool isIORank() const
@@ -600,10 +649,13 @@ namespace Opm
         IndexMapType                              localIndexMap_;
         IndexMapStorageType                       indexMaps_;
         std::unique_ptr<SimulationDataContainer>  globalReservoirState_;
+        std::unique_ptr<data::Solution>           globalCellData_;
         // this needs to be revised
         WellStateFullyImplicitBlackoil            globalWellState_;
         // true if we are on I/O rank
         const bool                                isIORank_;
+        // Phase usage needed to convert solution to simulation data container
+        Opm::PhaseUsage phaseUsage_;
     };
 #endif // #if HAVE_OPM_GRID
 

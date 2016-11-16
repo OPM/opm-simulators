@@ -240,7 +240,13 @@ namespace Opm
                   const WellState& localWellState,
                   bool substep)
     {
-        writeTimeStepWithCellProperties(timer, localState, localWellState, {} , substep);
+        data::Solution localCellData{};
+        if( output_ )
+        {
+            localCellData = simToSolution(localState, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
+        }
+        writeTimeStepWithCellProperties(timer, localState, localCellData ,
+                                        localWellState, substep);
     }
 
 
@@ -252,8 +258,8 @@ namespace Opm
     writeTimeStepWithCellProperties(
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
+                  const data::Solution& localCellData,
                   const WellState& localWellState,
-                  const data::Solution& cellData,
                   bool substep)
     {
         // VTK output (is parallel if grid is parallel)
@@ -272,9 +278,12 @@ namespace Opm
             int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
                 (timer.reportStepNum() - 1) : timer.reportStepNum();
             // collect all solutions to I/O rank
-            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState,
+                                                         localCellData,
+                                                         wellStateStepNumber );
         }
 
+        const data::Solution& cellData = ( parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalCellData() : localCellData;
         const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
         const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
 
@@ -314,12 +323,11 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                data::Solution combined_sol = simToSolution(state, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...)
-                combined_sol.insert(simProps.begin(), simProps.end());           // ... insert "extra" data (KR, VISC, ...)
+                // ... insert "extra" data (KR, VISC, ...)
                 eclWriter_->writeTimeStep(timer.reportStepNum(),
                                           substep,
                                           timer.simulationTimeElapsed(),
-                                          combined_sol,
+                                          simProps,
                                           wellState.report(phaseUsage_));
             }
         }
