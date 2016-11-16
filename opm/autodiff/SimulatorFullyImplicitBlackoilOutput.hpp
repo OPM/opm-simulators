@@ -68,12 +68,6 @@ namespace Opm
                         const int step,
                         const std::string& output_dir);
 
-
-    void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::SimulationDataContainer& state,
-                           const int step,
-                           const std::string& output_dir);
-
     void outputWellStateMatlab(const Opm::WellState& well_state,
                                const int step,
                                const std::string& output_dir);

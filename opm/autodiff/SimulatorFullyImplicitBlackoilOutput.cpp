@@ -94,66 +94,6 @@ namespace Opm
         Opm::writeVtkData(grid, dm, vtkfile);
     }
 
-
-    void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::SimulationDataContainer& state,
-                           const int step,
-                           const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        for (const auto& pair : state.cellData()) {
-            const std::string& name = pair.first;
-            std::string key;
-            if( name == "SURFACEVOL" ) {
-                key = "surfvolume";
-            }
-            else if( name == "RV" ) {
-                key = "rv";
-            }
-            else if( name == "GASOILRATIO" ) {
-                key = "rs";
-            }
-            else { // otherwise skip entry
-                continue;
-            }
-            // set data to datmap
-            dm[ key ] = &pair.second;
-        }
-
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  UgGridHelpers::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
     void outputWellStateMatlab(const Opm::WellState& well_state,
                                const int step,
                                const std::string& output_dir)
