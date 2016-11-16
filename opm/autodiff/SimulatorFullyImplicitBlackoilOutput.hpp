@@ -468,8 +468,6 @@ namespace Opm
                             const int reportStepNum,
                             const bool log) {
 
-            typedef Opm::AutoDiffBlock<double> ADB;
-
             const typename Model::SimulatorData& sd = physicalModel.getSimulatorData();
             //Get the value of each of the keys for the restart keywords
             std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);

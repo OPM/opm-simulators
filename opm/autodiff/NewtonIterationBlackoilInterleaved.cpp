@@ -581,7 +581,6 @@ namespace Opm
         computePressureIncrement(const LinearisedBlackoilResidual& residual)
         {
             typedef LinearisedBlackoilResidual::ADB ADB;
-            typedef ADB::V V;
 
             // Build the vector of equations (should be just a single material balance equation
             // in which the pressure equation is stored).
