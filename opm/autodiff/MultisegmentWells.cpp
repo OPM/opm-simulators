@@ -413,7 +413,12 @@ namespace Opm {
 
         for (int w = 0; w < nw; ++w) {
             const std::string well_name = wells_->name[w];
-            const WellNode* well_node = dynamic_cast<const WellNode *>(well_collection_->findNode(well_name));
+            // get the pointer to the well node in the well collection
+            WellNode* well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+            // maybe should put this if in function findWellNode()
+            if (well_node == nullptr) {
+                 OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
+            }
             well_efficiency_factors(w) = well_node->getAccumulativeEfficiencyFactor();
         }
 
