@@ -61,10 +61,13 @@ namespace Opm
 
 
     WellsGroupInterface::WellsGroupInterface(const std::string& myname,
+                                             const double efficiency_factor,
                                              const ProductionSpecification& prod_spec,
                                              const InjectionSpecification& inje_spec,
                                              const PhaseUsage& phase_usage)
         : parent_(NULL),
+          individual_control_(true), // always begin with individual control
+          efficiency_factor_(efficiency_factor),
           name_(myname),
           production_specification_(prod_spec),
           injection_specification_(inje_spec),
@@ -80,6 +83,12 @@ namespace Opm
     {
         return parent_;
     }
+
+    WellsGroupInterface* WellsGroupInterface::getParent()
+    {
+        return parent_;
+    }
+
     const std::string& WellsGroupInterface::name() const
     {
         return name_;
@@ -228,6 +237,25 @@ namespace Opm
         return target;
     }
 
+    bool WellsGroupInterface::individualControl() const
+    {
+        return individual_control_;
+    }
+
+    void WellsGroupInterface::setIndividualControl(const bool individual_control)
+    {
+        individual_control_ = individual_control;
+    }
+
+    double WellsGroupInterface::efficiencyFactor() const
+    {
+        return efficiency_factor_;
+    }
+
+    void WellsGroupInterface::setEfficiencyFactor(const double efficiency_factor)
+    {
+        efficiency_factor_=efficiency_factor;
+    }
 
 
 
@@ -253,32 +281,38 @@ namespace Opm
 
 
     WellsGroup::WellsGroup(const std::string& myname,
+                           const double efficiency_factor,
                            const ProductionSpecification& prod_spec,
                            const InjectionSpecification& inj_spec,
                            const PhaseUsage& phase_usage)
-        : WellsGroupInterface(myname, prod_spec, inj_spec, phase_usage)
+        : WellsGroupInterface(myname, efficiency_factor, prod_spec, inj_spec, phase_usage)
     {
     }
 
     /// Sets the current active control to the provided one for all injectors within the group.
     /// After this call, the combined rate (which rate depending on control_mode) of the group
     /// shall be equal to target.
-    /// \param[in] forced if true, all children will be set under group control, otherwise
-    ///                   only children that are under group control will be changed.
+    /// \param[in] only_group    if true, only children that are under group control will be changed.
+    ///                          otherwise, all children will be set under group control
     void WellsGroup::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
-                                          const bool forced)
+                                          const bool only_group)
     {
-        if (forced || injSpec().control_mode_ == InjectionSpecification::FLD
-            || injSpec().control_mode_ == InjectionSpecification::NONE) {
-            const double my_guide_rate = injectionGuideRate(!forced);
+        if (injSpec().control_mode_ == InjectionSpecification::NONE) {
+            // TODO: for multiple level of group control, it can be wrong to return here.
+            return;
+        }
+
+        if (!only_group || injSpec().control_mode_ == InjectionSpecification::FLD) {
+            const double my_guide_rate = injectionGuideRate(only_group);
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->injectionGuideRate(!forced) / my_guide_rate;
-                children_[i]->applyInjGroupControl(control_mode, child_target, true);
+                const double child_target = target / efficiencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
+                children_[i]->applyInjGroupControl(control_mode, injector_type, child_target, false);
             }
             injSpec().control_mode_ = InjectionSpecification::FLD;
         }
@@ -287,23 +321,24 @@ namespace Opm
     /// Sets the current active control to the provided one for all producers within the group.
     /// After this call, the combined rate (which rate depending on control_mode) of the group
     /// shall be equal to target.
-    /// \param[in] forced if true, all children will be set under group control, otherwise
-    ///                   only children that are under group control will be changed.
+    /// \param[in] only_group    if true, only children that are under group control will be changed.
+    ///                          otherwise, all children will be set under group control
     void WellsGroup::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           const bool forced)
+                                           const bool only_group)
     {
-        if (forced || (prodSpec().control_mode_ == ProductionSpecification::FLD
-                       || prodSpec().control_mode_ == ProductionSpecification::NONE)) {
-            const double my_guide_rate =  productionGuideRate(!forced);
+        if (prodSpec().control_mode_ == ProductionSpecification::NONE) {
+            return;
+        }
+        if (!only_group || prodSpec().control_mode_ == ProductionSpecification::FLD) {
+            const double my_guide_rate =  productionGuideRate(only_group);
             if (my_guide_rate == 0.0) {
                 // Nothing to do here
-                std::cout << "returning" << std::endl;
                 return;
             }
             for (size_t i = 0; i < children_.size(); ++i) {
-                const double child_target = target * children_[i]->productionGuideRate(!forced) / my_guide_rate;
-                children_[i]->applyProdGroupControl(control_mode, child_target, true);
+                const double child_target = target / efficiencyFactor() * children_[i]->productionGuideRate(only_group) / my_guide_rate;
+                children_[i]->applyProdGroupControl(control_mode, child_target, only_group);
             }
             prodSpec().control_mode_ = ProductionSpecification::FLD;
         }
@@ -315,6 +350,8 @@ namespace Opm
                                    const std::vector<double>& well_surfacerates_phase,
                                    WellPhasesSummed& summed_phases)
     {
+        // TODO: adding here for compilation, not sure everything will work correctly.
+        const InjectionSpecification::InjectorType injector_type = injSpec().injector_type_;
         // Check children's constraints recursively.
         WellPhasesSummed child_phases_summed;
         for (size_t i = 0; i < children_.size(); ++i) {
@@ -349,7 +386,7 @@ namespace Opm
                                     + " target not met for group " + name() + "\n"
                                     + "target = " + std::to_string(target_rate) + "\n"
                                     + "rate   = " + std::to_string(my_rate));
-                    applyInjGroupControl(mode, target_rate, true);
+                    applyInjGroupControl(mode, injector_type, target_rate, false);
                     injSpec().control_mode_ = mode;
                     return false;
                 }
@@ -397,10 +434,9 @@ namespace Opm
                                   production_mode_violated).first->shutWell();
                 return false;
             case ProductionSpecification::RATE:
-                std::cout << "Applying group control" << std::endl;
                 applyProdGroupControl(production_mode_violated,
                                       getTarget(production_mode_violated),
-                                      true);
+                                      false);
                 return false;
             case ProductionSpecification::NONE_P:
                 // Do nothing
@@ -455,7 +491,8 @@ namespace Opm
         case ProductionSpecification::LRAT:
         case ProductionSpecification::RESV:
         {
-            const double my_guide_rate = productionGuideRate(true);
+            // const double my_guide_rate = productionGuideRate(true);
+            const double my_guide_rate = productionGuideRate(false);
             if (my_guide_rate == 0) {
                 OPM_THROW(std::runtime_error, "Can't apply group control for group " << name() << " as the sum of guide rates for all group controlled wells is zero.");
             }
@@ -463,7 +500,7 @@ namespace Opm
                 // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->productionGuideRate(true);
+                const double children_guide_rate = children_[i]->productionGuideRate(false);
                 children_[i]->applyProdGroupControl(prod_mode,
                                                    (children_guide_rate / my_guide_rate) * getTarget(prod_mode),
                                                     false);
@@ -485,25 +522,26 @@ namespace Opm
     void WellsGroup::applyInjGroupControls()
     {
         InjectionSpecification::ControlMode inj_mode = injSpec().control_mode_;
+        InjectionSpecification::InjectorType inj_type = injSpec().injector_type_;
         switch (inj_mode) {
         case InjectionSpecification::RATE:
         case InjectionSpecification::RESV:
         {
-            const double my_guide_rate = injectionGuideRate(true);
+            // all the wells will be assinged a group control target.
+            // TODO: when we consider WGRUPCON and well groups not responding to higher level group control
+            const double my_guide_rate = injectionGuideRate(false);
+
             for (size_t i = 0; i < children_.size(); ++i) {
-                // Apply for all children.
-                // Note, we do _not_ want to call the applyProdGroupControl in this object,
-                // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->injectionGuideRate(true);
-                children_[i]->applyInjGroupControl(inj_mode,
-                        (children_guide_rate / my_guide_rate) * getTarget(inj_mode),
+                // Apply group control to all children.
+                const double children_guide_rate = children_[i]->injectionGuideRate(false);
+                children_[i]->applyInjGroupControl(inj_mode, inj_type,
+                        (children_guide_rate / my_guide_rate) * getTarget(inj_mode) / efficiencyFactor(),
                         false);
             }
             return;
         }
         case InjectionSpecification::VREP:
         case InjectionSpecification::REIN:
-            std::cout << "Replacement keywords found, remember to call applyExplicitReinjectionControls." << std::endl;
             return;
         case InjectionSpecification::FLD:
         case InjectionSpecification::NONE:
@@ -524,7 +562,13 @@ namespace Opm
     {
         double sum = 0.0;
         for (size_t i = 0; i < children_.size(); ++i) {
-            sum += children_[i]->productionGuideRate(only_group);
+            if (only_group) {
+                if (!children_[i]->individualControl()) {
+                    sum += children_[i]->productionGuideRate(only_group);
+                }
+            } else {
+                sum += children_[i]->productionGuideRate(only_group);
+            }
         }
         return sum;
     }
@@ -548,13 +592,23 @@ namespace Opm
     /// \param[in] phase            The phase for which to sum up.
 
     double WellsGroup::getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                             const BlackoilPhases::PhaseIndex phase)
+                                             const BlackoilPhases::PhaseIndex phase) const
     {
         double sum = 0.0;
         for (size_t i = 0; i < children_.size(); ++i) {
             sum += children_[i]->getTotalProductionFlow(phase_flows, phase);
         }
         return sum;
+    }
+
+
+    double WellsGroup::getTotalVoidageRate(const std::vector<double>& well_voidage_rates)
+    {
+        double sum = 0.0;
+        for (size_t i = 0; i < children_.size(); ++i) {
+            sum += children_[i]->getTotalVoidageRate(well_voidage_rates);
+        }
+        return sum * efficiencyFactor();
     }
 
     /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
@@ -569,6 +623,7 @@ namespace Opm
     void WellsGroup::applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase)
     {
+        const InjectionSpecification::InjectorType injector_type = injSpec().injector_type_;
         if (injSpec().control_mode_ == InjectionSpecification::REIN) {
             // Defaulting to water to satisfy -Wmaybe-uninitialized
             BlackoilPhases::PhaseIndex phase = BlackoilPhases::Aqua;
@@ -594,11 +649,11 @@ namespace Opm
 #ifdef DIRTY_WELLCTRL_HACK
                 children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
-                        false);
+                        true);
 #else
-                children_[i]->applyInjGroupControl(InjectionSpecification::RATE,
+                children_[i]->applyInjGroupControl(InjectionSpecification::RATE, injector_type,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().reinjection_fraction_target_,
-                        false);
+                        true);
 #endif
             }
         }
@@ -619,8 +674,8 @@ namespace Opm
                 // Apply for all children.
                 // Note, we do _not_ want to call the applyProdGroupControl in this object,
                 // as that would check if we're under group control, something we're not.
-                const double children_guide_rate = children_[i]->injectionGuideRate(true);
-                children_[i]->applyInjGroupControl(InjectionSpecification::RESV,
+                const double children_guide_rate = children_[i]->injectionGuideRate(false);
+                children_[i]->applyInjGroupControl(InjectionSpecification::RESV, injector_type,
                         (children_guide_rate / my_guide_rate) * total_reinjected * injSpec().voidage_replacment_fraction_,
                         false);
             }
@@ -628,19 +683,156 @@ namespace Opm
         }
     }
 
+
+    void WellsGroup::applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs)
+    {
+        const InjectionSpecification::ControlMode inj_mode = injSpec().control_mode_;
+        switch (inj_mode) {
+        case InjectionSpecification::VREP:
+        {
+            const double total_reinjected = getTotalVoidageRate(well_voidage_rates);
+            // TODO: we might need the reservoir condition well potentials here
+            const double my_guide_rate = injectionGuideRate(false);
+            for (size_t i = 0; i < children_.size(); ++i ) {
+                const double child_guide_rate = children_[i]->injectionGuideRate(false);
+                const double child_target = child_guide_rate / my_guide_rate * total_reinjected / efficiencyFactor()
+                                          * injSpec().voidage_replacment_fraction_;
+                children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
+            }
+        }
+        break;
+        default:
+        {
+            for (size_t i = 0; i < children_.size(); ++i ) {
+                children_[i]->applyVREPGroupControls(well_voidage_rates, conversion_coeffs);
+            }
+        }
+        }
+    }
+
+
+    // TODO: actually, it is not tested since it never get into this function.
+    void WellsGroup::applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group)
+    {
+        if (injSpec().control_mode_ == InjectionSpecification::NONE) {
+            // TODO: for multiple level of group control, it can be wrong to return here.
+            return;
+        }
+
+        // TODO: this condition will eventually be wrong.
+        if (!only_group || injSpec().control_mode_ == InjectionSpecification::FLD) {
+            // We should provide the well potentials under reservoir condition.
+            const double my_guide_rate = injectionGuideRate(only_group);
+            if (my_guide_rate == 0.0) {
+                // TODO: might not should return here
+                // Nothing to do here
+                return;
+            }
+            for (size_t i = 0; i < children_.size(); ++i) {
+                const double child_target = target / efficiencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
+                children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
+            }
+            // I do not know why here.
+            injSpec().control_mode_ = InjectionSpecification::FLD;
+        }
+    }
+
+
+    void WellsGroup::updateWellProductionTargets(const std::vector<double>& well_rates)
+    {
+        // TODO: currently, we only handle the level of the well groups for the moment, i.e. the level just above wells
+        // We believe the relations between groups are similar to the relations between different wells inside the same group.
+        // While there will be somre more complication invloved for sure.
+        // Basically, we need to update the target rates for the wells still under group control.
+
+        ProductionSpecification::ControlMode prod_mode = prodSpec().control_mode_;
+        double target_rate = -1.0;
+
+        switch(prod_mode) {
+        case ProductionSpecification::FLD :
+            {
+                auto* parent_node = getParent();
+                prod_mode = parent_node->prodSpec().control_mode_;
+                target_rate = parent_node->getTarget(prod_mode) / parent_node->efficiencyFactor();
+                break;
+            }
+        case ProductionSpecification::LRAT :
+        case ProductionSpecification::ORAT :
+        case ProductionSpecification::GRAT :
+        case ProductionSpecification::WRAT :
+            target_rate = getTarget(prod_mode);
+            break;
+        default:
+            OPM_THROW(std::runtime_error, "Not supporting type " << ProductionSpecification::toString(prod_mode) <<
+                                          " when updating well targets ");
+        }
+
+        target_rate /= efficiencyFactor();
+
+        // the rates contributed from wells under individual control due to their own limits.
+        // TODO: will handle wells specified not to join group control later.
+        double rate_individual_control = 0.;
+
+        for (size_t i = 0; i < children_.size(); ++i) {
+            if (children_[i]->individualControl()) {
+                rate_individual_control += std::abs(children_[i]->getProductionRate(well_rates, prod_mode) * children_[i]->efficiencyFactor());
+            }
+        }
+
+        // the rates left for the wells under group control to split
+        const double rate_for_group_control = target_rate - rate_individual_control;
+
+        const double my_guide_rate = productionGuideRate(true);
+
+        for (size_t i = 0; i < children_.size(); ++i) {
+            if (!children_[i]->individualControl()) {
+                const double children_guide_rate = children_[i]->productionGuideRate(true);
+                children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate / my_guide_rate) * rate_for_group_control, true);
+                children_[i]->setTargetUpdated(true);
+            }
+        }
+    }
+
+    void WellsGroup::updateWellInjectionTargets(const std::vector<double>& /*well_rates*/)
+    {
+        // NOT doing anything yet.
+        // Will finish it when having an examples with more than one injection wells within same injection group.
+    }
+
+    void WellsGroup::setTargetUpdated(const bool /* flag */)
+    {
+        // do nothing
+    }
+
+    double WellsGroup::getProductionRate(const std::vector<double>& well_rates,
+                                         const ProductionSpecification::ControlMode prod_mode) const
+    {
+        double total_production_rate = 0.0;
+        for (const std::shared_ptr<const WellsGroupInterface>& child_node : children_) {
+            total_production_rate += child_node->getProductionRate(well_rates, prod_mode);
+        }
+        return total_production_rate;
+    }
+
     // ==============    WellNode members   ============
 
 
 
     WellNode::WellNode(const std::string& myname,
+                       const double efficiency_factor,
                        const ProductionSpecification& prod_spec,
                        const InjectionSpecification& inj_spec,
                        const PhaseUsage& phase_usage)
-        : WellsGroupInterface(myname, prod_spec, inj_spec, phase_usage),
+        : WellsGroupInterface(myname, efficiency_factor, prod_spec, inj_spec, phase_usage),
           wells_(0),
           self_index_(-1),
           group_control_index_(-1),
-          shut_well_(true) // This is default for now
+          shut_well_(true), // This is default for now
+          target_updated_(false) // This is default for now, not sure whether to use the default value
     {
     }
 
@@ -652,7 +844,7 @@ namespace Opm
         // Report on our rates.
         const int np = phaseUsage().num_phases;
         for (int phase = 0; phase < np; ++phase) {
-            if (wells_->type[self_index_] == INJECTOR) {
+            if (isInjector()) {
                 summed_phases.res_inj_rates[phase] = well_reservoirrates_phase[np*self_index_ + phase];
                 summed_phases.surf_inj_rates[phase] = well_surfacerates_phase[np*self_index_ + phase];
             } else {
@@ -662,7 +854,6 @@ namespace Opm
         }
 
         // Check constraints.
-        bool is_producer = (wells_->type[self_index_] == PRODUCER);
         const WellControls * ctrls = wells_->ctrls[self_index_];
         for (int ctrl_index = 0; ctrl_index < well_controls_get_num(ctrls); ++ctrl_index) {
             if (ctrl_index == well_controls_get_current(ctrls) || ctrl_index == group_control_index_) {
@@ -676,7 +867,7 @@ namespace Opm
             case BHP: {
                 const double my_well_bhp = well_bhp[self_index_];
                 const double my_target_bhp = well_controls_iget_target( ctrls , ctrl_index);
-                ctrl_violated = is_producer ? (my_target_bhp > my_well_bhp)
+                ctrl_violated = isProducer() ? (my_target_bhp > my_well_bhp)
                     : (my_target_bhp < my_well_bhp);
                 if (ctrl_violated) {
                     OpmLog::info("BHP limit violated for well " + name() + ":\n"
@@ -799,20 +990,48 @@ namespace Opm
     }
 
     void WellNode::applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                        const InjectionSpecification::InjectorType injector_type,
                                         const double target,
-                                        const bool forced)
+                                        const bool only_group)
     {
-        // Not changing if we're not forced to change
-        if (!forced
-             && (injSpec().control_mode_ != InjectionSpecification::GRUP && injSpec().control_mode_ != InjectionSpecification::NONE)) {
-            return;
-        }
-        if (wells_->type[self_index_] != INJECTOR) {
-            assert(target == 0.0);
+        if ( !isInjector() ) {
+            // assert(target == 0.0);
             return;
         }
 
-        const double distr[3] = { 1.0, 1.0, 1.0 };
+        if (only_group && individualControl()) {
+            return;
+        }
+
+        // considering the efficiency factor
+        const double effective_target = target / efficiencyFactor();
+
+        const int* phase_pos = phaseUsage().phase_pos;
+        const int* phase_used = phaseUsage().phase_used;
+        double distr[3] = { 0.0, 0.0, 0.0 };
+        switch(injector_type) {
+        case InjectionSpecification::WATER:
+            if (!phase_used[BlackoilPhases::Aqua]) {
+                OPM_THROW(std::runtime_error, "Water phase not active while WATER phase injection specified.");
+            }
+            distr[phase_pos[BlackoilPhases::Aqua]] = 1.0;
+            break;
+        case InjectionSpecification::OIL:
+            if (!phase_used[BlackoilPhases::Liquid]) {
+                OPM_THROW(std::runtime_error, "Oil phase not active while OIL phase injection specified.");
+            }
+            distr[phase_pos[BlackoilPhases::Liquid]] = 1.0;
+            break;
+        case InjectionSpecification::GAS:
+            if (!phase_used[BlackoilPhases::Vapour]) {
+                OPM_THROW(std::runtime_error, "Gas phase not active while GAS phase injection specified.");
+            }
+            distr[phase_pos[BlackoilPhases::Vapour]] = 1.0;
+            break;
+        default:
+            OPM_THROW(std::runtime_error, "Group injection phase not handled: " << InjectionSpecification::toString(injector_type));
+        }
+
         WellControlType wct;
         switch (control_mode) {
         case InjectionSpecification::RATE:
@@ -827,17 +1046,18 @@ namespace Opm
 
         if (group_control_index_ < 0) {
             // The well only had its own controls, no group controls.
-            append_well_controls(wct, target, invalid_alq, invalid_vfp, distr, self_index_, wells_);
+            append_well_controls(wct, effective_target, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
+            // It will possibly be changed when initializing WellState
+            // set_current_control(self_index_, group_control_index_, wells_);
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
             well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , wct);
-            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ ,target);
+            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , effective_target);
             well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
-        set_current_control(self_index_, group_control_index_, wells_);
     }
 
 
@@ -848,12 +1068,21 @@ namespace Opm
     /// \param[in] phase            The phase for which to sum up.
 
     double WellNode::getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                            const BlackoilPhases::PhaseIndex phase)
+                                            const BlackoilPhases::PhaseIndex phase) const
     {
-        if (type() == INJECTOR) {
+        if (isInjector()) {
             return 0.0;
         }
         return phase_flows[self_index_*phaseUsage().num_phases + phaseUsage().phase_pos[phase]];
+    }
+
+    double WellNode::getTotalVoidageRate(const std::vector<double>& well_voidage_rates)
+    {
+        if (isProducer()) {
+            return well_voidage_rates[self_index_] * efficiencyFactor();
+        } else {
+            return 0;
+        }
     }
 
     WellType WellNode::type() const {
@@ -874,22 +1103,82 @@ namespace Opm
     {
         // Do nothing at well level.
     }
-    void WellNode::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
-                                         const double target,
-                                         const bool forced)
+
+
+    void WellNode::applyVREPGroupControls(const std::vector<double>&,
+                                          const std::vector<double>&)
     {
-        // Not changing if we're not forced to change
-        if (!forced && (prodSpec().control_mode_ != ProductionSpecification::GRUP
-                        && prodSpec().control_mode_ != ProductionSpecification::NONE)) {
-            std::cout << "Returning" << std::endl;
+        // It is the end, nothing should be done here.
+    }
+
+    void WellNode::applyVREPGroupControl(const double target,
+                                         const std::vector<double>& /*well_voidage_rates*/,
+                                         const std::vector<double>& conversion_coeffs,
+                                         const bool only_group)
+    {
+        if (!isInjector()) {
             return;
         }
-        if (wells_->type[self_index_] != PRODUCER) {
+
+        if (only_group && individualControl()) {
+            return;
+        }
+
+        // applying the efficiency factor
+        const double ntarget = target / efficiencyFactor();
+
+        const int np = phaseUsage().num_phases;
+        // WellControls* ctrl = wells_->ctrls[self_index_];
+        // for this case, distr contains the FVF information
+        // which results in the previous implementation of RESV keywords.
+        std::vector<double> distr(np);
+        std::copy(conversion_coeffs.begin() + np * self_index_,
+                  conversion_coeffs.begin() + np * (self_index_ + 1),
+                  distr.begin());
+
+
+        const double invalid_alq = -std::numeric_limits<double>::max();
+        const int invalid_vfp = -std::numeric_limits<int>::max();
+
+        if (group_control_index_ < 0) {
+            append_well_controls(RESERVOIR_RATE, ntarget, invalid_alq, invalid_vfp, &distr[0], self_index_, wells_);
+            // TODO: basically, one group control index is not enough eventually. There can be more than one sources for the
+            // group control
+            group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
+            // it should only apply for nodes with GRUP injeciton control
+            individual_control_ = false;
+        } else {
+            well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , RESERVOIR_RATE);
+            well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , ntarget);
+            well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
+            well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , &distr[0]);
+        }
+
+        // the way in computeRESV from the SimulatorBase
+        // looks like they specify the control already, while without giving the distr.
+        // The target will look like alreay there.
+        // Here, we should create a new control here.
+        // In theory, there can be more than one RESV controls and more than one other same types of control,
+        // which will really mess up the multi-layer controls.
+        // When we update them the next time, we need to find this control then update the distr and target instead of adding one
+        // Basically, we need to store the control and the source of the control (from which group or the well, so we can still
+        // identify them and update the value later in case we specify the same control with different value again)
+    }
+
+    void WellNode::applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
+                                         const double target,
+                                         const bool only_group)
+    {
+        if ( !isProducer() ) {
             assert(target == 0.0);
             return;
         }
+
+        if (only_group && individualControl()) {
+            return;
+        }
         // We're a producer, so we need to negate the input
-        double ntarget = -target;
+        double ntarget = -target / efficiencyFactor();
 
         double distr[3] = { 0.0, 0.0, 0.0 };
         const int* phase_pos = phaseUsage().phase_pos;
@@ -918,7 +1207,6 @@ namespace Opm
             distr[phase_pos[BlackoilPhases::Vapour]] = 1.0;
             break;
         case ProductionSpecification::LRAT:
-            std::cout << "applying rate" << std::endl;
             wct = SURFACE_RATE;
             if (!phase_used[BlackoilPhases::Liquid]) {
                 OPM_THROW(std::runtime_error, "Oil phase not active and LRAT control specified.");
@@ -941,6 +1229,8 @@ namespace Opm
             // The well only had its own controls, no group controls.
             append_well_controls(wct, ntarget, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
+            // It will possibly be changed when initializing WellState.
+            // set_current_control(self_index_, group_control_index_, wells_);
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
@@ -949,7 +1239,6 @@ namespace Opm
             well_controls_iset_alq(wells_->ctrls[self_index_] , group_control_index_ , -1e100);
             well_controls_iset_distr(wells_->ctrls[self_index_] , group_control_index_ , distr);
         }
-        set_current_control(self_index_, group_control_index_, wells_);
     }
 
 
@@ -968,10 +1257,14 @@ namespace Opm
     ///                       wells under group control
     double WellNode::productionGuideRate(bool only_group)
     {
-        if (!only_group || prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+        // Current understanding. Two ways might prevent to return the guide_rate here
+        // 1. preventing the well from group control with keyword WGRUPCON
+        // 2. the well violating some limits and working under limits.
+        if ( (!only_group || !individualControl()) && isProducer() ) {
             return prodSpec().guide_rate_;
+        } else {
+            return 0.0;
         }
-        return 0.0;
     }
 
     /// Calculates the injection guide rate for the group.
@@ -979,12 +1272,62 @@ namespace Opm
     ///                       wells under group control
     double WellNode::injectionGuideRate(bool only_group)
     {
-        if (!only_group || injSpec().control_mode_ == InjectionSpecification::GRUP) {
+        if ( (!only_group || !individualControl()) && isInjector() ) {
             return injSpec().guide_rate_;
+        } else {
+            return 0.0;
         }
-        return 0.0;
     }
 
+
+
+    /// Returning the group control index
+    int WellNode::groupControlIndex() const
+    {
+        return group_control_index_;
+    }
+
+
+    /// Returing whether the well is a producer
+    bool WellNode::isProducer() const
+    {
+        return (type() == PRODUCER);
+    }
+
+    /// Returing whether the well is a injector
+    bool WellNode::isInjector() const
+    {
+        return (type() == INJECTOR);
+    }
+
+
+
+    double WellNode::getProductionRate(const std::vector<double>& well_rates,
+                                       const ProductionSpecification::ControlMode prod_mode) const
+    {
+        switch(prod_mode) {
+        case ProductionSpecification::LRAT :
+            return ( getTotalProductionFlow(well_rates, BlackoilPhases::Liquid) +
+                     getTotalProductionFlow(well_rates, BlackoilPhases::Aqua) );
+        case ProductionSpecification::ORAT :
+            return getTotalProductionFlow(well_rates, BlackoilPhases::Liquid);
+        case ProductionSpecification::WRAT :
+            return getTotalProductionFlow(well_rates, BlackoilPhases::Aqua);
+        case ProductionSpecification::GRAT :
+            return getTotalProductionFlow(well_rates, BlackoilPhases::Vapour);
+        default:
+            OPM_THROW(std::runtime_error, "Not supporting type " << ProductionSpecification::toString(prod_mode) <<
+                                          " for production rate calculation ");
+        }
+    }
+
+    void WellNode::updateWellProductionTargets(const std::vector<double>& /*well_rates*/)
+    {
+    }
+
+    void WellNode::updateWellInjectionTargets(const std::vector<double>& /*well_rates*/)
+    {
+    }
 
     namespace
     {
@@ -1087,7 +1430,8 @@ namespace Opm
             injection_specification.reinjection_fraction_target_ = group.getTargetReinjectFraction(timeStep);
             injection_specification.voidage_replacment_fraction_ = group.getTargetVoidReplacementFraction(timeStep);
         }
-        else if (group.isProductionGroup(timeStep)) {
+
+        if (group.isProductionGroup(timeStep)) {
             production_specification.oil_max_rate_ = group.getOilTargetRate(timeStep);
             production_specification.control_mode_ = toProductionControlMode(GroupProduction::ControlEnum2String(group.getProductionControlMode(timeStep)));
             production_specification.water_max_rate_ = group.getWaterTargetRate(timeStep);
@@ -1097,7 +1441,9 @@ namespace Opm
             production_specification.reservoir_flow_max_rate_ = group.getReservoirVolumeTargetRate(timeStep);
         }
 
-        std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group.name(), production_specification, injection_specification, phase_usage));
+        const double efficiency_factor = group.getGroupEfficiencyFactor(timeStep);
+
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellsGroup(group.name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
     }
 
@@ -1136,7 +1482,41 @@ namespace Opm
                 production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(properties.controlMode));
             }
         }
-        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), production_specification, injection_specification, phase_usage));
+        // TODO: should be specified with WEFAC, while we do not have this keyword support yet.
+        const double efficiency_factor = 1.0;
+        std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
     }
+
+
+
+
+    double WellNode::getAccumulativeEfficiencyFactor() const {
+        // TODO: not sure whether a well can be exempted from repsponding to the efficiency factor
+        // for the parent group.
+        double efficiency_factor = efficiencyFactor();
+        const WellsGroupInterface* parent_node = getParent();
+        while (parent_node != nullptr) {
+            efficiency_factor *= parent_node->efficiencyFactor();
+            parent_node = parent_node->getParent();
+        }
+
+        return efficiency_factor;
+    }
+
+
+    int WellNode::selfIndex() const {
+        return self_index_;
+    }
+
+
+    bool WellNode::targetUpdated() const {
+        return target_updated_;
+    }
+
+
+    void WellNode::setTargetUpdated(const bool flag) {
+        target_updated_ = flag;
+    }
+
 }

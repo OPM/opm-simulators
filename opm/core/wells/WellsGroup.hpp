@@ -55,6 +55,7 @@ namespace Opm
     {
     public:
         WellsGroupInterface(const std::string& name,
+                            const double efficiency_factor,
                             const ProductionSpecification& prod_spec,
                             const InjectionSpecification& inj_spec,
                             const PhaseUsage& phase_usage);
@@ -92,6 +93,8 @@ namespace Opm
         /// Gets the parent of the group, NULL if no parent.
         const WellsGroupInterface* getParent() const;
 
+        WellsGroupInterface* getParent();
+
         /// Calculates the number of leaf nodes in the given group.
         /// A leaf node is defined to have one leaf node in its group.
         virtual int numberOfLeafNodes() = 0;
@@ -128,19 +131,20 @@ namespace Opm
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
-                                          const bool forced) = 0;
+                                          const bool only_group) = 0;
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           const bool forced) = 0;
+                                           const bool only_group) = 0;
 
         /// Gets the worst offending well based on the input
         /// \param[in]    well_reservoirrates_phase
@@ -188,7 +192,7 @@ namespace Opm
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                              const BlackoilPhases::PhaseIndex phase) = 0;
+                                              const BlackoilPhases::PhaseIndex phase) const = 0;
 
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
@@ -202,6 +206,38 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase) = 0;
 
+        /// TODO: prototyping a VREP enforcement function.
+        virtual void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs) = 0;
+
+        virtual void applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group) = 0;
+
+        virtual double getTotalVoidageRate(const std::vector<double>& well_voidage_rates) = 0;
+
+        /// Return whether the well is running under group control target
+        /// or under their own limit.
+        /// True  under their own limit.
+        /// False running under group control target
+        bool individualControl() const;
+
+        /// Update the status for individual contrl
+        void setIndividualControl(const bool);
+
+        virtual double getProductionRate(const std::vector<double>& well_rates,
+                                         const ProductionSpecification::ControlMode prod_mode) const = 0;
+
+        virtual void updateWellProductionTargets(const std::vector<double>& well_rates) = 0;
+
+        virtual void updateWellInjectionTargets(const std::vector<double>& well_rates) = 0;
+
+        virtual void setTargetUpdated(const bool flag) = 0;
+
+        double efficiencyFactor() const;
+
+        void setEfficiencyFactor(const double efficiency_factor);
 
     protected:
         /// Calculates the correct rate for the given ProductionSpecification::ControlMode
@@ -216,6 +252,14 @@ namespace Opm
 
         WellsGroupInterface* parent_;
 
+        // Whether well is running under the group control target.
+        // Current only consider one level of control.
+        // So not putting it in the WellsGroupInterface yet.
+        bool individual_control_;
+
+        // Efficiency factor
+        double efficiency_factor_;
+
     private:
         std::string name_;
         ProductionSpecification production_specification_;
@@ -229,6 +273,7 @@ namespace Opm
     {
     public:
         WellsGroup(const std::string& name,
+                   const double efficiency_factor,
                    const ProductionSpecification& prod_spec,
                    const InjectionSpecification& inj_spec,
                    const PhaseUsage& phase_usage);
@@ -250,20 +295,21 @@ namespace Opm
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
-                                          bool forced);
+                                          bool only_group);
 
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        //                           otherwise, all children will be set under group control
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           bool forced);
+                                           bool only_group);
 
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
@@ -289,7 +335,7 @@ namespace Opm
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                              const BlackoilPhases::PhaseIndex phase);
+                                              const BlackoilPhases::PhaseIndex phase) const;
 
         /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
         /// \param[in]    well_reservoirrates_phase
@@ -303,6 +349,26 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
 
+        /// TODO: prototyping a VREP enforcement function.
+        virtual void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs);
+
+        virtual void applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group);
+
+        virtual double getTotalVoidageRate(const std::vector<double>& well_voidage_rates);
+
+        virtual void updateWellProductionTargets(const std::vector<double>& well_rates);
+
+        virtual void updateWellInjectionTargets(const std::vector<double>& well_rates);
+
+        virtual void setTargetUpdated(const bool flag);
+
+        virtual double getProductionRate(const std::vector<double>& well_rates,
+                                         const ProductionSpecification::ControlMode prod_mode) const;
+
     private:
         std::vector<std::shared_ptr<WellsGroupInterface> > children_;
     };
@@ -313,6 +379,7 @@ namespace Opm
     {
     public:
         WellNode(const std::string& name,
+                 const double efficiency_factor,
                  const ProductionSpecification& prod_spec,
                  const InjectionSpecification& inj_spec,
                  const PhaseUsage& phase_usage);
@@ -339,20 +406,21 @@ namespace Opm
         /// Sets the current active control to the provided one for all injectors within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-       /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        ///                          otherwise, all children will be set under group control
         virtual void applyInjGroupControl(const InjectionSpecification::ControlMode control_mode,
+                                          const InjectionSpecification::InjectorType injector_type,
                                           const double target,
-                                          bool forced);
+                                          bool only_group);
 
         /// Sets the current active control to the provided one for all producers within the group.
         /// After this call, the combined rate (which rate depending on control_mode) of the group
         /// shall be equal to target.
-        /// \param[in] forced if true, all children will be set under group control, otherwise
-        ///                   only children that are under group control will be changed.
+        /// \param[in] only_group    if true, only children that are under group control will be changed.
+        ///                          otherwise, all children will be set under group control
         virtual void applyProdGroupControl(const ProductionSpecification::ControlMode control_mode,
                                            const double target,
-                                           bool forced);
+                                           bool only_group);
 
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
@@ -378,7 +446,7 @@ namespace Opm
         ///                             with all phase rates of a single well adjacent in the array.
         /// \param[in] phase            The phase for which to sum up.
         virtual double getTotalProductionFlow(const std::vector<double>& phase_flows,
-                                              const BlackoilPhases::PhaseIndex phase);
+                                              const BlackoilPhases::PhaseIndex phase) const;
 
         /// Returns the type of the well.
         WellType type() const;
@@ -395,11 +463,47 @@ namespace Opm
         virtual void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                                       const std::vector<double>& well_surfacerates_phase);
 
+        /// TODO: prototyping a VREP enforcement function.
+        virtual void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                            const std::vector<double>& conversion_coeffs);
+
+        virtual void applyVREPGroupControl(const double target,
+                                           const std::vector<double>& well_voidage_rates,
+                                           const std::vector<double>& conversion_coeffs,
+                                           const bool only_group);
+
+        virtual double getTotalVoidageRate(const std::vector<double>& well_voidage_rates);
+
+        int groupControlIndex() const;
+
+        virtual double getProductionRate(const std::vector<double>& well_rates,
+                                         const ProductionSpecification::ControlMode prod_mode) const;
+
+        virtual void updateWellProductionTargets(const std::vector<double>& well_rates);
+
+        virtual void updateWellInjectionTargets(const std::vector<double>& well_rates);
+
+        /// the efficiency factor for groups are muliplitive, this function return the resulted final efficiency factor
+        /// to the well in a multi-layer group structure.
+        double getAccumulativeEfficiencyFactor() const;
+
+        bool isProducer() const;
+
+        bool isInjector() const;
+
+        int selfIndex() const;
+
+        bool targetUpdated() const;
+
+        virtual void setTargetUpdated(const bool flag);
+
     private:
         Wells* wells_;
         int self_index_;
         int group_control_index_;
         bool shut_well_;
+        // TODO: used when updating well targets
+        bool target_updated_;
     };
 
     /// Creates the WellsGroupInterface for the given well
@@ -416,5 +520,6 @@ namespace Opm
     std::shared_ptr<WellsGroupInterface> createGroupWellsGroup(const Group& group, size_t timeStep,
                                                                const PhaseUsage& phase_usage );
 }
+
 #endif	/* OPM_WELLSGROUP_HPP */
 

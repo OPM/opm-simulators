@@ -22,7 +22,7 @@ namespace Opm
 
         enum GuideRateType
         {
-            OIL, GAS, WATER, NONE_GRT
+            OIL, GAS, WATER, LIQ, NONE_GRT
         };
 
         ProductionSpecification();
@@ -46,4 +46,3 @@ namespace Opm
 }
 
 #endif	/* OPM_PRODUCTIONSPECIFICATION_HPP */
-

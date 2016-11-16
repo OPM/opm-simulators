@@ -114,6 +114,7 @@ namespace Opm
 
         /// Access the well group hierarchy.
         const WellCollection& wellCollection() const;
+        WellCollection& wellCollection();
 
         /// Checks if each condition is met, applies well controls where needed
         /// (that is, it either changes the active control of violating wells, or shuts

@@ -52,6 +52,10 @@ namespace Opm
 
         std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
 
+        if (child->injSpec().control_mode_ == InjectionSpecification::VREP) {
+            having_vrep_groups_ = true;
+        }
+
         WellsGroup* parent_as_group = static_cast<WellsGroup*> (parent);
         if (!parent_as_group) {
             OPM_THROW(std::runtime_error, "Trying to add child group to group named " << parent->name() << ", but it's not a group.");
@@ -110,6 +114,21 @@ namespace Opm
             }
         }
         return NULL;
+    }
+
+
+    WellNode* WellCollection::findWellNode(const std::string& name) const
+    {
+        auto well_node = std::find_if(leaf_nodes_.begin(), leaf_nodes_.end(),
+                    [&] ( WellNode* w) {
+                    return w->name() == name;
+                    });
+
+        if (well_node != leaf_nodes_.end()) {
+            return *well_node;
+        } else {
+            return nullptr;
+        }
     }
 
     /// Adds the child to the collection
@@ -189,4 +208,107 @@ namespace Opm
             roots_[i]->applyExplicitReinjectionControls(well_reservoirrates_phase, well_surfacerates_phase);
         }
     }
+
+
+    void WellCollection::applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                                const std::vector<double>& conversion_coeffs)
+    {
+        for (size_t i = 0; i < roots_.size(); ++i) {
+            roots_[i]->applyVREPGroupControls(well_voidage_rates, conversion_coeffs);
+        }
+    }
+
+
+    // TODO: later, it should be extended to update group targets
+    bool WellCollection::needUpdateWellTargets() const
+    {
+        return needUpdateInjectionTargets() || needUpdateProductionTargets();
+    }
+
+
+    bool WellCollection::needUpdateInjectionTargets() const
+    {
+        // TODO: it should based on individual group
+        // With current approach, it will potentially result in more update,
+        // thus more iterations, while it will not cause result wrong.
+        // If the group control and individual control is mixed, then it need to
+        // update the well targets
+        bool any_group_control_node = false;
+        bool any_individual_control_node = false;
+
+        for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
+            if (leaf_nodes_[i]->isInjector()) {
+                if (leaf_nodes_[i]->individualControl()) {
+                    any_individual_control_node = true;
+                } else {
+                    any_group_control_node = true;
+                }
+            }
+        }
+
+        return (any_group_control_node && any_individual_control_node);
+    }
+
+
+    // These two functions should be made one
+    bool WellCollection::needUpdateProductionTargets() const
+    {
+        // TODO: it should based on individual group
+        // With current approach, it will potentially result in more update,
+        // thus more iterations, while it will not cause result wrong.
+        // If the group control and individual control is mixed, then it need to
+        // update the well targets
+        bool any_group_control_node = false;
+        bool any_individual_control_node = false;
+
+        for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
+            if (leaf_nodes_[i]->isProducer()) {
+                if (leaf_nodes_[i]->individualControl()) {
+                    any_individual_control_node = true;
+                } else {
+                    any_group_control_node = true;
+                }
+            }
+        }
+
+        return (any_group_control_node && any_individual_control_node);
+    }
+
+
+    void WellCollection::updateWellTargets(const std::vector<double>& well_rates)
+    {
+        if ( !needUpdateWellTargets() ) {
+            return;
+        }
+
+        // set the target_updated to be false
+        for (WellNode* well_node : leaf_nodes_) {
+            well_node->setTargetUpdated(false);
+        }
+
+        // TODO: currently, we only handle the level of the well groups for the moment, i.e. the level just above wells
+        // We believe the relations between groups are similar to the relations between different wells inside the same group.
+        // While there will be somre more complication invloved for sure.
+        for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
+            // find a node needs to update targets, then update targets for all the wellls inside the group.
+            // if (leaf_nodes_[i]->shouldUpdateWellTargets() && !leaf_nodes_[i]->individualControl()) {
+            if (!leaf_nodes_[i]->individualControl() && !leaf_nodes_[i]->targetUpdated()) {
+                WellsGroupInterface* parent_node = leaf_nodes_[i]->getParent();
+                // update the target within this group.
+                if (leaf_nodes_[i]->isProducer()) {
+                    parent_node->updateWellProductionTargets(well_rates);
+                }
+
+                if (leaf_nodes_[i]->isInjector()) {
+                    parent_node->updateWellInjectionTargets(well_rates);
+                }
+            }
+        }
+    }
+
+
+    bool WellCollection::havingVREPGroups() const {
+        return having_vrep_groups_;
+    }
+
 }

@@ -95,6 +95,10 @@ namespace Opm
         /// \return the pointer to the group if found, NULL otherwise
         const WellsGroupInterface* findNode(const std::string& name) const;
 
+
+        WellNode* findWellNode(const std::string& name) const;
+
+
         /// Applies all group controls (injection and production)
         void applyGroupControls();
 
@@ -110,6 +114,28 @@ namespace Opm
         void applyExplicitReinjectionControls(const std::vector<double>& well_reservoirrates_phase,
                                               const std::vector<double>& well_surfacerates_phase);
 
+
+        /// applying VREP group control based on calculated voidage rates
+        void applyVREPGroupControls(const std::vector<double>& well_voidage_rates,
+                                    const std::vector<double>& conversion_coeffs);
+
+        /// Checking whether need to update the targets of the wells / or the groups later
+        /// True  need to update well targets within this iteration, no switching control within this iteration.
+        /// False no need to update well targets within this iteration, continuing as usual.
+        bool needUpdateWellTargets() const;
+
+        /// Checking whether need to update the targets for the injection wells.
+        bool needUpdateInjectionTargets() const;
+
+        /// Checking whehter need to update the targets for the production wells.
+        bool needUpdateProductionTargets() const;
+
+        /// Updating the well targets based on the well rates.
+        void updateWellTargets(const std::vector<double>& well_rates);
+
+        /// When we have VREP group, we need to update the targets based on the updated production voidage rates for each iteration.
+        bool havingVREPGroups() const;
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;
@@ -117,9 +143,12 @@ namespace Opm
         // This will be used to traverse the bottom nodes.
         std::vector<WellNode*> leaf_nodes_;
 
+        bool having_vrep_groups_ = false;
+
 
     };
 
 } // namespace Opm
+
 #endif	/* OPM_WELLCOLLECTION_HPP */
 

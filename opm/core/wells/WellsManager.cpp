@@ -373,6 +373,12 @@ namespace Opm
         return well_collection_;
     }
 
+    WellCollection& WellsManager::wellCollection() {
+        return well_collection_;
+
+    }
+
+
     bool WellsManager::conditionsMet(const std::vector<double>& well_bhp,
                                      const std::vector<double>& well_reservoirrates_phase,
                                      const std::vector<double>& well_surfacerates_phase)
@@ -783,7 +789,17 @@ namespace Opm
                     if ( well->isProducer(timeStep) ) {
                         // The guide rates is calculated based on the group control
                         // Currently only supporting WRAT, ORAT and GRAT.
-                        switch (group.prodSpec().control_mode_) {
+                        ProductionSpecification::ControlMode control_mode = group.prodSpec().control_mode_;
+                        if (control_mode == ProductionSpecification::FLD) {
+                            if (group.getParent() !=  nullptr) {
+                                const WellsGroupInterface& higher_group = *(group.getParent());
+                                control_mode = higher_group.prodSpec().control_mode_;
+                            } else {
+                                OPM_THROW(std::runtime_error, "Group " << group.name() << " is under FLD control while no higher level of group is specified.");
+                            }
+                        }
+
+                        switch (control_mode) {
                         case ProductionSpecification::WRAT: {
                             if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
                                 OPM_THROW(std::runtime_error, "Water phase not used, yet found water rate controlled well.");
@@ -810,6 +826,25 @@ namespace Opm
                             wellnode.prodSpec().guide_rate_ = well_potentials[np*wix + gas_index];
                             wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::GAS;
                             break;
+                        }
+                        case ProductionSpecification::FLD: {
+                            OPM_THROW(std::logic_error, "Not support more than one continous level of FLD control");
+                        }
+                        case ProductionSpecification::LRAT: {
+                            double guide_rate = 0;
+                            if (phaseUsage.phase_used[BlackoilPhases::Liquid]) {
+                                const int oil_index = phaseUsage.phase_pos[BlackoilPhases::Liquid];
+                                const double potential_oil = well_potentials[np*wix + oil_index];
+                                guide_rate += potential_oil;
+                            }
+                            if (phaseUsage.phase_used[BlackoilPhases::Aqua]) {
+                                const int water_index = phaseUsage.phase_pos[BlackoilPhases::Aqua];
+                                const double potential_water = well_potentials[np*wix + water_index];
+                                guide_rate += potential_water;
+                            }
+                            // not sure if no water and no oil, what will happen here, zero guide_rate?
+                            wellnode.prodSpec().guide_rate_ = guide_rate;
+                            wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::LIQ;
                         }
                         case ProductionSpecification::NONE: {
                             // Group control is not in use for this group.
