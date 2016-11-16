@@ -904,20 +904,16 @@ namespace Opm
                 break;
             }
 
-            // get the pointer to the well node in the well collection
-            WellNode* well_node = well_collection_->findWellNode(std::string(wells().name[w]));
-            // maybe should put this if in function findWellNode()
-            if (well_node == nullptr) {
-                 OPM_THROW(std::runtime_error, "Could not find well " << std::string(wells().name[w]) << " in the well collection!\n");
-            }
+            // get the well node in the well collection
+            WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
 
             // update whehter the well is under group control or individual control
-            if (well_node->groupControlIndex() >= 0 && current == well_node->groupControlIndex()) {
+            if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
                 // under group control
-                well_node->setIndividualControl(false);
+                well_node.setIndividualControl(false);
             } else {
                 // individual control
-                well_node->setIndividualControl(true);
+                well_node.setIndividualControl(true);
             }
 
         }
