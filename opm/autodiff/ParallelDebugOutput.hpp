@@ -380,9 +380,11 @@ namespace Opm
                         const std::string& key = pair.first;
                         std::size_t container_size = globalState_.numCells() *
                             pair.second.data.size() / localState_.numCells();
-                        globalCellData_.insert(key, pair.second.dim,
+                        auto ret = globalCellData_.insert(key, pair.second.dim,
                                                 std::vector<double>(container_size),
                                                 pair.second.target);
+                        assert(ret.second);
+                        DUNE_UNUSED_PARAMETER(ret.second); //dummy op to prevent warning with -DNDEBUG
                     }
 
                     MessageBufferType buffer;
