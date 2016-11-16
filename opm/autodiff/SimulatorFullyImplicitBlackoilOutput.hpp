@@ -344,9 +344,17 @@ namespace Opm
                     .reset(new BlackoilVTKWriter< Grid >( grid, outputDir_ ));
             }
 
+            auto output_matlab = param.getDefault("output_matlab", false );
+
+            if ( parallelOutput_->isParallel() && output_matlab )
+            {
+                Opm::OpmLog::warning("Parallel Output Config",
+                                     "Velocity output for matlab is broken in parallel.");
+            }
+                
             if( parallelOutput_->isIORank() ) {
 
-                if ( param.getDefault("output_matlab", false ) )
+                if ( output_matlab )
                 {
                     matlabWriter_
                         .reset(new BlackoilMatlabWriter< Grid >( grid, outputDir_ ));
@@ -824,7 +832,7 @@ namespace Opm
 
                 if ( no_kw )
                 {
-                    Opm::OpmLog::warning("Unhandled output request in parallel", str.str());
+                    Opm::OpmLog::warning("Unhandled ouput request", str.str());
                 }
             }
         }        
