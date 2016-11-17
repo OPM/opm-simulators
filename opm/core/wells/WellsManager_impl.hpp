@@ -423,15 +423,19 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
         } while( !group_stack.empty() );
     }
 
-    for (auto w = wells.begin(), e = wells.end(); w != e; ++w) {
-        well_collection_.addWell(*w, timeStep, pu);
+    for (size_t i = 0; i < wells_on_proc.size(); ++i) {
+        // wells_on_proc is a vector of flag to indicate whether a well is on the process
+        if (wells_on_proc[i]) {
+            well_collection_.addWell(wells[i], timeStep, pu);
+        }
     }
 
     well_collection_.setWellsPointer(w_);
 
-    setupGuideRates(wells, timeStep, well_data, well_names_to_index, pu, well_potentials);
-
-    well_collection_.applyGroupControls();
+    if (well_collection_.groupControlActive()) {
+        setupGuideRates(wells, timeStep, well_data, well_names_to_index, pu, well_potentials);
+        well_collection_.applyGroupControls();
+    }
 
     // Debug output.
 #define EXTRA_OUTPUT
