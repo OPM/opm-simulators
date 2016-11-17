@@ -184,7 +184,7 @@ namespace Opm {
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
-        , isRestart_(false)
+        , invalidateIntensiveQuantitiesCache_(true)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
@@ -258,16 +258,21 @@ namespace Opm {
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
             }
+
+            // reset intensive quantities cache useless other options are set
+            // further down
+            invalidateIntensiveQuantitiesCache_ = true;
+
             IterationReport iter_report = assemble(timer, iteration, reservoir_state, well_state);
             std::vector<double> residual_norms;
             const bool converged = getConvergence(timer, iteration,residual_norms);
             residual_norms_history_.push_back(residual_norms);
             bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
-            // is first set to true if a linear solve is needed, but then it is set to false if the solver succeed.
-            isRestart_ = must_solve && (iteration == nonlinear_solver.maxIter());
+
             // don't solve if we have reached the maximum number of iteration.
             must_solve = must_solve && (iteration < nonlinear_solver.maxIter());
             if (must_solve) {
+
                 // enable single precision for solvers when dt is smaller then 20 days
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
@@ -276,6 +281,7 @@ namespace Opm {
                 const int nw = wellModel().wells().number_of_wells;
                 BVector x(nc);
                 BVector xw(nw);
+
                 solveJacobianSystem(x, xw);
 
                 // Stabilize the nonlinear update.
@@ -298,17 +304,21 @@ namespace Opm {
                 updateState(x,reservoir_state);
                 wellModel().updateWellState(xw, well_state);
 
-                // since the solution was changed, the cache for the intensive quantities
-                // are invalid
-                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-
-                // solver has succeed i.e. no need for restart.
-                isRestart_ = false;
+                // since the solution was changed, the cache for the intensive quantities are invalid
+                // ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
+
+            if( converged )
+            {
+                // in case of convergence we do not need to reset intensive quantities
+                invalidateIntensiveQuantitiesCache_ = false ;
+            }
+
             const bool failed = false; // Not needed in this model.
             const int linear_iters = must_solve ? linearIterationsLastSolve() : 0;
             return IterationReport{ failed, converged, linear_iters, iter_report.well_iterations };
         }
+
         void printIf(int c, double x, double y, double eps, std::string type) {
             if (std::abs(x-y) > eps) {
                 std::cout << type << " " <<c << ": "<<x << " " << y << std::endl;
@@ -351,7 +361,6 @@ namespace Opm {
             }
             catch ( const Dune::FMatrixError& e  )
             {
-                isRestart_ = true;
                 OPM_THROW(Opm::NumericalProblem,"Well equation did not converge");
             }
 
@@ -511,10 +520,11 @@ namespace Opm {
 #endif
           }
 
+          // y += \alpha * A * x
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
           {
             A_.usmv(alpha,x,y);
-            wellMod_.applyWellModel(x, y );
+            //wellMod_.applyWellModel(x, y );
 
 #if HAVE_MPI
             if( comm_ )
@@ -950,13 +960,11 @@ namespace Opm {
                 if (std::isnan(mass_balance_residual[phaseIdx])
                     || std::isnan(CNV[phaseIdx])
                     || (phaseIdx < np && std::isnan(well_flux_residual[phaseIdx]))) {
-                    isRestart_ = true;
                     OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
                 }
                 if (mass_balance_residual[phaseIdx] > maxResidualAllowed()
                     || CNV[phaseIdx] > maxResidualAllowed()
                     || (phaseIdx < np && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
-                    isRestart_ = true;
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }
@@ -1425,7 +1433,7 @@ namespace Opm {
                 ebosSimulator_.problem().beginTimeStep();
             }
             // if the last step failed we want to recalculate the IntesiveQuantities.
-            if (isRestart_) {
+            if ( invalidateIntensiveQuantitiesCache_ ) {
                 ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
 
@@ -1454,8 +1462,7 @@ namespace Opm {
 
     public:
         bool isBeginReportStep_;
-        bool isRestart_;
-
+        bool invalidateIntensiveQuantitiesCache_;
     };
 } // namespace Opm
 
