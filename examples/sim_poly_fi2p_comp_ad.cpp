@@ -151,12 +151,12 @@ try
         Opm::OpmLog::addBackend( "COUNTER" , counterLog );
     }
 
-    std::shared_ptr< Deck > deck;
+    Deck deck;
     std::shared_ptr<EclipseState> eclipseState;
     try {
-        *deck = parser.parseFile(deck_filename , parseContext);
-        Opm::checkDeck(*deck, parser);
-        eclipseState.reset(new Opm::EclipseState(*deck , parseContext));
+        deck = parser.parseFile(deck_filename , parseContext);
+        Opm::checkDeck(deck, parser);
+        eclipseState.reset(new Opm::EclipseState(deck , parseContext));
     }
     catch (const std::invalid_argument& e) {
         std::cerr << "Failed to create valid ECLIPSESTATE object. See logfile: " << logFile << std::endl;
@@ -173,7 +173,7 @@ try
         grid.reset(new GridManager(eclipseState->getInputGrid()));
     }
     auto &cGrid = *grid->c_grid();
-    const PhaseUsage pu = Opm::phaseUsageFromDeck(*deck);
+    const PhaseUsage pu = Opm::phaseUsageFromDeck(deck);
 
     // Rock and fluid init
 
@@ -182,31 +182,31 @@ try
 
     typedef BlackoilPropsAdFromDeck::MaterialLawManager MaterialLawManager;
     auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(*deck, *eclipseState, compressedToCartesianIdx);
+    materialLawManager->initFromDeck(deck, *eclipseState, compressedToCartesianIdx);
 
-    props.reset(new BlackoilPropertiesFromDeck( *deck, *eclipseState, materialLawManager,
+    props.reset(new BlackoilPropertiesFromDeck( deck, *eclipseState, materialLawManager,
                                                 Opm::UgGridHelpers::numCells(cGrid),
                                                 Opm::UgGridHelpers::globalCell(cGrid),
                                                 Opm::UgGridHelpers::cartDims(cGrid),
                                                 param));
 
     state.reset( new PolymerBlackoilState( Opm::UgGridHelpers::numCells(cGrid), Opm::UgGridHelpers::numFaces(cGrid), 2));
-    new_props.reset(new BlackoilPropsAdFromDeck(*deck, *eclipseState, materialLawManager, cGrid));
-    PolymerProperties polymer_props(*deck, *eclipseState);
+    new_props.reset(new BlackoilPropsAdFromDeck(deck, *eclipseState, materialLawManager, cGrid));
+    PolymerProperties polymer_props(deck, *eclipseState);
     PolymerPropsAd polymer_props_ad(polymer_props);
 
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(*deck, *eclipseState));
+    rock_comp.reset(new RockCompressibility(deck, *eclipseState));
 
     // Gravity.
-    gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+    gravity[2] = deck.hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
 
     // Init state variables (saturation and pressure).
     if (param.has("init_saturation")) {
         initStateBasic(*grid->c_grid(), *props, param, gravity[2], *state);
         initBlackoilSurfvol(*grid->c_grid(), *props, *state);
     } else {
-        initStateFromDeck(*grid->c_grid(), *props, *deck, gravity[2], *state);
+        initStateFromDeck(*grid->c_grid(), *props, deck, gravity[2], *state);
     }
 
     bool use_gravity = (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0);
@@ -229,7 +229,7 @@ try
     WellState well_state;
     // Check for WPOLYMER presence in last epoch to decide
     // polymer injection control type.
-    const bool use_wpolymer = deck->hasKeyword("WPOLYMER");
+    const bool use_wpolymer = deck.hasKeyword("WPOLYMER");
     if (use_wpolymer) {
         if (param.has("poly_start_days")) {
             OPM_MESSAGE("Warning: Using WPOLYMER to control injection since it was found in deck. "
