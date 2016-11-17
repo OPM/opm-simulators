@@ -94,66 +94,6 @@ namespace Opm
         Opm::writeVtkData(grid, dm, vtkfile);
     }
 
-
-    void outputStateMatlab(const UnstructuredGrid& grid,
-                           const Opm::SimulationDataContainer& state,
-                           const int step,
-                           const std::string& output_dir)
-    {
-        Opm::DataMap dm;
-        dm["saturation"] = &state.saturation();
-        dm["pressure"] = &state.pressure();
-        for (const auto& pair : state.cellData()) {
-            const std::string& name = pair.first;
-            std::string key;
-            if( name == "SURFACEVOL" ) {
-                key = "surfvolume";
-            }
-            else if( name == "RV" ) {
-                key = "rv";
-            }
-            else if( name == "GASOILRATIO" ) {
-                key = "rs";
-            }
-            else { // otherwise skip entry
-                continue;
-            }
-            // set data to datmap
-            dm[ key ] = &pair.second;
-        }
-
-        std::vector<double> cell_velocity;
-        Opm::estimateCellVelocity(AutoDiffGrid::numCells(grid),
-                                  AutoDiffGrid::numFaces(grid),
-                                  AutoDiffGrid::beginFaceCentroids(grid),
-                                  UgGridHelpers::faceCells(grid),
-                                  AutoDiffGrid::beginCellCentroids(grid),
-                                  AutoDiffGrid::beginCellVolumes(grid),
-                                  AutoDiffGrid::dimensions(grid),
-                                  state.faceflux(), cell_velocity);
-        dm["velocity"] = &cell_velocity;
-
-        // Write data (not grid) in Matlab format
-        for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
-            std::ostringstream fname;
-            fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
-            fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
-            std::ofstream file(fname.str().c_str());
-            if (!file) {
-                OPM_THROW(std::runtime_error, "Failed to open " << fname.str());
-            }
-            file.precision(15);
-            const std::vector<double>& d = *(it->second);
-            std::copy(d.begin(), d.end(), std::ostream_iterator<double>(file, "\n"));
-        }
-    }
     void outputWellStateMatlab(const Opm::WellState& well_state,
                                const int step,
                                const std::string& output_dir)
@@ -300,7 +240,13 @@ namespace Opm
                   const WellState& localWellState,
                   bool substep)
     {
-        writeTimeStepWithCellProperties(timer, localState, localWellState, {} , substep);
+        data::Solution localCellData{};
+        if( output_ )
+        {
+            localCellData = simToSolution(localState, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
+        }
+        writeTimeStepWithCellProperties(timer, localState, localCellData ,
+                                        localWellState, substep);
     }
 
 
@@ -312,8 +258,8 @@ namespace Opm
     writeTimeStepWithCellProperties(
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
+                  const data::Solution& localCellData,
                   const WellState& localWellState,
-                  const data::Solution& cellData,
                   bool substep)
     {
         // VTK output (is parallel if grid is parallel)
@@ -332,9 +278,12 @@ namespace Opm
             int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
                 (timer.reportStepNum() - 1) : timer.reportStepNum();
             // collect all solutions to I/O rank
-            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState,
+                                                         localCellData,
+                                                         wellStateStepNumber );
         }
 
+        const data::Solution& cellData = ( parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalCellData() : localCellData;
         const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
         const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
 
@@ -374,12 +323,11 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                data::Solution combined_sol = simToSolution(state, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...)
-                combined_sol.insert(simProps.begin(), simProps.end());           // ... insert "extra" data (KR, VISC, ...)
+                // ... insert "extra" data (KR, VISC, ...)
                 eclWriter_->writeTimeStep(timer.reportStepNum(),
                                           substep,
                                           timer.simulationTimeElapsed(),
-                                          combined_sol,
+                                          simProps,
                                           wellState.report(phaseUsage_));
             }
         }

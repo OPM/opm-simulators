@@ -28,7 +28,7 @@ namespace Opm
         : BlackoilState( number_of_cells , number_of_faces , number_of_phases)
     {
         registerCellData( SSOL , 1 );
-    };
+    }
 
 } // namespace Opm
 
