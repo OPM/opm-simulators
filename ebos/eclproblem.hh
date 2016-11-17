@@ -301,7 +301,7 @@ public:
         , deckUnits_(simulator)
         , eclWriter_(simulator)
         , summaryWriter_(simulator)
-        , pffDofData_(simulator.gridView(), simulator.model().dofMapper())
+        , pffDofData_(simulator.gridView(), this->elementMapper())
     {
         // add the output module for the Ecl binary output
         simulator.model().addOutputModule(new Ewoms::EclOutputBlackOilModule<TypeTag>(simulator));
