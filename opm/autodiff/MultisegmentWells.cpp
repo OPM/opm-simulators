@@ -141,10 +141,13 @@ namespace Opm {
 
     MultisegmentWells::
     MultisegmentWells(const Wells* wells_arg,
+                      WellCollection* well_collection,
                       const std::vector< const Well* >& wells_ecl,
                       const int time_step)
       : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
       , wops_ms_(wells_multisegment_)
+      , well_collection_(well_collection)
+      , well_perforation_efficiency_factors_(Vector::Ones(numWells()))
       , num_phases_(wells_arg ? wells_arg->number_of_phases : 0)
       , wells_(wells_arg)
       , fluid_(nullptr)
@@ -270,6 +273,8 @@ namespace Opm {
         }
 
         assert(start_perforation == nperf_total_);
+
+        calculateEfficiencyFactors();
     }
 
 
@@ -380,6 +385,56 @@ namespace Opm {
         assert(next == 2);
         return indices;
     }
+
+
+
+
+
+    WellCollection*
+    MultisegmentWells::
+    wellCollection() const {
+        return well_collection_;
+    }
+
+
+
+
+
+    void
+    MultisegmentWells::
+    calculateEfficiencyFactors()
+    {
+        if ( !localWellsActive() ) {
+            return;
+        }
+        // get efficiency factor for each well first
+        const int nw = wells_->number_of_wells;
+
+        Vector well_efficiency_factors = Vector::Ones(nw);
+
+        for (int w = 0; w < nw; ++w) {
+            const std::string well_name = wells_->name[w];
+            // get the well node in the well collection
+            WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+            well_efficiency_factors(w) = well_node.getAccumulativeEfficiencyFactor();
+        }
+
+        // map them to the perforation.
+        well_perforation_efficiency_factors_ = wellOps().w2p * well_efficiency_factors.matrix();
+    }
+
+
+
+
+
+    const
+    MultisegmentWells::Vector&
+    MultisegmentWells::
+    wellPerfEfficiencyFactors() const
+    {
+        return well_perforation_efficiency_factors_;
+    }
+
 
 } // end of namespace Opm
 

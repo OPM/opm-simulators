@@ -122,7 +122,7 @@ namespace Opm
             const auto wells_ecl = eclipse_state_->getSchedule().getWells(timer.currentStepNum());
             const int current_time_step = timer.currentStepNum();
 
-            const WellModel well_model(wells, wells_ecl, current_time_step);
+            const WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, current_time_step);
 
             well_state.init(well_model, state, prev_well_state, wells);
 

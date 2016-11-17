@@ -32,6 +32,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 
@@ -151,6 +152,10 @@ namespace Opm {
         typedef typename ModelTraits<Implementation>::WellState WellState;
         typedef typename ModelTraits<Implementation>::ModelParameters ModelParameters;
         typedef typename ModelTraits<Implementation>::SolutionState SolutionState;
+
+        // For the conversion between the surface volume rate and resrevoir voidage rate
+        using RateConverterType = RateConverter::
+                                  SurfaceToReservoirVoidage<BlackoilPropsAdInterface, std::vector<int> >;
 
         // ---------  Public methods  ---------
 
@@ -306,6 +311,18 @@ namespace Opm {
         computeFluidInPlace(const ReservoirState& x,
                             const std::vector<int>& fipnum);
 
+        /// Function to compute the resevoir voidage for the production wells.
+        /// TODO: Probably should go to well model, while we then have duplications there for two Well Models.
+        /// With time, it looks like probably we will introduce a base class for Well Models.
+        void computeWellVoidageRates(const ReservoirState& reservoir_state,
+                                     const WellState& well_state,
+                                     std::vector<double>& well_voidage_rates,
+                                     std::vector<double>& voidage_conversion_coeffs);
+
+
+        void applyVREPGroupControl(const ReservoirState& reservoir_state,
+                                   WellState& well_state);
+
     protected:
 
         // ---------  Types and enums  ---------
@@ -359,6 +376,9 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         V dx_old_;
+
+        // rate converter between the surface volume rates and reservoir voidage rates
+        RateConverterType rate_converter_;
 
         // ---------  Protected methods  ---------
 
@@ -418,6 +438,7 @@ namespace Opm {
         IterationReport
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
+                    const ReservoirState& reservoir_state,
                     SolutionState& state,
                     WellState& well_state);
 

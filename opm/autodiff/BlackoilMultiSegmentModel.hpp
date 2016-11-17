@@ -169,6 +169,7 @@ namespace Opm {
         IterationReport
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
+                    const ReservoirState& reservoir_state,
                     SolutionState& state,
                     WellState& well_state);
 
