@@ -50,6 +50,10 @@ namespace Opm
 
         }
 
+        if (groupChild.isProductionGroup(timeStep) || groupChild.isInjectionGroup(timeStep)) {
+            group_control_active_ = true;
+        }
+
         std::shared_ptr<WellsGroupInterface> child = createGroupWellsGroup(groupChild, timeStep, phaseUsage);
 
         if (child->injSpec().control_mode_ == InjectionSpecification::VREP) {
@@ -308,8 +312,15 @@ namespace Opm
     }
 
 
-    bool WellCollection::havingVREPGroups() const {
+    bool WellCollection::havingVREPGroups() const
+    {
         return having_vrep_groups_;
+    }
+
+
+    bool WellCollection::groupControlActive() const
+    {
+        return group_control_active_;
     }
 
 }

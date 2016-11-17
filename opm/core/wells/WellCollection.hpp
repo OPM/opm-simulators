@@ -136,6 +136,9 @@ namespace Opm
         /// When we have VREP group, we need to update the targets based on the updated production voidage rates for each iteration.
         bool havingVREPGroups() const;
 
+        /// Whether we have active group control
+        bool groupControlActive() const;
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;
@@ -144,6 +147,8 @@ namespace Opm
         std::vector<WellNode*> leaf_nodes_;
 
         bool having_vrep_groups_ = false;
+
+        bool group_control_active_ = false;
 
 
     };
