@@ -442,27 +442,25 @@ namespace Opm {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            typedef OverlappingWellModelMatrixAdapter<Mat,BVector,BVector, ThisType> Operator;
-            Operator opA(ebosJac, const_cast< ThisType& > (*this), istlSolver().parallelInformation() );
-
             // apply well residual to the residual.
             wellModel().apply(ebosResid);
 
             // set initial guess
             x = 0.0;
 
-            typedef typename Operator :: communication_type Comm;
-            Comm* comm = opA.comm();
             // Solve system.
-            if( comm )
+            if( isParallel() )
             {
-                istlSolver().solve( opA, x, ebosResid, *comm );
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, true > Operator;
+                Operator opA(ebosJac, const_cast< ThisType& > (*this), istlSolver().parallelInformation() );
+                assert( opA.comm() );
+                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter<Mat,BVector,BVector, ThisType> SequentialOperator;
-                SequentialOperator& sOpA = static_cast< SequentialOperator& > (opA);
-                istlSolver().solve( sOpA, x, ebosResid );
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, false > Operator;
+                Operator opA(ebosJac, const_cast< ThisType& > (*this) );
+                istlSolver().solve( opA, x, ebosResid );
             }
 
             // recover wells.
@@ -479,7 +477,7 @@ namespace Opm {
 
            Adapts a matrix to the assembled linear operator interface
          */
-        template<class M, class X, class Y, class WellModel>
+        template<class M, class X, class Y, class WellModel, bool overlapping >
         class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
         {
           typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
@@ -498,11 +496,13 @@ namespace Opm {
 
           enum {
             //! \brief The solver category.
-            category=Dune::SolverCategory::sequential
+            category = overlapping ?
+                Dune::SolverCategory::overlapping :
+                Dune::SolverCategory::sequential
           };
 
           //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, WellModel& wellMod, const boost::any& parallelInformation )
+          WellModelMatrixAdapter (const M& A, WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
               : A_( A ), wellMod_( wellMod ), comm_()
           {
 #if HAVE_MPI
@@ -552,24 +552,6 @@ namespace Opm {
           WellModel& wellMod_;
           std::unique_ptr< communication_type > comm_;
         };
-
-        template<class M, class X, class Y, class WellModel>
-        class OverlappingWellModelMatrixAdapter : public WellModelMatrixAdapter<M,X,Y,WellModel>
-        {
-        public:
-          typedef WellModelMatrixAdapter< M,X,Y,WellModel > BaseType;
-
-          enum {
-            //! \brief The solver category.
-            category=Dune::SolverCategory::overlapping
-          };
-
-          //! constructor: just store a reference to a matrix
-          OverlappingWellModelMatrixAdapter(const M& A, WellModel& wellMod, const boost::any& parallelInformation )
-              : BaseType( A, wellMod, parallelInformation )
-          {}
-        };
-
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
