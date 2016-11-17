@@ -1323,10 +1323,10 @@ namespace Opm {
 
 
     private:
-
         void convertResults(BVector& ebosResid, Mat& ebosJac) const
         {
-            const int numPhases = wells().number_of_phases;
+            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const int numFlowPhases = pu.num_phases;
             const int numCells = ebosJac.N();
             assert( numCells == static_cast<int>(ebosJac.M()) );
 
@@ -1338,9 +1338,11 @@ namespace Opm {
                 const double cellVolume = ebosSimulator_.model().dofTotalVolume(cellIdx);
                 auto& cellRes = ebosResid[ cellIdx ];
 
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
+                for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
                 {
-                    const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
+                    const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
+                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
+                    const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, 0);
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] /= refDens;
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] *= cellVolume;
                 }
@@ -1357,13 +1359,16 @@ namespace Opm {
                 const auto endcol = row->end();
                 for( auto col = row->begin(); col != endcol; ++col )
                 {
-                    for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
+                    for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
                     {
-                        const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
-                        for( int pvIdx=0; pvIdx<numPhases; ++pvIdx )
+                        const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
+                        const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
+                        const int ebosCompIdx = flowPhaseToEbosCompIdx(canonicalFlowPhaseIdx);
+                        const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, 0);
+                        for( int pvIdx=0; pvIdx<numFlowPhases; ++pvIdx )
                         {
-                            (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)] /= refDens;
-                            (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)] *= cellVolume;
+                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
+                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
                         }
                     }
                 }

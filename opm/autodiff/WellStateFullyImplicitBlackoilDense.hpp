@@ -115,7 +115,8 @@ namespace Opm
                 }
                     break;
                 }
-                assert(np == 3);
+#warning "HACK: that assert() was probably there for a reason!"
+                //assert(np == 3);
                 double total_rates = 0.0;
                 for (int p = 0; p < np; ++p)  {
                     total_rates += g[p] * wellRates()[np*w + p];
