@@ -251,6 +251,8 @@ protected:
             // check shortcut: if the mobility of the phase is zero in the interior as
             // well as the exterior DOF, we can skip looking at the phase.
             if (intQuantsIn.mobility(phaseIdx) < 1e-18 && intQuantsEx.mobility(phaseIdx) < 1e-18) {
+                upIdx_[phaseIdx] = interiorDofIdx_;
+                dnIdx_[phaseIdx] = exteriorDofIdx_;
                 pressureDifference_[phaseIdx] = 0.0;
                 volumeFlux_[phaseIdx] = 0.0;
                 continue;
