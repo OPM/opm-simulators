@@ -76,7 +76,7 @@ namespace Opm
       , wells_(wells_arg)
       , wops_(wells_arg)
       , well_collection_(well_collection)
-      , well_perforation_efficiency_factors_(Vector())
+      , well_perforation_efficiency_factors_(Vector::Ones(wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0))
       , fluid_(nullptr)
       , active_(nullptr)
       , phase_condition_(nullptr)
@@ -852,16 +852,20 @@ namespace Opm
                 break;
             }
 
-            // get well node in the well collection
-            WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
 
-            // update whehter the well is under group control or individual control
-            if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
-                // under group control
-                well_node.setIndividualControl(false);
-            } else {
-                // individual control
-                well_node.setIndividualControl(true);
+            if (wellCollection()->groupControlActive()) {
+
+                // get well node in the well collection
+                WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+
+                // update whehter the well is under group control or individual control
+                if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
+                    // under group control
+                    well_node.setIndividualControl(false);
+                } else {
+                    // individual control
+                    well_node.setIndividualControl(true);
+                }
             }
         }
 

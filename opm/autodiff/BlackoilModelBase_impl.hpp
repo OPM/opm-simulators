@@ -790,10 +790,12 @@ namespace detail {
         // get reasonable initial conditions for the wells
         asImpl().wellModel().updateWellControls(well_state);
 
-        // enforce VREP control when necessary.
-        applyVREPGroupControl(reservoir_state, well_state);
+        if (asImpl().wellModel().wellCollection()->groupControlActive()) {
+            // enforce VREP control when necessary.
+            applyVREPGroupControl(reservoir_state, well_state);
 
-        asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+            asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+        }
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
@@ -1097,9 +1099,12 @@ namespace detail {
             // wells active or not as parallel logging will take place that needs to
             // communicate with all processes.
             asImpl().wellModel().updateWellControls(well_state);
-            // Enforce the VREP control
-            applyVREPGroupControl(reservoir_state, well_state);
-            asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+
+            if (asImpl().wellModel().wellCollection()->groupControlActive()) {
+                // Enforce the VREP control
+                applyVREPGroupControl(reservoir_state, well_state);
+                asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+            }
         } while (it < 15);
 
         if (converged) {

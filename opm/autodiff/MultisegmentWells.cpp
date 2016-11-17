@@ -147,6 +147,7 @@ namespace Opm {
       : wells_multisegment_( createMSWellVector(wells_arg, wells_ecl, time_step) )
       , wops_ms_(wells_multisegment_)
       , well_collection_(well_collection)
+      , well_perforation_efficiency_factors_(Vector::Ones(numWells()))
       , num_phases_(wells_arg ? wells_arg->number_of_phases : 0)
       , wells_(wells_arg)
       , fluid_(nullptr)

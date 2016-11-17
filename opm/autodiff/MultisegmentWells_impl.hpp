@@ -904,16 +904,18 @@ namespace Opm
                 break;
             }
 
-            // get the well node in the well collection
-            WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+            if (wellCollection()->groupControlActive()) {
+                // get the well node in the well collection
+                WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
 
-            // update whehter the well is under group control or individual control
-            if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
-                // under group control
-                well_node.setIndividualControl(false);
-            } else {
-                // individual control
-                well_node.setIndividualControl(true);
+                // update whehter the well is under group control or individual control
+                if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
+                    // under group control
+                    well_node.setIndividualControl(false);
+                } else {
+                    // individual control
+                    well_node.setIndividualControl(true);
+                }
             }
 
         }
