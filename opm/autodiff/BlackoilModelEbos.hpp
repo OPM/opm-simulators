@@ -308,7 +308,7 @@ namespace Opm {
                 // ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
 
-            if( converged )
+            if( converged && (iteration >= nonlinear_solver.minIter()) )
             {
                 // in case of convergence we do not need to reset intensive quantities
                 invalidateIntensiveQuantitiesCache_ = false ;
@@ -423,9 +423,15 @@ namespace Opm {
         }
 
         template <class X, class Y>
-        void applyWellModel(const X& x, Y& y )
+        void applyWellModelAdd(const X& x, Y& y )
         {
-           wellModel().apply(x, y);
+            wellModel().apply(x, y);
+        }
+
+        template <class X, class Y>
+        void applyWellModelScaleAdd(const Scalar alpha, const X& x, Y& y )
+        {
+            wellModel().applyScaleAdd(alpha, x, y);
         }
 
 
@@ -487,7 +493,7 @@ namespace Opm {
 #if HAVE_MPI
           typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
 #else
-          typedef Dune::CollectiveCommunication<int> communication_type;
+          typedef Dune::CollectiveCommunication< Grid > communication_type;
 #endif
 
           enum {
@@ -512,7 +518,8 @@ namespace Opm {
           virtual void apply( const X& x, Y& y ) const
           {
             A_.mv( x, y );
-            wellMod_.applyWellModel(x, y );
+            // add well model modification to y
+            wellMod_.applyWellModelAdd(x, y );
 
 #if HAVE_MPI
             if( comm_ )
@@ -524,7 +531,8 @@ namespace Opm {
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
           {
             A_.usmv(alpha,x,y);
-            //wellMod_.applyWellModel(x, y );
+            // add scaled well model modification to y
+            wellMod_.applyWellModelScaleAdd( alpha, x, y );
 
 #if HAVE_MPI
             if( comm_ )
