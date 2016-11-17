@@ -101,7 +101,6 @@ try
     bool use_deck = param.has("deck_filename");
     std::shared_ptr< EclipseState > eclipseState;
 
-    std::shared_ptr< Deck > deck;
     std::unique_ptr<GridManager> grid;
     std::unique_ptr<IncompPropertiesInterface> props;
     std::unique_ptr<RockCompressibility> rock_comp;
@@ -112,28 +111,29 @@ try
     if (use_deck) {
         Parser parser;
         ParseContext parseContext;
+        parseContext.update(ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN);
 
         std::string deck_filename = param.get<std::string>("deck_filename");
-        *deck = parser.parseFile(deck_filename , parseContext);
-        eclipseState.reset( new EclipseState(*deck, parseContext));
+        auto deck = parser.parseFile(deck_filename , parseContext);
+        eclipseState.reset( new EclipseState(deck, parseContext));
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
             const UnstructuredGrid& ug_grid = *(grid->c_grid());
             // Rock and fluid init
-            props.reset(new IncompPropertiesFromDeck(*deck, *eclipseState, ug_grid));
+            props.reset(new IncompPropertiesFromDeck(deck, *eclipseState, ug_grid));
 
             state.reset( new TwophaseState(  UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid )));
 
             // Rock compressibility.
-            rock_comp.reset(new RockCompressibility(*deck, *eclipseState));
+            rock_comp.reset(new RockCompressibility(deck, *eclipseState));
             // Gravity.
-            gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+            gravity[2] = deck.hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
             // Init state variables (saturation and pressure).
             if (param.has("init_saturation")) {
                 initStateBasic(ug_grid, *props, param, gravity[2], *state);
             } else {
-                initStateFromDeck(ug_grid, *props, *deck, gravity[2], *state);
+                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
             }
         }
     } else {

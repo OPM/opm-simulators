@@ -94,7 +94,6 @@ try
 
 
     Parser parser;
-    std::shared_ptr< Deck > deck;
 
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
@@ -102,8 +101,8 @@ try
     if (use_deck) {
         ParseContext parseContext;
         std::string deck_filename = param.get<std::string>("deck_filename");
-        *deck = parser.parseFile(deck_filename , parseContext);
-        eclipseState.reset(new EclipseState(*deck, parseContext));
+        auto deck = parser.parseFile(deck_filename , parseContext);
+        eclipseState.reset(new EclipseState(deck, parseContext));
 
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
@@ -111,18 +110,18 @@ try
             const UnstructuredGrid& ug_grid = *(grid->c_grid());
             state.reset( new BlackoilState( UgGridHelpers::numCells( ug_grid ) , UgGridHelpers::numFaces( ug_grid ) ,2));
             // Rock and fluid init
-            props.reset(new BlackoilPropertiesFromDeck(*deck, *eclipseState, ug_grid, param));
+            props.reset(new BlackoilPropertiesFromDeck(deck, *eclipseState, ug_grid, param));
             // check_well_controls = param.getDefault("check_well_controls", false);
             // max_well_control_iterations = param.getDefault("max_well_control_iterations", 10);
             // Rock compressibility.
-            rock_comp.reset(new RockCompressibility(*deck, *eclipseState));
+            rock_comp.reset(new RockCompressibility(deck, *eclipseState));
             // Gravity.
-            gravity[2] = deck->hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
+            gravity[2] = deck.hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
             // Init state variables (saturation and pressure).
             if (param.has("init_saturation")) {
                 initStateBasic(ug_grid, *props, param, gravity[2], *state);
             } else {
-                initStateFromDeck(ug_grid, *props, *deck, gravity[2], *state);
+                initStateFromDeck(ug_grid, *props, deck, gravity[2], *state);
             }
             initBlackoilSurfvol(ug_grid, *props, *state);
         }
@@ -240,7 +239,7 @@ try
         int step = 0;
         SimulatorTimer simtimer;
         // Use timer for last epoch to obtain total time.
-        Opm::TimeMap timeMap(*deck);
+        const auto& timeMap = eclipseState->getSchedule().getTimeMap();
         simtimer.init(timeMap);
         const double total_time = simtimer.totalTime();
         for (size_t reportStepIdx = 0; reportStepIdx < timeMap.numTimesteps(); ++reportStepIdx) {
