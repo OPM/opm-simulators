@@ -125,7 +125,7 @@ namespace Opm
             int wellStateStepNumber = ( ! substep && timer.reportStepNum() > 0) ?
                 (timer.reportStepNum() - 1) : timer.reportStepNum();
             // collect all solutions to I/O rank
-            isIORank = parallelOutput_->collectToIORank( localState, localWellState, wellStateStepNumber );
+            isIORank = parallelOutput_->collectToIORank( localState, localWellState, sol, wellStateStepNumber );
         }
 
         const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;

@@ -178,7 +178,7 @@ namespace Opm
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability )
       : output_( param.getDefault("output", true) ),
-        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, permeability ) : 0 ),
+        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, permeability, phaseUsage ) : 0 ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
