@@ -34,7 +34,7 @@ SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param
                                           const RockCompressibility* rock_comp_props,
                                           std::shared_ptr<EclipseState> eclipse_state,
                                           BlackoilOutputWriter& output_writer,
-                                          std::shared_ptr< const Deck > deck,
+                                          const Deck& deck,
                                           NewtonIterationBlackoilInterface& linsolver,
                                           const double* gravity)
 : BaseType(param,
@@ -82,7 +82,7 @@ handleAdditionalWellInflow(SimulatorTimer& timer,
 {
     // compute polymer inflow
     std::unique_ptr<PolymerInflowInterface> polymer_inflow_ptr;
-    if (deck_->hasKeyword("WPOLYMER")) {
+    if (deck_.hasKeyword("WPOLYMER")) {
         if (wells_manager.c_wells() == 0) {
             OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
         }

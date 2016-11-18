@@ -109,7 +109,7 @@ namespace Opm
                                                   const RockCompressibility* rock_comp_props,
                                                   std::shared_ptr<EclipseState> eclipse_state,
                                                   BlackoilOutputWriter& output_writer,
-                                                  std::shared_ptr< const Deck > deck,
+                                                  const Deck& deck,
                                                   NewtonIterationBlackoilInterface& linsolver,
                                                   const double* gravity);
 
@@ -127,7 +127,7 @@ namespace Opm
                                    const WellState& well_state,
                                    DynamicListEconLimited& list_econ_limited) const;
 private:
-        std::shared_ptr< const Deck > deck_;
+        const Deck& deck_;
         const PolymerPropsAd& polymer_props_;
 
     };
