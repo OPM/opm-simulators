@@ -36,6 +36,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/ImpesTPFAAD.cpp
   opm/autodiff/moduleVersion.cpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
+  opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.cpp
   opm/autodiff/SimulatorIncompTwophaseAd.cpp
   opm/autodiff/TransportSolverTwophaseAd.cpp
   opm/autodiff/BlackoilPropsAdFromDeck.cpp
@@ -49,7 +50,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/WellMultiSegment.cpp
 	opm/autodiff/MultisegmentWells.cpp
   opm/autodiff/BlackoilSolventState.cpp
-  opm/autodiff/ThreadHandle.hpp
   opm/autodiff/MissingFeatures.cpp
   opm/polymer/PolymerState.cpp
   opm/polymer/PolymerBlackoilState.cpp
@@ -105,6 +105,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/find_zero.cpp
   examples/flow_legacy.cpp
   examples/flow_sequential.cpp
+  examples/flow_ebos.cpp
   examples/flow_multisegment.cpp
   examples/flow_solvent.cpp
   examples/sim_2p_incomp.cpp
@@ -124,6 +125,7 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
+  examples/flow_ebos.cpp
   examples/flow_legacy.cpp
   examples/flow_sequential.cpp
   examples/flow_solvent.cpp
@@ -143,6 +145,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/AutoDiffMatrix.hpp
   opm/autodiff/AutoDiff.hpp
   opm/autodiff/BackupRestore.hpp
+	opm/autodiff/BlackoilDetails.hpp
   opm/autodiff/BlackoilModel.hpp
   opm/autodiff/BlackoilModelBase.hpp
   opm/autodiff/BlackoilModelBase_impl.hpp
@@ -155,6 +158,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/Compat.hpp
   opm/autodiff/CPRPreconditioner.hpp
   opm/autodiff/createGlobalCellArray.hpp
+	opm/autodiff/DefaultBlackoilSolutionState.hpp
   opm/autodiff/BlackoilSequentialModel.hpp
   opm/autodiff/BlackoilSolventModel.hpp
   opm/autodiff/BlackoilSolventModel_impl.hpp
@@ -166,6 +170,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/DuneMatrix.hpp
   opm/autodiff/ExtractParallelGridInformationToISTL.hpp
   opm/autodiff/FlowMain.hpp
+  opm/autodiff/FlowMainEbos.hpp
   opm/autodiff/FlowMainPolymer.hpp
   opm/autodiff/FlowMainSequential.hpp
   opm/autodiff/FlowMainSolvent.hpp
@@ -173,6 +178,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/GridHelpers.hpp
   opm/autodiff/GridInit.hpp
   opm/autodiff/ImpesTPFAAD.hpp
+  opm/autodiff/ISTLSolver.hpp
+	opm/autodiff/IterationReport.hpp
   opm/autodiff/moduleVersion.hpp
   opm/autodiff/NewtonIterationBlackoilCPR.hpp
   opm/autodiff/NewtonIterationBlackoilInterface.hpp
@@ -187,18 +194,22 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/ParallelRestrictedAdditiveSchwarz.hpp
   opm/autodiff/RateConverter.hpp
   opm/autodiff/RedistributeDataHandles.hpp
+	opm/autodiff/SimFIBODetails.hpp
   opm/autodiff/SimulatorBase.hpp
   opm/autodiff/SimulatorBase_impl.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilSolvent.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilSolvent_impl.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment_impl.hpp
+	opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.hpp
   opm/autodiff/SimulatorIncompTwophaseAd.hpp
   opm/autodiff/SimulatorSequentialBlackoil.hpp
   opm/autodiff/TransportSolverTwophaseAd.hpp
   opm/autodiff/WellDensitySegmented.hpp
   opm/autodiff/WellStateFullyImplicitBlackoil.hpp
+  opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp
   opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
   opm/autodiff/VFPProperties.hpp
@@ -212,9 +223,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/WellHelpers.hpp
   opm/autodiff/StandardWells.hpp
   opm/autodiff/StandardWells_impl.hpp
+	opm/autodiff/StandardWellsDense.hpp
   opm/autodiff/StandardWellsSolvent.hpp
   opm/autodiff/StandardWellsSolvent_impl.hpp
   opm/autodiff/MissingFeatures.hpp
+  opm/autodiff/ThreadHandle.hpp
   opm/polymer/CompressibleTpfaPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer_impl.hpp
@@ -243,6 +256,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/SimulatorCompressibleTwophase.hpp
   opm/simulators/SimulatorIncompTwophase.hpp
+	opm/simulators/thresholdPressures.hpp
 	opm/simulators/WellSwitchingLogger.hpp
   )
 

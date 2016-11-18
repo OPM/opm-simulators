@@ -20,6 +20,8 @@
 #ifndef OPM_BLACKOILMODELPARAMETERS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELPARAMETERS_HEADER_INCLUDED
 
+#include <string>
+
 namespace Opm
 {
 
@@ -58,6 +60,9 @@ namespace Opm
 
         /// Try to detect oscillation or stagnation.
         bool use_update_stabilization_;
+
+        // The file name of the deck
+        std::string deck_file_name_;
 
         /// Construct from user parameters or defaults.
         explicit BlackoilModelParameters( const parameter::ParameterGroup& param );

@@ -24,7 +24,8 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 #include <opm/autodiff/VFPHelpers.hpp>
 
 
@@ -74,7 +75,42 @@ VFPProdProperties::ADB VFPProdProperties::bhp(const std::vector<int>& table_id,
 }
 
 
+VFPProdProperties::EvalWell VFPProdProperties::bhp(const int table_id,
+                                                   const EvalWell& aqua,
+                                                   const EvalWell& liquid,
+                                                   const EvalWell& vapour,
+                                                   const double& thp,
+                                                   const double& alq) const {
 
+    //Get the table
+    const VFPProdTable* table = detail::getTable(m_tables, table_id);
+    EvalWell bhp = 0.0;
+
+    //Find interpolation variables
+    EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+    EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
+    EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
+
+    //Compute the BHP for each well independently
+    if (table != nullptr) {
+        //First, find the values to interpolate between
+        //Value of FLO is negative in OPM for producers, but positive in VFP table
+        auto flo_i = detail::findInterpData(-flo.value(), table->getFloAxis());
+        auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
+        auto wfr_i = detail::findInterpData( wfr.value(), table->getWFRAxis());
+        auto gfr_i = detail::findInterpData( gfr.value(), table->getGFRAxis());
+        auto alq_i = detail::findInterpData( alq, table->getALQAxis()); //assume constant
+
+        detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+
+        bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
+        bhp.setValue(bhp_val.value);
+    }
+    else {
+        bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
+    }
+    return bhp;
+}
 
 
 

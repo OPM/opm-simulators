@@ -133,7 +133,7 @@ namespace Opm {
          */
         inline
         double computeHydrostaticCorrection(const Wells& wells, const int w, double vfp_ref_depth,
-                                            const Vector& well_perforation_densities, const double gravity) {
+                                            const double& rho, const double gravity) {
             if ( wells.well_connpos[w] == wells.well_connpos[w+1] )
             {
                 // This is a well with no perforations.
@@ -144,12 +144,11 @@ namespace Opm {
             }
             const double well_ref_depth = wells.depth_ref[w];
             const double dh = vfp_ref_depth - well_ref_depth;
-            const int perf = wells.well_connpos[w];
-            const double rho = well_perforation_densities[perf];
             const double dp = rho*gravity*dh;
 
             return dp;
         }
+
 
         inline
         Vector computeHydrostaticCorrection(const Wells& wells, const Vector vfp_ref_depth,
@@ -159,7 +158,23 @@ namespace Opm {
 
 #pragma omp parallel for schedule(static)
             for (int i=0; i<nw; ++i) {
-                retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities, gravity);
+                const int perf = wells.well_connpos[i];
+                retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities[perf], gravity);
+            }
+
+            return retval;
+        }
+
+        inline
+        std::vector<double> computeHydrostaticCorrection(const Wells& wells, const std::vector<double>& vfp_ref_depth,
+                                                         const std::vector<double>& well_perforation_densities, const double gravity) {
+            const int nw = wells.number_of_wells;
+            std::vector<double> retval(nw,0.0);
+
+#pragma omp parallel for schedule(static)
+            for (int i=0; i<nw; ++i) {
+                const int perf = wells.well_connpos[i];
+                retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities[perf], gravity);
             }
 
             return retval;

@@ -51,6 +51,7 @@ namespace Opm
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
         compute_well_potentials_ = param.getDefault("compute_well_potentials", compute_well_potentials_);
         use_update_stabilization_ = param.getDefault("use_update_stabilization", use_update_stabilization_);
+        deck_file_name_ = param.template get<std::string>("deck_filename");
     }
 
 

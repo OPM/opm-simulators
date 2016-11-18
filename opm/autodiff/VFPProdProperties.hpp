@@ -23,6 +23,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/core/wells.h>
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 
 #include <vector>
 #include <map>
@@ -98,6 +100,15 @@ public:
             const ADB& vapour,
             const ADB& thp,
             const ADB& alq) const;
+
+
+    typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
+    EvalWell bhp(const int table_id,
+            const EvalWell& aqua,
+            const EvalWell& liquid,
+            const EvalWell& vapour,
+            const double& thp,
+            const double& alq) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters

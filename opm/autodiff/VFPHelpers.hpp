@@ -25,7 +25,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 
 /**
  * This file contains a set of helper functions used by VFPProd / VFPInj.
@@ -35,14 +36,7 @@ namespace detail {
 
 
 typedef AutoDiffBlock<double> ADB;
-
-
-
-
-
-
-
-
+typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
 
 
 /**
@@ -52,7 +46,12 @@ inline double zeroIfNan(const double& value) {
     return (std::isnan(value)) ? 0.0 : value;
 }
 
-
+/**
+ * Returns zero if input value is NaN
+ */
+inline double zeroIfNan(const EvalWell& value) {
+    return (std::isnan(value.value())) ? 0.0 : value.value();
+}
 
 
 
