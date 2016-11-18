@@ -137,6 +137,11 @@ typedef Eigen::Array<double,
         , terminal_output_ (terminal_output)
         , material_name_(0)
         , current_relaxation_(1.0)
+        // only one region 0 used, which means average reservoir hydrocarbon conditions in
+        // the field will be calculated.
+        // TODO: more delicate implementation will be required if we want to handle different
+        // FIP regions specified from the well specifications.
+        , rate_converter_(fluid_, std::vector<int>(AutoDiffGrid::numCells(grid_),0))
     {
         if (active_[Water]) {
             material_name_.push_back("Water");
@@ -719,6 +724,13 @@ typedef Eigen::Array<double,
         // get reasonable initial conditions for the wells
         asImpl().wellModel().updateWellControls(well_state);
 
+        if (asImpl().wellModel().wellCollection()->groupControlActive()) {
+            // enforce VREP control when necessary.
+            applyVREPGroupControl(reservoir_state, well_state);
+
+            asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+        }
+
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
@@ -755,7 +767,7 @@ typedef Eigen::Array<double,
         asImpl().wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
         }
         V aliveWells;
         std::vector<ADB> cq_s;
@@ -770,6 +782,7 @@ typedef Eigen::Array<double,
             asImpl().makeConstantState(state0);
             asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
         }
+
         return iter_report;
     }
 
@@ -901,8 +914,10 @@ typedef Eigen::Array<double,
         // Add well contributions to mass balance equations
         const int nc = Opm::AutoDiffGrid::numCells(grid_);
         const int np = asImpl().numPhases();
+        const V& efficiency_factors = wellModel().wellPerfEfficiencyFactors();
         for (int phase = 0; phase < np; ++phase) {
-            residual_.material_balance_eq[phase] -= superset(cq_s[phase], wellModel().wellOps().well_cells, nc);
+            residual_.material_balance_eq[phase] -= superset(efficiency_factors * cq_s[phase],
+                                                             wellModel().wellOps().well_cells, nc);
         }
     }
 
@@ -951,6 +966,7 @@ typedef Eigen::Array<double,
     BlackoilModelBase<Grid, WellModel, Implementation>::
     solveWellEq(const std::vector<ADB>& mob_perfcells,
                 const std::vector<ADB>& b_perfcells,
+                const ReservoirState& reservoir_state,
                 SolutionState& state,
                 WellState& well_state)
     {
@@ -1017,6 +1033,12 @@ typedef Eigen::Array<double,
             // wells active or not as parallel logging will take place that needs to
             // communicate with all processes.
             asImpl().wellModel().updateWellControls(well_state);
+
+            if (asImpl().wellModel().wellCollection()->groupControlActive()) {
+                // Enforce the VREP control
+                applyVREPGroupControl(reservoir_state, well_state);
+                asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+            }
         } while (it < 15);
 
         if (converged) {
@@ -1700,6 +1722,7 @@ typedef Eigen::Array<double,
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
         converged_Well = converged_Well && (residualWell < tol_well_control);
+
         const bool converged = converged_MB && converged_CNV && converged_Well;
 
         // Residual in Pascal can have high values and still be ok.
@@ -1820,6 +1843,7 @@ typedef Eigen::Array<double,
         const double residualWell     = detail::infinityNormWell(residual_.well_eq,
                                                                  linsolver_.parallelInformation());
         converged_Well = converged_Well && (residualWell < tol_well_control);
+
         const bool converged = converged_Well;
 
         // if one of the residuals is NaN, throw exception, so that the solver can be restarted
@@ -2358,6 +2382,117 @@ typedef Eigen::Array<double,
         }
 
         return values;
+    }
+
+
+
+
+
+    template <class Grid, class WellModel, class Implementation>
+    void
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    computeWellVoidageRates(const ReservoirState& reservoir_state,
+                            const WellState& well_state,
+                            std::vector<double>& well_voidage_rates,
+                            std::vector<double>& voidage_conversion_coeffs)
+    {
+        // TODO: for now, we store the voidage rates for all the production wells.
+        // For injection wells, the rates are stored as zero.
+        // We only store the conversion coefficients for all the injection wells.
+        // Later, more delicate model will be implemented here.
+        // And for the moment, group control can only work for serial running.
+        const int nw = well_state.numWells();
+        const int np = numPhases();
+
+        const Wells* wells = asImpl().wellModel().wellsPointer();
+
+        // we calculate the voidage rate for each well, that means the sum of all the phases.
+        well_voidage_rates.resize(nw, 0);
+        // store the conversion coefficients, while only for the use of injection wells.
+        voidage_conversion_coeffs.resize(nw * np, 1.0);
+
+        int global_number_wells = nw;
+
+#if HAVE_MPI
+        if ( linsolver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
+        {
+            const auto& info =
+                boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation());
+            global_number_wells = info.communicator().sum(global_number_wells);
+            if ( global_number_wells )
+            {
+                rate_converter_.defineState(reservoir_state, boost::any_cast<const ParallelISTLInformation&>(linsolver_.parallelInformation()));
+            }
+        }
+        else
+#endif
+        {
+            if ( global_number_wells )
+            {
+                rate_converter_.defineState(reservoir_state);
+            }
+        }
+
+        std::vector<double> well_rates(np, 0.0);
+        std::vector<double> convert_coeff(np, 1.0);
+
+
+        if ( !well_voidage_rates.empty() ) {
+            for (int w = 0; w < nw; ++w) {
+                const bool is_producer = wells->type[w] == PRODUCER;
+
+                // not sure necessary to change all the value to be positive
+                if (is_producer) {
+                    std::transform(well_state.wellRates().begin() + np * w,
+                                   well_state.wellRates().begin() + np * (w + 1),
+                                   well_rates.begin(), std::negate<double>());
+
+                    // the average hydrocarbon conditions of the whole field will be used
+                    const int fipreg = 0; // Not considering FIP for the moment.
+
+                    rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                    well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
+                                                               convert_coeff.begin(), 0.0);
+                } else {
+                    // TODO: Not sure whether will encounter situation with all zero rates
+                    // and whether it will cause problem here.
+                    std::copy(well_state.wellRates().begin() + np * w,
+                              well_state.wellRates().begin() + np * (w + 1),
+                              well_rates.begin());
+                    // the average hydrocarbon conditions of the whole field will be used
+                    const int fipreg = 0; // Not considering FIP for the moment.
+                    rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                    std::copy(convert_coeff.begin(), convert_coeff.end(),
+                              voidage_conversion_coeffs.begin() + np * w);
+                }
+            }
+        }
+    }
+
+
+
+
+
+    template <class Grid, class WellModel, class Implementation>
+    void
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    applyVREPGroupControl(const ReservoirState& reservoir_state,
+                          WellState& well_state)
+    {
+        if (asImpl().wellModel().wellCollection()->havingVREPGroups()) {
+            std::vector<double> well_voidage_rates;
+            std::vector<double> voidage_conversion_coeffs;
+            computeWellVoidageRates(reservoir_state, well_state, well_voidage_rates, voidage_conversion_coeffs);
+            asImpl().wellModel().wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
+
+            // for the wells under group control, update the currentControls for the well_state
+            for (const WellNode* well_node : asImpl().wellModel().wellCollection()->getLeafNodes()) {
+                if (well_node->isInjector() && !well_node->individualControl()) {
+                    const int well_index = well_node->selfIndex();
+                    well_state.currentControls()[well_index] = well_node->groupControlIndex();
+                }
+            }
+        }
     }
 
 } // namespace Opm

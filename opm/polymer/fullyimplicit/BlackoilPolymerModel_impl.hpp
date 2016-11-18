@@ -542,7 +542,7 @@ namespace Opm {
         wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            Base::solveWellEq(mob_perfcells, b_perfcells, state, well_state);
+            Base::solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
         }
 
         V aliveWells;

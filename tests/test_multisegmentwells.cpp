@@ -119,7 +119,7 @@ struct SetupMSW {
         const Wells* wells = wells_manager.c_wells();
         const auto wells_ecl = ecl_state.getSchedule().getWells(current_timestep);
 
-        ms_wells.reset(new Opm::MultisegmentWells(wells, wells_ecl, current_timestep));
+        ms_wells.reset(new Opm::MultisegmentWells(wells, &(wells_manager.wellCollection()), wells_ecl, current_timestep));
     };
 
     std::shared_ptr<const Opm::MultisegmentWells> ms_wells;
