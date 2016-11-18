@@ -184,7 +184,7 @@ namespace Opm {
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
-        , isRestart_(false)
+        , invalidateIntensiveQuantitiesCache_(true)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
@@ -258,16 +258,21 @@ namespace Opm {
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
             }
+
+            // reset intensive quantities cache useless other options are set
+            // further down
+            invalidateIntensiveQuantitiesCache_ = true;
+
             IterationReport iter_report = assemble(timer, iteration, reservoir_state, well_state);
             std::vector<double> residual_norms;
             const bool converged = getConvergence(timer, iteration,residual_norms);
             residual_norms_history_.push_back(residual_norms);
             bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
-            // is first set to true if a linear solve is needed, but then it is set to false if the solver succeed.
-            isRestart_ = must_solve && (iteration == nonlinear_solver.maxIter());
+
             // don't solve if we have reached the maximum number of iteration.
             must_solve = must_solve && (iteration < nonlinear_solver.maxIter());
             if (must_solve) {
+
                 // enable single precision for solvers when dt is smaller then 20 days
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
 
@@ -276,6 +281,7 @@ namespace Opm {
                 const int nw = wellModel().wells().number_of_wells;
                 BVector x(nc);
                 BVector xw(nw);
+
                 solveJacobianSystem(x, xw);
 
                 // Stabilize the nonlinear update.
@@ -298,17 +304,21 @@ namespace Opm {
                 updateState(x,reservoir_state);
                 wellModel().updateWellState(xw, well_state);
 
-                // since the solution was changed, the cache for the intensive quantities
-                // are invalid
-                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-
-                // solver has succeed i.e. no need for restart.
-                isRestart_ = false;
+                // since the solution was changed, the cache for the intensive quantities are invalid
+                // ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
+
+            if( converged && (iteration >= nonlinear_solver.minIter()) )
+            {
+                // in case of convergence we do not need to reset intensive quantities
+                invalidateIntensiveQuantitiesCache_ = false ;
+            }
+
             const bool failed = false; // Not needed in this model.
             const int linear_iters = must_solve ? linearIterationsLastSolve() : 0;
             return IterationReport{ failed, converged, linear_iters, iter_report.well_iterations };
         }
+
         void printIf(int c, double x, double y, double eps, std::string type) {
             if (std::abs(x-y) > eps) {
                 std::cout << type << " " <<c << ": "<<x << " " << y << std::endl;
@@ -351,7 +361,6 @@ namespace Opm {
             }
             catch ( const Dune::FMatrixError& e  )
             {
-                isRestart_ = true;
                 OPM_THROW(Opm::NumericalProblem,"Well equation did not converge");
             }
 
@@ -414,9 +423,15 @@ namespace Opm {
         }
 
         template <class X, class Y>
-        void applyWellModel(const X& x, Y& y )
+        void applyWellModelAdd(const X& x, Y& y )
         {
-           wellModel().apply(x, y);
+            wellModel().apply(x, y);
+        }
+
+        template <class X, class Y>
+        void applyWellModelScaleAdd(const Scalar alpha, const X& x, Y& y )
+        {
+            wellModel().applyScaleAdd(alpha, x, y);
         }
 
 
@@ -427,27 +442,25 @@ namespace Opm {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            typedef OverlappingWellModelMatrixAdapter<Mat,BVector,BVector, ThisType> Operator;
-            Operator opA(ebosJac, const_cast< ThisType& > (*this), istlSolver().parallelInformation() );
-
             // apply well residual to the residual.
             wellModel().apply(ebosResid);
 
             // set initial guess
             x = 0.0;
 
-            typedef typename Operator :: communication_type Comm;
-            Comm* comm = opA.comm();
             // Solve system.
-            if( comm )
+            if( isParallel() )
             {
-                istlSolver().solve( opA, x, ebosResid, *comm );
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, true > Operator;
+                Operator opA(ebosJac, const_cast< ThisType& > (*this), istlSolver().parallelInformation() );
+                assert( opA.comm() );
+                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter<Mat,BVector,BVector, ThisType> SequentialOperator;
-                SequentialOperator& sOpA = static_cast< SequentialOperator& > (opA);
-                istlSolver().solve( sOpA, x, ebosResid );
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, false > Operator;
+                Operator opA(ebosJac, const_cast< ThisType& > (*this) );
+                istlSolver().solve( opA, x, ebosResid );
             }
 
             // recover wells.
@@ -464,7 +477,7 @@ namespace Opm {
 
            Adapts a matrix to the assembled linear operator interface
          */
-        template<class M, class X, class Y, class WellModel>
+        template<class M, class X, class Y, class WellModel, bool overlapping >
         class WellModelMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
         {
           typedef Dune::AssembledLinearOperator<M,X,Y> BaseType;
@@ -478,16 +491,18 @@ namespace Opm {
 #if HAVE_MPI
           typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
 #else
-          typedef Dune::CollectiveCommunication<int> communication_type;
+          typedef Dune::CollectiveCommunication< Grid > communication_type;
 #endif
 
           enum {
             //! \brief The solver category.
-            category=Dune::SolverCategory::sequential
+            category = overlapping ?
+                Dune::SolverCategory::overlapping :
+                Dune::SolverCategory::sequential
           };
 
           //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, WellModel& wellMod, const boost::any& parallelInformation )
+          WellModelMatrixAdapter (const M& A, WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
               : A_( A ), wellMod_( wellMod ), comm_()
           {
 #if HAVE_MPI
@@ -503,7 +518,8 @@ namespace Opm {
           virtual void apply( const X& x, Y& y ) const
           {
             A_.mv( x, y );
-            wellMod_.applyWellModel(x, y );
+            // add well model modification to y
+            wellMod_.applyWellModelAdd(x, y );
 
 #if HAVE_MPI
             if( comm_ )
@@ -511,10 +527,12 @@ namespace Opm {
 #endif
           }
 
+          // y += \alpha * A * x
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
           {
             A_.usmv(alpha,x,y);
-            wellMod_.applyWellModel(x, y );
+            // add scaled well model modification to y
+            wellMod_.applyWellModelScaleAdd( alpha, x, y );
 
 #if HAVE_MPI
             if( comm_ )
@@ -534,24 +552,6 @@ namespace Opm {
           WellModel& wellMod_;
           std::unique_ptr< communication_type > comm_;
         };
-
-        template<class M, class X, class Y, class WellModel>
-        class OverlappingWellModelMatrixAdapter : public WellModelMatrixAdapter<M,X,Y,WellModel>
-        {
-        public:
-          typedef WellModelMatrixAdapter< M,X,Y,WellModel > BaseType;
-
-          enum {
-            //! \brief The solver category.
-            category=Dune::SolverCategory::overlapping
-          };
-
-          //! constructor: just store a reference to a matrix
-          OverlappingWellModelMatrixAdapter(const M& A, WellModel& wellMod, const boost::any& parallelInformation )
-              : BaseType( A, wellMod, parallelInformation )
-          {}
-        };
-
 
         /// Apply an update to the primary variables, chopped if appropriate.
         /// \param[in]      dx                updates to apply to primary variables
@@ -950,13 +950,11 @@ namespace Opm {
                 if (std::isnan(mass_balance_residual[phaseIdx])
                     || std::isnan(CNV[phaseIdx])
                     || (phaseIdx < np && std::isnan(well_flux_residual[phaseIdx]))) {
-                    isRestart_ = true;
                     OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
                 }
                 if (mass_balance_residual[phaseIdx] > maxResidualAllowed()
                     || CNV[phaseIdx] > maxResidualAllowed()
                     || (phaseIdx < np && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
-                    isRestart_ = true;
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }
@@ -1425,7 +1423,7 @@ namespace Opm {
                 ebosSimulator_.problem().beginTimeStep();
             }
             // if the last step failed we want to recalculate the IntesiveQuantities.
-            if (isRestart_) {
+            if ( invalidateIntensiveQuantitiesCache_ ) {
                 ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
 
@@ -1454,8 +1452,7 @@ namespace Opm {
 
     public:
         bool isBeginReportStep_;
-        bool isRestart_;
-
+        bool invalidateIntensiveQuantitiesCache_;
     };
 } // namespace Opm
 

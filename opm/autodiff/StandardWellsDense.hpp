@@ -336,6 +336,22 @@ namespace Opm {
                 duneB_.mmtv(invDCx,Ax);
             }
 
+            // apply well model with scaling of alpha
+            void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax)
+            {
+                if ( ! localWellsActive() ) {
+                    return;
+                }
+
+                if( scaleAddRes_.size() != Ax.size() ) {
+                    scaleAddRes_.resize( Ax.size() );
+                }
+
+                scaleAddRes_ = 0.0;
+                apply( x, scaleAddRes_ );
+                Ax.axpy( alpha, scaleAddRes_ );
+            }
+
             // xw = inv(D)*(rw - C*x)
             void recoverVariable(const BVector& x, BVector& xw) const {
                 if ( ! localWellsActive() ) {
@@ -1418,6 +1434,7 @@ namespace Opm {
 
             mutable BVector Cx_;
             mutable BVector invDrw_;
+            mutable BVector scaleAddRes_;
 
             // protected methods
             EvalWell getBhp(const int wellIdx) const {

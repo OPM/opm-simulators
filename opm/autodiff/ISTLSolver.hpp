@@ -191,8 +191,8 @@ namespace Opm
         /// \brief construct the CPR preconditioner and the solver.
         /// \tparam P The type of the parallel information.
         /// \param parallelInformation the information about the parallelization.
-        template<int category=Dune::SolverCategory::sequential, class O, class POrComm>
-        void constructPreconditionerAndSolve(O& opA,
+        template<int category=Dune::SolverCategory::sequential, class LinearOperator, class POrComm>
+        void constructPreconditionerAndSolve(LinearOperator& linearOperator,
                                              Vector& x, Vector& istlb,
                                              const POrComm& parallelInformation_arg,
                                              Dune::InverseOperatorResult& result) const
@@ -211,21 +211,33 @@ namespace Opm
             {
                 typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
                 typedef typename CPRSelectorType::AMG AMG;
+                typedef typename CPRSelectorType::Operator MatrixOperator;
+
                 std::unique_ptr< AMG > amg;
+                std::unique_ptr< MatrixOperator > opA;
+
+                if( ! std::is_same< LinearOperator, MatrixOperator > :: value )
+                {
+                    // create new operator in case linear operator and matrix operator differ
+                    opA.reset( CPRSelectorType::makeOperator( linearOperator.getmat(), parallelInformation_arg ) );
+                }
+
+                const double relax = 1.0;
+
                 // Construct preconditioner.
-                constructAMGPrecond(opA, parallelInformation_arg, amg);
+                constructAMGPrecond( linearOperator, parallelInformation_arg, amg, opA, relax );
 
                 // Solve.
-                solve(opA, x, istlb, *sp, *amg, result);
+                solve(linearOperator, x, istlb, *sp, *amg, result);
             }
             else
 #endif
             {
                 // Construct preconditioner.
-                auto precond = constructPrecond(opA, parallelInformation_arg);
+                auto precond = constructPrecond(linearOperator, parallelInformation_arg);
 
                 // Solve.
-                solve(opA, x, istlb, *sp, *precond, result);
+                solve(linearOperator, x, istlb, *sp, *precond, result);
             }
         }
 
@@ -252,11 +264,18 @@ namespace Opm
         }
 #endif
 
-        template <class Operator, class POrComm, class AMG >
+        template <class LinearOperator, class MatrixOperator, class POrComm, class AMG >
         void
-        constructAMGPrecond(Operator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg ) const
+        constructAMGPrecond(LinearOperator& linearOperator, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax ) const
         {
-            const double relax = 1.0;
+            ISTLUtility::createAMGPreconditionerPointer( *opA, relax, comm, amg );
+        }
+
+
+        template <class MatrixOperator, class POrComm, class AMG >
+        void
+        constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax ) const
+        {
             ISTLUtility::createAMGPreconditionerPointer( opA, relax, comm, amg );
         }
 
