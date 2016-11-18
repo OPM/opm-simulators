@@ -55,6 +55,12 @@
 
 namespace Opm {
 
+enum WellVariablePositions {
+    XvarWell = 0,
+    WFrac = 1,
+    GFrac = 2
+};
+
 
         /// Class for handling the standard well model.
         template<typename FluidSystem, typename BlackoilIndices>
@@ -62,15 +68,17 @@ namespace Opm {
         public:
 
             // ---------      Types      ---------
-            typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
             typedef WellStateFullyImplicitBlackoilDense WellState;
             typedef BlackoilModelParameters ModelParameters;
 
             typedef double Scalar;
-            typedef Dune::FieldVector<Scalar, 3    > VectorBlockType;
-            typedef Dune::FieldMatrix<Scalar, 3, 3 > MatrixBlockType;
+            static const int blocksize = 3;
+            typedef Dune::FieldVector<Scalar, blocksize    > VectorBlockType;
+            typedef Dune::FieldMatrix<Scalar, blocksize, blocksize > MatrixBlockType;
             typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
             typedef Dune::BlockVector<VectorBlockType> BVector;
+            typedef DenseAd::Evaluation<double, /*size=*/blocksize*2> EvalWell;
+
 
             // ---------  Public methods  ---------
             StandardWellsDense(const Wells* wells_arg,
@@ -105,6 +113,10 @@ namespace Opm {
                 if ( ! localWellsActive() ) {
                     return;
                 }
+
+                // assumes the gas fractions are stored after water fractions
+                // WellVariablePositions needs to be changed for 2p runs
+                assert (np == 3 || np == 2 && !pu.phase_used[Gas] );
 
                 fluid_ = fluid_arg;
                 active_ = active_arg;
@@ -235,10 +247,16 @@ namespace Opm {
                             for (int p2 = 0; p2 < np; ++p2) {
                                 if (!only_wells) {
                                     ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
-                                    duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].derivative(p2+3); // intput in transformed matrix
+                                    duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].derivative(p2+blocksize); // intput in transformed matrix
                                     duneC_[w][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
                                 }
-                                invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2+3);
+                                invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2+blocksize);
+                            }
+
+                            // add trivial equation for 2p cases (Only support water + oil)
+                            if (np == 2) {
+                                assert((*active_)[ Gas ]);
+                                invDuneD_[w][w][flowPhaseToEbosCompIdx(Gas)][flowToEbosPvIdx(Gas)] = 1.0;
                             }
 
                             // Store the perforation phase flux for later usage.
@@ -253,7 +271,7 @@ namespace Opm {
                         EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
                         resWell_loc += getQs(w, p1);
                         for (int p2 = 0; p2 < np; ++p2) {
-                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivative(p2+3);
+                            invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivative(p2+blocksize);
                         }
                         resWell_[w][flowPhaseToEbosCompIdx(p1)] += resWell_loc.value();
                     }
@@ -464,11 +482,11 @@ namespace Opm {
             }
 
 
-            typedef DenseAd::Evaluation<double, /*size=*/3> Eval;
+            typedef DenseAd::Evaluation<double, /*size=*/blocksize> Eval;
             EvalWell extendEval(Eval in) const {
                 EvalWell out = 0.0;
                 out.setValue(in.value());
-                for(int i = 0;i<3;++i) {
+                for(int i = 0; i < blocksize;++i) {
                     out.setDerivative(i, in.derivative(flowToEbosPvIdx(i)));
                 }
                 return out;
@@ -482,7 +500,7 @@ namespace Opm {
                     for (int w = 0; w < nw; ++w) {
                         wellVariables_[w + nw*phaseIdx] = 0.0;
                         wellVariables_[w + nw*phaseIdx].setValue(xw.wellSolutions()[w + nw* phaseIdx]);
-                        wellVariables_[w + nw*phaseIdx].setDerivative(np + phaseIdx, 1.0);
+                        wellVariables_[w + nw*phaseIdx].setDerivative(blocksize + phaseIdx, 1.0);
                     }
                 }
             }
@@ -819,9 +837,13 @@ namespace Opm {
                 const PhaseUsage& pu = fluid_->phaseUsage();
                 const int np = fluid_->numPhases();
                 b_perf.resize(nperf*np);
-                rsmax_perf.resize(nperf);
-                rvmax_perf.resize(nperf);
                 surf_dens_perf.resize(nperf*np);
+
+                //rs and rv are only used if both oil and gas is present
+                if (pu.phase_used[BlackoilPhases::Vapour] && pu.phase_pos[BlackoilPhases::Liquid]) {
+                    rsmax_perf.resize(nperf);
+                    rvmax_perf.resize(nperf);
+                }
 
                 // Compute the average pressure in each well block
                 for (int w = 0; w < nw; ++w) {
@@ -915,34 +937,64 @@ namespace Opm {
 
                         // update the second and third well variable (The flux fractions)
                         std::vector<double> F(np,0.0);
-                        const int sign2 = dwells[w][flowPhaseToEbosCompIdx(1)] > 0 ? 1: -1;
-                        const double dx2_limited = sign2 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(1)]),dFLimit);
-                        well_state.wellSolutions()[nw + w] = xvar_well_old[nw + w] - dx2_limited;
-                        const int sign3 = dwells[w][flowPhaseToEbosCompIdx(2)] > 0 ? 1: -1;
-                        const double dx3_limited = sign3 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(2)]),dFLimit);
-                        well_state.wellSolutions()[2*nw + w] = xvar_well_old[2*nw + w] - dx3_limited;
-                        F[Water] = well_state.wellSolutions()[nw + w];
-                        F[Gas] = well_state.wellSolutions()[2*nw + w];
-                        F[Oil] = 1.0 - F[Water] - F[Gas];
-
-                        if (F[Water] < 0.0) {
-                            F[Gas] /= (1.0 - F[Water]);
-                            F[Oil] /= (1.0 - F[Water]);
-                            F[Water] = 0.0;
+                        if ((*active_)[ Water ]) {
+                            const int sign2 = dwells[w][flowPhaseToEbosCompIdx(WFrac)] > 0 ? 1: -1;
+                            const double dx2_limited = sign2 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(WFrac)]),dFLimit);
+                            well_state.wellSolutions()[WFrac*nw + w] = xvar_well_old[WFrac*nw + w] - dx2_limited;
                         }
-                        if (F[Gas] < 0.0) {
-                            F[Water] /= (1.0 - F[Gas]);
-                            F[Oil] /= (1.0 - F[Gas]);
-                            F[Gas] = 0.0;
+
+                        if ((*active_)[ Gas ]) {
+                            const int sign3 = dwells[w][flowPhaseToEbosCompIdx(GFrac)] > 0 ? 1: -1;
+                            const double dx3_limited = sign3 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(GFrac)]),dFLimit);
+                            well_state.wellSolutions()[GFrac*nw + w] = xvar_well_old[GFrac*nw + w] - dx3_limited;
+                        }
+
+                        assert((*active_)[ Oil ]);
+                        F[Oil] = 1.0;
+                        if ((*active_)[ Water ]) {
+                            F[Water] = well_state.wellSolutions()[WFrac*nw + w];
+                            F[Oil] -= F[Water];
+                        }
+
+                        if ((*active_)[ Gas ]) {
+                            F[Gas] = well_state.wellSolutions()[GFrac*nw + w];
+                            F[Oil] -= F[Gas];
+                        }
+
+                        if ((*active_)[ Water ]) {
+                            if (F[Water] < 0.0) {
+                                if ((*active_)[ Gas ]) {
+                                    F[Gas] /= (1.0 - F[Water]);
+                                }
+                                F[Oil] /= (1.0 - F[Water]);
+                                F[Water] = 0.0;
+                            }
+                        }
+                        if ((*active_)[ Gas ]) {
+                            if (F[Gas] < 0.0) {
+                                if ((*active_)[ Water ]) {
+                                    F[Water] /= (1.0 - F[Gas]);
+                                }
+                                F[Oil] /= (1.0 - F[Gas]);
+                                F[Gas] = 0.0;
+                            }
                         }
                         if (F[Oil] < 0.0) {
-                            F[Water] /= (1.0 - F[Oil]);
-                            F[Gas] /= (1.0 - F[Oil]);
+                            if ((*active_)[ Water ]) {
+                                F[Water] /= (1.0 - F[Oil]);
+                            }
+                            if ((*active_)[ Gas ]) {
+                                F[Gas] /= (1.0 - F[Oil]);
+                            }
                             F[Oil] = 0.0;
                         }
-                        well_state.wellSolutions()[nw + w] = F[Water];
-                        well_state.wellSolutions()[2*nw + w] = F[Gas];
-                        //std::cout << wells().name[w] << " "<< F[Water] << " "  << F[Oil] << " " << F[Gas] << std::endl;
+
+                        if ((*active_)[ Water ]) {
+                            well_state.wellSolutions()[WFrac*nw + w] = F[Water];
+                        }
+                        if ((*active_)[ Gas ]) {
+                            well_state.wellSolutions()[GFrac*nw + w] = F[Gas];
+                        }
 
                         // The interpretation of the first well variable depends on the well control
                         const WellControls* wc = wells().ctrls[w];
@@ -969,18 +1021,18 @@ namespace Opm {
                         case THP: // The BHP and THP both uses the total rate as first well variable.
                         case BHP:
                         {
-                            well_state.wellSolutions()[w] = xvar_well_old[w] - dwells[w][flowPhaseToEbosCompIdx(0)];
+                            well_state.wellSolutions()[nw*XvarWell + w] = xvar_well_old[nw*XvarWell + w] - dwells[w][flowPhaseToEbosCompIdx(XvarWell)];
 
                             switch (wells().type[w]) {
                             case INJECTOR:
                                 for (int p = 0; p < np; ++p) {
                                     const double comp_frac = wells().comp_frac[np*w + p];
-                                    well_state.wellRates()[w*np + p] = comp_frac * well_state.wellSolutions()[w];
+                                    well_state.wellRates()[w*np + p] = comp_frac * well_state.wellSolutions()[nw*XvarWell + w];
                                 }
                                 break;
                             case PRODUCER:
                                 for (int p = 0; p < np; ++p) {
-                                    well_state.wellRates()[w*np + p] = well_state.wellSolutions()[w] * F[p];
+                                    well_state.wellRates()[w*np + p] = well_state.wellSolutions()[nw*XvarWell + w] * F[p];
                                 }
                                 break;
                             }
@@ -1038,10 +1090,10 @@ namespace Opm {
                         case SURFACE_RATE: // Both rate controls use bhp as first well variable
                         case RESERVOIR_RATE:
                         {
-                            const int sign1 = dwells[w][flowPhaseToEbosCompIdx(0)] > 0 ? 1: -1;
-                            const double dx1_limited = sign1 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(0)]),std::abs(xvar_well_old[w])*dBHPLimit);
-                            well_state.wellSolutions()[w] = std::max(xvar_well_old[w] - dx1_limited,1e5);
-                            well_state.bhp()[w] = well_state.wellSolutions()[w];
+                            const int sign1 = dwells[w][flowPhaseToEbosCompIdx(XvarWell)] > 0 ? 1: -1;
+                            const double dx1_limited = sign1 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(XvarWell)]),std::abs(xvar_well_old[nw*XvarWell + w])*dBHPLimit);
+                            well_state.wellSolutions()[nw*XvarWell + w] = std::max(xvar_well_old[nw*XvarWell + w] - dx1_limited,1e5);
+                            well_state.bhp()[w] = well_state.wellSolutions()[nw*XvarWell + w];
 
                             if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
                                 if (wells().type[w]==PRODUCER) {
@@ -1235,14 +1287,14 @@ namespace Opm {
                         case BHP:
                         {
                             const WellType& well_type = wells().type[w];
-                            xw.wellSolutions()[w] = 0.0;
+                            xw.wellSolutions()[nw*XvarWell + w] = 0.0;
                             if (well_type == INJECTOR) {
                                 for (int p = 0; p < np; ++p)  {
-                                    xw.wellSolutions()[w] += xw.wellRates()[np*w + p] * wells().comp_frac[np*w + p];
+                                    xw.wellSolutions()[nw*XvarWell + w] += xw.wellRates()[np*w + p] * wells().comp_frac[np*w + p];
                                 }
                             } else {
                                 for (int p = 0; p < np; ++p)  {
-                                    xw.wellSolutions()[w] += g[p] * xw.wellRates()[np*w + p];
+                                    xw.wellSolutions()[nw*XvarWell + w] += g[p] * xw.wellRates()[np*w + p];
                                 }
                             }
                         }
@@ -1252,7 +1304,7 @@ namespace Opm {
                         case RESERVOIR_RATE: // Intentional fall-through
                         case SURFACE_RATE:
                         {
-                            xw.wellSolutions()[w] = xw.bhp()[w];
+                            xw.wellSolutions()[nw*XvarWell + w] = xw.bhp()[w];
                         }
                             break;
                         }
@@ -1262,11 +1314,20 @@ namespace Opm {
                             tot_well_rate += g[p] * xw.wellRates()[np*w + p];
                         }
                         if(std::abs(tot_well_rate) > 0) {
-                            xw.wellSolutions()[nw + w] = g[Water] * xw.wellRates()[np*w + Water] / tot_well_rate;
-                            xw.wellSolutions()[2*nw + w] = g[Gas] * xw.wellRates()[np*w + Gas] / tot_well_rate ;
+                            if ((*active_)[ Water ]) {
+                                xw.wellSolutions()[WFrac*nw + w] = g[Water] * xw.wellRates()[np*w + Water] / tot_well_rate;
+                            }
+                            if ((*active_)[ Gas ]) {
+                                xw.wellSolutions()[GFrac*nw + w] = g[Gas] * xw.wellRates()[np*w + Gas] / tot_well_rate ;
+                            }
                         } else {
-                            xw.wellSolutions()[nw + w] =  wells().comp_frac[np*w + Water];
-                            xw.wellSolutions()[2 * nw + w] =  wells().comp_frac[np*w + Gas];
+                            if ((*active_)[ Water ]) {
+                                xw.wellSolutions()[WFrac*nw + w] =  wells().comp_frac[np*w + Water];
+                            }
+
+                            if ((*active_)[ Gas ]) {
+                                xw.wellSolutions()[GFrac*nw + w] =  wells().comp_frac[np*w + Gas];
+                            }
                         }
                     }
                 }
@@ -1482,13 +1543,15 @@ namespace Opm {
                     return bhp;
 
                 }
-                return wellVariables_[wellIdx];
+                const int nw = wells().number_of_wells;
+                return wellVariables_[nw*XvarWell + wellIdx];
             }
 
             EvalWell getQs(const int wellIdx, const int phaseIdx) const {
                 EvalWell qs = 0.0;
                 const WellControls* wc = wells().ctrls[wellIdx];
                 const int np = wells().number_of_phases;
+                const int nw = wells().number_of_wells;
                 const double target_rate = well_controls_get_current_target(wc);
 
                 if (wells().type[wellIdx] == INJECTOR) {
@@ -1497,7 +1560,7 @@ namespace Opm {
                         return qs;
 
                     if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
-                        return wellVariables_[wellIdx];
+                        return wellVariables_[nw*XvarWell + wellIdx];
                     }
                     qs.setValue(target_rate);
                     return qs;
@@ -1505,7 +1568,7 @@ namespace Opm {
 
                 // Producers
                 if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP ) {
-                    return wellVariables_[wellIdx] * wellVolumeFractionScaled(wellIdx,phaseIdx);
+                    return wellVariables_[nw*XvarWell + wellIdx] * wellVolumeFractionScaled(wellIdx,phaseIdx);
                 }
                 if (well_controls_get_current_type(wc) == SURFACE_RATE) {
                     const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
@@ -1530,18 +1593,25 @@ namespace Opm {
             }
 
             EvalWell wellVolumeFraction(const int wellIdx, const int phaseIdx) const {
-                assert(wells().number_of_phases == 3);
                 const int nw = wells().number_of_wells;
                 if (phaseIdx == Water) {
-                   return wellVariables_[nw + wellIdx];
+                   return wellVariables_[WFrac * nw + wellIdx];
                 }
 
                 if (phaseIdx == Gas) {
-                   return wellVariables_[2*nw + wellIdx];
+                   return wellVariables_[GFrac * nw + wellIdx];
                 }
 
-                // Oil
-                return 1.0 - wellVariables_[nw + wellIdx] - wellVariables_[2 * nw + wellIdx];
+                // Oil fraction
+                EvalWell well_fraction = 1.0;
+                if ((*active_)[Water]) {
+                    well_fraction -= wellVariables_[WFrac * nw + wellIdx];
+                }
+
+                if ((*active_)[Gas]) {
+                    well_fraction -= wellVariables_[GFrac * nw + wellIdx];
+                }
+                return well_fraction;
             }
 
             EvalWell wellVolumeFractionScaled(const int wellIdx, const int phaseIdx) const {

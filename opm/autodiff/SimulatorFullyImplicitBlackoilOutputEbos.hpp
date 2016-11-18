@@ -254,7 +254,7 @@ namespace Opm
                                   std::unordered_set<std::string>());
 
         const Wells* wells = wellsmanager.c_wells();
-        wellstate.resize(wells, simulatorstate); //Resize for restart step
+        wellstate.resize(wells, simulatorstate, phaseusage ); //Resize for restart step
         auto restarted = Opm::init_from_restart_file(
                                 eclipseState_,
                                 Opm::UgGridHelpers::numCells(grid) );
