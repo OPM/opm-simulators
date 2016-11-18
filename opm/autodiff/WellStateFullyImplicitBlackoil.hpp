@@ -166,8 +166,10 @@ namespace Opm
                             // If the set of controls have changed, this may not be identical
                             // to the last control, but it must be a valid control.
                             currentControls()[ newIndex ] = old_control_index;
+                        } else {
+                            assert(well_controls_get_num(wells->ctrls[w]) > 0);
+                            currentControls()[ newIndex ] = 0;
                         }
-
                     }
                 }
             }

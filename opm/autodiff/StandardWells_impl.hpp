@@ -71,10 +71,12 @@ namespace Opm
 
 
 
-StandardWells::StandardWells(const Wells* wells_arg)
+    StandardWells::StandardWells(const Wells* wells_arg, WellCollection* well_collection)
       : wells_active_(wells_arg!=nullptr)
       , wells_(wells_arg)
       , wops_(wells_arg)
+      , well_collection_(well_collection)
+      , well_perforation_efficiency_factors_(Vector::Ones(wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0))
       , fluid_(nullptr)
       , active_(nullptr)
       , phase_condition_(nullptr)
@@ -103,6 +105,8 @@ StandardWells::StandardWells(const Wells* wells_arg)
         vfp_properties_ = vfp_properties_arg;
         gravity_ = gravity_arg;
         perf_cell_depth_ = subset(depth_arg, wellOps().well_cells);;
+
+        calculateEfficiencyFactors();
     }
 
 
@@ -741,6 +745,7 @@ StandardWells::StandardWells(const Wells* wells_arg)
                     break;
                 }
             }
+
             if (ctrl_index != nwc) {
                 // Constraint number ctrl_index was broken, switch to it.
                 // We disregard terminal_ouput here as with it only messages
@@ -748,6 +753,7 @@ StandardWells::StandardWells(const Wells* wells_arg)
                 logger.wellSwitched(wells().name[w],
                                     well_controls_iget_type(wc, current),
                                     well_controls_iget_type(wc, ctrl_index));
+
                 xw.currentControls()[w] = ctrl_index;
                 current = xw.currentControls()[w];
             }
@@ -846,6 +852,22 @@ StandardWells::StandardWells(const Wells* wells_arg)
 
 
                 break;
+            }
+
+
+            if (wellCollection()->groupControlActive()) {
+
+                // get well node in the well collection
+                WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+
+                // update whehter the well is under group control or individual control
+                if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
+                    // under group control
+                    well_node.setIndividualControl(false);
+                } else {
+                    // individual control
+                    well_node.setIndividualControl(true);
+                }
             }
         }
 
@@ -1544,6 +1566,50 @@ StandardWells::StandardWells(const Wells* wells_arg)
         }
 
         return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
+    }
+
+
+
+
+
+    WellCollection* StandardWells::wellCollection() const
+    {
+        return well_collection_;
+    }
+
+
+
+
+
+    void StandardWells::calculateEfficiencyFactors()
+    {
+        if ( !localWellsActive() ) {
+            return;
+        }
+        // get efficiency factor for each well first
+        const int nw = wells_->number_of_wells;
+
+        Vector well_efficiency_factors = Vector::Ones(nw);
+
+        for (int w = 0; w < nw; ++w) {
+            const std::string well_name = wells_->name[w];
+            const WellNode& well_node = well_collection_->findWellNode(well_name);
+
+            well_efficiency_factors(w) = well_node.getAccumulativeEfficiencyFactor();
+        }
+
+        // map them to the perforation.
+        well_perforation_efficiency_factors_ = wellOps().w2p * well_efficiency_factors.matrix();
+    }
+
+
+
+
+
+    const StandardWells::Vector&
+    StandardWells::wellPerfEfficiencyFactors() const
+    {
+        return well_perforation_efficiency_factors_;
     }
 
 

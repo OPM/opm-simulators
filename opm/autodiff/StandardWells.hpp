@@ -38,6 +38,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
+#include <opm/core/wells/WellCollection.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
@@ -70,7 +71,7 @@ namespace Opm {
                                             Eigen::Dynamic,
                                             Eigen::RowMajor>;
             // ---------  Public methods  ---------
-            explicit StandardWells(const Wells* wells_arg);
+            StandardWells(const Wells* wells_arg, WellCollection* well_collection);
 
             void init(const BlackoilPropsAdInterface* fluid_arg,
                       const std::vector<bool>* active_arg,
@@ -190,10 +191,24 @@ namespace Opm {
                                   const WellState& well_state,
                                   DynamicListEconLimited& list_econ_limited) const;
 
+
+            WellCollection* wellCollection() const;
+
+            void calculateEfficiencyFactors();
+
+            const Vector& wellPerfEfficiencyFactors() const;
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
             const WellOps  wops_;
+            // It will probably need to be updated during running time.
+            WellCollection* well_collection_;
+
+            // The efficiency factor for each connection
+            // It is specified based on wells and groups
+            // By default, they should all be one.
+            Vector well_perforation_efficiency_factors_;
 
             const BlackoilPropsAdInterface* fluid_;
             const std::vector<bool>*  active_;
