@@ -522,6 +522,10 @@ namespace Opm
                     const int wellRateIdx = wellIdx * localWellState_.numPhases();
                     for( int np=0; np<localWellState_.numPhases(); ++np )
                         buffer.write( localWellState_.wellRates()[ wellRateIdx + np ] );
+
+                    // Write well control
+                    buffer.write(localWellState_.currentControls()[ wellIdx ]);
+
                     // Write perfRates and perfPress. No need to figure out the index
                     // mapping there as the ordering of the perforations should
                     // be the same for global and local state.
@@ -572,6 +576,9 @@ namespace Opm
                     const int wellRateIdx = wellIdx * globalWellState_.numPhases();
                     for( int np=0; np<globalWellState_.numPhases(); ++np )
                         buffer.read( globalWellState_.wellRates()[ wellRateIdx + np ] );
+
+                    // Write well control
+                    buffer.read(globalWellState_.currentControls()[ wellIdx ]);
 
                     // Read perfRates and perfPress. No need to figure out the index
                     // mapping there as the ordering of the perforations should
