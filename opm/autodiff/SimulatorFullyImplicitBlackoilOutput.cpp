@@ -201,14 +201,14 @@ namespace Opm
             BlackoilOutputWriter& writer_;
             std::unique_ptr< SimulatorTimerInterface > timer_;
             const SimulationDataContainer state_;
-            const WellState wellState_;
+            const WellStateFullyImplicitBlackoil wellState_;
             data::Solution simProps_;
             const bool substep_;
 
             explicit WriterCall( BlackoilOutputWriter& writer,
                                  const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& state,
-                                 const WellState& wellState,
+                                 const WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
                                  bool substep )
                 : writer_( writer ),
@@ -237,7 +237,7 @@ namespace Opm
     writeTimeStepWithoutCellProperties(
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
-                  const WellState& localWellState,
+                  const WellStateFullyImplicitBlackoil& localWellState,
                   bool substep)
     {
         data::Solution localCellData{};
@@ -259,7 +259,7 @@ namespace Opm
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
                   const data::Solution& localCellData,
-                  const WellState& localWellState,
+                  const WellStateFullyImplicitBlackoil& localWellState,
                   bool substep)
     {
         // VTK output (is parallel if grid is parallel)
@@ -285,7 +285,7 @@ namespace Opm
 
         const data::Solution& cellData = ( parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalCellData() : localCellData;
         const SimulationDataContainer& state = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalReservoirState() : localState;
-        const WellState& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
+        const WellStateFullyImplicitBlackoil& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
 
         // serial output is only done on I/O rank
         if( isIORank )
@@ -307,7 +307,7 @@ namespace Opm
     BlackoilOutputWriter::
     writeTimeStepSerial(const SimulatorTimerInterface& timer,
                         const SimulationDataContainer& state,
-                        const WellState& wellState,
+                        const WellStateFullyImplicitBlackoil& wellState,
                         const data::Solution& simProps,
                         bool substep)
     {

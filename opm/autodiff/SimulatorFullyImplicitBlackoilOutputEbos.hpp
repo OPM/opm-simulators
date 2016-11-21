@@ -83,7 +83,7 @@ namespace Opm
         template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
-                           const Opm::WellState& wellState,
+                           const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const Model& physicalModel,
                            bool substep = false);
 
@@ -96,7 +96,7 @@ namespace Opm
         void writeTimeStepWithCellProperties(
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
-                           const Opm::WellState& wellState,
+                           const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const data::Solution& sol,
                            bool substep = false);
 
@@ -108,7 +108,7 @@ namespace Opm
         void writeTimeStepWithoutCellProperties(
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
-                           const Opm::WellState& wellState,
+                           const Opm::WellStateFullyImplicitBlackoil& wellState,
                            bool substep = false);
 
         /*!
@@ -118,7 +118,7 @@ namespace Opm
          */
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& reservoirState,
-                                 const Opm::WellState& wellState,
+                                 const Opm::WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
                                  bool substep);
 
@@ -684,7 +684,7 @@ namespace Opm
     BlackoilOutputWriterEbos::
     writeTimeStep(const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
-                  const WellState& localWellState,
+                  const WellStateFullyImplicitBlackoil& localWellState,
                   const Model& physicalModel,
                   bool substep)
     {
