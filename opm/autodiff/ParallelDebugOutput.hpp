@@ -522,9 +522,20 @@ namespace Opm
                     const int wellRateIdx = wellIdx * localWellState_.numPhases();
                     for( int np=0; np<localWellState_.numPhases(); ++np )
                         buffer.write( localWellState_.wellRates()[ wellRateIdx + np ] );
+                    // Write perfRates and perfPress. No need to figure out the index
+                    // mapping there as the ordering of the perforations should
+                    // be the same for global and local state.
+                    const int end_con = it->second[1] + it->second[2];
 
-                    // TODO: perfRates and perfPress, need to figure out the index
-                    // mapping there.
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.write( localWellState_.perfRates()[ con ] );
+                    }
+
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.write( localWellState_.perfPress()[ con ] );
+                    }
                 }
             }
 
@@ -553,8 +564,21 @@ namespace Opm
                     for( int np=0; np<globalWellState_.numPhases(); ++np )
                         buffer.read( globalWellState_.wellRates()[ wellRateIdx + np ] );
 
-                    // TODO: perfRates and perfPress, need to figure out the index
-                    // mapping there.
+                    // Read perfRates and perfPress. No need to figure out the index
+                    // mapping there as the ordering of the perforations should
+                    // be the same for global and local state.
+                    const int end_con = it->second[1] + it->second[2];
+
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.read( globalWellState_.perfRates()[ con ] );
+                    }
+
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.read( globalWellState_.perfPress()[ con ] );
+                    }
+
                 }
             }
         };
