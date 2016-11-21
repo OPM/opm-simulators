@@ -538,6 +538,13 @@ namespace Opm
                     }
 
                     // Write perfPhaseRate
+                    const int np = localWellState_.perfPhaseRates().size() /
+                        localWellState_.perfRates().size();
+
+                    for( int con = it->second[1]*np; con < end_con*np; ++con )
+                    {
+                        buffer.write( localWellState_.perfPhaseRates()[ con ] );
+                    }
                 }
             }
 
@@ -581,6 +588,14 @@ namespace Opm
                         buffer.read( globalWellState_.perfPress()[ con ] );
                     }
 
+                    // Read perfPhaseRate
+                    const int np = globalWellState_.perfPhaseRates().size() /
+                        globalWellState_.perfRates().size();
+
+                    for( int con = it->second[1]*np; con < end_con*np; ++con )
+                    {
+                        buffer.read( globalWellState_.perfPhaseRates()[ con ] );
+                    }
                 }
             }
         };
