@@ -368,10 +368,10 @@ namespace Opm
                 if( isIORank )
                 {
                     // add missing data to global state
-   		    for (const auto& pair : localState.cellData()) {
-		        const std::string& key = pair.first;
+                    for (const auto& pair : localState.cellData()) {
+                        const std::string& key = pair.first;
                         if (!globalState_.hasCellData( key )) {
-			    globalState_.registerCellData( key , localState.numCellDataComponents( key ));
+                            globalState_.registerCellData( key , localState.numCellDataComponents( key ));
                         }
                     }
 
@@ -432,7 +432,7 @@ namespace Opm
                     for( size_t i=0; i<stride; ++i )
                     {
                         //write all data from local state to buffer
-		        read( buffer, indexMap, data, i, stride );
+                        read( buffer, indexMap, data, i, stride );
                     }
                 }
 
