@@ -404,7 +404,6 @@ namespace Opm
 
                 // write all cell data registered in local state
                 for (const auto& pair : localCellData_) {
-		    const std::string& key = pair.first;
                     const auto& data = pair.second.data;
                     const size_t stride = data.size()/localState_.numCells();
 
