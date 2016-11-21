@@ -43,6 +43,7 @@ namespace Opm
         bool   newton_use_gmres_;
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
+        bool   linear_solver_use_amg_;
 
         NewtonIterationBlackoilInterleavedParameters() { reset(); }
         // read values from parameter class
@@ -59,6 +60,7 @@ namespace Opm
             linear_solver_verbosity_ = param.getDefault("linear_solver_verbosity", linear_solver_verbosity_);
             require_full_sparsity_pattern_ = param.getDefault("require_full_sparsity_pattern", require_full_sparsity_pattern_);
             ignoreConvergenceFailure_ = param.getDefault("linear_solver_ignoreconvergencefailure", ignoreConvergenceFailure_);
+            linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
         }
 
         // set default values
@@ -71,6 +73,7 @@ namespace Opm
             linear_solver_verbosity_ = 0;
             require_full_sparsity_pattern_ = false;
             ignoreConvergenceFailure_ = false;
+            linear_solver_use_amg_    = false;
         }
     };
 

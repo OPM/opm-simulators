@@ -255,8 +255,8 @@ typedef Eigen::Array<double,
         const bool converged = asImpl().getConvergence(timer, iteration);
         const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
         if (must_solve) {
-            // enable single precision for solvers when dt is smaller then 20 days
-            residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
+            // enable single precision for solvers when dt is smaller then maximal time step for single precision
+            residual_.singlePrecision = ( dt < param_.maxSinglePrecisionTimeStep_ );
 
             // Compute the nonlinear update.
             V dx = asImpl().solveJacobianSystem();
@@ -2157,7 +2157,7 @@ typedef Eigen::Array<double,
             // updatePhaseCondFromPrimarVariable() logic requires active gas and oil phase.
             phaseCondition_.assign(nc, PhasePresence());
             return;
-        }       
+        }
         for (int c = 0; c < nc; ++c) {
             phaseCondition_[c] = PhasePresence(); // No free phases.
             phaseCondition_[c].setFreeWater(); // Not necessary for property calculation usage.
