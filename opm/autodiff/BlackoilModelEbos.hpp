@@ -64,6 +64,7 @@
 
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/collectivecommunication.hh>
+#include <dune/common/unused.hh>
 
 #include <cassert>
 #include <cmath>
@@ -186,6 +187,7 @@ namespace Opm {
         , isBeginReportStep_(false)
         , invalidateIntensiveQuantitiesCache_(true)
         {
+            DUNE_UNUSED_PARAMETER(rock_comp_props);
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
@@ -335,6 +337,9 @@ namespace Opm {
                        const ReservoirState& reservoir_state,
                        WellState& well_state)
         {
+            DUNE_UNUSED_PARAMETER(timer);
+            DUNE_UNUSED_PARAMETER(reservoir_state);
+            DUNE_UNUSED_PARAMETER(well_state);
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
