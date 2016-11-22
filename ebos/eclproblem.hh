@@ -694,6 +694,12 @@ public:
     const MaterialLawParams& materialLawParams(unsigned globalDofIdx) const
     { return materialLawManager_->materialLawParams(globalDofIdx); }
 
+    const std::shared_ptr<EclMaterialLawManager> materialLawManager() const
+    { return materialLawManager_; }
+
+    std::shared_ptr<EclMaterialLawManager> materialLawManager()
+    { return materialLawManager_; }
+
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
