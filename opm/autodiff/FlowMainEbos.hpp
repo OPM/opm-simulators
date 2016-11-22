@@ -128,7 +128,18 @@ namespace Opm
         void setupGridAndProps()
         {
             Dune::CpGrid& grid = ebosSimulator_->gridManager().grid();
-            Base::material_law_manager_ = ebosSimulator_->problem().materialLawManager();
+
+            //Base::material_law_manager_ = ebosSimulator_->problem().materialLawManager();
+
+            grid.switchToGlobalView();
+            // Create material law manager.
+            std::vector<int> compressedToCartesianIdx;
+            Opm::createGlobalCellArray(grid, compressedToCartesianIdx);
+            material_law_manager_.reset(new MaterialLawManager());
+            material_law_manager_->initFromDeck(*deck_, *eclipse_state_, compressedToCartesianIdx);
+
+
+
             grid_init_.reset(new GridInit<Grid>());
             grid_init_->setGrid(grid);
 
