@@ -73,18 +73,42 @@ namespace Opm
     class GridInit<Dune::CpGrid>
     {
     public:
+        GridInit()
+        {
+            gridSelfManaged_ = false;
+        }
+
         /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
         GridInit(const EclipseState& eclipse_state, const std::vector<double>& porv)
         {
-            grid_.processEclipseFormat(eclipse_state.getInputGrid(), false, false, false, porv);
+            gridSelfManaged_ = true;
+
+            grid_ = new Dune::CpGrid;
+            grid_->processEclipseFormat(eclipse_state.getInputGrid(), false, false, false, porv);
         }
+
+        ~GridInit()
+        {
+            if (gridSelfManaged_)
+                delete grid_;
+        }
+
         /// Access the created grid. Note that mutable access may be required for load balancing.
         Dune::CpGrid& grid()
         {
-            return grid_;
+            return *grid_;
         }
+
+        /// set the grid from the outside
+        void setGrid(Dune::CpGrid& newGrid)
+        {
+            gridSelfManaged_ = false;
+            grid_ = &newGrid;
+        }
+
     private:
-        Dune::CpGrid grid_;
+        Dune::CpGrid* grid_;
+        bool gridSelfManaged_;
     };
 #endif // HAVE_OPM_GRID
 
