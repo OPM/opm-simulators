@@ -183,44 +183,32 @@ namespace Ewoms
                 ElementMapper;
 
             const CollectiveCommunication& comm = gridManager.grid().comm();
+            ElementMapper elemMapper(gridManager.gridView());
             {
                 std::set< int > send, recv;
                 // the I/O rank receives from all other ranks
                 if( isIORank() )
                 {
-                    const auto& eclGrid = gridManager.eclGrid();
+                    // the I/O rank needs a picture of the global grid, here we
+                    // use equilGrid which represents a view on the global grid
+                    const size_t globalSize = gridManager.equilGrid().leafGridView().size( 0 );
+                    // reserve memory
+                    globalCartesianIndex_.reserve( globalSize );
+                    globalCartesianIndex_.clear();
 
-                    // create the ACTNUM array based on the "real" grid which is used for
-                    // simulation. Note that this is still an approximation because the simulation
-                    // grid may also modify the geometry of cells (e.g. because of the PINCH
-                    // keyword), but at least the number of cells is correct, so all values are
-                    // hopefully displayed at approximately the correct location.
-                    std::vector<int> actnumData(eclGrid->getCartesianSize(), 0);
-                    ElementMapper elemMapper(gridManager.gridView());
-                    auto elemIt = gridManager.gridView().template begin<0>();
-                    const auto& elemEndIt = gridManager.gridView().template end<0>();
-                    for (; elemIt != elemEndIt; ++elemIt) {
+                    // loop over all elements (global grid) and store Cartesian index
+                    auto elemIt = gridManager.equilGrid().leafGridView().template begin<0>();
+                    const auto& elemEndIt = gridManager.equilGrid().leafGridView().template end<0>();
+                    int count = 0;
+                    for (; elemIt != elemEndIt; ++elemIt, ++count) {
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                         int elemIdx = elemMapper.index(*elemIt );
 #else
                         int elemIdx = elemMapper.map(*elemIt );
 #endif
-                        int cartElemIdx = gridManager.cartesianIndex(elemIdx);
-                        actnumData[cartElemIdx] = 1;
-                    }
-
-                    // the I/O rank needs a picture of the global grid
-                    const size_t cartesianSize = eclGrid->getCartesianSize();
-                    // reserve memory
-                    globalCartesianIndex_.reserve( cartesianSize );
-                    globalCartesianIndex_.clear();
-                    // get a global cartesian index for each active cell in the eclipse grid
-                    for( size_t cartIndex=0; cartIndex<cartesianSize; ++cartIndex )
-                    {
-                      if( actnumData[cartIndex] > 0 )
-                      {
-                        globalCartesianIndex_.push_back( cartIndex );
-                      }
+                        assert( count == elemIdx );
+                        int cartElemIdx = gridManager.equilCartesianIndexMapper().cartesianIndex(elemIdx);
+                        globalCartesianIndex_.push_back( cartElemIdx );
                     }
 
                     for(int i=0; i<comm.size(); ++i)
@@ -240,12 +228,23 @@ namespace Ewoms
                 const size_t gridSize = gridManager.grid().size( 0 );
                 localIndexMap_.reserve( gridSize );
 
+                // store the local Cartesian index
+                IndexMapType distributedCartesianIndex;
+                distributedCartesianIndex.reserve( gridSize );
+
                 unsigned int index = 0;
                 auto localView = gridManager.grid().leafGridView();
                 for( auto it = localView.template begin< 0 >(),
                      end = localView.template end< 0 >(); it != end; ++it, ++index )
                 {
                     const auto element = *it ;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+                    int elemIdx = elemMapper.index( element );
+#else
+                    int elemIdx = elemMapper.map( element );
+#endif
+                    distributedCartesianIndex.push_back( gridManager.cartesianIndex( elemIdx ) );
+
                     // only store interior element for collection
                     if( element.partitionType() == Dune :: InteriorEntity )
                     {
@@ -262,12 +261,6 @@ namespace Ewoms
                     indexMaps_.clear();
                     indexMaps_.resize( comm.size() );
                 }
-
-                // store the local cartesian index
-                IndexMapType distributedCartesianIndex;
-                distributedCartesianIndex.reserve( gridSize );
-                for( size_t cell = 0 ; cell<gridSize; ++cell )
-                  distributedCartesianIndex.push_back( gridManager.cartesianIndex( cell ) );
 
                 // distribute global id's to io rank for later association of dof's
                 DistributeIndexMapping distIndexMapping( globalCartesianIndex_, distributedCartesianIndex, localIndexMap_, indexMaps_ );
