@@ -37,7 +37,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/material/common/Unused.hpp>
+#include <opm/common/Unused.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 #include <dune/common/parallel/mpihelper.hh>

@@ -27,7 +27,7 @@
 #ifndef OPM_VALGRIND_HPP
 #define OPM_VALGRIND_HPP
 
-#include <opm/material/common/Unused.hpp>
+#include <opm/common/Unused.hpp>
 
 #if HAVE_VALGRIND
 #include <valgrind/memcheck.h>

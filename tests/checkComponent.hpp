@@ -27,7 +27,7 @@
 #ifndef OPM_CHECK_COMPONENT_HPP
 #define OPM_CHECK_COMPONENT_HPP
 
-#include <opm/material/common/Unused.hpp>
+#include <opm/common/Unused.hpp>
 #include <opm/material/common/ClassName.hpp>
 
 #include <iostream>
