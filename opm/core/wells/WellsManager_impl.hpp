@@ -235,7 +235,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
             well_names.push_back(well->name());
             {
                 WellData wd;
-                wd.reference_bhp_depth = well->getRefDepth();
+                wd.reference_bhp_depth = well->getRefDepth( timeStep );
                 wd.welspecsline = -1;
                 if (well->isInjector( timeStep ))
                     wd.type = INJECTOR;
