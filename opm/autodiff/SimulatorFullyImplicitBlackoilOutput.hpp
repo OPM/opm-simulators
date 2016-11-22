@@ -148,7 +148,7 @@ namespace Opm
 
         virtual void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& state,
-                           const WellState&,
+                           const WellStateFullyImplicitBlackoil&,
                            bool /*substep*/ = false) = 0;
         protected:
             const std::string outputDir_;
@@ -165,7 +165,7 @@ namespace Opm
 
             void writeTimeStep(const SimulatorTimerInterface& timer,
                     const SimulationDataContainer& state,
-                    const WellState&,
+                    const WellStateFullyImplicitBlackoil&,
                     bool /*substep*/ = false) override
             {
                 outputStateVtk(grid_, state, timer.currentStepNum(), outputDir_);
@@ -187,7 +187,7 @@ namespace Opm
 
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
-                           const WellState& wellState,
+                           const WellStateFullyImplicitBlackoil& wellState,
                            bool /*substep*/ = false) override
         {
             outputStateMatlab(grid_, reservoirState, timer.currentStepNum(), outputDir_);
@@ -224,7 +224,7 @@ namespace Opm
         template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
-                           const Opm::WellState& wellState,
+                           const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const Model& physicalModel,
                            bool substep = false);
 
@@ -238,7 +238,7 @@ namespace Opm
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const data::Solution& cellData,
-                           const Opm::WellState& wellState,
+                           const Opm::WellStateFullyImplicitBlackoil& wellState,
                            bool substep = false);
 
         /*!
@@ -249,7 +249,7 @@ namespace Opm
         void writeTimeStepWithoutCellProperties(
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
-                           const Opm::WellState& wellState,
+                           const Opm::WellStateFullyImplicitBlackoil& wellState,
                            bool substep = false);
 
         /*!
@@ -259,7 +259,7 @@ namespace Opm
          */
         void writeTimeStepSerial(const SimulatorTimerInterface& timer,
                                  const SimulationDataContainer& reservoirState,
-                                 const Opm::WellState& wellState,
+                                 const Opm::WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
                                  bool substep);
 
@@ -781,7 +781,7 @@ namespace Opm
     BlackoilOutputWriter::
     writeTimeStep(const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
-                  const WellState& localWellState,
+                  const WellStateFullyImplicitBlackoil& localWellState,
                   const Model& physicalModel,
                   bool substep)
     {

@@ -55,13 +55,13 @@ namespace Opm
         //!                            localReservoirState)
         //! \param wellStateStepNumber The step number of the well state.
         virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
-                                      const WellState& localWellState,
+                                      const WellStateFullyImplicitBlackoil& localWellState,
                                       const data::Solution& localCellData,
                                       const int wellStateStepNumber ) = 0;
 
         virtual const SimulationDataContainer& globalReservoirState() const = 0 ;
         virtual const data::Solution& globalCellData() const = 0 ;
-        virtual const WellState& globalWellState() const = 0 ;
+        virtual const WellStateFullyImplicitBlackoil& globalWellState() const = 0 ;
         virtual bool isIORank() const = 0;
         virtual bool isParallel() const = 0;
         virtual int numCells() const = 0 ;
@@ -74,9 +74,9 @@ namespace Opm
     protected:
         const GridImpl& grid_;
 
-        const SimulationDataContainer* globalState_;
-        const WellState*      wellState_;
-        const data::Solution* globalCellData_;
+        const SimulationDataContainer*        globalState_;
+        const WellStateFullyImplicitBlackoil* wellState_;
+        const data::Solution*                 globalCellData_;
 
     public:
         ParallelDebugOutput ( const GridImpl& grid,
@@ -88,7 +88,7 @@ namespace Opm
 
         // gather solution to rank 0 for EclipseWriter
         virtual bool collectToIORank( const SimulationDataContainer& localReservoirState,
-                                      const WellState& localWellState,
+                                      const WellStateFullyImplicitBlackoil& localWellState,
                                       const data::Solution& localCellData,
                                       const int /* wellStateStepNumber */)
         {
@@ -103,7 +103,7 @@ namespace Opm
         {
             return *globalCellData_;
         }
-        virtual const WellState& globalWellState() const { return *wellState_; }
+        virtual const WellStateFullyImplicitBlackoil& globalWellState() const { return *wellState_; }
         virtual bool isIORank () const { return true; }
         virtual bool isParallel () const { return false; }
         virtual int numCells() const { return grid_.number_of_cells; }
@@ -341,8 +341,8 @@ namespace Opm
             SimulationDataContainer& globalState_;
             const data::Solution& localCellData_;
             data::Solution& globalCellData_;
-            const WellState& localWellState_;
-            WellState& globalWellState_;
+            const WellStateFullyImplicitBlackoil& localWellState_;
+            WellStateFullyImplicitBlackoil& globalWellState_;
             const IndexMapType& localIndexMap_;
             const IndexMapStorageType& indexMaps_;
 
@@ -351,8 +351,8 @@ namespace Opm
                                                SimulationDataContainer& globalState,
                                                const data::Solution& localCellData,
                                                data::Solution& globalCellData,
-                                               const WellState& localWellState,
-                                               WellState& globalWellState,
+                                               const WellStateFullyImplicitBlackoil& localWellState,
+                                               WellStateFullyImplicitBlackoil& globalWellState,
                                                const IndexMapType& localIndexMap,
                                                const IndexMapStorageType& indexMaps,
                                                const bool isIORank )
@@ -522,8 +522,32 @@ namespace Opm
                     for( int np=0; np<localWellState_.numPhases(); ++np )
                         buffer.write( localWellState_.wellRates()[ wellRateIdx + np ] );
 
-                    // TODO: perfRates and perfPress, need to figure out the index
-                    // mapping there.
+                    // Write well control
+                    buffer.write(localWellState_.currentControls()[ wellIdx ]);
+
+                    // Write perfRates and perfPress. No need to figure out the index
+                    // mapping there as the ordering of the perforations should
+                    // be the same for global and local state.
+                    const int end_con = it->second[1] + it->second[2];
+
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.write( localWellState_.perfRates()[ con ] );
+                    }
+
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.write( localWellState_.perfPress()[ con ] );
+                    }
+
+                    // Write perfPhaseRate
+                    const int np = localWellState_.perfPhaseRates().size() /
+                        localWellState_.perfRates().size();
+
+                    for( int con = it->second[1]*np; con < end_con*np; ++con )
+                    {
+                        buffer.write( localWellState_.perfPhaseRates()[ con ] );
+                    }
                 }
             }
 
@@ -552,15 +576,39 @@ namespace Opm
                     for( int np=0; np<globalWellState_.numPhases(); ++np )
                         buffer.read( globalWellState_.wellRates()[ wellRateIdx + np ] );
 
-                    // TODO: perfRates and perfPress, need to figure out the index
-                    // mapping there.
+                    // Write well control
+                    buffer.read(globalWellState_.currentControls()[ wellIdx ]);
+
+                    // Read perfRates and perfPress. No need to figure out the index
+                    // mapping there as the ordering of the perforations should
+                    // be the same for global and local state.
+                    const int end_con = it->second[1] + it->second[2];
+
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.read( globalWellState_.perfRates()[ con ] );
+                    }
+
+                    for( int con = it->second[1]; con < end_con; ++con )
+                    {
+                        buffer.read( globalWellState_.perfPress()[ con ] );
+                    }
+
+                    // Read perfPhaseRate
+                    const int np = globalWellState_.perfPhaseRates().size() /
+                        globalWellState_.perfRates().size();
+
+                    for( int con = it->second[1]*np; con < end_con*np; ++con )
+                    {
+                        buffer.read( globalWellState_.perfPhaseRates()[ con ] );
+                    }
                 }
             }
         };
 
         // gather solution to rank 0 for EclipseWriter
         bool collectToIORank( const SimulationDataContainer& localReservoirState,
-                              const WellState& localWellState,
+                              const WellStateFullyImplicitBlackoil& localWellState,
                               const data::Solution& localCellData,
                               const int wellStateStepNumber )
         {
@@ -623,7 +671,7 @@ namespace Opm
             return *globalCellData_;
         }
 
-        const WellState& globalWellState() const { return globalWellState_; }
+        const WellStateFullyImplicitBlackoil& globalWellState() const { return globalWellState_; }
 
         bool isIORank() const
         {
