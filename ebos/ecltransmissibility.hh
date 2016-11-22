@@ -160,7 +160,9 @@ public:
                 const auto& intersection = *isIt;
 
                 // ignore boundary intersections for now (TODO?)
-                if (intersection.boundary())
+
+                // continue if no neighbor is present
+                if ( ! intersection.neighbor() )
                     continue;
 
                 const auto& inside = intersection.inside();
