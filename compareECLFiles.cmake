@@ -58,6 +58,7 @@ endif()
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 
 add_test_compareECLFiles(spe1 SPE1CASE2 flow)
+add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential)
 add_test_compareECLFiles(spe3 SPE3CASE1 flow)
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow)
 
