@@ -107,8 +107,14 @@ public:
         // create a separate instance of the material law manager just because opm-core
         // only supports double as the type for scalars (but ebos may use float or quad)
         std::vector<int> compressedToCartesianEquilElemIdx(numEquilElems);
+        std::map<int,int> equilCartesianToCompressed;
+
         for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx)
-            compressedToCartesianEquilElemIdx[equilElemIdx] = gridManager.equilCartesianIndex(equilElemIdx);
+        {
+            unsigned int equilCartesianIdx = gridManager.equilCartesianIndex(equilElemIdx);
+            compressedToCartesianEquilElemIdx[equilElemIdx] = equilCartesianIdx;
+            equilCartesianToCompressed[ equilCartesianIdx ] = equilElemIdx;
+        }
 
         auto equilMaterialLawManager =
             std::make_shared<Opm::EclMaterialLawManager<EquilTraits> >();
@@ -125,7 +131,6 @@ public:
             Opm::UgGridHelpers::cartDims(equilGrid),
             tmpParam);
 
-        assert( gridManager.grid().size(/*codim=*/0) == static_cast<int>(numEquilElems) );
         // initialize the boiler plate of opm-core the state structure.
         const auto opmPhaseUsage = opmBlackoilProps.phaseUsage();
         Opm::BlackoilState opmBlackoilState(numEquilElems,
@@ -140,14 +145,24 @@ public:
                             simulator.problem().gravity()[dimWorld - 1],
                             opmBlackoilState);
 
+        std::vector<int> localToEquilIndex( numElems, -1 );
+        for( unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx )
+        {
+            const int cartesianIndex = gridManager.cartesianIndex( elemIdx );
+            assert( equilCartesianToCompressed.find( cartesianIndex ) != equilCartesianToCompressed.end() );
+            localToEquilIndex[ elemIdx ] = equilCartesianToCompressed[ cartesianIndex ];
+        }
+
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);
-        for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
-            unsigned cartesianElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
+        for (unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            unsigned cartesianElemIdx = gridManager.cartesianIndex(elemIdx);
             auto& fluidState = initialFluidStates_[cartesianElemIdx];
 
+            const unsigned int equilElemIdx = localToEquilIndex[ elemIdx ];
+
             // get the PVT region index of the current element
-            unsigned regionIdx = simulator_.problem().pvtRegionIndex(equilElemIdx);
+            unsigned regionIdx = simulator_.problem().pvtRegionIndex(elemIdx);
 
             // set the phase saturations
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -186,7 +201,7 @@ public:
             // phase pressure, so we need to calculate the other phases' pressures
             // ourselfs.
             Dune::FieldVector< Scalar, numPhases >  pC( 0 );
-            const auto& matParams = simulator.problem().materialLawParams(equilElemIdx);
+            const auto& matParams = simulator.problem().materialLawParams(elemIdx);
             MaterialLaw::capillaryPressures(pC, matParams, fluidState);
             Scalar po = opmBlackoilState.pressure()[equilElemIdx];
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -238,13 +253,13 @@ public:
         // deal with the capillary pressure modification due to SWATINIT. this is
         // only necessary because, the fine equilibration code from opm-core requires
         // its own grid and its own material law manager...
-        std::vector<int> cartesianToCompressedElemIdx(numCartesianElems, -1);
-        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            int cartElemIdx = gridManager.cartesianIndex(elemIdx);
-            cartesianToCompressedElemIdx[cartElemIdx] = elemIdx;
-        }
-
         if (GET_PROP_VALUE(TypeTag, EnableSwatinit)) {
+            std::vector<int> cartesianToCompressedElemIdx(numCartesianElems, -1);
+            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+                int cartElemIdx = gridManager.cartesianIndex(elemIdx);
+                cartesianToCompressedElemIdx[cartElemIdx] = elemIdx;
+            }
+
             for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
                 int cartElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
                 assert(cartElemIdx >= 0);
