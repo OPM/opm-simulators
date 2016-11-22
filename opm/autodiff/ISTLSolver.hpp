@@ -169,7 +169,7 @@ namespace Opm
         }
 
         // dummy method that is not implemented for this class
-        SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual& residual) const
+        SolutionVector computeNewtonIncrement(const LinearisedBlackoilResidual&) const
         {
             OPM_THROW(std::logic_error,"This method is not implemented");
             return SolutionVector();

@@ -39,6 +39,8 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
+#include <dune/common/unused.hh>
+
 namespace Opm {
 
 class SimulatorFullyImplicitBlackoilEbos;
@@ -118,7 +120,7 @@ public:
           threshold_pressures_by_face_(threshold_pressures_by_face),
           is_parallel_run_( false )
     {
-
+        DUNE_UNUSED_PARAMETER(eclipse_state);
         // Misc init.
         const int num_cells = AutoDiffGrid::numCells(grid());
         allcells_.resize(num_cells);
@@ -395,10 +397,10 @@ public:
     { return ebosSimulator_.gridManager().grid(); }
 
 protected:
-    void handleAdditionalWellInflow(SimulatorTimer& timer,
-                                    WellsManager& wells_manager,
-                                    WellState& well_state,
-                                    const Wells* wells)
+    void handleAdditionalWellInflow(SimulatorTimer& /* timer */,
+                                    WellsManager& /* wells_manager */,
+                                    WellState& /* well_state */,
+                                    const Wells* /* wells */)
     { }
 
     std::unique_ptr<Solver> createSolver(const WellModel& well_model)
@@ -632,7 +634,7 @@ protected:
     }
 
 
-    std::vector<double> FIPTotals(const std::vector<std::vector<double>>& fip, const ReservoirState& state)
+    std::vector<double> FIPTotals(const std::vector<std::vector<double>>& fip, const ReservoirState& /* state */)
     {
         std::vector<double> totals(7,0.0);
         for (int i = 0; i < 5; ++i) {
