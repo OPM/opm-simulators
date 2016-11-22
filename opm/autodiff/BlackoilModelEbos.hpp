@@ -300,7 +300,7 @@ namespace Opm {
 
                 // Compute the nonlinear update.
                 const int nc = AutoDiffGrid::numCells(grid_);
-                const int nw = wellModel().wells().number_of_wells;
+                const int nw = numWells();
                 BVector x(nc);
                 BVector xw(nw);
 
@@ -447,7 +447,7 @@ namespace Opm {
         int sizeNonLinear() const
         {
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            const int nw = wellModel().wells().number_of_wells;
+            const int nw = numWells();
             return numPhases() * (nc + nw);
         }
 
@@ -476,8 +476,11 @@ namespace Opm {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            // apply well residual to the residual.
-            wellModel().apply(ebosResid);
+            if( xw.size() > 0 )
+            {
+                // apply well residual to the residual.
+                wellModel().apply(ebosResid);
+            }
 
             // set initial guess
             x = 0.0;
@@ -497,9 +500,12 @@ namespace Opm {
                 istlSolver().solve( opA, x, ebosResid );
             }
 
-            // recover wells.
-            xw = 0.0;
-            wellModel().recoverVariable(x, xw);
+            if( xw.size() > 0 )
+            {
+                // recover wells.
+                xw = 0.0;
+                wellModel().recoverVariable(x, xw);
+            }
         }
 
         //=====================================================================
@@ -1248,6 +1254,8 @@ namespace Opm {
 
         /// return true if wells are available in the reservoir
         bool wellsActive() const { return well_model_.wellsActive(); }
+
+        int numWells() const { return wellsActive() ? wells().number_of_wells : 0; }
 
         /// return true if wells are available on this process
         bool localWellsActive() const { return well_model_.localWellsActive(); }
