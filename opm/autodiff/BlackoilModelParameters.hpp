@@ -48,6 +48,10 @@ namespace Opm
         //  TODO: it might need to distinguish between rate control and pressure control later
         double tolerance_well_control_;
 
+        /// Tolerance for time step in seconds where single precision can be used
+        /// for solving for the Jacobian
+        double maxSinglePrecisionTimeStep_;
+
         /// Solve well equation initially
         bool solve_welleq_initially_;
 

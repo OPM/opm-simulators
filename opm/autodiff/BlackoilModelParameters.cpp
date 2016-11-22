@@ -19,6 +19,8 @@
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
+
 
 namespace Opm
 {
@@ -47,6 +49,8 @@ namespace Opm
         tolerance_cnv_   = param.getDefault("tolerance_cnv", tolerance_cnv_);
         tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
         tolerance_well_control_ = param.getDefault("tolerance_well_control", tolerance_well_control_);
+        maxSinglePrecisionTimeStep_ = unit::convert::from(
+                param.getDefault("max_single_precision_days", unit::convert::to( maxSinglePrecisionTimeStep_, unit::day) ), unit::day );
         solve_welleq_initially_ = param.getDefault("solve_welleq_initially",solve_welleq_initially_);
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
         compute_well_potentials_ = param.getDefault("compute_well_potentials", compute_well_potentials_);
@@ -68,6 +72,7 @@ namespace Opm
         tolerance_cnv_   = 1.0e-2;
         tolerance_wells_ = 1.0e-3;
         tolerance_well_control_ = 1.0e-7;
+        maxSinglePrecisionTimeStep_ = unit::convert::from( 20.0, unit::day );
         solve_welleq_initially_ = true;
         update_equations_scaling_ = false;
         compute_well_potentials_ = false;

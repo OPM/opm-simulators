@@ -206,8 +206,7 @@ namespace Opm
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
 #if ! HAVE_UMFPACK
-            const bool useAmg = false ;
-            if( useAmg )
+            if( parameters_.linear_solver_use_amg_ )
             {
                 typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
                 typedef typename CPRSelectorType::AMG AMG;
