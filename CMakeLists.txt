@@ -128,8 +128,6 @@ endif (NOT EIGEN3_FOUND)
 
 
 if (HAVE_OPM_DATA)
-    add_test( NAME flow_SPE1CASE2 COMMAND flow_legacy ${OPM_DATA_ROOT}/spe1/SPE1CASE2.DATA )
-    add_test( NAME flow_sequential_SPE1 COMMAND flow_sequential ${OPM_DATA_ROOT}/spe1/SPE1CASE1.DATA )
     add_test( NAME flow_MSW2DH__ COMMAND flow_multisegment ${OPM_DATA_ROOT}/wells_test_suite/MSW/2D_H__/2D_H__.DATA)
 
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
