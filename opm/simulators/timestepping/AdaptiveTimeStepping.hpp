@@ -65,8 +65,8 @@ namespace Opm {
             \param  well_state  additional well state object
         */
         template <class Solver, class State, class WellState>
-        void step( const SimulatorTimer& timer,
-                   Solver& solver, State& state, WellState& well_state );
+        SimulatorReport step( const SimulatorTimer& timer,
+                              Solver& solver, State& state, WellState& well_state );
 
         /** \brief  step method that acts like the solver::step method
                     in a sub cycle of time steps
@@ -78,15 +78,15 @@ namespace Opm {
             \param  outputWriter writer object to write sub steps
         */
         template <class Solver, class State, class WellState, class Output>
-        void step( const SimulatorTimer& timer,
-                   Solver& solver, State& state, WellState& well_state,
-                   Output& outputWriter );
+        SimulatorReport step( const SimulatorTimer& timer,
+                              Solver& solver, State& state, WellState& well_state,
+                              Output& outputWriter );
 
     protected:
         template <class Solver, class State, class WellState, class Output>
-        void stepImpl( const SimulatorTimer& timer,
-                       Solver& solver, State& state, WellState& well_state,
-                       Output* outputWriter);
+        SimulatorReport stepImpl( const SimulatorTimer& timer,
+                                  Solver& solver, State& state, WellState& well_state,
+                                  Output* outputWriter);
 
         void init(const parameter::ParameterGroup& param);
 

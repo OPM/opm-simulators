@@ -26,6 +26,7 @@
 #include <opm/core/simulator/SimulatorTimer.hpp>
 #include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
 #include <opm/core/simulator/TimeStepControl.hpp>
+#include <opm/core/utility/StopWatch.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <dune/istl/istlexception.hh>
@@ -148,28 +149,29 @@ namespace Opm {
 
 
     template <class Solver, class State, class WellState>
-    void AdaptiveTimeStepping::
+    SimulatorReport AdaptiveTimeStepping::
     step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state )
     {
-        stepImpl( simulatorTimer, solver, state, well_state );
+        return stepImpl( simulatorTimer, solver, state, well_state );
     }
 
     template <class Solver, class State, class WellState, class Output>
-    void AdaptiveTimeStepping::
+    SimulatorReport AdaptiveTimeStepping::
     step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state,
           Output& outputWriter )
     {
-        stepImpl( simulatorTimer, solver, state, well_state, &outputWriter );
+        return stepImpl( simulatorTimer, solver, state, well_state, &outputWriter );
     }
 
 
     // implementation of the step method
     template <class Solver, class State, class WState, class Output >
-    void AdaptiveTimeStepping::
+    SimulatorReport AdaptiveTimeStepping::
     stepImpl( const SimulatorTimer& simulatorTimer,
               Solver& solver, State& state, WState& well_state,
               Output* outputWriter )
     {
+        SimulatorReport report;
         const double timestep = simulatorTimer.currentStepLength();
 
         // init last time step as a fraction of the given time step
@@ -202,19 +204,19 @@ namespace Opm {
             if( timestep_verbose_ )
             {
                 std::ostringstream ss;
-                ss <<"Adaptive time step (" << substepTimer.currentStepNum() << "), stepsize "
+                ss <<"  Substep " << substepTimer.currentStepNum() << ", stepsize "
                    << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days.";
                 OpmLog::info(ss.str());
             }
 
-            int linearIterations = -1;
+            SimulatorReport substepReport;
             try {
-                // (linearIterations < 0 means on convergence in solver)
-                linearIterations = solver.step( substepTimer, state, well_state);
+                substepReport = solver.step( substepTimer, state, well_state);
+                report += substepReport;
 
                 if( solver_verbose_ ) {
                     // report number of linear iterations
-                    OpmLog::note("Overall linear iterations used: " + std::to_string(linearIterations));
+                    OpmLog::note("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));
                 }
             }
             catch (const Opm::NumericalProblem& e) {
@@ -234,8 +236,7 @@ namespace Opm {
                 // this can be thrown by ISTL's ILU0 in block mode, yet is not an ISTLError
             }
 
-            // (linearIterations < 0 means no convergence in solver)
-            if( linearIterations >= 0 )
+            if( substepReport.converged )
             {
                 // advance by current dt
                 ++substepTimer;
@@ -246,7 +247,7 @@ namespace Opm {
 
                 // compute new time step estimate
                 double dtEstimate =
-                    timeStepControl_->computeTimeStepSize( dt, linearIterations, relativeChange, substepTimer.simulationTimeElapsed());
+                    timeStepControl_->computeTimeStepSize( dt, substepReport.total_linear_iterations, relativeChange, substepTimer.simulationTimeElapsed());
 
                 // limit the growth of the timestep size by the growth factor
                 dtEstimate = std::min( dtEstimate, double(max_growth_ * dt) );
@@ -261,11 +262,15 @@ namespace Opm {
                 if( timestep_verbose_ )
                 {
                     std::ostringstream ss;
-                    if (solver.wellIterations() != 0) {
-                        ss << "well iterations = " << solver.wellIterations() << ", ";
+                    ss << "    Substep summary: ";
+                    if (report.total_well_iterations != 0) {
+                        ss << "well iterations = " << report.total_well_iterations << ", ";
                     }
-                    ss << "non-linear iterations = " << solver.nonlinearIterations()
-		       << ", total linear iterations = " << solver.linearIterations();
+                    ss << "newton iterations = " << report.total_newton_iterations << ", "
+                       << "linearizations = " << report.total_newton_iterations
+                       << " (" << report.assemble_time << " sec), "
+                       << "linear iterations = " << report.total_linear_iterations
+                       << " (" << report.linear_solve_time << " sec)";
                     OpmLog::info(ss.str());
                 }
 
@@ -274,9 +279,12 @@ namespace Opm {
                 // to write it as this will be done by the simulator
                 // anyway.
                 if( outputWriter && !substepTimer.done() ) {
+                    Opm::time::StopWatch perfTimer;
+                    perfTimer.start();
                     bool substep = true;
                     const auto& physicalModel = solver.model();
                     outputWriter->writeTimeStep( substepTimer, state, well_state, physicalModel, substep);
+                    report.output_write_time += perfTimer.secsSinceStart();
                 }
 
                 // set new time step length
@@ -286,9 +294,13 @@ namespace Opm {
                 last_state      = state ;
                 last_well_state = well_state;
 
+                report.converged = substepTimer.done();
+
             }
             else // in case of no convergence (linearIterations < 0)
             {
+                report.converged = false;
+
                 // increase restart counter
                 if( restarts >= solver_restart_max_ ) {
                     const auto msg = std::string("Solver failed to converge after ")
@@ -307,7 +319,7 @@ namespace Opm {
                     msg = "Solver convergence failed, restarting solver with new time step ("
                         + std::to_string(unit::convert::to( newTimeStep, unit::day )) + " days).\n";
                     OpmLog::problem(msg);
-		}
+                }
                 // reset states
                 state      = last_state;
                 well_state = last_well_state;
@@ -330,6 +342,7 @@ namespace Opm {
         if( ! std::isfinite( suggested_next_timestep_ ) ) { // check for NaN
             suggested_next_timestep_ = timestep;
         }
+        return report;
     }
 }
 
