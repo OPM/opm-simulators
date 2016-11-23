@@ -411,7 +411,7 @@ public:
             // has changed, the grid may need be re-created which has some serious
             // implications on e.g., the solution of the simulation.)
             const auto& miniDeck = schedule.getModifierDeck(nextEpisodeIdx);
-            eclState->applyModifierDeck(*miniDeck);
+            eclState->applyModifierDeck(miniDeck);
 
             // re-compute all quantities which may possibly be affected.
             transmissibilities_.update();
