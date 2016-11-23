@@ -45,6 +45,7 @@
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
 #include <opm/core/grid.h>
+#include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -64,6 +65,7 @@
 
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/collectivecommunication.hh>
+#include <dune/common/timer.hh>
 #include <dune/common/unused.hh>
 
 #include <cassert>
@@ -247,12 +249,16 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
-        IterationReport nonlinearIteration(const int iteration,
+        SimulatorReport nonlinearIteration(const int iteration,
                                            const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& nonlinear_solver,
                                            ReservoirState& reservoir_state,
                                            WellState& well_state)
         {
+            SimulatorReport report;
+            Dune::Timer perfTimer;
+
+            perfTimer.start();
             if (iteration == 0) {
                 // For each iteration we store in a vector the norms of the residual of
                 // the mass balance for each active phase, the well flux and the well equations.
@@ -264,16 +270,30 @@ namespace Opm {
             // reset intensive quantities cache useless other options are set
             // further down
             invalidateIntensiveQuantitiesCache_ = true;
+            report.total_linearizations = 1;
 
-            IterationReport iter_report = assemble(timer, iteration, reservoir_state, well_state);
+            try {
+                report += assemble(timer, iteration, reservoir_state, well_state);
+                report.assemble_time += perfTimer.stop();
+            }
+            catch (...) {
+                report.assemble_time += perfTimer.stop();
+                // todo (?): make the report an attribute of the class
+                throw; // continue throwing the stick
+            }
+
             std::vector<double> residual_norms;
-            const bool converged = getConvergence(timer, iteration,residual_norms);
+            perfTimer.reset();
+            perfTimer.start();
+            report.converged = getConvergence(timer, iteration,residual_norms);
+            report.update_time += perfTimer.stop();
             residual_norms_history_.push_back(residual_norms);
-            bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
 
-            // don't solve if we have reached the maximum number of iteration.
-            must_solve = must_solve && (iteration < nonlinear_solver.maxIter());
+            bool must_solve = iteration < nonlinear_solver.minIter() || !report.converged;
             if (must_solve) {
+                perfTimer.reset();
+                perfTimer.start();
+                report.total_newton_iterations = 1;
 
                 // enable single precision for solvers when dt is smaller then 20 days
                 //residual_.singlePrecision = (unit::convert::to(dt, unit::day) < 20.) ;
@@ -284,7 +304,20 @@ namespace Opm {
                 BVector x(nc);
                 BVector xw(nw);
 
-                solveJacobianSystem(x, xw);
+                try {
+                    solveJacobianSystem(x, xw);
+                    report.linear_solve_time += perfTimer.stop();
+                    report.total_linear_iterations += linearIterationsLastSolve();
+                }
+                catch (...) {
+                    report.linear_solve_time += perfTimer.stop();
+                    report.total_linear_iterations += linearIterationsLastSolve();
+                    // todo (?): make the report an attribute of the class
+                    throw; // re-throw up
+                }
+
+                perfTimer.reset();
+                perfTimer.start();
 
                 // Stabilize the nonlinear update.
                 bool isOscillate = false;
@@ -301,24 +334,20 @@ namespace Opm {
                 }
                 nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
 
-                // Apply the update, applying model-dependent
-                // limitations and chopping of the update.
+                // Apply the update, with considering model-dependent limitations and
+                // chopping of the update.
                 updateState(x,reservoir_state);
                 wellModel().updateWellState(xw, well_state);
-
-                // since the solution was changed, the cache for the intensive quantities are invalid
-                // ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+                report.update_time += perfTimer.stop();
             }
-
-            if( converged && (iteration >= nonlinear_solver.minIter()) )
-            {
-                // in case of convergence we do not need to reset intensive quantities
+            else {
+                // if the solution is not updated, we do not need to recalculate the
+                // intensive quantities in the next iteration.
+                assert(report.converged);
                 invalidateIntensiveQuantitiesCache_ = false ;
             }
 
-            const bool failed = false; // Not needed in this model.
-            const int linear_iters = must_solve ? linearIterationsLastSolve() : 0;
-            return IterationReport{ failed, converged, linear_iters, iter_report.well_iterations };
+            return report;
         }
 
         void printIf(int c, double x, double y, double eps, std::string type) {
@@ -346,12 +375,14 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        IterationReport assemble(const SimulatorTimerInterface& timer,
+        SimulatorReport assemble(const SimulatorTimerInterface& timer,
                                  const int iterationIdx,
                                  const ReservoirState& reservoir_state,
                                  WellState& well_state)
         {
             using namespace Opm::AutoDiffGrid;
+
+            SimulatorReport report;
 
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx, reservoir_state);
@@ -359,17 +390,16 @@ namespace Opm {
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
 
-            IterationReport iter_report;
             try
             {
-                iter_report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state);
+                report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state);
             }
             catch ( const Dune::FMatrixError& e  )
             {
                 OPM_THROW(Opm::NumericalProblem,"Well equation did not converge");
             }
 
-            return iter_report;
+            return report;
         }
 
 
@@ -438,7 +468,6 @@ namespace Opm {
         {
             wellModel().applyScaleAdd(alpha, x, y);
         }
-
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.

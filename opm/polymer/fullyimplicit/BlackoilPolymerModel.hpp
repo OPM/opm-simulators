@@ -121,7 +121,7 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        IterationReport 
+        SimulatorReport
         assemble(const ReservoirState& reservoir_state,
                  WellState& well_state,
                  const bool initial_assembly);

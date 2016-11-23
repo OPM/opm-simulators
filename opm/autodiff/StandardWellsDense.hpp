@@ -160,14 +160,14 @@ namespace Opm {
 
 
             template <typename Simulator>
-            IterationReport assemble(Simulator& ebosSimulator,
+            SimulatorReport assemble(Simulator& ebosSimulator,
                                      const int iterationIdx,
                                      const double dt,
                                      WellState& well_state) {
 
-                IterationReport iter_report = {false, false, 0, 0};
+                SimulatorReport report;
                 if ( ! localWellsActive() ) {
-                    return iter_report;
+                    return report;
                 }
 
                 resetWellControlFromState(well_state);
@@ -182,7 +182,7 @@ namespace Opm {
 
                 if (param_.solve_welleq_initially_ && iterationIdx == 0) {
                     // solve the well equations as a pre-processing step
-                    iter_report = solveWellEq(ebosSimulator, dt, well_state);
+                    report = solveWellEq(ebosSimulator, dt, well_state);
                 }
                 assembleWellEq(ebosSimulator, dt, well_state, false);
 
@@ -190,7 +190,8 @@ namespace Opm {
                 if (param_.compute_well_potentials_) {
                     //wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
                 }
-                return iter_report;
+                report.converged = true;
+                return report;
             }
 
             template <typename Simulator>
@@ -637,9 +638,8 @@ namespace Opm {
                 }
             }
 
-
             template <typename Simulator>
-            IterationReport solveWellEq(Simulator& ebosSimulator,
+            SimulatorReport solveWellEq(Simulator& ebosSimulator,
                                         const double dt,
                                         WellState& well_state)
             {
@@ -672,9 +672,10 @@ namespace Opm {
                     well_state = well_state0;
                 }
 
-                const bool failed = false; // Not needed in this method.
-                const int linear_iters = 0; // Not needed in this method
-                return IterationReport{failed, converged, linear_iters, it};
+                SimulatorReport report;
+                report.converged = converged;
+                report.total_well_iterations = it;
+                return report;
             }
 
             void printIf(int c, double x, double y, double eps, std::string type) {
@@ -1114,9 +1115,9 @@ namespace Opm {
                         // We disregard terminal_ouput here as with it only messages
                         // for wells on one process will be printed.
                         std::ostringstream ss;
-                        ss << "Switching control mode for well " << wells().name[w]
-                              << " from " << modestring[well_controls_iget_type(wc, current)]
-                              << " to " << modestring[well_controls_iget_type(wc, ctrl_index)] << std::endl;
+                        ss << "    Switching control mode for well " << wells().name[w]
+                           << " from " << modestring[well_controls_iget_type(wc, current)]
+                           << " to " << modestring[well_controls_iget_type(wc, ctrl_index)];
                         OpmLog::info(ss.str());
                         xw.currentControls()[w] = ctrl_index;
                         current = xw.currentControls()[w];

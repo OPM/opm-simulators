@@ -37,6 +37,7 @@
 #include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
 
 #include <array>
 
@@ -175,7 +176,7 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
-        IterationReport nonlinearIteration(const int iteration,
+        SimulatorReport nonlinearIteration(const int iteration,
                                            const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& nonlinear_solver,
                                            ReservoirState& reservoir_state,
@@ -194,8 +195,7 @@ namespace Opm {
         /// \param[in]      reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        /// \return well iterations.
-        IterationReport
+        SimulatorReport
         assemble(const ReservoirState& reservoir_state,
                  WellState& well_state,
                  const bool initial_assembly);
@@ -396,7 +396,7 @@ namespace Opm {
         assembleMassBalanceEq(const SolutionState& state);
 
 
-        IterationReport
+        SimulatorReport
         solveWellEq(const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
                     const ReservoirState& reservoir_state,

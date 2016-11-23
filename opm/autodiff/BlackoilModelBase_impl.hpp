@@ -50,8 +50,10 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-
 #include <opm/common/data/SimulationDataContainer.hpp>
+
+#include <dune/common/timer.hh>
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -233,7 +235,7 @@ typedef Eigen::Array<double,
 
     template <class Grid, class WellModel, class Implementation>
     template <class NonlinearSolverType>
-    IterationReport
+    SimulatorReport
     BlackoilModelBase<Grid, WellModel, Implementation>::
     nonlinearIteration(const int iteration,
                        const SimulatorTimerInterface& timer,
@@ -241,6 +243,10 @@ typedef Eigen::Array<double,
                        ReservoirState& reservoir_state,
                        WellState& well_state)
     {
+        SimulatorReport report;
+        Dune::Timer perfTimer;
+
+        perfTimer.start();
         const double dt = timer.currentStepLength();
 
         if (iteration == 0) {
@@ -250,16 +256,46 @@ typedef Eigen::Array<double,
             current_relaxation_ = 1.0;
             dx_old_ = V::Zero(sizeNonLinear());
         }
-        IterationReport iter_report = asImpl().assemble(reservoir_state, well_state, iteration == 0);
+        try {
+            report += asImpl().assemble(reservoir_state, well_state, iteration == 0);
+            report.assemble_time += perfTimer.stop();
+        }
+        catch (...) {
+            report.assemble_time += perfTimer.stop();
+            throw;
+        }
+
+        report.total_linearizations = 1;
+        perfTimer.reset();
+        perfTimer.start();
+        report.converged = asImpl().getConvergence(timer, iteration);
         residual_norms_history_.push_back(asImpl().computeResidualNorms());
-        const bool converged = asImpl().getConvergence(timer, iteration);
-        const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
+        report.update_time += perfTimer.stop();
+
+        const bool must_solve = (iteration < nonlinear_solver.minIter()) || (!report.converged);
         if (must_solve) {
+            perfTimer.reset();
+            perfTimer.start();
+            report.total_newton_iterations = 1;
+
             // enable single precision for solvers when dt is smaller then maximal time step for single precision
             residual_.singlePrecision = ( dt < param_.maxSinglePrecisionTimeStep_ );
 
             // Compute the nonlinear update.
-            V dx = asImpl().solveJacobianSystem();
+            V dx;
+            try {
+                dx = asImpl().solveJacobianSystem();
+                report.linear_solve_time += perfTimer.stop();
+                report.total_linear_iterations += linearIterationsLastSolve();
+            }
+            catch (...) {
+                report.linear_solve_time += perfTimer.stop();
+                report.total_linear_iterations += linearIterationsLastSolve();
+                throw;
+            }
+
+            perfTimer.reset();
+            perfTimer.start();
 
             if (param_.use_update_stabilization_) {
                 // Stabilize the nonlinear update.
@@ -281,10 +317,10 @@ typedef Eigen::Array<double,
             // Apply the update, applying model-dependent
             // limitations and chopping of the update.
             asImpl().updateState(dx, reservoir_state, well_state);
+            report.update_time += perfTimer.stop();
         }
-        const bool failed = false; // Not needed in this model.
-        const int linear_iters = must_solve ? asImpl().linearIterationsLastSolve() : 0;
-        return IterationReport{ failed, converged, linear_iters , iter_report.well_iterations};
+
+        return report;
     }
 
 
@@ -702,13 +738,15 @@ typedef Eigen::Array<double,
 
 
     template <class Grid, class WellModel, class Implementation>
-    IterationReport
+    SimulatorReport
     BlackoilModelBase<Grid, WellModel, Implementation>::
     assemble(const ReservoirState& reservoir_state,
              WellState& well_state,
              const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
+
+        SimulatorReport report;
 
         // If we have VFP tables, we need the well connection
         // pressures for the "simple" hydrostatic correction
@@ -757,9 +795,8 @@ typedef Eigen::Array<double,
         asImpl().assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
-        IterationReport iter_report = {false, false, 0, 0};
         if ( ! wellsActive() ) {
-            return iter_report;
+            return report;
         }
 
         std::vector<ADB> mob_perfcells;
@@ -767,7 +804,7 @@ typedef Eigen::Array<double,
         asImpl().wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
+            report += asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
         }
         V aliveWells;
         std::vector<ADB> cq_s;
@@ -783,7 +820,7 @@ typedef Eigen::Array<double,
             asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
         }
 
-        return iter_report;
+        return report;
     }
 
 
@@ -962,7 +999,7 @@ typedef Eigen::Array<double,
 
 
     template <class Grid, class WellModel, class Implementation>
-    IterationReport
+    SimulatorReport
     BlackoilModelBase<Grid, WellModel, Implementation>::
     solveWellEq(const std::vector<ADB>& mob_perfcells,
                 const std::vector<ADB>& b_perfcells,
@@ -1072,9 +1109,11 @@ typedef Eigen::Array<double,
         if (!converged) {
             well_state = well_state0;
         }
-        const bool failed = false; // Not needed in this method.
-        const int linear_iters = 0; // Not needed in this method
-        return IterationReport{failed, converged, linear_iters, it};
+
+        SimulatorReport report;
+        report.total_well_iterations = it;
+        report.converged = converged;
+        return report;
     }
 
 

@@ -102,7 +102,7 @@ namespace Opm
     }
 
     template <class PhysicalModel>
-    int
+    SimulatorReport
     NonlinearSolver<PhysicalModel>::
     step(const SimulatorTimerInterface& timer,
          ReservoirState& reservoir_state,
@@ -114,7 +114,7 @@ namespace Opm
 
 
     template <class PhysicalModel>
-    int
+    SimulatorReport
     NonlinearSolver<PhysicalModel>::
     step(const SimulatorTimerInterface& timer,
          const ReservoirState& initial_reservoir_state,
@@ -122,6 +122,9 @@ namespace Opm
          ReservoirState& reservoir_state,
          WellState& well_state)
     {
+        SimulatorReport iterReport;
+        SimulatorReport report;
+
         // Do model-specific once-per-step calculations.
         model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
 
@@ -130,44 +133,31 @@ namespace Opm
         // Let the model do one nonlinear iteration.
 
         // Set up for main solver loop.
-        int linIters = 0;
         bool converged = false;
-        int wellIters = 0;
 
         // ----------  Main nonlinear solver loop  ----------
         do {
             // Do the nonlinear step. If we are in a converged state, the
             // model will usually do an early return without an expensive
             // solve, unless the minIter() count has not been reached yet.
-            IterationReport report = model_->nonlinearIteration(iteration, timer, *this, reservoir_state, well_state);
-            if (report.failed) {
-                OPM_THROW(Opm::NumericalProblem, "Failed to complete a nonlinear iteration.");
-            }
+            iterReport = model_->nonlinearIteration(iteration, timer, *this, reservoir_state, well_state);
+
+            report += iterReport;
+            report.converged = iterReport.converged;
+
             converged = report.converged;
-            linIters += report.linear_iterations;
-            wellIters += report.well_iterations;
-            ++iteration;
-        } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
+            iteration += 1;
+        } while ( (!converged && (iteration <= maxIter())) || (iteration < minIter()));
 
         if (!converged) {
-            if (model_->terminalOutputEnabled()) {
-                std::cerr << "WARNING: Failed to compute converged solution in " << iteration - 1 << " iterations." << std::endl;
-            }
-            return -1; // -1 indicates that the solver has to be restarted
+            OPM_THROW(Opm::NumericalProblem, "Failed to complete a time step within "+std::to_string(maxIter())+" iterations.");
         }
-
-        linearIterations_ += linIters;
-        nonlinearIterations_ += iteration - 1; // Since the last one will always be trivial.
-        linearizations_ += iteration;
-        wellIterations_ += wellIters;
-        linearIterationsLast_ = linIters;
-        nonlinearIterationsLast_ = iteration;
-        wellIterationsLast_ = wellIters;
 
         // Do model-specific post-step actions.
         model_->afterStep(timer, reservoir_state, well_state);
+        report.converged = true;
 
-        return linIters;
+        return report;
     }
 
 

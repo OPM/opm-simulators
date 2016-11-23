@@ -179,7 +179,7 @@ namespace Opm
             stime += st;
             if ( output_writer_.output() ) {
                 SimulatorReport step_report;
-                step_report.pressure_time = st;
+                step_report.solver_time = st;
                 step_report.total_time =  step_timer.secsSinceStart();
                 step_report.reportParam(tstep_os);
             }
@@ -198,9 +198,8 @@ namespace Opm
         // Stop timer and create timing report
         total_timer.stop();
         SimulatorReport report;
-        report.pressure_time = stime;
-        report.transport_time = 0.0;
         report.total_time = total_timer.secsSinceStart();
+        report.solver_time = stime;
         report.total_newton_iterations = totalNonlinearIterations;
         report.total_linear_iterations = totalLinearIterations;
         return report;

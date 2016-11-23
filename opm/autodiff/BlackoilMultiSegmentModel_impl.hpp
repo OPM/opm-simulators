@@ -127,7 +127,7 @@ namespace Opm {
 
 
     template <class Grid>
-    IterationReport
+    SimulatorReport
     BlackoilMultiSegmentModel<Grid>::
     assemble(const ReservoirState& reservoir_state,
              WellState& well_state,
@@ -188,9 +188,9 @@ namespace Opm {
         asImpl().assembleMassBalanceEq(state);
 
         // -------- Well equations ----------
-        IterationReport iter_report = {false, false, 0, 0};
         if ( ! wellsActive() ) {
-            return iter_report;
+            SimulatorReport report;
+            return report;
         }
 
         wellModel().computeSegmentFluidProperties(state);
@@ -200,10 +200,11 @@ namespace Opm {
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
+        SimulatorReport report;
         wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
+            report = asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
         }
 
         // the perforation flux here are different
@@ -215,7 +216,7 @@ namespace Opm {
         wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
-        return iter_report;
+        return report;
     }
 
 
@@ -223,16 +224,16 @@ namespace Opm {
 
 
     template <class Grid>
-    IterationReport
+    SimulatorReport
     BlackoilMultiSegmentModel<Grid>::solveWellEq(const std::vector<ADB>& mob_perfcells,
                                                  const std::vector<ADB>& b_perfcells,
                                                  const ReservoirState& reservoir_state,
                                                  SolutionState& state,
                                                  WellState& well_state)
     {
-        IterationReport iter_report = Base::solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
+        SimulatorReport report = Base::solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
 
-        if (iter_report.converged) {
+        if (report.converged) {
             // We must now update the state.segp and state.segqs members,
             // that the base version does not know about.
             const int np = numPhases();
@@ -261,7 +262,7 @@ namespace Opm {
             asImpl().computeWellConnectionPressures(state, well_state);
         }
 
-        return iter_report;
+        return report;
     }
 
 

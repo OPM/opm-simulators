@@ -149,13 +149,14 @@ namespace Opm {
 
 
 
-        IterationReport
+        SimulatorReport
         assemble(const ReservoirState& reservoir_state,
                  WellState& well_state,
                  const bool initial_assembly)
         {
-            IterationReport iter_report = Base::assemble(reservoir_state, well_state, initial_assembly);
+            SimulatorReport report;
 
+            report += Base::assemble(reservoir_state, well_state, initial_assembly);
             if (initial_assembly) {
             }
 
@@ -186,7 +187,8 @@ namespace Opm {
                 assert(int(well_state.perfRates().size()) == wflux.size());
                 std::copy_n(wflux.data(), wflux.size(), well_state.perfRates().begin());
             }
-            return iter_report;
+
+            return report;
         }
 
 

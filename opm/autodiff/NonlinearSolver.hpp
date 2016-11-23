@@ -22,6 +22,7 @@
 #define OPM_NONLINEARSOLVER_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <opm/autodiff/DuneMatrix.hpp>
@@ -87,8 +88,7 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state     reservoir state variables
         /// \param[in, out] well_state          well state variables
-        /// \return                             number of linear iterations used
-        int
+        SimulatorReport
         step(const SimulatorTimerInterface& timer,
              ReservoirState& reservoir_state,
              WellState& well_state);
@@ -103,7 +103,7 @@ namespace Opm {
         /// \param[in, out] reservoir_state     reservoir state variables
         /// \param[in, out] well_state          well state variables
         /// \return                             number of linear iterations used
-        int
+        SimulatorReport
         step(const SimulatorTimerInterface& timer,
              const ReservoirState& initial_reservoir_state,
              const WellState& initial_well_state,
@@ -178,7 +178,7 @@ namespace Opm {
         double relaxRelTol() const       { return param_.relax_rel_tol_; }
 
         /// The maximum number of nonlinear iterations allowed.
-        double maxIter() const           { return param_.max_iter_; }
+        int maxIter() const           { return param_.max_iter_; }
 
         /// The minimum number of nonlinear iterations allowed.
         double minIter() const           { return param_.min_iter_; }

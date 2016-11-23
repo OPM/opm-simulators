@@ -494,12 +494,14 @@ namespace Opm {
 
 
     template <class Grid>
-    IterationReport
+    SimulatorReport
     BlackoilPolymerModel<Grid>::assemble(const ReservoirState& reservoir_state,
                                          WellState& well_state,
                                          const bool initial_assembly)
     {
         using namespace Opm::AutoDiffGrid;
+
+        SimulatorReport report;
 
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
@@ -531,10 +533,9 @@ namespace Opm {
 
         // -------- Mass balance equations --------
         assembleMassBalanceEq(state);
-        IterationReport iter_report = {false, false, 0, 0};
         // -------- Well equations ----------
         if ( ! wellsActive() ) {
-            return iter_report;
+            return report;
         }
 
         std::vector<ADB> mob_perfcells;
@@ -572,7 +573,9 @@ namespace Opm {
         wellModel().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
         wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
-        return iter_report;
+
+        report.converged = true;
+        return report;
     }
 
 
