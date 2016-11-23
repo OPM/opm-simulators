@@ -31,13 +31,23 @@ namespace Opm
         double pressure_time;
         double transport_time;
         double total_time;
+        double solver_time;
+        double assemble_time;
+        double linear_solve_time;
+        double update_time;
+        double output_write_time;
 
+        unsigned int total_well_iterations;
         unsigned int total_linearizations;
         unsigned int total_newton_iterations;
         unsigned int total_linear_iterations;
 
+        bool converged;
+
         /// Default constructor initializing all times to 0.0.
         SimulatorReport(bool verbose=true);
+        /// Copy constructor
+        SimulatorReport(const SimulatorReport&) = default;
         /// Increment this report's times by those in sr.
         void operator+=(const SimulatorReport& sr);
         /// Print a report to the given stream.

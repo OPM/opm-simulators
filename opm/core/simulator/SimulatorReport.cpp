@@ -27,9 +27,16 @@ namespace Opm
         : pressure_time(0.0),
           transport_time(0.0),
           total_time(0.0),
+          total_well_iterations(0),
+          solver_time(0.0),
+          assemble_time(0.0),
+          linear_solve_time(0.0),
+          update_time(0.0),
+          output_write_time(0.0),
           total_linearizations( 0 ),
           total_newton_iterations( 0 ),
           total_linear_iterations( 0 ),
+          converged(false),
           verbose_(verbose)
     {
     }
@@ -38,7 +45,14 @@ namespace Opm
     {
         pressure_time += sr.pressure_time;
         transport_time += sr.transport_time;
+        linear_solve_time += sr.linear_solve_time;
+        solver_time += sr.solver_time;
+        assemble_time += sr.assemble_time;
+        update_time += sr.update_time;
+        output_write_time += sr.output_write_time;
         total_time += sr.total_time;
+        total_well_iterations += sr.total_well_iterations;
+        total_linearizations += sr.total_linearizations;
         total_newton_iterations += sr.total_newton_iterations;
         total_linear_iterations += sr.total_linear_iterations;
     }
@@ -60,12 +74,19 @@ namespace Opm
     {
         if ( verbose_ )
         {
-            os << "Total time taken (seconds):  " << total_time
-               << "\nSolver time (seconds):       " << pressure_time
-               << "\nOverall Linearizations:      " << total_linearizations
-               << "\nOverall Newton Iterations:   " << total_newton_iterations
-               << "\nOverall Linear Iterations:   " << total_linear_iterations
-               << std::endl;
+            os << "Total time taken (seconds):   " << total_time << "\n"
+               << "Solver time (seconds):        " << solver_time << "\n";
+            if (assemble_time > 0.0 || linear_solve_time > 0.0) {
+                os << " Assembly time (seconds):     " << assemble_time << "\n"
+                   << " Linear solve time (seconds): " << linear_solve_time  << "\n"
+                   << " Update time (seconds):       " << update_time  << "\n"
+                   << " Output write time (seconds): " << output_write_time  << "\n";
+
+            }
+            os << "Overall Well Iterations:      " << total_well_iterations << "\n"
+               << "Overall Linearizations:       " << total_linearizations << "\n"
+               << "Overall Newton Iterations:    " << total_newton_iterations << "\n"
+               << "Overall Linear Iterations:    " << total_linear_iterations << "\n";
         }
     }
 
