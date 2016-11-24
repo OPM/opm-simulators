@@ -489,21 +489,21 @@ namespace Opm
             if (aqua_active && outKeywords["KRW"] > 0) {
                 outKeywords["KRW"] = 0;
                 output.insert("WATKR",
-                           Opm::UnitSystem::measure::permeability,
+                           Opm::UnitSystem::measure::identity,
                            std::move(krWater),
                            data::TargetType::RESTART_AUXILLARY);
             }
             if (liquid_active && outKeywords["KRO"] > 0) {
                 outKeywords["KRO"] = 0;
                 output.insert("OILKR",
-                           Opm::UnitSystem::measure::permeability,
+                           Opm::UnitSystem::measure::identity,
                            std::move(krOil),
                            data::TargetType::RESTART_AUXILLARY);
             }
             if (vapour_active && outKeywords["KRG"] > 0) {
                 outKeywords["KRG"] = 0;
                 output.insert("GASKR",
-                           Opm::UnitSystem::measure::permeability,
+                           Opm::UnitSystem::measure::identity,
                            std::move(krGas),
                            data::TargetType::RESTART_AUXILLARY);
             }
