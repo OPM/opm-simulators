@@ -569,7 +569,7 @@ namespace Opm
                 if (sd.rq[aqua_idx].kr.size() > 0) {
                     rstKeywords["KRW"] = 0;
                     output.insert("WATKR",
-                                  Opm::UnitSystem::measure::permeability,
+                                  Opm::UnitSystem::measure::identity,
                                   adbToDoubleVector(sd.rq[aqua_idx].kr),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
@@ -585,7 +585,7 @@ namespace Opm
                 if (sd.rq[liquid_idx].kr.size() > 0) {
                     rstKeywords["KRO"] = 0;
                     output.insert("OILKR",
-                                  Opm::UnitSystem::measure::permeability,
+                                  Opm::UnitSystem::measure::identity,
                                   adbToDoubleVector(sd.rq[liquid_idx].kr),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
@@ -601,7 +601,7 @@ namespace Opm
                 if (sd.rq[vapour_idx].kr.size() > 0) {
                     rstKeywords["KRG"] = 0;
                     output.insert("GASKR",
-                                  Opm::UnitSystem::measure::permeability,
+                                  Opm::UnitSystem::measure::identity,
                                   adbToDoubleVector(sd.rq[vapour_idx].kr),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
