@@ -348,6 +348,9 @@ namespace Opm
                                      const SolutionState& state,
                                      WellState& xw) const
     {
+        if ( !localWellsActive() ) {
+            return;
+        }
         // Update the perforation phase rates (used to calculate the pressure drop in the wellbore).
         const int np = numPhases();
         const int nw = numWells();
@@ -604,6 +607,9 @@ namespace Opm
                   const SolutionState& state,
                   LinearisedBlackoilResidual& residual)
     {
+        if ( !localWellsActive() ) {
+            return;
+        }
         // the well flux equations are for each segment and each phase.
         //    /delta m_p_n / dt  - /sigma Q_pi - /sigma q_pj + Q_pn = 0
         // 1. It is the gain of the amount of the component p in the segment n during the
