@@ -548,7 +548,7 @@ namespace Opm {
         if (has_vapoil_) {
             const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             const V drv = Base::isRv_ * dxvar;
-            const V drv_limited = sign(drv) * drv.abs().min( (rv_old.abs()*drmaxrel).max( ones*1e-6));
+            const V drv_limited = sign(drv) * drv.abs().min( (rv_old.abs()*drmaxrel).max( ones*1e-3));
             rv = rv_old - drv_limited;
             rv = rv.max(zero);
         }

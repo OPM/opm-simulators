@@ -38,6 +38,8 @@ namespace Opm
         double dr_max_rel_;
         /// Max relative change in bhp in single iteration.
         double dbhp_max_rel_;
+        /// Max absolute change in well volume fraction in single iteration.
+        double dwell_fraction_max_;
         /// Absolute max limit for residuals.
         double max_residual_allowed_;
         /// Relative mass balance tolerance (total mass balance error).

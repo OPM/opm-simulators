@@ -935,8 +935,8 @@ enum WellVariablePositions {
                     const int np = wells().number_of_phases;
                     const int nw = wells().number_of_wells;
 
-                    double dFLimit = 0.2;
-                    double dBHPLimit = 2.0;
+                    double dFLimit = dWellFractionMax();
+                    double dBHPLimit = dbhpMaxRel();
                     std::vector<double> xvar_well_old = well_state.wellSolutions();
 
                     for (int w = 0; w < nw; ++w) {
@@ -1502,6 +1502,9 @@ enum WellVariablePositions {
             mutable BVector Cx_;
             mutable BVector invDrw_;
             mutable BVector scaleAddRes_;
+
+            double dbhpMaxRel() const {return param_.dbhp_max_rel_; }
+            double dWellFractionMax() const {return param_.dwell_fraction_max_; }
 
             // protected methods
             EvalWell getBhp(const int wellIdx) const {

@@ -1260,7 +1260,7 @@ typedef Eigen::Array<double,
         if (has_disgas_) {
             const V rs_old = Eigen::Map<const V>(&reservoir_state.gasoilratio()[0], nc);
             const V drs = isRs_ * dxvar;
-            const V drs_limited = sign(drs) * drs.abs().min( (rs_old.abs()*drmaxrel).max( ones*1e-6));
+            const V drs_limited = sign(drs) * drs.abs().min( (rs_old.abs()*drmaxrel).max( ones*1.0));
             rs = rs_old - drs_limited;
             rs = rs.max(zero);
         }
@@ -1268,7 +1268,7 @@ typedef Eigen::Array<double,
         if (has_vapoil_) {
             const V rv_old = Eigen::Map<const V>(&reservoir_state.rv()[0], nc);
             const V drv = isRv_ * dxvar;
-            const V drv_limited = sign(drv) * drv.abs().min( (rv_old.abs()*drmaxrel).max( ones*1e-6));
+            const V drv_limited = sign(drv) * drv.abs().min( (rv_old.abs()*drmaxrel).max( ones*1e-3));
             rv = rv_old - drv_limited;
             rv = rv.max(zero);
         }
