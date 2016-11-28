@@ -62,7 +62,7 @@ namespace Opm
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         template <class State, class PrevState>
-        void init(const Wells* wells, const State& state, const PrevState& prevState)
+        void init(const Wells* wells, const State& state, const PrevState& prevState, const PhaseUsage& pu)
         {
             // call init on base class
             BaseType :: init(wells, state, prevState);
@@ -115,18 +115,31 @@ namespace Opm
                 }
                     break;
                 }
-                assert(np == 3);
+
                 double total_rates = 0.0;
                 for (int p = 0; p < np; ++p)  {
                     total_rates += g[p] * wellRates()[np*w + p];
                 }
 
+                const int waterpos = pu.phase_pos[Water];
+                const int gaspos = pu.phase_pos[Gas];
+
+                assert (np == 3 || np == 2 && !pu.phase_used[Gas] );
+                // assumes the gas fractions are stored after water fractions
                 if(std::abs(total_rates) > 0) {
-                    wellSolutions()[nw + w] = g[Water] * wellRates()[np*w + Water] / total_rates; //wells->comp_frac[np*w + Water]; // Water;
-                    wellSolutions()[2*nw + w] = g[Gas] * wellRates()[np*w + Gas] / total_rates ; //wells->comp_frac[np*w + Gas]; //Gas
+                    if( pu.phase_used[Water] ) {
+                        wellSolutions()[nw + w] = g[Water] * wellRates()[np*w + waterpos] / total_rates;
+                    }
+                    if( pu.phase_used[Gas] ) {
+                        wellSolutions()[2*nw + w] = g[Gas] * wellRates()[np*w + gaspos] / total_rates ;
+                    }
                 } else {
-                    wellSolutions()[nw + w] = wells->comp_frac[np*w + Water];
-                    wellSolutions()[2*nw + w] = wells->comp_frac[np*w + Gas];
+                    if( pu.phase_used[Water] ) {
+                        wellSolutions()[nw + w] = wells->comp_frac[np*w + waterpos];
+                    }
+                    if( pu.phase_used[Gas] ) {
+                        wellSolutions()[2*nw + w] = wells->comp_frac[np*w + gaspos];
+                    }
                 }
             }
 
@@ -158,9 +171,9 @@ namespace Opm
         }
 
         template <class State>
-        void resize(const Wells* wells, const State& state) {
+        void resize(const Wells* wells, const State& state, const PhaseUsage& pu ) {
             const WellStateFullyImplicitBlackoilDense dummy_state{}; // Init with an empty previous state only resizes
-            init(wells, state, dummy_state) ;
+            init(wells, state, dummy_state, pu) ;
         }
 
 

@@ -627,99 +627,102 @@ namespace Opm {
                 double& so = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Oil ]];
                 so -= step * dso;
 
-                // const double drmaxrel = drMaxRel();
-                // Update rs and rv
-                if (has_disgas_) {
-                    double& rs = reservoir_state.gasoilratio()[cell_idx];
-                    rs -= drs;
-                    rs = std::max(rs, 0.0);
-
-                }
-                if (has_vapoil_) {
-                    double& rv = reservoir_state.rv()[cell_idx];
-                    rv -= drv;
-                    rv = std::max(rv, 0.0);
-                }
-
-                // Sg is used as primal variable for water only cells.
-                const double epsilon = 1e-4; //std::sqrt(std::numeric_limits<double>::epsilon());
-                double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
-                double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
-                double& rs = reservoir_state.gasoilratio()[cell_idx];
-                double& rv = reservoir_state.rv()[cell_idx];
-
-
-                // phase translation sg <-> rs
-                const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
-                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                const auto& fs = intQuants.fluidState();
-                switch (hydroCarbonState) {
-                case HydroCarbonState::GasAndOil: {
-
-                    if (sw > (1.0 - epsilon)) // water only i.e. do nothing
-                        break;
-
-                    if (sg <= 0.0 && has_disgas_) {
-                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
-                        sg = 0;
-                        so = 1.0 - sw - sg;
-                        const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                // phase for when oil and gas
+                if (active_[Gas] && active_[Oil] ) {
+                    // const double drmaxrel = drMaxRel();
+                    // Update rs and rv
+                    if (has_disgas_) {
                         double& rs = reservoir_state.gasoilratio()[cell_idx];
-                        rs = rsSat*(1-epsilon);
-                    } else if (so <= 0.0 && has_vapoil_) {
-                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasOnly; // sg --> rv
-                        so = 0;
-                        sg = 1.0 - sw - so;
+                        rs -= drs;
+                        rs = std::max(rs, 0.0);
+
+                    }
+                    if (has_vapoil_) {
                         double& rv = reservoir_state.rv()[cell_idx];
-                        // use gas pressure?
+                        rv -= drv;
+                        rv = std::max(rv, 0.0);
+                    }
+
+                    // Sg is used as primal variable for water only cells.
+                    const double epsilon = 1e-4; //std::sqrt(std::numeric_limits<double>::epsilon());
+                    double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
+                    double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
+                    double& rs = reservoir_state.gasoilratio()[cell_idx];
+                    double& rv = reservoir_state.rv()[cell_idx];
+
+
+                    // phase translation sg <-> rs
+                    const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
+                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                    const auto& fs = intQuants.fluidState();
+                    switch (hydroCarbonState) {
+                    case HydroCarbonState::GasAndOil: {
+
+                        if (sw > (1.0 - epsilon)) // water only i.e. do nothing
+                            break;
+
+                        if (sg <= 0.0 && has_disgas_) {
+                            reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
+                            sg = 0;
+                            so = 1.0 - sw - sg;
+                            const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                            double& rs = reservoir_state.gasoilratio()[cell_idx];
+                            rs = rsSat*(1-epsilon);
+                        } else if (so <= 0.0 && has_vapoil_) {
+                            reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasOnly; // sg --> rv
+                            so = 0;
+                            sg = 1.0 - sw - so;
+                            double& rv = reservoir_state.rv()[cell_idx];
+                            // use gas pressure?
+                            const double& rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                            rv = rvSat*(1-epsilon);
+                        }
+                        break;
+                    }
+                    case HydroCarbonState::OilOnly: {
+                        if (sw > (1.0 - epsilon)) {
+                            // water only change to Sg
+                            rs = 0;
+                            rv = 0;
+                            reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                            //std::cout << "watonly rv -> sg" << cell_idx << std::endl;
+                            break;
+                        }
+
+
+
+
+                        const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        if (rs > ( rsSat * (1+epsilon) ) ) {
+                            reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                            sg = epsilon;
+                            so -= epsilon;
+                            rs = rsSat;
+                        }
+                        break;
+                    }
+                    case HydroCarbonState::GasOnly: {
+                        if (sw > (1.0 - epsilon)) {
+                            // water only change to Sg
+                            rs = 0;
+                            rv = 0;
+                            reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                            //std::cout << "watonly rv -> sg" << cell_idx << std::endl;
+                            break;
+                        }
                         const double& rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
-                        rv = rvSat*(1-epsilon);
-                    }
-                    break;
-                }
-                case HydroCarbonState::OilOnly: {
-                    if (sw > (1.0 - epsilon)) {
-                        // water only change to Sg
-                        rs = 0;
-                        rv = 0;
-                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
-                        //std::cout << "watonly rv -> sg" << cell_idx << std::endl;
+                        if (rv > rvSat * (1+epsilon) ) {
+                            reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
+                            so = epsilon;
+                            rv = rvSat;
+                            sg -= epsilon;
+                        }
                         break;
                     }
 
-
-
-
-                    const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
-                    if (rs > ( rsSat * (1+epsilon) ) ) {
-                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
-                        sg = epsilon;
-                        so -= epsilon;
-                        rs = rsSat;
+                    default:
+                        OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << cell_idx << ": " << hydroCarbonState);
                     }
-                    break;
-                }
-                case HydroCarbonState::GasOnly: {
-                    if (sw > (1.0 - epsilon)) {
-                        // water only change to Sg
-                        rs = 0;
-                        rv = 0;
-                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
-                        //std::cout << "watonly rv -> sg" << cell_idx << std::endl;
-                        break;
-                    }
-                    const double& rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
-                    if (rv > rvSat * (1+epsilon) ) {
-                        reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
-                        so = epsilon;
-                        rv = rvSat;
-                        sg -= epsilon;
-                    }
-                    break;
-                }
-
-                default:
-                    OPM_THROW(std::logic_error, "Unknown primary variable enum value in cell " << cell_idx << ": " << hydroCarbonState);
                 }
             }
 
@@ -1242,56 +1245,61 @@ namespace Opm {
                 cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
 
                 // set switching variable and interpretation
-                if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::OilOnly && has_disgas_ )
-                {
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
+                if (active_[Gas] ) {
+                    if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::OilOnly && has_disgas_ )
+                    {
+                        cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
+                        cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
+                        cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
+                    }
+                    else if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasOnly && has_vapoil_ )
+                    {
+                        // this case (-> gas only with vaporized oil in the gas) is
+                        // relatively expensive as it requires to compute the capillary
+                        // pressure in order to get the gas phase pressure. (the reason why
+                        // ebos uses the gas pressure here is that it makes the common case
+                        // of the primary variable switching code fast because to determine
+                        // whether the oil phase appears one needs to compute the Rv value
+                        // for the saturated gas phase and if this is not available as a
+                        // primary variable, it needs to be computed.) luckily for here, the
+                        // gas-only case is not too common, so the performance impact of this
+                        // is limited.
+                        typedef Opm::SimpleModularFluidState<double,
+                                /*numPhases=*/3,
+                                /*numComponents=*/3,
+                                FluidSystem,
+                                /*storePressure=*/false,
+                                /*storeTemperature=*/false,
+                                /*storeComposition=*/false,
+                                /*storeFugacity=*/false,
+                                /*storeSaturation=*/true,
+                                /*storeDensity=*/false,
+                                /*storeViscosity=*/false,
+                                /*storeEnthalpy=*/false> SatOnlyFluidState;
+                        SatOnlyFluidState fluidState;
+                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
+                        fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
+                        fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
+
+                        double pC[/*numPhases=*/3] = { 0.0, 0.0, 0.0 };
+                        const MaterialLawParams& matParams = simulator.problem().materialLawParams(cellIdx);
+                        MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+                        double pg = oilPressure[cellIdx] + (pC[FluidSystem::gasPhaseIdx] - pC[FluidSystem::oilPhaseIdx]);
+
+                        cellPv[BlackoilIndices::compositionSwitchIdx] = rv[cellIdx];
+                        cellPv[BlackoilIndices::pressureSwitchIdx] = pg;
+                        cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_pg_Rv );
+                    }
+                    else
+                    {
+                        assert( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasAndOil);
+                        cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
+                        cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
+                        cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
+                    }
+                } else {
+                    // for oil-water case oil pressure should be used as primary variable
                     cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
-                }
-                else if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasOnly && has_vapoil_ )
-                {
-                    // this case (-> gas only with vaporized oil in the gas) is
-                    // relatively expensive as it requires to compute the capillary
-                    // pressure in order to get the gas phase pressure. (the reason why
-                    // ebos uses the gas pressure here is that it makes the common case
-                    // of the primary variable switching code fast because to determine
-                    // whether the oil phase appears one needs to compute the Rv value
-                    // for the saturated gas phase and if this is not available as a
-                    // primary variable, it needs to be computed.) luckily for here, the
-                    // gas-only case is not too common, so the performance impact of this
-                    // is limited.
-                    typedef Opm::SimpleModularFluidState<double,
-                                                         /*numPhases=*/3,
-                                                         /*numComponents=*/3,
-                                                         FluidSystem,
-                                                         /*storePressure=*/false,
-                                                         /*storeTemperature=*/false,
-                                                         /*storeComposition=*/false,
-                                                         /*storeFugacity=*/false,
-                                                         /*storeSaturation=*/true,
-                                                         /*storeDensity=*/false,
-                                                         /*storeViscosity=*/false,
-                                                         /*storeEnthalpy=*/false> SatOnlyFluidState;
-                    SatOnlyFluidState fluidState;
-                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
-                    fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
-                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
-
-                    double pC[/*numPhases=*/3] = { 0.0, 0.0, 0.0 };
-                    const MaterialLawParams& matParams = simulator.problem().materialLawParams(cellIdx);
-                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-                    double pg = oilPressure[cellIdx] + (pC[FluidSystem::gasPhaseIdx] - pC[FluidSystem::oilPhaseIdx]);
-
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = rv[cellIdx];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = pg;
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_pg_Rv );
-                }
-                else
-                {
-                    assert( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasAndOil);
-                    cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
-                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
-                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
                 }
             }
 
@@ -1328,10 +1336,10 @@ namespace Opm {
 
 
     private:
-
         void convertResults(BVector& ebosResid, Mat& ebosJac) const
         {
-            const int numPhases = wells().number_of_phases;
+            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const int numFlowPhases = pu.num_phases;
             const int numCells = ebosJac.N();
             assert( numCells == static_cast<int>(ebosJac.M()) );
 
@@ -1343,9 +1351,11 @@ namespace Opm {
                 const double cellVolume = ebosSimulator_.model().dofTotalVolume(cellIdx);
                 auto& cellRes = ebosResid[ cellIdx ];
 
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
+                for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
                 {
-                    const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
+                    const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
+                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
+                    const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, 0);
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] /= refDens;
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] *= cellVolume;
                 }
@@ -1362,13 +1372,16 @@ namespace Opm {
                 const auto endcol = row->end();
                 for( auto col = row->begin(); col != endcol; ++col )
                 {
-                    for( int flowPhaseIdx = 0; flowPhaseIdx < numPhases; ++flowPhaseIdx )
+                    for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
                     {
-                        const double refDens = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( flowPhaseIdx ), 0 );
-                        for( int pvIdx=0; pvIdx<numPhases; ++pvIdx )
+                        const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
+                        const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
+                        const int ebosCompIdx = flowPhaseToEbosCompIdx(canonicalFlowPhaseIdx);
+                        const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, 0);
+                        for( int pvIdx=0; pvIdx<numFlowPhases; ++pvIdx )
                         {
-                            (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)] /= refDens;
-                            (*col)[flowPhaseToEbosCompIdx(flowPhaseIdx)][flowToEbosPvIdx(pvIdx)] *= cellVolume;
+                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
+                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
                         }
                     }
                 }
