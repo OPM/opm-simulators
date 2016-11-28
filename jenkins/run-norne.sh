@@ -6,8 +6,9 @@ test -z $SIM && SIM=flow
 
 # Run the norne case
 cd norne
-$WORKSPACE/$configuration/build-opm-simulators/bin/$SIM deck_filename=NORNE_ATW2013.DATA output_dir=OPM
+mkdir $SIM
+$WORKSPACE/$configuration/build-opm-simulators/bin/$SIM deck_filename=NORNE_ATW2013.DATA output_dir=$SIM
 test $? -eq 0 || exit 1
-PATH=$WORKSPACE/$configuration/install/bin:$PATH ./plotwells.sh
+./plotwells.sh $WORKSPACE/$configuration/install/bin
 
 popd
