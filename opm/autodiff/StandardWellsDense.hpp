@@ -135,7 +135,7 @@ enum WellVariablePositions {
 
                 // assumes the gas fractions are stored after water fractions
                 // WellVariablePositions needs to be changed for 2p runs
-                assert (np == 3 || np == 2 && !pu.phase_used[Gas] );
+                assert (np == 3 || (np == 2 && !pu.phase_used[Gas]) );
 #endif
 
                 // set invDuneD

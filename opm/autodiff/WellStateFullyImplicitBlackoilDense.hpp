@@ -124,7 +124,7 @@ namespace Opm
                 const int waterpos = pu.phase_pos[Water];
                 const int gaspos = pu.phase_pos[Gas];
 
-                assert (np == 3 || np == 2 && !pu.phase_used[Gas] );
+                assert(np == 3 || (np == 2 && !pu.phase_used[Gas]));
                 // assumes the gas fractions are stored after water fractions
                 if(std::abs(total_rates) > 0) {
                     if( pu.phase_used[Water] ) {
