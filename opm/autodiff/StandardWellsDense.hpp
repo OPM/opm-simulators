@@ -114,10 +114,6 @@ enum WellVariablePositions {
                     return;
                 }
 
-                // assumes the gas fractions are stored after water fractions
-                // WellVariablePositions needs to be changed for 2p runs
-                assert (np == 3 || np == 2 && !pu.phase_used[Gas] );
-
                 fluid_ = fluid_arg;
                 active_ = active_arg;
                 vfp_properties_ = vfp_properties_arg;
@@ -132,6 +128,15 @@ enum WellVariablePositions {
                 const int nw = wells().number_of_wells;
                 const int nperf = wells().well_connpos[nw];
                 const int nc = numCells();
+
+#ifndef NDEBUG
+                const auto pu = fluid_->phaseUsage();
+                const int np = pu.num_phases;
+
+                // assumes the gas fractions are stored after water fractions
+                // WellVariablePositions needs to be changed for 2p runs
+                assert (np == 3 || np == 2 && !pu.phase_used[Gas] );
+#endif
 
                 // set invDuneD
                 invDuneD_.setSize( nw, nw, nw );
