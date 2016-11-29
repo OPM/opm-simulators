@@ -30,7 +30,7 @@
 #include <opm/material/common/TridiagonalMatrix.hpp>
 #include <opm/material/common/PolynomialUtils.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/material/common/Unused.hpp>
+#include <opm/common/Unused.hpp>
 
 #include <ostream>
 #include <vector>

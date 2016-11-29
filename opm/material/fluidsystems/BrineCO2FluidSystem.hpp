@@ -43,7 +43,7 @@
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
 #include <opm/material/binarycoefficients/H2O_N2.hpp>
 
-#include <opm/material/common/Unused.hpp>
+#include <opm/common/Unused.hpp>
 
 #include <iostream>
 
