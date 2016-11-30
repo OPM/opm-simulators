@@ -48,6 +48,7 @@ NEW_PROP_TAG(FluidSystem);
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(MaterialLaw);
+NEW_PROP_TAG(EnableSwatinit);
 }
 
 /*!
@@ -243,21 +244,23 @@ public:
             cartesianToCompressedElemIdx[cartElemIdx] = elemIdx;
         }
 
-        for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
-            int cartElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
-            assert(cartElemIdx >= 0);
-            int elemIdx = cartesianToCompressedElemIdx[cartElemIdx];
-            if (elemIdx < 0)
-                // the element is present in the grid for used for equilibration but
-                // it isn't present in the one used for the simulation. the most
-                // probable reason for this is that the simulation grid was load
-                // balanced.
-                continue;
+        if (GET_PROP_VALUE(TypeTag, EnableSwatinit)) {
+            for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
+                int cartElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
+                assert(cartElemIdx >= 0);
+                int elemIdx = cartesianToCompressedElemIdx[cartElemIdx];
+                if (elemIdx < 0)
+                    // the element is present in the grid for used for equilibration but
+                    // it isn't present in the one used for the simulation. the most
+                    // probable reason for this is that the simulation grid was load
+                    // balanced.
+                    continue;
 
-            auto& scalingPoints = materialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
-            const auto& equilScalingPoints = equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+                auto& scalingPoints = materialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+                const auto& equilScalingPoints = equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
 
-            scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
+                scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
+            }
         }
     }
 

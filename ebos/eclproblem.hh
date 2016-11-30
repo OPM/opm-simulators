@@ -115,6 +115,9 @@ NEW_PROP_TAG(DisableWells);
 // print statements in debug mode.
 NEW_PROP_TAG(EnableDebuggingChecks);
 
+// If this property is set to false, the SWATINIT keyword will not be handled by ebos.
+NEW_PROP_TAG(EnableSwatinit);
+
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -211,10 +214,13 @@ SET_INT_PROP(EclBaseProblem, RestartWritingInterval, 0xffffff); // disable
 
 // By default, ebos should handle the wells internally, so we don't disable the well
 // treatment
-SET_INT_PROP(EclBaseProblem, DisableWells, false);
+SET_BOOL_PROP(EclBaseProblem, DisableWells, false);
 
 // By default, we enable the debugging checks if we're compiled in debug mode
-SET_INT_PROP(EclBaseProblem, EnableDebuggingChecks, true);
+SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
+
+// ebos handles the SWATINIT keyword by default
+SET_BOOL_PROP(EclBaseProblem, EnableSwatinit, true);
 } // namespace Properties
 
 /*!
