@@ -83,13 +83,14 @@ namespace Opm {
             asImpl().makeConstantState(state0_);
         }
 
-        IterationReport
+        SimulatorReport
         assemble(const ReservoirState& reservoir_state,
                  WellState& well_state,
                  const bool initial_assembly)
         {
-
             using namespace Opm::AutoDiffGrid;
+
+            SimulatorReport report;
 
             // If we have VFP tables, we need the well connection
             // pressures for the "simple" hydrostatic correction
@@ -125,9 +126,8 @@ namespace Opm {
             asImpl().assembleMassBalanceEq(state);
 
             // -------- Well equations ----------
-            IterationReport iter_report = {false, false, 0, 0};
             if ( ! wellsActive() ) {
-                return iter_report;
+                return report;
             }
 
             std::vector<ADB> mob_perfcells;
@@ -135,7 +135,7 @@ namespace Opm {
             asImpl().wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
             if (param_.solve_welleq_initially_ && initial_assembly) {
                 // solve the well equations as a pre-processing step
-                iter_report = asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
+                report += asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
             }
             V aliveWells;
             std::vector<ADB> cq_s;
@@ -154,7 +154,8 @@ namespace Opm {
                 asImpl().makeConstantState(state0);
                 asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
             }
-            return iter_report;
+
+            return report;
         }
 
 

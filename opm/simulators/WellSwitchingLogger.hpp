@@ -74,7 +74,7 @@ public:
         else
         {
             std::ostringstream ss;
-            ss << "Switching control mode for well " << name
+            ss << "    Switching control mode for well " << name
                << " from " << modestring[from]
                << " to " <<  modestring[to] << std::endl;
             OpmLog::info(ss.str());

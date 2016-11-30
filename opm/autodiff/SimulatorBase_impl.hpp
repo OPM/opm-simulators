@@ -98,7 +98,6 @@ namespace Opm
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
-        double stime = 0.0;
         Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
@@ -133,12 +132,11 @@ namespace Opm
                                     desiredRestoreStep );
         }
 
-        unsigned int totalLinearizations = 0;
-        unsigned int totalNonlinearIterations = 0;
-        unsigned int totalLinearIterations = 0;
         bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
         std::vector<double> well_potentials;
         DynamicListEconLimited dynamic_list_econ_limited;
+        SimulatorReport report;
+        SimulatorReport stepReport;
 
         bool ooip_computed = false;
         std::vector<int> fipnum_global = eclipse_state_->get3DProperties().getIntGridProperty("FIPNUM").getData();
@@ -186,9 +184,14 @@ namespace Opm
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
+                Dune::Timer perfTimer;
+                perfTimer.start();
+
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
                 output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
+
+                report.output_write_time += perfTimer.stop();
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -220,8 +223,7 @@ namespace Opm
                 step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
                          << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
                          << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-                         << ", date = " << timer.currentDateTime()
-                         << "\n";
+                         << ", date = " << timer.currentDateTime();
                 OpmLog::info(step_msg.str());
             }
 
@@ -231,11 +233,12 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                adaptiveTimeStepping->step( timer, *solver, state, well_state, output_writer_ );
+                report += adaptiveTimeStepping->step( timer, *solver, state, well_state, output_writer_ );
             }
             else {
                 // solve for complete report step
-                solver->step(timer, state, well_state);
+                stepReport = solver->step(timer, state, well_state);
+                report += stepReport;
 
                 if( terminal_output_ )
                 {
@@ -268,13 +271,9 @@ namespace Opm
             // take time that was used to solve system for this reportStep
             solver_timer.stop();
 
-            // accumulate the number of nonlinear and linear Iterations
-            totalLinearizations += solver->linearizations();
-            totalNonlinearIterations += solver->nonlinearIterations();
-            totalLinearIterations += solver->linearIterations();
+            // update timing.
+            report.solver_time += solver_timer.secsSinceStart();
 
-            // Report timing.
-            const double st = solver_timer.secsSinceStart();
             // Compute current FIP.
             std::vector<V> COIP;
             COIP = solver->computeFluidInPlace(state, fipnum);
@@ -290,27 +289,17 @@ namespace Opm
                 }
             }
 
-            // accumulate total time
-            stime += st;
-            
             if ( terminal_output_ )
             {
                 std::string msg;
-                msg = "Fully implicit solver took: " + std::to_string(st) + " seconds. Total solver time taken: " + std::to_string(stime) + " seconds.";
+                msg = "Fully implicit solver took: " + std::to_string(stepReport.solver_time) + " seconds. Total solver time taken: " + std::to_string(report.solver_time) + " seconds.";
                 OpmLog::note(msg);
             }
 
             if ( output_writer_.output() ) {
-                SimulatorReport step_report;
-                step_report.pressure_time = st;
-                step_report.total_time =  step_timer.secsSinceStart();
-                step_report.total_newton_iterations = solver->nonlinearIterations();
-                step_report.total_linear_iterations = solver->linearIterations();
-                step_report.total_linearizations = solver->linearizations();
-
                 if ( output_writer_.isIORank() )
                 {
-                    step_report.reportParam(tstep_os);
+                    stepReport.reportParam(tstep_os);
                 }
             }
 
@@ -318,8 +307,11 @@ namespace Opm
             ++timer;
 
             // write simulation state at the report stage
+            Dune::Timer perfTimer;
+            perfTimer.start();
             const auto& physicalModel = solver->model();
             output_writer_.writeTimeStep( timer, state, well_state, physicalModel );
+            report.output_write_time += perfTimer.stop();
 
             prev_well_state = well_state;
             // The well potentials are only computed if they are needed
@@ -334,13 +326,8 @@ namespace Opm
 
         // Stop timer and create timing report
         total_timer.stop();
-        SimulatorReport report;
-        report.pressure_time = stime;
-        report.transport_time = 0.0;
         report.total_time = total_timer.secsSinceStart();
-        report.total_linearizations = totalLinearizations;
-        report.total_newton_iterations = totalNonlinearIterations;
-        report.total_linear_iterations = totalLinearIterations;
+        report.converged = true;
         return report;
     }
 

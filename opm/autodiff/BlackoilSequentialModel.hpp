@@ -123,7 +123,7 @@ namespace Opm {
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
-        IterationReport nonlinearIteration(const int iteration,
+        SimulatorReport nonlinearIteration(const int iteration,
                                            const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& /* nonlinear_solver */,
                                            ReservoirState& reservoir_state,
@@ -140,7 +140,8 @@ namespace Opm {
                     OpmLog::info("Solving the pressure equation.");
                 }
                 ReservoirState initial_state = reservoir_state;
-                const int pressure_liniter = pressure_solver_.step(timer, reservoir_state, well_state);
+                const SimulatorReport pressure_report = pressure_solver_.step(timer, reservoir_state, well_state);
+                const int pressure_liniter = pressure_report.total_linear_iterations;
                 if (pressure_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Pressure solver failed to converge.");
                 }
@@ -149,13 +150,17 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the transport equations.");
                 }
-                const int transport_liniter = transport_solver_.step(timer, initial_state, well_state, reservoir_state, well_state);
+                const SimulatorReport transport_report = transport_solver_.step(timer, initial_state, well_state, reservoir_state, well_state);
+                const int transport_liniter = transport_report.total_linear_iterations;
                 if (transport_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Transport solver failed to converge.");
                 }
 
                 // Report and return.
-                return IterationReport { false, true, pressure_liniter + transport_liniter, 0 };
+                SimulatorReport report;
+                report.converged = true;
+                report.total_linear_iterations = pressure_liniter + transport_liniter;
+                return report;
             } else {
                 // Iterate to fully implicit solution.
                 // This call is just for a single iteration (one pressure and one transport solve),
@@ -168,7 +173,8 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the pressure equation.");
                 }
-                const int pressure_liniter = pressure_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+                const SimulatorReport& pressure_report = pressure_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+                const int pressure_liniter = pressure_report.total_linear_iterations;
                 if (pressure_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Pressure solver failed to converge.");
                 }
@@ -177,14 +183,16 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the transport equations.");
                 }
-                const int transport_liniter = transport_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+                const SimulatorReport& transport_report = transport_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+                const int transport_liniter = transport_report.total_linear_iterations;
                 if (transport_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Transport solver failed to converge.");
                 }
 
-                // Report and return.
-                const bool converged = iteration >= 3; // TODO: replace this with a proper convergence check
-                return IterationReport { false, converged, pressure_liniter + transport_liniter, 0 };
+                SimulatorReport report;
+                report.converged = iteration >= 3; // TODO: replace this with a proper convergence check
+                report.total_linear_iterations = pressure_liniter + transport_liniter;
+                return report;
             }
         }
 
