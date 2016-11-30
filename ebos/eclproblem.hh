@@ -638,6 +638,16 @@ public:
     }
 
     /*!
+     * \brief Returns the porosity of an element
+     *
+     * Note that this method is *not* part of the generic eWoms problem API because it
+     * would bake the assumption that only the elements are the degrees of freedom into
+     * the interface.
+     */
+    Scalar porosity(unsigned elementIdx) const
+    { return porosity_[elementIdx]; }
+
+    /*!
      * \brief Returns the depth of an degree of freedom [m]
      *
      * For ECL problems this is defined as the average of the depth of an element and is
