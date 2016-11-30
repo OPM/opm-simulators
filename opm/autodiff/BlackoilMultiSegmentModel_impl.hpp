@@ -211,10 +211,12 @@ namespace Opm {
         V aliveWells;
         std::vector<ADB> cq_s;
         wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
-        wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
-        wellModel().addWellFluxEq(cq_s, state, residual_);
-        asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
-        wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
+        if (!cq_s.empty()) {
+            wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
+            wellModel().addWellFluxEq(cq_s, state, residual_);
+            asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
+            wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
+        }
         return iter_report;
     }
 
