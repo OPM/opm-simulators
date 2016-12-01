@@ -148,7 +148,8 @@ namespace Opm {
                 FIP_PV = 5,                    //< Pore volume
                 FIP_WEIGHTED_PRESSURE = 6
             };
-            std::array<std::vector<double>, 7> fip;
+            static const int fipValues = FIP_WEIGHTED_PRESSURE + 1 ;
+            std::array<std::vector<double>, fipValues> fip;
         };
 
         // ---------  Public methods  ---------
@@ -1025,7 +1026,7 @@ namespace Opm {
             const auto& pv = geo_.poreVolume();
             const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
 
-            for (int i = 0; i<7; i++) {
+            for (int i = 0; i<FIPData::fipValues; i++) {
                 fip_.fip[i].resize(nc,0.0);
             }
 
@@ -1049,7 +1050,7 @@ namespace Opm {
 
             // For a parallel run this is just a local maximum and needs to be updated later
             int dims = *std::max_element(fipnum.begin(), fipnum.end());
-            std::vector<std::vector<double>> values(dims, std::vector<double>(7,0.0));
+            std::vector<std::vector<double>> values(dims, std::vector<double>(FIPData::fipValues,0.0));
 
             std::vector<double> hcpv(dims, 0.0);
             std::vector<double> pres(dims, 0.0);
@@ -1117,11 +1118,12 @@ namespace Opm {
                 // mask[c] is 1 if we need to compute something in parallel
                 const auto & pinfo =
                         boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation());
-                const auto& mask = pinfo.getOwnerMask();
+                const auto& mask = pinfo.updateOwnerMask( fipnum );
+
                 auto comm = pinfo.communicator();
                 // Compute the global dims value and resize values accordingly.
                 dims = comm.max(dims);
-                values.resize(dims, std::vector<double>(7,0.0));
+                values.resize(dims, std::vector<double>(FIPData::fipValues,0.0));
 
                 //Accumulate phases for each region
                 for (int phase = 0; phase < maxnp; ++phase) {
