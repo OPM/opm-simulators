@@ -201,6 +201,12 @@ public:
     { return asImp_().cartesianIndexMapper().cartesianSize(); }
 
     /*!
+     * \brief Returns the overall number of cells of the logically EquilCartesian grid
+     */
+    int equilCartesianSize() const
+    { return asImp_().equilCartesianIndexMapper().cartesianSize(); }
+
+    /*!
      * \brief Returns the Cartesian cell id for identifaction with ECL data
      */
     unsigned cartesianIndex(unsigned compressedCellIdx) const

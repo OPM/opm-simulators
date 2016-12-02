@@ -107,7 +107,7 @@ public:
         // create a separate instance of the material law manager just because opm-core
         // only supports double as the type for scalars (but ebos may use float or quad)
         std::vector<int> compressedToCartesianEquilElemIdx(numEquilElems);
-        std::map<int,int> equilCartesianToCompressed;
+        std::vector<int> equilCartesianToCompressed( gridManager.equilCartesianSize(), -1 );
 
         for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx)
         {
@@ -149,7 +149,7 @@ public:
         for( unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx )
         {
             const int cartesianIndex = gridManager.cartesianIndex( elemIdx );
-            assert( equilCartesianToCompressed.find( cartesianIndex ) != equilCartesianToCompressed.end() );
+            assert( equilCartesianToCompressed[ cartesianIndex ] >= 0 );
             localToEquilIndex[ elemIdx ] = equilCartesianToCompressed[ cartesianIndex ];
         }
 
