@@ -284,7 +284,8 @@ namespace Opm
                                                  Base::deck_->hasKeyword("VAPOIL"),
                                                  Base::eclipse_state_,
                                                  *Base::output_writer_,
-                                                 Base::threshold_pressures_));
+                                                 Base::threshold_pressures_,
+                                                 Base::defunct_well_names_));
         }
 
     private:
