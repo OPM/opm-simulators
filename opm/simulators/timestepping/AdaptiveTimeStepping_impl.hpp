@@ -267,7 +267,7 @@ namespace Opm {
                         ss << "well iterations = " << report.total_well_iterations << ", ";
                     }
                     ss << "newton iterations = " << report.total_newton_iterations << ", "
-                       << "linearizations = " << report.total_newton_iterations
+                       << "linearizations = " << report.total_linearizations
                        << " (" << report.assemble_time << " sec), "
                        << "linear iterations = " << report.total_linear_iterations
                        << " (" << report.linear_solve_time << " sec)";
