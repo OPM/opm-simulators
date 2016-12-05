@@ -386,16 +386,16 @@ namespace Opm {
 
         // Add well contributions to polymer mass balance equation
         if (has_polymer_) {
-            const ADB mc = computeMc(state);
             const int nc = xw.polymerInflow().size();
             const V polyin = Eigen::Map<const V>(xw.polymerInflow().data(), nc);
             const int nperf = wells().well_connpos[wells().number_of_wells];
             const std::vector<int> well_cells(wells().well_cells, wells().well_cells + nperf);
             const V poly_in_perf = subset(polyin, well_cells);
-            const V poly_mc_perf = subset(mc.value(), well_cells);
+            // The polymer concentration in the perforated grid blocks
+            const V poly_c_perf = subset(state.concentration.value(), well_cells);
             const ADB& cq_s_water = cq_s[fluid_.phaseUsage().phase_pos[Water]];
             Selector<double> injector_selector(cq_s_water.value());
-            const V poly_perf = injector_selector.select(poly_in_perf, poly_mc_perf);
+            const V poly_perf = injector_selector.select(poly_in_perf, poly_c_perf);
             const ADB cq_s_poly =  cq_s_water * poly_perf;
             residual_.material_balance_eq[poly_pos_] -= superset(cq_s_poly, well_cells, nc);
         }
