@@ -193,22 +193,19 @@ namespace Ewoms
                     // use equilGrid which represents a view on the global grid
                     const size_t globalSize = gridManager.equilGrid().leafGridView().size( 0 );
                     // reserve memory
-                    globalCartesianIndex_.reserve( globalSize );
-                    globalCartesianIndex_.clear();
+                    globalCartesianIndex_.resize(globalSize, -1);
 
                     // loop over all elements (global grid) and store Cartesian index
                     auto elemIt = gridManager.equilGrid().leafGridView().template begin<0>();
                     const auto& elemEndIt = gridManager.equilGrid().leafGridView().template end<0>();
-                    int count = 0;
-                    for (; elemIt != elemEndIt; ++elemIt, ++count) {
+                    for (; elemIt != elemEndIt; ++elemIt) {
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                         int elemIdx = elemMapper.index(*elemIt );
 #else
                         int elemIdx = elemMapper.map(*elemIt );
 #endif
-                        assert( count == elemIdx );
                         int cartElemIdx = gridManager.equilCartesianIndexMapper().cartesianIndex(elemIdx);
-                        globalCartesianIndex_.push_back( cartElemIdx );
+                        globalCartesianIndex_[elemIdx] = cartElemIdx;
                     }
 
                     for(int i=0; i<comm.size(); ++i)
@@ -230,12 +227,11 @@ namespace Ewoms
 
                 // store the local Cartesian index
                 IndexMapType distributedCartesianIndex;
-                distributedCartesianIndex.reserve( gridSize );
+                distributedCartesianIndex.resize(gridSize, -1);
 
-                unsigned int index = 0;
                 auto localView = gridManager.grid().leafGridView();
                 for( auto it = localView.template begin< 0 >(),
-                     end = localView.template end< 0 >(); it != end; ++it, ++index )
+                     end = localView.template end< 0 >(); it != end; ++it )
                 {
                     const auto element = *it ;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
@@ -248,7 +244,7 @@ namespace Ewoms
                     // only store interior element for collection
                     if( element.partitionType() == Dune :: InteriorEntity )
                     {
-                        localIndexMap_.push_back( index );
+                        localIndexMap_[elemIdx] = elemIdx;
                     }
                 }
 
