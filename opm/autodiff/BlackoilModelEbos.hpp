@@ -286,8 +286,6 @@ namespace Opm {
             report.converged = getConvergence(timer, iteration,residual_norms);
             report.update_time += perfTimer.stop();
             residual_norms_history_.push_back(residual_norms);
-            bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
-
             bool must_solve = iteration < nonlinear_solver.minIter() || !report.converged;
             if (must_solve) {
                 perfTimer.reset();
@@ -337,6 +335,11 @@ namespace Opm {
                 // chopping of the update.
                 updateState(x,reservoir_state);
                 wellModel().updateWellState(xw, well_state);
+                // if the solution is updated the solution needs to be comunicated to ebos
+                // and the cachedIntensiveQuantities needs to be updated.
+                convertInput( iteration, reservoir_state, ebosSimulator_ );
+                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
                 report.update_time += perfTimer.stop();
             }
 
