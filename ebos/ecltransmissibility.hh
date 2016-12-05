@@ -101,12 +101,12 @@ public:
         const auto& gridView = simulator_.gridView();
         const auto& elementMapper = simulator_.model().elementMapper();
         const auto& cartMapper = gridManager.cartesianIndexMapper();
-        const auto eclState = gridManager.eclState();
-        const auto eclGrid = eclState->getInputGrid();
-        const auto& transMult = eclState->getTransMult();
+        const auto& eclState = gridManager.eclState();
+        const auto& eclGrid = eclState.getInputGrid();
+        const auto& transMult = eclState.getTransMult();
 
         const std::vector<double>& ntg =
-            eclState->get3DProperties().getDoubleGridProperty("NTG").getData();
+            eclState.get3DProperties().getDoubleGridProperty("NTG").getData();
 
         unsigned numElements = elementMapper.size();
 

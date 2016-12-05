@@ -118,13 +118,13 @@ public:
 
         auto equilMaterialLawManager =
             std::make_shared<Opm::EclMaterialLawManager<EquilTraits> >();
-        equilMaterialLawManager->initFromDeck(*deck, *eclState, compressedToCartesianEquilElemIdx);
+        equilMaterialLawManager->initFromDeck(deck, eclState, compressedToCartesianEquilElemIdx);
 
         // create the data structures which are used by initStateEquil()
         Opm::parameter::ParameterGroup tmpParam;
         Opm::BlackoilPropertiesFromDeck opmBlackoilProps(
-            *gridManager.deck(),
-            *gridManager.eclState(),
+            gridManager.deck(),
+            gridManager.eclState(),
             equilMaterialLawManager,
             Opm::UgGridHelpers::numCells(equilGrid),
             Opm::UgGridHelpers::globalCell(equilGrid),
@@ -140,8 +140,8 @@ public:
         // do the actual computation.
         Opm::initStateEquil(equilGrid,
                             opmBlackoilProps,
-                            *gridManager.deck(),
-                            *gridManager.eclState(),
+                            gridManager.deck(),
+                            gridManager.eclState(),
                             simulator.problem().gravity()[dimWorld - 1],
                             opmBlackoilState);
 

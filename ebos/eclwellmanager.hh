@@ -95,9 +95,9 @@ public:
      *
      * I.e., well positions, names etc...
      */
-    void init(std::shared_ptr< const Opm::EclipseState > eclState)
+    void init(const Opm::EclipseState& eclState)
     {
-        const auto& deckSchedule = eclState->getSchedule();
+        const auto& deckSchedule = eclState.getSchedule();
 
         // create the wells which intersect with the current process' grid
         for (size_t deckWellIdx = 0; deckWellIdx < deckSchedule.numWells(); ++deckWellIdx)
@@ -121,11 +121,11 @@ public:
      * \brief This should be called the problem before each simulation
      *        episode to adapt the well controls.
      */
-    void beginEpisode(std::shared_ptr< const Opm::EclipseState > eclState, bool wasRestarted=false)
+    void beginEpisode(const Opm::EclipseState& eclState, bool wasRestarted=false)
     {
         unsigned episodeIdx = simulator_.episodeIndex();
 
-        const auto& deckSchedule = eclState->getSchedule();
+        const auto& deckSchedule = eclState.getSchedule();
         WellCompletionsMap wellCompMap;
         computeWellCompletionsMap_(episodeIdx, wellCompMap);
 
@@ -567,12 +567,12 @@ public:
      * "Something" can either be the well topology (i.e., which grid blocks are contained
      * in which well) or it can be a well parameter like the bottom hole pressure...
      */
-    bool wellsChanged(std::shared_ptr< const Opm::EclipseState > eclState, unsigned reportStepIdx) const
+    bool wellsChanged(const Opm::EclipseState& eclState, unsigned reportStepIdx) const
     {
         if (wellTopologyChanged_(eclState, reportStepIdx))
             return true;
 
-        const auto& schedule = eclState->getSchedule();
+        const auto& schedule = eclState.getSchedule();
         if (schedule.getTimeMap().numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
@@ -585,7 +585,7 @@ public:
     }
 
 protected:
-    bool wellTopologyChanged_(std::shared_ptr< const Opm::EclipseState > eclState, unsigned reportStepIdx) const
+    bool wellTopologyChanged_(const Opm::EclipseState& eclState, unsigned reportStepIdx) const
     {
         if (reportStepIdx == 0) {
             // the well topology has always been changed relative to before the
@@ -593,7 +593,7 @@ protected:
             return true;
         }
 
-        const auto& schedule = eclState->getSchedule();
+        const auto& schedule = eclState.getSchedule();
         if (schedule.getTimeMap().numTimesteps() <= (unsigned) reportStepIdx)
             // for the "until the universe dies" episode, the wells don't change
             return false;
@@ -666,11 +666,11 @@ protected:
 
     void computeWellCompletionsMap_(unsigned reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
     {
-        auto eclStatePtr = simulator_.gridManager().eclState();
-        const auto& deckSchedule = eclStatePtr->getSchedule();
+        const auto& eclState = simulator_.gridManager().eclState();
+        const auto& deckSchedule = eclState.getSchedule();
 
 #ifndef NDEBUG
-        const auto& eclGrid = eclStatePtr->getInputGrid();
+        const auto& eclGrid = eclState.getInputGrid();
         assert( int(eclGrid.getNX()) == simulator_.gridManager().cartesianDimensions()[ 0 ] );
         assert( int(eclGrid.getNY()) == simulator_.gridManager().cartesianDimensions()[ 1 ] );
         assert( int(eclGrid.getNZ()) == simulator_.gridManager().cartesianDimensions()[ 2 ] );
@@ -718,8 +718,8 @@ protected:
 
     void updateWellParameters_(unsigned reportStepIdx, const WellCompletionsMap& wellCompletions)
     {
-        auto eclStatePtr = simulator_.gridManager().eclState();
-        const auto& deckSchedule = eclStatePtr->getSchedule();
+        const auto& eclState = simulator_.gridManager().eclState();
+        const auto& deckSchedule = eclState.getSchedule();
         const std::vector<const Opm::Well*>& deckWells = deckSchedule.getWells(reportStepIdx);
 
         // set the reference depth for all wells

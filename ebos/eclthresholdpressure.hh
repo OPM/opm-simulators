@@ -103,14 +103,14 @@ public:
 
         const auto& gridManager = simulator_.gridManager();
         const auto& eclState = gridManager.eclState();
-        const auto& simConfig = eclState->getSimulationConfig();
+        const auto& simConfig = eclState.getSimulationConfig();
 
         enableThresholdPressure_ = simConfig.hasThresholdPressure();
         if (!enableThresholdPressure_)
             return;
 
         numEquilRegions_ =
-            deck->getKeyword("EQLDIMS").getRecord(0).getItem("NTEQUL").template get<int>(0);
+            deck.getKeyword("EQLDIMS").getRecord(0).getItem("NTEQUL").template get<int>(0);
         if (numEquilRegions_ > 0xff) {
             // make sure that the index of an equilibration region can be stored in a
             // single byte
@@ -124,7 +124,7 @@ public:
 
         // internalize the data specified using the EQLNUM keyword
         const std::vector<int>& equilRegionData =
-            eclState->get3DProperties().getIntGridProperty("EQLNUM").getData();
+            eclState.get3DProperties().getIntGridProperty("EQLNUM").getData();
         elemEquilRegion_.resize(numElements, 0);
         for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
             int cartElemIdx = gridManager.cartesianIndex(elemIdx);
@@ -233,7 +233,7 @@ private:
         const auto& gridView = gridManager.gridView();
         const auto& elementMapper = simulator_.model().elementMapper();
         const auto& eclState = simulator_.gridManager().eclState();
-        const Opm::SimulationConfig& simConfig = eclState->getSimulationConfig();
+        const Opm::SimulationConfig& simConfig = eclState.getSimulationConfig();
         const auto& thpres = simConfig.getThresholdPressure();
 
         // set the threshold pressures for all EQUIL region boundaries which have a
@@ -241,7 +241,6 @@ private:
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-
             const auto& elem = *elemIt;
             if (elem.partitionType() != Dune::InteriorEntity)
                 continue;

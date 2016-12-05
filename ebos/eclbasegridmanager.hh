@@ -137,8 +137,8 @@ public:
         tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_RANDOM_SLASH , Opm::InputError::IGNORE));
         Opm::ParseContext parseContext(tmp);
 
-        deck_ = std::make_shared< Opm::Deck >( parser.parseFile(fileName , parseContext) );
-        eclState_ =  std::make_shared< Opm::EclipseState >(*deck_, parseContext);
+        deck_ = parser.parseFile(fileName , parseContext);
+        eclState_.reset(new Opm::EclipseState(deck_, parseContext));
 
         asImp_().createGrids_();
 
@@ -148,36 +148,20 @@ public:
     /*!
      * \brief Return a pointer to the parsed ECL deck
      */
-    std::shared_ptr< const Opm::Deck > deck() const
+    const Opm::Deck& deck() const
     { return deck_; }
 
-    std::shared_ptr< Opm::Deck > deck()
+    Opm::Deck& deck()
     { return deck_; }
 
     /*!
      * \brief Return a pointer to the internalized ECL deck
      */
-    std::shared_ptr< const Opm::EclipseState > eclState() const
-    { return eclState_; }
+    const Opm::EclipseState& eclState() const
+    { return *eclState_; }
 
-    std::shared_ptr< Opm::EclipseState > eclState()
-    { return eclState_; }
-
-    /*!
-     * \brief Return a pointer to the internalized schedule of the ECL deck
-     */
-    const Opm::Schedule* schedule() const
-    { return &eclState()->getSchedule(); }
-
-    /*!
-     * \brief Return a pointer to the EclipseGrid object
-     *
-     * The EclipseGrid class is provided by the opm-parser module and is used to
-     * internalize the cornerpoint grid representation and, amongst others, can be used
-     * to write EGRID files (which tends to be difficult with a plain Dune::CpGrid)
-     */
-    const Opm::EclipseGrid* eclGrid() const
-    { return &eclState()->getInputGrid(); }
+    Opm::EclipseState& eclState()
+    { return *eclState_; }
 
     /*!
      * \brief Returns the name of the case.
@@ -259,8 +243,8 @@ private:
     { return *static_cast<const Implementation*>(this); }
 
     std::string caseName_;
-    std::shared_ptr< Opm::Deck > deck_;
-    std::shared_ptr< Opm::EclipseState > eclState_;
+    Opm::Deck deck_;
+    std::unique_ptr<Opm::EclipseState> eclState_;
 };
 
 } // namespace Ewoms
