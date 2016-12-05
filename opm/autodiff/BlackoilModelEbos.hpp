@@ -190,7 +190,6 @@ namespace Opm {
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
-        , invalidateIntensiveQuantitiesCache_(true)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
@@ -269,9 +268,6 @@ namespace Opm {
                 dx_old_ = 0.0;
             }
 
-            // reset intensive quantities cache useless other options are set
-            // further down
-            invalidateIntensiveQuantitiesCache_ = true;
             report.total_linearizations = 1;
 
             try {
@@ -290,6 +286,7 @@ namespace Opm {
             report.converged = getConvergence(timer, iteration,residual_norms);
             report.update_time += perfTimer.stop();
             residual_norms_history_.push_back(residual_norms);
+            bool must_solve = (iteration < nonlinear_solver.minIter()) || (!converged);
 
             bool must_solve = iteration < nonlinear_solver.minIter() || !report.converged;
             if (must_solve) {
@@ -341,12 +338,6 @@ namespace Opm {
                 updateState(x,reservoir_state);
                 wellModel().updateWellState(xw, well_state);
                 report.update_time += perfTimer.stop();
-            }
-            else {
-                // if the solution is not updated, we do not need to recalculate the
-                // intensive quantities in the next iteration.
-                assert(report.converged);
-                invalidateIntensiveQuantitiesCache_ = false ;
             }
 
             return report;
@@ -1452,8 +1443,6 @@ namespace Opm {
                                    const int iterationIdx,
                                    const ReservoirState& reservoirState)
         {
-            convertInput( iterationIdx, reservoirState, ebosSimulator_ );
-
             ebosSimulator_.startNextEpisode( timer.currentStepLength() );
             ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
             ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
@@ -1481,8 +1470,10 @@ namespace Opm {
             {
                 ebosSimulator_.problem().beginTimeStep();
             }
-            // if the last step failed we want to recalculate the IntesiveQuantities.
-            if ( invalidateIntensiveQuantitiesCache_ ) {
+            // if the last time step failed we need to update the solution varables in ebos
+            // and recalculate the IntesiveQuantities.
+            if ( timer.hasLastStepFailed() && iterationIdx == 0 ) {
+                convertInput( iterationIdx, reservoirState, ebosSimulator_ );
                 ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
 
@@ -1511,7 +1502,6 @@ namespace Opm {
 
     public:
         bool isBeginReportStep_;
-        bool invalidateIntensiveQuantitiesCache_;
     };
 } // namespace Opm
 
