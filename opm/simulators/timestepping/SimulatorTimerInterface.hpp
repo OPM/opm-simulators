@@ -101,6 +101,9 @@ namespace Opm
             return std::mktime(&t);
         }
 
+        /// Return true if last time step failed
+        virtual bool lastStepFailed() const = 0;
+
         /// return copy of current timer instance
         virtual std::unique_ptr< SimulatorTimerInterface > clone () const = 0;
     };

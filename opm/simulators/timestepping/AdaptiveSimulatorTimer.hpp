@@ -93,6 +93,12 @@ namespace Opm
         /// \brief start date time of simulation
         boost::posix_time::ptime startDateTime() const;
 
+        /// \brief Return true if last time step failed
+        bool lastStepFailed() const {return lastStepFailed_;}
+
+        /// \brief tell the timestepper whether timestep failed or not
+        void setLastStepFailed(bool lastStepFailed) {lastStepFailed_ = lastStepFailed;}
+
         /// return copy of object
         virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
 
@@ -108,6 +114,8 @@ namespace Opm
         int current_step_;
 
         std::vector< double > steps_;
+        bool lastStepFailed_;
+
     };
 
 } // namespace Opm

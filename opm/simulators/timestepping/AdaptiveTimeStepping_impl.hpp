@@ -295,12 +295,13 @@ namespace Opm {
                 last_well_state = well_state;
 
                 report.converged = substepTimer.done();
+                substepTimer.setLastStepFailed(false);
 
             }
             else // in case of no convergence (linearIterations < 0)
             {
                 report.converged = false;
-
+                substepTimer.setLastStepFailed(true);
                 // increase restart counter
                 if( restarts >= solver_restart_max_ ) {
                     const auto msg = std::string("Solver failed to converge after ")

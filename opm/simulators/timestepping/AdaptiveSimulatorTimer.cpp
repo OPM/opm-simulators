@@ -42,6 +42,7 @@ namespace Opm
         , dt_( 0.0 )
         , current_step_( 0 )
         , steps_()
+        , lastStepFailed_( false )
     {
         // reserve memory for sub steps
         steps_.reserve( 10 );

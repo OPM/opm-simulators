@@ -110,6 +110,10 @@ namespace Opm
         /// Return true if op++() has been called numSteps() times.
         bool done() const;
 
+        /// Always return false. Timestep failures is handled in the
+        /// substepTimer
+        bool lastStepFailed() const {return false;}
+
         /// return copy of object
         virtual std::unique_ptr< SimulatorTimerInterface > clone() const;
 
