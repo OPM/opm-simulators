@@ -84,6 +84,7 @@ namespace Properties {
 NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 SET_BOOL_PROP(EclFlowProblem, DisableWells, true);
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
+SET_BOOL_PROP(EclFlowProblem, EnableSwatinit, false);
 }}
 
 namespace Opm {
@@ -156,7 +157,6 @@ namespace Opm {
         /// \param[in] grid             grid data structure
         /// \param[in] fluid            fluid properties
         /// \param[in] geo              rock properties
-        /// \param[in] rock_comp_props  if non-null, rock compressibility properties
         /// \param[in] wells            well structure
         /// \param[in] vfp_properties   Vertical flow performance tables
         /// \param[in] linsolver        linear solver
@@ -166,7 +166,6 @@ namespace Opm {
                           const ModelParameters&          param,
                           const BlackoilPropsAdInterface& fluid,
                           const DerivedGeology&           geo  ,
-                          const RockCompressibility*      rock_comp_props,
                           const StandardWellsDense<FluidSystem, BlackoilIndices>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
@@ -189,7 +188,6 @@ namespace Opm {
         , isBeginReportStep_(false)
         , invalidateIntensiveQuantitiesCache_(true)
         {
-            DUNE_UNUSED_PARAMETER(rock_comp_props);
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
@@ -226,7 +224,7 @@ namespace Opm {
 
 
         const EclipseState& eclState() const
-        { return *ebosSimulator_.gridManager().eclState(); }
+        { return ebosSimulator_.gridManager().eclState(); }
 
         /// Called once before each time step.
         /// \param[in] timer                  simulation timer
@@ -756,7 +754,6 @@ namespace Opm {
             }
 
         }
-
 
         /// Return true if output to cout is wanted.
         bool terminalOutputEnabled() const
