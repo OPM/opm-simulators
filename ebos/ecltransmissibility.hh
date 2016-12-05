@@ -49,7 +49,8 @@ namespace Ewoms {
 namespace Properties {
 NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Simulator);
+NEW_PROP_TAG(GridManager);
+NEW_PROP_TAG(ElementMapper);
 }
 
 /*!
@@ -63,7 +64,8 @@ class EclTransmissibility
 {
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+    typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
+    typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
     typedef typename GridView::Intersection Intersection;
 
     // Grid and world dimension
@@ -73,8 +75,8 @@ class EclTransmissibility
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
 
 public:
-    EclTransmissibility(const Simulator& simulator)
-        : simulator_(simulator)
+    EclTransmissibility(const GridManager& gridManager)
+        : gridManager_(gridManager)
     {}
 
     /*!
@@ -96,25 +98,19 @@ public:
 
     void update()
     {
-        const auto& problem = simulator_.problem();
-        const auto& gridManager = simulator_.gridManager();
-        const auto& gridView = simulator_.gridView();
-        const auto& elementMapper = simulator_.model().elementMapper();
-        const auto& cartMapper = gridManager.cartesianIndexMapper();
-        const auto& eclState = gridManager.eclState();
+        const auto& gridView = gridManager_.gridView();
+        const auto& cartMapper = gridManager_.cartesianIndexMapper();
+        const auto& eclState = gridManager_.eclState();
         const auto& eclGrid = eclState.getInputGrid();
-        const auto& transMult = eclState.getTransMult();
+        auto& transMult = eclState.getTransMult();
+        ElementMapper elemMapper(gridView);
 
         const std::vector<double>& ntg =
             eclState.get3DProperties().getDoubleGridProperty("NTG").getData();
 
-        unsigned numElements = elementMapper.size();
+        unsigned numElements = elemMapper.size();
 
-        // this code assumes that the DOFs are the elements. (i.e., an
-        // ECFV spatial discretization with TPFA). if you try to use
-        // it with something else, you're currently out of luck,
-        // sorry!
-        assert(simulator_.model().numGridDof() == numElements);
+        extractPermeability_(eclState);
 
         // calculate the axis specific centroids of all elements
         std::array<std::vector<DimVector>, dimWorld> axisCentroids;
@@ -127,9 +123,9 @@ public:
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-            unsigned elemIdx = elementMapper.index(elem);
+            unsigned elemIdx = elemMapper.index(elem);
 #else
-            unsigned elemIdx = elementMapper.map(elem);
+            unsigned elemIdx = elemMapper.map(elem);
 #endif
 
             // compute the axis specific "centroids" used for the transmissibilities. for
@@ -168,11 +164,11 @@ public:
                 const auto& inside = intersection.inside();
                 const auto& outside = intersection.outside();
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                unsigned insideElemIdx = elementMapper.index(inside);
-                unsigned outsideElemIdx = elementMapper.index(outside);
+                unsigned insideElemIdx = elemMapper.index(inside);
+                unsigned outsideElemIdx = elemMapper.index(outside);
 #else
-                unsigned insideElemIdx = elementMapper.map(*inside);
-                unsigned outsideElemIdx = elementMapper.map(*outside);
+                unsigned insideElemIdx = elemMapper.map(*inside);
+                unsigned outsideElemIdx = elemMapper.map(*outside);
 #endif
 
                 // we only need to calculate a face's transmissibility
@@ -198,7 +194,7 @@ public:
                                                   intersection.indexInInside(),
                                                   insideElemIdx,
                                                   axisCentroids),
-                                  problem.intrinsicPermeability(insideElemIdx));
+                                  permeability_[insideElemIdx]);
                 computeHalfTrans_(halfTrans2,
                                   intersection,
                                   outsideFaceIdx,
@@ -206,7 +202,7 @@ public:
                                                   intersection.indexInOutside(),
                                                   outsideElemIdx,
                                                   axisCentroids),
-                                  problem.intrinsicPermeability(outsideElemIdx));
+                                  permeability_[outsideElemIdx]);
 
                 applyNtg_(halfTrans1, insideFaceIdx, insideCartElemIdx, ntg);
                 applyNtg_(halfTrans2, outsideFaceIdx, outsideCartElemIdx, ntg);
@@ -257,10 +253,50 @@ public:
         }
     }
 
+    const DimMatrix& permeability(unsigned elemIdx) const
+    { return permeability_[elemIdx]; }
+
     Scalar transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
     { return trans_.at(isId_(elemIdx1, elemIdx2)); }
 
 private:
+    void extractPermeability_(const Opm::EclipseState& eclState)
+    {
+        const auto& props = gridManager_.eclState().get3DProperties();
+
+        unsigned numElem = gridManager_.gridView().size(/*codim=*/0);
+        permeability_.resize(numElem);
+
+        // read the intrinsic permeabilities from the eclState. Note that all arrays
+        // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
+        // simulation grid might remove a few elements. (e.g. because it is distributed
+        // over several processes.)
+        if (props.hasDeckDoubleGridProperty("PERMX")) {
+            const std::vector<double>& permxData =
+                props.getDoubleGridProperty("PERMX").getData();
+            std::vector<double> permyData(permxData);
+            if (props.hasDeckDoubleGridProperty("PERMY"))
+                permyData = props.getDoubleGridProperty("PERMY").getData();
+            std::vector<double> permzData(permxData);
+            if (props.hasDeckDoubleGridProperty("PERMZ"))
+                permzData = props.getDoubleGridProperty("PERMZ").getData();
+
+            for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
+                unsigned cartesianElemIdx = gridManager_.cartesianIndex(dofIdx);
+                permeability_[dofIdx] = 0.0;
+                permeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
+                permeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
+                permeability_[dofIdx][2][2] = permzData[cartesianElemIdx];
+            }
+
+            // for now we don't care about non-diagonal entries
+        }
+        else
+            OPM_THROW(std::logic_error,
+                      "Can't read the intrinsic permeability from the ecl state. "
+                      "(The PERM{X,Y,Z} keywords are missing)");
+    }
+
     std::uint64_t isId_(unsigned elemIdx1, unsigned elemIdx2) const
     {
         static const unsigned elemIdxShift = 32; // bits
@@ -362,7 +398,8 @@ private:
         }
     }
 
-    const Simulator& simulator_;
+    const GridManager& gridManager_;
+    std::vector<DimMatrix> permeability_;
     std::unordered_map<std::uint64_t, Scalar> trans_;
 };
 

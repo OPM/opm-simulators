@@ -301,7 +301,7 @@ public:
      */
     EclProblem(Simulator& simulator)
         : ParentType(simulator)
-        , transmissibilities_(simulator)
+        , transmissibilities_(simulator.gridManager())
         , thresholdPressures_(simulator)
         , wellManager_(simulator)
         , deckUnits_(simulator)
@@ -597,7 +597,7 @@ public:
                                            unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return intrinsicPermeability_[globalSpaceIdx];
+        return transmissibilities_.permeability(globalSpaceIdx);
     }
 
     /*!
@@ -607,7 +607,7 @@ public:
      * Its main (only?) usage is the ECL transmissibility calculation code...
      */
     const DimMatrix& intrinsicPermeability(unsigned globalElemIdx) const
-    { return intrinsicPermeability_[globalElemIdx]; }
+    { return transmissibilities_.permeability(globalElemIdx); }
 
     /*!
      * \copydoc BlackOilBaseProblem::transmissibility
@@ -930,47 +930,9 @@ private:
         const auto& gridManager = this->simulator().gridManager();
         const auto& deck = gridManager.deck();
         const auto& eclState = gridManager.eclState();
-        const auto& props = eclState.get3DProperties();
-
-        size_t numDof = this->model().numGridDof();
 
         // the PVT region number
         updatePvtnum_();
-
-        ////////////////////////////////
-        // intrinsic permeability
-
-        intrinsicPermeability_.resize(numDof);
-
-        // read the intrinsic permeabilities from the eclState. Note that all arrays
-        // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
-        // opm-grid CpGrid object might remove a few elements...
-        if (props.hasDeckDoubleGridProperty("PERMX")) {
-                const std::vector<double>& permxData =
-                props.getDoubleGridProperty("PERMX").getData();
-            std::vector<double> permyData(permxData);
-            if (props.hasDeckDoubleGridProperty("PERMY"))
-                permyData = props.getDoubleGridProperty("PERMY").getData();
-            std::vector<double> permzData(permxData);
-            if (props.hasDeckDoubleGridProperty("PERMZ"))
-                permzData = props.getDoubleGridProperty("PERMZ").getData();
-
-            for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
-                unsigned cartesianElemIdx = gridManager.cartesianIndex(dofIdx);
-                intrinsicPermeability_[dofIdx] = 0.0;
-                intrinsicPermeability_[dofIdx][0][0] = permxData[cartesianElemIdx];
-                intrinsicPermeability_[dofIdx][1][1] = permyData[cartesianElemIdx];
-                intrinsicPermeability_[dofIdx][2][2] = permzData[cartesianElemIdx];
-            }
-
-            // for now we don't care about non-diagonal entries
-        }
-        else
-            OPM_THROW(std::logic_error,
-                      "Can't read the intrinsic permeability from the ecl state. "
-                      "(The PERM{X,Y,Z} keywords are missing)");
-        ////////////////////////////////
-
 
         ////////////////////////////////
         // porosity
@@ -979,6 +941,7 @@ private:
 
         ////////////////////////////////
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
+        size_t numDof = this->model().numGridDof();
         std::vector<int> compressedToCartesianElemIdx(numDof);
         for (unsigned elemIdx = 0; elemIdx < numDof; ++elemIdx)
             compressedToCartesianElemIdx[elemIdx] = gridManager.cartesianIndex(elemIdx);
@@ -1350,7 +1313,6 @@ private:
 
     std::vector<Scalar> porosity_;
     std::vector<Scalar> elementCenterDepth_;
-    std::vector<DimMatrix> intrinsicPermeability_;
     EclTransmissibility<TypeTag> transmissibilities_;
 
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
