@@ -271,7 +271,7 @@ public:
                     // balanced.
                     continue;
 
-                auto& scalingPoints = materialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+                auto& scalingPoints = materialLawManager->oilWaterScaledEpsPointsDrainage(elemIdx);
                 const auto& equilScalingPoints = equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
 
                 scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
