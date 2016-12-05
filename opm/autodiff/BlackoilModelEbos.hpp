@@ -283,11 +283,11 @@ namespace Opm {
             std::vector<double> residual_norms;
             perfTimer.reset();
             perfTimer.start();
-            report.converged = getConvergence(timer, iteration,residual_norms);
+            // the step is not considered converged until at least minIter iterations is done
+            report.converged = getConvergence(timer, iteration,residual_norms) && iteration > nonlinear_solver.minIter();
             report.update_time += perfTimer.stop();
             residual_norms_history_.push_back(residual_norms);
-            bool must_solve = iteration < nonlinear_solver.minIter() || !report.converged;
-            if (must_solve) {
+            if (!report.converged) {
                 perfTimer.reset();
                 perfTimer.start();
                 report.total_newton_iterations = 1;
@@ -1475,7 +1475,7 @@ namespace Opm {
             }
             // if the last time step failed we need to update the solution varables in ebos
             // and recalculate the IntesiveQuantities.
-            if ( timer.hasLastStepFailed() && iterationIdx == 0 ) {
+            if ( timer.lastStepFailed() && iterationIdx == 0 ) {
                 convertInput( iterationIdx, reservoirState, ebosSimulator_ );
                 ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
