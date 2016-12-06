@@ -182,7 +182,7 @@ public:
             }
 
             //distribute the grid and switch to the distributed view.
-            grid_->loadBalance(&this->eclState(), faceTrans.data());
+            defunctWellNames_ = std::get<1>(grid_->loadBalance(&this->eclState(), faceTrans.data()));
             grid_->switchToDistributedView();
 
             delete cartesianIndexMapper_;
@@ -205,6 +205,9 @@ public:
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const
     { return *equilCartesianIndexMapper_; }
+
+    std::unordered_set<std::string> defunctWellNames() const
+    { return defunctWellNames_; }
 
 protected:
     void createGrids_()
@@ -236,6 +239,8 @@ protected:
     EquilGrid* equilGrid_;
     CartesianIndexMapper* cartesianIndexMapper_;
     CartesianIndexMapper* equilCartesianIndexMapper_;
+
+    std::unordered_set<std::string> defunctWellNames_;
 };
 
 } // namespace Ewoms
