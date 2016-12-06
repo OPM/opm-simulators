@@ -32,7 +32,7 @@ namespace Opm
                                                        const UnstructuredGrid& grid)
     {
         rock_.init(eclState, grid.number_of_cells, grid.global_cell, grid.cartdims);
-        pvt_.init(deck);
+        pvt_.init(eclState, deck);
         auto materialLawManager = std::make_shared<typename SaturationPropsFromDeck::MaterialLawManager>();
 
         std::vector<int> compressedToCartesianIdx(grid.number_of_cells);

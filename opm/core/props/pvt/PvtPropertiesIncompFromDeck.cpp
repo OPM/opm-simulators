@@ -21,12 +21,10 @@
 #include "config.h"
 #include <opm/core/props/pvt/PvtPropertiesIncompFromDeck.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/parser/eclipse/Deck/DeckItem.hpp>
-#include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
-#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 
 
 namespace Opm
@@ -36,7 +34,7 @@ namespace Opm
     {
     }
 
-    void PvtPropertiesIncompFromDeck::init(const Opm::Deck& deck)
+    void PvtPropertiesIncompFromDeck::init(const EclipseState& es, const Opm::Deck& deck)
     {
         // So far, this class only supports a single PVT region. TODO?
         int region_number = 0;
@@ -61,20 +59,14 @@ namespace Opm
         // We will modify them with formation volume factors if found.
         reservoir_density_ = surface_density_;
 
-        // Water viscosity.
-        if (deck.hasKeyword("PVTW")) {
-            const auto& pvtwRecord = deck.getKeyword("PVTW").getRecord(region_number);
-            if (pvtwRecord.getItem("WATER_COMPRESSIBILITY").getSIDouble(0) != 0.0 ||
-                pvtwRecord.getItem("WATER_VISCOSIBILITY").getSIDouble(0) != 0.0) {
-                OPM_MESSAGE("Compressibility effects in PVTW are ignored.");
-            }
-            reservoir_density_[phase_usage.phase_pos[PhaseUsage::Aqua]] /= pvtwRecord.getItem("WATER_VOL_FACTOR").getSIDouble(0);
-            viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = pvtwRecord.getItem("WATER_VISCOSITY").getSIDouble(0);
-        } else {
-            // Eclipse 100 default.
-            // viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = 0.5*Opm::prefix::centi*Opm::unit::Poise;
-            OPM_THROW(std::runtime_error, "Input is missing PVTW\n");
+        const auto& pvtw = es.getTableManager().getPvtwTable().at( region_number );
+
+        if (pvtw.compressibility != 0.0 || pvtw.viscosibility != 0.0) {
+            OPM_MESSAGE("Compressibility effects in PVTW are ignored.");
         }
+
+        reservoir_density_[phase_usage.phase_pos[PhaseUsage::Aqua]] /= pvtw.volume_factor;
+        viscosity_[phase_usage.phase_pos[PhaseUsage::Aqua]] = pvtw.viscosity;
 
         // Oil viscosity.
         if (deck.hasKeyword("PVCDO")) {

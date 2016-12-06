@@ -21,6 +21,8 @@
 #define OPM_PVTPROPERTIESINCOMPFROMDECK_HEADER_INCLUDED
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+
 #include <array>
 
 namespace Opm
@@ -38,7 +40,7 @@ namespace Opm
         PvtPropertiesIncompFromDeck();
 
         /// Initialize from deck.
-        void init(const Opm::Deck& deck);
+        void init(const EclipseState&, const Opm::Deck& deck);
 
         /// Number of active phases.
         int numPhases() const;
