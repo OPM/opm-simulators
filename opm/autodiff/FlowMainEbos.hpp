@@ -32,6 +32,7 @@
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
+#include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
@@ -242,12 +243,12 @@ namespace Opm
             }
         }
 
-        // Setup OpmLog backend with output_dir. 
+        // Setup OpmLog backend with output_dir.
         void setupLogging()
         {
             std::string deck_filename = param_.get<std::string>("deck_filename");
             // create logFile
-            using boost::filesystem::path; 
+            using boost::filesystem::path;
             path fpath(deck_filename);
             std::string baseName;
             std::ostringstream debugFileStream;
@@ -630,6 +631,8 @@ namespace Opm
         void setupLinearSolver()
         {
             typedef typename BlackoilModelEbos :: ISTLSolverType ISTLSolverType;
+
+            extractParallelGridInformationToISTL(grid(), parallel_information_);
             fis_solver_.reset( new ISTLSolverType( param_, parallel_information_ ) );
         }
 
