@@ -38,7 +38,7 @@
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/autodiff/Compat.hpp>
 #include <opm/core/utility/DataMap.hpp>
-#include <opm/output/vtk/writeVtkData.hpp>
+#include <opm/simulators/vtk/writeVtkData.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 
 #include <opm/core/wells/WellsManager.hpp>
