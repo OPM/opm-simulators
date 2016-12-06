@@ -565,9 +565,9 @@ namespace Opm {
             V shear_mult_wells_v = Eigen::Map<V>(shear_mult_wells_.data(), shear_mult_wells_.size());
             ADB shear_mult_wells_adb = ADB::constant(shear_mult_wells_v);
             mob_perfcells[water_pos] = mob_perfcells[water_pos] / shear_mult_wells_adb;
+            wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         }
 
-        wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
         wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         wellModel().addWellFluxEq(cq_s, state, residual_);
         addWellContributionToMassBalanceEq(cq_s, state, well_state);
