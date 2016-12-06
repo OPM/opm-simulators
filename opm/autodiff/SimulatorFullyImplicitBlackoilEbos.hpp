@@ -100,7 +100,8 @@ public:
                                        const bool has_disgas,
                                        const bool has_vapoil,
                                        const EclipseState& eclState,
-                                       BlackoilOutputWriterEbos& output_writer)
+                                       BlackoilOutputWriterEbos& output_writer,
+                                       const std::unordered_set<std::string>& defunct_well_names)
         : ebosSimulator_(ebosSimulator),
           param_(param),
           model_param_(param),
@@ -113,6 +114,7 @@ public:
           has_vapoil_(has_vapoil),
           terminal_output_(param.getDefault("output_terminal", true)),
           output_writer_(output_writer),
+          defunct_well_names_( defunct_well_names ),
           is_parallel_run_( false )
     {
         DUNE_UNUSED_PARAMETER(eclState);
@@ -224,7 +226,8 @@ public:
                                        props_.permeability(),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
-                                       well_potentials );
+                                       well_potentials,
+                                       defunct_well_names_ );
 
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
@@ -724,6 +727,11 @@ protected:
     // output_writer
     OutputWriter& output_writer_;
     std::unique_ptr<RateConverterType> rateConverter_;
+    // The names of wells that should be defunct
+    // (e.g. in a parallel run when they are handeled by
+    // a different process)
+    std::unordered_set<std::string> defunct_well_names_;
+
     // Whether this a parallel simulation or not
     bool is_parallel_run_;
 

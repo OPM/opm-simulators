@@ -649,7 +649,8 @@ namespace Opm
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
                                            eclState(),
-                                           *output_writer_));
+                                           *output_writer_,
+                                           defunctWellNames()));
         }
 
     private:
@@ -704,6 +705,9 @@ namespace Opm
 
         Grid& grid()
         { return ebosSimulator_->gridManager().grid(); }
+
+        std::unordered_set<std::string> defunctWellNames() const
+        { return ebosSimulator_->gridManager().defunctWellNames(); }
 
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
