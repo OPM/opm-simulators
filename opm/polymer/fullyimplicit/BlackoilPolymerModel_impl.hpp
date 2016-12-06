@@ -463,14 +463,13 @@ namespace Opm {
             if (has_polymer_) {
                 const ADB tr_mult = transMult(state.pressure);
                 const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-                const ADB mc = computeMc(state);
                 const ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration, cmax, kr);
                 const ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(state.concentration, mu.value());
                 // Reduce mobility of water phase by relperm reduction and effective viscosity increase.
                 sd_.rq[actph].mob = tr_mult * krw_eff * inv_wat_eff_visc;
                 // Compute polymer mobility.
                 const ADB inv_poly_eff_visc = polymer_props_ad_.effectiveInvPolymerVisc(state.concentration, mu.value());
-                sd_.rq[poly_pos_].mob = tr_mult * mc * krw_eff * inv_poly_eff_visc;
+                sd_.rq[poly_pos_].mob = tr_mult * krw_eff * state.concentration * inv_poly_eff_visc;
                 sd_.rq[poly_pos_].b = sd_.rq[actph].b;
                 sd_.rq[poly_pos_].dh = sd_.rq[actph].dh;
                 UpwindSelector<double> upwind(grid_, ops_, sd_.rq[poly_pos_].dh.value());
@@ -622,7 +621,6 @@ namespace Opm {
         UpwindSelector<double> upwind(grid_, ops_, dh.value());
 
         const ADB cmax = ADB::constant(cmax_, state.concentration.blockPattern());
-        const ADB mc = computeMc(state);
         ADB krw_eff = polymer_props_ad_.effectiveRelPerm(state.concentration,
                                                          cmax,
                                                          sd_.rq[phase].kr);
