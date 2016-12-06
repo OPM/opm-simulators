@@ -103,7 +103,8 @@ public:
                                        const bool has_vapoil,
                                        std::shared_ptr<EclipseState> eclipse_state,
                                        BlackoilOutputWriterEbos& output_writer,
-                                       const std::vector<double>& threshold_pressures_by_face)
+                                       const std::vector<double>& threshold_pressures_by_face,
+                                       const std::unordered_set<std::string>& defunct_well_names)
         : ebosSimulator_(ebosSimulator),
           param_(param),
           model_param_(param),
@@ -118,6 +119,7 @@ public:
           terminal_output_(param.getDefault("output_terminal", true)),
           output_writer_(output_writer),
           threshold_pressures_by_face_(threshold_pressures_by_face),
+          defunct_well_names_( defunct_well_names ),
           is_parallel_run_( false )
     {
         DUNE_UNUSED_PARAMETER(eclipse_state);
@@ -229,7 +231,8 @@ public:
                                        props_.permeability(),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
-                                       well_potentials );
+                                       well_potentials,
+                                       defunct_well_names_ );
 
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
@@ -733,6 +736,11 @@ protected:
     std::unique_ptr<RateConverterType> rateConverter_;
     // Threshold pressures.
     std::vector<double> threshold_pressures_by_face_;
+    // The names of wells that should be defunct
+    // (e.g. in a parallel run when they are handeled by
+    // a different process)
+    std::unordered_set<std::string> defunct_well_names_;
+
     // Whether this a parallel simulation or not
     bool is_parallel_run_;
 
