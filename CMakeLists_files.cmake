@@ -67,6 +67,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/SimulatorCompressibleTwophase.cpp
   opm/simulators/SimulatorIncompTwophase.cpp
   opm/simulators/WellSwitchingLogger.cpp
+  opm/simulators/vtk/writeVtkData.cpp
   )
 
 
@@ -258,5 +259,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/SimulatorIncompTwophase.hpp
   opm/simulators/thresholdPressures.hpp
   opm/simulators/WellSwitchingLogger.hpp
+  opm/simulators/vtk/writeVtkData.hpp
   )
 
