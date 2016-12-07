@@ -42,6 +42,10 @@ SET_TAG_PROP(LensProblemEcfv, SpatialDiscretizationSplice, EcfvDiscretization);
 
 // use automatic differentiation for this simulator
 SET_TAG_PROP(LensProblemEcfv, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+
+// this problem works fine if the linear solver uses single precision scalars
+SET_TYPE_PROP(LensProblemEcfv, LinearSolverScalar, float);
+
 }}
 
 int main(int argc, char **argv)
