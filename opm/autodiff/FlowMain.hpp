@@ -152,7 +152,7 @@ namespace Opm
             asImpl().setupOutputWriter();
             asImpl().setupLinearSolver();
             asImpl().createSimulator();
-            
+
             // Run.
             auto ret =  asImpl().runSimulator();
 
@@ -388,12 +388,12 @@ namespace Opm
 
 
 
-        // Setup OpmLog backend with output_dir. 
+        // Setup OpmLog backend with output_dir.
         void setupLogging()
         {
             std::string deck_filename = param_.get<std::string>("deck_filename");
             // create logFile
-            using boost::filesystem::path; 
+            using boost::filesystem::path;
             path fpath(deck_filename);
             std::string baseName;
             std::ostringstream debugFileStream;
