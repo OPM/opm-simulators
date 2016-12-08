@@ -416,6 +416,7 @@ public:
             // re-compute all quantities which may possibly be affected.
             transmissibilities_.update();
             updatePorosity_();
+            updatePffDofData_();
         }
 
         // Opm::TimeMap deals with points in time, so the number of time intervals (i.e.,
