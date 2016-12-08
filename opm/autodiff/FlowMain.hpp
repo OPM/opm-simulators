@@ -82,6 +82,7 @@
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/common/ResetLocale.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -133,6 +134,10 @@ namespace Opm
         /// flow.cpp.
         int execute(int argc, char** argv)
         try {
+            // we always want to use the default locale, and thus spare us the trouble
+            // with incorrect locale settings.
+            resetLocale();
+
             // Setup.
             asImpl().setupParallelism(argc, argv);
             asImpl().printStartupMessage();
