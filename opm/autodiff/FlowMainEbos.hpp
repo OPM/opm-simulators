@@ -39,6 +39,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
+#include <opm/common/ResetLocale.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -74,6 +75,10 @@ namespace Opm
         int execute(int argc, char** argv)
         {
             try {
+                // we always want to use the default locale, and thus spare us the trouble
+                // with incorrect locale settings.
+                resetLocale();
+
                 setupParallelism(argc, argv);
                 printStartupMessage();
                 const bool ok = setupParameters(argc, argv);
