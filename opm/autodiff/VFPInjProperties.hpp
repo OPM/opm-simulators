@@ -22,7 +22,6 @@
 
 #include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
 #include <opm/core/wells.h>
-#include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/autodiff/VFPHelpers.hpp>
@@ -34,6 +33,8 @@
 
 namespace Opm {
 
+template <class Scalar>
+class AutoDiffBlock;
 
 class VFPInjProperties {
 public:
@@ -154,10 +155,10 @@ public:
      * the above parameters from the values in the input table.
      */
     double bhp(int table_id,
-            const double& aqua,
-            const double& liquid,
-            const double& vapour,
-            const double& thp) const;
+               const double& aqua,
+               const double& liquid,
+               const double& vapour,
+               const double& thp) const;
 
 
     /**
@@ -172,10 +173,10 @@ public:
      * the above parameters from the values in the input table.
      */
     double thp(int table_id,
-            const double& aqua,
-            const double& liquid,
-            const double& vapour,
-            const double& bhp) const;
+               const double& aqua,
+               const double& liquid,
+               const double& vapour,
+               const double& bhp) const;
 
     /**
      * Returns the table associated with the ID, or throws an exception if

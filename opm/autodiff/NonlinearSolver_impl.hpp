@@ -249,36 +249,6 @@ namespace Opm
 
 
     template <class PhysicalModel>
-    void
-    NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega) const
-    {
-        // The dxOld is updated with dx.
-        // If omega is equal to 1., no relaxtion will be appiled.
-
-        const V tempDxOld = dxOld;
-        dxOld = dx;
-
-        switch (relaxType()) {
-            case DAMPEN:
-                if (omega == 1.) {
-                    return;
-                }
-                dx = dx*omega;
-                return;
-            case SOR:
-                if (omega == 1.) {
-                    return;
-                }
-                dx = dx*omega + (1.-omega)*tempDxOld;
-                return;
-            default:
-                OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
-        }
-
-        return;
-    }
-
-    template <class PhysicalModel>
     template <class BVector>
     void
     NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
@@ -294,15 +264,19 @@ namespace Opm
                 if (omega == 1.) {
                     return;
                 }
-                dx *= omega;
+                for (size_t i = 0; i < dx.size(); ++i) {
+                    dx[i] *= omega;
+                }
                 return;
             case SOR:
                 if (omega == 1.) {
                     return;
                 }
-                dx *= omega;
-                tempDxOld *= (1.-omega);
-                dx += tempDxOld;
+                for (size_t i = 0; i < dx.size(); ++i) {
+                    dx[i] *= omega;
+                    tempDxOld[i] *= (1.-omega);
+                    dx[i] += tempDxOld[i];
+                }
                 return;
             default:
                 OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
@@ -310,8 +284,6 @@ namespace Opm
 
         return;
     }
-
-
 } // namespace Opm
 
 

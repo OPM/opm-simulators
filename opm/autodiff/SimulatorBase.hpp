@@ -159,17 +159,18 @@ namespace Opm
                     WellState& xw);
 
         void
-        FIPUnitConvert(const UnitSystem& units, V& fip);
+        FIPUnitConvert(const UnitSystem& units,
+                       std::vector<std::vector<double> >& fip);
 
         void
         FIPUnitConvert(const UnitSystem& units,
-                       std::vector<V>& fip);
-        
-        V
-        FIPTotals(const std::vector<V>& fip, const ReservoirState& state);
+                       std::vector<double>& fip);
+
+        std::vector<double>
+        FIPTotals(const std::vector<std::vector<double> >& fip, const ReservoirState& state);
 
         void
-        outputFluidInPlace(const V& oip, const V& cip, const UnitSystem& units, const int reg);
+        outputFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg);
 
         void computeWellPotentials(const Wells*                    wells,
                                    const WellState& xw,

@@ -2243,7 +2243,7 @@ typedef Eigen::Array<double,
 
 
     template <class Grid, class WellModel, class Implementation>
-    std::vector<V>
+    std::vector<std::vector<double> >
     BlackoilModelBase<Grid, WellModel, Implementation>::
     computeFluidInPlace(const ReservoirState& x,
                         const std::vector<int>& fipnum)
@@ -2282,7 +2282,10 @@ typedef Eigen::Array<double,
 
         // For a parallel run this is just a local maximum and needs to be updated later
         int dims = *std::max_element(fipnum.begin(), fipnum.end());
-        std::vector<V> values(dims, V::Zero(7));
+        std::vector<std::vector<double> > values(dims);
+        for (int i=0; i < dims; ++i) {
+            values[i].resize(7, 0.0);
+        }
 
         const V hydrocarbon = saturation[Oil].value() + saturation[Gas].value();
         V hcpv;
@@ -2356,7 +2359,11 @@ typedef Eigen::Array<double,
             auto comm = pinfo.communicator();
             // Compute the global dims value and resize values accordingly.
             dims = comm.max(dims);
-            values.resize(dims, V::Zero(7));
+            values.resize(dims);
+            for (int i=0; i < dims; ++i) {
+                values[i].resize(7);
+                std::fill(values[i].begin(), values[i].end(), 0.0);
+            }
 
             //Accumulate phases for each region
             for (int phase = 0; phase < maxnp; ++phase) {
