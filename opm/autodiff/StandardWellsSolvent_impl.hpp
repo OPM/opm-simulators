@@ -114,7 +114,7 @@ namespace Opm
         const Vector perf_so =  subset(state.saturation[pu.phase_pos[Oil]].value(), well_cells);
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const Vector bo = fluid_->bOil(avg_press_ad, perf_temp, perf_rs, perf_cond, well_cells).value();
-            //const V bo_eff = subset(rq_[pu.phase_pos[Oil] ].b , well_cells).value();
+            //const Vector bo = subset(rq[pu.phase_pos[Oil] ].b , well_cells).value();
             b.col(pu.phase_pos[BlackoilPhases::Liquid]) = bo;
             // const Vector rssat = fluidRsSat(avg_press, perf_so, well_cells);
             const Vector rssat = fluid_->rsSat(ADB::constant(avg_press), ADB::constant(perf_so), well_cells).value();
@@ -133,14 +133,14 @@ namespace Opm
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             // Unclear wether the effective or the pure values should be used for the wells
             // the current usage of unmodified properties values gives best match.
-            //V bg_eff = subset(rq_[pu.phase_pos[Gas]].b,well_cells).value();
+            //Vector bg = subset(rq[pu.phase_pos[Gas]].b,well_cells).value();
             Vector bg = fluid_->bGas(avg_press_ad, perf_temp, perf_rv, perf_cond, well_cells).value();
             Vector rhog = fluid_->surfaceDensity(pu.phase_pos[BlackoilPhases::Vapour], well_cells);
             // to handle solvent related
             if (has_solvent_) {
 
                 const Vector bs = solvent_props_->bSolvent(avg_press_ad,well_cells).value();
-                //const V bs_eff = subset(rq_[solvent_pos_].b,well_cells).value();
+                //const Vector bs = subset(rq[solvent_pos_].b,well_cells).value();
 
                 // number of cells
                 const int nc = state.pressure.size();
@@ -228,15 +228,17 @@ namespace Opm
     extractWellPerfProperties(const SolutionState& state,
                               const std::vector<ReservoirResidualQuant>& rq,
                               std::vector<ADB>& mob_perfcells,
-                              std::vector<ADB>& b_perfcells) const
+                              std::vector<ADB>& b_perfcells,
+                              ADB& rv_perfcells) const
     {
-        Base::extractWellPerfProperties(state, rq, mob_perfcells, b_perfcells);
+        Base::extractWellPerfProperties(state, rq, mob_perfcells, b_perfcells, rv_perfcells);
         // handle the solvent related
         if (has_solvent_) {
             const Opm::PhaseUsage& pu = fluid_->phaseUsage();
             int gas_pos = pu.phase_pos[Gas];
             const std::vector<int>& well_cells = wellOps().well_cells;
             const int nperf = well_cells.size();
+
             // Gas and solvent is combinded and solved together
             // The input in the well equation is then the
             // total gas phase = hydro carbon gas + solvent gas
@@ -255,10 +257,17 @@ namespace Opm
 
             Selector<double> zero_selector(ss.value() + sg.value(), Selector<double>::Zero);
             ADB F_solvent = subset(zero_selector.select(ss, ss / (ss + sg)),well_cells);
-            Vector ones = Vector::Constant(nperf,1.0);
 
+            Vector ones = Vector::Constant(nperf,1.0);
             b_perfcells[gas_pos] = (ones - F_solvent) * b_perfcells[gas_pos];
             b_perfcells[gas_pos] += (F_solvent * subset(rq[solvent_pos_].b, well_cells));
+
+            // RV should only be applied to the pure gas saturation. To make it possible to
+            // reuse the same well code as for the standard blackoil case the input rv values are manipulated
+            //  instead. We want:
+            // rv * (ones-F_solvent) * q_gas
+            // by passing rv * (ones-F_solvent) we don't need to do (ones-F_solvent) * q_gas in the well model.
+            rv_perfcells = rv_perfcells * (ones - F_solvent);
         }
     }
 

@@ -338,7 +338,8 @@ namespace Opm
     void
     StandardWells::
     computeWellConnectionPressures(const SolutionState& state,
-                                   const WellState& xw)
+                                   const WellState& xw
+                                   )
     {
         if( ! localWellsActive() ) return ;
         // 1. Compute properties required by computeConnectionPressureDelta().
@@ -365,10 +366,11 @@ namespace Opm
     template <class ReservoirResidualQuant, class SolutionState>
     void
     StandardWells::
-    extractWellPerfProperties(const SolutionState& /* state */,
+    extractWellPerfProperties(const SolutionState& state,
                               const std::vector<ReservoirResidualQuant>& rq,
                               std::vector<ADB>& mob_perfcells,
-                              std::vector<ADB>& b_perfcells) const
+                              std::vector<ADB>& b_perfcells,
+                              ADB& rv_perfcells) const
     {
         // If we have wells, extract the mobilities and b-factors for
         // the well-perforated cells.
@@ -385,6 +387,7 @@ namespace Opm
                 mob_perfcells[phase] = subset(rq[phase].mob, well_cells);
                 b_perfcells[phase] = subset(rq[phase].b, well_cells);
             }
+            rv_perfcells = subset(state.rv, well_cells);
         }
     }
 
@@ -399,6 +402,7 @@ namespace Opm
     computeWellFlux(const SolutionState& state,
                     const std::vector<ADB>& mob_perfcells,
                     const std::vector<ADB>& b_perfcells,
+                    const ADB& rv_perfcells,
                     Vector& aliveWells,
                     std::vector<ADB>& cq_s) const
     {
@@ -412,6 +416,7 @@ namespace Opm
 
         // pressure diffs computed already (once per step, not changing per iteration)
         const Vector& cdp = wellPerforationPressureDiffs();
+
         // Extract needed quantities for the perforation cells
         const ADB& p_perfcells = subset(state.pressure, well_cells);
 
@@ -468,7 +473,7 @@ namespace Opm
             const int gaspos = pu.phase_pos[Gas];
             const ADB cq_psOil = cq_ps[oilpos];
             const ADB cq_psGas = cq_ps[gaspos];
-            const ADB& rv_perfcells = subset(state.rv, well_cells);
+            //const ADB& rv_perfcells = subset(state.rv, well_cells);
             const ADB& rs_perfcells = subset(state.rs, well_cells);
             cq_ps[gaspos] += rs_perfcells * cq_psOil;
             cq_ps[oilpos] += rv_perfcells * cq_psGas;
@@ -527,9 +532,11 @@ namespace Opm
 
         if ((*active_)[Oil] && (*active_)[Gas]) {
             // Incorporate RS/RV factors if both oil and gas active
-            const ADB& rv_perfcells = subset(state.rv, well_cells);
+            // the rv_perfcells could have been modified to accont for the effect of the solvent
+            // to remove dissolved oil and gas the pure rv value should be used.
+            const ADB& rv_perfcells_unmodified = subset(state.rv, well_cells);
             const ADB& rs_perfcells = subset(state.rs, well_cells);
-            const ADB d = Vector::Constant(nperf,1.0) - rv_perfcells * rs_perfcells;
+            const ADB d = Vector::Constant(nperf,1.0) - rv_perfcells_unmodified * rs_perfcells;
 
             const int oilpos = pu.phase_pos[Oil];
             const int gaspos = pu.phase_pos[Gas];
@@ -1002,6 +1009,7 @@ namespace Opm
     void
     StandardWells::computeWellPotentials(const std::vector<ADB>& mob_perfcells,
                                          const std::vector<ADB>& b_perfcells,
+                                         const ADB& rv_perfcells,
                                          SolutionState& state0,
                                          WellState& well_state)
     {
@@ -1080,7 +1088,7 @@ namespace Opm
         // compute well potentials
         Vector aliveWells;
         std::vector<ADB> well_potentials;
-        computeWellFlux(state0, mob_perfcells,  b_perfcells, aliveWells, well_potentials);
+        computeWellFlux(state0, mob_perfcells,  b_perfcells, rv_perfcells, aliveWells, well_potentials);
 
         // store well potentials in the well state
         // transform to a single vector instead of separate vectors pr phase
