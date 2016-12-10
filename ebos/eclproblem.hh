@@ -717,7 +717,7 @@ public:
      * Note that this method is *not* part of the generic eWoms problem API because it
      * would force all problens use the ECL material laws.
      */
-    const std::shared_ptr<EclMaterialLawManager> materialLawManager() const
+    std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
     /*!
