@@ -1304,7 +1304,7 @@ typedef Eigen::Array<double,
                     hydroCarbonState[c] = HydroCarbonState::OilOnly;
                 }
             }
-            rs = rs.min(rsSat);
+            //rs = rs.min(rsSat);
         }
 
         // phase transitions so <-> rv
@@ -1336,7 +1336,7 @@ typedef Eigen::Array<double,
                     hydroCarbonState[c] = HydroCarbonState::GasOnly;
                 }
             }
-            rv = rv.min(rvSat);
+            //rv = rv.min(rvSat);
         }
 
         // Update the reservoir_state
