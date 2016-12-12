@@ -539,7 +539,8 @@ namespace Opm {
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
         wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
-        // get the concentration of the well cells
+
+        // Calculating the mobility for the polymer injection peforations
         if (has_polymer_ && wellModel().localWellsActive()) {
             const std::vector<int> well_cells = wellModel().wellOps().well_cells;
             const int nperf = well_cells.size();
