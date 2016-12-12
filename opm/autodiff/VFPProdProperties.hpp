@@ -25,6 +25,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
+#include <opm/autodiff/VFPHelpers.hpp>
 
 #include <vector>
 #include <map>
@@ -102,13 +103,60 @@ public:
             const ADB& alq) const;
 
 
-    typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
+    /**
+     * Linear interpolation of bhp as a function of the input parameters given as
+     * Evalutions
+     * Each entry corresponds typically to one well.
+     * @param table_id Table number to use. A negative entry (e.g., -1)
+     *                 will indicate that no table is used, and the corresponding
+     *                 BHP will be calculated as a constant -1e100.
+     * @param aqua Water phase
+     * @param liquid Oil phase
+     * @param vapour Gas phase
+     * @param thp Tubing head pressure
+     * @param alq Artificial lift or other parameter
+     *
+     * @return The bottom hole pressure, interpolated/extrapolated linearly using
+     * the above parameters from the values in the input table, for each entry in the
+     * input ADB objects.
+     */
+    template <class EvalWell>
     EvalWell bhp(const int table_id,
-            const EvalWell& aqua,
-            const EvalWell& liquid,
-            const EvalWell& vapour,
-            const double& thp,
-            const double& alq) const;
+                 const EvalWell& aqua,
+                 const EvalWell& liquid,
+                 const EvalWell& vapour,
+                 const double& thp,
+                 const double& alq) const {
+
+        //Get the table
+        const VFPProdTable* table = detail::getTable(m_tables, table_id);
+        EvalWell bhp = 0.0;
+
+        //Find interpolation variables
+        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+        EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
+        EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
+
+        //Compute the BHP for each well independently
+        if (table != nullptr) {
+            //First, find the values to interpolate between
+            //Value of FLO is negative in OPM for producers, but positive in VFP table
+            auto flo_i = detail::findInterpData(-flo.value(), table->getFloAxis());
+            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
+            auto wfr_i = detail::findInterpData( wfr.value(), table->getWFRAxis());
+            auto gfr_i = detail::findInterpData( gfr.value(), table->getGFRAxis());
+            auto alq_i = detail::findInterpData( alq, table->getALQAxis()); //assume constant
+
+            detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+
+            bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
+            bhp.setValue(bhp_val.value);
+        }
+        else {
+            bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
+        }
+        return bhp;
+    }
 
     /**
      * Linear interpolation of bhp as a function of the input parameters

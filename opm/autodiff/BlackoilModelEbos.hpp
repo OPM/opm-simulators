@@ -126,8 +126,9 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
         typedef double Scalar;
-        typedef Dune::FieldVector<Scalar, 3    >        VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, 3, 3 >        MatrixBlockType;
+        static const int blocksize = 3;
+        typedef Dune::FieldVector<Scalar, blocksize    >        VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, blocksize, blocksize >        MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 

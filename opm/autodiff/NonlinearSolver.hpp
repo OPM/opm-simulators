@@ -44,10 +44,6 @@ namespace Opm {
         typedef ADB::V V;
         typedef ADB::M M;
 
-        typedef double Scalar;
-        typedef Dune::FieldVector<Scalar, 3    >       VectorBlockType;
-        typedef Dune::BlockVector<VectorBlockType>      BVector;
-
         // Available relaxation scheme types.
         enum RelaxType { DAMPEN, SOR };
 
@@ -163,6 +159,9 @@ namespace Opm {
         /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
         void stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega) const;
 
+        /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
+        /// Implemention for Dune block vectors.
+        template <class BVector>
         void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const;
 
         /// The greatest relaxation factor (i.e. smallest factor) allowed.
