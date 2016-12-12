@@ -266,7 +266,6 @@ namespace Opm {
                         concentration.begin() ,
                         max_concentration.begin() ,
                         [](double c_max , double c) { return std::max( c_max , c ); });
-
     }
 
 
@@ -540,6 +539,59 @@ namespace Opm {
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
         wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
+        // get the concentration of the well cells
+        if (has_polymer_ && wellModel().localWellsActive()) {
+            const std::vector<int> well_cells = wellModel().wellOps().well_cells;
+            const int nperf = well_cells.size();
+
+            // Calculating the drawdown to decide the injection perforation
+            const ADB& p_perfcells = subset(state.pressure, well_cells);
+            const V& cdp = wellModel().wellPerforationPressureDiffs();
+            const ADB perfpressure = (wellModel().wellOps().w2p * state.bhp) + cdp;
+            // Pressure drawdown (also used to determine direction of flow)
+            const ADB drawdown =  p_perfcells - perfpressure;
+
+            // Polymer concentration in the perforations
+            const ADB c_perfcells = subset(state.concentration, well_cells);
+
+            // Distinguishing the injection perforation from other perforation
+            // The value is the location in the well_cell array, not the global index
+            std::vector<int> polymer_inj_cells;
+            std::vector<int> other_well_cells;
+
+            polymer_inj_cells.reserve(nperf);
+            other_well_cells.reserve(nperf);
+
+            for (int c = 0; c < nperf; ++c) {
+                // TODO: more tests need to be done for this criterion
+                if (drawdown.value()[c] < 0.0 && c_perfcells.value()[c] > 0.0) {
+                    polymer_inj_cells.push_back(c);
+                } else {
+                    other_well_cells.push_back(c);
+                }
+            }
+
+            // there is some polymer injection process going
+            if ( !polymer_inj_cells.empty() ) {
+                // the mobility need to be recalculated for the polymer injection cells
+                const int water_pos = fluid_.phaseUsage().phase_pos[Water];
+                const ADB mu_perfcells = subset(sd_.rq[water_pos].mu, well_cells);
+
+                const ADB c_poly_inj_cells = subset(c_perfcells, polymer_inj_cells);
+                const ADB mu_poly_inj_cells = subset(mu_perfcells, polymer_inj_cells); // water viscosity
+
+                const ADB inv_wat_eff_visc = polymer_props_ad_.effectiveInvWaterVisc(c_poly_inj_cells, mu_poly_inj_cells.value());
+                const ADB fully_mixing_visc = polymer_props_ad_.viscMult(c_poly_inj_cells) * mu_poly_inj_cells;
+
+                // the original mobility for the polymer injection well cells
+                ADB mob_polymer_inj = subset(mob_perfcells[water_pos], polymer_inj_cells);
+                const ADB mob_others = subset(mob_perfcells[water_pos], other_well_cells);
+
+                mob_polymer_inj = mob_polymer_inj / inv_wat_eff_visc / fully_mixing_visc;
+                mob_perfcells[water_pos] = superset(mob_polymer_inj, polymer_inj_cells, nperf) + superset(mob_others, other_well_cells, nperf);
+            }
+        }
+
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
             Base::solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
@@ -749,6 +801,15 @@ namespace Opm {
         for (size_t i = 0; i < well_cells.size(); ++i) {
             if (xw.polymerInflow()[well_cells[i]] == 0. && selectInjectingPerforations[i] == 1) { // maybe comparison with epsilon threshold
                 visc_mult_wells[i] = 1.;
+            }
+            if (selectInjectingPerforations[i] == 1) { // maybe comparison with epsilon threshold
+                if (xw.polymerInflow()[well_cells[i]] == 0.) {
+                    visc_mult_wells[i] = 1.;
+                } else {
+                    // TODO: not tested for this assumption yet
+                    const double c_perf = state.concentration.value()[well_cells[i]];
+                    visc_mult_wells[i] = polymer_props_ad_.viscMult(c_perf);
+                }
             }
         }
 
