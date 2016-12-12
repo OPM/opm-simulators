@@ -264,7 +264,7 @@ enum WellVariablePositions {
 
                             // add trivial equation for 2p cases (Only support water + oil)
                             if (np == 2) {
-                                assert((*active_)[ Gas ]);
+                                assert(!(*active_)[ Gas ]);
                                 invDuneD_[w][w][flowPhaseToEbosCompIdx(Gas)][flowToEbosPvIdx(Gas)] = 1.0;
                             }
 
