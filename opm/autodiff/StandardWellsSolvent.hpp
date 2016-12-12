@@ -44,6 +44,13 @@ namespace Opm {
                              const int solvent_pos,
                              const bool has_solvent);
 
+            template <class SolutionState>
+            void computeWellFlux(const SolutionState& state,
+                                 const std::vector<ADB>& mob_perfcells,
+                                 const std::vector<ADB>& b_perfcells,
+                                 Vector& aliveWells,
+                                 std::vector<ADB>& cq_s) const;
+
             template <class SolutionState, class WellState>
             void computePropertiesForWellConnectionPressures(const SolutionState& state,
                                                              const WellState& xw,

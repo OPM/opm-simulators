@@ -634,6 +634,8 @@ namespace Opm {
                 int wc = wells().well_cells[perf];
                 if ( (ss[wc] + sg[wc]) > 0) {
                     well_state.solventFraction()[perf] = ss[wc] / (ss[wc] + sg[wc]);
+                } else {
+                    well_state.solventFraction()[perf] = 0.0;
                 }
             }
         }
@@ -824,7 +826,7 @@ namespace Opm {
 
                 const V eps = V::Constant(nc, 1e-7);
                 Selector<double> noOil_selector(so.value()-eps, Selector<double>::LessEqualZero);
-                relperm[Gas] = noOil_selector.select(relperm[Gas], (ones - misc) * relperm[Gas] + misc * mkrgt);
+                relperm[Gas] = (ones - misc) * relperm[Gas] + misc * mkrgt;
                 relperm[Oil] = noOil_selector.select(relperm[Oil], (ones - misc) * relperm[Oil] + misc * mkro);
                 return relperm;
             } else {

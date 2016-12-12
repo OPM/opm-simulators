@@ -20,6 +20,7 @@
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/core/wells.h>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <numeric>
@@ -143,6 +144,123 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
     return dens;
 }
 
+
+
+
+std::vector<double>
+Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
+                                                      const WellStateFullyImplicitBlackoilSolvent& wstate,
+                                                      const PhaseUsage& phase_usage,
+                                                      const std::vector<double>& b_perf,
+                                                      const std::vector<double>& rsmax_perf,
+                                                      const std::vector<double>& rvmax_perf,
+                                                      const std::vector<double>& surf_dens_perf)
+{
+    // Verify that we have consistent input.
+    const int np = wells.number_of_phases;
+    const int nw = wells.number_of_wells;
+    const int nperf = wells.well_connpos[nw];
+    if (wells.number_of_phases != phase_usage.num_phases) {
+        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. phase_usage.");
+    }
+    if (nperf*np != int(surf_dens_perf.size())) {
+        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. surf_dens.");
+    }
+    if (nperf*np != int(wstate.perfPhaseRates().size())) {
+        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. wstate.");
+    }
+    if (nperf*np != int(b_perf.size())) {
+        OPM_THROW(std::logic_error, "Inconsistent input: wells vs. b_perf.");
+    }
+    if ((!rsmax_perf.empty()) || (!rvmax_perf.empty())) {
+        // Need both oil and gas phases.
+        if (!phase_usage.phase_used[BlackoilPhases::Liquid]) {
+            OPM_THROW(std::logic_error, "Oil phase inactive, but non-empty rsmax_perf or rvmax_perf.");
+        }
+        if (!phase_usage.phase_used[BlackoilPhases::Vapour]) {
+            OPM_THROW(std::logic_error, "Gas phase inactive, but non-empty rsmax_perf or rvmax_perf.");
+        }
+    }
+
+    // 1. Compute the flow (in surface volume units for each
+    //    component) exiting up the wellbore from each perforation,
+    //    taking into account flow from lower in the well, and
+    //    in/out-flow at each perforation.
+    std::vector<double> q_out_perf(nperf*np);
+    for (int w = 0; w < nw; ++w) {
+        // Iterate over well perforations from bottom to top.
+        for (int perf = wells.well_connpos[w+1] - 1; perf >= wells.well_connpos[w]; --perf) {
+            for (int phase = 0; phase < np; ++phase) {
+                if (perf == wells.well_connpos[w+1] - 1) {
+                    // This is the bottom perforation. No flow from below.
+                    q_out_perf[perf*np + phase] = 0.0;
+                } else {
+                    // Set equal to flow from below.
+                    q_out_perf[perf*np + phase] = q_out_perf[(perf+1)*np + phase];
+                }
+                // Subtract outflow through perforation.
+                q_out_perf[perf*np + phase] -= wstate.perfPhaseRates()[perf*np + phase];
+            }
+        }
+    }
+
+    // 2. Compute the component mix at each perforation as the
+    //    absolute values of the surface rates divided by their sum.
+    //    Then compute volume ratios (formation factors) for each perforation.
+    //    Finally compute densities for the segments associated with each perforation.
+    const int gaspos = phase_usage.phase_pos[BlackoilPhases::Vapour];
+    const int oilpos = phase_usage.phase_pos[BlackoilPhases::Liquid];
+    std::vector<double> mix(np);
+    std::vector<double> x(np);
+    std::vector<double> surf_dens(np);
+    std::vector<double> dens(nperf);
+    for (int w = 0; w < nw; ++w) {
+        for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w+1]; ++perf) {
+            // Find component mix.
+            const double tot_surf_rate = std::accumulate(q_out_perf.begin() + np*perf,
+                                                         q_out_perf.begin() + np*(perf+1), 0.0);
+            if (tot_surf_rate != 0.0) {
+                for (int phase = 0; phase < np; ++phase) {
+                    mix[phase] = std::fabs(q_out_perf[perf*np + phase]/tot_surf_rate);
+                }
+            } else {
+                // No flow => use well specified fractions for mix.
+                std::copy(wells.comp_frac + w*np, wells.comp_frac + (w+1)*np, mix.begin());
+            }
+            // Compute volume ratio.
+            x = mix;
+            double rs = 0.0;
+            double rv = 0.0;
+            if (!rsmax_perf.empty() && mix[oilpos] > 0.0) {
+                rs = std::min(mix[gaspos]/mix[oilpos], rsmax_perf[perf]);
+            }
+            const double gas_without_solvent = mix[gaspos] * (1.0 - wstate.solventFraction()[w]);
+            if (!rvmax_perf.empty() && gas_without_solvent > 0.0) {
+                rv = std::min(mix[oilpos]/gas_without_solvent, rvmax_perf[perf]);
+            }
+            if (rs != 0.0) {
+                // Subtract gas in oil from gas mixture
+                x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/(1.0 - rs*rv);
+            }
+            if (rv != 0.0) {
+                // Subtract oil in gas from oil mixture
+                x[oilpos] = (mix[oilpos] - gas_without_solvent*rv)/(1.0 - rs*rv);;
+            }
+            double volrat = 0.0;
+            for (int phase = 0; phase < np; ++phase) {
+                volrat += x[phase] / b_perf[perf*np + phase];
+            }
+            for (int phase = 0; phase < np; ++phase) {
+                surf_dens[phase] = surf_dens_perf[perf*np + phase];
+            }
+
+            // Compute segment density.
+            dens[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
+        }
+    }
+
+    return dens;
+}
 
 
 
