@@ -108,12 +108,14 @@ namespace Opm {
             void extractWellPerfProperties(const SolutionState& state,
                                            const std::vector<ReservoirResidualQuant>& rq,
                                            std::vector<ADB>& mob_perfcells,
-                                           std::vector<ADB>& b_perfcells) const;
+                                           std::vector<ADB>& b_perfcells,
+                                           ADB& rv_perfcells) const;
 
             template <class SolutionState>
             void computeWellFlux(const SolutionState& state,
                                  const std::vector<ADB>& mob_perfcells,
                                  const std::vector<ADB>& b_perfcells,
+                                 const ADB& rv_perfcells,
                                  Vector& aliveWells,
                                  std::vector<ADB>& cq_s) const;
 
@@ -152,6 +154,7 @@ namespace Opm {
             void
             computeWellPotentials(const std::vector<ADB>& mob_perfcells,
                                   const std::vector<ADB>& b_perfcells,
+                                  const ADB& rv_perfcells,
                                   SolutionState& state0,
                                   WellState& well_state);
 

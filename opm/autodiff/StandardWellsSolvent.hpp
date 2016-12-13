@@ -57,7 +57,8 @@ namespace Opm {
             void extractWellPerfProperties(const SolutionState& state,
                                            const std::vector<ReservoirResidualQuant>& rq,
                                            std::vector<ADB>& mob_perfcells,
-                                           std::vector<ADB>& b_perfcells) const;
+                                           std::vector<ADB>& b_perfcells,
+                                           ADB& rv_perfcells) const;
 
             template <class SolutionState, class WellState>
             void computeWellConnectionPressures(const SolutionState& state,

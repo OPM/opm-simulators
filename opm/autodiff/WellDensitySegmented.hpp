@@ -28,6 +28,7 @@ namespace Opm
 {
 
     class WellStateFullyImplicitBlackoil;
+    class WellStateFullyImplicitBlackoilSolvent;
     struct PhaseUsage;
 
 
@@ -50,6 +51,23 @@ namespace Opm
         /// \param[in] surf_dens    surface densities for active components, size NP, P values per perforation
         static std::vector<double> computeConnectionDensities(const Wells& wells,
                                                               const WellStateFullyImplicitBlackoil& wstate,
+                                                              const PhaseUsage& phase_usage,
+                                                              const std::vector<double>& b_perf,
+                                                              const std::vector<double>& rsmax_perf,
+                                                              const std::vector<double>& rvmax_perf,
+                                                              const std::vector<double>& surf_dens_perf);
+
+        /// Compute well segment densities
+        /// Notation: N = number of perforations, P = number of phases.
+        /// \param[in] wells        struct with static well info
+        /// \param[in] wstate       dynamic well solution information, only perfRates() is used
+        /// \param[in] phase_usage  specifies which phases are active and not
+        /// \param[in] b_perf       inverse ('little b') formation volume factor, size NP, P values per perforation
+        /// \param[in] rsmax_perf   saturation point for rs (gas in oil) at each perforation, size N
+        /// \param[in] rvmax_perf   saturation point for rv (oil in gas) at each perforation, size N
+        /// \param[in] surf_dens    surface densities for active components, size NP, P values per perforation
+        static std::vector<double> computeConnectionDensities(const Wells& wells,
+                                                              const WellStateFullyImplicitBlackoilSolvent& wstate,
                                                               const PhaseUsage& phase_usage,
                                                               const std::vector<double>& b_perf,
                                                               const std::vector<double>& rsmax_perf,

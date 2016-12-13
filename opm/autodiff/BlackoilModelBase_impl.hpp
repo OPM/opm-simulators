@@ -801,14 +801,15 @@ typedef Eigen::Array<double,
 
         std::vector<ADB> mob_perfcells;
         std::vector<ADB> b_perfcells;
-        asImpl().wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells);
+        ADB rv_perfcells = ADB::null();
+        asImpl().wellModel().extractWellPerfProperties(state, sd_.rq, mob_perfcells, b_perfcells, rv_perfcells);
         if (param_.solve_welleq_initially_ && initial_assembly) {
             // solve the well equations as a pre-processing step
-            report += asImpl().solveWellEq(mob_perfcells, b_perfcells, reservoir_state, state, well_state);
+            report += asImpl().solveWellEq(mob_perfcells, b_perfcells, rv_perfcells, reservoir_state, state, well_state);
         }
         V aliveWells;
         std::vector<ADB> cq_s;
-        asImpl().wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, aliveWells, cq_s);
+        asImpl().wellModel().computeWellFlux(state, mob_perfcells, b_perfcells, rv_perfcells, aliveWells, cq_s);
         asImpl().wellModel().updatePerfPhaseRatesAndPressures(cq_s, state, well_state);
         asImpl().wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
@@ -817,7 +818,7 @@ typedef Eigen::Array<double,
         if (param_.compute_well_potentials_) {
             SolutionState state0 = state;
             asImpl().makeConstantState(state0);
-            asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
+            asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, rv_perfcells, state0, well_state);
         }
 
         return report;
@@ -1003,6 +1004,7 @@ typedef Eigen::Array<double,
     BlackoilModelBase<Grid, WellModel, Implementation>::
     solveWellEq(const std::vector<ADB>& mob_perfcells,
                 const std::vector<ADB>& b_perfcells,
+                const ADB& rv_perfcells,
                 const ReservoirState& reservoir_state,
                 SolutionState& state,
                 WellState& well_state)
@@ -1017,6 +1019,7 @@ typedef Eigen::Array<double,
 
         std::vector<ADB> mob_perfcells_const(np, ADB::null());
         std::vector<ADB> b_perfcells_const(np, ADB::null());
+        ADB rv_perfcells_const = ADB::null();
 
         if (asImpl().localWellsActive() ){
             // If there are non well in the sudomain of the process
@@ -1025,6 +1028,7 @@ typedef Eigen::Array<double,
                 mob_perfcells_const[phase] = ADB::constant(mob_perfcells[phase].value());
                 b_perfcells_const[phase] = ADB::constant(b_perfcells[phase].value());
             }
+            rv_perfcells_const = ADB::constant(rv_perfcells.value());
         }
 
         int it  = 0;
@@ -1038,7 +1042,7 @@ typedef Eigen::Array<double,
 
             SolutionState wellSolutionState = state0;
             asImpl().wellModel().variableStateExtractWellsVars(indices, vars, wellSolutionState);
-            asImpl().wellModel().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, aliveWells, cq_s);
+            asImpl().wellModel().computeWellFlux(wellSolutionState, mob_perfcells_const, b_perfcells_const, rv_perfcells_const, aliveWells, cq_s);
             asImpl().wellModel().updatePerfPhaseRatesAndPressures(cq_s, wellSolutionState, well_state);
             asImpl().wellModel().addWellFluxEq(cq_s, wellSolutionState, residual_);
             asImpl().wellModel().addWellControlEq(wellSolutionState, well_state, aliveWells, residual_);
@@ -1109,7 +1113,6 @@ typedef Eigen::Array<double,
         if (!converged) {
             well_state = well_state0;
         }
-
         SimulatorReport report;
         report.total_well_iterations = it;
         report.converged = converged;

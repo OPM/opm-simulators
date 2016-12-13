@@ -634,6 +634,8 @@ namespace Opm {
                 int wc = wells().well_cells[perf];
                 if ( (ss[wc] + sg[wc]) > 0) {
                     well_state.solventFraction()[perf] = ss[wc] / (ss[wc] + sg[wc]);
+                } else {
+                    well_state.solventFraction()[perf] = 0.0;
                 }
             }
         }
@@ -824,7 +826,7 @@ namespace Opm {
 
                 const V eps = V::Constant(nc, 1e-7);
                 Selector<double> noOil_selector(so.value()-eps, Selector<double>::LessEqualZero);
-                relperm[Gas] = noOil_selector.select(relperm[Gas], (ones - misc) * relperm[Gas] + misc * mkrgt);
+                relperm[Gas] = (ones - misc) * relperm[Gas] + misc * mkrgt;
                 relperm[Oil] = noOil_selector.select(relperm[Oil], (ones - misc) * relperm[Oil] + misc * mkro);
                 return relperm;
             } else {
@@ -994,32 +996,38 @@ namespace Opm {
         const ADB sgf = zero_selectorSog_eff.select(zero , sg_eff / sog_eff);
 
         // Effective densities
-        const ADB mu_sog_pow = mu_s_pow * ( (sgf * mu_o_pow) + (sof * mu_g_pow) );
-        const ADB mu_o_eff_pow = pow(mu_o_eff, 0.25);
-        const ADB mu_g_eff_pow = pow(mu_g_eff, 0.25);
-        const ADB mu_s_eff_pow = pow(mu_s_eff, 0.25);       
-        const ADB sfraction_oe = (mu_o_pow * (mu_o_eff_pow - mu_s_pow)) / (mu_o_eff_pow * (mu_o_pow - mu_s_pow));
-        const ADB sfraction_ge = (mu_g_pow * (mu_s_pow - mu_g_eff_pow)) / (mu_g_eff_pow * (mu_s_pow - mu_g_pow));
-        const ADB sfraction_se = (mu_sog_pow - ( mu_o_pow * mu_g_pow * mu_s_pow / mu_s_eff_pow) ) / ( mu_sog_pow - (mu_o_pow * mu_g_pow));
-        const ADB rho_o_eff = (rho_o * sfraction_oe) + (rho_s * (ones - sfraction_oe));
-        const ADB rho_g_eff = (rho_g * sfraction_ge) + (rho_s * (ones - sfraction_ge));
-        const ADB rho_s_eff = (rho_s * sfraction_se) + (rho_g * sgf * (ones - sfraction_se)) + (rho_o * sof * (ones - sfraction_se));
-
         // Avoid division by zero for equal mobilities. For equal mobilities the effecitive density is calculated
         // based on the saturation fraction directly.
         Selector<double> unitGasSolventMobilityRatio_selector(mu_s.value() - mu_g.value(), Selector<double>::Zero);
         Selector<double> unitOilSolventMobilityRatio_selector(mu_s.value() - mu_o.value(), Selector<double>::Zero);
 
+        const ADB mu_sog_pow = mu_s_pow * ( (sgf * mu_o_pow) + (sof * mu_g_pow) );
+        const ADB mu_o_eff_pow = pow(mu_o_eff, 0.25);
+        const ADB mu_g_eff_pow = pow(mu_g_eff, 0.25);
+        const ADB mu_s_eff_pow = pow(mu_s_eff, 0.25);
+
+        Selector<double> zero_selectorMus_eff(mu_s_eff_pow.value(), Selector<double>::Zero);
+        const ADB mu_s_eff_frac = zero_selectorMus_eff.select(zero , mu_s_pow / mu_s_eff_pow);
+
+        Selector<double> unitSolventGasOilMobilityRatio_selector(mu_sog_pow.value() - mu_o_pow.value() * mu_g_pow.value(), Selector<double>::Zero);
+
+        const ADB sfraction_oe = unitOilSolventMobilityRatio_selector.select(zero, mu_o_pow * (mu_o_eff_pow - mu_s_pow) / (mu_o_eff_pow * (mu_o_pow - mu_s_pow)));
+        const ADB sfraction_ge = unitGasSolventMobilityRatio_selector.select(zero, mu_g_pow * (mu_s_pow - mu_g_eff_pow) / (mu_g_eff_pow * (mu_s_pow - mu_g_pow)));
+        const ADB sfraction_se = unitSolventGasOilMobilityRatio_selector.select(zero, (mu_sog_pow - ( mu_o_pow * mu_g_pow * mu_s_eff_frac) ) / ( mu_sog_pow - (mu_o_pow * mu_g_pow)));
+        const ADB rho_o_eff = (rho_o * sfraction_oe) + (rho_s * (ones - sfraction_oe));
+        const ADB rho_g_eff = (rho_g * sfraction_ge) + (rho_s * (ones - sfraction_ge));
+        const ADB rho_s_eff = (rho_s * sfraction_se) + (rho_g * sgf * (ones - sfraction_se)) + (rho_o * sof * (ones - sfraction_se));
+
         // Effective densities when the mobilities are equal
         const ADB rho_m = zero_selectorSn.select(zero, (rho_o * so_eff / sn_eff) + (rho_g * sg_eff / sn_eff) + (rho_s * ss_eff / sn_eff));
         const ADB rho_o_eff_simple = ((ones - mix_param_rho) * rho_o) + (mix_param_rho * rho_m);
         const ADB rho_g_eff_simple = ((ones - mix_param_rho) * rho_g) + (mix_param_rho * rho_m);
-        //const ADB rho_s_eff_simple = ((ones - mix_param_rho) * rho_s) + (mix_param_rho * rho_m);
+        const ADB rho_s_eff_simple = ((ones - mix_param_rho) * rho_s) + (mix_param_rho * rho_m);
 
         // Update densities, use pure values if solvent saturation is zero
         rho_o = zero_selectorSs.select(rho_o, unitOilSolventMobilityRatio_selector.select(rho_o_eff_simple, rho_o_eff) );
         rho_g = zero_selectorSs.select(rho_g, unitGasSolventMobilityRatio_selector.select(rho_g_eff_simple, rho_g_eff) );
-        rho_s = zero_selectorSs.select(rho_s, rho_s_eff);
+        rho_s = zero_selectorSs.select(rho_s, unitSolventGasOilMobilityRatio_selector.select(rho_s_eff_simple, rho_s_eff) );
 
 
     }
