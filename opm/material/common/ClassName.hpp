@@ -69,7 +69,7 @@ std::string className()
 // specialize for quad precision floating point values to avoid
 // needing a type_info structure
 template <>
-std::string className<__float128>()
+inline std::string className<__float128>()
 { return "quad"; }
 #endif
 
