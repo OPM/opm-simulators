@@ -20,16 +20,15 @@
 #ifndef OPM_BLACKOILMODELENUMS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELENUMS_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
-#include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 
 namespace Opm
 {
 
-    constexpr const auto Water        = BlackoilPropsAdInterface::Water;
-    constexpr const auto Oil          = BlackoilPropsAdInterface::Oil;
-    constexpr const auto Gas          = BlackoilPropsAdInterface::Gas;
-    constexpr const auto MaxNumPhases = BlackoilPropsAdInterface::MaxNumPhases;
+    constexpr const auto Water        = BlackoilPhases::Aqua;
+    constexpr const auto Oil          = BlackoilPhases::Liquid;
+    constexpr const auto Gas          = BlackoilPhases::Vapour;
+    constexpr const auto MaxNumPhases = BlackoilPhases::MaxNumPhases;
 
     enum PrimalVariables {
         Sg = 0,

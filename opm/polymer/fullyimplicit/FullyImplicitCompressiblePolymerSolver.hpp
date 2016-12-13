@@ -23,7 +23,8 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/polymer/PolymerProperties.hpp>
@@ -85,9 +86,9 @@ namespace Opm {
             }
 
             enum FipId {
-                FIP_AQUA = BlackoilPropsAdInterface::Water,
-                FIP_LIQUID = BlackoilPropsAdInterface::Oil,
-                FIP_VAPOUR = BlackoilPropsAdInterface::Gas,
+                FIP_AQUA = Opm::Water,
+                FIP_LIQUID = Opm::Oil,
+                FIP_VAPOUR = Opm::Gas,
                 FIP_DISSOLVED_GAS = 3,
                 FIP_VAPORIZED_OIL = 4,
                 FIP_PV = 5,                    //< Pore volume
@@ -179,8 +180,8 @@ namespace Opm {
             Eigen::SparseMatrix<double> p2w;  // perf -> well (gather)
         };
 
-        enum { Water = BlackoilPropsAdInterface::Water,
-               Oil   = BlackoilPropsAdInterface::Oil  };
+        enum { Water = Opm::Water,
+               Oil   = Opm::Oil  };
 
         // Member data
         const UnstructuredGrid&         grid_;

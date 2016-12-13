@@ -22,6 +22,7 @@
 #include <config.h>
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <opm/core/props/BlackoilPropertiesInterface.hpp>
