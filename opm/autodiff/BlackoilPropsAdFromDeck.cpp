@@ -127,11 +127,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     materialLawManager_ = materialLawManager;
 
     // Copy properties that do not depend on the postion within the grid.
-    oilPvt_           = props.oilPvt_;
-    gasPvt_           = props.gasPvt_;
-    waterPvt_         = props.waterPvt_;
     phase_usage_      = props.phase_usage_;
-    surfaceDensity_   = props.surfaceDensity_;
     vap1_             = props.vap1_;
     vap2_             = props.vap2_;
     vap_satmax_guard_ = props.vap_satmax_guard_;
@@ -162,33 +158,9 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         phase_usage_ = phaseUsageFromDeck(deck);
 
-        gasPvt_ = std::make_shared<GasPvt>();
-        oilPvt_ = std::make_shared<OilPvt>();
-        waterPvt_ = std::make_shared<WaterPvt>();
-
-        gasPvt_->initFromDeck(deck, eclState);
-        oilPvt_->initFromDeck(deck, eclState);
-        waterPvt_->initFromDeck(deck, eclState);
-
-        // Surface densities. Accounting for different orders in eclipse and our code.
-        const auto& densityKeyword = deck.getKeyword("DENSITY");
-        int numRegions = densityKeyword.size();
-        auto tables = eclState.getTableManager();
-
-        surfaceDensity_.resize(numRegions);
-        for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            if (phase_usage_.phase_used[Oil]) {
-                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Oil]]
-                    = densityKeyword.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
-            }
-            if (phase_usage_.phase_used[Water]) {
-                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Water]]
-                    = densityKeyword.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
-            }
-            if (phase_usage_.phase_used[Gas]) {
-                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Gas]]
-                    = densityKeyword.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
-            }
+        if (! (&FluidSystem::oilPvt()) ) {
+            // make sure that we don't initialize the fluid system twice
+            FluidSystem::initFromDeck(deck, eclState);
         }
 
         // Oil vaporization controls (kw VAPPARS)
@@ -274,8 +246,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         V rhos = V::Zero(n);
         for (int cellIdx = 0; cellIdx < n; ++cellIdx) {
             int pvtRegionIdx = cellPvtRegionIdx_[cellIdx];
-            const auto* rho = &surfaceDensity_[pvtRegionIdx][0];
-            rhos[cellIdx] = rho[phaseIdx];
+            rhos[cellIdx] = FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
         }
         return rhos;
     }
@@ -314,7 +285,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             pEval.setValue(pw.value()[i]);
             TEval.setValue(T.value()[i]);
 
-            const Eval& muEval = waterPvt_->viscosity(pvtRegionIdx, TEval, pEval);
+            const Eval& muEval = FluidSystem::waterPvt().viscosity(pvtRegionIdx, TEval, pEval);
 
             mu[i] = muEval.value();
             dmudp[i] = muEval.derivative(0);
@@ -371,13 +342,13 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeGas()) {
-                muEval = oilPvt_->saturatedViscosity(pvtRegionIdx, TEval, pEval);
+                muEval = FluidSystem::oilPvt().saturatedViscosity(pvtRegionIdx, TEval, pEval);
             }
             else {
                 if (phase_usage_.phase_used[Gas]) {
                     RsEval.setValue(rs.value()[i]);
                 }
-                muEval = oilPvt_->viscosity(pvtRegionIdx, TEval, pEval, RsEval);
+                muEval = FluidSystem::oilPvt().viscosity(pvtRegionIdx, TEval, pEval, RsEval);
             }
 
             mu[i] = muEval.value();
@@ -438,11 +409,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeOil()) {
-                muEval = gasPvt_->saturatedViscosity(pvtRegionIdx, TEval, pEval);
+                muEval = FluidSystem::gasPvt().saturatedViscosity(pvtRegionIdx, TEval, pEval);
             }
             else {
                 RvEval.setValue(rv.value()[i]);
-                muEval = gasPvt_->viscosity(pvtRegionIdx, TEval, pEval, RvEval);
+                muEval = FluidSystem::gasPvt().viscosity(pvtRegionIdx, TEval, pEval, RvEval);
             }
 
             mu[i] = muEval.value();
@@ -497,7 +468,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             pEval.setValue(pw.value()[i]);
             TEval.setValue(T.value()[i]);
 
-            const Eval& bEval = waterPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
+            const Eval& bEval = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
 
             b[i] = bEval.value();
             dbdp[i] = bEval.derivative(0);
@@ -552,7 +523,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
             //RS/RV only makes sense when gas phase is active
             if (cond[i].hasFreeGas()) {
-                bEval = oilPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
+                bEval = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
             }
             else {
                 if (rs.size() == 0) {
@@ -561,7 +532,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                 else {
                     RsEval.setValue(rs.value()[i]);
                 }
-                bEval = oilPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RsEval);
+                bEval = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RsEval);
             }
 
             b[i] = bEval.value();
@@ -624,11 +595,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             TEval.setValue(T.value()[i]);
 
             if (cond[i].hasFreeOil()) {
-                bEval = gasPvt_->saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
+                bEval = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval);
             }
             else {
                 RvEval.setValue(rv.value()[i]);
-                bEval = gasPvt_->inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RvEval);
+                bEval = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, TEval, pEval, RvEval);
             }
 
             b[i] = bEval.value();
@@ -679,7 +650,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
             pEval.setValue(po.value()[i]);
 
-            const Eval& RsEval = oilPvt_->saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
+            const Eval& RsEval = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, TEval, pEval);
 
             rbub[i] = RsEval.value();
             drbubdp[i] = RsEval.derivative(0);
@@ -736,7 +707,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
             pEval.setValue(pg.value()[i]);
 
-            const Eval& RvEval = gasPvt_->saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
+            const Eval& RvEval = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, TEval, pEval);
 
             rv[i] = RvEval.value();
             drvdp[i] = RvEval.derivative(0);
