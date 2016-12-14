@@ -28,7 +28,7 @@
 #define OPM_CHECK_COMPONENT_HPP
 
 #include <opm/common/Unused.hpp>
-#include <opm/material/common/ClassName.hpp>
+#include <dune/common/classname.hh>
 
 #include <iostream>
 #include <string>
@@ -42,7 +42,7 @@
 template <class Component, class Evaluation>
 void checkComponent()
 {
-    std::cout << "Testing component '" << Opm::className<Component>() << "'\n";
+    std::cout << "Testing component '" << Dune::className<Component>() << "'\n";
 
     // make sure the necessary typedefs exist
     typedef typename Component::Scalar Scalar;
