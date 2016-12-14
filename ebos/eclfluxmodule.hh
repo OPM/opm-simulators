@@ -34,7 +34,7 @@
 #include <ewoms/disc/common/fvbaseproperties.hh>
 #include <ewoms/common/signum.hh>
 
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
