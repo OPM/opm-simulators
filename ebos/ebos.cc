@@ -27,7 +27,7 @@
  */
 #include "config.h"
 
-#include <ewoms/common/quad.hh>
+#include <opm/material/common/quad.hpp>
 #include <ewoms/common/start.hh>
 
 #include "eclproblem.hh"
