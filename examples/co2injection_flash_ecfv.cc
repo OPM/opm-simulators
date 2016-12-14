@@ -29,7 +29,7 @@
 #include "config.h"
 
 #if HAVE_QUAD
-#include <ewoms/common/quad.hh>
+#include <opm/material/common/quad.hpp>
 #endif
 
 #include <ewoms/common/start.hh>
