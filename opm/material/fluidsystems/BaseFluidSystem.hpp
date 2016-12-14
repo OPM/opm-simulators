@@ -31,7 +31,7 @@
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/material/common/ClassName.hpp>
+#include <dune/common/classname.hh>
 
 namespace Opm {
 
@@ -74,7 +74,7 @@ public:
     static char *phaseName(unsigned /*phaseIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a phaseName() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a phaseName() method!");
     }
 
     /*!
@@ -85,7 +85,7 @@ public:
     static bool isLiquid(unsigned /*phaseIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isLiquid() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a isLiquid() method!");
     }
 
     /*!
@@ -105,7 +105,7 @@ public:
     static bool isIdealMixture(unsigned /*phaseIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealMixture() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a isIdealMixture() method!");
     }
 
     /*!
@@ -120,7 +120,7 @@ public:
     static bool isCompressible(unsigned /*phaseIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isCompressible() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a isCompressible() method!");
     }
 
     /*!
@@ -132,7 +132,7 @@ public:
     static bool isIdealGas(unsigned /*phaseIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a isIdealGas() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a isIdealGas() method!");
     }
 
     /*!
@@ -143,7 +143,7 @@ public:
     static const char *componentName(unsigned /*compIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a componentName() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a componentName() method!");
     }
 
     /*!
@@ -154,7 +154,7 @@ public:
     static Scalar molarMass(unsigned /*compIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a molarMass() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a molarMass() method!");
     }
 
     /*!
@@ -175,7 +175,7 @@ public:
                            unsigned /*phaseIdx*/)
     {
         OPM_THROW(std::runtime_error,
-                  "Not implemented: The fluid system '" << Opm::className<Implementation>() << "' does not provide a density() method!");
+                  "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a density() method!");
     }
 
     /*!
@@ -198,7 +198,7 @@ public:
                                        unsigned /*phaseIdx*/,
                                        unsigned /*compIdx*/)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a fugacityCoefficient() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Dune::className<Implementation>() << "'  does not provide a fugacityCoefficient() method!");
     }
 
     /*!
@@ -212,7 +212,7 @@ public:
                              ParamCache& /*paramCache*/,
                              unsigned /*phaseIdx*/)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a viscosity() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Dune::className<Implementation>() << "'  does not provide a viscosity() method!");
     }
 
     /*!
@@ -238,7 +238,7 @@ public:
                                         unsigned /*phaseIdx*/,
                                         unsigned /*compIdx*/)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Dune::className<Implementation>() << "'  does not provide a diffusionCoefficient() method!");
     }
 
     /*!
@@ -253,7 +253,7 @@ public:
                             ParamCache& /*paramCache*/,
                             unsigned /*phaseIdx*/)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide an enthalpy() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Dune::className<Implementation>() << "'  does not provide an enthalpy() method!");
     }
 
     /*!
@@ -267,7 +267,7 @@ public:
                                        ParamCache& /*paramCache*/,
                                        unsigned /*phaseIdx*/)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a thermalConductivity() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Dune::className<Implementation>() << "'  does not provide a thermalConductivity() method!");
     }
 
     /*!
@@ -281,7 +281,7 @@ public:
                                 ParamCache& /*paramCache*/,
                                 unsigned /*phaseIdx*/)
     {
-        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Opm::className<Implementation>() << "'  does not provide a heatCapacity() method!");
+        OPM_THROW(std::runtime_error, "Not implemented: The fluid system '" << Dune::className<Implementation>() << "'  does not provide a heatCapacity() method!");
     }
 };
 

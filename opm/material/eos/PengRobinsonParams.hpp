@@ -27,7 +27,7 @@
 #ifndef OPM_PENG_ROBINSON_PARAMS_HPP
 #define OPM_PENG_ROBINSON_PARAMS_HPP
 
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 
 namespace Opm
 {

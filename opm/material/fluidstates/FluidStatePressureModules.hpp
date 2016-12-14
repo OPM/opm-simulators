@@ -29,7 +29,7 @@
 #define OPM_FLUID_STATE_PRESSURE_MODULES_HPP
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 

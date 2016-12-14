@@ -33,7 +33,7 @@
 #include <opm/material/IdealGas.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 
 #include "Component.hpp"
 

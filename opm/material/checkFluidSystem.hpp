@@ -46,7 +46,7 @@
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 
 #include <opm/common/Unused.hpp>
-#include <opm/material/common/ClassName.hpp>
+#include <dune/common/classname.hh>
 
 #include <iostream>
 #include <string>
@@ -276,7 +276,7 @@ void checkFluidState(const BaseFluidState &fs)
 template <class Scalar, class FluidSystem, class RhsEval, class LhsEval>
 void checkFluidSystem()
 {
-    std::cout << "Testing fluid system '" << Opm::className<FluidSystem>() << "'\n";
+    std::cout << "Testing fluid system '" << Dune::className<FluidSystem>() << "'\n";
 
     // make sure the fluid system provides the number of phases and
     // the number of components

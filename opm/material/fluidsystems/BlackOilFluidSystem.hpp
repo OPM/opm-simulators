@@ -35,7 +35,7 @@
 #include <opm/material/Constants.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 #include <opm/material/common/HasMemberGeneratorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
