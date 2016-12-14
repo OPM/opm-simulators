@@ -28,7 +28,7 @@
  */
 #include "config.h"
 
-#include <ewoms/common/quad.hh>
+#include <opm/material/common/quad.hpp>
 #include <ewoms/common/start.hh>
 #include <ewoms/models/flash/flashmodel.hh>
 #include <ewoms/disc/vcfv/vcfvdiscretization.hh>
