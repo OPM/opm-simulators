@@ -28,7 +28,7 @@
 #ifndef OPM_FLUID_STATE_TEMPERATURE_MODULES_HPP
 #define OPM_FLUID_STATE_TEMPERATURE_MODULES_HPP
 
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/common/ErrorMacros.hpp>

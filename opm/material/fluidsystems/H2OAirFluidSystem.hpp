@@ -35,7 +35,7 @@
 #include <opm/material/components/Air.hpp>
 #include <opm/material/components/H2O.hpp>
 #include <opm/material/components/TabulatedComponent.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>

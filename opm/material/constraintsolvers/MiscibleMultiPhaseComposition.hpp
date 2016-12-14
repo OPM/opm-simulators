@@ -40,7 +40,7 @@
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 
 namespace Opm {
 

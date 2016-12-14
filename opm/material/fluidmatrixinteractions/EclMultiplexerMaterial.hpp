@@ -33,7 +33,7 @@
 #include "EclStone2Material.hpp"
 #include "EclTwoPhaseMaterial.hpp"
 
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>

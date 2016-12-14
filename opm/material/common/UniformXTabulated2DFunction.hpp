@@ -28,7 +28,7 @@
 #ifndef OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 #define OPM_UNIFORM_X_TABULATED_2D_FUNCTION_HPP
 
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/common/Valgrind.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Unused.hpp>
