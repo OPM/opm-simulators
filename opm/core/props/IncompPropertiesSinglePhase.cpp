@@ -37,9 +37,9 @@ namespace Opm
     {
         rock_.init(eclState, grid.number_of_cells, grid.global_cell, grid.cartdims);
 
-        if (deck.hasKeyword("DENSITY")) {
-            const auto& densityRecord = deck.getKeyword("DENSITY").getRecord(0);
-            surface_density_ = densityRecord.getItem("OIL").getSIDouble(0);
+        const auto& densities = eclState.getTableManager().getDensityTable();
+        if( !densities.empty() ) {
+            surface_density_ = densities[0].oil;
         } else {
             surface_density_ = 1000.0;
             OPM_MESSAGE("Input is missing DENSITY -- using a standard density of "

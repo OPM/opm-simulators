@@ -47,10 +47,10 @@ namespace Opm
         }
 
         // Surface densities. Accounting for different orders in eclipse and our code.
-        if (deck.hasKeyword("DENSITY")) {
-            const auto& densityRecord = deck.getKeyword("DENSITY").getRecord(region_number);
-            surface_density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = densityRecord.getItem("OIL").getSIDouble(0);
-            surface_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = densityRecord.getItem("WATER").getSIDouble(0);
+        const auto& densities = es.getTableManager().getDensityTable();
+        if (!densities.empty()) {
+            surface_density_[phase_usage.phase_pos[PhaseUsage::Aqua]]   = densities[region_number].water;
+            surface_density_[phase_usage.phase_pos[PhaseUsage::Liquid]] = densities[region_number].oil;
         } else {
             OPM_THROW(std::runtime_error, "Input is missing DENSITY\n");
         }
