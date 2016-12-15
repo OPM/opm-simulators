@@ -1390,11 +1390,13 @@ namespace Opm {
                 const double cellVolume = ebosSimulator_.model().dofTotalVolume(cellIdx);
                 auto& cellRes = ebosResid[ cellIdx ];
 
+                unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(cellIdx);
+
                 for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
                 {
                     const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
                     const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
-                    const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, 0);
+                    const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, pvtRegionIdx);
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] /= refDens;
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] *= cellVolume;
                 }
@@ -1404,7 +1406,7 @@ namespace Opm {
             {
                 const int rowIdx = row.index();
                 const double cellVolume = ebosSimulator_.model().dofTotalVolume(rowIdx);
-
+                unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(rowIdx);
 
                 // translate the Jacobian of the residual from the format used by ebos to
                 // the one expected by flow
@@ -1416,7 +1418,7 @@ namespace Opm {
                         const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
                         const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
                         const int ebosCompIdx = flowPhaseToEbosCompIdx(canonicalFlowPhaseIdx);
-                        const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, 0);
+                        const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, pvtRegionIdx);
                         for( int pvIdx=0; pvIdx<numFlowPhases; ++pvIdx )
                         {
                             (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
