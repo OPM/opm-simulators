@@ -540,6 +540,7 @@ namespace Opm {
                              int nc) const;
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
+        double dbhpMaxRel() const {return param_.dbhp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
