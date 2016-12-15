@@ -702,7 +702,7 @@ namespace Opm
             const BlackoilPropertiesInterface& props_;
             const int phase_;
             const int cell_;
-            const int target_pc_;
+            const double target_pc_;
             mutable double s_[BlackoilPhases::MaxNumPhases];
             mutable double pc_[BlackoilPhases::MaxNumPhases];
         };
@@ -775,7 +775,7 @@ namespace Opm
             const int phase1_;
             const int phase2_;
             const int cell_;
-            const int target_pc_;
+            const double target_pc_;
             mutable double s_[BlackoilPhases::MaxNumPhases];
             mutable double pc_[BlackoilPhases::MaxNumPhases];
         };
