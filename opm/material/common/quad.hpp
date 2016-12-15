@@ -39,7 +39,7 @@
 
 #include <cmath>
 #include <string>
-#include <exception>
+#include <stdexcept>
 #include <limits>
 #include <iostream>
 #include <type_traits>
