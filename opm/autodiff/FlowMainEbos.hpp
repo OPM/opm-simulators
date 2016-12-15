@@ -555,12 +555,8 @@ namespace Opm
             {
                 const EclipseGrid& inputGrid = eclState().getInputGrid();
                 eclipse_writer_.reset(new EclipseWriter(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
-
-#warning TODO
-#if 0
                 eclipse_writer_->writeInitial(geoprops_->simProps(grid),
                                               geoprops_->nonCartesianConnections());
-#endif
             }
         }
 
