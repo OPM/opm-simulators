@@ -159,6 +159,9 @@ namespace Opm
                     WellState& xw);
 
         void
+        FIPUnitConvert(const UnitSystem& units, V& fip);
+
+        void
         FIPUnitConvert(const UnitSystem& units,
                        std::vector<V>& fip);
         

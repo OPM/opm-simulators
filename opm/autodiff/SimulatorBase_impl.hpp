@@ -277,9 +277,13 @@ namespace Opm
             // Compute current FIP.
             std::vector<V> COIP;
             COIP = solver->computeFluidInPlace(state, fipnum);
-            FIPUnitConvert(eclipse_state_->getUnits(), COIP);
             V OOIP_totals = FIPTotals(OOIP, state);
             V COIP_totals = FIPTotals(COIP, state);
+
+            //Convert to correct units
+            FIPUnitConvert(eclipse_state_->getUnits(), COIP);
+            FIPUnitConvert(eclipse_state_->getUnits(), OOIP_totals);
+            FIPUnitConvert(eclipse_state_->getUnits(), COIP_totals);
 
             if ( terminal_output_ )
             {
@@ -667,21 +671,27 @@ namespace Opm
     SimulatorBase<Implementation>::FIPUnitConvert(const UnitSystem& units,
                                                   std::vector<V>& fip)
     {
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            for (size_t i = 0; i < fip.size(); ++i) {
-                fip[i][0] = unit::convert::to(fip[i][0], unit::stb);
-                fip[i][1] = unit::convert::to(fip[i][1], unit::stb); 
-                fip[i][2] = unit::convert::to(fip[i][2], 1000*unit::cubic(unit::feet));
-                fip[i][3] = unit::convert::to(fip[i][3], 1000*unit::cubic(unit::feet));
-                fip[i][4] = unit::convert::to(fip[i][4], unit::stb);
-                fip[i][5] = unit::convert::to(fip[i][5], unit::stb);
-                fip[i][6] = unit::convert::to(fip[i][6], unit::psia);
-            }
+        for (size_t i = 0; i < fip.size(); ++i) {
+            FIPUnitConvert(units, fip[i]);
         }
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            for (size_t i = 0; i < fip.size(); ++i) {
-                fip[i][6] = unit::convert::to(fip[i][6], unit::barsa);
-            }
+    }
+
+
+    template <class Implementation>
+    void
+    SimulatorBase<Implementation>::FIPUnitConvert(const UnitSystem& units, V& fip)
+    {
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+            fip[0] = unit::convert::to(fip[0], unit::stb);
+            fip[1] = unit::convert::to(fip[1], unit::stb);
+            fip[2] = unit::convert::to(fip[2], 1000*unit::cubic(unit::feet));
+            fip[3] = unit::convert::to(fip[3], 1000*unit::cubic(unit::feet));
+            fip[4] = unit::convert::to(fip[4], unit::stb);
+            fip[5] = unit::convert::to(fip[5], unit::stb);
+            fip[6] = unit::convert::to(fip[6], unit::psia);
+        }
+        else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            fip[6] = unit::convert::to(fip[6], unit::barsa);
         }
     }
 
@@ -707,7 +717,7 @@ namespace Opm
         if ( ! is_parallel_run_ )
         {
             totals[5] = geo_.poreVolume().sum();
-            totals[6] = unit::convert::to((p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum()), unit::barsa);
+            totals[6] = (p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum());
         }
         else
         {
@@ -728,8 +738,8 @@ namespace Opm
             pinfo.computeReduction(inputs, operators, results);
             using std::get;
             totals[5] = get<0>(results);
-            totals[6] = unit::convert::to(get<1>(results)/get<2>(results),
-                                          unit::barsa);
+            totals[6] = get<1>(results)/get<2>(results);
+
 #else
             // This should never happen!
             OPM_THROW(std::logic_error, "HAVE_MPI should be defined if we are running in parallel");
