@@ -91,9 +91,9 @@ public:
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
-        const auto deck = gridManager.deck();
-        const auto eclState = gridManager.eclState();
-        const auto& equilGrid   = gridManager.equilGrid();
+        const auto& deck = gridManager.deck();
+        const auto& eclState = gridManager.eclState();
+        const auto& equilGrid = gridManager.equilGrid();
 
         unsigned numElems = gridManager.grid().size(0);
         unsigned numEquilElems = gridManager.equilGrid().size(0);

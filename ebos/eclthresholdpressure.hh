@@ -91,7 +91,7 @@ public:
     void finishInit()
     {
         const auto& gridView = simulator_.gridView();
-        auto deck = simulator_.gridManager().deck();
+        const auto& deck = simulator_.gridManager().deck();
 
         unsigned numElements = gridView.size(/*codim=*/0);
 
