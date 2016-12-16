@@ -85,9 +85,9 @@ class EclEquilInitializer
     enum { dimWorld = GridView::dimensionworld };
 
 public:
-    template <class MaterialLawManager>
+    template <class MaxPcnwVector>
     EclEquilInitializer(const Simulator& simulator,
-                        std::shared_ptr<MaterialLawManager> materialLawManager)
+                        MaxPcnwVector& maxPcnw)
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
@@ -152,6 +152,10 @@ public:
             assert( equilCartesianToCompressed[ cartesianIndex ] >= 0 );
             localToEquilIndex[ elemIdx ] = equilCartesianToCompressed[ cartesianIndex ];
         }
+
+        // resize the array of maximum water-oil capillary pressures (needed to apply the
+        // SWATINIT keyword).
+        maxPcnw.resize(numElems);
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);
@@ -248,35 +252,18 @@ public:
                 fluidState.setMoleFraction(gasPhaseIdx, oilCompIdx, xgO);
                 fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);
             }
+
+            // store the maximum oil-water capillary pressure for later (required by the
+            // SWATINIT keyword)
+            const auto& equilScalingPoints =
+                equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+            maxPcnw[elemIdx] = equilScalingPoints.maxPcnw();
         }
 
-        // deal with the capillary pressure modification due to SWATINIT. this is
-        // only necessary because, the fine equilibration code from opm-core requires
-        // its own grid and its own material law manager...
-        if (GET_PROP_VALUE(TypeTag, EnableSwatinit)) {
-            std::vector<int> cartesianToCompressedElemIdx(numCartesianElems, -1);
-            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-                int cartElemIdx = gridManager.cartesianIndex(elemIdx);
-                cartesianToCompressedElemIdx[cartElemIdx] = elemIdx;
-            }
-
-            for (unsigned equilElemIdx = 0; equilElemIdx < numEquilElems; ++equilElemIdx) {
-                int cartElemIdx = gridManager.equilCartesianIndex(equilElemIdx);
-                assert(cartElemIdx >= 0);
-                int elemIdx = cartesianToCompressedElemIdx[cartElemIdx];
-                if (elemIdx < 0)
-                    // the element is present in the grid for used for equilibration but
-                    // it isn't present in the one used for the simulation. the most
-                    // probable reason for this is that the simulation grid was load
-                    // balanced.
-                    continue;
-
-                auto& scalingPoints = materialLawManager->oilWaterScaledEpsPointsDrainage(elemIdx);
-                const auto& equilScalingPoints = equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
-
-                scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
-            }
-        }
+        // immediately forget about the SWATINIT stuff if the SWATINIT keyword is not
+        // present in the deck
+        if (!deck.hasKeyword("SWATINIT"))
+            maxPcnw.clear();
     }
 
     /*!

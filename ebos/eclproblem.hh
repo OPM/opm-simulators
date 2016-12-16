@@ -851,6 +851,27 @@ public:
     const EclWellManager<TypeTag>& wellManager() const
     { return wellManager_; }
 
+    /*!
+     * \brief Apply the necessary measures mandated by the SWATINIT keyword the the
+     *        material law parameters.
+     *
+     * If SWATINIT is not used or if the method has already been called, this method is a
+     * no-op.
+     */
+    void applySwatinit()
+    {
+        if (maxPcnw_.empty())
+            return; // SWATINIT not applicable
+
+        unsigned numElems = this->simulator().gridView().size(/*codim=*/0);
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            auto& scalingPoints = materialLawManager_->oilWaterScaledEpsPointsDrainage(elemIdx);
+            scalingPoints.setMaxPcnw(maxPcnw_[elemIdx]);
+        }
+
+        maxPcnw_.clear();
+    }
+
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
@@ -1032,14 +1053,17 @@ private:
 
         // release the memory of the EQUIL grid since it's no longer needed after this point
         this->simulator().gridManager().releaseEquilGrid();
+
+        // apply SWATINIT if requested by the problem and if it is enabled by the deck
+        if (GET_PROP_VALUE(TypeTag, EnableSwatinit))
+            applySwatinit();
     }
 
     void readEquilInitialCondition_()
     {
-        // The EQUIL initializer also modifies the material law manager according to
-        // SWATINIT (although it does not belong there strictly speaking)
+        // initial condition corresponds to hydrostatic conditions
         typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
-        EquilInitializer equilInitializer(this->simulator(), materialLawManager_);
+        EquilInitializer equilInitializer(this->simulator(), maxPcnw_);
 
         // since the EquilInitializer provides fluid states that are consistent with the
         // black-oil model, we can use naive instead of mass conservative determination
@@ -1341,6 +1365,8 @@ private:
     EclSummaryWriter summaryWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
+
+    std::vector<Scalar> maxPcnw_;
 };
 } // namespace Ewoms
 
