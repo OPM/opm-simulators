@@ -693,6 +693,9 @@ namespace Opm
         else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             fip[6] = unit::convert::to(fip[6], unit::barsa);
         }
+        else {
+            OPM_THROW(std::runtime_error, "Unsupported unit type for fluid in place output.");
+        }
     }
 
 
