@@ -150,7 +150,13 @@ namespace Opm
         } while ( (!converged && (iteration <= maxIter())) || (iteration < minIter()));
 
         if (!converged) {
-            OPM_THROW(Opm::NumericalProblem, "Failed to complete a time step within "+std::to_string(maxIter())+" iterations.");
+            if (model_->terminalOutputEnabled()) {
+                OPM_THROW(Opm::NumericalProblem, "Failed to complete a time step within "+std::to_string(maxIter())+" iterations.");
+            }
+            else
+            {
+                OPM_THROW_NOLOG(Opm::NumericalProblem, "Failed to complete a time step within "+std::to_string(maxIter())+" iterations.");
+            }
         }
 
         // Do model-specific post-step actions.
