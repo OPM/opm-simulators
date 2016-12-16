@@ -623,6 +623,12 @@ public:
     }
 
     /*!
+     * \brief Return a reference to the object that handles the "raw" transmissibilities.
+     */
+    const EclTransmissibility<TypeTag>& eclTransmissibilities() const
+    { return transmissibilities_; }
+
+    /*!
      * \copydoc BlackOilBaseProblem::thresholdPressure
      */
     Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
