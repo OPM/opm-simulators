@@ -43,6 +43,11 @@ SET_TAG_PROP(ReservoirNcpVcfvProblem, SpatialDiscretizationSplice, VcfvDiscretiz
 // enable the storage cache for this problem so that the storage cache receives wider
 // testing
 SET_BOOL_PROP(ReservoirNcpVcfvProblem, EnableStorageCache, true);
+
+// reduce the base epsilon for the finite difference method to 10^-11. for some reason
+// the simulator converges better with this. (TODO: use automatic differentiation?)
+SET_SCALAR_PROP(ReservoirNcpVcfvProblem, BaseEpsilon, 1e-11);
+
 }}
 
 int main(int argc, char **argv)
