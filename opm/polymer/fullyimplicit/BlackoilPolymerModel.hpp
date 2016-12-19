@@ -228,6 +228,10 @@ namespace Opm {
                      const int            aix  );
 
         void
+        computeInjectionMobility(const SolutionState& state,
+                                 std::vector<ADB>& mob_perfcells);
+
+        void
         assembleMassBalanceEq(const SolutionState& state);
 
         void

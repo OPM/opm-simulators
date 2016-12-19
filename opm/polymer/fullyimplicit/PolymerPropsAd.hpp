@@ -74,6 +74,9 @@ namespace Opm {
         /// \param[in] c        Array of n polymer concentraion values.
         /// \return             Array of n viscosity multiplier from PLVISC table.
 
+
+        ADB viscMult(const ADB& c) const;
+
         /// Constructor wrapping a polymer props.
         PolymerPropsAd(const PolymerProperties& polymer_props);
 

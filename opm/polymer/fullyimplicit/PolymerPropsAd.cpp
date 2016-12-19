@@ -130,6 +130,29 @@ namespace Opm {
     }
 
 
+    ADB
+    PolymerPropsAd::viscMult(const ADB& c) const
+    {
+        const int nc = c.size();
+        V visc_mult(nc);
+        V dvisc_mult(nc);
+
+        for (int i = 0; i < nc; ++i) {
+            double im = 0, dim = 0;
+            im = polymer_props_.viscMultWithDer(c.value()(i), &dim);
+            visc_mult(i) = im;
+            dvisc_mult(i) = dim;
+        }
+
+        ADB::M dim_diag(dvisc_mult.matrix().asDiagonal());
+        const int num_blocks = c.numBlocks();
+        std::vector<ADB::M> jacs(num_blocks);
+        for (int block = 0; block < num_blocks; ++block) {
+            jacs[block] = dim_diag * c.derivative()[block];
+        }
+        return ADB::function(std::move(visc_mult), std::move(jacs));
+    }
+
 
 
     PolymerPropsAd::PolymerPropsAd(const PolymerProperties& polymer_props)
