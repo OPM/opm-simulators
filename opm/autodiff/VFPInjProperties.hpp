@@ -25,6 +25,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
+#include <opm/autodiff/VFPHelpers.hpp>
 
 #include <vector>
 #include <map>
@@ -93,12 +94,53 @@ public:
             const ADB& vapour,
             const ADB& thp) const;
 
-    typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
+    /**
+     * Linear interpolation of bhp as a function of the input parameters given as
+     * Evaluation
+     * Each entry corresponds typically to one well.
+     * @param table_id Table number to use. A negative entry (e.g., -1)
+     *                 will indicate that no table is used, and the corresponding
+     *                 BHP will be calculated as a constant -1e100.
+     * @param aqua Water phase
+     * @param liquid Oil phase
+     * @param vapour Gas phase
+     * @param thp Tubing head pressure
+     *
+     * @return The bottom hole pressure, interpolated/extrapolated linearly using
+     * the above parameters from the values in the input table, for each entry in the
+     * input ADB objects.
+     */
+    template <class EvalWell>
     EvalWell bhp(const int table_id,
-            const EvalWell& aqua,
-            const EvalWell& liquid,
-            const EvalWell& vapour,
-            const double& thp) const;
+                 const EvalWell& aqua,
+                 const EvalWell& liquid,
+                 const EvalWell& vapour,
+                 const double& thp) const {
+
+        //Get the table
+        const VFPInjTable* table = detail::getTable(m_tables, table_id);
+        EvalWell bhp = 0.0;
+
+        //Find interpolation variables
+        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
+
+        //Compute the BHP for each well independently
+        if (table != nullptr) {
+            //First, find the values to interpolate between
+            //Value of FLO is negative in OPM for producers, but positive in VFP table
+            auto flo_i = detail::findInterpData(flo.value(), table->getFloAxis());
+            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
+
+            detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i);
+
+            bhp = bhp_val.dflo * flo;
+            bhp.setValue(bhp_val.value); // thp is assumed constant i.e.
+        }
+        else {
+            bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
+        }
+        return bhp;
+    }
 
     /**
      * Linear interpolation of bhp as a function of the input parameters

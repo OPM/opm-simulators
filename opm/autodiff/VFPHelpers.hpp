@@ -36,7 +36,6 @@ namespace detail {
 
 
 typedef AutoDiffBlock<double> ADB;
-typedef DenseAd::Evaluation<double, /*size=*/6> EvalWell;
 
 
 /**
@@ -49,6 +48,7 @@ inline double zeroIfNan(const double& value) {
 /**
  * Returns zero if input value is NaN
  */
+template <class EvalWell>
 inline double zeroIfNan(const EvalWell& value) {
     return (std::isnan(value.value())) ? 0.0 : value.value();
 }

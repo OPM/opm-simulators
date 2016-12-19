@@ -279,6 +279,7 @@ namespace Opm
     }
 
     template <class PhysicalModel>
+    template <class BVector>
     void
     NonlinearSolver<PhysicalModel>::stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
     {
