@@ -26,6 +26,7 @@
 
 #include <opm/autodiff/BlackoilModelBase.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
+#include <opm/autodiff/BlackoilLegacyDetails.hpp>
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>

@@ -147,6 +147,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/AutoDiff.hpp
   opm/autodiff/BackupRestore.hpp
   opm/autodiff/BlackoilDetails.hpp
+  opm/autodiff/BlackoilLegacyDetails.hpp
   opm/autodiff/BlackoilModel.hpp
   opm/autodiff/BlackoilModelBase.hpp
   opm/autodiff/BlackoilModelBase_impl.hpp
