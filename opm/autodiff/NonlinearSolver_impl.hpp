@@ -147,7 +147,7 @@ namespace Opm
 
             converged = report.converged;
             iteration += 1;
-        } while ( (!converged && (iteration <= maxIter())) || (iteration < minIter()));
+        } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
         if (!converged) {
             if (model_->terminalOutputEnabled()) {
