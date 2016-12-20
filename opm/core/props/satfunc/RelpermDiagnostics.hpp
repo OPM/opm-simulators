@@ -86,14 +86,13 @@ namespace Opm {
 
 
         ///Check the phase that used.
-        void phaseCheck_(const Deck& deck);
+        void phaseCheck_(const EclipseState& es);
 
         ///Check saturation family I and II.
         void satFamilyCheck_(const EclipseState& eclState);
  
         ///Check saturation tables.
-        void tableCheck_(const EclipseState& eclState,
-                         const Deck& deck);
+        void tableCheck_(const EclipseState& eclState);
 
         ///Check endpoints in the saturation tables.
         void unscaledEndPointsCheck_(const Deck& deck,
