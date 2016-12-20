@@ -147,7 +147,7 @@ namespace Opm
 
             converged = report.converged;
             iteration += 1;
-        } while ( (!converged && (iteration <= maxIter())) || (iteration < minIter()));
+        } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
         if (!converged) {
             OPM_THROW(Opm::NumericalProblem, "Failed to complete a time step within "+std::to_string(maxIter())+" iterations.");
