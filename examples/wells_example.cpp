@@ -46,7 +46,7 @@ try
 
     // Define rock and fluid properties
     IncompPropertiesFromDeck incomp_properties(deck, eclipseState, *grid.c_grid());
-    RockCompressibility rock_comp(deck, eclipseState);
+    RockCompressibility rock_comp(eclipseState);
 
     // Finally handle the wells
     WellsManager wells(eclipseState , 0 , *grid.c_grid(), incomp_properties.permeability());
