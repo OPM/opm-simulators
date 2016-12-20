@@ -25,6 +25,7 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/parser/eclipse/Deck/DeckRecord.hpp>

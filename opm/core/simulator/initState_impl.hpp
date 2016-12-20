@@ -33,6 +33,7 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 
 #include <iostream>
@@ -621,14 +622,14 @@ namespace Opm
     template <class Props, class State>
     void initStateFromDeck(const UnstructuredGrid& grid,
                            const Props& props,
-                           const Opm::Deck& deck,
+                           const Opm::EclipseState& es,
                            const double gravity,
                            State& state)
     {
         initStateFromDeck(grid.number_of_cells, grid.global_cell,
                           grid.number_of_faces, UgGridHelpers::faceCells(grid),
                           grid.face_centroids, grid.cell_centroids, grid.dimensions,
-                          props, deck, gravity, state);
+                          props, es, gravity, state);
     }
     /// Initialize a state from input deck.
     template <class FaceCells, class FCI, class CCI, class Props, class State>
@@ -640,22 +641,30 @@ namespace Opm
                            CCI begin_cell_centroids,
                            int dimensions,
                            const Props& props,
-                           const Opm::Deck& deck,
+                           const Opm::EclipseState& es,
                            const double gravity,
                            State& state)
     {
         const int num_phases = props.numPhases();
-        const PhaseUsage pu = phaseUsageFromDeck(deck);
+        const PhaseUsage pu = phaseUsageFromDeck(es);
+
+        const auto& init_config = es.cfg().init();
+        const auto& grid_props = es.get3DProperties();
+        const auto has_equil = init_config.hasEquil();
+        const auto has_pressure = grid_props.hasDeckDoubleGridProperty("PRESSURE");
+        const auto has_sgas = grid_props.hasDeckDoubleGridProperty("SGAS");
+        const auto has_swat = grid_props.hasDeckDoubleGridProperty("SWAT");
+
         if (num_phases != pu.num_phases) {
             OPM_THROW(std::runtime_error, "initStateFromDeck():  user specified property object with " << num_phases << " phases, "
                   "found " << pu.num_phases << " phases in deck.");
         }
-        if (deck.hasKeyword("EQUIL") && deck.hasKeyword("PRESSURE")) {
+        if (has_equil && has_pressure) {
             OPM_THROW(std::runtime_error, "initStateFromDeck(): The deck must either specify the initial "
                       "condition using the PRESSURE _or_ the EQUIL keyword (currently it has both)");
         }
 
-        if (deck.hasKeyword("EQUIL")) {
+        if (has_equil) {
             if (num_phases != 2) {
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only two-phase scenarios.");
             }
@@ -663,7 +672,7 @@ namespace Opm
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): EQUIL-based init currently handling only oil-water scenario (no gas).");
             }
             // Set saturations depending on oil-water contact.
-            Equil equil( deck.getKeyword( "EQUIL" ) );
+            const auto& equil = init_config.getEquil();
             if (equil.size() != 1) {
                 OPM_THROW(std::runtime_error, "initStateFromDeck(): No region support yet.");
             }
@@ -675,19 +684,20 @@ namespace Opm
             const double datum_p = equil.getRecord( 0 ).datumDepthPressure();
             initHydrostaticPressure(number_of_cells, begin_cell_centroids, dimensions,
                                     props, woc, gravity, datum_z, datum_p, state);
-        } else if (deck.hasKeyword("PRESSURE")) {
+        } else if (has_pressure) {
             // Set saturations from SWAT/SGAS, pressure from PRESSURE.
             std::vector<double>& s = state.saturation();
             std::vector<double>& p = state.pressure();
-            const std::vector<double>& p_deck = deck.getKeyword("PRESSURE").getSIDoubleData();
+            const auto& p_deck = grid_props.getDoubleGridProperty("PRESSURE").getData();
             const int num_cells = number_of_cells;
+
             if (num_phases == 2) {
                 if (!pu.phase_used[BlackoilPhases::Aqua]) {
                     // oil-gas: we require SGAS
-                    if (!deck.hasKeyword("SGAS")) {
+                    if (!has_sgas) {
                         OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS keyword in 2-phase init");
                     }
-                    const std::vector<double>& sg_deck = deck.getKeyword("SGAS").getSIDoubleData();
+                    const auto& sg_deck = grid_props.getDoubleGridProperty("SGAS").getData();
                     const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                     const int opos = pu.phase_pos[BlackoilPhases::Liquid];
                     for (int c = 0; c < num_cells; ++c) {
@@ -698,10 +708,10 @@ namespace Opm
                     }
                 } else {
                     // water-oil or water-gas: we require SWAT
-                    if (!deck.hasKeyword("SWAT")) {
+                    if (!has_swat) {
                         OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SWAT keyword in 2-phase init");
                     }
-                    const std::vector<double>& sw_deck = deck.getKeyword("SWAT").getSIDoubleData();
+                    const auto& sw_deck = grid_props.getDoubleGridProperty("SWAT").getData();
                     const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                     const int nwpos = (wpos + 1) % 2;
                     for (int c = 0; c < num_cells; ++c) {
@@ -712,15 +722,15 @@ namespace Opm
                     }
                 }
             } else if (num_phases == 3) {
-                const bool has_swat_sgas = deck.hasKeyword("SWAT") && deck.hasKeyword("SGAS");
+                const bool has_swat_sgas = has_swat && has_sgas;
                 if (!has_swat_sgas) {
                     OPM_THROW(std::runtime_error, "initStateFromDeck(): missing SGAS or SWAT keyword in 3-phase init.");
                 }
                 const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
                 const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
                 const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-                const std::vector<double>& sw_deck = deck.getKeyword("SWAT").getSIDoubleData();
-                const std::vector<double>& sg_deck = deck.getKeyword("SGAS").getSIDoubleData();
+                const auto& sw_deck = grid_props.getDoubleGridProperty("SWAT").getData();
+                const auto& sg_deck = grid_props.getDoubleGridProperty("SGAS").getData();
                 for (int c = 0; c < num_cells; ++c) {
                     int c_deck = (global_cell == NULL) ? c : global_cell[c];
                     s[3*c + wpos] = sw_deck[c_deck];
@@ -913,14 +923,14 @@ namespace Opm
     template <class Props, class State>
     void initBlackoilStateFromDeck(const UnstructuredGrid& grid,
                                    const Props& props,
-                                   const Opm::Deck& deck,
+                                   const Opm::EclipseState& es,
                                    const double gravity,
                                    State& state)
     {
         initBlackoilStateFromDeck(grid.number_of_cells, grid.global_cell,
                                   grid.number_of_faces, UgGridHelpers::faceCells(grid),
                                   grid.face_centroids, grid.cell_centroids,grid.dimensions,
-                                  props, deck, gravity, state);
+                                  props, es, gravity, state);
     }
 
     /// Initialize a blackoil state from input deck.
@@ -933,15 +943,18 @@ namespace Opm
                                    CCI begin_cell_centroids,
                                    int dimensions,
                                    const Props& props,
-                                   const Opm::Deck& deck,
+                                   const Opm::EclipseState& es,
                                    const double gravity,
                                    State& state)
     {
         initStateFromDeck(number_of_cells, global_cell, number_of_faces,
                           face_cells, begin_face_centroids, begin_cell_centroids,
-                          dimensions, props, deck, gravity, state);
-        if (deck.hasKeyword("RS")) {
-            const std::vector<double>& rs_deck = deck.getKeyword("RS").getSIDoubleData();
+                          dimensions, props, es, gravity, state);
+
+        const auto& grid_props = es.get3DProperties();
+
+        if (grid_props.hasDeckDoubleGridProperty("RS")) {
+            const auto& rs_deck = grid_props.getDoubleGridProperty("RS").getData();
             const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
                 int c_deck = (global_cell == NULL) ? c : global_cell[c];
@@ -949,8 +962,8 @@ namespace Opm
             }
             initBlackoilSurfvolUsingRSorRV(number_of_cells, props, state);
             computeSaturation(props,state);
-        } else if (deck.hasKeyword("RV")){
-            const std::vector<double>& rv_deck = deck.getKeyword("RV").getSIDoubleData();
+        } else if (grid_props.hasDeckDoubleGridProperty("RV")) {
+            const auto& rv_deck = grid_props.getDoubleGridProperty("RV").getData();
             const int num_cells = number_of_cells;
             for (int c = 0; c < num_cells; ++c) {
                 int c_deck = (global_cell == NULL) ? c : global_cell[c];
