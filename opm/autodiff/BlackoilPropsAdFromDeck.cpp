@@ -170,23 +170,24 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         waterPvt_->initFromDeck(deck, eclState);
 
         // Surface densities. Accounting for different orders in eclipse and our code.
-        const auto& densityKeyword = deck.getKeyword("DENSITY");
-        int numRegions = densityKeyword.size();
-        auto tables = eclState.getTableManager();
+        const auto& tables = eclState.getTableManager();
+        const auto& densities = tables.getDensityTable();
+        const auto numRegions = densities.size();
 
         surfaceDensity_.resize(numRegions);
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
+            const auto& region_density = densities.at( regionIdx );
             if (phase_usage_.phase_used[Liquid]) {
                 surfaceDensity_[regionIdx][phase_usage_.phase_pos[Liquid]]
-                    = densityKeyword.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
+                    = region_density.oil;
             }
             if (phase_usage_.phase_used[Aqua]) {
                 surfaceDensity_[regionIdx][phase_usage_.phase_pos[Aqua]]
-                    = densityKeyword.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
+                    = region_density.water;
             }
             if (phase_usage_.phase_used[Vapour]) {
                 surfaceDensity_[regionIdx][phase_usage_.phase_pos[Vapour]]
-                    = densityKeyword.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
+                    = region_density.gas;
             }
         }
 

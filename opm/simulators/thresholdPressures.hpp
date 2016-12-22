@@ -73,26 +73,24 @@ void computeMaxDp(std::map<std::pair<int, int>, double>& maxDp,
 
     // retrieve the surface densities
     std::vector<std::vector<double> > surfaceDensity(numPvtRegions);
-    const auto& densityKw = deck.getKeyword("DENSITY");
+    const auto& densities = eclipseState.getTableManager().getDensityTable();
     for (int regionIdx = 0; regionIdx < numPvtRegions; ++regionIdx) {
         surfaceDensity[regionIdx].resize(numPhases);
+        const auto& region_density = densities.at( regionIdx );
 
         if (pu.phase_used[BlackoilPhases::Aqua]) {
             const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
-            surfaceDensity[regionIdx][wpos] =
-                densityKw.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
+            surfaceDensity[regionIdx][wpos] = region_density.water;
         }
 
         if (pu.phase_used[BlackoilPhases::Liquid]) {
             const int opos = pu.phase_pos[BlackoilPhases::Liquid];
-            surfaceDensity[regionIdx][opos] =
-                densityKw.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
+            surfaceDensity[regionIdx][opos] = region_density.oil;
         }
 
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
-            surfaceDensity[regionIdx][gpos] =
-                densityKw.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
+            surfaceDensity[regionIdx][gpos] = region_density.gas;
         }
     }
 
