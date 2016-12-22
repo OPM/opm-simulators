@@ -336,7 +336,6 @@ public:
         case EclTwoPhaseGasOil: {
             Scalar So = FsToolbox::scalarValue(fluidState.saturation(oilPhaseIdx));
 
-            params.oilWaterParams().update(/*pcSw=*/0.0, /*krwSw=*/0.0, /*krnSw=*/0.0);
             params.gasOilParams().update(/*pcSw=*/So, /*krwSw=*/So, /*krnSw=*/So);
             break;
         }
@@ -345,7 +344,6 @@ public:
             Scalar Sw = FsToolbox::scalarValue(fluidState.saturation(waterPhaseIdx));
 
             params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
-            params.gasOilParams().update(/*pcSw=*/0.0, /*krwSw=*/0.0, /*krnSw=*/0.0);
             break;
         }
 
