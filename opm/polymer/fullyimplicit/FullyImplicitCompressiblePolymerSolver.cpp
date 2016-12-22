@@ -697,8 +697,6 @@ namespace {
 
         const ADB& bhp = state.bhp;
 
-        const DataBlock well_s = wops_.w2p * Eigen::Map<const DataBlock>(wells_.comp_frac, nw, np).matrix();
-
         // Extract variables for perforation cell pressures
         // and corresponding perforation well pressures.
         const ADB p_perfcell = subset(state.pressure, well_cells);
