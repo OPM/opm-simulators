@@ -332,9 +332,12 @@ public:
             // Compute current FIP.
             std::vector<std::vector<double>> COIP;
             COIP = solver->computeFluidInPlace(fipnum);
-            FIPUnitConvert(eclState().getUnits(), COIP);
             std::vector<double> OOIP_totals = FIPTotals(OOIP, state);
             std::vector<double> COIP_totals = FIPTotals(COIP, state);
+
+            FIPUnitConvert(eclState().getUnits(), COIP);
+            FIPUnitConvert(eclState().getUnits(), OOIP_totals);
+            FIPUnitConvert(eclState().getUnits(), COIP_totals);
 
             if ( terminal_output_ )
             {
@@ -598,21 +601,29 @@ protected:
     void FIPUnitConvert(const UnitSystem& units,
                         std::vector<std::vector<double>>& fip)
     {
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            for (size_t i = 0; i < fip.size(); ++i) {
-                fip[i][0] = unit::convert::to(fip[i][0], unit::stb);
-                fip[i][1] = unit::convert::to(fip[i][1], unit::stb);
-                fip[i][2] = unit::convert::to(fip[i][2], 1000*unit::cubic(unit::feet));
-                fip[i][3] = unit::convert::to(fip[i][3], 1000*unit::cubic(unit::feet));
-                fip[i][4] = unit::convert::to(fip[i][4], unit::stb);
-                fip[i][5] = unit::convert::to(fip[i][5], unit::stb);
-                fip[i][6] = unit::convert::to(fip[i][6], unit::psia);
-            }
+        for (size_t i = 0; i < fip.size(); ++i) {
+            FIPUnitConvert(units, fip[i]);
         }
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            for (size_t i = 0; i < fip.size(); ++i) {
-                fip[i][6] = unit::convert::to(fip[i][6], unit::barsa);
-            }
+    }
+
+
+    void FIPUnitConvert(const UnitSystem& units,
+                        std::vector<double>& fip)
+    {
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+            fip[0] = unit::convert::to(fip[0], unit::stb);
+            fip[1] = unit::convert::to(fip[1], unit::stb);
+            fip[2] = unit::convert::to(fip[2], 1000*unit::cubic(unit::feet));
+            fip[3] = unit::convert::to(fip[3], 1000*unit::cubic(unit::feet));
+            fip[4] = unit::convert::to(fip[4], unit::stb);
+            fip[5] = unit::convert::to(fip[5], unit::stb);
+            fip[6] = unit::convert::to(fip[6], unit::psia);
+        }
+        else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+            fip[6] = unit::convert::to(fip[6], unit::barsa);
+        }
+        else {
+            OPM_THROW(std::runtime_error, "Unsupported unit type for fluid in place output.");
         }
     }
 
@@ -646,7 +657,7 @@ protected:
                 OPM_THROW(std::logic_error, "FIP not yet implemented for MPI");
             }
         }
-        totals[6] = unit::convert::to( (p_pv_hydrocarbon_sum / pv_hydrocarbon_sum), unit::barsa);
+        totals[6] = (p_pv_hydrocarbon_sum / pv_hydrocarbon_sum);
         return totals;
     }
 
