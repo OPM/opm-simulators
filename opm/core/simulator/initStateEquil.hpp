@@ -68,6 +68,8 @@ namespace Opm
      * \param[in] props    Property object, pvt and capillary properties are used.
      * \param[in] deck     Simulation deck, used to obtain EQUIL and related data.
      * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
+     * \param[in] applySwatInit     Make it possible to not apply SWATINIT even if it
+     *                              is present in the deck
      */
     template<class Grid>
     void initStateEquil(const Grid& grid,
@@ -75,7 +77,8 @@ namespace Opm
                         const Opm::Deck& deck,
                         const Opm::EclipseState& eclipseState,
                         const double gravity,
-                        BlackoilState& state);
+                        BlackoilState& state,
+                        bool applySwatInit = true);
 
 
     /**
@@ -246,13 +249,17 @@ namespace Opm
                                      const Opm::Deck&             deck,
                                      const Opm::EclipseState& eclipseState,
                                      const Grid&                        G    ,
-                                     const double                       grav = unit::gravity)
+                                     const double grav = unit::gravity,
+                                     const std::vector<double>&  swat_init = {}
+                                     )
                     : pp_(props.numPhases(),
                           std::vector<double>(UgGridHelpers::numCells(G))),
                       sat_(props.numPhases(),
                           std::vector<double>(UgGridHelpers::numCells(G))),
                       rs_(UgGridHelpers::numCells(G)),
-                      rv_(UgGridHelpers::numCells(G))
+                      rv_(UgGridHelpers::numCells(G)),
+                      swat_init_(swat_init)
+
                 {
                     // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(eclipseState);
@@ -340,20 +347,6 @@ namespace Opm
                         }
                     }
                     
-
-                    // Check for presence of kw SWATINIT
-                    if (deck.hasKeyword("SWATINIT")) {
-                        const std::vector<double>& swat_init = eclipseState.
-                                get3DProperties().getDoubleGridProperty("SWATINIT").getData();
-                        const int nc = UgGridHelpers::numCells(G);
-                        swat_init_.resize(nc);
-                        const int* gc = UgGridHelpers::globalCell(G);
-                        for (int c = 0; c < nc; ++c) {
-                            const int deck_pos = (gc == NULL) ? c : gc[c];
-                            swat_init_[c] = swat_init[deck_pos];
-                        }
-                    }
-
                     // Compute pressures, saturations, rs and rv factors.
                     calcPressSatRsRv(eqlmap, rec, props, G, grav);
 

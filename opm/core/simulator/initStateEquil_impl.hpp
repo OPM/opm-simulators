@@ -882,6 +882,8 @@ namespace Opm
      * \param[in] props    Property object, pvt and capillary properties are used.
      * \param[in] deck     Simulation deck, used to obtain EQUIL and related data.
      * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
+     * \param[in] applySwatInit     Make it possible to not apply SWATINIT even if it
+     *                              is present in the deck
      */
     template<class Grid>
     void initStateEquil(const Grid& grid,
@@ -889,10 +891,26 @@ namespace Opm
                         const Opm::Deck& deck,
                         const Opm::EclipseState& eclipseState,
                         const double gravity,
-                        BlackoilState& state)
+                        BlackoilState& state,
+                        bool applySwatinit = true)
     {
+
         typedef EQUIL::DeckDependent::InitialStateComputer ISC;
-        ISC isc(props, deck, eclipseState, grid, gravity);
+        //Check for presence of kw SWATINIT
+        std::vector<double> swat_init = {};
+        if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatinit) {
+            const std::vector<double>& swat_init_ecl = eclipseState.
+                    get3DProperties().getDoubleGridProperty("SWATINIT").getData();
+            const int nc = UgGridHelpers::numCells(grid);
+            swat_init.resize(nc);
+            const int* gc = UgGridHelpers::globalCell(grid);
+            for (int c = 0; c < nc; ++c) {
+                const int deck_pos = (gc == NULL) ? c : gc[c];
+                swat_init[c] = swat_init_ecl[deck_pos];
+            }
+        }
+
+        ISC isc(props, deck, eclipseState, grid, gravity, swat_init);
         const auto pu = props.phaseUsage();
         const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
             ? pu.phase_pos[BlackoilPhases::Liquid]
