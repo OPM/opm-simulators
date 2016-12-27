@@ -57,52 +57,52 @@ template <>
 class numeric_limits<quad>
 {
 public:
-    static const bool is_specialized = true;
+    static constexpr bool is_specialized = true;
 
-    static quad min() throw()
+    static constexpr quad min() throw()
     { return FLT128_MIN; }
-    static quad max() throw()
+    static constexpr quad max() throw()
     { return FLT128_MAX; }
 
     // number of bits in mantissa
-    static const int digits = FLT128_MANT_DIG;
+    static constexpr int digits = FLT128_MANT_DIG;
     // number of decimal digits
-    static const int digits10 = FLT128_DIG;
-    static const bool is_signed = true;
-    static const bool is_integer = false;
-    static const bool is_exact = false;
-    static const int radix = 0;
-    static quad epsilon() throw()
+    static constexpr int digits10 = FLT128_DIG;
+    static constexpr bool is_signed = true;
+    static constexpr bool is_integer = false;
+    static constexpr bool is_exact = false;
+    static constexpr int radix = 0;
+    static constexpr quad epsilon() throw()
     { return FLT128_EPSILON; }
-    static quad round_error() throw()
+    static constexpr quad round_error() throw()
     { return 0.5; }
 
-    static const int min_exponent = FLT128_MIN_EXP;
-    static const int min_exponent10 = FLT128_MIN_10_EXP;
-    static const int max_exponent = FLT128_MAX_EXP;
-    static const int max_exponent10 = FLT128_MAX_10_EXP;
+    static constexpr int min_exponent = FLT128_MIN_EXP;
+    static constexpr int min_exponent10 = FLT128_MIN_10_EXP;
+    static constexpr int max_exponent = FLT128_MAX_EXP;
+    static constexpr int max_exponent10 = FLT128_MAX_10_EXP;
 
-    static const bool has_infinity = true;
-    static const bool has_quiet_NaN = true;
-    static const bool has_signaling_NaN = true;
-    static const float_denorm_style has_denorm = denorm_present;
-    static const bool has_denorm_loss = false;
-    static quad infinity() throw()
+    static constexpr bool has_infinity = true;
+    static constexpr bool has_quiet_NaN = true;
+    static constexpr bool has_signaling_NaN = true;
+    static constexpr float_denorm_style has_denorm = denorm_present;
+    static constexpr bool has_denorm_loss = false;
+    static constexpr quad infinity() throw()
     { return __builtin_huge_valq(); }
-    static quad quiet_NaN() throw()
+    static constexpr quad quiet_NaN() throw()
     { return __builtin_nan(""); }
-    static quad signaling_NaN() throw()
+    static constexpr quad signaling_NaN() throw()
     { return __builtin_nans(""); }
-    static quad denorm_min() throw()
+    static constexpr quad denorm_min() throw()
     { return FLT128_DENORM_MIN; }
 
-    static const bool is_iec559 = true;
-    static const bool is_bounded = true;
-    static const bool is_modulo = false;
+    static constexpr bool is_iec559 = true;
+    static constexpr bool is_bounded = true;
+    static constexpr bool is_modulo = false;
 
-    static const bool traps = std::numeric_limits<double>::traps;
-    static const bool tinyness_before = std::numeric_limits<double>::tinyness_before;
-    static const float_round_style round_style = round_to_nearest;
+    static constexpr bool traps = std::numeric_limits<double>::traps;
+    static constexpr bool tinyness_before = std::numeric_limits<double>::tinyness_before;
+    static constexpr float_round_style round_style = round_to_nearest;
 };
 
 // provide some type traits for the quadruple precision type
