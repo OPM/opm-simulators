@@ -265,7 +265,7 @@ namespace Opm
 
         template <class LinearOperator, class MatrixOperator, class POrComm, class AMG >
         void
-        constructAMGPrecond(LinearOperator& linearOperator, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax ) const
+        constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax ) const
         {
             ISTLUtility::createAMGPreconditionerPointer( *opA, relax, comm, amg );
         }
