@@ -29,6 +29,7 @@
 #define EWOMS_WATER_AIR_PROBLEM_HH
 
 #include <ewoms/models/pvs/pvsproperties.hh>
+#include <ewoms/linear/parallelistlbackend.hh>
 
 #include <opm/material/fluidsystems/H2OAirFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
@@ -120,6 +121,14 @@ SET_SCALAR_PROP(WaterAirBaseProblem, InitialTimeStepSize, 250);
 
 // The default DGF file to load
 SET_STRING_PROP(WaterAirBaseProblem, GridFile, "./data/waterair.dgf");
+
+// Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
+SET_TAG_PROP(WaterAirBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
+SET_TYPE_PROP(WaterAirBaseProblem, LinearSolverWrapper,
+              Ewoms::Linear::SolverWrapperRestartedGMRes<TypeTag>);
+SET_TYPE_PROP(WaterAirBaseProblem, PreconditionerWrapper,
+              Ewoms::Linear::PreconditionerWrapperILUn<TypeTag>);
+SET_INT_PROP(WaterAirBaseProblem, PreconditionerOrder, 2);
 } // namespace Properties
 } // namespace Ewoms
 
