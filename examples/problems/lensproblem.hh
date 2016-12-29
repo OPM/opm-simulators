@@ -29,7 +29,6 @@
 #define EWOMS_LENS_PROBLEM_HH
 
 #include <ewoms/io/structuredgridmanager.hh>
-
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>

@@ -28,7 +28,6 @@
 #ifndef EWOMS_GROUND_WATER_PROBLEM_HH
 #define EWOMS_GROUND_WATER_PROBLEM_HH
 
-#include <ewoms/linear/paralleliterativebackend.hh>
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
 
 #include <opm/material/components/SimpleH2O.hpp>
@@ -88,12 +87,6 @@ SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightY, 0.75);
 SET_SCALAR_PROP(GroundWaterBaseProblem, LensUpperRightZ, 0.75);
 SET_SCALAR_PROP(GroundWaterBaseProblem, Permeability, 1e-10);
 SET_SCALAR_PROP(GroundWaterBaseProblem, PermeabilityLens, 1e-12);
-// Linear solver settings
-SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
-              Ewoms::Linear::SolverWrapperConjugatedGradients<TypeTag>);
-SET_TYPE_PROP(GroundWaterBaseProblem, PreconditionerWrapper,
-              Ewoms::Linear::PreconditionerWrapperILU0<TypeTag>);
-SET_INT_PROP(GroundWaterBaseProblem, LinearSolverVerbosity, 0);
 
 // Enable gravity
 SET_BOOL_PROP(GroundWaterBaseProblem, EnableGravity, true);
