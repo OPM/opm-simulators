@@ -83,8 +83,7 @@ enum WellVariablePositions {
             // ---------  Public methods  ---------
             StandardWellsDense(const Wells* wells_arg,
                                const ModelParameters& param,
-                               const bool terminal_output,
-                               const std::vector<double>& pv)
+                               const bool terminal_output)
                 : wells_active_(wells_arg!=nullptr)
                 , wells_(wells_arg)
                 , param_(param)
@@ -1290,7 +1289,6 @@ enum WellVariablePositions {
                         }
                         std::vector<double> g = {1,1,0.01};
                         if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
-                            const double* distr = well_controls_iget_distr(wc, current);
                             for (int phase = 0; phase < np; ++phase) {
                                 g[phase] = distr[phase];
                             }
