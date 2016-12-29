@@ -21,7 +21,7 @@
 #ifndef OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 #define OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>

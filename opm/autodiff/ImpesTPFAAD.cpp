@@ -144,7 +144,7 @@ namespace {
 
 
     ImpesTPFAAD::ImpesTPFAAD(const UnstructuredGrid&         grid,
-                             const BlackoilPropsAdInterface& fluid,
+                             const BlackoilPropsAdFromDeck& fluid,
                              const DerivedGeology&           geo,
                              const Wells&                    wells,
                              const LinearSolverInterface&    linsolver)

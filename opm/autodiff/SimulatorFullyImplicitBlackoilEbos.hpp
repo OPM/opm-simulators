@@ -94,7 +94,7 @@ public:
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
                                        const parameter::ParameterGroup& param,
                                        DerivedGeology& geo,
-                                       BlackoilPropsAdInterface& props,
+                                       BlackoilPropsAdFromDeck& props,
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const double* gravity,
                                        const bool has_disgas,
@@ -715,7 +715,7 @@ protected:
     Simulator& ebosSimulator_;
 
     typedef RateConverter::
-    SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
+    SurfaceToReservoirVoidage< BlackoilPropsAdFromDeck,
                                std::vector<int> > RateConverterType;
     typedef typename Solver::SolverParameters SolverParameters;
 
@@ -724,7 +724,7 @@ protected:
     SolverParameters solver_param_;
 
     // Observed objects.
-    BlackoilPropsAdInterface& props_;
+    BlackoilPropsAdFromDeck& props_;
     const double* gravity_;
     // Solvers
     DerivedGeology& geo_;

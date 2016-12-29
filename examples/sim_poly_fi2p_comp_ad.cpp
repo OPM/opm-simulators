@@ -57,7 +57,7 @@
 #include <opm/polymer/PolymerState.hpp>
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 
@@ -113,7 +113,7 @@ try
     }
     std::shared_ptr<GridManager> grid;
     std::shared_ptr<BlackoilPropertiesInterface> props;
-    std::shared_ptr<BlackoilPropsAdInterface> new_props;
+    std::shared_ptr<BlackoilPropsAdFromDeck> new_props;
     std::shared_ptr<RockCompressibility> rock_comp;
     std::unique_ptr<PolymerBlackoilState> state;
     // bool check_well_controls = false;

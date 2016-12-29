@@ -27,7 +27,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
@@ -117,7 +117,7 @@ namespace Opm {
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
-                                  SurfaceToReservoirVoidage<BlackoilPropsAdInterface, std::vector<int> >;
+                                  SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck, std::vector<int> >;
 
         // ---------  Public methods  ---------
 
@@ -138,7 +138,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelBase(const ModelParameters&          param,
                           const Grid&                     grid ,
-                          const BlackoilPropsAdInterface& fluid,
+                          const BlackoilPropsAdFromDeck&  fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
                           const WellModel&                well_model,
@@ -297,7 +297,7 @@ namespace Opm {
         // ---------  Data members  ---------
 
         const Grid&         grid_;
-        const BlackoilPropsAdInterface& fluid_;
+        const BlackoilPropsAdFromDeck& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         VFPProperties                   vfp_properties_;

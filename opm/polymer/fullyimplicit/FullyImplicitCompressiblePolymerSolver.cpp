@@ -25,7 +25,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 
@@ -167,7 +167,7 @@ namespace {
 
     FullyImplicitCompressiblePolymerSolver::
     FullyImplicitCompressiblePolymerSolver(const UnstructuredGrid&  		grid,
-                                		   const BlackoilPropsAdInterface&  fluid,
+                                		   const BlackoilPropsAdFromDeck&  fluid,
                                 		   const DerivedGeology&           	geo  ,
                                 		   const RockCompressibility*      	rock_comp_props,
                                 		   const PolymerPropsAd&           	polymer_props_ad,

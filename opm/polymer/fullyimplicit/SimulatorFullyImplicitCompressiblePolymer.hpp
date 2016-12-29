@@ -25,7 +25,7 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/SimulatorBase.hpp>
 
@@ -103,7 +103,7 @@ namespace Opm
         SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
                                                   const GridT& grid,
                                                   DerivedGeology& geo,
-                                                  BlackoilPropsAdInterface& props,
+                                                  BlackoilPropsAdFromDeck& props,
                                                   const PolymerPropsAd&    polymer_props,
                                                   const RockCompressibility* rock_comp_props,
                                                   std::shared_ptr<EclipseState> eclipse_state,

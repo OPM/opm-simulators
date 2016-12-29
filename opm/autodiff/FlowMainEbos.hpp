@@ -30,7 +30,6 @@
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
 

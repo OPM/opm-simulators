@@ -24,7 +24,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -46,7 +46,7 @@ namespace Opm {
     public:
         /// Construct impes solver.
         ImpesTPFAAD(const UnstructuredGrid&         grid,
-                    const BlackoilPropsAdInterface& fluid,
+                    const BlackoilPropsAdFromDeck& fluid,
                     const DerivedGeology&           geo,
                     const Wells&                    wells,
                     const LinearSolverInterface&    linsolver);
@@ -77,7 +77,7 @@ namespace Opm {
 
         // Data
         const UnstructuredGrid&      grid_;
-        const BlackoilPropsAdInterface&               fluid_;
+        const BlackoilPropsAdFromDeck&               fluid_;
         const DerivedGeology&        geo_ ;
         const Wells&                 wells_;
         const LinearSolverInterface& linsolver_;

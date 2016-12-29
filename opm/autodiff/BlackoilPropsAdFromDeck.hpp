@@ -22,16 +22,13 @@
 #ifndef OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 #define OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
-#include <opm/material/fluidsystems/blackoilpvt/GasPvtMultiplexer.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -61,7 +58,7 @@ namespace Opm
     /// taking an AD type and returning the same. Derivatives are not
     /// returned separately by any method, only implicitly with the AD
     /// version of the methods.
-    class BlackoilPropsAdFromDeck : public BlackoilPropsAdInterface
+    class BlackoilPropsAdFromDeck
     {
         friend class BlackoilPropsDataHandle;
     public:

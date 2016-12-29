@@ -36,7 +36,7 @@ namespace Opm
     SimulatorBase<Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
                                                  const Grid& grid,
                                                  DerivedGeology& geo,
-                                                 BlackoilPropsAdInterface& props,
+                                                 BlackoilPropsAdFromDeck& props,
                                                  const RockCompressibility* rock_comp_props,
                                                  NewtonIterationBlackoilInterface& linsolver,
                                                  const double* gravity,

@@ -92,7 +92,7 @@ namespace Opm
 
 
     void
-    StandardWells::init(const BlackoilPropsAdInterface* fluid_arg,
+    StandardWells::init(const BlackoilPropsAdFromDeck* fluid_arg,
                         const std::vector<bool>* active_arg,
                         const std::vector<PhasePresence>* pc_arg,
                         const VFPProperties*  vfp_properties_arg,

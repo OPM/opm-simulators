@@ -30,7 +30,7 @@
 
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilModel.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 
@@ -124,7 +124,7 @@ namespace Opm
         SimulatorBase(const parameter::ParameterGroup& param,
                       const Grid& grid,
                       DerivedGeology& geo,
-                      BlackoilPropsAdInterface& props,
+                      BlackoilPropsAdFromDeck& props,
                       const RockCompressibility* rock_comp_props,
                       NewtonIterationBlackoilInterface& linsolver,
                       const double* gravity,
@@ -189,7 +189,7 @@ namespace Opm
 
         // Data.
         typedef RateConverter::
-        SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
+        SurfaceToReservoirVoidage< BlackoilPropsAdFromDeck,
                                    std::vector<int> > RateConverterType;
         typedef typename Traits::Model Model;
         typedef typename Model::ModelParameters ModelParameters;
@@ -201,7 +201,7 @@ namespace Opm
 
         // Observed objects.
         const Grid& grid_;
-        BlackoilPropsAdInterface& props_;
+        BlackoilPropsAdFromDeck& props_;
         const RockCompressibility* rock_comp_props_;
         const double* gravity_;
         // Solvers

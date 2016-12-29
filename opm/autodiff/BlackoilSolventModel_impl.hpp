@@ -25,7 +25,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 
@@ -72,7 +72,7 @@ namespace Opm {
     template <class Grid>
     BlackoilSolventModel<Grid>::BlackoilSolventModel(const typename Base::ModelParameters&   param,
                                                      const Grid&                             grid,
-                                                     const BlackoilPropsAdInterface&         fluid,
+                                                     const BlackoilPropsAdFromDeck&         fluid,
                                                      const DerivedGeology&                   geo,
                                                      const RockCompressibility*              rock_comp_props,
                                                      const SolventPropsAdFromDeck&           solvent_props,

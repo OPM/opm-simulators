@@ -20,7 +20,7 @@
 #ifndef SOLVENTPROPSADFROMDECK_HPP
 #define SOLVENTPROPSADFROMDECK_HPP
 
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
 #include <opm/core/utility/NonuniformTableLinear.hpp>

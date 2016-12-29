@@ -37,7 +37,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
@@ -98,7 +98,7 @@ namespace Opm {
                                                                      const std::vector< const Well* >& wells_ecl,
                                                                      const int time_step);
 
-            void init(const BlackoilPropsAdInterface* fluid_arg,
+            void init(const BlackoilPropsAdFromDeck* fluid_arg,
                       const std::vector<bool>* active_arg,
                       const std::vector<PhasePresence>* pc_arg,
                       const VFPProperties*  vfp_properties_arg,
@@ -261,7 +261,7 @@ namespace Opm {
         // TODO: they should be split eventually.
         const Wells* wells_;
 
-        const BlackoilPropsAdInterface* fluid_;
+        const BlackoilPropsAdFromDeck* fluid_;
         const std::vector<bool>*  active_;
         const std::vector<PhasePresence>*  phase_condition_;
         const VFPProperties* vfp_properties_;

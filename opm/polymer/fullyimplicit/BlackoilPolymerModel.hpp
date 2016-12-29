@@ -76,7 +76,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilPolymerModel(const typename Base::ModelParameters&   param,
                              const Grid&                             grid,
-                             const BlackoilPropsAdInterface&         fluid,
+                             const BlackoilPropsAdFromDeck&         fluid,
                              const DerivedGeology&                   geo,
                              const RockCompressibility*              rock_comp_props,
                              const PolymerPropsAd&                   polymer_props_ad,
