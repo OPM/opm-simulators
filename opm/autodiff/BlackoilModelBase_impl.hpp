@@ -144,7 +144,7 @@ typedef Eigen::Array<double,
         // the field will be calculated.
         // TODO: more delicate implementation will be required if we want to handle different
         // FIP regions specified from the well specifications.
-        , rate_converter_(fluid_, std::vector<int>(AutoDiffGrid::numCells(grid_),0))
+        , rate_converter_(fluid_.phaseUsage(), fluid_.cellPvtRegionIndex(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
     {
         if (active_[Water]) {
             material_name_.push_back("Water");

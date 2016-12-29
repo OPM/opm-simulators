@@ -117,7 +117,7 @@ namespace Opm {
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
-                                  SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck, std::vector<int> >;
+            SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
 
         // ---------  Public methods  ---------
 

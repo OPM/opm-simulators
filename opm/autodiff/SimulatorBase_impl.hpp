@@ -60,7 +60,7 @@ namespace Opm
           terminal_output_(param.getDefault("output_terminal", true)),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
-          rateConverter_(props_, std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
+          rateConverter_(props_.phaseUsage(), props.cellPvtRegionIndex(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
           is_parallel_run_( false ),
           defunct_well_names_(defunct_well_names)

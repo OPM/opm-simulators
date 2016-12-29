@@ -87,10 +87,11 @@ BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
     typedef std::vector<int>                     Region;
     typedef Opm::BlackoilPropsAdFromDeck         Props;
     typedef Opm::RateConverter::
-        SurfaceToReservoirVoidage<Props, Region> RCvrt;
+        SurfaceToReservoirVoidage<Props::FluidSystem, Region> RCvrt;
 
     Region reg{ 0 };
-    RCvrt  cvrt(ad_props, reg);
+    int numCells = Opm::UgGridHelpers::numCells(*grid.c_grid());
+    RCvrt  cvrt(ad_props.phaseUsage(), ad_props.cellPvtRegionIndex(), numCells, reg);
 }
 
 
@@ -100,12 +101,13 @@ BOOST_FIXTURE_TEST_CASE(ThreePhase, TestFixture<SetupSimple>)
     typedef std::vector<int>                     Region;
     typedef Opm::BlackoilPropsAdFromDeck         Props;
     typedef Opm::RateConverter::
-        SurfaceToReservoirVoidage<Props, Region> RCvrt;
+        SurfaceToReservoirVoidage<Props::FluidSystem, Region> RCvrt;
 
     Region reg{ 0 };
-    RCvrt  cvrt(ad_props, reg);
+    int numCells = Opm::UgGridHelpers::numCells(*grid.c_grid());
+    RCvrt  cvrt(ad_props.phaseUsage(), ad_props.cellPvtRegionIndex(), numCells, reg);
 
-    Opm::BlackoilState x( Opm::UgGridHelpers::numCells( *grid.c_grid()) , Opm::UgGridHelpers::numFaces( *grid.c_grid()) , 3);
+    Opm::BlackoilState x(numCells, Opm::UgGridHelpers::numFaces( *grid.c_grid()) , 3);
 
     cvrt.defineState(x);
 

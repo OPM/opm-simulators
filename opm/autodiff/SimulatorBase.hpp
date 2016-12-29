@@ -189,7 +189,7 @@ namespace Opm
 
         // Data.
         typedef RateConverter::
-        SurfaceToReservoirVoidage< BlackoilPropsAdFromDeck,
+        SurfaceToReservoirVoidage< BlackoilPropsAdFromDeck::FluidSystem,
                                    std::vector<int> > RateConverterType;
         typedef typename Traits::Model Model;
         typedef typename Model::ModelParameters ModelParameters;
