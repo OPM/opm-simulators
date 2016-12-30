@@ -110,7 +110,7 @@ public:
 
         unsigned numElements = elemMapper.size();
 
-        extractPermeability_(eclState);
+        extractPermeability_();
 
         // calculate the axis specific centroids of all elements
         std::array<std::vector<DimVector>, dimWorld> axisCentroids;
@@ -260,7 +260,7 @@ public:
     { return trans_.at(isId_(elemIdx1, elemIdx2)); }
 
 private:
-    void extractPermeability_(const Opm::EclipseState& eclState)
+    void extractPermeability_()
     {
         const auto& props = gridManager_.eclState().get3DProperties();
 
