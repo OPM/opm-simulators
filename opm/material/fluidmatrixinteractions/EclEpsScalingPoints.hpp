@@ -97,10 +97,14 @@ public:
         if (ecl3dProps.hasDeckDoubleGridProperty("PERMX")) {
             permx = &ecl3dProps.getDoubleGridProperty("PERMX").getData();
             permy = permx;
+            permz = permx;
         }
 
         if (ecl3dProps.hasDeckDoubleGridProperty("PERMY"))
             permy = &ecl3dProps.getDoubleGridProperty("PERMY").getData();
+
+        if (ecl3dProps.hasDeckDoubleGridProperty("PERMZ"))
+            permz = &ecl3dProps.getDoubleGridProperty("PERMZ").getData();
     }
 #endif
 
@@ -122,6 +126,7 @@ public:
     const DoubleData* poro;
     const DoubleData* permx;
     const DoubleData* permy;
+    const DoubleData* permz;
 
 private:
 #if HAVE_OPM_PARSER
@@ -292,7 +297,7 @@ struct EclEpsScalingPointsInfo
      * I.e., the values which are "seen" by the physical model.
      */
     void extractScaled(const Opm::Deck& deck,
-                       const Opm::EclipseState& /*eclState*/,
+                       const Opm::EclipseState& eclState,
                        const EclEpsGridProperties& epsProperties,
                        unsigned cartesianCellIdx)
     {
@@ -322,21 +327,21 @@ struct EclEpsScalingPointsInfo
         // documentation.
         pcowLeverettFactor = 1.0;
         pcgoLeverettFactor = 1.0;
-        if (deck.hasKeyword("JFUNC")) {
-            const auto& jfuncKeyword = deck.getKeyword("JFUNC");
-            const auto& jfuncRecord = jfuncKeyword.getRecord(0);
-            const std::string& jfuncFlag = jfuncRecord.getItem("FLAG").template get<std::string>(0);
-            const std::string& jfuncDir =
-                jfuncRecord.getItem("DIRECTION").template get<std::string>(0);
+        if (eclState.getTableManager().useJFunc()) {
+            const auto& jfunc = eclState.getTableManager().getJFunc();
+            const auto& jfuncDir = jfunc.direction();
 
             Scalar perm;
-            if (jfuncDir == "X")
+            if (jfuncDir == Opm::JFunc::Direction::X)
                 perm =
                     (*epsProperties.permx)[cartesianCellIdx];
-            else if (jfuncDir == "Y")
+            else if (jfuncDir == Opm::JFunc::Direction::Y)
                 perm =
                     (*epsProperties.permy)[cartesianCellIdx];
-            else if (jfuncDir == "XY")
+            else if (jfuncDir == Opm::JFunc::Direction::Z)
+                perm =
+                    (*epsProperties.permz)[cartesianCellIdx];
+            else if (jfuncDir == Opm::JFunc::Direction::XY)
                 // TODO: verify that this really is the arithmetic mean. (the
                 // documentation just says that the "average" should be used, IMO the
                 // harmonic mean would be more appropriate because that's what's usually
@@ -346,14 +351,14 @@ struct EclEpsScalingPointsInfo
                                         (*epsProperties.permy)[cartesianCellIdx]);
             else
                 OPM_THROW(std::runtime_error, "Illegal direction indicator for the JFUNC "
-                          "keyword ('"<<jfuncDir<<"')");
+                          "keyword ("<<static_cast<int>(jfuncDir)<<")");
 
             // convert permeability from m^2 to mD
             perm *= 1.01325e15;
 
             Scalar poro = (*epsProperties.poro)[cartesianCellIdx];
-            Scalar alpha = jfuncRecord.getItem("ALPHA_FACTOR").template get<double>(0);
-            Scalar beta = jfuncRecord.getItem("BETA_FACTOR").template get<double>(0);
+            Scalar alpha = jfunc.alphaFactor();
+            Scalar beta = jfunc.betaFactor();
 
             // the part of the Leverett capillary pressure which does not depend on
             // surface tension.
@@ -364,20 +369,21 @@ struct EclEpsScalingPointsInfo
             const Scalar Uconst = 0.318316 * 1e5;
 
             // compute the oil-water Leverett factor.
-            if (jfuncFlag == "WATER" || jfuncFlag == "BOTH") {
+            const auto& jfuncFlag = jfunc.flag();
+            if (jfuncFlag == Opm::JFunc::Flag::WATER || jfuncFlag == Opm::JFunc::Flag::BOTH) {
                 // note that we use the surface tension in terms of [dyn/cm]
                 Scalar gamma =
-                    jfuncRecord.getItem("OW_SURFACE_TENSION").getSIDouble(0)
+                    jfunc.owSurfaceTension()
                     * (/*dyn/N=*/1e5 * /*m/cm=*/1e-2);
 
                 pcowLeverettFactor = commonFactor*gamma*Uconst;
             }
 
             // compute the gas-oil Leverett factor.
-            if (jfuncFlag == "GAS" || jfuncFlag == "BOTH") {
+            if (jfuncFlag == Opm::JFunc::Flag::GAS || jfuncFlag == Opm::JFunc::Flag::BOTH) {
                 // note that we use the surface tension in terms of [dyn/cm]
                 Scalar gamma =
-                    jfuncRecord.getItem("GO_SURFACE_TENSION").getSIDouble(0)
+                    jfunc.goSurfaceTension()
                     * (/*dyn/N=*/1e5 * /*m/cm=*/1e-2);
 
                 pcgoLeverettFactor = commonFactor*gamma*Uconst;

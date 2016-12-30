@@ -244,16 +244,10 @@ public:
                 || props.hasDeckDoubleGridProperty("SWATINIT");
 
             // check if Leverett capillary pressure scaling is requested
-            if (deck.hasKeyword("JFUNC")) {
-                const auto& jfuncKeyword = deck.getKeyword("JFUNC");
-                std::string flagString =
-                    jfuncKeyword.getRecord(0).getItem("FLAG").getTrimmedString(0);
-                std::transform(flagString.begin(),
-                               flagString.end(),
-                               flagString.begin(),
-                               ::toupper);
-
-                if (flagString == "BOTH" || flagString == "WATER")
+            if (eclState.getTableManager().useJFunc()) {
+                const auto& jfunc = eclState.getTableManager().getJFunc();
+                auto flag = jfunc.flag();
+                if (flag == Opm::JFunc::Flag::BOTH || flag == Opm::JFunc::Flag::WATER)
                     enableLeverettScaling_ = true;
             }
 
@@ -268,16 +262,10 @@ public:
             enablePcScaling_ = props.hasDeckDoubleGridProperty("PCG");
 
             // check if Leverett capillary pressure scaling is requested
-            if (deck.hasKeyword("JFUNC")) {
-                const auto& jfuncKeyword = deck.getKeyword("JFUNC");
-                std::string flagString =
-                    jfuncKeyword.getRecord(0).getItem("FLAG").getTrimmedString(0);
-                std::transform(flagString.begin(),
-                               flagString.end(),
-                               flagString.begin(),
-                               ::toupper);
-
-                if (flagString == "BOTH" || flagString == "GAS")
+            if (eclState.getTableManager().useJFunc()) {
+                const auto& jfunc = eclState.getTableManager().getJFunc();
+                auto flag = jfunc.flag();
+                if (flag == Opm::JFunc::Flag::BOTH || flag == Opm::JFunc::Flag::GAS)
                     enableLeverettScaling_ = true;
             }
 
