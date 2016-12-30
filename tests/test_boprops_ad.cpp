@@ -116,17 +116,17 @@ BOOST_FIXTURE_TEST_CASE(SurfaceDensity, TestFixture<SetupSimple>)
 
     typedef Opm::BlackoilPropsAdFromDeck::V V;
 
-    enum { Water = Opm::BlackoilPropsAdFromDeck::Water };
+    enum { Water = Opm::Water };
     V rho0AD_Water = boprops_ad.surfaceDensity(Water, cells);
     BOOST_REQUIRE_EQUAL(rho0AD_Water.size(), cells.size());
     BOOST_CHECK_EQUAL(rho0AD_Water[0], 1000.0);
 
-    enum { Oil = Opm::BlackoilPropsAdFromDeck::Oil };
+    enum { Oil = Opm::Oil };
     V rho0AD_Oil = boprops_ad.surfaceDensity(Oil, cells);
     BOOST_REQUIRE_EQUAL(rho0AD_Oil.size(), cells.size());
     BOOST_CHECK_EQUAL(rho0AD_Oil[0], 800.0);
 
-    enum { Gas = Opm::BlackoilPropsAdFromDeck::Gas };
+    enum { Gas = Opm::Gas };
     V rho0AD_Gas = boprops_ad.surfaceDensity(Gas, cells);
     BOOST_REQUIRE_EQUAL(rho0AD_Gas.size(), cells.size());
     BOOST_CHECK_EQUAL(rho0AD_Gas[0], 1.0);

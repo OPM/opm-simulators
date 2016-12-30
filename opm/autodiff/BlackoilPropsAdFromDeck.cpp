@@ -177,16 +177,16 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         surfaceDensity_.resize(numRegions);
         for (int regionIdx = 0; regionIdx < numRegions; ++regionIdx) {
-            if (phase_usage_.phase_used[Liquid]) {
-                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Liquid]]
+            if (phase_usage_.phase_used[Oil]) {
+                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Oil]]
                     = densityKeyword.getRecord(regionIdx).getItem("OIL").getSIDouble(0);
             }
-            if (phase_usage_.phase_used[Aqua]) {
-                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Aqua]]
+            if (phase_usage_.phase_used[Water]) {
+                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Water]]
                     = densityKeyword.getRecord(regionIdx).getItem("WATER").getSIDouble(0);
             }
-            if (phase_usage_.phase_used[Vapour]) {
-                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Vapour]]
+            if (phase_usage_.phase_used[Gas]) {
+                surfaceDensity_[regionIdx][phase_usage_.phase_pos[Gas]]
                     = densityKeyword.getRecord(regionIdx).getItem("GAS").getSIDouble(0);
             }
         }
