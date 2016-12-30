@@ -615,7 +615,7 @@ public:
      */
     template <class Context>
     Scalar transmissibility(const Context& context,
-                            unsigned fromDofLocalIdx,
+                            unsigned OPM_OPTIM_UNUSED fromDofLocalIdx,
                             unsigned toDofLocalIdx) const
     {
         assert(fromDofLocalIdx == 0);
