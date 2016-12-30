@@ -21,6 +21,9 @@
 #ifndef OPM_SIMULATORBASE_HEADER_INCLUDED
 #define OPM_SIMULATORBASE_HEADER_INCLUDED
 
+#include <opm/material/densead/Math.hpp>
+#include <opm/autodiff/DuneMatrix.hpp>
+
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
