@@ -39,6 +39,10 @@
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
+#if HAVE_MPI
+#include <mpi.h>
+#endif // HAVE_MPI
+
 #include <vector>
 #include <unordered_set>
 #include <array>
