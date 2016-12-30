@@ -124,9 +124,8 @@ public:
             rawCaseName = baseName.substr(0, i);
 
         // transform the result to ALL_UPPERCASE
-        caseName_ = "";
-        for (size_t i = 0; i < rawCaseName.size(); ++i)
-            caseName_ += std::toupper(rawCaseName[i]);
+        caseName_ = rawCaseName;
+        std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
 
         if (myRank == 0)
             std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
