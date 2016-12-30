@@ -63,42 +63,42 @@ public:
     { }
 
     template <bool prepareValues = true, bool prepareGradients = true>
-    void prepare(const ElementContext& elemCtx, unsigned timeIdx)
+    void prepare(const ElementContext& OPM_UNUSED elemCtx, unsigned OPM_UNUSED timeIdx)
     { }
 
     template <class QuantityCallback, class QuantityType = Scalar>
-    QuantityType calculateValue(const ElementContext& elemCtx,
-                                unsigned fapIdx,
-                                const QuantityCallback& quantityCallback) const
+    QuantityType calculateValue(const ElementContext& OPM_UNUSED elemCtx,
+                                unsigned OPM_UNUSED fapIdx,
+                                const QuantityCallback& OPM_UNUSED quantityCallback) const
     {
         OPM_THROW(std::logic_error,
                   "Generic values are not supported by the ECL black-oil simulator");
     }
 
     template <class QuantityCallback>
-    void calculateGradient(DimVector& quantityGrad,
-                           const ElementContext& elemCtx,
-                           unsigned fapIdx,
-                           const QuantityCallback& quantityCallback) const
+    void calculateGradient(DimVector& OPM_UNUSED quantityGrad,
+                           const ElementContext& OPM_UNUSED elemCtx,
+                           unsigned OPM_UNUSED fapIdx,
+                           const QuantityCallback& OPM_UNUSED quantityCallback) const
     {
         OPM_THROW(std::logic_error,
                   "Generic gradients are not supported by the ECL black-oil simulator");
     }
 
     template <class QuantityCallback>
-    Scalar calculateBoundaryValue(const ElementContext& elemCtx,
-                                  unsigned fapIdx,
-                                  const QuantityCallback& quantityCallback)
+    Scalar calculateBoundaryValue(const ElementContext& OPM_UNUSED elemCtx,
+                                  unsigned OPM_UNUSED fapIdx,
+                                  const QuantityCallback& OPM_UNUSED quantityCallback)
     {
         OPM_THROW(std::logic_error,
                   "Generic boundary values are not supported by the ECL black-oil simulator");
     }
 
     template <class QuantityCallback>
-    void calculateBoundaryGradient(DimVector& quantityGrad,
-                                   const ElementContext& elemCtx,
-                                   unsigned fapIdx,
-                                   const QuantityCallback& quantityCallback) const
+    void calculateBoundaryGradient(DimVector& OPM_UNUSED quantityGrad,
+                                   const ElementContext& OPM_UNUSED elemCtx,
+                                   unsigned OPM_UNUSED fapIdx,
+                                   const QuantityCallback& OPM_UNUSED quantityCallback) const
     {
         OPM_THROW(std::logic_error,
                   "Generic boundary gradients are not supported by the ECL black-oil simulator");

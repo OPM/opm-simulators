@@ -91,7 +91,7 @@ class EclTransIntensiveQuantities
 {
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
 protected:
-    void update_(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
+    void update_(const ElementContext& OPM_UNUSED elemCtx, unsigned OPM_UNUSED dofIdx, unsigned OPM_UNUSED timeIdx)
     { }
 };
 
@@ -139,7 +139,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& potentialGrad(unsigned phaseIdx) const
+    const EvalDimVector& potentialGrad(unsigned OPM_UNUSED phaseIdx) const
     {
         OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide explicit potential gradients");
@@ -160,7 +160,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& filterVelocity(unsigned phaseIdx) const
+    const EvalDimVector& filterVelocity(unsigned OPM_UNUSED phaseIdx) const
     {
         OPM_THROW(Opm::NotImplemented,
                   "The ECL transmissibility module does not provide explicit filter velocities");
@@ -348,7 +348,7 @@ protected:
     /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
-    void calculateFluxes_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    void calculateFluxes_(const ElementContext& OPM_UNUSED elemCtx, unsigned OPM_UNUSED scvfIdx, unsigned OPM_UNUSED timeIdx)
     { }
 
     // transmissibility [m^3 s]
