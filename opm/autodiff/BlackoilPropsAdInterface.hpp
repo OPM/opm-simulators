@@ -21,7 +21,7 @@
 #define OPM_BLACKOILPROPSADINTERFACE_HEADER_INCLUDED
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 
 namespace Opm
 {
@@ -74,16 +74,6 @@ namespace Opm
 
         /// \return   Object describing the active phases.
         virtual PhaseUsage phaseUsage() const = 0;
-
-        // ------ Canonical named indices for each phase ------
-
-        /// Canonical named indices for each phase.
-        enum PhaseIndex { Water = BlackoilPhases::Aqua, Oil = BlackoilPhases::Liquid,
-                          Gas = BlackoilPhases::Vapour,
-                          Aqua = BlackoilPhases::Aqua,
-                          Liquid = BlackoilPhases::Liquid,
-                          Vapour = BlackoilPhases::Vapour,
-                          MaxNumPhases = BlackoilPhases::MaxNumPhases};
 
         // ------ Density ------
 

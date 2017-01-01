@@ -23,6 +23,7 @@
 
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 
 struct UnstructuredGrid;
@@ -70,9 +71,9 @@ namespace Opm {
                              Eigen::Dynamic,
                              Eigen::Dynamic,
                              Eigen::RowMajor> DataBlock;
-        enum { Water = BlackoilPropsAdInterface::Water,
-               Oil = BlackoilPropsAdInterface::Oil,
-               Gas = BlackoilPropsAdInterface::Gas };
+        enum { Water = Opm::Water,
+               Oil = Opm::Oil,
+               Gas = Opm::Gas };
 
         // Data
         const UnstructuredGrid&      grid_;

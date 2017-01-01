@@ -24,8 +24,8 @@
 
 #include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
