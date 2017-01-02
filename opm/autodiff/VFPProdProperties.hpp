@@ -22,7 +22,6 @@
 
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/core/wells.h>
-#include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/autodiff/VFPHelpers.hpp>
@@ -33,6 +32,8 @@
 
 namespace Opm {
 
+template <class Scalar>
+class AutoDiffBlock;
 
 /**
  * Class which linearly interpolates BHP as a function of rate, tubing head pressure,

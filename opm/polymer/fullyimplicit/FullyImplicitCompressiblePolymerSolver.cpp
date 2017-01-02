@@ -536,7 +536,7 @@ namespace {
 
 
 
-    std::vector<V>
+    std::vector<std::vector<double> >
     FullyImplicitCompressiblePolymerSolver::computeFluidInPlace(const PolymerBlackoilState& x,
                                                                 const std::vector<int>& fipnum)
     {
@@ -568,7 +568,11 @@ namespace {
 
 
         const int dims = *std::max_element(fipnum.begin(), fipnum.end());
-        std::vector<V> values(dims, V::Zero(7));
+        std::vector<std::vector<double> > values(dims);
+        for (int i=0; i < dims; ++i) {
+            values[i].resize(7, 0.0);
+        }
+
         V hcpv = V::Zero(nc);
         V pres = V::Zero(nc);
         for (int i = 0; i < 5; ++i) {

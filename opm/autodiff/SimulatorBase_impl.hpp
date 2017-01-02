@@ -149,7 +149,7 @@ namespace Opm
                 fipnum[c] = fipnum_global[AutoDiffGrid::globalCell(grid_)[c]];
             }
         }
-        std::vector<V> OOIP;
+        std::vector<std::vector<double> > OOIP;
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -275,10 +275,10 @@ namespace Opm
             report.solver_time += solver_timer.secsSinceStart();
 
             // Compute current FIP.
-            std::vector<V> COIP;
+            std::vector<std::vector<double> > COIP;
             COIP = solver->computeFluidInPlace(state, fipnum);
-            V OOIP_totals = FIPTotals(OOIP, state);
-            V COIP_totals = FIPTotals(COIP, state);
+            std::vector<double> OOIP_totals = FIPTotals(OOIP, state);
+            std::vector<double> COIP_totals = FIPTotals(COIP, state);
 
             //Convert to correct units
             FIPUnitConvert(eclipse_state_->getUnits(), COIP);
@@ -665,21 +665,19 @@ namespace Opm
         }
     }
 
-
     template <class Implementation>
     void
     SimulatorBase<Implementation>::FIPUnitConvert(const UnitSystem& units,
-                                                  std::vector<V>& fip)
+                                                  std::vector<std::vector<double> >& fip)
     {
         for (size_t i = 0; i < fip.size(); ++i) {
             FIPUnitConvert(units, fip[i]);
         }
     }
 
-
     template <class Implementation>
     void
-    SimulatorBase<Implementation>::FIPUnitConvert(const UnitSystem& units, V& fip)
+    SimulatorBase<Implementation>::FIPUnitConvert(const UnitSystem& units, std::vector<double>& fip)
     {
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             fip[0] = unit::convert::to(fip[0], unit::stb);
@@ -700,10 +698,10 @@ namespace Opm
 
 
     template <class Implementation>
-    V
-    SimulatorBase<Implementation>::FIPTotals(const std::vector<V>& fip, const ReservoirState& state)
+    std::vector<double>
+    SimulatorBase<Implementation>::FIPTotals(const std::vector<std::vector<double> >& fip, const ReservoirState& state)
     {
-        V totals(V::Zero(7));
+        std::vector<double> totals(7, 0.0);
         for (int i = 0; i < 5; ++i) {
             for (size_t reg = 0; reg < fip.size(); ++reg) {
                 totals[i] += fip[reg][i];
@@ -713,15 +711,34 @@ namespace Opm
         const int np = state.numPhases();
         const PhaseUsage& pu = props_.phaseUsage();
         const DataBlock s = Eigen::Map<const DataBlock>(& state.saturation()[0], nc, np);
-        const V so = pu.phase_used[BlackoilPhases::Liquid] ? V(s.col(BlackoilPhases::Liquid)) : V::Zero(nc);
-        const V sg = pu.phase_used[BlackoilPhases::Vapour] ? V(s.col(BlackoilPhases::Vapour)) : V::Zero(nc);
-        const V hydrocarbon = so + sg;
-        const V p = Eigen::Map<const V>(& state.pressure()[0], nc);
+        std::vector<double> so(nc);
+        std::vector<double> sg(nc);
+        std::vector<double> hydrocarbon(nc);
+        const auto& soCol = s.col(BlackoilPhases::Liquid);
+        const auto& sgCol = s.col(BlackoilPhases::Vapour);
+        for (unsigned c = 0; c < so.size(); ++ c) {
+            double mySo = 0.0;
+            if (pu.phase_used[BlackoilPhases::Liquid])
+                mySo = soCol[c];
+            double mySg = 0.0;
+            if (pu.phase_used[BlackoilPhases::Vapour])
+                mySg = sgCol[c];
+            so[c] = mySo;
+            sg[c] = mySg;
+            hydrocarbon[c] = mySo + mySg;
+        }
+        const std::vector<double> p = state.pressure();
         if ( ! is_parallel_run_ )
         {
+            double tmp = 0.0;
+            double tmp2 = 0.0;
+            for (unsigned i = 0; i < p.size(); ++i) {
+                tmp += p[i] * geo_.poreVolume()[i] * hydrocarbon[i];
+                tmp2 += geo_.poreVolume()[i] * hydrocarbon[i];
+            }
             totals[5] = geo_.poreVolume().sum();
-            totals[6] = (p * geo_.poreVolume() * hydrocarbon).sum() / ((geo_.poreVolume() * hydrocarbon).sum());
-        }
+            totals[6] = unit::convert::to(tmp/tmp2, unit::barsa); 
+       }
         else
         {
 #if HAVE_MPI
@@ -730,8 +747,12 @@ namespace Opm
             auto operators = std::make_tuple(Opm::Reduction::makeGlobalSumFunctor<double>(),
                                              Opm::Reduction::makeGlobalSumFunctor<double>(),
                                              Opm::Reduction::makeGlobalSumFunctor<double>());
-            auto pav_nom   = p * geo_.poreVolume() * hydrocarbon;
-            auto pav_denom = geo_.poreVolume() * hydrocarbon;
+            std::vector<double> pav_nom(p.size());
+            std::vector<double> pav_denom(pav_nom.size());
+            for (unsigned i = 0; i < p.size(); ++i) {
+                pav_nom[i] = p[i] * geo_.poreVolume()[i] * hydrocarbon[i];
+                pav_denom[i] = geo_.poreVolume()[i] * hydrocarbon[i];
+            }
 
             // using ref cref to prevent copying
             auto inputs = std::make_tuple(std::cref(geo_.poreVolume()),
@@ -756,7 +777,7 @@ namespace Opm
 
     template <class Implementation>
     void
-    SimulatorBase<Implementation>::outputFluidInPlace(const V& oip, const V& cip, const UnitSystem& units, const int reg)
+    SimulatorBase<Implementation>::outputFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg)
     {
         std::ostringstream ss;
         if (!reg) {

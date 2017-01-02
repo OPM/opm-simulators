@@ -21,11 +21,9 @@
 #ifndef OPM_NONLINEARSOLVER_HEADER_INCLUDED
 #define OPM_NONLINEARSOLVER_HEADER_INCLUDED
 
-#include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
-#include <opm/autodiff/DuneMatrix.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
@@ -39,11 +37,6 @@ namespace Opm {
     class NonlinearSolver
     {
     public:
-        // ---------  Types and enums  ---------
-        typedef AutoDiffBlock<double> ADB;
-        typedef ADB::V V;
-        typedef ADB::M M;
-
         // Available relaxation scheme types.
         enum RelaxType { DAMPEN, SOR };
 
@@ -132,14 +125,13 @@ namespace Opm {
         /// \param[in]    ReservoirState
         /// \param[in]    FIPNUM for active cells not global cells.
         /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
-        std::vector<V>
-        computeFluidInPlace(const ReservoirState& x,
-                            const std::vector<int>& fipnum) const
+        std::vector<std::vector<double> >
+        computeFluidInPlace(const ReservoirState& x, const std::vector<int>& fipnum) const
         {
             return model_->computeFluidInPlace(x, fipnum);
         }
 
-        std::vector<std::vector<double>>
+        std::vector<std::vector<double> >
         computeFluidInPlace(const std::vector<int>& fipnum) const
         {
             return model_->computeFluidInPlace(fipnum);
@@ -155,9 +147,6 @@ namespace Opm {
         /// Detect oscillation or stagnation in a given residual history.
         void detectOscillations(const std::vector<std::vector<double>>& residual_history,
                                 const int it, bool& oscillate, bool& stagnate) const;
-
-        /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
-        void stabilizeNonlinearUpdate(V& dx, V& dxOld, const double omega) const;
 
         /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
         /// Implemention for Dune block vectors.

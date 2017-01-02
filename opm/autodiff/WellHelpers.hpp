@@ -23,7 +23,6 @@
 #define OPM_WELLHELPERS_HEADER_INCLUDED
 
 #include <opm/core/wells.h>
-#include <opm/autodiff/AutoDiffBlock.hpp>
 // #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <vector>
@@ -121,7 +120,6 @@ namespace Opm {
 
 
         // ---------      Types      ---------
-        using Vector = AutoDiffBlock<double>::V;
 
         /**
          * Simple hydrostatic correction for VFP table
@@ -149,7 +147,7 @@ namespace Opm {
             return dp;
         }
 
-
+        template <class Vector>
         inline
         Vector computeHydrostaticCorrection(const Wells& wells, const Vector vfp_ref_depth,
                 const Vector& well_perforation_densities, const double gravity) {

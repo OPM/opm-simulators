@@ -27,6 +27,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 
 #include <opm/autodiff/VFPHelpers.hpp>
@@ -67,14 +68,10 @@ VFPInjProperties::VFPInjProperties(const std::map<int, VFPInjTable>& tables) {
     }
 }
 
-
-
-
-
 VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
-        const Wells& wells,
-        const ADB& qs,
-        const ADB& thp_val) const {
+                                            const Wells& wells,
+                                            const ADB& qs,
+                                            const ADB& thp_val) const {
     const int nw = wells.number_of_wells;
 
     //Short-hands for water / oil / gas phases
@@ -87,14 +84,11 @@ VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
     return bhp(table_id, w, o, g, thp_val);
 }
 
-
-
-
 VFPInjProperties::ADB VFPInjProperties::bhp(const std::vector<int>& table_id,
-        const ADB& aqua,
-        const ADB& liquid,
-        const ADB& vapour,
-        const ADB& thp_arg) const {
+                                            const ADB& aqua,
+                                            const ADB& liquid,
+                                            const ADB& vapour,
+                                            const ADB& thp_arg) const {
     const int nw = thp_arg.size();
 
     std::vector<int> block_pattern = detail::commonBlockPattern(aqua, liquid, vapour, thp_arg);
