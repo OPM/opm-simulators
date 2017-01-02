@@ -296,8 +296,7 @@ struct EclEpsScalingPointsInfo
      *
      * I.e., the values which are "seen" by the physical model.
      */
-    void extractScaled(const Opm::Deck& deck,
-                       const Opm::EclipseState& eclState,
+    void extractScaled(const Opm::EclipseState& eclState,
                        const EclEpsGridProperties& epsProperties,
                        unsigned cartesianCellIdx)
     {

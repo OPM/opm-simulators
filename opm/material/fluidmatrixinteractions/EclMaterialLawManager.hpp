@@ -377,7 +377,6 @@ private:
             readGasOilScaledPoints_(gasOilScaledInfoVector,
                                     gasOilScaledPointsVector,
                                     gasOilConfig,
-                                    deck,
                                     eclState,
                                     epsGridProperties,
                                     elemIdx,
@@ -385,7 +384,6 @@ private:
             readOilWaterScaledPoints_(oilWaterScaledEpsInfoDrainage_,
                                       oilWaterScaledEpsPointsDrainage,
                                       oilWaterConfig,
-                                      deck,
                                       eclState,
                                       epsGridProperties,
                                       elemIdx,
@@ -395,7 +393,6 @@ private:
                 readGasOilScaledPoints_(gasOilScaledImbInfoVector,
                                         gasOilScaledImbPointsVector,
                                         gasOilConfig,
-                                        deck,
                                         eclState,
                                         epsImbGridProperties,
                                         elemIdx,
@@ -403,7 +400,6 @@ private:
                 readOilWaterScaledPoints_(oilWaterScaledImbInfoVector,
                                           oilWaterScaledImbPointsVector,
                                           oilWaterConfig,
-                                          deck,
                                           eclState,
                                           epsImbGridProperties,
                                           elemIdx,
@@ -786,7 +782,6 @@ private:
     void readGasOilScaledPoints_(InfoContainer& destInfo,
                                  PointsContainer& destPoints,
                                  std::shared_ptr<EclEpsConfig> config,
-                                 const Opm::Deck& deck,
                                  const Opm::EclipseState& eclState,
                                  const EclEpsGridProperties& epsGridProperties,
                                  unsigned elemIdx,
@@ -795,7 +790,7 @@ private:
         unsigned satnumIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumIdx]);
-        destInfo[elemIdx]->extractScaled(deck, eclState, epsGridProperties, cartElemIdx);
+        destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
 
         destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
         destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclGasOilSystem);
@@ -805,7 +800,6 @@ private:
     void readOilWaterScaledPoints_(InfoContainer& destInfo,
                                    PointsContainer& destPoints,
                                    std::shared_ptr<EclEpsConfig> config,
-                                   const Opm::Deck& deck,
                                    const Opm::EclipseState& eclState,
                                    const EclEpsGridProperties& epsGridProperties,
                                    unsigned elemIdx,
@@ -814,7 +808,7 @@ private:
         unsigned satnumIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
 
         destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumIdx]);
-        destInfo[elemIdx]->extractScaled(deck, eclState, epsGridProperties, cartElemIdx);
+        destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
 
         destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
         destPoints[elemIdx]->init(*destInfo[elemIdx], *config, EclOilWaterSystem);
