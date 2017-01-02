@@ -242,8 +242,7 @@ public:
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
-            const WellModel well_model(wells, model_param_, terminal_output_, pv);
+            const WellModel well_model(wells, model_param_, terminal_output_);
 
             auto solver = createSolver(well_model);
 
