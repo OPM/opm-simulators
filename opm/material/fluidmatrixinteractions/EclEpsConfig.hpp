@@ -164,8 +164,9 @@ public:
                       const Opm::EclipseState& eclState,
                       Opm::EclTwoPhaseSystemType twoPhaseSystemType)
     {
+        const auto& endscale = eclState.runspec().endpoint_scaling();
         // find out if endpoint scaling is used in the first place
-        if (!deck.hasKeyword("ENDSCALE")) {
+        if( !endscale ) {
             // it is not used, i.e., just set all enable$Foo attributes to 0 and be done
             // with it.
             enableSatScaling_ = false;
@@ -180,26 +181,7 @@ public:
         // endpoint scaling is used, i.e., at least saturation scaling needs to be enabled
         enableSatScaling_ = true;
 
-        // check if three-point scaling is to be used for the saturations of the relative
-        // permeabilities
-        if (deck.hasKeyword("SCALECRS")) {
-            // if the deck features the SCALECRS keyword, it must be set to 'YES'
-            const auto& scalecrsKeyword = deck.getKeyword("SCALECRS");
-            std::string scalecrsValue =
-                scalecrsKeyword.getRecord(0).getItem("VALUE").get< std::string >(0);
-            // convert the value of the SCALECRS keyword to upper case, just to be sure
-            std::transform(scalecrsValue.begin(),
-                           scalecrsValue.end(),
-                           scalecrsValue.begin(),
-                           ::toupper);
-
-            if (scalecrsValue == "YES" || scalecrsValue == "Y")
-                enableThreePointKrSatScaling_ = true;
-            else
-                enableThreePointKrSatScaling_ = false;
-        }
-        else
-            enableThreePointKrSatScaling_ = false;
+        enableThreePointKrSatScaling_ = endscale.threepoint();
 
         auto& props = eclState.get3DProperties();
         // check if we are supposed to scale the Y axis of the capillary pressure
