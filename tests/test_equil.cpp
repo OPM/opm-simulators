@@ -809,4 +809,88 @@ BOOST_AUTO_TEST_CASE (DeckWithRSVDAndRVVD)
     }
 }
 
+BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
+{
+    Opm::GridManager gm(1, 1, 20, 1.0, 1.0, 5.0);
+    const UnstructuredGrid& grid = *(gm.c_grid());
+    Opm::Parser parser;
+    Opm::ParseContext parseContext;
+    Opm::Deck deck = parser.parseFile("capillarySwatinit.DATA" , parseContext);
+    Opm::EclipseState eclipseState(deck , parseContext);
+    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
+    Opm::BlackoilState state( Opm::UgGridHelpers::numCells( grid ) , Opm::UgGridHelpers::numFaces( grid ) , 3);
+
+    // reference saturations
+    const std::vector<double> s[3]{
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.42192000000000002, 0.77802666666666664, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0, 0, 0, 0.00736, 0.792746666666, 0.8, 0.8, 0.8, 0.8, 0.57807999999999993, 0.22197333333333336, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.79264, 0.007253333333, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    };
+    // sw in cell 13 and 14 is forced to be swu=1 since P_oil - P_wat < 0.
+    const std::vector<double> swatinit[3]{
+        { 0.2, 0.2, 0.2, 0.2, 0.2, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 0, 0, 0, 0.00736, 0.792746666666, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0, 0, 0, 0, 0, 0 },
+        { 0.8, 0.8, 0.8, 0.79264, 0.007253333333, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    };
+    std::vector<double> sats = state.saturation();
+    for (int phase = 0; phase < 3; ++phase) {
+        for (size_t i = 0; i < 20; ++i) {
+            sats[3*i + phase] = s[phase][i];
+        }
+    }
+    // reference pcs
+    const int numCells = Opm::UgGridHelpers::numCells(grid);
+    std::vector<int> cells(numCells);
+    for (int c = 0; c < numCells; ++c) { cells[c] = c; }
+    std::vector<double> pc_original = state.saturation();
+    props.capPress(numCells, sats.data(), cells.data(), pc_original.data(), nullptr);
+
+    std::vector<double> pc_scaled_truth = pc_original;
+    // only modify pcow
+    // sw = 0.2
+    for (size_t i = 0; i < 5; ++i) {
+        pc_scaled_truth[3*i + 0] = 40000;
+    }
+    // sw = 0.5
+    for (size_t i = 5; i < 12; ++i) {
+        pc_scaled_truth[3*i + 0] = 28750;
+    }
+    // sw = 1
+    for (size_t i = 12; i < 20; ++i) {
+        pc_scaled_truth[3*i + 0] = 10000;
+    }
+
+    // compute the initial state
+
+    // apply swatinit
+    Opm::BlackoilState state_scaled = state;
+    initStateEquil(grid, props, deck, eclipseState, 10.0, state_scaled, true);
+
+    // don't apply swatinit
+    Opm::BlackoilState state_unscaled = state;
+    initStateEquil(grid, props, deck, eclipseState, 10.0, state_unscaled, false);
+
+    // compute pc
+    std::vector<double> pc_scaled= state.saturation();
+    props.capPress(numCells, state_scaled.saturation().data(), cells.data(), pc_scaled.data(), nullptr);
+    std::vector<double> pc_unscaled= state.saturation();
+    props.capPress(numCells, state_unscaled.saturation().data(), cells.data(), pc_unscaled.data(), nullptr);
+
+    // test
+    const double reltol = 1.0e-6;
+    for (int phase = 0; phase < 3; ++phase) {
+        for (size_t i = 0; i < 20; ++i) {
+            CHECK( pc_original[3*i + phase ], pc_unscaled[3*i + phase ], reltol);
+            CHECK( pc_scaled_truth[3*i + phase], pc_scaled[3*i + phase ], reltol);
+        }
+    }
+
+    for (int phase = 0; phase < 3; ++phase) {
+        for (size_t i = 0; i < 20; ++i) {
+            CHECK(state_unscaled.saturation()[3*i + phase], s[phase][i], reltol);
+            CHECK(state_scaled.saturation()[3*i + phase], swatinit[phase][i], reltol);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
