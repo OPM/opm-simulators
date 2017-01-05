@@ -120,6 +120,7 @@ inline void solutionToSim( const data::Solution& sol,
                           SimulationDataContainer& state ) {
 
     const auto stride = phases.num_phases;
+
     if( sol.has( "SWAT" ) ) {
         stripe( sol.data( "SWAT" ),
                 stride,
@@ -133,6 +134,18 @@ inline void solutionToSim( const data::Solution& sol,
                 phases.phase_pos[ BlackoilPhases::Vapour ],
                 state.saturation() );
     }
+
+    for (size_t c = 0; c < state.numCells(); ++c) {
+        double& so = state.saturation()[phases.num_phases*c + phases.phase_pos[ BlackoilPhases::Liquid ]];
+        so = 1.0;
+        if (phases.phase_used[ BlackoilPhases::Aqua]) {
+            so -= state.saturation()[phases.num_phases*c + phases.phase_pos[ BlackoilPhases::Aqua ]];
+        }
+        if (phases.phase_used[ BlackoilPhases::Vapour]) {
+            so -= state.saturation()[phases.num_phases*c + phases.phase_pos[ BlackoilPhases::Vapour ]];
+        }
+    }
+
 
     if( sol.has( "PRESSURE" ) ) {
         state.pressure() = sol.data( "PRESSURE" );
