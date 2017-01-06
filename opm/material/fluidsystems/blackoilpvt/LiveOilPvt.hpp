@@ -55,6 +55,11 @@ class LiveOilPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    LiveOilPvt()
+    {
+        vapPar2_ = 0.0;
+    }
+
 #if HAVE_OPM_PARSER
     /*!
      * \brief Initialize the oil parameters via the data specified by the PVTO ECL keyword.

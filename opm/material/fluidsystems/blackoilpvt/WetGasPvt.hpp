@@ -55,6 +55,11 @@ class WetGasPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
+    WetGasPvt()
+    {
+        vapPar1_ = 0.0;
+    }
+
 #if HAVE_OPM_PARSER
     /*!
      * \brief Initialize the parameters for wet gas using an ECL deck.
