@@ -111,7 +111,7 @@ namespace Opm {
         /// \param[in] wells            well structure
         /// \param[in] linsolver        linear solver
         FullyImplicitCompressiblePolymerSolver(const UnstructuredGrid&         grid ,
-        		                       const BlackoilPropsAdInterface& fluid,
+        		                       const BlackoilPropsAdFromDeck& fluid,
                    			       const DerivedGeology&           geo  ,
                                                const RockCompressibility*      rock_comp_props,
                                                const PolymerPropsAd&           polymer_props_ad,
@@ -185,7 +185,7 @@ namespace Opm {
 
         // Member data
         const UnstructuredGrid&         grid_;
-        const BlackoilPropsAdInterface& fluid_;
+        const BlackoilPropsAdFromDeck& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
         const PolymerPropsAd&           polymer_props_ad_;

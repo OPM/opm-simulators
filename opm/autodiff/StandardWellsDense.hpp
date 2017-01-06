@@ -36,12 +36,12 @@
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
@@ -104,7 +104,7 @@ enum WellVariablePositions {
                 }
               }
 
-            void init(const BlackoilPropsAdInterface* fluid_arg,
+            void init(const BlackoilPropsAdFromDeck* fluid_arg,
                       const std::vector<bool>* active_arg,
                       const VFPProperties*  vfp_properties_arg,
                       const double gravity_arg,
@@ -1483,7 +1483,7 @@ enum WellVariablePositions {
             ModelParameters param_;
             bool terminal_output_;
 
-            const BlackoilPropsAdInterface* fluid_;
+            const BlackoilPropsAdFromDeck* fluid_;
             const std::vector<bool>*  active_;
             const VFPProperties* vfp_properties_;
             double gravity_;

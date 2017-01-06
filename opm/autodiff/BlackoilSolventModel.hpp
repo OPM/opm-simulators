@@ -67,7 +67,7 @@ namespace Opm {
         /// \param[in] is_miscible         turn on miscible feature
         BlackoilSolventModel(const typename Base::ModelParameters&   param,
                              const Grid&                             grid,
-                             const BlackoilPropsAdInterface&         fluid,
+                             const BlackoilPropsAdFromDeck&         fluid,
                              const DerivedGeology&                   geo,
                              const RockCompressibility*              rock_comp_props,
                              const SolventPropsAdFromDeck&           solvent_props,

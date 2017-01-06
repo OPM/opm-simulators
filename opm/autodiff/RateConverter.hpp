@@ -21,14 +21,12 @@
 #ifndef OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 #define OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
-
-#include <Eigen/Core>
 
 #include <algorithm>
 #include <cmath>
@@ -385,9 +383,7 @@ namespace Opm {
          * The conversion uses fluid properties evaluated at average
          * hydrocarbon pressure in regions or field.
          *
-         * \tparam Property Fluid property object.  Expected to
-         * feature the formation volume factor functions of the
-         * BlackoilPropsAdInterface.
+         * \tparam FluidSystem Fluid system class. Expected to be a BlackOilFluidSystem
          *
          * \tparam Region Type of a forward region mapping.  Expected
          * to provide indexed access through \code operator[]()
@@ -395,24 +391,29 @@ namespace Opm {
          * size_type, and \c const_iterator.  Typically \code
          * std::vector<int> \endcode.
          */
-        template <class Property, class Region>
+        template <class FluidSystem, class Region>
         class SurfaceToReservoirVoidage {
         public:
             /**
              * Constructor.
              *
-             * \param[in] props Fluid property object.
-             *
              * \param[in] region Forward region mapping.  Often
              * corresponds to the "FIPNUM" mapping of an ECLIPSE input
              * deck.
              */
-            SurfaceToReservoirVoidage(const Property& props,
+            SurfaceToReservoirVoidage(const PhaseUsage& phaseUsage,
+                                      const int* cellPvtRegionIdx,
+                                      const int numCells,
                                       const Region&   region)
-                : props_(props)
+                : phaseUsage_(phaseUsage)
                 , rmap_ (region)
-                , attr_ (rmap_, Attributes(props_.numPhases()))
-            {}
+                , attr_ (rmap_, Attributes(phaseUsage_.num_phases))
+            {
+                cellPvtIdx_.resize(numCells, 0);
+                if (cellPvtRegionIdx) {
+                    std::copy_n(cellPvtRegionIdx, numCells, cellPvtIdx_.begin());
+                }
+            }
 
             /**
              * Compute average hydrocarbon pressure and maximum
@@ -484,59 +485,58 @@ namespace Opm {
             void
             calcCoeff(const Input& in, const RegionId r, Coeff& coeff) const
             {
-                using V = typename Property::V;
-
-                const auto& pu = props_.phaseUsage();
+                const auto& pu = phaseUsage_;
                 const auto& ra = attr_.attributes(r);
 
-                const auto  p  = this->constant(ra.pressure);
-                const auto  T  = this->constant(ra.temperature);
-                const auto  c  = this->getRegCell(r);
+                const double p = ra.pressure;
+                const double T = ra.temperature;
+                const int cellIdx = attr_.cell(r);
+                const int pvtRegionIdx = cellPvtIdx_[cellIdx];
 
                 const int   iw = Details::PhasePos::water(pu);
                 const int   io = Details::PhasePos::oil  (pu);
                 const int   ig = Details::PhasePos::gas  (pu);
 
-                std::fill(& coeff[0], & coeff[0] + props_.numPhases(), 0.0);
+                std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
 
                 if (Details::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const V bw = props_.bWat(p, T, c).value();
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p);
 
-                    coeff[iw] = 1.0 / bw(0);
+                    coeff[iw] = 1.0 / bw;
                 }
 
                 const Miscibility& m = calcMiscibility(in, r);
 
                 // Determinant of 'R' matrix
-                const double detR = 1.0 - (m.rs(0) * m.rv(0));
+                const double detR = 1.0 - (m.rs * m.rv);
 
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const auto   rs  = this->constant(m.rs);
-                    const V      bo  = props_.bOil(p, T, rs, m.cond, c).value();
-                    const double den = bo(0) * detR;
+                    const double Rs = m.rs;
+                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+                    const double den = bo * detR;
 
                     coeff[io] += 1.0 / den;
 
                     if (Details::PhaseUsed::gas(pu)) {
-                        coeff[ig] -= m.rv(0) / den;
+                        coeff[ig] -= m.rv / den;
                     }
                 }
 
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const auto   rv  = this->constant(m.rv);
-                    const V      bg  = props_.bGas(p, T, rv, m.cond, c).value();
-                    const double den = bg(0) * detR;
+                    const double Rv = m.rv;
+                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+                    const double den = bg * detR;
 
                     coeff[ig] += 1.0 / den;
 
                     if (Details::PhaseUsed::oil(pu)) {
-                        coeff[io] -= m.rs(0) / den;
+                        coeff[io] -= m.rs / den;
                     }
                 }
             }
@@ -545,7 +545,8 @@ namespace Opm {
             /**
              * Fluid property object.
              */
-            const Property&  props_;
+            const PhaseUsage phaseUsage_;
+            std::vector<int> cellPvtIdx_;
 
             /**
              * "Fluid-in-place" region mapping (forward and reverse).
@@ -559,12 +560,12 @@ namespace Opm {
                 Attributes(const int np)
                     : pressure   (0.0)
                     , temperature(0.0)
-                    , Rmax       (Eigen::ArrayXd::Zero(np, 1))
+                    , Rmax(np, 0.0)
                 {}
 
                 double         pressure;
                 double         temperature;
-                Eigen::ArrayXd Rmax;
+                std::vector<double> Rmax;
             };
 
             Details::RegionAttributes<RegionId, Attributes> attr_;
@@ -580,8 +581,8 @@ namespace Opm {
                     , rv  (1)
                     , cond(1)
                 {
-                    rs << 0.0;
-                    rv << 0.0;
+                    rs = 0.0;
+                    rv = 0.0;
                 }
 
                 /**
@@ -591,7 +592,7 @@ namespace Opm {
                  * Limited by "RSmax" at average hydrocarbon pressure
                  * in region.
                  */
-                typename Property::V rs;
+                double rs;
 
                 /**
                  * Evaporated oil-gas ratio at particular component oil
@@ -600,7 +601,7 @@ namespace Opm {
                  * Limited by "RVmax" at average hydrocarbon pressure
                  * in region.
                  */
-                typename Property::V rv;
+                double rv;
 
                 /**
                  * Fluid condition in representative region cell.
@@ -674,14 +675,13 @@ namespace Opm {
             void
             calcRmax()
             {
-                const PhaseUsage& pu = props_.phaseUsage();
+                const PhaseUsage& pu = phaseUsage_;
 
                 if (Details::PhaseUsed::oil(pu) &&
                     Details::PhaseUsed::gas(pu))
                 {
-                    const Eigen::ArrayXd::Index
-                        io = Details::PhasePos::oil(pu),
-                        ig = Details::PhasePos::gas(pu);
+                    const int io = Details::PhasePos::oil(pu);
+                    const int ig = Details::PhasePos::gas(pu);
 
                     // Note: Intentionally does not take capillary
                     // pressure into account.  This facility uses the
@@ -691,13 +691,14 @@ namespace Opm {
                     for (const auto& reg : rmap_.activeRegions()) {
                         auto& ra = attr_.attributes(reg);
 
-                        const auto c = this->getRegCell(reg);
-                        const auto p = this->constant(ra.pressure);
-                        const auto T = this->constant(ra.temperature);
+                        const double T = ra.temperature;
+                        const double p = ra.pressure;
+                        const int cellIdx = attr_.cell(reg);
+                        const int pvtRegionIdx = cellPvtIdx_[cellIdx];
 
-                        auto& Rmax = ra.Rmax;
-                        Rmax.row(io) = props_.rsSat(p, T, c).value();
-                        Rmax.row(ig) = props_.rvSat(p, T, c).value();
+                        std::vector<double>& Rmax = ra.Rmax;
+                        Rmax[io] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, T, p);
+                        Rmax[ig] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, T, p);
                     }
                 }
             }
@@ -723,7 +724,7 @@ namespace Opm {
             Miscibility
             calcMiscibility(const Input& in, const RegionId r) const
             {
-                const auto& pu   = props_.phaseUsage();
+                const auto& pu   = phaseUsage_;
                 const auto& attr = attr_.attributes(r);
 
                 const int io = Details::PhasePos::oil(pu);
@@ -740,7 +741,7 @@ namespace Opm {
                     cond.setFreeOil();
 
                     if (Details::PhaseUsed::gas(pu)) {
-                        const double rsmax = attr.Rmax(io);
+                        const double rsmax = attr.Rmax[io];
                         const double rs =
                             (0.0 < std::abs(in[io]))
                             ? in[ig] / in[io]
@@ -750,7 +751,7 @@ namespace Opm {
                             cond.setFreeGas();
                         }
 
-                        m.rs(0) = std::min(rs, rsmax);
+                        m.rs = std::min(rs, rsmax);
                     }
                 }
 
@@ -761,55 +762,17 @@ namespace Opm {
                     }
 
                     if (Details::PhaseUsed::oil(pu)) {
-                        const double rvmax = attr.Rmax(ig);
+                        const double rvmax = attr.Rmax[ig];
                         const double rv =
                             (0.0 < std::abs(in[ig]))
                             ? (in[io] / in[ig])
                             : (0.0 < std::abs(in[io])) ? rvmax : 0.0;
 
-                        m.rv(0) = std::min(rv, rvmax);
+                        m.rv = std::min(rv, rvmax);
                     }
                 }
 
                 return m;
-            }
-
-            /**
-             * Conversion from \code Property::V \endcode to (constant)
-             * \code Property::ADB \endcode (zero derivatives).
-             */
-            typename Property::ADB
-            constant(const typename Property::V& x) const
-            {
-                return Property::ADB::constant(x);
-            }
-
-            /**
-             * Conversion from \c double to (constant) \code Property::ADB
-             * \endcode (zero derivatives).
-             */
-            typename Property::ADB
-            constant(const double x) const
-            {
-                typename Property::V y(1);
-                y << x;
-
-                return this->constant(y);
-            }
-
-            /**
-             * Retrieve representative cell of region
-             *
-             * \param[in] r Particular region.
-             *
-             * \return Representative cell of region \c r.
-             */
-            typename Property::Cells
-            getRegCell(const RegionId r) const
-            {
-                typename Property::Cells c(1, this->attr_.cell(r));
-
-                return c;
             }
         };
     } // namespace RateConverter

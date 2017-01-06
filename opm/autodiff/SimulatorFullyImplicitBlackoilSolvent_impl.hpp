@@ -27,7 +27,7 @@ namespace Opm
     SimulatorFullyImplicitBlackoilSolvent(const parameter::ParameterGroup& param,
                                           const GridT& grid,
                                           DerivedGeology& geo,
-                                          BlackoilPropsAdInterface& props,
+                                          BlackoilPropsAdFromDeck& props,
                                           const SolventPropsAdFromDeck& solvent_props,
                                           const RockCompressibility* rock_comp_props,
                                           NewtonIterationBlackoilInterface& linsolver,

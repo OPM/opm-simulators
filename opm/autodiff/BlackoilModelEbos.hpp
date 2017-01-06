@@ -33,7 +33,7 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
@@ -169,7 +169,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters&          param,
-                          const BlackoilPropsAdInterface& fluid,
+                          const BlackoilPropsAdFromDeck& fluid,
                           const DerivedGeology&           geo  ,
                           const StandardWellsDense<FluidSystem, BlackoilIndices>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
@@ -1209,7 +1209,7 @@ namespace Opm {
         Simulator& ebosSimulator_;
         const Grid&            grid_;
         const ISTLSolverType*  istlSolver_;
-        const BlackoilPropsAdInterface& fluid_;
+        const BlackoilPropsAdFromDeck& fluid_;
         const DerivedGeology&           geo_;
         VFPProperties                   vfp_properties_;
         // For each canonical phase -> true if active

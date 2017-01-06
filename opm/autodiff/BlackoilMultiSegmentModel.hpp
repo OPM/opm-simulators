@@ -83,7 +83,7 @@ namespace Opm {
         /// \param[in] wells_multisegment a vector of multisegment wells
         BlackoilMultiSegmentModel(const typename Base::ModelParameters&  param,
                           const Grid&                     grid ,
-                          const BlackoilPropsAdInterface& fluid,
+                          const BlackoilPropsAdFromDeck& fluid,
                           const DerivedGeology&           geo  ,
                           const RockCompressibility*      rock_comp_props,
                           const MultisegmentWells&        well_model,

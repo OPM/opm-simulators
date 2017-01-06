@@ -44,7 +44,7 @@
 
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 
 
@@ -211,7 +211,7 @@ void initOPMTrans(TransGraph& opmTrans, const Deck& deck, const EclipseState& ec
     std::shared_ptr<GridManager> grid = std::make_shared<GridManager>( eclipseState.getInputGrid(),
             eclipseState.get3DProperties().getDoubleGridProperty( "PORV" ).getData() );
     const struct UnstructuredGrid * cGrid = grid->c_grid();
-    std::shared_ptr<BlackoilPropsAdInterface> props;
+    std::shared_ptr<BlackoilPropsAdFromDeck> props;
 
     props.reset(new BlackoilPropsAdFromDeck(deck, eclipseState, *grid->c_grid()));
     DerivedGeology geology(*grid->c_grid() , *props, eclipseState, false);

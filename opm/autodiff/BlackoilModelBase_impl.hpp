@@ -32,7 +32,7 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
+#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
@@ -101,7 +101,7 @@ typedef Eigen::Array<double,
     BlackoilModelBase<Grid, WellModel, Implementation>::
     BlackoilModelBase(const ModelParameters&          param,
                   const Grid&                     grid ,
-                  const BlackoilPropsAdInterface& fluid,
+                  const BlackoilPropsAdFromDeck& fluid,
                   const DerivedGeology&           geo  ,
                   const RockCompressibility*      rock_comp_props,
                   const WellModel&                well_model,
@@ -144,7 +144,7 @@ typedef Eigen::Array<double,
         // the field will be calculated.
         // TODO: more delicate implementation will be required if we want to handle different
         // FIP regions specified from the well specifications.
-        , rate_converter_(fluid_, std::vector<int>(AutoDiffGrid::numCells(grid_),0))
+        , rate_converter_(fluid_.phaseUsage(), fluid_.cellPvtRegionIndex(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
     {
         if (active_[Water]) {
             material_name_.push_back("Water");

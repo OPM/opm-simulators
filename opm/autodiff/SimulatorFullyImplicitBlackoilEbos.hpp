@@ -94,7 +94,7 @@ public:
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
                                        const parameter::ParameterGroup& param,
                                        DerivedGeology& geo,
-                                       BlackoilPropsAdInterface& props,
+                                       BlackoilPropsAdFromDeck& props,
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const double* gravity,
                                        const bool has_disgas,
@@ -117,15 +117,11 @@ public:
           defunct_well_names_( defunct_well_names ),
           is_parallel_run_( false )
     {
-        DUNE_UNUSED_PARAMETER(eclState);
-        // Misc init.
-        const int num_cells = AutoDiffGrid::numCells(grid());
-        allcells_.resize(num_cells);
-        for (int cell = 0; cell < num_cells; ++cell) {
-            allcells_[cell] = cell;
-        }
-
-        rateConverter_.reset(new RateConverterType(props_, std::vector<int>(AutoDiffGrid::numCells(grid()), 0)));
+        extractLegacyCellPvtRegionIndex_();
+        rateConverter_.reset(new RateConverterType(props.phaseUsage(),
+                                                   legacyCellPvtRegionIdx_.data(),
+                                                   AutoDiffGrid::numCells(grid()),
+                                                   std::vector<int>(AutoDiffGrid::numCells(grid()), 0)));
 
 #if HAVE_MPI
         if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
@@ -708,15 +704,24 @@ protected:
     const EclipseState& eclState() const
     { return ebosSimulator_.gridManager().eclState(); }
 
-    EclipseState& eclState()
-    { return ebosSimulator_.gridManager().eclState(); }
+    void extractLegacyCellPvtRegionIndex_()
+    {
+        const auto& grid = ebosSimulator_.gridManager().grid();
+        const auto& eclProblem = ebosSimulator_.problem();
+        const unsigned numCells = grid.size(/*codim=*/0);
+
+        legacyCellPvtRegionIdx_.resize(numCells);
+        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            legacyCellPvtRegionIdx_[cellIdx] =
+                eclProblem.pvtRegionIndex(cellIdx);
+        }
+    }
 
     // Data.
     Simulator& ebosSimulator_;
 
-    typedef RateConverter::
-    SurfaceToReservoirVoidage< BlackoilPropsAdInterface,
-                               std::vector<int> > RateConverterType;
+    std::vector<int> legacyCellPvtRegionIdx_;
+    typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
     typedef typename Solver::SolverParameters SolverParameters;
 
     const parameter::ParameterGroup param_;
@@ -724,7 +729,7 @@ protected:
     SolverParameters solver_param_;
 
     // Observed objects.
-    BlackoilPropsAdInterface& props_;
+    BlackoilPropsAdFromDeck& props_;
     const double* gravity_;
     // Solvers
     DerivedGeology& geo_;

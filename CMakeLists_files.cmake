@@ -26,7 +26,6 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  opm/autodiff/BlackoilPropsAdInterface.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/NewtonIterationBlackoilCPR.cpp
   opm/autodiff/NewtonIterationBlackoilInterleaved.cpp
@@ -156,7 +155,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilPressureModel.hpp
   opm/autodiff/BlackoilPropsAdFromDeck.hpp
   opm/autodiff/SolventPropsAdFromDeck.hpp
-  opm/autodiff/BlackoilPropsAdInterface.hpp
   opm/autodiff/Compat.hpp
   opm/autodiff/CPRPreconditioner.hpp
   opm/autodiff/createGlobalCellArray.hpp

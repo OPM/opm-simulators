@@ -22,16 +22,13 @@
 #ifndef OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 #define OPM_BLACKOILPROPSADFROMDECK_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilPropsAdInterface.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
 #include <opm/core/props/rock/RockFromDeck.hpp>
 
-#include <opm/material/fluidsystems/blackoilpvt/GasPvtMultiplexer.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -61,10 +58,11 @@ namespace Opm
     /// taking an AD type and returning the same. Derivatives are not
     /// returned separately by any method, only implicitly with the AD
     /// version of the methods.
-    class BlackoilPropsAdFromDeck : public BlackoilPropsAdInterface
+    class BlackoilPropsAdFromDeck
     {
         friend class BlackoilPropsDataHandle;
     public:
+        typedef FluidSystems::BlackOil<double> FluidSystem;
         typedef Opm::GasPvtMultiplexer<double> GasPvt;
         typedef Opm::OilPvtMultiplexer<double> OilPvt;
         typedef Opm::WaterPvtMultiplexer<double> WaterPvt;
@@ -416,18 +414,11 @@ namespace Opm
         // The PVT region which is to be used for each cell
         std::vector<int> cellPvtRegionIdx_;
 
-        // Densities, one std::array per PVT region.
-        std::vector<std::array<double, BlackoilPhases::MaxNumPhases> > surfaceDensity_;
-
         // VAPPARS
         double vap1_;
         double vap2_;
         std::vector<double> satOilMax_;
         double vap_satmax_guard_;  //Threshold value to promote stability
-
-        std::shared_ptr<GasPvt> gasPvt_;
-        std::shared_ptr<OilPvt> oilPvt_;
-        std::shared_ptr<WaterPvt> waterPvt_;
     };
 } // namespace Opm
 
