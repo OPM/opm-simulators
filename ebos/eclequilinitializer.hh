@@ -137,13 +137,17 @@ public:
                                             /*numFaces=*/0, // we don't care here
                                             opmPhaseUsage.num_phases);
 
+        // tell the initializers whether SWATINIT should be applied or not.
+        bool enableSwatInit = GET_PROP_VALUE(TypeTag, EnableSwatinit);
+
         // do the actual computation.
         Opm::initStateEquil(equilGrid,
                             opmBlackoilProps,
                             gridManager.deck(),
                             gridManager.eclState(),
                             simulator.problem().gravity()[dimWorld - 1],
-                            opmBlackoilState);
+                            opmBlackoilState,
+                            enableSwatInit);
 
         std::vector<int> localToEquilIndex( numElems, -1 );
         for( unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx )

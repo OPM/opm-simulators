@@ -197,6 +197,12 @@ private:
                     // the current face is not at the boundary between EQUIL regions!
                     continue;
 
+                // don't include connections with negligible flow
+                const Scalar& trans = simulator_.problem().transmissibility(elemCtx, i, j);
+                const Scalar& faceArea = face.area();
+                if ( std::abs(faceArea * trans) < 1e-18)
+                    continue;
+
                 // determine the maximum difference of the pressure of any phase over the
                 // intersection
                 Scalar pth = 0.0;
