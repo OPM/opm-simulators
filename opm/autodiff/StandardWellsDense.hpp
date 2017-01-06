@@ -235,7 +235,8 @@ enum WellVariablePositions {
                         const int cell_idx = wells().well_cells[perf];
                         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                         std::vector<EvalWell> cq_s(np,0.0);
-                        computeWellFlux(w, wells().WI[perf], intQuants, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
+                        const EvalWell bhp = getBhp(w);
+                        computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
                         for (int p1 = 0; p1 < np; ++p1) {
 
@@ -531,10 +532,9 @@ enum WellVariablePositions {
 
             template<typename intensiveQuants>
             void
-            computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
+            computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const EvalWell& bhp, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
             {
-                const Opm::PhaseUsage& pu = phase_usage_;
-                EvalWell bhp = getBhp(w);
+                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
                 const int np = wells().number_of_phases;
                 std::vector<EvalWell> cmix_s(np,0.0);
                 for (int phase = 0; phase < np; ++phase) {
