@@ -734,7 +734,7 @@ namespace Opm
             } else if (f1 > 0.0) {
                 return s1;
             } else {
-                const int max_iter = 30;
+                const int max_iter = 60;
                 const double tol = 1e-6;
                 int iter_used = -1;
                 typedef RegulaFalsi<ThrowOnError> ScalarSolver;
