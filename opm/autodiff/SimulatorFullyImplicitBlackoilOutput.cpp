@@ -317,18 +317,18 @@ namespace Opm
         }
 
         // ECL output
-        if ( eclWriter_ )
+        if ( eclIO_ )
         {
             const auto& initConfig = eclipseState_.getInitConfig();
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
                 // ... insert "extra" data (KR, VISC, ...)
-                eclWriter_->writeTimeStep(timer.reportStepNum(),
-                                          substep,
-                                          timer.simulationTimeElapsed(),
-                                          simProps,
-                                          wellState.report(phaseUsage_));
+                eclIO_->writeTimeStep(timer.reportStepNum(),
+                                      substep,
+                                      timer.simulationTimeElapsed(),
+                                      simProps,
+                                      wellState.report(phaseUsage_));
             }
         }
 

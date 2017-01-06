@@ -25,12 +25,11 @@
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/output/eclipse/EclipseReader.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 
-#include <opm/output/eclipse/EclipseWriter.hpp>
+#include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/autodiff/Compat.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
@@ -70,7 +69,7 @@ namespace Opm
         BlackoilOutputWriterEbos(const Grid& grid,
                                  const parameter::ParameterGroup& param,
                                  const EclipseState& eclipseState,
-                                 std::unique_ptr<EclipseWriter>&& eclWriter,
+                                 std::unique_ptr<EclipseIO>&& eclIO,
                                  const Opm::PhaseUsage &phaseUsage,
                                  const double* permeability );
 
@@ -162,7 +161,7 @@ namespace Opm
 
         std::ofstream backupfile_;
         Opm::PhaseUsage phaseUsage_;
-        std::unique_ptr<EclipseWriter> eclWriter_;
+        std::unique_ptr<EclipseIO> eclIO_;
         const EclipseState& eclipseState_;
 
         std::unique_ptr< ThreadHandle > asyncOutput_;
@@ -180,7 +179,7 @@ namespace Opm
     BlackoilOutputWriterEbos(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              const Opm::EclipseState& eclipseState,
-                             std::unique_ptr<EclipseWriter>&& eclWriter,
+                             std::unique_ptr<EclipseIO>&& eclIO,
                              const Opm::PhaseUsage &phaseUsage,
                              const double* permeability )
       : output_( param.getDefault("output", true) ),
@@ -194,7 +193,7 @@ namespace Opm
     {
         // For output.
         if (output_ && parallelOutput_->isIORank() ) {
-            eclWriter_ = std::move(eclWriter);
+            eclIO_ = std::move(eclIO);
 
             // Ensure that output dir exists
             boost::filesystem::path fpath(outputDir_);
@@ -239,6 +238,13 @@ namespace Opm
                          SimulationDataContainer& simulatorstate,
                          WellStateFullyImplicitBlackoilDense& wellstate)
     {
+        std::map<std::string, UnitSystem::measure> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
+                                                                  {"SWAT" , UnitSystem::measure::identity},
+                                                                  {"SGAS" , UnitSystem::measure::identity},
+                                                                  {"TEMP" , UnitSystem::measure::temperature},
+                                                                  {"RS" , UnitSystem::measure::gas_oil_ratio},
+                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio}};
+
         // gives a dummy dynamic_list_econ_limited
         DynamicListEconLimited dummy_list_econ_limited;
         WellsManager wellsmanager(eclipseState_,
@@ -261,12 +267,9 @@ namespace Opm
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate, phaseusage ); //Resize for restart step
-        auto restarted = Opm::init_from_restart_file(
-                                eclipseState_,
-                                Opm::UgGridHelpers::numCells(grid) );
-
-        solutionToSim( restarted.first, phaseusage, simulatorstate );
-        wellsToState( restarted.second, phaseusage, wellstate );
+        auto state = eclIO_->loadRestart(solution_keys);
+        solutionToSim( state.first, phaseusage, simulatorstate );
+        wellsToState( state.second, phaseusage, wellstate );
     }
 
 
