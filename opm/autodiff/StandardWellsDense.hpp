@@ -201,9 +201,9 @@ enum WellVariablePositions {
                 }
                 assembleWellEq(ebosSimulator, dt, well_state, false);
 
-
+                // Not sure we should calculate it during solveWellEq
                 if (param_.compute_well_potentials_) {
-                    //wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
+                    computeWellPotentials(ebosSimulator, well_state);
                 }
                 report.converged = true;
                 return report;
@@ -1473,6 +1473,107 @@ enum WellVariablePositions {
 
 
             }
+
+
+
+
+
+            // TODO: Later we might want to change the function to only handle one well,
+            // the requirement for well potential calculation can be based on individual wells.
+            // getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
+            template<typename Simulator>
+            void
+            computeWellPotentials(const Simulator& ebosSimulator,
+                                  WellState& well_state)  const
+            {
+
+                // number of wells and phases
+                const int nw = wells().number_of_wells;
+                const int np = wells().number_of_phases;
+
+                for (int w = 0; w < nw; ++w) {
+                    // bhp needs to be determined for the well potential calculation
+                    double bhp = 0.;
+
+                    const WellControls* well_control = wells().ctrls[w];
+                    // The number of the well controls
+                    const int nwc = well_controls_get_num(well_control);
+
+                    // Finding a BHP control or a THP control
+                    // IF we find a THP control, we calculate the BHP value.
+                    // TODO: there is option to ignore the THP limit when calculating well potentials,
+                    // we are not handling it for the moment.
+                    for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                        if (well_controls_iget_type(well_control, ctrl_index) == BHP) {
+                            // set bhp to the bhp value
+                            bhp = well_controls_iget_target(well_control, ctrl_index);
+                        }
+
+
+                        if (well_controls_iget_type(well_control, ctrl_index) == THP) {
+                            double aqua = 0.0;
+                            double liquid = 0.0;
+                            double vapour = 0.0;
+
+                            const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+
+                            if ((*active_)[ Water ]) {
+                                aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                            }
+                            if ((*active_)[ Oil ]) {
+                                liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+                            }
+                            if ((*active_)[ Gas ]) {
+                                vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
+                            }
+
+                            const int vfp        = well_controls_iget_vfp(well_control, ctrl_index);
+                            const double& thp    = well_controls_iget_target(well_control, ctrl_index);
+                            const double& alq    = well_controls_iget_alq(well_control, ctrl_index);
+
+                            // Calculating the BHP value based on THP
+                            const WellType& well_type = wells().type[w];
+                            const int first_perf = wells().well_connpos[w]; //first perforation
+
+                            if (well_type == INJECTOR) {
+                                const double dp = wellhelpers::computeHydrostaticCorrection(
+                                                  wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
+                                                  wellPerforationDensities()[first_perf], gravity_);
+                                const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                                // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
+                                if (bhp_calculated < bhp) {
+                                    bhp = bhp_calculated;
+                                }
+                            }
+                            else if (well_type == PRODUCER) {
+                                const double dp = wellhelpers::computeHydrostaticCorrection(
+                                                  wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
+                                                  wellPerforationDensities()[first_perf], gravity_);
+                                const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                                // apply the strictest of the bhp controlls i.e. largest bhp for producers
+                                if (bhp_calculated > bhp) {
+                                    bhp = bhp_calculated;
+                                }
+                            } else {
+                                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                            }
+                        }
+                    }
+
+                    // Should we consider crossflow when calculating well potentionals?
+                    const bool allow_cf = allow_cross_flow(w, ebosSimulator);
+                    for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                        const int cell_index = wells().well_cells[perf];
+                        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
+                        std::vector<EvalWell> well_potentials(np, 0.0);
+                        computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials);
+                        for(int p = 0; p < np; ++p) {
+                            well_state.wellPotentials()[perf * np + p] = well_potentials[p].value();
+                        }
+                    }
+                }
+            }
+
 
         protected:
             bool wells_active_;
