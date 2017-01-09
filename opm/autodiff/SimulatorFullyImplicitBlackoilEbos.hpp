@@ -252,7 +252,7 @@ public:
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            const WellModel well_model(wells, model_param_, terminal_output_);
+            const WellModel well_model(wells, &(wells_manager.wellCollection()), model_param_, terminal_output_);
 
             auto solver = createSolver(well_model);
 

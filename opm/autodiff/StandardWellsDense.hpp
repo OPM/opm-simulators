@@ -35,6 +35,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
+#include <opm/core/wells/WellCollection.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
@@ -81,10 +82,12 @@ enum WellVariablePositions {
 
             // ---------  Public methods  ---------
             StandardWellsDense(const Wells* wells_arg,
+                               WellCollection* well_collection,
                                const ModelParameters& param,
                                const bool terminal_output)
                 : wells_active_(wells_arg!=nullptr)
                 , wells_(wells_arg)
+                , well_collection_(well_collection)
                 , param_(param)
                 , terminal_output_(terminal_output)
                 , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
@@ -1575,9 +1578,22 @@ enum WellVariablePositions {
             }
 
 
+
+
+
+            WellCollection* wellCollection() const
+            {
+                return well_collection_;
+            }
+
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
+
+            // Well collection is used to enforce the group control
+            WellCollection* well_collection_;
+
             ModelParameters param_;
             bool terminal_output_;
 
