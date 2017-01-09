@@ -196,7 +196,7 @@ try
     PolymerPropsAd polymer_props_ad(polymer_props);
 
     // Rock compressibility.
-    rock_comp.reset(new RockCompressibility(deck, *eclipseState));
+    rock_comp.reset(new RockCompressibility(*eclipseState));
 
     // Gravity.
     gravity[2] = deck.hasKeyword("NOGRAV") ? 0.0 : unit::gravity;
