@@ -737,7 +737,7 @@ namespace Opm
                 tmp2 += geo_.poreVolume()[i] * hydrocarbon[i];
             }
             totals[5] = geo_.poreVolume().sum();
-            totals[6] = unit::convert::to(tmp/tmp2, unit::barsa); 
+            totals[6] = tmp/tmp2;
        }
         else
         {
