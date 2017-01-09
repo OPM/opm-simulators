@@ -1360,7 +1360,8 @@ enum WellVariablePositions {
                                   const WellState& well_state,
                                   DynamicListEconLimited& list_econ_limited) const
             {
-                const int nw = wells_struct->number_of_wells;
+                // With no wells (on process) wells_struct is a null pointer
+                const int nw = (wells_struct)? wells_struct->number_of_wells : 0;
 
                 for (int w = 0; w < nw; ++w) {
                     // flag to check if the mim oil/gas rate limit is violated
