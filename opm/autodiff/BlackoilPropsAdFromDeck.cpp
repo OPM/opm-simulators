@@ -158,11 +158,6 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         phase_usage_ = phaseUsageFromDeck(deck);
 
-        if (! (&FluidSystem::oilPvt()) ) {
-            // make sure that we don't initialize the fluid system twice
-            FluidSystem::initFromDeck(deck, eclState);
-        }
-
         // Oil vaporization controls (kw VAPPARS)
         vap1_ = vap2_ = 0.0;
         if (deck.hasKeyword("VAPPARS") && deck.hasKeyword("VAPOIL") && deck.hasKeyword("DISGAS")) {
