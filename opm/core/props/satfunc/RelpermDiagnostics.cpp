@@ -25,12 +25,13 @@
 
 namespace Opm{
 
-    void RelpermDiagnostics::phaseCheck_(const Deck& deck)
+    void RelpermDiagnostics::phaseCheck_(const EclipseState& es)
     {
-        bool hasWater = deck.hasKeyword("WATER");
-        bool hasGas = deck.hasKeyword("GAS");
-        bool hasOil = deck.hasKeyword("OIL");
-        bool hasSolvent = deck.hasKeyword("SOLVENT");
+        const auto& phases = es.runspec().phases();
+        bool hasWater   = phases.active( Phase::WATER );
+        bool hasGas     = phases.active( Phase::GAS );
+        bool hasOil     = phases.active( Phase::OIL );
+        bool hasSolvent = phases.active( Phase::SOLVENT );
             
         if (hasWater && hasGas && !hasOil && !hasSolvent) {
             const std::string msg = "System:  Water-Gas system.";
@@ -125,10 +126,9 @@ namespace Opm{
 
  
 
-    void RelpermDiagnostics::tableCheck_(const EclipseState& eclState,
-                                         const Deck& deck)
+    void RelpermDiagnostics::tableCheck_(const EclipseState& eclState)
     {
-        const int numSatRegions = deck.getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
+        const int numSatRegions = eclState.runspec().tabdims().getNumSatTables();
         {
             const std::string msg = "Number of saturation regions: " + std::to_string(numSatRegions) + "\n";
             OpmLog::info(msg);
@@ -149,46 +149,46 @@ namespace Opm{
         const TableContainer& msfnTables    = tableManager.getMsfnTables();
         
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
-            if (deck.hasKeyword("SWOF")) {
+            if (tableManager.hasTables("SWOF")) {
                 swofTableCheck_(swofTables.getTable<SwofTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SGOF")) {
+            if (tableManager.hasTables("SGOF")) {
                 sgofTableCheck_(sgofTables.getTable<SgofTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SLGOF")) {
+            if (tableManager.hasTables("SLGOF")) {
                 slgofTableCheck_(slgofTables.getTable<SlgofTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SWFN")) {
+            if (tableManager.hasTables("SWFN")) {
                 swfnTableCheck_(swfnTables.getTable<SwfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SGFN")) {
+            if (tableManager.hasTables("SGFN")) {
                 sgfnTableCheck_(sgfnTables.getTable<SgfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SOF3")) {
+            if (tableManager.hasTables("SOF3")) {
                 sof3TableCheck_(sof3Tables.getTable<Sof3Table>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SOF2")) {
+            if (tableManager.hasTables("SOF2")) {
                 sof2TableCheck_(sof2Tables.getTable<Sof2Table>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SGWFN")) {
+            if (tableManager.hasTables("SGWFN")) {
                 sgwfnTableCheck_(sgwfnTables.getTable<SgwfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SGCWMIS")) {
+            if (tableManager.hasTables("SGCWMIS")) {
                 sgcwmisTableCheck_(sgcwmisTables.getTable<SgcwmisTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SORWMIS")) {
+            if (tableManager.hasTables("SORWMIS")) {
                 sorwmisTableCheck_(sorwmisTables.getTable<SorwmisTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("SSFN")) {
+            if (tableManager.hasTables("SSFN")) {
                 ssfnTableCheck_(ssfnTables.getTable<SsfnTable>(satnumIdx), satnumIdx+1);
             }
-            if (deck.hasKeyword("MSFN")) {
+            if (tableManager.hasTables("MSFN")) {
                 msfnTableCheck_(msfnTables.getTable<MsfnTable>(satnumIdx), satnumIdx+1);
             }
         }
 
 
-        if (deck.hasKeyword("MISCIBLE")) {
+        if (tableManager.hasTables("MISC")) {
             const int numMiscNumIdx = miscTables.size();
             const std::string msg = "Number of misc regions: " + std::to_string(numMiscNumIdx) + "\n";
             OpmLog::info(msg);
@@ -610,7 +610,7 @@ namespace Opm{
                                                      const EclipseState& eclState)
     {
         // get the number of saturation regions and the number of cells in the deck
-        const int numSatRegions = deck.getKeyword("TABDIMS").getRecord(0).getItem("NTSFUN").get< int >(0);
+        const int numSatRegions = eclState.runspec().tabdims().getNumSatTables();
         unscaledEpsInfo_.resize(numSatRegions);
 
         const auto& tables = eclState.getTableManager();

@@ -23,7 +23,6 @@
 #include <opm/core/grid.h>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <opm/core/utility/CompressedPropertyAccess.hpp>

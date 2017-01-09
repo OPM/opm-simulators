@@ -34,9 +34,9 @@ namespace Opm {
                                        const GridT& grid)
     {
         OpmLog::info("\n***************Saturation Functions Diagnostics***************");
-        phaseCheck_(deck);
+        phaseCheck_(eclState);
         satFamilyCheck_(eclState);
-        tableCheck_(eclState, deck);
+        tableCheck_(eclState);
         unscaledEndPointsCheck_(deck, eclState);
         scaledEndPointsCheck_(deck, eclState, grid);
     }
