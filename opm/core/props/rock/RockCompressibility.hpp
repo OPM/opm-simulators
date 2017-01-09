@@ -20,7 +20,6 @@
 #ifndef OPM_ROCKCOMPRESSIBILITY_HEADER_INCLUDED
 #define OPM_ROCKCOMPRESSIBILITY_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 #include <vector>
@@ -35,8 +34,7 @@ namespace Opm
     public:
         /// Construct from input deck.
         /// Looks for the keywords ROCK and ROCKTAB.
-        RockCompressibility(const Opm::Deck& deck,
-                            const Opm::EclipseState& eclipseState,
+        RockCompressibility(const Opm::EclipseState& eclipseState,
                             const bool is_io_rank = true);
 
         /// Construct from parameters.

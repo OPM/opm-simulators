@@ -41,8 +41,7 @@ namespace Opm
         rock_comp_ = param.getDefault("rock_compressibility", 0.0)/unit::barsa;
     }
 
-    RockCompressibility::RockCompressibility(const Opm::Deck& deck,
-                                             const Opm::EclipseState& eclipseState,
+    RockCompressibility::RockCompressibility(const Opm::EclipseState& eclipseState,
                                              const bool is_io_rank)
         : pref_(0.0),
           rock_comp_(0.0)
@@ -61,21 +60,19 @@ namespace Opm
             } else {
                 transmult_ =  rocktabTable.getColumn("PV_MULT_TRANX").vectorCopy();
             }
-        } else if (deck.hasKeyword("ROCK")) {
-            const auto& rockKeyword = deck.getKeyword("ROCK");
+        } else if (!tables.getRockTable().empty()) {
+            const auto& rockKeyword = tables.getRockTable();
             if (rockKeyword.size() != 1) {
                 if (is_io_rank) {
                     OpmLog::warning("Can only handle a single region in ROCK ("
                                     + std::to_string(rockKeyword.size())
                                     + " regions specified)."
-                                    + " Ignoring all except for the first.\n"
-                                    + "In file " + rockKeyword.getFileName()
-                                    + ", line " + std::to_string(rockKeyword.getLineNumber()) + "\n");
+                                    + " Ignoring all except for the first.\n");
                 }
             }
 
-            pref_ = rockKeyword.getRecord(0).getItem("PREF").getSIDouble(0);
-            rock_comp_ = rockKeyword.getRecord(0).getItem("COMPRESSIBILITY").getSIDouble(0);
+            pref_ = rockKeyword[0].reference_pressure;
+            rock_comp_ = rockKeyword[0].compressibility;
         } else {
             OpmLog::warning("No rock compressibility data found in deck (ROCK or ROCKTAB).");
         }
