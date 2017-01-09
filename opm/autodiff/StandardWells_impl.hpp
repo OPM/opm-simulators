@@ -1210,7 +1210,8 @@ namespace Opm
                          const WellState& well_state,
                          DynamicListEconLimited& list_econ_limited) const
    {
-       const int nw = wells_struct->number_of_wells;
+       // wells_struct may be null pointer if there are no wells in process domain
+       const int nw = ( wells_struct ) ? wells_struct->number_of_wells : 0;
 
        for (int w = 0; w < nw; ++w) {
            // flag to check if the mim oil/gas rate limit is violated
