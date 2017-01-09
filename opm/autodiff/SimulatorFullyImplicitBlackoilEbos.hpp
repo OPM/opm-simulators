@@ -673,7 +673,7 @@ protected:
                 }
             }
 #else
-            OPM_THROW(std::logic_error, "Requested a parallel run with MPI available!");
+            OPM_THROW(std::logic_error, "Requested a parallel run without MPI available!");
 #endif
         }
         totals[6] = (p_pv_hydrocarbon_sum / pv_hydrocarbon_sum);
