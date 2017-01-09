@@ -158,7 +158,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
 
         phase_usage_ = phaseUsageFromDeck(deck);
 
-        if (! (&FluidSystem::oilPvt()) ) {
+        if (!FluidSystem::isInitialized()) {
             // make sure that we don't initialize the fluid system twice
             FluidSystem::initFromDeck(deck, eclState);
         }
