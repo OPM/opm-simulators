@@ -335,7 +335,12 @@ public:
             // finally, for oil phase, we take the molar mass from the spe9 paper
             molarMass_[regionIdx][oilCompIdx] = 175e-3; // kg/mol
         }
+
+        isInitialized_ = true;
     }
+
+    static bool isInitialized()
+    { return isInitialized_; }
 
     /****************************************
      * Generic phase properties
@@ -1172,6 +1177,8 @@ private:
     // the BlackOil fluid system in the attribute declaration below...
     static std::vector<std::array<Scalar, /*numPhases=*/3> > referenceDensity_;
     static std::vector<std::array<Scalar, /*numComponents=*/3> > molarMass_;
+
+    static bool isInitialized_;
 };
 
 template <class Scalar>
@@ -1230,6 +1237,10 @@ BlackOil<Scalar>::referenceDensity_;
 template <class Scalar>
 std::vector<std::array<Scalar, 3> >
 BlackOil<Scalar>::molarMass_;
+
+template <class Scalar>
+bool BlackOil<Scalar>::isInitialized_ = false;
+
 }} // namespace Opm, FluidSystems
 
 #endif
