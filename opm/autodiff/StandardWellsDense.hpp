@@ -90,6 +90,10 @@ enum WellVariablePositions {
                 , well_collection_(well_collection)
                 , param_(param)
                 , terminal_output_(terminal_output)
+                , fluid_(nullptr)
+                , active_(nullptr)
+                , vfp_properties_(nullptr)
+                , well_perforation_efficiency_factors_((wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0), 1.0)
                 , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
                 , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
                 , wellVariables_( wells_ ? (wells_arg->number_of_wells * wells_arg->number_of_phases) : 0)
@@ -121,6 +125,8 @@ enum WellVariablePositions {
                 gravity_ = gravity_arg;
                 cell_depths_ = extractPerfData(depth_arg);
                 pv_ = pv_arg;
+
+                calculateEfficiencyFactors();
 
                 // setup sparsity pattern for the matrices
                 //[A B^T    [x    =  [ res
@@ -240,6 +246,11 @@ enum WellVariablePositions {
                         std::vector<EvalWell> cq_s(np,0.0);
                         const EvalWell bhp = getBhp(w);
                         computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
+
+                        // applying the efficiency factor
+                        for (int p1 = 0; p1 < np; ++p1) {
+                            cq_s[p1] = well_perforation_efficiency_factors_[perf] * cq_s[p1];
+                        }
 
                         for (int p1 = 0; p1 < np; ++p1) {
 
@@ -1587,6 +1598,41 @@ enum WellVariablePositions {
             }
 
 
+
+
+
+            const std::vector<double>&
+            wellPerfEfficiencyFactors() const
+            {
+                return well_perforation_efficiency_factors_;
+            }
+
+
+
+
+
+            void calculateEfficiencyFactors()
+            {
+                if ( !localWellsActive() ) {
+                    return;
+                }
+
+                const int nw = wells().number_of_wells;
+
+                for (int w = 0; w < nw; ++w) {
+                    const std::string well_name = wells().name[w];
+                    const WellNode& well_node = wellCollection()->findWellNode(well_name);
+
+                    const double well_efficiency_factors = well_node.getAccumulativeEfficiencyFactor();
+
+                    // assign the efficiency factor to each perforation related.
+                    for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w + 1]; ++perf) {
+                        well_perforation_efficiency_factors_[perf] = well_efficiency_factors;
+                    }
+                }
+            }
+
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
@@ -1601,6 +1647,11 @@ enum WellVariablePositions {
             std::vector<bool>  active_;
             const VFPProperties* vfp_properties_;
             double gravity_;
+
+            // The efficiency factor for each connection. It is specified based on wells and groups,
+            // We calculate the factor for each connection for the computation of contributions to the mass balance equations.
+            // By default, they should all be one.
+            std::vector<double> well_perforation_efficiency_factors_;
             // the depth of the all the cell centers
             // for standard Wells, it the same with the perforation depth
             std::vector<double> cell_depths_;
