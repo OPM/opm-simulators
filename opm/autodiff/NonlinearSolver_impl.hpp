@@ -258,13 +258,14 @@ namespace Opm
 
         BVector tempDxOld = dxOld;
         dxOld = dx;
+        const size_t num = dx.size();
 
         switch (relaxType()) {
             case DAMPEN:
                 if (omega == 1.) {
                     return;
                 }
-                for (size_t i = 0; i < dx.size(); ++i) {
+                for (size_t i = 0; i < num; ++i) {
                     dx[i] *= omega;
                 }
                 return;
@@ -272,7 +273,7 @@ namespace Opm
                 if (omega == 1.) {
                     return;
                 }
-                for (size_t i = 0; i < dx.size(); ++i) {
+                for (size_t i = 0; i < num; ++i) {
                     dx[i] *= omega;
                     tempDxOld[i] *= (1.-omega);
                     dx[i] += tempDxOld[i];
