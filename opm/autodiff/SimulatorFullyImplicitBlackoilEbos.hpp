@@ -672,6 +672,10 @@ protected:
                     p_pv_hydrocarbon_sum += p * pv[cellIdx] * hydrocarbon;
                 }
             }
+
+            totals[5] = pinfo.communicator().sum(totals[5]);
+            pv_hydrocarbon_sum = pinfo.communicator().sum(pv_hydrocarbon_sum);
+            p_pv_hydrocarbon_sum= pinfo.communicator().sum(p_pv_hydrocarbon_sum);
 #else
             OPM_THROW(std::logic_error, "Requested a parallel run without MPI available!");
 #endif
