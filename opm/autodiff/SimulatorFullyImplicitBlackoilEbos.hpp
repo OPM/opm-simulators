@@ -636,21 +636,45 @@ protected:
         double pv_hydrocarbon_sum = 0.0;
         double p_pv_hydrocarbon_sum = 0.0;
 
-        for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
+        if ( ! is_parallel_run_ )
+        {
+            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
 
-            const double& p = fs.pressure(FluidSystem::oilPhaseIdx).value();
-            const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-            if ( ! is_parallel_run_ )
-            {
+                const double& p = fs.pressure(FluidSystem::oilPhaseIdx).value();
+                const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+
                 totals[5] += pv[cellIdx];
                 pv_hydrocarbon_sum += pv[cellIdx] * hydrocarbon;
                 p_pv_hydrocarbon_sum += p * pv[cellIdx] * hydrocarbon;
             }
-            else {
-                OPM_THROW(std::logic_error, "FIP not yet implemented for MPI");
+        }
+        else
+        {
+#if HAVE_MPI
+            const auto & pinfo =
+                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
+            // Mask with 1 for owned cell and 0 otherwise
+            const auto& mask = pinfo.updateOwnerMask(pv);
+
+            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+
+                const double& p = fs.pressure(FluidSystem::oilPhaseIdx).value();
+                const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+
+                if( mask[cellIdx] )
+                {
+                    totals[5] += pv[cellIdx];
+                    pv_hydrocarbon_sum += pv[cellIdx] * hydrocarbon;
+                    p_pv_hydrocarbon_sum += p * pv[cellIdx] * hydrocarbon;
+                }
             }
+#else
+            OPM_THROW(std::logic_error, "Requested a parallel run with MPI available!");
+#endif
         }
         totals[6] = (p_pv_hydrocarbon_sum / pv_hydrocarbon_sum);
         return totals;
