@@ -260,24 +260,28 @@ namespace Opm
         dxOld = dx;
 
         switch (relaxType()) {
-            case DAMPEN:
+            case DAMPEN: {
                 if (omega == 1.) {
                     return;
                 }
-                for (size_t i = 0; i < dx.size(); ++i) {
+                auto i = dx.size();
+                for (i = 0; i < dx.size(); ++i) {
                     dx[i] *= omega;
                 }
                 return;
-            case SOR:
+            }
+            case SOR: {
                 if (omega == 1.) {
                     return;
                 }
-                for (size_t i = 0; i < dx.size(); ++i) {
+                auto i = dx.size();
+                for (i = 0; i < dx.size(); ++i) {
                     dx[i] *= omega;
                     tempDxOld[i] *= (1.-omega);
                     dx[i] += tempDxOld[i];
                 }
                 return;
+            }
             default:
                 OPM_THROW(std::runtime_error, "Can only handle DAMPEN and SOR relaxation type.");
         }
