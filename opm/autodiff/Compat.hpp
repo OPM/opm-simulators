@@ -94,11 +94,11 @@ inline std::vector< double >& stripe( const std::vector< double >& v,
     }
 
     if( reservoir.hasCellData( BlackoilState::GASOILRATIO ) ) {
-        sol.insert( "RS", UnitSystem::measure::identity, reservoir.getCellData( BlackoilState::GASOILRATIO ) , data::TargetType::RESTART_SOLUTION );
+        sol.insert( "RS", UnitSystem::measure::gas_oil_ratio, reservoir.getCellData( BlackoilState::GASOILRATIO ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if( reservoir.hasCellData( BlackoilState::RV ) ) {
-        sol.insert( "RV", UnitSystem::measure::identity, reservoir.getCellData( BlackoilState::RV ) , data::TargetType::RESTART_SOLUTION );
+        sol.insert( "RV", UnitSystem::measure::oil_gas_ratio, reservoir.getCellData( BlackoilState::RV ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if (reservoir.hasCellData( BlackoilSolventState::SSOL)) {
