@@ -44,7 +44,6 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
@@ -88,9 +87,6 @@ enum WellVariablePositions {
                 , wells_(wells_arg)
                 , param_(param)
                 , terminal_output_(terminal_output)
-                , fluid_(nullptr)
-                , active_(nullptr)
-                , vfp_properties_(nullptr)
                 , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
                 , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
                 , wellVariables_( wells_ ? (wells_arg->number_of_wells * wells_arg->number_of_phases) : 0)
@@ -104,8 +100,8 @@ enum WellVariablePositions {
                 }
               }
 
-            void init(const BlackoilPropsAdFromDeck* fluid_arg,
-                      const std::vector<bool>* active_arg,
+            void init(const PhaseUsage phase_usage_arg,
+                      const std::vector<bool>& active_arg,
                       const VFPProperties*  vfp_properties_arg,
                       const double gravity_arg,
                       const std::vector<double>& depth_arg,
@@ -116,7 +112,7 @@ enum WellVariablePositions {
                     return;
                 }
 
-                fluid_ = fluid_arg;
+                phase_usage_ = phase_usage_arg;
                 active_ = active_arg;
                 vfp_properties_ = vfp_properties_arg;
                 gravity_ = gravity_arg;
@@ -132,7 +128,7 @@ enum WellVariablePositions {
                 const int nc = numCells();
 
 #ifndef NDEBUG
-                const auto pu = fluid_->phaseUsage();
+                const auto pu = phase_usage_;
                 const int np = pu.num_phases;
 
                 // assumes the gas fractions are stored after water fractions
@@ -263,7 +259,7 @@ enum WellVariablePositions {
 
                             // add trivial equation for 2p cases (Only support water + oil)
                             if (np == 2) {
-                                assert(!(*active_)[ Gas ]);
+                                assert(!active_[ Gas ]);
                                 invDuneD_[w][w][flowPhaseToEbosCompIdx(Gas)][flowToEbosPvIdx(Gas)] = 1.0;
                             }
 
@@ -537,7 +533,7 @@ enum WellVariablePositions {
             void
             computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
             {
-                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                const Opm::PhaseUsage& pu = phase_usage_;
                 EvalWell bhp = getBhp(w);
                 const int np = wells().number_of_phases;
                 std::vector<EvalWell> cmix_s(np,0.0);
@@ -574,7 +570,7 @@ enum WellVariablePositions {
                         cq_ps[phase] = b_perfcells_dense[phase] * cq_p;
                     }
 
-                    if ((*active_)[Oil] && (*active_)[Gas]) {
+                    if (active_[Oil] && active_[Gas]) {
                         const int oilpos = pu.phase_pos[Oil];
                         const int gaspos = pu.phase_pos[Gas];
                         const EvalWell cq_psOil = cq_ps[oilpos];
@@ -603,12 +599,12 @@ enum WellVariablePositions {
 
                     // compute volume ratio between connection at standard conditions
                     EvalWell volumeRatio = 0.0;
-                    if ((*active_)[Water]) {
+                    if (active_[Water]) {
                         const int watpos = pu.phase_pos[Water];
                         volumeRatio += cmix_s[watpos] / b_perfcells_dense[watpos];
                     }
 
-                    if ((*active_)[Oil] && (*active_)[Gas]) {
+                    if (active_[Oil] && active_[Gas]) {
                         EvalWell well_temperature = extendEval(fs.temperature(FluidSystem::oilPhaseIdx));
                         EvalWell rsSatEval = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), well_temperature, well_pressure);
                         EvalWell rvSatEval = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), well_temperature, well_pressure);
@@ -645,11 +641,11 @@ enum WellVariablePositions {
                         volumeRatio += tmp_gas / b_perfcells_dense[gaspos];
                     }
                     else {
-                        if ((*active_)[Oil]) {
+                        if (active_[Oil]) {
                             const int oilpos = pu.phase_pos[Oil];
                             volumeRatio += cmix_s[oilpos] / b_perfcells_dense[oilpos];
                         }
-                        if ((*active_)[Gas]) {
+                        if (active_[Gas]) {
                             const int gaspos = pu.phase_pos[Gas];
                             volumeRatio += cmix_s[gaspos] / b_perfcells_dense[gaspos];
                         }
@@ -846,8 +842,8 @@ enum WellVariablePositions {
             {
                 const int nperf = wells().well_connpos[wells().number_of_wells];
                 const int nw = wells().number_of_wells;
-                const PhaseUsage& pu = fluid_->phaseUsage();
-                const int np = fluid_->numPhases();
+                const PhaseUsage& pu = phase_usage_;
+                const int np = phase_usage_.num_phases;
                 b_perf.resize(nperf*np);
                 surf_dens_perf.resize(nperf*np);
 
@@ -949,42 +945,42 @@ enum WellVariablePositions {
 
                         // update the second and third well variable (The flux fractions)
                         std::vector<double> F(np,0.0);
-                        if ((*active_)[ Water ]) {
+                        if (active_[ Water ]) {
                             const int sign2 = dwells[w][flowPhaseToEbosCompIdx(WFrac)] > 0 ? 1: -1;
                             const double dx2_limited = sign2 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(WFrac)]),dFLimit);
                             well_state.wellSolutions()[WFrac*nw + w] = xvar_well_old[WFrac*nw + w] - dx2_limited;
                         }
 
-                        if ((*active_)[ Gas ]) {
+                        if (active_[ Gas ]) {
                             const int sign3 = dwells[w][flowPhaseToEbosCompIdx(GFrac)] > 0 ? 1: -1;
                             const double dx3_limited = sign3 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(GFrac)]),dFLimit);
                             well_state.wellSolutions()[GFrac*nw + w] = xvar_well_old[GFrac*nw + w] - dx3_limited;
                         }
 
-                        assert((*active_)[ Oil ]);
+                        assert(active_[ Oil ]);
                         F[Oil] = 1.0;
-                        if ((*active_)[ Water ]) {
+                        if (active_[ Water ]) {
                             F[Water] = well_state.wellSolutions()[WFrac*nw + w];
                             F[Oil] -= F[Water];
                         }
 
-                        if ((*active_)[ Gas ]) {
+                        if (active_[ Gas ]) {
                             F[Gas] = well_state.wellSolutions()[GFrac*nw + w];
                             F[Oil] -= F[Gas];
                         }
 
-                        if ((*active_)[ Water ]) {
+                        if (active_[ Water ]) {
                             if (F[Water] < 0.0) {
-                                if ((*active_)[ Gas ]) {
+                                if (active_[ Gas ]) {
                                     F[Gas] /= (1.0 - F[Water]);
                                 }
                                 F[Oil] /= (1.0 - F[Water]);
                                 F[Water] = 0.0;
                             }
                         }
-                        if ((*active_)[ Gas ]) {
+                        if (active_[ Gas ]) {
                             if (F[Gas] < 0.0) {
-                                if ((*active_)[ Water ]) {
+                                if (active_[ Water ]) {
                                     F[Water] /= (1.0 - F[Gas]);
                                 }
                                 F[Oil] /= (1.0 - F[Gas]);
@@ -992,19 +988,19 @@ enum WellVariablePositions {
                             }
                         }
                         if (F[Oil] < 0.0) {
-                            if ((*active_)[ Water ]) {
+                            if (active_[ Water ]) {
                                 F[Water] /= (1.0 - F[Oil]);
                             }
-                            if ((*active_)[ Gas ]) {
+                            if (active_[ Gas ]) {
                                 F[Gas] /= (1.0 - F[Oil]);
                             }
                             F[Oil] = 0.0;
                         }
 
-                        if ((*active_)[ Water ]) {
+                        if (active_[ Water ]) {
                             well_state.wellSolutions()[WFrac*nw + w] = F[Water];
                         }
-                        if ((*active_)[ Gas ]) {
+                        if (active_[ Gas ]) {
                             well_state.wellSolutions()[GFrac*nw + w] = F[Gas];
                         }
 
@@ -1056,15 +1052,15 @@ enum WellVariablePositions {
                                 double liquid = 0.0;
                                 double vapour = 0.0;
 
-                                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                                const Opm::PhaseUsage& pu = phase_usage_;
 
-                                if ((*active_)[ Water ]) {
+                                if (active_[ Water ]) {
                                     aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
                                 }
-                                if ((*active_)[ Oil ]) {
+                                if (active_[ Oil ]) {
                                     liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
                                 }
-                                if ((*active_)[ Gas ]) {
+                                if (active_[ Gas ]) {
                                     vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
                                 }
 
@@ -1203,15 +1199,15 @@ enum WellVariablePositions {
                             double liquid = 0.0;
                             double vapour = 0.0;
 
-                            const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                            const Opm::PhaseUsage& pu = phase_usage_;
 
-                            if ((*active_)[ Water ]) {
+                            if (active_[ Water ]) {
                                 aqua = xw.wellRates()[w*np + pu.phase_pos[ Water ] ];
                             }
-                            if ((*active_)[ Oil ]) {
+                            if (active_[ Oil ]) {
                                 liquid = xw.wellRates()[w*np + pu.phase_pos[ Oil ] ];
                             }
-                            if ((*active_)[ Gas ]) {
+                            if (active_[ Gas ]) {
                                 vapour = xw.wellRates()[w*np + pu.phase_pos[ Gas ] ];
                             }
 
@@ -1325,18 +1321,18 @@ enum WellVariablePositions {
                             tot_well_rate += g[p] * xw.wellRates()[np*w + p];
                         }
                         if(std::abs(tot_well_rate) > 0) {
-                            if ((*active_)[ Water ]) {
+                            if (active_[ Water ]) {
                                 xw.wellSolutions()[WFrac*nw + w] = g[Water] * xw.wellRates()[np*w + Water] / tot_well_rate;
                             }
-                            if ((*active_)[ Gas ]) {
+                            if (active_[ Gas ]) {
                                 xw.wellSolutions()[GFrac*nw + w] = g[Gas] * xw.wellRates()[np*w + Gas] / tot_well_rate ;
                             }
                         } else {
-                            if ((*active_)[ Water ]) {
+                            if (active_[ Water ]) {
                                 xw.wellSolutions()[WFrac*nw + w] =  wells().comp_frac[np*w + Water];
                             }
 
-                            if ((*active_)[ Gas ]) {
+                            if (active_[ Gas ]) {
                                 xw.wellSolutions()[GFrac*nw + w] =  wells().comp_frac[np*w + Gas];
                             }
                         }
@@ -1466,7 +1462,7 @@ enum WellVariablePositions {
                 // Compute densities
                 well_perforation_densities_ =
                         WellDensitySegmented::computeConnectionDensities(
-                                wells(), xw, fluid_->phaseUsage(),
+                                wells(), xw, phase_usage_,
                                 b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
                 // Compute pressure deltas
@@ -1484,8 +1480,8 @@ enum WellVariablePositions {
             ModelParameters param_;
             bool terminal_output_;
 
-            const BlackoilPropsAdFromDeck* fluid_;
-            const std::vector<bool>*  active_;
+            PhaseUsage phase_usage_;
+            std::vector<bool>  active_;
             const VFPProperties* vfp_properties_;
             double gravity_;
             // the depth of the all the cell centers
@@ -1531,15 +1527,15 @@ enum WellVariablePositions {
                     EvalWell bhp = 0.0;
                     double vfp_ref_depth = 0.0;
 
-                    const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                    const Opm::PhaseUsage& pu = phase_usage_;
 
-                    if ((*active_)[ Water ]) {
+                    if (active_[ Water ]) {
                         aqua = getQs(wellIdx, pu.phase_pos[ Water]);
                     }
-                    if ((*active_)[ Oil ]) {
+                    if (active_[ Oil ]) {
                         liquid = getQs(wellIdx, pu.phase_pos[ Oil ]);
                     }
-                    if ((*active_)[ Gas ]) {
+                    if (active_[ Gas ]) {
                         vapour = getQs(wellIdx, pu.phase_pos[ Gas ]);
                     }
                     if (wells().type[wellIdx] == INJECTOR) {
@@ -1619,11 +1615,11 @@ enum WellVariablePositions {
 
                 // Oil fraction
                 EvalWell well_fraction = 1.0;
-                if ((*active_)[Water]) {
+                if (active_[Water]) {
                     well_fraction -= wellVariables_[WFrac * nw + wellIdx];
                 }
 
-                if ((*active_)[Gas]) {
+                if (active_[Gas]) {
                     well_fraction -= wellVariables_[GFrac * nw + wellIdx];
                 }
                 return well_fraction;
@@ -1646,11 +1642,11 @@ enum WellVariablePositions {
                                      const WellState& well_state,
                                      const int well_number) const
             {
-                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                const Opm::PhaseUsage& pu = phase_usage_;
                 const int np = well_state.numPhases();
 
                 if (econ_production_limits.onMinOilRate()) {
-                    assert((*active_)[Oil]);
+                    assert(active_[Oil]);
                     const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
                     const double min_oil_rate = econ_production_limits.minOilRate();
                     if (std::abs(oil_rate) < min_oil_rate) {
@@ -1659,7 +1655,7 @@ enum WellVariablePositions {
                 }
 
                 if (econ_production_limits.onMinGasRate() ) {
-                    assert((*active_)[Gas]);
+                    assert(active_[Gas]);
                     const double gas_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Gas ] ];
                     const double min_gas_rate = econ_production_limits.minGasRate();
                     if (std::abs(gas_rate) < min_gas_rate) {
@@ -1668,8 +1664,8 @@ enum WellVariablePositions {
                 }
 
                 if (econ_production_limits.onMinLiquidRate() ) {
-                    assert((*active_)[Oil]);
-                    assert((*active_)[Water]);
+                    assert(active_[Oil]);
+                    assert(active_[Water]);
                     const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
                     const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
                     const double liquid_rate = oil_rate + water_rate;
@@ -1767,11 +1763,11 @@ enum WellVariablePositions {
                 double violation_extent = -1.0;
 
                 const int np = well_state.numPhases();
-                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                const Opm::PhaseUsage& pu = phase_usage_;
                 const int well_number = map_entry[0];
 
-                assert((*active_)[Oil]);
-                assert((*active_)[Water]);
+                assert(active_[Oil]);
+                assert(active_[Water]);
 
                 const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
                 const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
