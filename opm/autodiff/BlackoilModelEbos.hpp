@@ -207,25 +207,8 @@ namespace Opm {
             }
         }
 
-        bool
-        isParallel() const
-        {
-    #if HAVE_MPI
-            if ( istlSolver().parallelInformation().type() !=
-                 typeid(ParallelISTLInformation) )
-            {
-                return false;
-            }
-            else
-            {
-                const auto& comm =boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation()).communicator();
-                return  comm.size() > 1;
-            }
-    #else
-            return false;
-    #endif
-        }
-
+        bool isParallel() const
+        { return  grid_.comm().size() > 1; }
 
         const EclipseState& eclState() const
         { return ebosSimulator_.gridManager().eclState(); }
