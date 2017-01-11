@@ -763,7 +763,6 @@ protected:
     DerivedGeology& geo_;
     NewtonIterationBlackoilInterface& solver_;
     // Misc. data
-    std::vector<int> allcells_;
     const bool has_disgas_;
     const bool has_vapoil_;
     bool       terminal_output_;
