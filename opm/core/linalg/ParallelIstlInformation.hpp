@@ -663,6 +663,29 @@ inline void extractParallelGridInformationToISTL(boost::any& anyComm, const Unst
 {
     (void)anyComm; (void)grid;
 }
+
+/// \brief Accumulates entries masked with 1.
+/// \param container The container whose values to accumulate.
+/// \param maskContainer null pointer or a pointer to a container
+/// with entries 0 and 1. Only values at indices with a 1 stored
+/// will be accumulated. If null then all values will be accumulated
+/// \return the summ of all entries that should be represented.
+template<class T1>
+auto
+accumulateMaskedValues(const T1& container, const std::vector<double>* maskContainer)
+    -> decltype(container[0]*(*maskContainer)[0])
+{
+    decltype(container[0]*(*maskContainer)[0]) initial = 0;
+
+    if( maskContainer )
+    {
+        return std::inner_product(container.begin(), container.end(), maskContainer->begin(),
+                                  initial);
+    }else
+    {
+        return std::accumulate(container.begin(), container.end(), initial);
+    }
+}   
 } // end namespace Opm
 
 #endif
