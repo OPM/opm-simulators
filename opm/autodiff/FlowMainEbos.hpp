@@ -60,6 +60,8 @@ namespace Opm
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+        typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
+        typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
         typedef Opm::SimulatorFullyImplicitBlackoilEbos Simulator;
@@ -377,7 +379,6 @@ namespace Opm
         // Create grid and property objects.
         // Writes to:
         //   fluidprops_
-        //   gravity_
         void setupGridAndProps()
         {
             Dune::CpGrid& grid = ebosSimulator_->gridManager().grid();
@@ -388,16 +389,9 @@ namespace Opm
                                                           materialLawManager(),
                                                           grid));
 
-            // Gravity.
-            static_assert(Grid::dimension == 3, "Only 3D grids are supported");
-            gravity_.fill(0.0);
-            if (!deck().hasKeyword("NOGRAV"))
-                gravity_[2] =
-                    param_.getDefault("gravity", unit::gravity);
-
             // Geological properties
             bool use_local_perm = param_.getDefault("use_local_perm", true);
-            geoprops_.reset(new DerivedGeology(grid, *fluidprops_, eclState(), use_local_perm, gravity_.data()));
+            geoprops_.reset(new DerivedGeology(grid, *fluidprops_, eclState(), use_local_perm, &ebosProblem().gravity()[0]));
         }
 
         const Deck& deck() const
@@ -446,7 +440,7 @@ namespace Opm
                                Opm::UgGridHelpers::beginFaceCentroids(grid),
                                Opm::UgGridHelpers::beginCellCentroids(grid),
                                Grid::dimension,
-                               props, param_, gravity_[2], *state_);
+                               props, param_, gravity(), *state_);
 
                 initBlackoilSurfvol(Opm::UgGridHelpers::numCells(grid), props, *state_);
 
@@ -469,7 +463,7 @@ namespace Opm
                                                   Opm::UgGridHelpers::numFaces(grid),
                                                   props.numPhases()));
 
-                initStateEquil(grid, props, deck(), eclState(), gravity_[2], *state_);
+                initStateEquil(grid, props, deck(), eclState(), gravity(), *state_);
                 //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
                 state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
@@ -482,7 +476,7 @@ namespace Opm
                                           Opm::UgGridHelpers::beginFaceCentroids(grid),
                                           Opm::UgGridHelpers::beginCellCentroids(grid),
                                           Opm::UgGridHelpers::dimensions(grid),
-                                          props, deck(), gravity_[2], *state_);
+                                          props, deck(), gravity(), *state_);
             }
 
             // The capillary pressure is scaled in fluidprops_ to match the scaled capillary pressure in props.
@@ -646,7 +640,6 @@ namespace Opm
                                            *geoprops_,
                                            *fluidprops_,
                                            *fis_solver_,
-                                           gravity_.data(),
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
                                            eclState(),
@@ -707,8 +700,17 @@ namespace Opm
         Grid& grid()
         { return ebosSimulator_->gridManager().grid(); }
 
+        Problem& ebosProblem()
+        { return ebosSimulator_->problem(); }
+
+        const Problem& ebosProblem() const
+        { return ebosSimulator_->problem(); }
+
         std::shared_ptr<MaterialLawManager> materialLawManager()
-        { return ebosSimulator_->problem().materialLawManager(); }
+        { return ebosProblem().materialLawManager(); }
+
+        Scalar gravity() const
+        { return ebosProblem().gravity()[2]; }
 
         std::unordered_set<std::string> defunctWellNames() const
         { return ebosSimulator_->gridManager().defunctWellNames(); }
@@ -721,7 +723,6 @@ namespace Opm
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
         std::unique_ptr<BlackoilPropsAdFromDeck> fluidprops_;
-        std::array<double, 3> gravity_;
         std::unique_ptr<DerivedGeology> geoprops_;
         std::unique_ptr<ReservoirState> state_;
         std::unique_ptr<EclipseWriter> eclipse_writer_;

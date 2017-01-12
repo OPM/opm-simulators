@@ -85,7 +85,6 @@ public:
     /// \param[in] geo           derived geological properties
     /// \param[in] props         fluid and rock properties
     /// \param[in] linsolver     linear solver
-    /// \param[in] gravity       if non-null, gravity vector
     /// \param[in] has_disgas    true for dissolved gas option
     /// \param[in] has_vapoil    true for vaporized oil option
     /// \param[in] eclipse_state the object which represents an internalized ECL deck
@@ -96,7 +95,6 @@ public:
                                        DerivedGeology& geo,
                                        BlackoilPropsAdFromDeck& props,
                                        NewtonIterationBlackoilInterface& linsolver,
-                                       const double* gravity,
                                        const bool has_disgas,
                                        const bool has_vapoil,
                                        const EclipseState& eclState,
@@ -107,7 +105,6 @@ public:
           model_param_(param),
           solver_param_(param),
           props_(props),
-          gravity_(gravity),
           geo_(geo),
           solver_(linsolver),
           has_disgas_(has_disgas),
@@ -758,7 +755,6 @@ protected:
 
     // Observed objects.
     BlackoilPropsAdFromDeck& props_;
-    const double* gravity_;
     // Solvers
     DerivedGeology& geo_;
     NewtonIterationBlackoilInterface& solver_;
