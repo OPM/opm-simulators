@@ -376,18 +376,16 @@ namespace Opm
 
         // Create grid and property objects.
         // Writes to:
-        //   material_law_manager_
         //   fluidprops_
         //   gravity_
         void setupGridAndProps()
         {
             Dune::CpGrid& grid = ebosSimulator_->gridManager().grid();
-            material_law_manager_ = ebosSimulator_->problem().materialLawManager();
 
             // create the legacy properties objects
             fluidprops_.reset(new BlackoilPropsAdFromDeck(deck(),
                                                           eclState(),
-                                                          material_law_manager_,
+                                                          materialLawManager(),
                                                           grid));
 
             // Gravity.
@@ -427,7 +425,7 @@ namespace Opm
             // Need old-style fluid object for init purposes (only).
             BlackoilPropertiesFromDeck props(deck(),
                                              eclState(),
-                                             material_law_manager_,
+                                             materialLawManager(),
                                              grid.size(/*codim=*/0),
                                              grid.globalCell().data(),
                                              grid.logicalCartesianSize().data(),
@@ -709,6 +707,9 @@ namespace Opm
         Grid& grid()
         { return ebosSimulator_->gridManager().grid(); }
 
+        std::shared_ptr<MaterialLawManager> materialLawManager()
+        { return ebosSimulator_->problem().materialLawManager(); }
+
         std::unordered_set<std::string> defunctWellNames() const
         { return ebosSimulator_->gridManager().defunctWellNames(); }
 
@@ -719,7 +720,6 @@ namespace Opm
         parameter::ParameterGroup param_;
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
-        std::shared_ptr<MaterialLawManager> material_law_manager_;
         std::unique_ptr<BlackoilPropsAdFromDeck> fluidprops_;
         std::array<double, 3> gravity_;
         std::unique_ptr<DerivedGeology> geoprops_;
