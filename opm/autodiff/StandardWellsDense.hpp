@@ -90,9 +90,6 @@ enum WellVariablePositions {
                 , well_collection_(well_collection)
                 , param_(param)
                 , terminal_output_(terminal_output)
-                , fluid_(nullptr)
-                , active_(nullptr)
-                , vfp_properties_(nullptr)
                 , well_perforation_efficiency_factors_((wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0), 1.0)
                 , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
                 , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
@@ -546,7 +543,7 @@ enum WellVariablePositions {
             void
             computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const EvalWell& bhp, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
             {
-                const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                const Opm::PhaseUsage& pu = phase_usage_;
                 const int np = wells().number_of_phases;
                 std::vector<EvalWell> cmix_s(np,0.0);
                 for (int phase = 0; phase < np; ++phase) {
@@ -1551,15 +1548,15 @@ enum WellVariablePositions {
                             double liquid = 0.0;
                             double vapour = 0.0;
 
-                            const Opm::PhaseUsage& pu = fluid_->phaseUsage();
+                            const Opm::PhaseUsage& pu = phase_usage_;
 
-                            if ((*active_)[ Water ]) {
+                            if (active_[ Water ]) {
                                 aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
                             }
-                            if ((*active_)[ Oil ]) {
+                            if (active_[ Oil ]) {
                                 liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
                             }
-                            if ((*active_)[ Gas ]) {
+                            if (active_[ Gas ]) {
                                 vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
                             }
 
