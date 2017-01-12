@@ -193,7 +193,7 @@ namespace Opm {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
-            well_model_.init(&fluid_, &active_, &vfp_properties_, gravity, depth, pv);
+            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv);
             wellModel().setWellsActive( localWellsActive() );
             global_nc_ =  Opm::AutoDiffGrid::numCells(grid_);
             // compute global sum of number of cells
