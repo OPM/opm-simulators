@@ -39,7 +39,6 @@
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
-#include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
@@ -117,7 +116,6 @@ namespace Opm {
         typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoilDense WellState;
         typedef BlackoilModelParameters ModelParameters;
-        typedef DefaultBlackoilSolutionState SolutionState;
 
         typedef typename TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator ;
