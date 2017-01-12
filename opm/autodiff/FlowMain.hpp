@@ -465,7 +465,7 @@ namespace Opm
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if( mpi_rank_ != 0 || !must_distribute_ )
+            if( mpi_rank_ != 0 || !must_distribute_ || !output_to_files_ )
             {
                 return;
             }
