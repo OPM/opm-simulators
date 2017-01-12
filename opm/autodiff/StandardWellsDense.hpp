@@ -191,6 +191,10 @@ enum WellVariablePositions {
                     return report;
                 }
 
+                if (param_.compute_well_potentials_) {
+                    computeWellPotentials(ebosSimulator, well_state);
+                }
+
                 resetWellControlFromState(well_state);
                 updateWellControls(well_state);
                 // Set the primary variables for the wells
@@ -207,10 +211,6 @@ enum WellVariablePositions {
                 }
                 assembleWellEq(ebosSimulator, dt, well_state, false);
 
-                // Not sure we should calculate it during solveWellEq
-                if (param_.compute_well_potentials_) {
-                    computeWellPotentials(ebosSimulator, well_state);
-                }
                 report.converged = true;
                 return report;
             }
