@@ -247,16 +247,14 @@ enum WellVariablePositions {
                         const EvalWell bhp = getBhp(w);
                         computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
-                        // applying the efficiency factor
-                        for (int p1 = 0; p1 < np; ++p1) {
-                            cq_s[p1] = well_perforation_efficiency_factors_[perf] * cq_s[p1];
-                        }
-
                         for (int p1 = 0; p1 < np; ++p1) {
 
                             if (!only_wells) {
                                 // subtract sum of phase fluxes in the reservoir equation.
-                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value();
+                                // applying the efficiency factor to the flux rate
+                                // TODO: not sure whether the way applying efficiency factor to Jacs are completely correct
+                                // It should enter the mass balance equation, while should not enter the well equations
+                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= well_perforation_efficiency_factors_[perf] * cq_s[p1].value();
                             }
 
                             // subtract sum of phase fluxes in the well equations.
@@ -265,7 +263,7 @@ enum WellVariablePositions {
                             // assemble the jacobians
                             for (int p2 = 0; p2 < np; ++p2) {
                                 if (!only_wells) {
-                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
+                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= well_perforation_efficiency_factors_[perf] * cq_s[p1].derivative(p2);
                                     duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].derivative(p2+blocksize); // intput in transformed matrix
                                     duneC_[w][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
                                 }
@@ -1297,6 +1295,10 @@ enum WellVariablePositions {
 
                             break;
                         }
+
+
+
+
                         std::vector<double> g = {1,1,0.01};
                         if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
                             for (int phase = 0; phase < np; ++phase) {
@@ -1351,6 +1353,26 @@ enum WellVariablePositions {
                             }
                         }
                     }
+
+                    // update whether well is under group control
+                    if (wellCollection()->groupControlActive()) {
+                        // get well node in the well collection
+                        WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+
+                        // update whehter the well is under group control or individual control
+                        if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
+                            // under group control
+                            well_node.setIndividualControl(false);
+                        } else {
+                            // individual control
+                            well_node.setIndividualControl(true);
+                        }
+                    }
+                }
+
+                // upate the well targets following the group control
+                if (wellCollection()->groupControlActive()) {
+                    wellCollection()->updateWellTargets(xw.wellRates());
                 }
             }
 
@@ -1623,11 +1645,11 @@ enum WellVariablePositions {
                     const std::string well_name = wells().name[w];
                     const WellNode& well_node = wellCollection()->findWellNode(well_name);
 
-                    const double well_efficiency_factors = well_node.getAccumulativeEfficiencyFactor();
+                    const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
 
                     // assign the efficiency factor to each perforation related.
                     for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w + 1]; ++perf) {
-                        well_perforation_efficiency_factors_[perf] = well_efficiency_factors;
+                        well_perforation_efficiency_factors_[perf] = well_efficiency_factor;
                     }
                 }
             }
