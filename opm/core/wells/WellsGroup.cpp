@@ -793,6 +793,18 @@ namespace Opm
                 const double children_guide_rate = children_[i]->productionGuideRate(true);
                 children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate / my_guide_rate) * rate_for_group_control, true);
                 children_[i]->setTargetUpdated(true);
+            } else {
+                // for the well not under group control, we need to update their group control limit
+                // to provide a mechanism for the well to return to group control
+                // putting its own rate back to the rate_for_group_control for redistribution
+                const double rate = std::abs(children_[i]->getProductionRate(well_rates, prod_mode) * children_[i]->efficiencyFactor());
+                const double temp_rate_for_group_control = rate_for_group_control + rate;
+
+                // TODO: the following might not be the correct thing to do for mutliple-layer group
+                const double children_guide_rate = children_[i]->productionGuideRate(false);
+                const double temp_my_guide_rate = my_guide_rate + children_guide_rate;
+                children_[i]->applyProdGroupControl(prod_mode, (children_guide_rate / temp_my_guide_rate) * temp_rate_for_group_control, false);
+                children_[i]->setTargetUpdated(true);
             }
         }
     }
