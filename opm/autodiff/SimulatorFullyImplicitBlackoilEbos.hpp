@@ -97,7 +97,7 @@ public:
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const bool has_disgas,
                                        const bool has_vapoil,
-                                       const EclipseState& eclState,
+                                       const EclipseState& /* eclState */,
                                        BlackoilOutputWriterEbos& output_writer,
                                        const std::unordered_set<std::string>& defunct_well_names)
         : ebosSimulator_(ebosSimulator),
