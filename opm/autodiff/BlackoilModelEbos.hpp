@@ -1006,8 +1006,6 @@ namespace Opm {
         {
             using namespace Opm::AutoDiffGrid;
             const int nc = numCells(grid_);
-            //const ADB pv_mult = poroMult(pressure);
-            const auto& pv = geo_.poreVolume();
             const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
 
             for (int i = 0; i<FIPDataType::fipValues; i++) {
@@ -1033,8 +1031,9 @@ namespace Opm {
                 for (int phase = 0; phase < maxnp; ++phase) {
                     const double b = fs.invB(flowPhaseToEbosPhaseIdx(phase)).value();
                     const double s = fs.saturation(flowPhaseToEbosPhaseIdx(phase)).value();
-                    const double pv_mult = 1.0; //todo
-                    fip_.fip[phase][cellIdx] = pv_mult * b * s * pv[cellIdx];
+
+                    const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    fip_.fip[phase][cellIdx] = b * s * pv;
                 }
 
                 if (active_[ Oil ] && active_[ Gas ]) {
@@ -1082,25 +1081,26 @@ namespace Opm {
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-                        hcpv[region] += pv[c] * hydrocarbon;
-                        pres[region] += pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value();
+                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        hcpv[region] += pv * hydrocarbon;
+                        pres[region] += pv * fs.pressure(FluidSystem::oilPhaseIdx).value();
                     }
                 }
                 for (int c = 0; c < nc; ++c) {
                     const int region = fipnum[c] - 1;
                     if (region != -1) {
-
-                        fip_.fip[FIPDataType::FIP_PV][c] = pv[c];
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
+                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        fip_.fip[FIPDataType::FIP_PV][c] = pv;
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
 
                         //Compute hydrocarbon pore volume weighted average pressure.
                         //If we have no hydrocarbon in region, use pore volume weighted average pressure instead
                         if (hcpv[region] != 0) {
-                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pv * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
                         } else {
-                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv;
                         }
 
                         values[region][FIPDataType::FIP_PV] += fip_.fip[FIPDataType::FIP_PV][c];
@@ -1151,8 +1151,9 @@ namespace Opm {
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-                        hcpv[region] += pv[c] * hydrocarbon;
-                        pres[region] += pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value();
+                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        hcpv[region] += pv * hydrocarbon;
+                        pres[region] += pv * fs.pressure(FluidSystem::oilPhaseIdx).value();
                     }
                 }
 
@@ -1162,15 +1163,16 @@ namespace Opm {
                 for (int c = 0; c < nc; ++c) {
                     const int region = fipnum[c] - 1;
                     if (region != -1 && mask[c]) {
-                        fip_.fip[FIPDataType::FIP_PV][c] = pv[c];
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        fip_.fip[FIPDataType::FIP_PV][c] = pv;
 
                         if (hcpv[region] != 0) {
-                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pv * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
                         } else {
-                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv;
                         }
 
                         values[region][FIPDataType::FIP_PV] += fip_.fip[FIPDataType::FIP_PV][c];
