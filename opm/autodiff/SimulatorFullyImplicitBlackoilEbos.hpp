@@ -157,24 +157,31 @@ public:
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os(tstep_filename.c_str());
 
+        const auto& schedule = eclState().getSchedule();
+
         // adaptive time stepping
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
-            adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+
+            if (param_.getDefault("use_TUNING", false)) {
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule.getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+            } else {
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+            }
         }
 
         std::string restorefilename = param_.getDefault("restorefile", std::string("") );
         if( ! restorefilename.empty() )
         {
             // -1 means that we'll take the last report step that was written
-            //const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
+            const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
 
-            //            output_writer_.restore( timer,
-            //                                    state,
-            //                                    prev_well_state,
-            //                                    restorefilename,
-            //                                    desiredRestoreStep );
+            output_writer_.restore( timer,
+                                    state,
+                                    prev_well_state,
+                                    restorefilename,
+                                    desiredRestoreStep );
         }
 
         bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
@@ -195,7 +202,6 @@ public:
             }
         }
         std::vector<std::vector<double>> OOIP;
-
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -221,13 +227,24 @@ public:
                                        is_parallel_run_,
                                        well_potentials,
                                        defunct_well_names_ );
-
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
             well_state.init(wells, state, prev_well_state, props_.phaseUsage());
 
             // give the polymer and surfactant simulators the chance to do their stuff
             handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
+
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+                Dune::Timer perfTimer;
+                perfTimer.start();
+
+                // No per cell data is written for initial step, but will be
+                // for subsequent steps, when we have started simulating
+                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
+
+                report.output_write_time += perfTimer.stop();
+            }
 
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
@@ -238,29 +255,6 @@ public:
             const WellModel well_model(wells, model_param_, terminal_output_);
 
             auto solver = createSolver(well_model);
-
-            // write the inital state at the report stage
-            if (timer.initialStep()) {
-                Dune::Timer perfTimer;
-                perfTimer.start();
-
-                // make sure that the Intensive Quantities cache is up to date
-                const auto& gridManager = ebosSimulator_.gridManager();
-                const auto& gridView = gridManager.gridView();
-                auto elemIt = gridView.template begin<0>();
-                auto elemEndIt = gridView.template end<0>();
-                ElementContext elemCtx(ebosSimulator_);
-                for (; elemIt != elemEndIt; ++ elemIt) {
-                    elemCtx.updatePrimaryStencil(*elemIt);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                }
-
-                // No per cell data is written for initial step, but will be
-                // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
-
-                report.output_write_time += perfTimer.stop();
-            }
 
             // Compute orignal FIP;
             if (!ooip_computed) {
@@ -274,12 +268,10 @@ public:
                 std::ostringstream step_msg;
                 boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
                 step_msg.imbue(std::locale(std::locale::classic(), facet));
-                step_msg << "\n"
-                         << "Time step " << std::setw(4) <<timer.currentStepNum()
+                step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
                          << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
                          << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-                         << ", date = " << timer.currentDateTime()
-                         << ", size = " << (double)unit::convert::to(timer.currentStepLength(), unit::day) << " days";
+                         << ", date = " << timer.currentDateTime();
                 OpmLog::info(step_msg.str());
             }
 
@@ -321,7 +313,7 @@ public:
             // update timing.
             report.solver_time += solver_timer.secsSinceStart();
 
-            // Compute current FIP.
+            // Compute current fluid in place.
             std::vector<std::vector<double>> COIP;
             COIP = solver->computeFluidInPlace(fipnum);
             std::vector<double> OOIP_totals = FIPTotals(OOIP, state);
@@ -331,7 +323,7 @@ public:
             FIPUnitConvert(eclState().getUnits(), OOIP_totals);
             FIPUnitConvert(eclState().getUnits(), COIP_totals);
 
-            if ( terminal_output_ )
+            if (terminal_output_ )
             {
                 outputFluidInPlace(OOIP_totals, COIP_totals,eclState().getUnits(), 0);
                 for (size_t reg = 0; reg < OOIP.size(); ++reg) {
@@ -343,6 +335,13 @@ public:
                     "Time step took " + std::to_string(stepReport.solver_time) + " seconds; "
                     "total solver time " + std::to_string(report.solver_time) + " seconds.";
                 OpmLog::note(msg);
+            }
+
+            if ( output_writer_.output() ) {
+                if ( output_writer_.isIORank() )
+                {
+                    stepReport.reportParam(tstep_os);
+                }
             }
 
             // Increment timer, remember well state.
