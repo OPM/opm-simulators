@@ -17,14 +17,14 @@ The \eWoms fluid framework currently features the following concepts
 \item[Fluid state:] Fluid states are responsible for representing the
   complete thermodynamic configuration of a system at a given spatial
   and temporal position. A fluid state always provides access methods
-  to {\bf all} thermodynamic quantities, but the concept of a fluid state does not
+  to \textbf{all} thermodynamic quantities, but the concept of a fluid state does not
   mandate what assumptions are made to store these thermodynamic
-  quantities. What fluid states also do {\bf not} do is to make sure
+  quantities. What fluid states also do \textbf{not} do is to make sure
   that the thermodynamic state which they represent is physically
   possible.
-\item[Fluid system:] Fluid systems express the thermodynamic {\bf
-    relations}\footnote{Strictly speaking, these relations are
-    functions, mathematically.} between quantities. Since functions do
+\item[Fluid system:] Fluid systems express the thermodynamic \textbf{
+  relations}\footnote{Strictly speaking, these relations are
+  functions, mathematically.} between quantities. Since functions do
   not exhibit any internal state, fluid systems are stateless classes,
   i.e. all member functions are \texttt{static}. This is a conscious
   decision since the thermodynamic state of the system is expressed by
@@ -68,7 +68,7 @@ system at a given spatial and temporal position.
 
 \subsection{Exported Constants}
 
-{\bf All} fluid states {\bf must} export the following constants:
+\textbf{All} fluid states \textbf{must} export the following constants:
 \begin{description}
 \item[numPhases:] The number of fluid phases considered.
 \item[numComponents:] The number of considered chemical
@@ -77,7 +77,7 @@ system at a given spatial and temporal position.
 
 \subsection{Accessible Thermodynamic Quantities}
 
-Also, {\bf all} fluid states {\bf must} provide the following methods:
+Also, \textbf{all} fluid states \textbf{must} provide the following methods:
 \begin{description}
 \item[temperature():] The absolute temperature $T_\alpha$ of
   a fluid phase $\alpha$.
