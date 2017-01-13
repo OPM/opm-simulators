@@ -1027,12 +1027,14 @@ namespace Opm {
                 const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
+                const double pv =
+                    ebosSimulator_.model().dofTotalVolume(cellIdx)
+                    * ebosSimulator_.problem().porosity(cellIdx);
 
                 for (int phase = 0; phase < maxnp; ++phase) {
                     const double b = fs.invB(flowPhaseToEbosPhaseIdx(phase)).value();
                     const double s = fs.saturation(flowPhaseToEbosPhaseIdx(phase)).value();
 
-                    const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
                     fip_.fip[phase][cellIdx] = b * s * pv;
                 }
 
@@ -1081,7 +1083,9 @@ namespace Opm {
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        const double pv =
+                            ebosSimulator_.model().dofTotalVolume(c)
+                            * ebosSimulator_.problem().porosity(c);
                         hcpv[region] += pv * hydrocarbon;
                         pres[region] += pv * fs.pressure(FluidSystem::oilPhaseIdx).value();
                     }
@@ -1091,7 +1095,9 @@ namespace Opm {
                     if (region != -1) {
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
-                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        const double pv =
+                            ebosSimulator_.model().dofTotalVolume(c)
+                            * ebosSimulator_.problem().porosity(c);
                         fip_.fip[FIPDataType::FIP_PV][c] = pv;
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
 
@@ -1151,7 +1157,9 @@ namespace Opm {
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        const double pv =
+                            ebosSimulator_.model().dofTotalVolume(c)
+                            * ebosSimulator_.problem().porosity(c);
                         hcpv[region] += pv * hydrocarbon;
                         pres[region] += pv * fs.pressure(FluidSystem::oilPhaseIdx).value();
                     }
@@ -1166,7 +1174,9 @@ namespace Opm {
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-                        const double pv = intQuants.porosity().value()*elemCtx.dofVolume(/*spaceIdx=*/0, /*timeIdx=*/0);
+                        const double pv =
+                            ebosSimulator_.model().dofTotalVolume(c)
+                            * ebosSimulator_.problem().porosity(c);
                         fip_.fip[FIPDataType::FIP_PV][c] = pv;
 
                         if (hcpv[region] != 0) {
