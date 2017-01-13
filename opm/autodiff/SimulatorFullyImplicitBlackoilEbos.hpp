@@ -256,6 +256,11 @@ public:
 
             auto solver = createSolver(well_model);
 
+            // make sure that the ebos side of the model is consistent with the reservoir
+            // state object.
+            solver->model().convertInput(/*iterationIdx=*/0, state, ebosSimulator_);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
             // Compute orignal FIP;
             if (!ooip_computed) {
                 OOIP = solver->computeFluidInPlace(fipnum);
