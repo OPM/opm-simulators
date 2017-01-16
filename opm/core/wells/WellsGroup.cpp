@@ -820,6 +820,17 @@ namespace Opm
         // do nothing
     }
 
+
+    bool WellsGroup::canProduceMore() const
+    {
+        for (const std::shared_ptr<const WellsGroupInterface>& child_node : children_) {
+            if (child_node->canProduceMore()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     double WellsGroup::getProductionRate(const std::vector<double>& well_rates,
                                          const ProductionSpecification::ControlMode prod_mode) const
     {
@@ -1504,7 +1515,8 @@ namespace Opm
 
 
 
-    double WellNode::getAccumulativeEfficiencyFactor() const {
+    double WellNode::getAccumulativeEfficiencyFactor() const
+    {
         // TODO: not sure whether a well can be exempted from repsponding to the efficiency factor
         // for the parent group.
         double efficiency_factor = efficiencyFactor();
@@ -1518,18 +1530,27 @@ namespace Opm
     }
 
 
-    int WellNode::selfIndex() const {
+    int WellNode::selfIndex() const
+    {
         return self_index_;
     }
 
 
-    bool WellNode::targetUpdated() const {
+    bool WellNode::targetUpdated() const
+    {
         return target_updated_;
     }
 
 
-    void WellNode::setTargetUpdated(const bool flag) {
+    void WellNode::setTargetUpdated(const bool flag)
+    {
         target_updated_ = flag;
+    }
+
+
+    bool WellNode::canProduceMore() const
+    {
+        return (isProducer() && !individualControl());
     }
 
 }

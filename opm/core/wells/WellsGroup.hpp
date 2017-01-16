@@ -235,6 +235,10 @@ namespace Opm
 
         virtual void setTargetUpdated(const bool flag) = 0;
 
+        // bascially, for the group or wells under group control
+        // they have the potential to adjust their targets to produce more to match the higher level target
+        virtual bool canProduceMore() const = 0;
+
         double efficiencyFactor() const;
 
         void setEfficiencyFactor(const double efficiency_factor);
@@ -369,6 +373,8 @@ namespace Opm
         virtual double getProductionRate(const std::vector<double>& well_rates,
                                          const ProductionSpecification::ControlMode prod_mode) const;
 
+        virtual bool canProduceMore() const;
+
     private:
         std::vector<std::shared_ptr<WellsGroupInterface> > children_;
     };
@@ -496,6 +502,8 @@ namespace Opm
         bool targetUpdated() const;
 
         virtual void setTargetUpdated(const bool flag);
+
+        virtual bool canProduceMore() const;
 
     private:
         Wells* wells_;
