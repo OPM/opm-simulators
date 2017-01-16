@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#Print commands as they execute
+#set -x
+
 declare -a upstreams
 upstreams=(opm-common
            ert
