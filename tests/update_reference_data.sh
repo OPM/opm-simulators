@@ -60,7 +60,7 @@ done
 
 
 
-echo -e "update reference data for $2\n" > /tmp/cmsg
+echo -e "update reference data for ${@:2}\n" > /tmp/cmsg
 for dep in ert opm-common opm-core opm-grid opm-material opm-parser opm-output
 do
   pushd $WORKSPACE/deps/$dep > /dev/null
