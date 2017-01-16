@@ -498,7 +498,8 @@ namespace Opm
 
             // Create Deck and EclipseState.
             try {
-                ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+                ParseContext parseContext({ { ParseContext::PARSE_RANDOM_SLASH ,        InputError::IGNORE },
+                                            { ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN   } });
                 deck_ = std::make_shared< Deck >( parser.parseFile(deck_filename, parseContext) );
                 checkDeck(*deck_, parser);
 
