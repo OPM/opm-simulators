@@ -95,7 +95,7 @@ parameters used by a simulation can be obtained by passing
 \lstinputlisting[style=eWomsCode, numbersep=5pt, firstline=28, firstnumber=28]{../../tutorial/tutorial1problem.hh}
 \end{lst}
 
-For using \eWoms, the central file is the \textit{problem file} as
+For using \eWoms, the central file is the \emph{problem file} as
 shown in listing~\ref{tutorial1:problemfile}. This file is responsible
 for specifying the physical setup of the problem which is to be
 simulated. In this context, all problems first need to set up the
@@ -186,7 +186,7 @@ at least the following methods:
 All of these methods take a single template argument,
 \texttt{Context}, and the three function arguments \texttt{context},
 \texttt{spaceIdx} and \texttt{timeIdx}. Together, these form the
-so-called \textit{execution context}. The execution context can be
+so-called \emph{execution context}. The execution context can be
 thought of as a collection of all available information for a given
 method. Thus, execution contexts a way to abstract away the
 differences of discretization schemes. The following methods are
@@ -378,7 +378,7 @@ chapter~\ref{sec:fluidframework}.
 
 \item \textbf{Use a Full-Fledged Fluid System} \\
   In \eWoms, the canonical way to describe fluid mixtures is via
-  \textit{fluid systems}\footnote{For a thorough introduction into
+  \emph{fluid systems}\footnote{For a thorough introduction into
     fluid systems and the concepts related to it, see chapter
     \ref{sec:fluidframework}}.  In order to include a fluid system,
   you first have to comment out lines
@@ -456,7 +456,7 @@ You can use the fluids of exercise 1b).
 \texttt{const auto \&pos=context.pos(spaceIdx, timeIdx);}
 
 When does the front cross the material border? In paraview, the
-animation view (\textit{View} $\rightarrow$ \textit{Animation View})
+animation view (\emph{View} $\rightarrow$ \textit{Animation View})
 is a convenient way to get a rough feeling of the time-step sizes.
 \end{enumerate}
 
