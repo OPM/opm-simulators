@@ -43,7 +43,18 @@ SCRIPT_PATH=`getAbsPath "$SCRIPT_PATH"`
 #Get options
 OPM_DATA=
 WORKSPACE="$SCRIPT_PATH/.."
-BUILDTHREADS=4 
+
+if [ "$OSTYPE" == "linux-gnu" ]
+then
+  if which nproc > /dev/null
+  then
+    BUILDTHREADS=`nproc`
+  fi
+else # OSX
+  BUILDTHREADS=`sysctl hw.ncpu | awk -F ' ' '{print $1}'`
+fi
+test -z "$BUILDTHREADS" && BUILDTHREADS=1
+
 PULL_REQUESTS=
 [ $# -eq 0 ] && usage
 while getopts "d:w:p:t:h" arg; do
