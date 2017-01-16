@@ -889,7 +889,7 @@ namespace Opm
     {
         double total_production_rate = 0.0;
         for (const std::shared_ptr<const WellsGroupInterface>& child_node : children_) {
-            total_production_rate += child_node->getProductionRate(well_rates, prod_mode);
+            total_production_rate += child_node->getProductionRate(well_rates, prod_mode) * child_node->efficiencyFactor();
         }
         return total_production_rate;
     }
