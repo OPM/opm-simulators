@@ -268,6 +268,12 @@ namespace Opm {
             perfTimer.start();
             // the step is not considered converged until at least minIter iterations is done
             report.converged = getConvergence(timer, iteration,residual_norms) && iteration > nonlinear_solver.minIter();
+
+             // checking whether the group targets are converged
+             if (wellModel().wellCollection()->groupControlActive()) {
+                  report.converged = report.converged && wellModel().wellCollection()->groupTargetConverged(well_state.wellRates());
+             }
+
             report.update_time += perfTimer.stop();
             residual_norms_history_.push_back(residual_norms);
             if (!report.converged) {

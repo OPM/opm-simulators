@@ -682,6 +682,11 @@ enum WellVariablePositions {
                     assembleWellEq(ebosSimulator, dt, well_state, true);
                     converged = getWellConvergence(ebosSimulator, it);
 
+                    // checking whether the group targets are converged
+                    if (wellCollection()->groupControlActive()) {
+                        converged = converged && wellCollection()->groupTargetConverged(well_state.wellRates());
+                    }
+
                     if (converged) {
                         break;
                     }
