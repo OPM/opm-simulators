@@ -7,15 +7,18 @@ set -e
 #set -x
 
 
+# Get the absolute path from a (potentially) relative path
+# $1 = relative path
+# Prints the absolute path to stdout for capture
 getAbsPath() {
   local MY_PATH=$1
   local ORIG_PATH=`pwd`
 
-  MY_PATH="`( cd \"$MY_PATH\" && pwd )`" 
+  MY_PATH="`( cd \"$MY_PATH\" && pwd )`"
   cd "$ORIG_PATH"
 
   if [ -z "$MY_PATH" ] ; then
-    echo "Script path became something strange: '$SCRIPT_PATH'" 
+    echo "Script path became something strange: '$SCRIPT_PATH'"
     exit 1  # fail
   fi
   echo "$MY_PATH"
@@ -49,7 +52,7 @@ while getopts "d:w:p:t:h" arg; do
       echo "OPM_DATA ${OPTARG}"
       OPM_DATA=${OPTARG}
       ;;
-    w) # Workspace directory to use for opm-simultors
+    w) # Workspace directory to use for opm-simulators
       echo "WORKSPACE ${OPTARG}"
       WORKSPACE=${OPTARG}
       ;;
@@ -69,8 +72,8 @@ while getopts "d:w:p:t:h" arg; do
 done
 
 
-if [ -z "$OPM_DATA" ]; then 
-  echo "No OPM_DATA dir, will clone using network (slow)"; 
+if [ -z "$OPM_DATA" ]; then
+  echo "No OPM_DATA dir, will clone using network (slow)";
 fi
 WORKSPACE=`getAbsPath "$WORKSPACE"`
 

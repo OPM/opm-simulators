@@ -2,6 +2,11 @@
 
 OPM_DATA_ROOT=$1
 
+# Copy results from a test run to refence dir
+# $1 = source directory to copy data from
+# $2 = destination directory to copy data to
+# $3 = base file name for files to copy
+# $4...$@ = file types to copy
 copyToReferenceDir () {
   SRC_DIR=$1
   DST_DIR=$2;
