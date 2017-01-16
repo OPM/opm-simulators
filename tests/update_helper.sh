@@ -57,7 +57,7 @@ test -z "$BUILDTHREADS" && BUILDTHREADS=1
 
 PULL_REQUESTS=
 [ $# -eq 0 ] && usage
-while getopts "d:w:p:t:h" arg; do
+while getopts "d:w:p:t:o:h" arg; do
   case $arg in
     d) # OPM Data path to use
       echo "OPM_DATA ${OPTARG}"
@@ -74,6 +74,10 @@ while getopts "d:w:p:t:h" arg; do
     p) # Select pull requests to build (e.g., opm-core=1100)
       echo "PULL_REQUESTS ${OPTARG}"
       PULL_REQUESTS=${OPTARG}
+      ;;
+    o) # Use given toolchain file
+      echo "Using ${OPTARG} toolchain"
+      CMAKE_TOOLCHAIN_FILES=${OPTARG}
       ;;
     h) # Display help.
       usage
@@ -98,6 +102,8 @@ export OPM_DATA_ROOT_PREDEFINED="$OPM_DATA"
 export OPM_DATA_ROOT="$OPM_DATA"
 export WORKSPACE
 export BUILDTHREADS
+export BTYPES=serial
+export CMAKE_TOOLCHAIN_FILES
 export ghprbCommentBody="$PULL_REQUESTS"
 
 
