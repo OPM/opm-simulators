@@ -120,6 +120,7 @@ namespace Opm {
         typedef typename TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator ;
         typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
+        typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
         typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
         typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
@@ -1000,21 +1001,33 @@ namespace Opm {
                 fip_.fip[i].resize(nc,0.0);
             }
 
-            for (int c = 0; c < nc; ++c) {
-                const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
+            ElementContext elemCtx(ebosSimulator_);
+            auto elemIt = elemCtx.gridView().template begin</*codim=*/0>();
+            const auto& elemEndIt = elemCtx.gridView().template end</*codim=*/0>();
+            for (; elemIt != elemEndIt; ++elemIt) {
+                const auto& elem = *elemIt;
+                if (elem.partitionType() != Dune::InteriorEntity) {
+                    continue;
+                }
+
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
                 for (int phase = 0; phase < maxnp; ++phase) {
-                    const double& b = fs.invB(flowPhaseToEbosPhaseIdx(phase)).value();
-                    const double& s = fs.saturation(flowPhaseToEbosPhaseIdx(phase)).value();
+                    const double b = fs.invB(flowPhaseToEbosPhaseIdx(phase)).value();
+                    const double s = fs.saturation(flowPhaseToEbosPhaseIdx(phase)).value();
                     const double pv_mult = 1.0; //todo
-                    fip_.fip[phase][c] = pv_mult * b * s * pv[c];
+                    fip_.fip[phase][cellIdx] = pv_mult * b * s * pv[cellIdx];
                 }
 
                 if (active_[ Oil ] && active_[ Gas ]) {
                     // Account for gas dissolved in oil and vaporized oil
-                    fip_.fip[FIPData::FIP_DISSOLVED_GAS][c] = fs.Rs().value() * fip_.fip[FIPData::FIP_LIQUID][c];
-                    fip_.fip[FIPData::FIP_VAPORIZED_OIL][c] = fs.Rv().value() * fip_.fip[FIPData::FIP_VAPOUR][c];
+                    fip_.fip[FIPData::FIP_DISSOLVED_GAS][cellIdx] = fs.Rs().value() * fip_.fip[FIPData::FIP_LIQUID][cellIdx];
+                    fip_.fip[FIPData::FIP_VAPORIZED_OIL][cellIdx] = fs.Rv().value() * fip_.fip[FIPData::FIP_VAPOUR][cellIdx];
                 }
             }
 
