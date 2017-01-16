@@ -111,7 +111,7 @@ echo " "
 echo " "
 echo ">>> To update opm-data, please use the following command <<<"
 echo " "
-echo "configuration=serial WORKSPACE=$WORKSPACE $SCRIPT_PATH/update_reference_data.sh $WORKSPACE/deps/opm-data [spe1] [spe3] [spe9]"
+echo "configuration=serial WORKSPACE=$WORKSPACE $SCRIPT_PATH/update_reference_data.sh $WORKSPACE/deps/opm-data [spe11] [spe12] [spe3] [spe9]"
 echo " "
 
 echo ">>> To plot difference between new and old data, usse the following <<<"

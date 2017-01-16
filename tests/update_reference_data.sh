@@ -19,16 +19,19 @@ copyToReferenceDir () {
 }
 
 for test_name in ${@:2}; do
-  if grep -q "spe1" <<< $test_name
+  if grep -q "spe11" <<< $test_name
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_sequential+spe1/ \
       $OPM_DATA_ROOT/spe1/opm-simulation-reference/ \
       SPE1CASE1 \
       EGRID INIT SMSPEC UNRST UNSMRY
+  fi
 
+  if grep -q "spe12" <<< $test_name
+  then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_sequential+spe1/ \
+      $configuration/build-opm-simulators/tests/results/flow+spe1/ \
       $OPM_DATA_ROOT/spe1/opm-simulation-reference/ \
       SPE1CASE2 \
       EGRID INIT SMSPEC UNRST UNSMRY
