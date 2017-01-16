@@ -282,7 +282,7 @@ namespace Opm
 
     void WellCollection::updateWellTargets(const std::vector<double>& well_rates)
     {
-        if ( !needUpdateWellTargets() ) {
+        if ( !needUpdateWellTargets() && groupTargetConverged(well_rates)) {
             return;
         }
 
@@ -321,6 +321,19 @@ namespace Opm
     bool WellCollection::groupControlActive() const
     {
         return group_control_active_;
+    }
+
+
+    bool WellCollection::groupTargetConverged(const std::vector<double>& well_rates) const
+    {
+        // TODO: eventually, there should be only one root node
+        // TODO: we also need to check the injection target, while we have not done that.
+        for (const std::shared_ptr<WellsGroupInterface>& root_node : roots_) {
+            if ( !root_node->groupProdTargetConverged(well_rates) ) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }

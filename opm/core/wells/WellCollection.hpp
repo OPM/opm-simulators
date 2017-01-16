@@ -139,6 +139,13 @@ namespace Opm
         /// Whether we have active group control
         bool groupControlActive() const;
 
+        /// Whether the group target is converged
+        // It is considered converged if eitehr the group targets are matched or the group targets are not matched while the wells are
+        // running under their own limits so that they can not produce more
+        // It is considered not converged if the group targets are not matched while some of the wells are still running under group control
+        // The strategy may need to be adjusted when more complicated multi-layered group control situation applied, not sure about thatyet.
+        bool groupTargetConverged(const std::vector<double>& well_rates) const;
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;

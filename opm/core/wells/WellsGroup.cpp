@@ -857,20 +857,14 @@ namespace Opm
                 const double relative_tolerance = 0.01;
                 // the bigger one of the two values
                 const double bigger_of_two = std::max(production_rate, production_target);
-                // if production_rate is greater than production_target, there must be something wrong
-                // in the logic or the implementation
-                if (production_rate - production_target > relative_tolerance * bigger_of_two) {
-                    const std::string msg = " The group " + name() + " is over producing the target, something might be wrong ";
-                    OPM_THROW(std::runtime_error, msg);
-                }
 
-                if (production_target - production_rate > relative_tolerance * bigger_of_two) {
+                if (std::abs(production_target - production_rate) > relative_tolerance * bigger_of_two) {
                     // underproducing the target while potentially can produce more
                     // then we should not consider the effort to match the group target is done yet
                     if (canProduceMore()) {
                         return false;
                     } else {
-                        // can not produce more
+                        // can not produce more to meet the target
                         OpmLog::info("group " + name() + " can not meet its target!");
                     }
                 }
@@ -1296,6 +1290,7 @@ namespace Opm
             if (!phase_used[BlackoilPhases::Aqua]) {
                 OPM_THROW(std::runtime_error, "Water phase not active and LRAT control specified.");
             }
+
             distr[phase_pos[BlackoilPhases::Liquid]] = 1.0;
             distr[phase_pos[BlackoilPhases::Aqua]] = 1.0;
             break;
