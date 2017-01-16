@@ -186,7 +186,7 @@ namespace Opm
         return tot_rate;
     }
 
-    double WellsGroupInterface::getTarget(ProductionSpecification::ControlMode mode)
+    double WellsGroupInterface::getTarget(ProductionSpecification::ControlMode mode) const
     {
         double target = -1.0;
         switch (mode) {
@@ -216,7 +216,7 @@ namespace Opm
         return target;
     }
 
-    double WellsGroupInterface::getTarget(InjectionSpecification::ControlMode mode)
+    double WellsGroupInterface::getTarget(InjectionSpecification::ControlMode mode) const
     {
         double target = -1.0;
         switch (mode) {
@@ -830,6 +830,65 @@ namespace Opm
         }
         return false;
     }
+
+
+    bool WellsGroup::groupProdTargetConverged(const std::vector<double>& well_rates) const
+    {
+        // TODO: should consider the efficiency factor in getProductionRate()
+        for (const std::shared_ptr<const WellsGroupInterface>& child_node : children_) {
+            if ( ! child_node->groupProdTargetConverged(well_rates) ) {
+                return false;
+            }
+        }
+
+        // We need to check whether the current group target is satisfied
+        // we need to decide the modes we want to support here.
+        const ProductionSpecification::ControlMode prod_mode = prodSpec().control_mode_;
+        switch(prod_mode) {
+            case ProductionSpecification::LRAT :
+            case ProductionSpecification::ORAT :
+            case ProductionSpecification::WRAT :
+            case ProductionSpecification::GRAT :
+            {
+                const double production_rate = std::abs(getProductionRate(well_rates, prod_mode));
+                const double production_target = std::abs(getTarget(prod_mode));
+
+                // 0.01 is a hard-coded relative tolerance
+                const double relative_tolerance = 0.01;
+                // the bigger one of the two values
+                const double bigger_of_two = std::max(production_rate, production_target);
+                // if production_rate is greater than production_target, there must be something wrong
+                // in the logic or the implementation
+                if (production_rate - production_target > relative_tolerance * bigger_of_two) {
+                    const std::string msg = " The group " + name() + " is over producing the target, something might be wrong ";
+                    OPM_THROW(std::runtime_error, msg);
+                }
+
+                if (production_target - production_rate > relative_tolerance * bigger_of_two) {
+                    // underproducing the target while potentially can produce more
+                    // then we should not consider the effort to match the group target is done yet
+                    if (canProduceMore()) {
+                        return false;
+                    } else {
+                        // can not produce more
+                        OpmLog::info("group " + name() + " can not meet its target!");
+                    }
+                }
+            }
+            case ProductionSpecification::FLD :
+            case ProductionSpecification::NONE :
+            case ProductionSpecification::GRUP :
+                break;
+            default:
+            {
+                const std::string msg = "Not handling target checking for control type " + ProductionSpecification::toString(prod_mode);
+                OPM_THROW(std::runtime_error, msg);
+            }
+        }
+
+        return true;
+    }
+
 
     double WellsGroup::getProductionRate(const std::vector<double>& well_rates,
                                          const ProductionSpecification::ControlMode prod_mode) const
@@ -1551,6 +1610,12 @@ namespace Opm
     bool WellNode::canProduceMore() const
     {
         return (isProducer() && !individualControl());
+    }
+
+
+    bool WellNode::groupProdTargetConverged(const std::vector<double>& /* well_rates */) const
+    {
+        return true;
     }
 
 }

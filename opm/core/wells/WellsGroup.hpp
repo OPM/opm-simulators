@@ -163,10 +163,10 @@ namespace Opm
                                                                ProductionSpecification::ControlMode mode) = 0;
 
         /// Gets the target rate for the given mode.
-        double getTarget(ProductionSpecification::ControlMode mode);
+        double getTarget(ProductionSpecification::ControlMode mode) const;
 
         /// Gets the target rate for the given mode.
-        double getTarget(InjectionSpecification::ControlMode mode);
+        double getTarget(InjectionSpecification::ControlMode mode) const;
 
         /// Applies any production group control relevant to all children nodes.
         /// If no group control is set, this is called recursively to the children.
@@ -238,6 +238,14 @@ namespace Opm
         // bascially, for the group or wells under group control
         // they have the potential to adjust their targets to produce more to match the higher level target
         virtual bool canProduceMore() const = 0;
+
+        // checking wether group production target converged
+        // if the group is producing following the target, then it should be considered okay
+        // if the group is not producing following the target, then we should check wether the group
+        // should be able to produce more to match the target.
+        // if the group can not produce more, we also consider the effort to match the group target is
+        // also done and the group target converged while we should give a message
+        virtual bool groupProdTargetConverged(const std::vector<double>& well_rates) const = 0;
 
         double efficiencyFactor() const;
 
@@ -375,6 +383,8 @@ namespace Opm
 
         virtual bool canProduceMore() const;
 
+        virtual bool groupProdTargetConverged(const std::vector<double>& well_rates) const;
+
     private:
         std::vector<std::shared_ptr<WellsGroupInterface> > children_;
     };
@@ -504,6 +514,8 @@ namespace Opm
         virtual void setTargetUpdated(const bool flag);
 
         virtual bool canProduceMore() const;
+
+        virtual bool groupProdTargetConverged(const std::vector<double>& well_rates) const;
 
     private:
         Wells* wells_;
