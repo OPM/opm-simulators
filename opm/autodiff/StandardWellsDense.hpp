@@ -1378,6 +1378,7 @@ enum WellVariablePositions {
 
                 // upate the well targets following the group control
                 if (wellCollection()->groupControlActive()) {
+                    applyVREPGroupControl(xw);
                     wellCollection()->updateWellTargets(xw.wellRates());
                 }
             }
@@ -1689,7 +1690,7 @@ enum WellVariablePositions {
                 std::vector<double> convert_coeff(np, 1.0);
 
                 for (int w = 0; w < nw; ++w) {
-                    const bool is_producer = wells->type[w] == PRODUCER;
+                    const bool is_producer = wells().type[w] == PRODUCER;
 
                     // not sure necessary to change all the value to be positive
                     if (is_producer) {
@@ -1714,6 +1715,28 @@ enum WellVariablePositions {
                         rate_converter_->calcCoeff(well_rates, fipreg, convert_coeff);
                         std::copy(convert_coeff.begin(), convert_coeff.end(),
                                   voidage_conversion_coeffs.begin() + np * w);
+                    }
+                }
+            }
+
+
+
+
+
+            void applyVREPGroupControl(WellState& well_state) const
+            {
+                if ( wellCollection()->havingVREPGroups() ) {
+                    std::vector<double> well_voidage_rates;
+                    std::vector<double> voidage_conversion_coeffs;
+                    computeWellVoidageRates(well_state, well_voidage_rates, voidage_conversion_coeffs);
+                    wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
+
+                    // for the wells under group control, update the currentControls for the well_state
+                    for (const WellNode* well_node : wellCollection()->getLeafNodes()) {
+                        if (well_node->isInjector() && !well_node->individualControl()) {
+                            const int well_index = well_node->selfIndex();
+                            well_state.currentControls()[well_index] = well_node->groupControlIndex();
+                        }
                     }
                 }
             }

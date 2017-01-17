@@ -375,6 +375,11 @@ namespace Opm {
 
             SimulatorReport report;
 
+            // when having VREP group control, update the rate converter based on reservoir state
+            if ( wellModel().wellCollection()->havingVREPGroups() ) {
+                updateRateConverter(reservoir_state);
+            }
+
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx, reservoir_state);
 
