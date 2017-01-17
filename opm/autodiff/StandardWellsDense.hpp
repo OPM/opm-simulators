@@ -46,6 +46,7 @@
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
@@ -79,6 +80,9 @@ enum WellVariablePositions {
             typedef Dune::BlockVector<VectorBlockType> BVector;
             typedef DenseAd::Evaluation<double, /*size=*/blocksize*2> EvalWell;
 
+            // For the conversion between the surface volume rate and resrevoir voidage rate
+            using RateConverterType = RateConverter::
+                SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
 
             // ---------  Public methods  ---------
             StandardWellsDense(const Wells* wells_arg,
@@ -109,7 +113,8 @@ enum WellVariablePositions {
                       const VFPProperties*  vfp_properties_arg,
                       const double gravity_arg,
                       const std::vector<double>& depth_arg,
-                      const std::vector<double>& pv_arg)
+                      const std::vector<double>& pv_arg,
+                      const RateConverterType* rate_converter)
             {
 
                 if ( ! localWellsActive() ) {
@@ -122,6 +127,7 @@ enum WellVariablePositions {
                 gravity_ = gravity_arg;
                 cell_depths_ = extractPerfData(depth_arg);
                 pv_ = pv_arg;
+                rate_converter_ = rate_converter;
 
                 calculateEfficiencyFactors();
 
@@ -1671,6 +1677,7 @@ enum WellVariablePositions {
             std::vector<bool>  active_;
             const VFPProperties* vfp_properties_;
             double gravity_;
+            const RateConverterType* rate_converter_;
 
             // The efficiency factor for each connection. It is specified based on wells and groups,
             // We calculate the factor for each connection for the computation of contributions to the mass balance equations.
