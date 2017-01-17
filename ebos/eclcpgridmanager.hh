@@ -226,12 +226,9 @@ protected:
         // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
         // is allergic to distributed grids and the simulation grid is distributed before
         // the initial condition is calculated.
-        equilGrid_ = new Dune::CpGrid();
-        equilGrid_->processEclipseFormat(this->eclState().getInputGrid(),
-                                         /*isPeriodic=*/false,
-                                         /*flipNormals=*/false,
-                                         /*clipZ=*/false,
-                                         porv);
+        // After loadbalance grid_ will contain a global and distribute view.
+        // equilGrid_being a shallow copy only the global view.
+        equilGrid_ = new Dune::CpGrid(*grid_);
         equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
     }
 
