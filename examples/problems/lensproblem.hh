@@ -325,9 +325,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context& OPM_UNUSED context,
-                    unsigned OPM_UNUSED spaceIdx,
-                    unsigned OPM_UNUSED timeIdx) const
+    Scalar porosity(const Context& context OPM_UNUSED,
+                    unsigned spaceIdx OPM_UNUSED,
+                    unsigned timeIdx OPM_UNUSED) const
     { return 0.4; }
 
     /*!
@@ -348,9 +348,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context& OPM_UNUSED context,
-                       unsigned OPM_UNUSED spaceIdx,
-                       unsigned OPM_UNUSED timeIdx) const
+    Scalar temperature(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
     { return temperature_; }
 
     //! \}
@@ -530,9 +530,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     //! \}

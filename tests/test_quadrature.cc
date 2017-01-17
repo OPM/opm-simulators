@@ -46,7 +46,7 @@
 #if HAVE_DUNE_ALUGRID
 #define EWOMS_NO_ALUGRID_UNUSED
 #else
-#define EWOMS_NO_ALUGRID_UNUSED OPM_UNUSED
+#define EWOMS_NO_ALUGRID_UNUSED  OPM_UNUSED
 #endif
 
 const unsigned dim = 3;

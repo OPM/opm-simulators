@@ -279,9 +279,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context& OPM_UNUSED context,
-                       unsigned OPM_UNUSED spaceIdx,
-                       unsigned OPM_UNUSED timeIdx) const
+    Scalar temperature(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
     { return temperature_; }
 
     /*!
@@ -303,9 +303,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context& OPM_UNUSED context,
-                    unsigned OPM_UNUSED spaceIdx,
-                    unsigned OPM_UNUSED timeIdx) const
+    Scalar porosity(const Context& context OPM_UNUSED,
+                    unsigned spaceIdx OPM_UNUSED,
+                    unsigned timeIdx OPM_UNUSED) const
     { return porosity_; }
 
     /*!
@@ -313,9 +313,9 @@ public:
      */
     template <class Context>
     const MaterialLawParams&
-    materialLawParams(const Context& OPM_UNUSED context,
-                      unsigned OPM_UNUSED spaceIdx,
-                      unsigned OPM_UNUSED timeIdx) const
+    materialLawParams(const Context& context OPM_UNUSED,
+                      unsigned spaceIdx OPM_UNUSED,
+                      unsigned timeIdx OPM_UNUSED) const
     { return materialParams_; }
 
     /*!
@@ -324,9 +324,9 @@ public:
      * In this case, we assume the rock-matrix to be quartz.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context& OPM_UNUSED context,
-                             unsigned OPM_UNUSED spaceIdx,
-                             unsigned OPM_UNUSED timeIdx) const
+    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
+                             unsigned spaceIdx OPM_UNUSED,
+                             unsigned timeIdx OPM_UNUSED) const
     {
         return 850.     // specific heat capacity [J / (kg K)]
                * 2650.; // density of sand [kg/m^3]
@@ -401,9 +401,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     //! \}

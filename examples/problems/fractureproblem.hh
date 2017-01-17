@@ -316,9 +316,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context& OPM_UNUSED context,
-                       unsigned OPM_UNUSED spaceIdx,
-                       unsigned OPM_UNUSED timeIdx) const
+    Scalar temperature(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
     { return temperature_; }
 
     // \}
@@ -332,9 +332,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix& intrinsicPermeability(const Context& OPM_UNUSED context,
-                                           unsigned OPM_UNUSED spaceIdx,
-                                           unsigned OPM_UNUSED timeIdx) const
+    const DimMatrix& intrinsicPermeability(const Context& context OPM_UNUSED,
+                                           unsigned spaceIdx OPM_UNUSED,
+                                           unsigned timeIdx OPM_UNUSED) const
     { return matrixK_; }
 
     /*!
@@ -343,18 +343,18 @@ public:
      * \copydoc Doxygen::contextParams
      */
     template <class Context>
-    const DimMatrix& fractureIntrinsicPermeability(const Context& OPM_UNUSED context,
-                                                   unsigned OPM_UNUSED spaceIdx,
-                                                   unsigned OPM_UNUSED timeIdx) const
+    const DimMatrix& fractureIntrinsicPermeability(const Context& context OPM_UNUSED,
+                                                   unsigned spaceIdx OPM_UNUSED,
+                                                   unsigned timeIdx OPM_UNUSED) const
     { return fractureK_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context& OPM_UNUSED context,
-                    unsigned OPM_UNUSED spaceIdx,
-                    unsigned OPM_UNUSED timeIdx) const
+    Scalar porosity(const Context& context OPM_UNUSED,
+                    unsigned spaceIdx OPM_UNUSED,
+                    unsigned timeIdx OPM_UNUSED) const
     { return matrixPorosity_; }
 
     /*!
@@ -363,18 +363,18 @@ public:
      * \copydoc Doxygen::contextParams
      */
     template <class Context>
-    Scalar fracturePorosity(const Context& OPM_UNUSED context,
-                            unsigned OPM_UNUSED spaceIdx,
-                            unsigned OPM_UNUSED timeIdx) const
+    Scalar fracturePorosity(const Context& context OPM_UNUSED,
+                            unsigned spaceIdx OPM_UNUSED,
+                            unsigned timeIdx OPM_UNUSED) const
     { return fracturePorosity_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
-    const MaterialLawParams& materialLawParams(const Context& OPM_UNUSED context,
-                                               unsigned OPM_UNUSED spaceIdx,
-                                               unsigned OPM_UNUSED timeIdx) const
+    const MaterialLawParams& materialLawParams(const Context& context OPM_UNUSED,
+                                               unsigned spaceIdx OPM_UNUSED,
+                                               unsigned timeIdx OPM_UNUSED) const
     { return matrixMaterialParams_; }
 
     /*!
@@ -383,9 +383,9 @@ public:
      * \copydoc Doxygen::contextParams
      */
     template <class Context>
-    const MaterialLawParams& fractureMaterialLawParams(const Context& OPM_UNUSED context,
-                                                       unsigned OPM_UNUSED spaceIdx,
-                                                       unsigned OPM_UNUSED timeIdx) const
+    const MaterialLawParams& fractureMaterialLawParams(const Context& context OPM_UNUSED,
+                                                       unsigned spaceIdx OPM_UNUSED,
+                                                       unsigned timeIdx OPM_UNUSED) const
     { return fractureMaterialParams_; }
 
     /*!
@@ -407,10 +407,10 @@ public:
      * \param timeIdx The index used by the time discretization.
      */
     template <class Context>
-    Scalar fractureWidth(const Context& OPM_UNUSED context,
-                         unsigned OPM_UNUSED spaceIdx1,
-                         unsigned OPM_UNUSED spaceIdx2,
-                         unsigned OPM_UNUSED timeIdx) const
+    Scalar fractureWidth(const Context& context OPM_UNUSED,
+                         unsigned spaceIdx1 OPM_UNUSED,
+                         unsigned spaceIdx2 OPM_UNUSED,
+                         unsigned timeIdx OPM_UNUSED) const
     { return fractureWidth_; }
 
     /*!
@@ -418,9 +418,9 @@ public:
      */
     template <class Context>
     const HeatConductionLawParams &
-    heatConductionParams(const Context& OPM_UNUSED context,
-                         unsigned OPM_UNUSED spaceIdx,
-                         unsigned OPM_UNUSED timeIdx) const
+    heatConductionParams(const Context& context OPM_UNUSED,
+                         unsigned spaceIdx OPM_UNUSED,
+                         unsigned timeIdx OPM_UNUSED) const
     { return heatCondParams_; }
 
     /*!
@@ -429,9 +429,9 @@ public:
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context& OPM_UNUSED context,
-                             unsigned OPM_UNUSED spaceIdx,
-                             unsigned OPM_UNUSED timeIdx) const
+    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
+                             unsigned spaceIdx OPM_UNUSED,
+                             unsigned timeIdx OPM_UNUSED) const
     {
         return 790     // specific heat capacity of granite [J / (kg K)]
                * 2700; // density of granite [kg/m^3]
@@ -533,9 +533,9 @@ public:
      */
     template <class Context>
     void initial(PrimaryVariables& values,
-                 const Context& OPM_UNUSED context,
-                 unsigned OPM_UNUSED spaceIdx,
-                 unsigned OPM_UNUSED timeIdx) const
+                 const Context& context OPM_UNUSED,
+                 unsigned spaceIdx OPM_UNUSED,
+                 unsigned timeIdx OPM_UNUSED) const
     {
         FluidState fluidState;
         fluidState.setTemperature(temperature_);
@@ -557,9 +557,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     // \}

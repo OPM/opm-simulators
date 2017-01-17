@@ -319,9 +319,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context& OPM_UNUSED context,
-                       unsigned OPM_UNUSED spaceIdx,
-                       unsigned OPM_UNUSED timeIdx) const
+    Scalar temperature(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
     { return 293.15; /* [K] */ }
 
     /*!
@@ -369,18 +369,18 @@ public:
      */
     template <class Context>
     const HeatConductionLawParams &
-    heatConductionParams(const Context& OPM_UNUSED context,
-                         unsigned OPM_UNUSED spaceIdx,
-                         unsigned OPM_UNUSED timeIdx) const
+    heatConductionParams(const Context& context OPM_UNUSED,
+                         unsigned spaceIdx OPM_UNUSED,
+                         unsigned timeIdx OPM_UNUSED) const
     { return heatCondParams_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::heatCapacitySolid
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context& OPM_UNUSED context,
-                             unsigned OPM_UNUSED spaceIdx,
-                             unsigned OPM_UNUSED timeIdx) const
+    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
+                             unsigned spaceIdx OPM_UNUSED,
+                             unsigned timeIdx OPM_UNUSED) const
     {
         return 850     // specific heat capacity [J / (kg K)]
                * 2650; // density of sand [kg/m^3]
@@ -465,9 +465,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     //! \}

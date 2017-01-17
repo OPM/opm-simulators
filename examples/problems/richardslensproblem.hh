@@ -274,7 +274,7 @@ public:
     Scalar temperature(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
 
-    Scalar temperature(unsigned OPM_UNUSED globalSpaceIdx, unsigned OPM_UNUSED timeIdx) const
+    Scalar temperature(unsigned globalSpaceIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED) const
     { return 273.15 + 10; } // -> 10°C
 
     /*!
@@ -295,9 +295,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context& OPM_UNUSED context,
-                    unsigned OPM_UNUSED spaceIdx,
-                    unsigned OPM_UNUSED timeIdx) const
+    Scalar porosity(const Context& context OPM_UNUSED,
+                    unsigned spaceIdx OPM_UNUSED,
+                    unsigned timeIdx OPM_UNUSED) const
     { return 0.4; }
 
     /*!
@@ -313,7 +313,7 @@ public:
     }
 
     const MaterialLawParams& materialLawParams(unsigned globalSpaceIdx,
-                                               unsigned OPM_UNUSED timeIdx) const
+                                               unsigned timeIdx OPM_UNUSED) const
     {
         if (dofIsInLens_[globalSpaceIdx])
             return lensMaterialParams_;
@@ -333,8 +333,8 @@ public:
 
     // the Richards model does not have an element context available at all places
     // where the reference pressure is required...
-    Scalar referencePressure(unsigned OPM_UNUSED globalSpaceIdx,
-                             unsigned OPM_UNUSED timeIdx) const
+    Scalar referencePressure(unsigned globalSpaceIdx OPM_UNUSED,
+                             unsigned timeIdx OPM_UNUSED) const
     { return pnRef_; }
 
     //! \}
@@ -418,9 +418,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     //! \}
