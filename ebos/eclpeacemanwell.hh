@@ -136,7 +136,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
         // retrieve the solution dependent quantities that are only updated at the
         // beginning of a time step from the IntensiveQuantities of the model
-        void updateBeginTimestep(const IntensiveQuantities& OPM_UNUSED intQuants)
+        void updateBeginTimestep(const IntensiveQuantities& intQuants OPM_UNUSED)
         {}
 
         // retrieve the solution dependent quantities from the IntensiveQuantities of the
