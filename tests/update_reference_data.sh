@@ -14,7 +14,7 @@ copyToReferenceDir () {
   FILETYPES=${@:4};
 
   for filetype in $FILETYPES; do
-    cp "$SRC_DIR$STEM.$filetype" $DST_DIR
+    echo cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
   done
 }
 
@@ -37,7 +37,7 @@ for test_name in ${@:2}; do
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
-  if grep -q "spe3" <<< $2
+  if grep -q "spe3" <<< $test_name
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_sequential+spe3/ \
@@ -46,7 +46,7 @@ for test_name in ${@:2}; do
       EGRID INIT PRT SMSPEC UNRST UNSMRY
   fi
 
-  if grep -q "spe9" <<< $2
+  if grep -q "spe9" <<< $test_name
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+spe9/ \
@@ -61,7 +61,8 @@ done
 
 
 echo -e "update reference data for ${@:2}\n" > /tmp/cmsg
-for dep in ert opm-common opm-core opm-grid opm-material opm-parser opm-output
+echo -e "Reason: fill in this\n" >> /tmp/cmsg
+for dep in ert opm-common opm-core opm-grid opm-material opm-parser opm-output ewoms
 do
   pushd $WORKSPACE/deps/$dep > /dev/null
   name=`printf "%-14s" $dep`
