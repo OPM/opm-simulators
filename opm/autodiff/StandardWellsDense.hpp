@@ -1197,7 +1197,6 @@ enum WellVariablePositions {
                         well_controls_set_current( wc, current);
 
 
-
                         // Updating well state and primary variables if constraint is broken
 
                         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
@@ -1294,11 +1293,8 @@ enum WellVariablePositions {
                                 OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
                             }
 
-
                             break;
                         }
-
-
 
 
                         std::vector<double> g = {1,1,0.01};
@@ -1597,6 +1593,8 @@ enum WellVariablePositions {
                             }
                         }
                     }
+
+                    assert(bhp != 0.0);
 
                     // Should we consider crossflow when calculating well potentionals?
                     const bool allow_cf = allow_cross_flow(w, ebosSimulator);
