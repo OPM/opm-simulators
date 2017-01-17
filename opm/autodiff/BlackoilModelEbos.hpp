@@ -1051,9 +1051,6 @@ namespace Opm {
             dims = comm.max(dims);
             std::vector<std::vector<double>> values(dims, std::vector<double>(FIPDataType::fipValues,0.0));
 
-            std::vector<double> hcpv(dims, 0.0);
-            std::vector<double> pres(dims, 0.0);
-
             //Accumulate phases for each region
             for (int phase = 0; phase < maxnp; ++phase) {
                 if (active_[ phase ]) {
@@ -1077,8 +1074,8 @@ namespace Opm {
                 }
             }
 
-            comm.sum(hcpv.data(), hcpv.size());
-            comm.sum(pres.data(), pres.size());
+            std::vector<double> hcpv(dims, 0.0);
+            std::vector<double> pres(dims, 0.0);
 
             elemIt = elemCtx.gridView().template begin</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
@@ -1103,6 +1100,9 @@ namespace Opm {
                     pres[region] += pv * fs.pressure(FluidSystem::oilPhaseIdx).value();
                 }
             }
+
+            comm.sum(hcpv.data(), hcpv.size());
+            comm.sum(pres.data(), pres.size());
 
             elemIt = elemCtx.gridView().template begin</*codim=*/0>();
             for (; elemIt != elemEndIt; ++elemIt) {
