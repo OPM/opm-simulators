@@ -1663,6 +1663,63 @@ enum WellVariablePositions {
             }
 
 
+
+
+            void computeWellVoidageRates(const WellState& well_state,
+                                         std::vector<double>& well_voidage_rates,
+                                         std::vector<double>& voidage_conversion_coeffs) const
+            {
+                if ( !localWellsActive() ) {
+                    return;
+                }
+                // TODO: for now, we store the voidage rates for all the production wells.
+                // For injection wells, the rates are stored as zero.
+                // We only store the conversion coefficients for all the injection wells.
+                // Later, more delicate model will be implemented here.
+                // And for the moment, group control can only work for serial running.
+                const int nw = well_state.numWells();
+                const int np = well_state.numPhases();
+
+                // we calculate the voidage rate for each well, that means the sum of all the phases.
+                well_voidage_rates.resize(nw, 0);
+                // store the conversion coefficients, while only for the use of injection wells.
+                voidage_conversion_coeffs.resize(nw * np, 1.0);
+
+                std::vector<double> well_rates(np, 0.0);
+                std::vector<double> convert_coeff(np, 1.0);
+
+                for (int w = 0; w < nw; ++w) {
+                    const bool is_producer = wells->type[w] == PRODUCER;
+
+                    // not sure necessary to change all the value to be positive
+                    if (is_producer) {
+                        std::transform(well_state.wellRates().begin() + np * w,
+                                       well_state.wellRates().begin() + np * (w + 1),
+                                       well_rates.begin(), std::negate<double>());
+
+                        // the average hydrocarbon conditions of the whole field will be used
+                        const int fipreg = 0; // Not considering FIP for the moment.
+
+                        rate_converter_->calcCoeff(well_rates, fipreg, convert_coeff);
+                        well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
+                                                                   convert_coeff.begin(), 0.0);
+                    } else {
+                        // TODO: Not sure whether will encounter situation with all zero rates
+                        // and whether it will cause problem here.
+                        std::copy(well_state.wellRates().begin() + np * w,
+                                  well_state.wellRates().begin() + np * (w + 1),
+                                  well_rates.begin());
+                        // the average hydrocarbon conditions of the whole field will be used
+                        const int fipreg = 0; // Not considering FIP for the moment.
+                        rate_converter_->calcCoeff(well_rates, fipreg, convert_coeff);
+                        std::copy(convert_coeff.begin(), convert_coeff.end(),
+                                  voidage_conversion_coeffs.begin() + np * w);
+                    }
+                }
+            }
+
+
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
