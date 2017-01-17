@@ -481,9 +481,9 @@ public:
      * will need it one day?
      */
     template <class Context>
-    Scalar temperature(const Context& OPM_UNUSED context,
-                       unsigned OPM_UNUSED spaceIdx,
-                       unsigned OPM_UNUSED timeIdx) const
+    Scalar temperature(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
     { return temperature_; }
 
     // \}
@@ -501,9 +501,9 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector& values,
-                  const Context& OPM_UNUSED context,
-                  unsigned OPM_UNUSED spaceIdx,
-                  unsigned OPM_UNUSED timeIdx) const
+                  const Context& context OPM_UNUSED,
+                  unsigned spaceIdx OPM_UNUSED,
+                  unsigned timeIdx OPM_UNUSED) const
     {
         // no flow on top and bottom
         values.setNoFlow();
@@ -524,9 +524,9 @@ public:
      */
     template <class Context>
     void initial(PrimaryVariables& values,
-                 const Context& OPM_UNUSED context,
-                 unsigned OPM_UNUSED spaceIdx,
-                 unsigned OPM_UNUSED timeIdx) const
+                 const Context& context OPM_UNUSED,
+                 unsigned spaceIdx OPM_UNUSED,
+                 unsigned timeIdx OPM_UNUSED) const
     {
         values.assignNaive(initialFluidState_);
 
@@ -569,9 +569,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     //! \}

@@ -183,9 +183,9 @@ public:
      * This problem assumes a temperature of 10 degrees Celsius.
      */
     template <class Context>
-    Scalar temperature(const Context& OPM_UNUSED context,
-                       unsigned OPM_UNUSED spaceIdx,
-                       unsigned OPM_UNUSED timeIdx) const
+    Scalar temperature(const Context& context OPM_UNUSED,
+                       unsigned spaceIdx OPM_UNUSED,
+                       unsigned timeIdx OPM_UNUSED) const
     { return 273.15 + 10; /* -> 10 deg C */ }
 
     // \}
@@ -273,9 +273,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     /*!

@@ -427,9 +427,9 @@ public:
      * In this case, we assume the rock-matrix to be granite.
      */
     template <class Context>
-    Scalar heatCapacitySolid(const Context& OPM_UNUSED context,
-                             unsigned OPM_UNUSED spaceIdx,
-                             unsigned OPM_UNUSED timeIdx) const
+    Scalar heatCapacitySolid(const Context& context OPM_UNUSED,
+                             unsigned spaceIdx OPM_UNUSED,
+                             unsigned timeIdx OPM_UNUSED) const
     {
         return 790     // specific heat capacity of granite [J / (kg K)]
                * 2700; // density of granite [kg/m^3]
@@ -527,9 +527,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& OPM_UNUSED context,
-                unsigned OPM_UNUSED spaceIdx,
-                unsigned OPM_UNUSED timeIdx) const
+                const Context& context OPM_UNUSED,
+                unsigned spaceIdx OPM_UNUSED,
+                unsigned timeIdx OPM_UNUSED) const
     { rate = Scalar(0.0); }
 
     //! \}
