@@ -1467,8 +1467,8 @@ namespace Opm {
                 ebosSimulator_.problem().beginTimeStep();
             }
             // if the last time step failed we need to update the solution varables in ebos
-            // and recalculate the IntesiveQuantities.
-            if ( timer.lastStepFailed() && iterationIdx == 0 ) {
+            // and recalculate the IntesiveQuantities. Also pass the solution initially.
+            if ( (timer.lastStepFailed() || timer.reportStepNum()==0) && iterationIdx == 0  ) {
                 convertInput( iterationIdx, reservoirState, ebosSimulator_ );
                 ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
