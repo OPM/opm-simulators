@@ -229,7 +229,7 @@ namespace Ewoms
 
                 localIndexMap_.clear();
                 const size_t gridSize = gridManager.grid().size( 0 );
-                localIndexMap_.resize( gridSize, -1 );
+                localIndexMap_.reserve( gridSize );
 
                 // store the local Cartesian index
                 IndexMapType distributedCartesianIndex;
