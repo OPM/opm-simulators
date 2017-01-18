@@ -60,7 +60,7 @@ public:
     /*!
      * \brief A human readable name for the CO2.
      */
-    static const char *name()
+    static const char* name()
     { return "CO2"; }
 
     /*!

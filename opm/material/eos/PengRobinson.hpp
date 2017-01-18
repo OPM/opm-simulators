@@ -99,7 +99,7 @@ public:
      * difference between the gas and liquid phase fugacity zero.
      */
     template <class Evaluation, class Params>
-    static Evaluation computeVaporPressure(const Params &params, const Evaluation& T)
+    static Evaluation computeVaporPressure(const Params& params, const Evaluation& T)
     {
         typedef MathToolbox<Evaluation> Toolbox;
         typedef typename Params::Component Component;
@@ -144,8 +144,8 @@ public:
     template <class FluidState, class Params>
     static
     typename FluidState::Scalar
-    computeMolarVolume(const FluidState &fs,
-                       Params &params,
+    computeMolarVolume(const FluidState& fs,
+                       Params& params,
                        unsigned phaseIdx,
                        bool isGasPhase)
     {
@@ -245,7 +245,7 @@ public:
      * \param params Parameters
      */
     template <class Evaluation, class Params>
-    static Evaluation computeFugacityCoeffient(const Params &params)
+    static Evaluation computeFugacityCoeffient(const Params& params)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -279,14 +279,14 @@ public:
      * \param params Parameters
      */
     template <class Evaluation, class Params>
-    static Evaluation computeFugacity(const Params &params)
+    static Evaluation computeFugacity(const Params& params)
     { return params.pressure()*computeFugacityCoeff(params); }
 
 protected:
     template <class FluidState, class Params, class Evaluation = typename FluidState::Scalar>
-    static void handleCriticalFluid_(Evaluation &Vm,
-                                     const FluidState &/*fs*/,
-                                     const Params &params,
+    static void handleCriticalFluid_(Evaluation& Vm,
+                                     const FluidState& /*fs*/,
+                                     const Params& params,
                                      unsigned phaseIdx,
                                      bool isGasPhase)
     {
@@ -308,9 +308,9 @@ protected:
     }
 
     template <class Evaluation>
-    static void findCriticalPoint_(Evaluation &Tcrit,
-                                   Evaluation &pcrit,
-                                   Evaluation &Vcrit,
+    static void findCriticalPoint_(Evaluation& Tcrit,
+                                   Evaluation& pcrit,
+                                   Evaluation& Vcrit,
                                    const Evaluation& a,
                                    const Evaluation& b)
     {
@@ -407,10 +407,10 @@ protected:
     // find the two molar volumes where the EOS exhibits extrema and
     // which are larger than the covolume of the phase
     template <class Evaluation>
-    static bool findExtrema_(Evaluation &Vmin,
-                             Evaluation &Vmax,
-                             Evaluation &/*pMin*/,
-                             Evaluation &/*pMax*/,
+    static bool findExtrema_(Evaluation& Vmin,
+                             Evaluation& Vmax,
+                             Evaluation& /*pMin*/,
+                             Evaluation& /*pMax*/,
                              const Evaluation& a,
                              const Evaluation& b,
                              const Evaluation& T)
@@ -504,7 +504,7 @@ protected:
      * Appl. Chem., 61, 1395-1403, 1989
      */
     template <class Evaluation, class Params>
-    static Evaluation ambroseWalton_(const Params &/*params*/, const Evaluation& T)
+    static Evaluation ambroseWalton_(const Params& /*params*/, const Evaluation& T)
     {
         typedef MathToolbox<Evaluation> Toolbox;
         typedef typename Params::Component Component;
@@ -531,7 +531,7 @@ protected:
      * \param VmGas Molar volume of the gas phase [cm^3/mol]
      */
     template <class Evaluation, class Params>
-    static Evaluation fugacityDifference_(const Params &params,
+    static Evaluation fugacityDifference_(const Params& params,
                                           const Evaluation& T,
                                           const Evaluation& p,
                                           const Evaluation& VmLiquid,

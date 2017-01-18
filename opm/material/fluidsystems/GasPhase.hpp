@@ -45,7 +45,7 @@ public:
     /*!
      * \brief A human readable name for the component.
      */
-    static const char *name()
+    static const char* name()
     { return Component::name(); }
 
     /*!

@@ -96,7 +96,7 @@ public:
      * \brief The capillary pressure-saturation curves.
      */
     template <class Container, class FluidState>
-    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    static void capillaryPressures(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -109,7 +109,7 @@ public:
      *        their pressure differences.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    static void saturations(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -128,7 +128,7 @@ public:
      *           ought to be calculated
      */
     template <class Container, class FluidState>
-    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    static void relativePermeabilities(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -150,7 +150,7 @@ public:
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fs)
+    static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -163,7 +163,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -173,7 +173,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
+    static Evaluation twoPhaseSatPcnwInv(const Params& params, const Evaluation& pcnw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -195,7 +195,7 @@ public:
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &params, const FluidState &fs)
+    static Evaluation Sw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -206,7 +206,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pc)
+    static Evaluation twoPhaseSatSw(const Params& params, const Evaluation& pc)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -220,11 +220,11 @@ public:
      *        the phase pressures.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params, const FluidState &fs)
+    static Evaluation Sn(const Params& params, const FluidState& fs)
     { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pc)
+    static Evaluation twoPhaseSatSn(const Params& params, const Evaluation& pc)
     { return 1 - twoPhaseSatSw(params, pc); }
     /*!
      * \brief The relative permeability for the wetting phase of
@@ -235,7 +235,7 @@ public:
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params, const FluidState &fs)
+    static Evaluation krw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -246,7 +246,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -256,7 +256,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    static Evaluation twoPhaseSatKrwInv(const Params& params, const Evaluation& krw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -272,7 +272,7 @@ public:
      *               (for Brooks-Corey: Entry pressure and shape factor)
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params, const FluidState &fs)
+    static Evaluation krn(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -283,7 +283,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -295,7 +295,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    static Evaluation twoPhaseSatKrnInv(const Params& params, const Evaluation& krn)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 

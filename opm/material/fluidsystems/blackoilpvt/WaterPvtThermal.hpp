@@ -198,7 +198,7 @@ public:
     }
 
 private:
-    IsothermalPvt *isothermalPvt_;
+    IsothermalPvt* isothermalPvt_;
 
     // The PVT properties needed for temperature dependence. We need to store one
     // value per PVT region.

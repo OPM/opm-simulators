@@ -62,10 +62,10 @@ public:
      * \return Number of solutions.
      */
     template <class MutableParams, class FluidState>
-    static int computeMolarVolumes(Scalar *Vm,
-                                   const MutableParams &params,
+    static int computeMolarVolumes(Scalar* Vm,
+                                   const MutableParams& params,
                                    unsigned phaseIdx,
-                                   const FluidState &fs)
+                                   const FluidState& fs)
     {
         return PengRobinson::computeMolarVolumes(Vm, params, phaseIdx, fs);
     }
@@ -88,8 +88,8 @@ public:
       * 4th edition, McGraw-Hill, 1987, pp. 42-44, 143-145
       */
     template <class FluidState, class Params, class LhsEval = typename FluidState::Scalar>
-    static LhsEval computeFugacityCoefficient(const FluidState &fs,
-                                              const Params &params,
+    static LhsEval computeFugacityCoefficient(const FluidState& fs,
+                                              const Params& params,
                                               unsigned phaseIdx,
                                               unsigned compIdx)
     {

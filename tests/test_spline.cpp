@@ -47,9 +47,9 @@ gnuplot> plot "spline.csv" using 1:2 w l ti "Curve", \
 #include <array>
 
 template <class Spline>
-void testCommon(const Spline &sp,
-                const double *x,
-                const double *y)
+void testCommon(const Spline& sp,
+                const double* x,
+                const double* y)
 {
     static double eps = 1e-10;
     static double epsFD = 1e-7;
@@ -111,9 +111,9 @@ void testCommon(const Spline &sp,
 }
 
 template <class Spline>
-void testFull(const Spline &sp,
-              const double *x,
-              const double *y,
+void testFull(const Spline& sp,
+              const double* x,
+              const double* y,
               double m0,
               double m1)
 {
@@ -135,9 +135,9 @@ void testFull(const Spline &sp,
 }
 
 template <class Spline>
-void testNatural(const Spline &sp,
-                 const double *x,
-                 const double *y)
+void testNatural(const Spline& sp,
+                 const double* x,
+                 const double* y)
 {
     // test the common properties of splines
     testCommon(sp, x, y);
@@ -159,9 +159,9 @@ void testNatural(const Spline &sp,
 }
 
 template <class Spline>
-void testMonotonic(const Spline &sp,
-                   const double *x,
-                   const double *y)
+void testMonotonic(const Spline& sp,
+                   const double* x,
+                   const double* y)
 {
     // test the common properties of splines
     testCommon(sp, x, y);
@@ -270,8 +270,8 @@ void plot()
     double y_[] = { 10, 0, 10, 0, 10 };
     double m1 = 10;
     double m2 = -10;
-    FV &xs = *reinterpret_cast<FV*>(x_);
-    FV &ys = *reinterpret_cast<FV*>(y_);
+    FV& xs = *reinterpret_cast<FV*>(x_);
+    FV& ys = *reinterpret_cast<FV*>(y_);
     Opm::Spline<double> spFull(xs, ys, m1, m2);
     Opm::Spline<double> spNatural(xs, ys);
     Opm::Spline<double> spPeriodic(xs, ys, /*type=*/Opm::Spline<double>::Periodic);
@@ -303,7 +303,7 @@ int main(int argc, char **argv)
         testAll();
         plot();
     }
-    catch (const std::exception &e) {
+    catch (const std::exception& e) {
         std::cout << "Caught OPM exception: " << e.what() << "\n";
     }
 

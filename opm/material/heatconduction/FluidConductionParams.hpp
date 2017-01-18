@@ -35,7 +35,7 @@ template <class ScalarT>
 class FluidHeatConductionParams
 {
     // do not copy!
-    FluidHeatConductionParams(const FluidHeatConductionParams &)
+    FluidHeatConductionParams(const FluidHeatConductionParams&)
     {}
 
 public:

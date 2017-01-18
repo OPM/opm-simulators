@@ -363,9 +363,9 @@ public:
     static const Scalar surfaceTemperature;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(unsigned phaseIdx)
+    static const char* phaseName(unsigned phaseIdx)
     {
-        static const char *name[] = { "water", "oil", "gas" };
+        static const char* name[] = { "water", "oil", "gas" };
 
         assert(0 <= phaseIdx && phaseIdx < numPhases + 1);
         return name[phaseIdx];
@@ -420,9 +420,9 @@ public:
     { return static_cast<unsigned>(phaseToSoluteCompIdx_[phaseIdx]); }
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(unsigned compIdx)
+    static const char* componentName(unsigned compIdx)
     {
-        static const char *name[] = { "Oil", "Water", "Gas" };
+        static const char* name[] = { "Oil", "Water", "Gas" };
 
         assert(0 <= compIdx && compIdx < numComponents);
         return name[compIdx];
@@ -491,15 +491,15 @@ public:
      ****************************************/
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval density(const FluidState &fluidState,
-                           const ParameterCache<ParamCacheEval> &paramCache,
+    static LhsEval density(const FluidState& fluidState,
+                           const ParameterCache<ParamCacheEval>& paramCache,
                            unsigned phaseIdx)
     { return density<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache<ParamCacheEval> &paramCache,
+    static LhsEval fugacityCoefficient(const FluidState& fluidState,
+                                       const ParameterCache<ParamCacheEval>& paramCache,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
@@ -511,8 +511,8 @@ public:
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache<ParamCacheEval> &paramCache,
+    static LhsEval viscosity(const FluidState& fluidState,
+                             const ParameterCache<ParamCacheEval>& paramCache,
                              unsigned phaseIdx)
     { return viscosity<FluidState, LhsEval>(fluidState, phaseIdx, paramCache.regionIndex()); }
 
@@ -523,7 +523,7 @@ public:
      ****************************************/
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval density(const FluidState &fluidState,
+    static LhsEval density(const FluidState& fluidState,
                            unsigned phaseIdx,
                            unsigned regionIdx)
     {
@@ -580,7 +580,7 @@ public:
      * maximum. For the water phase, there's no difference to the density() method.
      */
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval saturatedDensity(const FluidState &fluidState,
+    static LhsEval saturatedDensity(const FluidState& fluidState,
                                     unsigned phaseIdx,
                                     unsigned regionIdx)
     {
@@ -735,7 +735,7 @@ public:
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval fugacityCoefficient(const FluidState &fluidState,
+    static LhsEval fugacityCoefficient(const FluidState& fluidState,
                                        unsigned phaseIdx,
                                        unsigned compIdx,
                                        unsigned regionIdx)
@@ -863,7 +863,7 @@ public:
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar>
-    static LhsEval viscosity(const FluidState &fluidState,
+    static LhsEval viscosity(const FluidState& fluidState,
                              unsigned phaseIdx,
                              unsigned regionIdx)
     {

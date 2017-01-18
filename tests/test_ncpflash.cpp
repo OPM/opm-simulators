@@ -50,7 +50,7 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 template <class Scalar, class FluidState>
-void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
+void checkSame(const FluidState& fsRef, const FluidState& fsFlash)
 {
     enum { numPhases = FluidState::numPhases };
     enum { numComponents = FluidState::numComponents };
@@ -93,8 +93,8 @@ void checkSame(const FluidState &fsRef, const FluidState &fsFlash)
 }
 
 template <class Scalar, class FluidSystem, class MaterialLaw, class FluidState>
-void checkNcpFlash(const FluidState &fsRef,
-                   typename MaterialLaw::Params &matParams)
+void checkNcpFlash(const FluidState& fsRef,
+                   typename MaterialLaw::Params& matParams)
 {
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
@@ -129,8 +129,8 @@ void checkNcpFlash(const FluidState &fsRef,
 
 
 template <class Scalar, class FluidSystem, class MaterialLaw, class FluidState>
-void completeReferenceFluidState(FluidState &fs,
-                                 typename MaterialLaw::Params &matParams,
+void completeReferenceFluidState(FluidState& fs,
+                                 typename MaterialLaw::Params& matParams,
                                  unsigned refPhaseIdx)
 {
     enum { numPhases = FluidSystem::numPhases };

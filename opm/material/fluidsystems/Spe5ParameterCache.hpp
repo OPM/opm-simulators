@@ -72,7 +72,7 @@ public:
 
     //! \copydoc ParameterCacheBase::updatePhase
     template <class FluidState>
-    void updatePhase(const FluidState &fluidState,
+    void updatePhase(const FluidState& fluidState,
                      unsigned phaseIdx,
                      int exceptQuantities = ParentType::None)
     {
@@ -89,7 +89,7 @@ public:
 
     //! \copydoc ParameterCacheBase::updateSingleMoleFraction
     template <class FluidState>
-    void updateSingleMoleFraction(const FluidState &fluidState,
+    void updateSingleMoleFraction(const FluidState& fluidState,
                                   unsigned phaseIdx,
                                   unsigned compIdx)
     {
@@ -192,14 +192,14 @@ public:
      * \brief Returns the Peng-Robinson mixture parameters for the oil
      *        phase.
      */
-    const OilPhaseParams &oilPhaseParams() const
+    const OilPhaseParams& oilPhaseParams() const
     { return oilPhaseParams_; }
 
     /*!
      * \brief Returns the Peng-Robinson mixture parameters for the gas
      *        phase.
      */
-    const GasPhaseParams &gasPhaseParams() const
+    const GasPhaseParams& gasPhaseParams() const
     { return gasPhaseParams_; }
 
     /*!
@@ -211,7 +211,7 @@ public:
      * \param exceptQuantities The quantities of the fluid state that have not changed since the last update.
      */
     template <class FluidState>
-    void updateEosParams(const FluidState &fluidState,
+    void updateEosParams(const FluidState& fluidState,
                          unsigned phaseIdx,
                          int exceptQuantities = ParentType::None)
     {
@@ -239,7 +239,7 @@ protected:
      * This usually means the parameters for the pure components.
      */
     template <class FluidState>
-    void updatePure_(const FluidState &fluidState, unsigned phaseIdx)
+    void updatePure_(const FluidState& fluidState, unsigned phaseIdx)
     {
         Scalar T = fluidState.temperature(phaseIdx);
         Scalar p = fluidState.pressure(phaseIdx);
@@ -260,7 +260,7 @@ protected:
      * Here, the mixing rule kicks in.
      */
     template <class FluidState>
-    void updateMix_(const FluidState &fluidState, unsigned phaseIdx)
+    void updateMix_(const FluidState& fluidState, unsigned phaseIdx)
     {
         Valgrind::CheckDefined(fluidState.averageMolarMass(phaseIdx));
         switch (phaseIdx)
@@ -277,7 +277,7 @@ protected:
     }
 
     template <class FluidState>
-    void updateMolarVolume_(const FluidState &fluidState,
+    void updateMolarVolume_(const FluidState& fluidState,
                             unsigned phaseIdx)
     {
         VmUpToDate_[phaseIdx] = true;

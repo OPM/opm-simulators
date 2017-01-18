@@ -111,7 +111,7 @@ public:
      *           ought to be calculated
      */
     template <class Container, class FluidState>
-    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    static void capillaryPressures(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -124,7 +124,7 @@ public:
      *        their pressure differences.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &values, const Params &params, const FluidState &fs)
+    static void saturations(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -143,7 +143,7 @@ public:
      *           ought to be calculated
      */
     template <class Container, class FluidState>
-    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    static void relativePermeabilities(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -166,7 +166,7 @@ public:
      *           ought to be calculated
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fs)
+    static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -193,7 +193,7 @@ public:
      * \param Sw The effective wetting phase saturation
      */
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -213,7 +213,7 @@ public:
      * \param fs The fluid state containing valid phase pressures
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &params, const FluidState &fs)
+    static Evaluation Sw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -224,7 +224,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSw(const Params &params, const Evaluation& pC)
+    static Evaluation twoPhaseSatSw(const Params& params, const Evaluation& pC)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -238,11 +238,11 @@ public:
      *        the phase pressures.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params, const FluidState &fs)
+    static Evaluation Sn(const Params& params, const FluidState& fs)
     { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pC)
+    static Evaluation twoPhaseSatSn(const Params& params, const Evaluation& pC)
     { return 1 - twoPhaseSatSw(params, pC); }
 
     /*!
@@ -256,7 +256,7 @@ public:
      *           ought to be calculated
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params, const FluidState &fs)
+    static Evaluation krw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -267,7 +267,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -287,7 +287,7 @@ public:
      *           ought to be calculated
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params, const FluidState &fs)
+    static Evaluation krn(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -298,7 +298,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, Evaluation Sw)
+    static Evaluation twoPhaseSatKrn(const Params& params, Evaluation Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 

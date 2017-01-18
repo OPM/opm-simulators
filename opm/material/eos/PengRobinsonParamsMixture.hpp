@@ -71,7 +71,7 @@ public:
      * \brief Update Peng-Robinson parameters for the pure components.
      */
     template <class FluidState>
-    void updatePure(const FluidState &fluidState)
+    void updatePure(const FluidState& fluidState)
     {
         updatePure(fluidState.temperature(phaseIdx),
                    fluidState.pressure(phaseIdx));
@@ -134,7 +134,7 @@ public:
      * this method!
      */
     template <class FluidState>
-    void updateMix(const FluidState &fs)
+    void updateMix(const FluidState& fs)
     {
         Scalar sumx = 0.0;
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
@@ -186,7 +186,7 @@ public:
      * this method!
      */
     template <class FluidState>
-    void updateSingleMoleFraction(const FluidState &fs,
+    void updateSingleMoleFraction(const FluidState& fs,
                                   unsigned /*compIdx*/)
     {
         updateMix(fs);
@@ -195,13 +195,13 @@ public:
     /*!
      * \brief Return the Peng-Robinson parameters of a pure substance,
      */
-    const PureParams &pureParams(unsigned compIdx) const
+    const PureParams& pureParams(unsigned compIdx) const
     { return pureParams_[compIdx]; }
 
     /*!
      * \brief Returns the Peng-Robinson parameters for a pure component.
      */
-    const PureParams &operator[](unsigned compIdx) const
+    const PureParams& operator[](unsigned compIdx) const
     {
         assert(0 <= compIdx && compIdx < numComponents);
         return pureParams_[compIdx];

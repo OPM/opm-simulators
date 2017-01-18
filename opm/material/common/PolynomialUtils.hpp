@@ -48,7 +48,7 @@ namespace Opm {
  * \param b The coefficient for the constant term
  */
 template <class Scalar, class SolContainer>
-unsigned invertLinearPolynomial(SolContainer &sol,
+unsigned invertLinearPolynomial(SolContainer& sol,
                                 Scalar a,
                                 Scalar b)
 {
@@ -77,7 +77,7 @@ unsigned invertLinearPolynomial(SolContainer &sol,
  * \param c The coefficient for the constant term
  */
 template <class Scalar, class SolContainer>
-unsigned invertQuadraticPolynomial(SolContainer &sol,
+unsigned invertQuadraticPolynomial(SolContainer& sol,
                                    Scalar a,
                                    Scalar b,
                                    Scalar c)
@@ -105,7 +105,7 @@ unsigned invertQuadraticPolynomial(SolContainer &sol,
 
 //! \cond SKIP_THIS
 template <class Scalar, class SolContainer>
-void invertCubicPolynomialPostProcess_(SolContainer &sol,
+void invertCubicPolynomialPostProcess_(SolContainer& sol,
                                        int numSol,
                                        Scalar a,
                                        Scalar b,
@@ -150,7 +150,7 @@ void invertCubicPolynomialPostProcess_(SolContainer &sol,
  * \param d The coefficient for the constant term
  */
 template <class Scalar, class SolContainer>
-unsigned invertCubicPolynomial(SolContainer *sol,
+unsigned invertCubicPolynomial(SolContainer* sol,
                                Scalar a,
                                Scalar b,
                                Scalar c,

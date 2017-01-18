@@ -177,7 +177,7 @@ public:
             return isothermalMu;
 
         // compute the viscosity deviation due to temperature
-        const auto &muOilvisct = oilvisctCurves_[regionIdx].eval(temperature);
+        const auto& muOilvisct = oilvisctCurves_[regionIdx].eval(temperature);
         return muOilvisct/viscRef_[regionIdx]*isothermalMu;
     }
 
@@ -194,7 +194,7 @@ public:
             return isothermalMu;
 
         // compute the viscosity deviation due to temperature
-        const auto &muOilvisct = oilvisctCurves_[regionIdx].eval(temperature);
+        const auto& muOilvisct = oilvisctCurves_[regionIdx].eval(temperature);
         return muOilvisct/viscRef_[regionIdx]*isothermalMu;
     }
 
@@ -286,7 +286,7 @@ public:
     { return isothermalPvt_->saturationPressure(regionIdx, temperature, pressure); }
 
 private:
-    IsothermalPvt *isothermalPvt_;
+    IsothermalPvt* isothermalPvt_;
 
     // The PVT properties needed for temperature dependence of the viscosity. We need
     // to store one value per PVT region.

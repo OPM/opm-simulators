@@ -106,7 +106,7 @@ public:
      * \brief Guess initial values for all quantities.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static void guessInitial(FluidState &fluidState,
+    static void guessInitial(FluidState& fluidState,
                              const Dune::FieldVector<Evaluation, numComponents>& globalMolarities)
     {
         // the sum of all molarities
@@ -147,8 +147,8 @@ public:
      * The phase's fugacities must already be set.
      */
     template <class MaterialLaw, class FluidState>
-    static void solve(FluidState &fluidState,
-                      const typename MaterialLaw::Params &matParams,
+    static void solve(FluidState& fluidState,
+                      const typename MaterialLaw::Params& matParams,
                       typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                       const Dune::FieldVector<typename FluidState::Scalar, numComponents>& globalMolarities,
                       Scalar tolerance = -1.0)
@@ -247,8 +247,8 @@ public:
      * zero...
      */
     template <class FluidState, class ComponentVector>
-    static void solve(FluidState &fluidState,
-                      const ComponentVector &globalMolarities,
+    static void solve(FluidState& fluidState,
+                      const ComponentVector& globalMolarities,
                       Scalar tolerance = 0.0)
     {
         typedef NullMaterialTraits<Scalar, numPhases> MaterialTraits;
@@ -262,7 +262,7 @@ public:
 
 protected:
     template <class FluidState>
-    static void printFluidState_(const FluidState &fluidState)
+    static void printFluidState_(const FluidState& fluidState)
     {
         typedef typename FluidState::Scalar FsScalar;
 
@@ -405,9 +405,9 @@ protected:
     }
 
     template <class FlashFluidState, class FlashDefectVector, class FlashComponentVector>
-    static void evalDefect_(FlashDefectVector &b,
-                            const FlashFluidState &fluidState,
-                            const FlashComponentVector &globalMolarities)
+    static void evalDefect_(FlashDefectVector& b,
+                            const FlashFluidState& fluidState,
+                            const FlashComponentVector& globalMolarities)
     {
         typedef typename FlashFluidState::Scalar FlashEval;
         typedef Opm::MathToolbox<FlashEval> FlashToolbox;
@@ -508,9 +508,9 @@ protected:
     }
 
     template <class MaterialLaw, class FlashFluidState>
-    static void completeFluidState_(FlashFluidState &flashFluidState,
-                                    typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar> &paramCache,
-                                    const typename MaterialLaw::Params &matParams)
+    static void completeFluidState_(FlashFluidState& flashFluidState,
+                                    typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar>& paramCache,
+                                    const typename MaterialLaw::Params& matParams)
     {
         typedef typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar> ParamCache;
 
@@ -560,7 +560,7 @@ protected:
 
     // retrieves a quantity from the fluid state
     template <class FluidState>
-    static const typename FluidState::Scalar& getQuantity_(const FluidState &fluidState, unsigned pvIdx)
+    static const typename FluidState::Scalar& getQuantity_(const FluidState& fluidState, unsigned pvIdx)
     {
         assert(pvIdx < numEq);
 
@@ -585,7 +585,7 @@ protected:
 
     // set a quantity in the fluid state
     template <class FluidState>
-    static void setQuantity_(FluidState &fluidState,
+    static void setQuantity_(FluidState& fluidState,
                              unsigned pvIdx,
                              const typename FluidState::Scalar& value)
     {
@@ -612,7 +612,7 @@ protected:
     }
 
     template <class FluidState>
-    static Scalar quantityWeight_(const FluidState &/*fluidState*/, unsigned pvIdx)
+    static Scalar quantityWeight_(const FluidState& /*fluidState*/, unsigned pvIdx)
     {
         // first pressure
         if (pvIdx < 1)

@@ -128,9 +128,9 @@ public:
      * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
-    static void capillaryPressures(ContainerT &values,
-                                   const Params &params,
-                                   const FluidState &fluidState)
+    static void capillaryPressures(ContainerT& values,
+                                   const Params& params,
+                                   const FluidState& fluidState)
     {
         switch (params.approach()) {
         case EclStone1Approach:
@@ -248,9 +248,9 @@ public:
      * technical description.
      */
     template <class ContainerT, class FluidState>
-    static void relativePermeabilities(ContainerT &values,
-                                       const Params &params,
-                                       const FluidState &fluidState)
+    static void relativePermeabilities(ContainerT& values,
+                                       const Params& params,
+                                       const FluidState& fluidState)
     {
         switch (params.approach()) {
         case EclStone1Approach:
@@ -318,7 +318,7 @@ public:
      * error. (But not calling it will still work.)
      */
     template <class FluidState>
-    static void updateHysteresis(Params &params, const FluidState &fluidState)
+    static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
         switch (params.approach()) {
         case EclStone1Approach:

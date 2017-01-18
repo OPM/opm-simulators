@@ -74,8 +74,8 @@ public:
     }
 
 protected:
-    PLScanningCurve(PLScanningCurve *prevSC,
-                    PLScanningCurve *nextSC,
+    PLScanningCurve(PLScanningCurve* prevSC,
+                    PLScanningCurve* nextSC,
                     int loopN,
                     Scalar SwReversal,
                     Scalar pcnwReversal,
@@ -109,14 +109,14 @@ public:
      * \brief Return the previous scanning curve, i.e. the curve
      *        with one less reversal than the current one.
      */
-    PLScanningCurve *prev() const
+    PLScanningCurve* prev() const
     { return prev_; }
 
     /*!
      * \brief Return the next scanning curve, i.e. the curve
      *        with one more reversal than the current one.
      */
-    PLScanningCurve *next() const
+    PLScanningCurve* next() const
     { return next_; }
 
     /*!
@@ -217,8 +217,8 @@ public:
     { return SwMdc_; }
 
 private:
-    PLScanningCurve *prev_;
-    PLScanningCurve *next_;
+    PLScanningCurve* prev_;
+    PLScanningCurve* next_;
 
     int loopNum_;
 
@@ -286,7 +286,7 @@ public:
      * \brief Resets the hysteresis model to the
      *        initial parameters on the main drainage curve
      */
-    static void reset(Params &params)
+    static void reset(Params& params)
     {
         delete params.mdc(); // this will work even if mdc_ == NULL!
         params.setMdc(new ScanningCurve(params.SwrPc()));
@@ -300,7 +300,7 @@ public:
      *        current timestep
      */
     template <class FluidState>
-    static void update(Params &params, const FluidState &fs)
+    static void update(Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -315,7 +315,7 @@ public:
 
         // find the loop number which corrosponds to the
         // given effective saturation
-        ScanningCurve *curve = findScanningCurve_(params, Sw);
+        ScanningCurve* curve = findScanningCurve_(params, Sw);
 
         // calculate the apparent saturation on the MIC and MDC
         // which yield the same capillary pressure as the
@@ -342,7 +342,7 @@ public:
      *        the phase saturations.
      */
     template <class Container, class FluidState>
-    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    static void capillaryPressures(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -355,7 +355,7 @@ public:
      *        the phase saturations.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &/*values*/, const Params &/*params*/, const FluidState &/*fs*/)
+    static void saturations(Container& /*values*/, const Params& /*params*/, const FluidState& /*fs*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::saturations()"); }
 
     /*!
@@ -363,7 +363,7 @@ public:
      *        dependening on the phase saturations.
      */
     template <class Container, class FluidState>
-    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    static void relativePermeabilities(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -376,7 +376,7 @@ public:
      *        the phase saturations.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fs)
+    static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -387,12 +387,12 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
         // calculate the current apparent saturation
-        ScanningCurve *sc = findScanningCurve_(params, Toolbox::scalarValue(Sw));
+        ScanningCurve* sc = findScanningCurve_(params, Toolbox::scalarValue(Sw));
 
         // calculate the apparant saturation
         const Evaluation& Sw_app = absoluteToApparentSw_(params, Sw);
@@ -427,11 +427,11 @@ public:
      *        the phase pressures.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &/*params*/, const FluidState &/*fs*/)
+    static Evaluation Sw(const Params& /*params*/, const FluidState& /*fs*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::Sw()"); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSw(const Params &/*params*/, const Evaluation& /*pc*/)
+    static Evaluation twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*pc*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSw()"); }
 
     /*!
@@ -439,11 +439,11 @@ public:
      *        the phase pressures.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params, const FluidState &fs)
+    static Evaluation Sn(const Params& params, const FluidState& fs)
     { return 1 - Sw<FluidState, Evaluation>(params, fs); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSn(const Params &/*params*/, const Evaluation& /*pc*/)
+    static Evaluation twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*pc*/)
     { OPM_THROW(std::logic_error, "Not implemented: ParkerLenhard::twoPhaseSatSn()"); }
 
     /*!
@@ -451,7 +451,7 @@ public:
      *        the medium.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params, const FluidState &fs)
+    static Evaluation krw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -462,7 +462,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
         // for the effective permeability we only use Land's law and
         // the relative permeability of the main drainage curve.
@@ -475,7 +475,7 @@ public:
      *        of the params.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params, const FluidState &fs)
+    static Evaluation krn(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -486,7 +486,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
     {
         // for the effective permeability we only use Land's law and
         // the relative permeability of the main drainage curve.
@@ -498,7 +498,7 @@ public:
      * \brief Convert an absolute wetting saturation to an apparent one.
      */
     template <class Evaluation>
-    static Evaluation absoluteToApparentSw_(const Params &params, const Evaluation& Sw)
+    static Evaluation absoluteToApparentSw_(const Params& params, const Evaluation& Sw)
     {
         return effectiveToApparentSw_(params, absoluteToEffectiveSw_(params, Sw));
     }
@@ -514,7 +514,7 @@ private:
      * \return          Effective saturation of the wetting phase.
      */
     template <class Evaluation>
-    static Evaluation absoluteToEffectiveSw_(const Params &params, const Evaluation& Sw)
+    static Evaluation absoluteToEffectiveSw_(const Params& params, const Evaluation& Sw)
     { return (Sw - params.SwrPc())/(1 - params.SwrPc()); }
 
     /*!
@@ -527,13 +527,13 @@ private:
      * \return          Absolute saturation of the non-wetting phase.
      */
     template <class Evaluation>
-    static Evaluation effectiveToAbsoluteSw_(const Params &params, const Evaluation& Swe)
+    static Evaluation effectiveToAbsoluteSw_(const Params& params, const Evaluation& Swe)
     { return Swe*(1 - params.SwrPc()) + params.SwrPc(); }
 
     // return the effctive residual non-wetting saturation, given an
     // effective wetting saturation
     template <class Evaluation>
-    static Evaluation computeCurrentSnr_(const Params &params, const Evaluation& Sw)
+    static Evaluation computeCurrentSnr_(const Params& params, const Evaluation& Sw)
     {
         // regularize
         if (Sw > 1 - params.Snr())
@@ -558,7 +558,7 @@ private:
     // returns the trapped effective non-wetting saturation for a
     // given wetting phase saturation
     template <class Evaluation>
-    static Evaluation trappedEffectiveSn_(const Params &params, const Evaluation& Sw)
+    static Evaluation trappedEffectiveSn_(const Params& params, const Evaluation& Sw)
     {
         const Evaluation& Swe = absoluteToEffectiveSw_(params, Sw);
         Scalar SwePisc = absoluteToEffectiveSw_(params, params.pisc()->Sw());
@@ -570,7 +570,7 @@ private:
     // returns the apparent saturation of the wetting phase depending
     // on the effective saturation
     template <class Evaluation>
-    static Evaluation effectiveToApparentSw_(const Params &params, const Evaluation& Swe)
+    static Evaluation effectiveToApparentSw_(const Params& params, const Evaluation& Swe)
     {
         if (params.pisc() == NULL ||
             Swe <= absoluteToEffectiveSw_(params, params.pisc()->Sw()))
@@ -589,7 +589,7 @@ private:
 
     // Returns the effective saturation to a given apparent one
     template <class Evaluation>
-    static Evaluation apparentToEffectiveSw_(const Params &params, const Evaluation& Swapp)
+    static Evaluation apparentToEffectiveSw_(const Params& params, const Evaluation& Swapp)
     {
         Scalar SwePisc = absoluteToEffectiveSw_(params, params.pisc()->Sw());
         if (params.pisc() == NULL || Swapp <= SwePisc) {
@@ -608,7 +608,7 @@ private:
 
     // find the loop on which the an effective
     // saturation has to be
-    static ScanningCurve *findScanningCurve_(const Params &params, Scalar Sw)
+    static ScanningCurve* findScanningCurve_(const Params& params, Scalar Sw)
     {
         if (params.pisc() == NULL || Sw <= params.pisc()->Sw()) {
             // we don't have a PISC yet, or the effective
@@ -627,7 +627,7 @@ private:
             return params.pisc();
         }
 
-        ScanningCurve *curve = params.csc()->next();
+        ScanningCurve* curve = params.csc()->next();
         while (true) {
             assert(curve != params.mdc()->prev());
             if (curve->isValidAt_Sw(Sw)) {

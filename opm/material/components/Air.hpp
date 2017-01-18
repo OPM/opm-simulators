@@ -58,7 +58,7 @@ public:
     /*!
      * \brief A human readable name for the \f$Air\f$.
      */
-    static const char *name()
+    static const char* name()
     { return "Air"; }
 
     /*!

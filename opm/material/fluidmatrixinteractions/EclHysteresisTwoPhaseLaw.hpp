@@ -146,7 +146,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
         // TODO: capillary pressure hysteresis
         return EffectiveLaw::twoPhaseSatPcnw(params.drainageParams(), Sw);
@@ -234,7 +234,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
 
         // if no relperm hysteresis is enabled, use the drainage curve
@@ -262,7 +262,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
     {
         // if no relperm hysteresis is enabled, use the drainage curve
         if (!params.config().enableHysteresis() || params.config().krHysteresisModel() < 0)

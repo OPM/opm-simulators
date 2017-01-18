@@ -84,7 +84,7 @@ public:
     /*!
      * \brief A human readable name for the component.
      */
-    static const char *name()
+    static const char* name()
     { OPM_THROW(std::runtime_error, "Not implemented: Component::name()"); }
 
     /*!

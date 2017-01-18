@@ -61,7 +61,7 @@ public:
     /*!
      * \brief A human readable name for the water.
      */
-    static const char *name()
+    static const char* name()
     { return "H2O"; }
 
     /*!

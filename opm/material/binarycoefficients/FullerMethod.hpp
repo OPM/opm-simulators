@@ -53,8 +53,8 @@ namespace BinaryCoeff {
  * edition, McGraw-Hill, 1987, pp. 587-588
  */
 template <class Scalar, class Evaluation = Scalar>
-inline Evaluation fullerMethod(const Scalar *M, // molar masses [g/mol]
-                               const Scalar *SigmaNu, // atomic diffusion volume
+inline Evaluation fullerMethod(const Scalar* M, // molar masses [g/mol]
+                               const Scalar* SigmaNu, // atomic diffusion volume
                                const Evaluation& temperature, // [K]
                                const Evaluation& pressure) // [Pa]
 {

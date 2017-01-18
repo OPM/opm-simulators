@@ -164,7 +164,7 @@ public:
     }
 
 protected:
-    const Implementation &asImp_() const
+    const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
     Scalar moleFraction_[numPhases][numComponents];
@@ -246,7 +246,7 @@ public:
     { }
 
 protected:
-    const Implementation &asImp_() const
+    const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 };
 

@@ -33,12 +33,12 @@
 #define OPM_WATER_PVT_MULTIPLEXER_CALL(codeToCall)                      \
     switch (approach_) {                                                \
     case ConstantCompressibilityWaterPvt: {                             \
-        auto &pvtImpl = getRealPvt<ConstantCompressibilityWaterPvt>();  \
+        auto& pvtImpl = getRealPvt<ConstantCompressibilityWaterPvt>();  \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
     case ThermalWaterPvt: {                                             \
-        auto &pvtImpl = getRealPvt<ThermalWaterPvt>();                  \
+        auto& pvtImpl = getRealPvt<ThermalWaterPvt>();                  \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
@@ -191,7 +191,7 @@ public:
 
 private:
     WaterPvtApproach approach_;
-    void *realWaterPvt_;
+    void* realWaterPvt_;
 };
 
 #undef OPM_WATER_PVT_MULTIPLEXER_CALL

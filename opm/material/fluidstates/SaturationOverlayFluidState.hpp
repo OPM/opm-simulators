@@ -55,7 +55,7 @@ public:
      * argument, so it initially behaves exactly like the underlying
      * fluid state.
      */
-    SaturationOverlayFluidState(const FluidState &fs)
+    SaturationOverlayFluidState(const FluidState& fs)
         : fs_(&fs)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -63,13 +63,13 @@ public:
     }
 
     // copy constructor
-    SaturationOverlayFluidState(const SaturationOverlayFluidState &fs)
+    SaturationOverlayFluidState(const SaturationOverlayFluidState& fs)
         : fs_(fs.fs_)
         , saturation_(fs.saturation_)
     {}
 
     // assignment operator
-    SaturationOverlayFluidState &operator=(const SaturationOverlayFluidState &fs)
+    SaturationOverlayFluidState& operator=(const SaturationOverlayFluidState& fs)
     {
         fs_ = fs.fs_;
         saturation_ = fs.saturation_;
@@ -228,7 +228,7 @@ public:
     }
 
 protected:
-    const FluidState *fs_;
+    const FluidState* fs_;
     std::array<Scalar, numPhases> saturation_;
 };
 

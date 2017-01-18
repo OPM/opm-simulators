@@ -148,7 +148,7 @@ public:
      *
      * \param samplePoints A container of \f$(p_g, B_g)\f$ values
      */
-    void setGasFormationVolumeFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
+    void setGasFormationVolumeFactor(unsigned regionIdx, const SamplingPoints& samplePoints)
     {
         SamplingPoints tmp(samplePoints);
         auto it = tmp.begin();

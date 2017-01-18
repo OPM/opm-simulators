@@ -82,11 +82,11 @@ public:
     static const int nonWettingPhaseIdx = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(unsigned phaseIdx)
+    static const char* phaseName(unsigned phaseIdx)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        static const char *name[] = {
+        static const char* name[] = {
             "wetting",
             "nonwetting"
         };
@@ -148,7 +148,7 @@ public:
     static const int nonWettingCompIdx = 1;
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(unsigned compIdx)
+    static const char* componentName(unsigned compIdx)
     {
         assert(0 <= compIdx && compIdx < numComponents);
 
@@ -222,13 +222,13 @@ public:
 
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval density(const FluidState &fluidState,
-                           const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval density(const FluidState& fluidState,
+                           const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -239,13 +239,13 @@ public:
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval viscosity(const FluidState& fluidState,
+                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -256,15 +256,15 @@ public:
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval fugacityCoefficient(const FluidState &/*fluidState*/,
-                                       const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval fugacityCoefficient(const FluidState& /*fluidState*/,
+                                       const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
         typedef MathToolbox<LhsEval> LhsToolbox;
 
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        assert(0 <= compIdx  && compIdx < numComponents);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(0 <= compIdx && compIdx < numComponents);
 
         if (phaseIdx == compIdx)
             // TODO (?): calculate the real fugacity coefficient of
@@ -277,13 +277,13 @@ public:
 
     //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval enthalpy(const FluidState &fluidState,
-                            const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval enthalpy(const FluidState& fluidState,
+                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -294,13 +294,13 @@ public:
 
     //! \copydoc BaseFluidSystem::thermalConductivity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval thermalConductivity(const FluidState &fluidState,
-                                       const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval thermalConductivity(const FluidState& fluidState,
+                                       const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -311,13 +311,13 @@ public:
 
     //! \copydoc BaseFluidSystem::heatCapacity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval heatCapacity(const FluidState &fluidState,
-                                const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval heatCapacity(const FluidState& fluidState,
+                                const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                 unsigned phaseIdx)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));

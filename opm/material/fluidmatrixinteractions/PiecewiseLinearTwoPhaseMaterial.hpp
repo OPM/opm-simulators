@@ -97,7 +97,7 @@ public:
      * \brief The capillary pressure-saturation curve.
      */
     template <class Container, class FluidState>
-    static void capillaryPressures(Container &values, const Params &params, const FluidState &fs)
+    static void capillaryPressures(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -117,7 +117,7 @@ public:
      * \brief The relative permeabilities
      */
     template <class Container, class FluidState>
-    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fs)
+    static void relativePermeabilities(Container& values, const Params& params, const FluidState& fs)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -129,7 +129,7 @@ public:
      * \brief The capillary pressure-saturation curve
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fs)
+    static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const auto& Sw =
@@ -142,11 +142,11 @@ public:
      * \brief The saturation-capillary pressure curve
      */
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     { return eval_(params.SwPcwnSamples(), params.pcnwSamples(), Sw); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
+    static Evaluation twoPhaseSatPcnwInv(const Params& params, const Evaluation& pcnw)
     { return eval_(params.pcnwSamples(), params.SwPcwnSamples(), pcnw); }
 
     /*!
@@ -165,11 +165,11 @@ public:
      *        the phase pressures.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params, const FluidState &fs)
+    static Evaluation Sn(const Params& params, const FluidState& fs)
     { return 1 - Sw<FluidState, Scalar>(params, fs); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pC)
+    static Evaluation twoPhaseSatSn(const Params& params, const Evaluation& pC)
     { return 1 - twoPhaseSatSw(params, pC); }
 
     /*!
@@ -177,7 +177,7 @@ public:
      *        porous medium
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params, const FluidState &fs)
+    static Evaluation krw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const auto& Sw =
@@ -187,11 +187,11 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     { return eval_(params.SwKrwSamples(), params.krwSamples(), Sw); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    static Evaluation twoPhaseSatKrwInv(const Params& params, const Evaluation& krw)
     { return eval_(params.krwSamples(), params.SwKrwSamples(), krw); }
 
     /*!
@@ -199,7 +199,7 @@ public:
      *        of the porous medium
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params, const FluidState &fs)
+    static Evaluation krn(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const auto& Sw =
@@ -209,17 +209,17 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
     { return eval_(params.SwKrnSamples(), params.krnSamples(), Sw); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    static Evaluation twoPhaseSatKrnInv(const Params& params, const Evaluation& krn)
     { return eval_(params.krnSamples(), params.SwKrnSamples(), krn); }
 
 private:
     template <class Evaluation>
-    static Evaluation eval_(const ValueVector &xValues,
-                            const ValueVector &yValues,
+    static Evaluation eval_(const ValueVector& xValues,
+                            const ValueVector& yValues,
                             const Evaluation& x)
     {
         if (xValues.front() < xValues.back())
@@ -228,8 +228,8 @@ private:
     }
 
     template <class Evaluation>
-    static Evaluation evalAscending_(const ValueVector &xValues,
-                                     const ValueVector &yValues,
+    static Evaluation evalAscending_(const ValueVector& xValues,
+                                     const ValueVector& yValues,
                                      const Evaluation& x)
     {
         typedef MathToolbox<Evaluation> Toolbox;
@@ -253,8 +253,8 @@ private:
     }
 
     template <class Evaluation>
-    static Evaluation evalDescending_(const ValueVector &xValues,
-                                      const ValueVector &yValues,
+    static Evaluation evalDescending_(const ValueVector& xValues,
+                                      const ValueVector& yValues,
                                       const Evaluation& x)
     {
         typedef MathToolbox<Evaluation> Toolbox;
@@ -278,8 +278,8 @@ private:
     }
 
     template <class Evaluation>
-    static Evaluation evalDeriv_(const ValueVector &xValues,
-                                 const ValueVector &yValues,
+    static Evaluation evalDeriv_(const ValueVector& xValues,
+                                 const ValueVector& yValues,
                                  const Evaluation& x)
     {
         typedef MathToolbox<Evaluation> Toolbox;
@@ -300,7 +300,7 @@ private:
         return Toolbox::createConstant((y1 - y0)/(x1 - x0));
     }
 
-    static size_t findSegmentIndex_(const ValueVector &xValues, Scalar x)
+    static size_t findSegmentIndex_(const ValueVector& xValues, Scalar x)
     {
         assert(xValues.size() > 1); // we need at least two sampling points!
         size_t n = xValues.size() - 1;
@@ -322,7 +322,7 @@ private:
         return lowIdx;
     }
 
-    static size_t findSegmentIndexDescending_(const ValueVector &xValues, Scalar x)
+    static size_t findSegmentIndexDescending_(const ValueVector& xValues, Scalar x)
     {
         assert(xValues.size() > 1); // we need at least two sampling points!
         size_t n = xValues.size() - 1;

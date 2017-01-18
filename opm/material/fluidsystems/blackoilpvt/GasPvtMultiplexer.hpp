@@ -42,17 +42,17 @@ namespace Opm {
 #define OPM_GAS_PVT_MULTIPLEXER_CALL(codeToCall)                        \
     switch (gasPvtApproach_) {                                          \
     case DryGasPvt: {                                                   \
-        auto &pvtImpl = getRealPvt<DryGasPvt>();                        \
+        auto& pvtImpl = getRealPvt<DryGasPvt>();                        \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
     case WetGasPvt: {                                                   \
-        auto &pvtImpl = getRealPvt<WetGasPvt>();                        \
+        auto& pvtImpl = getRealPvt<WetGasPvt>();                        \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
     case ThermalGasPvt: {                                               \
-        auto &pvtImpl = getRealPvt<ThermalGasPvt>();                    \
+        auto& pvtImpl = getRealPvt<ThermalGasPvt>();                    \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
@@ -290,7 +290,7 @@ public:
 
 private:
     GasPvtApproach gasPvtApproach_;
-    void *realGasPvt_;
+    void* realGasPvt_;
 };
 
 #undef OPM_GAS_PVT_MULTIPLEXER_CALL

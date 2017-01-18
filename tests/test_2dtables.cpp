@@ -57,7 +57,7 @@ static Scalar testFn3(Scalar x, Scalar y)
 
 template <class Fn>
 std::shared_ptr<Opm::UniformTabulated2DFunction<Scalar> >
-createUniformTabulatedFunction(Fn &f)
+createUniformTabulatedFunction(Fn& f)
 {
     Scalar xMin = -2.0;
     Scalar xMax = 3.0;
@@ -83,7 +83,7 @@ createUniformTabulatedFunction(Fn &f)
 
 template <class Fn>
 std::shared_ptr<Opm::UniformXTabulated2DFunction<Scalar> >
-createUniformXTabulatedFunction(Fn &f)
+createUniformXTabulatedFunction(Fn& f)
 {
     Scalar xMin = -2.0;
     Scalar xMax = 3.0;
@@ -109,7 +109,7 @@ createUniformXTabulatedFunction(Fn &f)
 
 template <class Fn>
 std::shared_ptr<Opm::UniformXTabulated2DFunction<Scalar> >
-createUniformXTabulatedFunction2(Fn &f)
+createUniformXTabulatedFunction2(Fn& f)
 {
     Scalar xMin = -2.0;
     Scalar xMax = 3.0;
@@ -135,7 +135,7 @@ createUniformXTabulatedFunction2(Fn &f)
 }
 
 template <class Fn, class Table>
-bool compareTableWithAnalyticFn(const Table &table,
+bool compareTableWithAnalyticFn(const Table& table,
                                 Scalar xMin,
                                 Scalar xMax,
                                 unsigned numX,
@@ -144,7 +144,7 @@ bool compareTableWithAnalyticFn(const Table &table,
                                 Scalar yMax,
                                 unsigned numY,
 
-                                Fn &f,
+                                Fn& f,
                                 Scalar tolerance = 1e-8)
 {
     // make sure that the tabulated function evaluates to the same thing as the analytic
@@ -167,7 +167,7 @@ bool compareTableWithAnalyticFn(const Table &table,
 template <class UniformTablePtr, class UniformXTablePtr, class Fn>
 bool compareTables(const UniformTablePtr uTable,
                    const UniformXTablePtr uXTable,
-                   Fn &f,
+                   Fn& f,
                    Scalar tolerance = 1e-8)
 {
     // make sure the uniform and the non-uniform tables exhibit the same dimensions

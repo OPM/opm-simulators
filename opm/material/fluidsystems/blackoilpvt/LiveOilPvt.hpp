@@ -265,7 +265,7 @@ public:
      *
      * \param samplePoints A container of (x,y) values.
      */
-    void setSaturatedOilGasDissolutionFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
+    void setSaturatedOilGasDissolutionFactor(unsigned regionIdx, const SamplingPoints& samplePoints)
     { saturatedGasDissolutionFactorTable_[regionIdx].setContainerOfTuples(samplePoints); }
 
     /*!
@@ -277,7 +277,7 @@ public:
      * only depends on pressure) while the dependence on the gas mass fraction is
      * guesstimated.
      */
-    void setSaturatedOilFormationVolumeFactor(unsigned regionIdx, const SamplingPoints &samplePoints)
+    void setSaturatedOilFormationVolumeFactor(unsigned regionIdx, const SamplingPoints& samplePoints)
     {
         Scalar T = 273.15 + 15.56; // [K]
         auto& invOilB = inverseOilBTable_[regionIdx];
@@ -331,7 +331,7 @@ public:
      * requires the viscosity of gas-saturated oil (which only depends on pressure) while
      * there is assumed to be no dependence on the gas mass fraction...
      */
-    void setSaturatedOilViscosity(unsigned regionIdx, const SamplingPoints &samplePoints)
+    void setSaturatedOilViscosity(unsigned regionIdx, const SamplingPoints& samplePoints)
     {
         Scalar T = 273.15 + 15.56; // [K]
 

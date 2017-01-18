@@ -154,9 +154,9 @@ void ensureBlackoilApi()
 
 
         // the "not considered safe to use directly" API
-        const OilPvt  &oilPvt2 OPM_UNUSED = FluidSystem::oilPvt();
-        const GasPvt  &gasPvt2 OPM_UNUSED = FluidSystem::gasPvt();
-        const WaterPvt  &waterPvt2 OPM_UNUSED = FluidSystem::waterPvt();
+        const OilPvt& oilPvt2 OPM_UNUSED = FluidSystem::oilPvt();
+        const GasPvt& gasPvt2 OPM_UNUSED = FluidSystem::gasPvt();
+        const WaterPvt& waterPvt2 OPM_UNUSED = FluidSystem::waterPvt();
     }
 }
 

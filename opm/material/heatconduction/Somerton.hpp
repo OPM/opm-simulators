@@ -87,8 +87,8 @@ public:
      * phase \f$\alpha\f$.
      */
     template <class FluidState, class Evaluation = Scalar>
-    static Evaluation heatConductivity(const Params &params,
-                                       const FluidState &fluidState)
+    static Evaluation heatConductivity(const Params& params,
+                                       const FluidState& fluidState)
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 

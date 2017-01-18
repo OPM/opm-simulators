@@ -231,7 +231,7 @@ private:
 };
 
 template <class Scalar, class BaseFluidState>
-void checkFluidState(const BaseFluidState &fs)
+void checkFluidState(const BaseFluidState& fs)
 {
     // fluid states must be copy-able
     BaseFluidState tmpFs(fs);

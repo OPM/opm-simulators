@@ -39,7 +39,7 @@ template <unsigned numPhases, class ScalarT>
 class SomertonParams
 {
     // do not copy!
-    SomertonParams(const SomertonParams &)
+    SomertonParams(const SomertonParams&)
     {}
 
 public:

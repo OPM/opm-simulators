@@ -86,9 +86,9 @@ public:
     typedef Opm::H2O<Scalar> H2O;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(unsigned phaseIdx)
+    static const char* phaseName(unsigned phaseIdx)
     {
-        static const char *name[] = {
+        static const char* name[] = {
             "gas",
             "water",
             "oil",
@@ -148,9 +148,9 @@ public:
     static const int C20Idx = 6; //!< Index of the C20 component
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(unsigned compIdx)
+    static const char* componentName(unsigned compIdx)
     {
-        static const char *name[] = {
+        static const char* name[] = {
             H2O::name(),
             "C1",
             "C3",
@@ -359,22 +359,22 @@ public:
 
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval density(const FluidState &fluidState,
-                           const ParameterCache<ParamCacheEval> &paramCache,
+    static LhsEval density(const FluidState& fluidState,
+                           const ParameterCache<ParamCacheEval>& paramCache,
                            unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         return fluidState.averageMolarMass(phaseIdx)/paramCache.molarVolume(phaseIdx);
     }
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval viscosity(const FluidState &/*fluidState*/,
-                             const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval viscosity(const FluidState& /*fluidState*/,
+                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
 
         if (phaseIdx == gasPhaseIdx) {
             // given by SPE-5 in table on page 64. we use a constant
@@ -394,13 +394,13 @@ public:
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache<ParamCacheEval> &paramCache,
+    static LhsEval fugacityCoefficient(const FluidState& fluidState,
+                                       const ParameterCache<ParamCacheEval>& paramCache,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx <= numPhases);
-        assert(0 <= compIdx  && compIdx <= numComponents);
+        assert(0 <= phaseIdx && phaseIdx <= numPhases);
+        assert(0 <= compIdx && compIdx <= numComponents);
 
         if (phaseIdx == oilPhaseIdx || phaseIdx == gasPhaseIdx)
             return PengRobinsonMixture::computeFugacityCoefficient(fluidState,

@@ -42,7 +42,7 @@ extern bool success;
 bool success;
 
 template <class Scalar>
-void isSame(const char *str, Scalar v, Scalar vRef, Scalar tol=1e-3)
+void isSame(const char* str, Scalar v, Scalar vRef, Scalar tol=1e-3)
 {
     if (std::abs( (v - vRef)/vRef ) > tol) {
         std::cout << "error for \"" << str << "\": "  << (v - vRef)/vRef*100 << "% difference (tolerance: "  << tol*100 << "%)\n";

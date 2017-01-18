@@ -89,9 +89,9 @@ public:
      * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
-    static void capillaryPressures(ContainerT &values,
-                                   const Params &/*params*/,
-                                   const FluidState &/*fluidState*/)
+    static void capillaryPressures(ContainerT& values,
+                                   const Params& /*params*/,
+                                   const FluidState& /*fluidState*/)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             values[phaseIdx] = 0.0;
@@ -101,18 +101,18 @@ public:
      * \brief The inverse of the capillary pressure
      */
     template <class ContainerT, class FluidState>
-    static void saturations(ContainerT &/*values*/,
-                            const Params &/*params*/,
-                            const FluidState &/*fluidState*/)
+    static void saturations(ContainerT& /*values*/,
+                            const Params& /*params*/,
+                            const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not defined: NullMaterial::saturations()"); }
 
     /*!
      * \brief The relative permeability of all phases.
      */
     template <class ContainerT, class FluidState>
-    static void relativePermeabilities(ContainerT &values,
-                                       const Params &/*params*/,
-                                       const FluidState &fluidState)
+    static void relativePermeabilities(ContainerT& values,
+                                       const Params& /*params*/,
+                                       const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -130,12 +130,12 @@ public:
      */
     template <class FluidState, class Evaluation  = typename FluidState::Scalar>
     static typename std::enable_if<(numPhases > 1), Evaluation>::type
-    pcnw(const Params &/*params*/, const FluidState &/*fluidState*/)
+    pcnw(const Params& /*params*/, const FluidState& /*fluidState*/)
     { return 0; }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
-    twoPhaseSatPcnw(const Params &/*params*/, const Evaluation& /*Sw*/)
+    twoPhaseSatPcnw(const Params& /*params*/, const Evaluation& /*Sw*/)
     { return 0; }
 
     /*!
@@ -143,12 +143,12 @@ public:
      *        of the fluid state has been initialized
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Scalar Sw(const Params &/*params*/, const FluidState &/*fluidState*/)
+    static Scalar Sw(const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not defined: Sw()"); }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
-    twoPhaseSatSw(const Params &/*params*/, const Evaluation& /*pcnw*/)
+    twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*pcnw*/)
     { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSw()"); }
 
     /*!
@@ -156,12 +156,12 @@ public:
      *        rest of the fluid state has been initialized
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Scalar Sn(const Params &/*params*/, const FluidState &/*fluidState*/)
+    static Scalar Sn(const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not defined: Sn()"); }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
-    twoPhaseSatSn(const Params &/*params*/, const Evaluation& /*pcnw*/)
+    twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*pcnw*/)
     { OPM_THROW(std::logic_error, "Not defined: twoPhaseSatSn()"); }
 
     /*!
@@ -172,7 +172,7 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if< (numPhases > 2), Evaluation>::type
-    Sg(const Params &/*params*/, const FluidState &/*fluidState*/)
+    Sg(const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not defined: Sg()"); }
 
     /*!
@@ -180,7 +180,7 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if<(numPhases > 1), Evaluation>::type
-    krw(const Params &/*params*/, const FluidState &fluidState)
+    krw(const Params& /*params*/, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -193,7 +193,7 @@ public:
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
-    twoPhaseSatKrw(const Params &/*params*/, const Evaluation& Sw)
+    twoPhaseSatKrw(const Params& /*params*/, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -205,7 +205,7 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if<(numPhases > 1), Evaluation>::type
-    krn(const Params &/*params*/, const FluidState &fluidState)
+    krn(const Params& /*params*/, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -218,7 +218,7 @@ public:
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
-    twoPhaseSatKrn(const Params &/*params*/, const Evaluation& Sw)
+    twoPhaseSatKrn(const Params& /*params*/, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -232,7 +232,7 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if< (numPhases > 2), Evaluation>::type
-    krg(const Params &/*params*/, const FluidState &fluidState)
+    krg(const Params& /*params*/, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -250,7 +250,7 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if< (Traits::numPhases > 2), Evaluation>::type
-    pcgn(const Params &/*params*/, const FluidState &/*fluidState*/)
+    pcgn(const Params& /*params*/, const FluidState& /*fluidState*/)
     { return 0; }
 };
 } // namespace Opm

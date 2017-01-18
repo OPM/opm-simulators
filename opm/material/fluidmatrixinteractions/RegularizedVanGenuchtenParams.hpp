@@ -137,7 +137,7 @@ public:
      * \brief Return the spline curve which ought to be used between
      *        the upper threshold saturation and 1.
      */
-    const Spline<Scalar> &pcnwHighSpline() const
+    const Spline<Scalar>& pcnwHighSpline() const
     { assertFinalized_(); return pcnwHighSpline_; }
 
     /*!

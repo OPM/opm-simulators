@@ -92,7 +92,7 @@ public:
      * \brief The capillary pressure-saturation curve.
      */
     template <class Container, class FluidState>
-    static void capillaryPressures(Container &values, const Params &params, const FluidState &fluidState)
+    static void capillaryPressures(Container& values, const Params& params, const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -105,14 +105,14 @@ public:
      *        pressure differences.
      */
     template <class Container, class FluidState>
-    static void saturations(Container &/*values*/, const Params &/*params*/, const FluidState &/*fluidState*/)
+    static void saturations(Container& /*values*/, const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: saturations()"); }
 
     /*!
      * \brief The relative permeabilities
      */
     template <class Container, class FluidState>
-    static void relativePermeabilities(Container &values, const Params &params, const FluidState &fluidState)
+    static void relativePermeabilities(Container& values, const Params& params, const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -124,7 +124,7 @@ public:
      * \brief The capillary pressure-saturation curve
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fluidState)
+    static Evaluation pcnw(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -138,7 +138,7 @@ public:
      * \brief The saturation-capillary pressure curve
      */
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
         // this assumes that the capillary pressure is monotonically decreasing
         const auto& pcnwSpline = params.pcnwSpline();
@@ -151,7 +151,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnw)
+    static Evaluation twoPhaseSatPcnwInv(const Params& params, const Evaluation& pcnw)
     {
         static const Evaluation nil(0.0);
 
@@ -171,11 +171,11 @@ public:
      * \brief The saturation-capillary pressure curve
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &/*params*/, const FluidState &/*fluidState*/)
+    static Evaluation Sw(const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: Sw()"); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSw(const Params &/*params*/, const Evaluation& /*pC*/)
+    static Evaluation twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*pC*/)
     { OPM_THROW(std::logic_error, "Not implemented: twoPhaseSatSw()"); }
 
     /*!
@@ -183,11 +183,11 @@ public:
      *        the phase pressures.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &params, const FluidState &fluidState)
+    static Evaluation Sn(const Params& params, const FluidState& fluidState)
     { return 1 - Sw<FluidState, Evaluation>(params, fluidState); }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatSn(const Params &params, const Evaluation& pC)
+    static Evaluation twoPhaseSatSn(const Params& params, const Evaluation& pC)
     { return 1 - twoPhaseSatSw(params, pC); }
 
     /*!
@@ -195,7 +195,7 @@ public:
      *        porous medium
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params, const FluidState &fluidState)
+    static Evaluation krw(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -206,7 +206,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
         const auto& krwSpline = params.krwSpline();
         if (Sw <= krwSpline.xAt(0))
@@ -218,7 +218,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krw)
+    static Evaluation twoPhaseSatKrwInv(const Params& params, const Evaluation& krw)
     {
         static const Evaluation nil(0.0);
 
@@ -236,7 +236,7 @@ public:
      *        of the porous medium
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params, const FluidState &fluidState)
+    static Evaluation krn(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -247,7 +247,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& Sw)
+    static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
     {
         const auto& krnSpline = params.krnSpline();
         if (Sw <= krnSpline.xAt(0))
@@ -259,7 +259,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krn)
+    static Evaluation twoPhaseSatKrnInv(const Params& params, const Evaluation& krn)
     {
         static const Evaluation nil(0.0);
 

@@ -162,10 +162,10 @@ public:
      * - if the setInternalEnergy parameter is true, also specific enthalpies and internal energies of *all* phases
      */
     template <class FluidState, class ParameterCache>
-    static void solve(FluidState &fluidState,
-                      ParameterCache &paramCache,
+    static void solve(FluidState& fluidState,
+                      ParameterCache& paramCache,
                       int phasePresence,
-                      const MMPCAuxConstraint<Evaluation> *auxConstraints,
+                      const MMPCAuxConstraint<Evaluation>* auxConstraints,
                       unsigned numAuxConstraints,
                       bool setViscosity,
                       bool setInternalEnergy)
@@ -231,7 +231,7 @@ public:
         // phases present.
         unsigned presentPhases = 0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!(phasePresence & (1 << phaseIdx)))
+            if (!(phasePresence&  (1 << phaseIdx)))
                 continue;
 
             unsigned rowIdx = numComponents*(numPhases - 1) + presentPhases;
@@ -261,7 +261,7 @@ public:
             Dune::FMatrixPrecision<Scalar>::set_singular_limit(1e-50);
             M.solve(x, b);
         }
-        catch (const Dune::FMatrixError &e) {
+        catch (const Dune::FMatrixError& e) {
             OPM_THROW(NumericalProblem,
                       "Numerical problem in MiscibleMultiPhaseComposition::solve(): " << e.what() << "; M="<<M);
         }
@@ -302,8 +302,8 @@ public:
      * This is a convenience method where no auxiliary constraints are used.
      */
     template <class FluidState, class ParameterCache>
-    static void solve(FluidState &fluidState,
-                      ParameterCache &paramCache,
+    static void solve(FluidState& fluidState,
+                      ParameterCache& paramCache,
                       bool setViscosity,
                       bool setInternalEnergy)
     {
