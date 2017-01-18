@@ -31,6 +31,7 @@
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
 // the ordering of these includes matters. do not touch it if you're not prepared to deal
 // with some trouble!
@@ -85,9 +86,10 @@ class EclEquilInitializer
     enum { dimWorld = GridView::dimensionworld };
 
 public:
-    template <class MaxPcnwVector>
+    template <class EclMaterialLawManager>
     EclEquilInitializer(const Simulator& simulator,
-                        MaxPcnwVector& maxPcnw)
+                        EclMaterialLawManager& materialLawManager,
+                        bool enableSwatinit)
         : simulator_(simulator)
     {
         const auto& gridManager = simulator.gridManager();
@@ -137,9 +139,6 @@ public:
                                             /*numFaces=*/0, // we don't care here
                                             opmPhaseUsage.num_phases);
 
-        // tell the initializers whether SWATINIT should be applied or not.
-        bool enableSwatInit = GET_PROP_VALUE(TypeTag, EnableSwatinit);
-
         // do the actual computation.
         Opm::initStateEquil(equilGrid,
                             opmBlackoilProps,
@@ -147,7 +146,7 @@ public:
                             gridManager.eclState(),
                             simulator.problem().gravity()[dimWorld - 1],
                             opmBlackoilState,
-                            enableSwatInit);
+                            enableSwatinit);
 
         std::vector<int> localToEquilIndex( numElems, -1 );
         for( unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx )
@@ -156,10 +155,6 @@ public:
             assert( equilCartesianToCompressed[ cartesianIndex ] >= 0 );
             localToEquilIndex[ elemIdx ] = equilCartesianToCompressed[ cartesianIndex ];
         }
-
-        // resize the array of maximum water-oil capillary pressures (needed to apply the
-        // SWATINIT keyword).
-        maxPcnw.resize(numElems);
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numCartesianElems);
@@ -257,17 +252,16 @@ public:
                 fluidState.setMoleFraction(gasPhaseIdx, gasCompIdx, 1 - xgO);
             }
 
-            // store the maximum oil-water capillary pressure for later (required by the
-            // SWATINIT keyword)
-            const auto& equilScalingPoints =
-                equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
-            maxPcnw[elemIdx] = equilScalingPoints.maxPcnw();
+            // deal with the changed pressure scaling due to SWATINIT if SWATINIT is
+            // requested to be applied. this is quite hacky but hey it works!
+            if (enableSwatinit) {
+                const auto& equilScalingPoints =
+                    equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+                auto& scalingPoints =
+                    materialLawManager.oilWaterScaledEpsPointsDrainage(elemIdx);
+                scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
+            }
         }
-
-        // immediately forget about the SWATINIT stuff if the SWATINIT keyword is not
-        // present in the deck
-        if (!deck.hasKeyword("SWATINIT"))
-            maxPcnw.clear();
     }
 
     /*!

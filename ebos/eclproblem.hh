@@ -817,6 +817,28 @@ public:
         // this point, because determining the threshold pressures may require to access
         // the initial solution.
         thresholdPressures_.finishInit();
+
+        // apply SWATINIT if requested by the programmer. this is only necessary if
+        // SWATINIT has not yet been considered at the first time the EquilInitializer
+        // was used, i.e., only if threshold pressures are enabled in addition to
+        // SWATINIT.
+        const auto& deck = this->simulator().gridManager().deck();
+        const auto& eclState = this->simulator().gridManager().eclState();
+        int numEquilRegions =
+            deck.getKeyword("EQLDIMS").getRecord(0).getItem("NTEQUL").template get<int>(0);
+        bool useThpres = deck.hasKeyword("THPRES") && numEquilRegions > 1;
+        bool useSwatinit =
+            GET_PROP_VALUE(TypeTag, EnableSwatinit) &&
+            eclState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
+
+        if (useThpres && useSwatinit)
+            applySwatinit();
+
+        // release the memory of the EQUIL grid since it's no longer needed after this point
+        this->simulator().gridManager().releaseEquilGrid();
+
+        // the fluid states specifying the initial condition are also no longer required.
+        initialFluidStates_.clear();
     }
 
     /*!
@@ -860,16 +882,39 @@ public:
      */
     void applySwatinit()
     {
-        if (maxPcnw_.empty())
-            return; // SWATINIT not applicable
+        const auto& deck = this->simulator().gridManager().deck();
+        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& deckProps = eclState.get3DProperties();
 
-        unsigned numElems = this->simulator().gridView().size(/*codim=*/0);
-        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& scalingPoints = materialLawManager_->oilWaterScaledEpsPointsDrainage(elemIdx);
-            scalingPoints.setMaxPcnw(maxPcnw_[elemIdx]);
+        if (!deckProps.hasDeckDoubleGridProperty("SWATINIT"))
+            return; // SWATINIT is not in the deck
+        else if (!deck.hasKeyword("EQUIL"))
+            // SWATINIT only applies if the initial solution is specified using the EQUIL
+            // keyword.
+            return;
+
+        // SWATINIT applies. We have to do a complete re-initialization here. this is a
+        // kludge, but to calculate the threshold pressures the initial solution without
+        // SWATINIT is required!
+
+        typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
+        EquilInitializer equilInitializer(this->simulator(),
+                                          *materialLawManager_,
+                                          /*enableSwatinit=*/true);
+        auto& model = this->model();
+        size_t numElems = model.numGridDof();
+        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            const auto& fs = equilInitializer.initialFluidState(elemIdx);
+            auto& priVars0 = model.solution(/*timeIdx=*/0)[elemIdx];
+            auto& priVars1 = model.solution(/*timeIdx=*/1)[elemIdx];
+
+            priVars1.assignNaive(fs);
+            priVars0 = priVars1;
         }
 
-        maxPcnw_.clear();
+        // the solution (most likely) has changed, so we need to invalidate the cache for
+        // intensive quantities
+        this->simulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
     }
 
 private:
@@ -1050,20 +1095,26 @@ private:
             readExplicitInitialCondition_();
         else
             readEquilInitialCondition_();
-
-        // release the memory of the EQUIL grid since it's no longer needed after this point
-        this->simulator().gridManager().releaseEquilGrid();
-
-        // apply SWATINIT if requested by the problem and if it is enabled by the deck
-        if (GET_PROP_VALUE(TypeTag, EnableSwatinit))
-            applySwatinit();
     }
 
     void readEquilInitialCondition_()
     {
-        // initial condition corresponds to hydrostatic conditions
+        const auto& deck = this->simulator().gridManager().deck();
+        const auto& eclState = this->simulator().gridManager().eclState();
+        int numEquilRegions =
+            deck.getKeyword("EQLDIMS").getRecord(0).getItem("NTEQUL").template get<int>(0);
+
+        bool useThpres = deck.hasKeyword("THPRES") && numEquilRegions > 1;
+        bool useSwatinit =
+            GET_PROP_VALUE(TypeTag, EnableSwatinit) &&
+            eclState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
+
+        // initial condition corresponds to hydrostatic conditions. The SWATINIT keyword
+        // can be considered here directly if threshold pressures are disabled.
         typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
-        EquilInitializer equilInitializer(this->simulator(), maxPcnw_);
+        EquilInitializer equilInitializer(this->simulator(),
+                                          *materialLawManager_,
+                                          /*enableSwatinit=*/useThpres && useSwatinit);
 
         // since the EquilInitializer provides fluid states that are consistent with the
         // black-oil model, we can use naive instead of mass conservative determination
@@ -1365,8 +1416,6 @@ private:
     EclSummaryWriter summaryWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
-
-    std::vector<Scalar> maxPcnw_;
 };
 } // namespace Ewoms
 
