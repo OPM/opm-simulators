@@ -542,7 +542,7 @@ public:
      *        to the hard disk.
      */
     template <class Restarter>
-    void serialize(Restarter& OPM_UNUSED res)
+    void serialize(Restarter& res OPM_UNUSED)
     {
         /* do nothing: Everything which we need here is provided by the deck->.. */
     }
@@ -554,7 +554,7 @@ public:
      * It is the inverse of the serialize() method.
      */
     template <class Restarter>
-    void deserialize(Restarter& OPM_UNUSED res)
+    void deserialize(Restarter& res OPM_UNUSED)
     {
         // initialize the wells for the current episode
         beginEpisode(simulator_.gridManager().eclState(), /*wasRestarted=*/true);
@@ -604,7 +604,7 @@ protected:
                                reportStepIdx);
     }
 
-    void updateWellTopology_(unsigned OPM_UNUSED reportStepIdx,
+    void updateWellTopology_(unsigned reportStepIdx OPM_UNUSED,
                              const WellCompletionsMap& wellCompletions,
                              std::vector<bool>& gridDofIsPenetrated) const
     {
@@ -664,7 +664,7 @@ protected:
         }
     }
 
-    void computeWellCompletionsMap_(unsigned OPM_UNUSED reportStepIdx, WellCompletionsMap& cartesianIdxToCompletionMap)
+    void computeWellCompletionsMap_(unsigned reportStepIdx OPM_UNUSED, WellCompletionsMap& cartesianIdxToCompletionMap)
     {
         const auto& eclState = simulator_.gridManager().eclState();
         const auto& deckSchedule = eclState.getSchedule();

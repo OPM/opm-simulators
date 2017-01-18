@@ -775,9 +775,9 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector& values,
-                  const Context& OPM_UNUSED context,
-                  unsigned OPM_UNUSED spaceIdx,
-                  unsigned OPM_UNUSED timeIdx) const
+                  const Context& context OPM_UNUSED,
+                  unsigned spaceIdx OPM_UNUSED,
+                  unsigned timeIdx OPM_UNUSED) const
     { values.setNoFlow(); }
 
     /*!

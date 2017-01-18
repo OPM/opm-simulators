@@ -168,7 +168,7 @@ public:
     /*!
      * \brief Called whenever a new time step must be written.
      */
-    void beginWrite(double OPM_UNUSED t)
+    void beginWrite(double t OPM_UNUSED)
     {
         if (enableEclOutput_() && reportStepIdx_ == 0 && collectToIORank_.isIORank() )
             EclWriterHelper<TypeTag, GridManager>::writeHeaders_(*this);
@@ -180,7 +180,7 @@ public:
      * For the EclWriter, this method is a no-op which throws a
      * std::logic_error exception
      */
-    void attachScalarVertexData(ScalarBuffer& OPM_UNUSED buf, std::string OPM_UNUSED name)
+    void attachScalarVertexData(ScalarBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
     {
         OPM_THROW(std::logic_error,
                   "The EclWriter can only write element based quantities!");
@@ -192,7 +192,7 @@ public:
      * For the EclWriter, this method is a no-op which throws a
      * std::logic_error exception
      */
-    void attachVectorVertexData(VectorBuffer& OPM_UNUSED buf, std::string OPM_UNUSED name)
+    void attachVectorVertexData(VectorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
     {
         OPM_THROW(std::logic_error,
                   "The EclWriter can only write element based quantities!");
@@ -201,7 +201,7 @@ public:
     /*
      * \brief Add a vertex-centered tensor field to the output.
      */
-    void attachTensorVertexData(TensorBuffer& OPM_UNUSED buf, std::string OPM_UNUSED name)
+    void attachTensorVertexData(TensorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
     {
         OPM_THROW(std::logic_error,
                   "The EclWriter can only write element based quantities!");
@@ -225,7 +225,7 @@ public:
      * For the EclWriter, this method is a no-op which throws a
      * std::logic_error exception
      */
-    void attachVectorElementData(VectorBuffer& OPM_UNUSED buf, std::string OPM_UNUSED name)
+    void attachVectorElementData(VectorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
     {
         OPM_THROW(std::logic_error,
                   "Currently, the EclWriter can only write scalar quantities!");
@@ -234,7 +234,7 @@ public:
     /*
      * \brief Add a element-centered tensor field to the output.
      */
-    void attachTensorElementData(TensorBuffer& OPM_UNUSED buf, std::string OPM_UNUSED name)
+    void attachTensorElementData(TensorBuffer& buf OPM_UNUSED, std::string name OPM_UNUSED)
     {
         OPM_THROW(std::logic_error,
                   "Currently, the EclWriter can only write scalar quantities!");
