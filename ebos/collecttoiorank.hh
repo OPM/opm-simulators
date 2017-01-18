@@ -177,8 +177,14 @@ namespace Ewoms
 
         CollectDataToIORank( const GridManager& gridManager )
             : toIORankComm_( ),
-              isIORank_( gridManager.grid().comm().rank() == ioRank )
+              isIORank_( gridManager.grid().comm().rank() == ioRank ),
+              isParallel_( gridManager.grid().comm().size() > 1 )
         {
+            if ( !isParallel_ )
+            {
+                // no need to collect anything.
+                return;
+            }
             typedef typename GridManager::GridView GridView;
             typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>
                 ElementMapper;
@@ -384,6 +390,11 @@ namespace Ewoms
         template <class BufferList>
         void collect( BufferList& bufferList ) const
         {
+            if ( !isParallel_ )
+            {
+                // no need to collect anything.
+                return;
+            }
             PackUnPackOutputBuffers< BufferList >
                 packUnpack( bufferList,
                             localIndexMap_,
@@ -418,6 +429,8 @@ namespace Ewoms
         IndexMapStorageType             indexMaps_;
         // true if we are on I/O rank
         bool                            isIORank_;
+        /// \brief True if there is more than one MPI process
+        bool                            isParallel_;
     };
 
 } // end namespace Opm
