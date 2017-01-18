@@ -44,6 +44,17 @@ SCRIPT_PATH=`getAbsPath "$SCRIPT_PATH"`
 OPM_DATA=
 WORKSPACE="$SCRIPT_PATH/.."
 
+# Make sure the working tree is clean
+pushd . > /dev/null
+cd $WORKSPACE
+if [[ -n $(git diff-files) ]]
+then
+  echo "Cannot run with working tree changes. Commit, drop or stash them."
+  exit 1
+fi
+popd > /dev/null
+
+
 if [ "$OSTYPE" == "linux-gnu" ]
 then
   if which nproc > /dev/null
