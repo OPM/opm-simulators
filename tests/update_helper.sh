@@ -76,8 +76,8 @@ while getopts "d:w:p:t:o:h" arg; do
       PULL_REQUESTS=${OPTARG}
       ;;
     o) # Use given toolchain file
-      echo "Using ${OPTARG} toolchain"
-      CMAKE_TOOLCHAIN_FILES=${OPTARG}
+      CMAKE_TOOLCHAIN_FILES=`getAbsPath "$OPTARG"`
+      echo "Using ${CMAKE_TOOLCHAIN_FILES} toolchain"
       ;;
     h) # Display help.
       usage
@@ -116,6 +116,7 @@ echo " "
 echo " "
 echo " "
 echo ">>> To update opm-data, please use the following command <<<"
+echo ">>> This creates a commit in $OPM_DATA_ROOT. You can then push the result to a branch in your repository on github, and create a pull request."
 echo " "
 echo "configuration=serial WORKSPACE=$WORKSPACE $SCRIPT_PATH/update_reference_data.sh $OPM_DATA_ROOT [spe11] [spe12] [spe3] [spe9]"
 echo " "
