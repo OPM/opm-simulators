@@ -35,6 +35,7 @@
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
+#include <opm/core/wells/WellCollection.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
@@ -81,12 +82,15 @@ enum WellVariablePositions {
 
             // ---------  Public methods  ---------
             StandardWellsDense(const Wells* wells_arg,
+                               WellCollection* well_collection,
                                const ModelParameters& param,
                                const bool terminal_output)
                 : wells_active_(wells_arg!=nullptr)
                 , wells_(wells_arg)
+                , well_collection_(well_collection)
                 , param_(param)
                 , terminal_output_(terminal_output)
+                , well_perforation_efficiency_factors_((wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0), 1.0)
                 , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
                 , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
                 , wellVariables_( wells_ ? (wells_arg->number_of_wells * wells_arg->number_of_phases) : 0)
@@ -118,6 +122,8 @@ enum WellVariablePositions {
                 gravity_ = gravity_arg;
                 cell_depths_ = extractPerfData(depth_arg);
                 pv_ = pv_arg;
+
+                calculateEfficiencyFactors();
 
                 // setup sparsity pattern for the matrices
                 //[A B^T    [x    =  [ res
@@ -185,6 +191,10 @@ enum WellVariablePositions {
                     return report;
                 }
 
+                if (param_.compute_well_potentials_) {
+                    computeWellPotentials(ebosSimulator, well_state);
+                }
+
                 resetWellControlFromState(well_state);
                 updateWellControls(well_state);
                 // Set the primary variables for the wells
@@ -201,10 +211,6 @@ enum WellVariablePositions {
                 }
                 assembleWellEq(ebosSimulator, dt, well_state, false);
 
-
-                if (param_.compute_well_potentials_) {
-                    //wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
-                }
                 report.converged = true;
                 return report;
             }
@@ -235,13 +241,17 @@ enum WellVariablePositions {
                         const int cell_idx = wells().well_cells[perf];
                         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                         std::vector<EvalWell> cq_s(np,0.0);
-                        computeWellFlux(w, wells().WI[perf], intQuants, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
+                        const EvalWell bhp = getBhp(w);
+                        computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
                         for (int p1 = 0; p1 < np; ++p1) {
 
                             if (!only_wells) {
                                 // subtract sum of phase fluxes in the reservoir equation.
-                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].value();
+                                // applying the efficiency factor to the flux rate
+                                // TODO: not sure whether the way applying efficiency factor to Jacs are completely correct
+                                // It should enter the mass balance equation, while should not enter the well equations
+                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= well_perforation_efficiency_factors_[perf] * cq_s[p1].value();
                             }
 
                             // subtract sum of phase fluxes in the well equations.
@@ -250,7 +260,7 @@ enum WellVariablePositions {
                             // assemble the jacobians
                             for (int p2 = 0; p2 < np; ++p2) {
                                 if (!only_wells) {
-                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
+                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= well_perforation_efficiency_factors_[perf] * cq_s[p1].derivative(p2);
                                     duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].derivative(p2+blocksize); // intput in transformed matrix
                                     duneC_[w][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
                                 }
@@ -531,10 +541,9 @@ enum WellVariablePositions {
 
             template<typename intensiveQuants>
             void
-            computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
+            computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants, const EvalWell& bhp, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
             {
                 const Opm::PhaseUsage& pu = phase_usage_;
-                EvalWell bhp = getBhp(w);
                 const int np = wells().number_of_phases;
                 std::vector<EvalWell> cmix_s(np,0.0);
                 for (int phase = 0; phase < np; ++phase) {
@@ -672,6 +681,11 @@ enum WellVariablePositions {
                 do {
                     assembleWellEq(ebosSimulator, dt, well_state, true);
                     converged = getWellConvergence(ebosSimulator, it);
+
+                    // checking whether the group targets are converged
+                    if (wellCollection()->groupControlActive()) {
+                        converged = converged && wellCollection()->groupTargetConverged(well_state.wellRates());
+                    }
 
                     if (converged) {
                         break;
@@ -1183,7 +1197,6 @@ enum WellVariablePositions {
                         well_controls_set_current( wc, current);
 
 
-
                         // Updating well state and primary variables if constraint is broken
 
                         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
@@ -1280,9 +1293,10 @@ enum WellVariablePositions {
                                 OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
                             }
 
-
                             break;
                         }
+
+
                         std::vector<double> g = {1,1,0.01};
                         if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
                             for (int phase = 0; phase < np; ++phase) {
@@ -1337,6 +1351,26 @@ enum WellVariablePositions {
                             }
                         }
                     }
+
+                    // update whether well is under group control
+                    if (wellCollection()->groupControlActive()) {
+                        // get well node in the well collection
+                        WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+
+                        // update whehter the well is under group control or individual control
+                        if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
+                            // under group control
+                            well_node.setIndividualControl(false);
+                        } else {
+                            // individual control
+                            well_node.setIndividualControl(true);
+                        }
+                    }
+                }
+
+                // upate the well targets following the group control
+                if (wellCollection()->groupControlActive()) {
+                    wellCollection()->updateWellTargets(xw.wellRates());
                 }
             }
 
@@ -1474,9 +1508,160 @@ enum WellVariablePositions {
 
             }
 
+
+
+
+
+            // TODO: Later we might want to change the function to only handle one well,
+            // the requirement for well potential calculation can be based on individual wells.
+            // getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
+            template<typename Simulator>
+            void
+            computeWellPotentials(const Simulator& ebosSimulator,
+                                  WellState& well_state)  const
+            {
+
+                // number of wells and phases
+                const int nw = wells().number_of_wells;
+                const int np = wells().number_of_phases;
+
+                for (int w = 0; w < nw; ++w) {
+                    // bhp needs to be determined for the well potential calculation
+                    double bhp = 0.;
+
+                    const WellControls* well_control = wells().ctrls[w];
+                    // The number of the well controls
+                    const int nwc = well_controls_get_num(well_control);
+
+                    // Finding a BHP control or a THP control
+                    // IF we find a THP control, we calculate the BHP value.
+                    // TODO: there is option to ignore the THP limit when calculating well potentials,
+                    // we are not handling it for the moment.
+                    for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                        if (well_controls_iget_type(well_control, ctrl_index) == BHP) {
+                            // set bhp to the bhp value
+                            bhp = well_controls_iget_target(well_control, ctrl_index);
+                        }
+
+
+                        if (well_controls_iget_type(well_control, ctrl_index) == THP) {
+                            double aqua = 0.0;
+                            double liquid = 0.0;
+                            double vapour = 0.0;
+
+                            const Opm::PhaseUsage& pu = phase_usage_;
+
+                            if (active_[ Water ]) {
+                                aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                            }
+                            if (active_[ Oil ]) {
+                                liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+                            }
+                            if (active_[ Gas ]) {
+                                vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
+                            }
+
+                            const int vfp        = well_controls_iget_vfp(well_control, ctrl_index);
+                            const double& thp    = well_controls_iget_target(well_control, ctrl_index);
+                            const double& alq    = well_controls_iget_alq(well_control, ctrl_index);
+
+                            // Calculating the BHP value based on THP
+                            const WellType& well_type = wells().type[w];
+                            const int first_perf = wells().well_connpos[w]; //first perforation
+
+                            if (well_type == INJECTOR) {
+                                const double dp = wellhelpers::computeHydrostaticCorrection(
+                                                  wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
+                                                  wellPerforationDensities()[first_perf], gravity_);
+                                const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                                // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
+                                if (bhp_calculated < bhp) {
+                                    bhp = bhp_calculated;
+                                }
+                            }
+                            else if (well_type == PRODUCER) {
+                                const double dp = wellhelpers::computeHydrostaticCorrection(
+                                                  wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
+                                                  wellPerforationDensities()[first_perf], gravity_);
+                                const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                                // apply the strictest of the bhp controlls i.e. largest bhp for producers
+                                if (bhp_calculated > bhp) {
+                                    bhp = bhp_calculated;
+                                }
+                            } else {
+                                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                            }
+                        }
+                    }
+
+                    assert(bhp != 0.0);
+
+                    // Should we consider crossflow when calculating well potentionals?
+                    const bool allow_cf = allow_cross_flow(w, ebosSimulator);
+                    for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                        const int cell_index = wells().well_cells[perf];
+                        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
+                        std::vector<EvalWell> well_potentials(np, 0.0);
+                        computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials);
+                        for(int p = 0; p < np; ++p) {
+                            well_state.wellPotentials()[perf * np + p] = well_potentials[p].value();
+                        }
+                    }
+                }
+            }
+
+
+
+
+
+            WellCollection* wellCollection() const
+            {
+                return well_collection_;
+            }
+
+
+
+
+
+            const std::vector<double>&
+            wellPerfEfficiencyFactors() const
+            {
+                return well_perforation_efficiency_factors_;
+            }
+
+
+
+
+
+            void calculateEfficiencyFactors()
+            {
+                if ( !localWellsActive() ) {
+                    return;
+                }
+
+                const int nw = wells().number_of_wells;
+
+                for (int w = 0; w < nw; ++w) {
+                    const std::string well_name = wells().name[w];
+                    const WellNode& well_node = wellCollection()->findWellNode(well_name);
+
+                    const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
+
+                    // assign the efficiency factor to each perforation related.
+                    for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w + 1]; ++perf) {
+                        well_perforation_efficiency_factors_[perf] = well_efficiency_factor;
+                    }
+                }
+            }
+
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
+
+            // Well collection is used to enforce the group control
+            WellCollection* well_collection_;
+
             ModelParameters param_;
             bool terminal_output_;
 
@@ -1484,6 +1669,11 @@ enum WellVariablePositions {
             std::vector<bool>  active_;
             const VFPProperties* vfp_properties_;
             double gravity_;
+
+            // The efficiency factor for each connection. It is specified based on wells and groups,
+            // We calculate the factor for each connection for the computation of contributions to the mass balance equations.
+            // By default, they should all be one.
+            std::vector<double> well_perforation_efficiency_factors_;
             // the depth of the all the cell centers
             // for standard Wells, it the same with the perforation depth
             std::vector<double> cell_depths_;
