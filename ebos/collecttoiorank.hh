@@ -250,7 +250,7 @@ namespace Ewoms
                     // only store interior element for collection
                     if( element.partitionType() == Dune :: InteriorEntity )
                     {
-                        localIndexMap_[elemIdx] = elemIdx;
+                        localIndexMap_.push_back( elemIdx );
                     }
                 }
 
