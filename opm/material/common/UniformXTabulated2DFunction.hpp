@@ -144,7 +144,7 @@ public:
      * sample point.
       */
     template <class Evaluation>
-    Evaluation xToI(const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate = false) const
+    Evaluation xToI(const Evaluation& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(extrapolate || (xMin() <= x && x <= xMax()));
 
@@ -186,7 +186,7 @@ public:
      * sample point.
      */
     template <class Evaluation>
-    Evaluation yToJ(size_t i, const Evaluation& y, OPM_OPTIM_UNUSED bool extrapolate = false) const
+    Evaluation yToJ(size_t i, const Evaluation& y, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(0 <= i && i < numX());
         const auto &colSamplePoints = samples_.at(i);

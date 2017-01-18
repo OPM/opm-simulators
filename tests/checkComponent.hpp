@@ -48,23 +48,23 @@ void checkComponent()
     typedef typename Component::Scalar Scalar;
 
     // make sure the necessary constants are exported
-    OPM_UNUSED bool isTabulated = Component::isTabulated;
+    bool isTabulated OPM_UNUSED = Component::isTabulated;
 
     // test for the gas-phase functions
     Evaluation T=0, p=0;
     while (0) {
-        { OPM_UNUSED bool b = Component::gasIsCompressible(); }
-        { OPM_UNUSED bool b = Component::gasIsIdeal(); }
-        { OPM_UNUSED bool b = Component::liquidIsCompressible(); }
-        { OPM_UNUSED std::string s = Component::name(); }
-        { OPM_UNUSED Scalar M = Component::molarMass(); }
-        { OPM_UNUSED Scalar Tc = Component::criticalTemperature(); }
-        { OPM_UNUSED Scalar pc = Component::criticalPressure(); }
-        { OPM_UNUSED Scalar Tt = Component::tripleTemperature(); }
-        { OPM_UNUSED Scalar pt = Component::triplePressure(); }
-        { OPM_UNUSED Evaluation pv = Component::vaporPressure(T); }
-        { OPM_UNUSED Evaluation rho = Component::gasDensity(T, p); }
-        { OPM_UNUSED Evaluation rho = Component::liquidDensity(T, p); }
+        { bool b OPM_UNUSED = Component::gasIsCompressible(); }
+        { bool b OPM_UNUSED = Component::gasIsIdeal(); }
+        { bool b OPM_UNUSED = Component::liquidIsCompressible(); }
+        { std::string s OPM_UNUSED = Component::name(); }
+        { Scalar M OPM_UNUSED = Component::molarMass(); }
+        { Scalar Tc OPM_UNUSED = Component::criticalTemperature(); }
+        { Scalar pc OPM_UNUSED = Component::criticalPressure(); }
+        { Scalar Tt OPM_UNUSED = Component::tripleTemperature(); }
+        { Scalar pt OPM_UNUSED = Component::triplePressure(); }
+        { Evaluation pv OPM_UNUSED = Component::vaporPressure(T); }
+        { Evaluation rho OPM_UNUSED = Component::gasDensity(T, p); }
+        { Evaluation rho OPM_UNUSED = Component::liquidDensity(T, p); }
     }
     std::cout << "----------------------------------\n";
 }

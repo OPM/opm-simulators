@@ -82,7 +82,7 @@ public:
     static const int liquidPhaseIdx = 0;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(OPM_OPTIM_UNUSED unsigned phaseIdx)
+    static const char* phaseName(unsigned phaseIdx OPM_OPTIM_UNUSED)
     {
         assert(phaseIdx == liquidPhaseIdx);
 

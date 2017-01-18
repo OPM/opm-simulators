@@ -75,7 +75,7 @@ public:
     static const int numPhases = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(OPM_OPTIM_UNUSED unsigned phaseIdx)
+    static const char* phaseName(unsigned phaseIdx OPM_OPTIM_UNUSED)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -125,7 +125,7 @@ public:
     static const int numComponents = 1;
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(OPM_OPTIM_UNUSED unsigned compIdx)
+    static const char* componentName(unsigned compIdx OPM_OPTIM_UNUSED)
     {
         assert(0 <= compIdx && compIdx < numComponents);
 

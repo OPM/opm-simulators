@@ -127,7 +127,7 @@ public:
     /*!
      * \copydoc BaseFluidSystem::isIdealMixture
      */
-    static bool isIdealMixture(OPM_OPTIM_UNUSED unsigned phaseIdx)
+    static bool isIdealMixture(unsigned phaseIdx OPM_OPTIM_UNUSED)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
@@ -137,7 +137,7 @@ public:
     /*!
      * \copydoc BaseFluidSystem::isCompressible
      */
-    static bool isCompressible(OPM_OPTIM_UNUSED unsigned phaseIdx)
+    static bool isCompressible(unsigned phaseIdx OPM_OPTIM_UNUSED)
     {
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 

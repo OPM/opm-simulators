@@ -305,7 +305,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalSecondDerivative(OPM_OPTIM_UNUSED const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate=false) const
+    Evaluation evalSecondDerivative(const Evaluation OPM_OPTIM_UNUSED& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -326,7 +326,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalThirdDerivative(OPM_OPTIM_UNUSED const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate=false) const
+    Evaluation evalThirdDerivative(const Evaluation OPM_OPTIM_UNUSED& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -484,7 +484,7 @@ private:
     }
 
     template <class Evaluation>
-    Evaluation evalDerivative_(OPM_UNUSED const Evaluation& x, size_t segIdx) const
+    Evaluation evalDerivative_(const Evaluation &x OPM_UNUSED, size_t segIdx) const
     {
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
