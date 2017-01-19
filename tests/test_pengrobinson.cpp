@@ -41,7 +41,7 @@
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
 template <class FluidSystem, class FluidState>
-void createSurfaceGasFluidSystem(FluidState &gasFluidState)
+void createSurfaceGasFluidSystem(FluidState& gasFluidState)
 {
     static const int gasPhaseIdx = FluidSystem::gasPhaseIdx;
 
@@ -71,9 +71,9 @@ void createSurfaceGasFluidSystem(FluidState &gasFluidState)
 }
 
 template <class Scalar, class FluidSystem, class FluidState>
-Scalar computeSumxg(FluidState &resultFluidState,
-                    const FluidState &prestineFluidState,
-                    const FluidState &gasFluidState,
+Scalar computeSumxg(FluidState& resultFluidState,
+                    const FluidState& prestineFluidState,
+                    const FluidState& gasFluidState,
                     Scalar additionalGas)
 {
     static const int oilPhaseIdx = FluidSystem::oilPhaseIdx;
@@ -104,7 +104,7 @@ Scalar computeSumxg(FluidState &resultFluidState,
 }
 
 template <class Scalar, class FluidSystem, class FluidState>
-void makeOilSaturated(FluidState &fluidState, const FluidState &gasFluidState)
+void makeOilSaturated(FluidState& fluidState, const FluidState& gasFluidState)
 {
     static const int gasPhaseIdx = FluidSystem::gasPhaseIdx;
 
@@ -139,7 +139,7 @@ void makeOilSaturated(FluidState &fluidState, const FluidState &gasFluidState)
 }
 
 template <class FluidSystem, class FluidState>
-void guessInitial(FluidState &fluidState, unsigned phaseIdx)
+void guessInitial(FluidState& fluidState, unsigned phaseIdx)
 {
     if (phaseIdx == FluidSystem::gasPhaseIdx) {
         fluidState.setMoleFraction(phaseIdx, FluidSystem::H2OIdx, 0.0);
@@ -165,7 +165,7 @@ void guessInitial(FluidState &fluidState, unsigned phaseIdx)
 }
 
 template <class Scalar, class FluidSystem, class FluidState>
-Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const FluidState &reservoirFluidState, bool guessInitial)
+Scalar bringOilToSurface(FluidState& surfaceFluidState, Scalar alpha, const FluidState& reservoirFluidState, bool guessInitial)
 {
     enum {
         numPhases = FluidSystem::numPhases,
@@ -258,7 +258,7 @@ Scalar bringOilToSurface(FluidState &surfaceFluidState, Scalar alpha, const Flui
 
 template <class RawTable>
 void printResult(const RawTable& rawTable,
-                 const std::string &fieldName,
+                 const std::string& fieldName,
                  size_t firstIdx,
                  size_t secondIdx,
                  double hiresThres)

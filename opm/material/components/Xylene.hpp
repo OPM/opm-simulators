@@ -52,7 +52,7 @@ public:
     /*!
      * \brief A human readable name for the xylene
      */
-    static const char *name()
+    static const char* name()
     { return "xylene"; }
 
     /*!

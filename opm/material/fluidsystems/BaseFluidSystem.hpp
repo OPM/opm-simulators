@@ -71,7 +71,7 @@ public:
      *
      * \copydoc Doxygen::phaseIdxParam
      */
-    static char *phaseName(unsigned /*phaseIdx*/)
+    static char* phaseName(unsigned /*phaseIdx*/)
     {
         OPM_THROW(std::runtime_error,
                   "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a phaseName() method!");
@@ -140,7 +140,7 @@ public:
      *
      * \copydoc Doxygen::compIdxParam
      */
-    static const char *componentName(unsigned /*compIdx*/)
+    static const char* componentName(unsigned /*compIdx*/)
     {
         OPM_THROW(std::runtime_error,
                   "Not implemented: The fluid system '" << Dune::className<Implementation>() << "' does not provide a componentName() method!");

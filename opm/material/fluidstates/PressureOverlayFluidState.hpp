@@ -55,7 +55,7 @@ public:
      * so it initially behaves exactly like the underlying fluid
      * state.
      */
-    PressureOverlayFluidState(const FluidState &fs)
+    PressureOverlayFluidState(const FluidState& fs)
         : fs_(&fs)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -63,14 +63,14 @@ public:
     }
 
     // copy constructor
-    PressureOverlayFluidState(const PressureOverlayFluidState &fs)
+    PressureOverlayFluidState(const PressureOverlayFluidState& fs)
         : fs_(fs.fs_)
         , pressure_(fs.pressure_)
     {
     }
 
     // assignment operator
-    PressureOverlayFluidState &operator=(const PressureOverlayFluidState &fs)
+    PressureOverlayFluidState& operator=(const PressureOverlayFluidState& fs)
     {
         fs_ = fs.fs_;
         pressure_ = fs.pressure_;
@@ -229,7 +229,7 @@ public:
     }
 
 protected:
-    const FluidState *fs_;
+    const FluidState* fs_;
     std::array<Scalar, numPhases> pressure_;
 };
 

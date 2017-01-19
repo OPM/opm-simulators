@@ -99,9 +99,9 @@ public:
      * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
-    static void capillaryPressures(ContainerT &values,
-                                   const Params &params,
-                                   const FluidState &fluidState)
+    static void capillaryPressures(ContainerT& values,
+                                   const Params& params,
+                                   const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -120,7 +120,7 @@ public:
      * \f]
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcgn(const Params &params, const FluidState &fluidState)
+    static Evaluation pcgn(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -176,7 +176,7 @@ public:
      * \f]
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fluidState)
+    static Evaluation pcnw(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -225,39 +225,39 @@ public:
      *
      */
     template <class ContainerT, class FluidState>
-    static void saturations(ContainerT &/*values*/,
-                            const Params &/*params*/,
-                            const FluidState &/*fluidState*/)
+    static void saturations(ContainerT& /*values*/,
+                            const Params& /*params*/,
+                            const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: inverse capillary pressures"); }
 
     /*!
      * \brief The saturation of the gas phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sg(const Params &/*params*/, const FluidState &/*fluidState*/)
+    static Evaluation Sg(const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: Sg()"); }
 
     /*!
      * \brief The saturation of the non-wetting (i.e., oil) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &/*params*/, const FluidState &/*fluidState*/)
+    static Evaluation Sn(const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: Sn()"); }
 
     /*!
      * \brief The saturation of the wetting (i.e., water) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &/*params*/, const FluidState &/*fluidState*/)
+    static Evaluation Sw(const Params& /*params*/, const FluidState& /*fluidState*/)
     { OPM_THROW(std::logic_error, "Not implemented: Sw()"); }
 
     /*!
      * \brief The relative permeability of all phases.
      */
     template <class ContainerT, class FluidState>
-    static void relativePermeabilities(ContainerT &values,
-                                       const Params &params,
-                                       const FluidState &fluidState)
+    static void relativePermeabilities(ContainerT& values,
+                                       const Params& params,
+                                       const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -275,7 +275,7 @@ public:
      * MOJDEH  DELSHAD and GARY A. POPE, Transport in Porous Media 4 (1989), 59-83.)
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params, const FluidState &fluidState)
+    static Evaluation krw(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -306,7 +306,7 @@ public:
      * 66 (2003), 261-285
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params, const FluidState &fluidState)
+    static Evaluation krn(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -354,7 +354,7 @@ public:
      * G. A. Pope, Transport in Porous Media 4 (1989), 59-83.)
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krg(const Params &params, const FluidState &fluidState)
+    static Evaluation krg(const Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         typedef MathToolbox<Evaluation> Toolbox;

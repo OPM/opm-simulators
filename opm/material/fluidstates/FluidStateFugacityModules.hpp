@@ -100,7 +100,7 @@ public:
     }
 
 protected:
-    const Implementation &asImp_() const
+    const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
     Scalar fugacityCoefficient_[numPhases][numComponents];
@@ -167,7 +167,7 @@ public:
     }
 
 protected:
-    const Implementation &asImp_() const
+    const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
 
     Scalar fugacityCoefficient_[numPhases];

@@ -50,7 +50,7 @@ public:
     /*!
      * \brief A human readable name for the TCE.
      */
-    static const char *name()
+    static const char* name()
     { return "DNAPL"; }
 
     /*!

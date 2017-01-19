@@ -150,7 +150,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnw(const Params &params, const Evaluation& SwScaled)
+    static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& SwScaled)
     {
         const Evaluation& SwUnscaled = scaledToUnscaledSatPc(params, SwScaled);
         const Evaluation& pcUnscaled = EffLaw::twoPhaseSatPcnw(params.effectiveLawParams(), SwUnscaled);
@@ -158,7 +158,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatPcnwInv(const Params &params, const Evaluation& pcnwScaled)
+    static Evaluation twoPhaseSatPcnwInv(const Params& params, const Evaluation& pcnwScaled)
     {
         Evaluation pcnwUnscaled = scaledToUnscaledPcnw_(params, pcnwScaled);
         Evaluation SwUnscaled = EffLaw::twoPhaseSatPcnwInv(params.effectiveLawParams(), pcnwUnscaled);
@@ -228,7 +228,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrw(const Params &params, const Evaluation& SwScaled)
+    static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& SwScaled)
     {
         const Evaluation& SwUnscaled = scaledToUnscaledSatKrw(params, SwScaled);
         const Evaluation& krwUnscaled = EffLaw::twoPhaseSatKrw(params.effectiveLawParams(), SwUnscaled);
@@ -236,7 +236,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrwInv(const Params &params, const Evaluation& krwScaled)
+    static Evaluation twoPhaseSatKrwInv(const Params& params, const Evaluation& krwScaled)
     {
         Evaluation krwUnscaled = scaledToUnscaledKrw_(params, krwScaled);
         Evaluation SwUnscaled = EffLaw::twoPhaseSatKrwInv(params.effectiveLawParams(), krwUnscaled);
@@ -254,7 +254,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrn(const Params &params, const Evaluation& SwScaled)
+    static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& SwScaled)
     {
         const Evaluation& SwUnscaled = scaledToUnscaledSatKrn(params, SwScaled);
         const Evaluation& krnUnscaled = EffLaw::twoPhaseSatKrn(params.effectiveLawParams(), SwUnscaled);
@@ -262,7 +262,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation twoPhaseSatKrnInv(const Params &params, const Evaluation& krnScaled)
+    static Evaluation twoPhaseSatKrnInv(const Params& params, const Evaluation& krnScaled)
     {
         Evaluation krnUnscaled = scaledToUnscaledKrn_(params, krnScaled);
         Evaluation SwUnscaled = EffLaw::twoPhaseSatKrnInv(params.effectiveLawParams(), krnUnscaled);
@@ -275,7 +275,7 @@ public:
      * The effective saturation is then feed into the "raw" capillary pressure law.
      */
     template <class Evaluation>
-    static Evaluation scaledToUnscaledSatPc(const Params &params, const Evaluation& SwScaled)
+    static Evaluation scaledToUnscaledSatPc(const Params& params, const Evaluation& SwScaled)
     {
         if (!params.config().enableSatScaling())
             return SwScaled;
@@ -288,7 +288,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation unscaledToScaledSatPc(const Params &params, const Evaluation& SwUnscaled)
+    static Evaluation unscaledToScaledSatPc(const Params& params, const Evaluation& SwUnscaled)
     {
         if (!params.config().enableSatScaling())
             return SwUnscaled;
@@ -305,7 +305,7 @@ public:
      *        relperm of the wetting phase.
      */
     template <class Evaluation>
-    static Evaluation scaledToUnscaledSatKrw(const Params &params, const Evaluation& SwScaled)
+    static Evaluation scaledToUnscaledSatKrw(const Params& params, const Evaluation& SwScaled)
     {
         if (!params.config().enableSatScaling())
             return SwScaled;
@@ -323,7 +323,7 @@ public:
     }
 
     template <class Evaluation>
-    static Evaluation unscaledToScaledSatKrw(const Params &params, const Evaluation& SwUnscaled)
+    static Evaluation unscaledToScaledSatKrw(const Params& params, const Evaluation& SwUnscaled)
     {
         if (!params.config().enableSatScaling())
             return SwUnscaled;
@@ -345,7 +345,7 @@ public:
      *        relperm of the non-wetting phase.
      */
     template <class Evaluation>
-    static Evaluation scaledToUnscaledSatKrn(const Params &params, const Evaluation& SwScaled)
+    static Evaluation scaledToUnscaledSatKrn(const Params& params, const Evaluation& SwScaled)
     {
         if (!params.config().enableSatScaling())
             return SwScaled;
@@ -362,7 +362,7 @@ public:
 
 
     template <class Evaluation>
-    static Evaluation unscaledToScaledSatKrn(const Params &params, const Evaluation& SwUnscaled)
+    static Evaluation unscaledToScaledSatKrn(const Params& params, const Evaluation& SwUnscaled)
     {
         if (!params.config().enableSatScaling())
             return SwUnscaled;
@@ -466,7 +466,7 @@ private:
      * \brief Scale the capillary pressure according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation unscaledToScaledPcnw_(const Params &params, const Evaluation& unscaledPcnw)
+    static Evaluation unscaledToScaledPcnw_(const Params& params, const Evaluation& unscaledPcnw)
     {
         if (params.config().enableLeverettScaling()) {
             // HACK: we need to divide the "unscaled capillary pressure" by the
@@ -487,7 +487,7 @@ private:
     }
 
     template <class Evaluation>
-    static Evaluation scaledToUnscaledPcnw_(const Params &params, const Evaluation& scaledPcnw)
+    static Evaluation scaledToUnscaledPcnw_(const Params& params, const Evaluation& scaledPcnw)
     {
         if (params.config().enableLeverettScaling()) {
             // HACK: we need to multiply the "scaled capillary pressure" by the conversion
@@ -508,7 +508,7 @@ private:
      * \brief Scale the wetting phase relative permeability of a phase according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation unscaledToScaledKrw_(const Params &params, const Evaluation& unscaledKrw)
+    static Evaluation unscaledToScaledKrw_(const Params& params, const Evaluation& unscaledKrw)
     {
         if (!params.config().enableKrwScaling())
             return unscaledKrw;
@@ -519,7 +519,7 @@ private:
     }
 
     template <class Evaluation>
-    static Evaluation scaledToUnscaledKrw_(const Params &params, const Evaluation& scaledKrw)
+    static Evaluation scaledToUnscaledKrw_(const Params& params, const Evaluation& scaledKrw)
     {
         if (!params.config().enableKrwScaling())
             return scaledKrw;
@@ -532,7 +532,7 @@ private:
      * \brief Scale the non-wetting phase relative permeability of a phase according to the given parameters
      */
     template <class Evaluation>
-    static Evaluation unscaledToScaledKrn_(const Params &params, const Evaluation& unscaledKrn)
+    static Evaluation unscaledToScaledKrn_(const Params& params, const Evaluation& unscaledKrn)
     {
         if (!params.config().enableKrnScaling())
             return unscaledKrn;
@@ -543,7 +543,7 @@ private:
     }
 
     template <class Evaluation>
-    static Evaluation scaledToUnscaledKrn_(const Params &params, const Evaluation& scaledKrn)
+    static Evaluation scaledToUnscaledKrn_(const Params& params, const Evaluation& scaledKrn)
     {
         if (!params.config().enableKrnScaling())
             return scaledKrn;

@@ -36,22 +36,22 @@ namespace Opm {
 #define OPM_OIL_PVT_MULTIPLEXER_CALL(codeToCall)                        \
     switch (approach_) {                                                \
     case ConstantCompressibilityOilPvt: {                               \
-        auto &pvtImpl = getRealPvt<ConstantCompressibilityOilPvt>();    \
+        auto& pvtImpl = getRealPvt<ConstantCompressibilityOilPvt>();    \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
     case DeadOilPvt: {                                                  \
-        auto &pvtImpl = getRealPvt<DeadOilPvt>();                       \
+        auto& pvtImpl = getRealPvt<DeadOilPvt>();                       \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
     case LiveOilPvt: {                                                  \
-        auto &pvtImpl = getRealPvt<LiveOilPvt>();                       \
+        auto& pvtImpl = getRealPvt<LiveOilPvt>();                       \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \
     case ThermalOilPvt: {                                               \
-        auto &pvtImpl = getRealPvt<ThermalOilPvt>();                    \
+        auto& pvtImpl = getRealPvt<ThermalOilPvt>();                    \
         codeToCall;                                                     \
         break;                                                          \
     }                                                                   \

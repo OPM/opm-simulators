@@ -64,8 +64,8 @@ public:
      */
     template <class ScalarArrayX, class ScalarArrayY>
     Tabulated1DFunction(size_t nSamples,
-                        const ScalarArrayX &x,
-                        const ScalarArrayY &y,
+                        const ScalarArrayX& x,
+                        const ScalarArrayY& y,
                         bool sortInputs = false)
     { this->setXYArrays(nSamples, x, y, sortInputs); }
 
@@ -78,8 +78,8 @@ public:
      *          (must have a size() method)
      */
     template <class ScalarContainer>
-    Tabulated1DFunction(const ScalarContainer &x,
-                        const ScalarContainer &y,
+    Tabulated1DFunction(const ScalarContainer& x,
+                        const ScalarContainer& y,
                         bool sortInputs = false)
     { this->setXYContainers(x, y, sortInputs); }
 
@@ -90,7 +90,7 @@ public:
      *               have a size() method)
      */
     template <class PointContainer>
-    Tabulated1DFunction(const PointContainer &points,
+    Tabulated1DFunction(const PointContainer& points,
                         bool sortInputs = false)
     { this->setContainerOfTuples(points, sortInputs); }
 
@@ -101,8 +101,8 @@ public:
      */
     template <class ScalarArrayX, class ScalarArrayY>
     void setXYArrays(size_t nSamples,
-                     const ScalarArrayX &x,
-                     const ScalarArrayY &y,
+                     const ScalarArrayX& x,
+                     const ScalarArrayY& y,
                      bool sortInputs = false)
     {
         assert(nSamples > 1);
@@ -125,8 +125,8 @@ public:
      * This method takes STL compatible containers as arguments.
      */
     template <class ScalarContainerX, class ScalarContainerY>
-    void setXYContainers(const ScalarContainerX &x,
-                         const ScalarContainerY &y,
+    void setXYContainers(const ScalarContainerX& x,
+                         const ScalarContainerY& y,
                          bool sortInputs = false)
     {
         assert(x.size() == y.size());
@@ -147,7 +147,7 @@ public:
      */
     template <class PointArray>
     void setArrayOfPoints(size_t nSamples,
-                          const PointArray &points,
+                          const PointArray& points,
                           bool sortInputs = false)
     {
         // a linear function with less than two sampling points? what an incredible
@@ -181,7 +181,7 @@ public:
      * and the Y containers must be equal and larger than 1.
      */
     template <class XYContainer>
-    void setContainerOfTuples(const XYContainer &points,
+    void setContainerOfTuples(const XYContainer& points,
                               bool sortInputs = false)
     {
         // a linear function with less than two sampling points? what an incredible
@@ -305,7 +305,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalSecondDerivative(OPM_OPTIM_UNUSED const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate=false) const
+    Evaluation evalSecondDerivative(const Evaluation OPM_OPTIM_UNUSED& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -326,7 +326,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalThirdDerivative(OPM_OPTIM_UNUSED const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate=false) const
+    Evaluation evalThirdDerivative(const Evaluation OPM_OPTIM_UNUSED& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(extrapolate || applies(x));
         return 0.0;
@@ -423,7 +423,7 @@ public:
      "function.csv" using 1:3 w l ti "Derivative"
      ----------- snap -----------
     */
-    void printCSV(Scalar xi0, Scalar xi1, unsigned k, std::ostream &os = std::cout) const
+    void printCSV(Scalar xi0, Scalar xi1, unsigned k, std::ostream& os = std::cout) const
     {
         Scalar x0 = std::min(xi0, xi1);
         Scalar x1 = std::max(xi0, xi1);
@@ -484,7 +484,7 @@ private:
     }
 
     template <class Evaluation>
-    Evaluation evalDerivative_(OPM_UNUSED const Evaluation& x, size_t segIdx) const
+    Evaluation evalDerivative_(const Evaluation& x OPM_UNUSED, size_t segIdx) const
     {
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
@@ -503,7 +503,7 @@ private:
     // 1: function is monotonously increasing in the specified interval
     // 0: function is not monotonic in the specified interval
     // -1: function is monotonously decreasing in the specified interval
-    int updateMonotonicity_(size_t i, int &r) const
+    int updateMonotonicity_(size_t i, int& r) const
     {
         if (yValues_[i] < yValues_[i + 1]) {
             // monotonically increasing?
@@ -530,14 +530,14 @@ private:
      */
     struct ComparatorX_
     {
-        ComparatorX_(const std::vector<Scalar> &x)
+        ComparatorX_(const std::vector<Scalar>& x)
             : x_(x)
         {}
 
         bool operator ()(size_t idxA, size_t idxB) const
         { return x_.at(idxA) < x_.at(idxB); }
 
-        const std::vector<Scalar> &x_;
+        const std::vector<Scalar>& x_;
     };
 
     /*!

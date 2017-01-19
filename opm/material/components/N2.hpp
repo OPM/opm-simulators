@@ -53,7 +53,7 @@ public:
     /*!
      * \brief A human readable name for nitrogen.
      */
-    static const char *name()
+    static const char* name()
     { return "N2"; }
 
     /*!

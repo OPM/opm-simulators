@@ -54,7 +54,7 @@ public:
      *        medium.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation heatConductivity(const Params& OPM_UNUSED params,
+    static Evaluation heatConductivity(const Params& params OPM_UNUSED,
                                        const FluidState& fluidState)
     {
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;

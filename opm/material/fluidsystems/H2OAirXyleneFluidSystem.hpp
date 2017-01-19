@@ -127,7 +127,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(unsigned phaseIdx)
+    static const char* phaseName(unsigned phaseIdx)
     {
         switch (phaseIdx) {
         case waterPhaseIdx: return "water";
@@ -138,7 +138,7 @@ public:
     }
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(unsigned compIdx)
+    static const char* componentName(unsigned compIdx)
     {
         switch (compIdx) {
         case H2OIdx: return H2O::name();
@@ -166,8 +166,8 @@ public:
 
     //! \copydoc BaseFluidSystem::density
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval density(const FluidState &fluidState,
-                           const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval density(const FluidState& fluidState,
+                           const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -209,8 +209,8 @@ public:
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval viscosity(const FluidState& fluidState,
+                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -273,8 +273,8 @@ public:
 
     //! \copydoc BaseFluidSystem::diffusionCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval diffusionCoefficient(const FluidState &fluidState,
-                                        const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval diffusionCoefficient(const FluidState& fluidState,
+                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                         unsigned phaseIdx,
                                         unsigned compIdx)
     {
@@ -327,15 +327,15 @@ public:
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval fugacityCoefficient(const FluidState& fluidState,
+                                       const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        assert(0 <= compIdx  && compIdx < numComponents);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(0 <= compIdx && compIdx < numComponents);
 
         const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
         const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
@@ -372,8 +372,8 @@ public:
 
     //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval enthalpy(const FluidState &fluidState,
-                            const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval enthalpy(const FluidState& fluidState,
+                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;

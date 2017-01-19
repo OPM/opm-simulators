@@ -97,9 +97,9 @@ public:
      * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
-    static void capillaryPressures(ContainerT &values,
-                                   const Params &params,
-                                   const FluidState &state)
+    static void capillaryPressures(ContainerT& values,
+                                   const Params& params,
+                                   const FluidState& state)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -119,9 +119,9 @@ public:
      * \brief The inverse of the capillary pressure
      */
     template <class ContainerT, class FluidState>
-    static void saturations(ContainerT &/*values*/,
-                            const Params &/*params*/,
-                            const FluidState &/*state*/)
+    static void saturations(ContainerT& /*values*/,
+                            const Params& /*params*/,
+                            const FluidState& /*state*/)
     {
         OPM_THROW(std::runtime_error, "Not implemented: LinearMaterial::saturations()");
     }
@@ -130,9 +130,9 @@ public:
      * \brief The relative permeability of all phases.
      */
     template <class ContainerT, class FluidState>
-    static void relativePermeabilities(ContainerT &values,
-                                       const Params &/*params*/,
-                                       const FluidState &state)
+    static void relativePermeabilities(ContainerT& values,
+                                       const Params& /*params*/,
+                                       const FluidState& state)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
         typedef MathToolbox<Evaluation> Toolbox;
@@ -151,7 +151,7 @@ public:
      * \brief The difference between the pressures of the non-wetting and wetting phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params, const FluidState &fs)
+    static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const Evaluation& Sw =
@@ -176,7 +176,7 @@ public:
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
-    twoPhaseSatPcnw(const Params &params, const Evaluation& Sw)
+    twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
         const Evaluation& wPhasePressure =
             Sw*params.pcMaxSat(Traits::wettingPhaseIdx) +
@@ -194,12 +194,12 @@ public:
      *        of the fluid state has been initialized
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sw(const Params &/*params*/, const FluidState &/*fs*/)
+    static Evaluation Sw(const Params& /*params*/, const FluidState& /*fs*/)
     { OPM_THROW(std::runtime_error, "Not implemented: Sw()"); }
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
-    twoPhaseSatSw(const Params &/*params*/, const Evaluation& /*Sw*/)
+    twoPhaseSatSw(const Params& /*params*/, const Evaluation& /*Sw*/)
     { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSw()"); }
 
     /*!
@@ -207,12 +207,12 @@ public:
      *        the rest of the fluid state has been initialized
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation Sn(const Params &/*params*/, const FluidState &/*fs*/)
+    static Evaluation Sn(const Params& /*params*/, const FluidState& /*fs*/)
     { OPM_THROW(std::runtime_error, "Not implemented: Sn()"); }
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
-    twoPhaseSatSn(const Params &/*params*/, const Evaluation& /*Sw*/)
+    twoPhaseSatSn(const Params& /*params*/, const Evaluation& /*Sw*/)
     { OPM_THROW(std::runtime_error, "Not implemented: twoPhaseSatSn()"); }
 
     /*!
@@ -223,14 +223,14 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if<Traits::numPhases == 3, Evaluation>::type
-    Sg(const Params &/*params*/, const FluidState &/*fs*/)
+    Sg(const Params& /*params*/, const FluidState& /*fs*/)
     { OPM_THROW(std::runtime_error, "Not implemented: Sg()"); }
 
     /*!
      * \brief The relative permability of the wetting phase
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &/*params*/, const FluidState &fs)
+    static Evaluation krw(const Params& /*params*/, const FluidState& fs)
     {
         typedef MathToolbox<Evaluation> Toolbox;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -242,7 +242,7 @@ public:
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
-    twoPhaseSatKrw(const Params &/*params*/, const Evaluation& Sw)
+    twoPhaseSatKrw(const Params& /*params*/, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -253,7 +253,7 @@ public:
      * \brief The relative permability of the liquid non-wetting phase
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &/*params*/, const FluidState &fs)
+    static Evaluation krn(const Params& /*params*/, const FluidState& fs)
     {
         typedef MathToolbox<Evaluation> Toolbox;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -265,7 +265,7 @@ public:
 
     template <class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 2, Evaluation>::type
-    twoPhaseSatKrn(const Params &/*params*/, const Evaluation& Sw)
+    twoPhaseSatKrn(const Params& /*params*/, const Evaluation& Sw)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -279,7 +279,7 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if<Traits::numPhases == 3, Evaluation>::type
-    krg(const Params &/*params*/, const FluidState &fs)
+    krg(const Params& /*params*/, const FluidState& fs)
     {
         typedef MathToolbox<Evaluation> Toolbox;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -296,7 +296,7 @@ public:
      */
     template <class FluidState, class Evaluation = Scalar>
     static typename std::enable_if<Traits::numPhases == 3, Evaluation>::type
-    pcgn(const Params &params, const FluidState &fs)
+    pcgn(const Params& params, const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 

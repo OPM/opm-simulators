@@ -743,7 +743,7 @@ private:
 
 
     template <class Container>
-    void readGasOilUnscaledPoints_(Container &dest,
+    void readGasOilUnscaledPoints_(Container& dest,
                                    std::shared_ptr<EclEpsConfig> config,
                                    const Opm::Deck& deck,
                                    const Opm::EclipseState& /* eclState */,
@@ -761,7 +761,7 @@ private:
     }
 
     template <class Container>
-    void readOilWaterUnscaledPoints_(Container &dest,
+    void readOilWaterUnscaledPoints_(Container& dest,
                                      std::shared_ptr<EclEpsConfig> config,
                                      const Opm::Deck& deck,
                                      const Opm::EclipseState& /* eclState */,

@@ -41,7 +41,7 @@ public:
     typedef ComponentT Component;
 
     //! \copydoc GasPhase::name
-    static const char *name()
+    static const char* name()
     { return Component::name(); }
 
     //! \copydoc GasPhase::isLiquid

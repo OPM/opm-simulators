@@ -215,7 +215,7 @@ public:
     /*!
      * \brief A human readable name for the component.
      */
-    static const char *name()
+    static const char* name()
     { return RawComponent::name(); }
 
     /*!
@@ -539,7 +539,7 @@ public:
 private:
     // returns an interpolated value depending on temperature
     template <class Evaluation>
-    static Evaluation interpolateT_(const Scalar *values, const Evaluation& T)
+    static Evaluation interpolateT_(const Scalar* values, const Evaluation& T)
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
@@ -558,7 +558,7 @@ private:
     // returns an interpolated value for liquid depending on
     // temperature and pressure
     template <class Evaluation>
-    static Evaluation interpolateLiquidTP_(const Scalar *values, const Evaluation& T, const Evaluation& p)
+    static Evaluation interpolateLiquidTP_(const Scalar* values, const Evaluation& T, const Evaluation& p)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -593,7 +593,7 @@ private:
     // returns an interpolated value for gas depending on
     // temperature and pressure
     template <class Evaluation>
-    static Evaluation interpolateGasTP_(const Scalar *values, const Evaluation& T, const Evaluation& p)
+    static Evaluation interpolateGasTP_(const Scalar* values, const Evaluation& T, const Evaluation& p)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -630,7 +630,7 @@ private:
     // returns an interpolated value for gas depending on
     // temperature and density
     template <class Evaluation>
-    static Evaluation interpolateGasTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
+    static Evaluation interpolateGasTRho_(const Scalar* values, const Evaluation& T, const Evaluation& rho)
     {
         Evaluation alphaT = tempIdx_(T);
         unsigned iT = std::max(0,
@@ -661,7 +661,7 @@ private:
     // returns an interpolated value for liquid depending on
     // temperature and density
     template <class Evaluation>
-    static Evaluation interpolateLiquidTRho_(const Scalar *values, const Evaluation& T, const Evaluation& rho)
+    static Evaluation interpolateLiquidTRho_(const Scalar* values, const Evaluation& T, const Evaluation& rho)
     {
         Evaluation alphaT = tempIdx_(T);
         unsigned iT = std::max<int>(0, std::min<int>(nTemp_ - 2, static_cast<int>(alphaT)));
@@ -789,35 +789,35 @@ private:
     { return maxGasDensity__[tempIdx]; }
 
     // 1D fields with the temperature as degree of freedom
-    static Scalar *vaporPressure_;
+    static Scalar* vaporPressure_;
 
-    static Scalar *minLiquidDensity__;
-    static Scalar *maxLiquidDensity__;
+    static Scalar* minLiquidDensity__;
+    static Scalar* maxLiquidDensity__;
 
-    static Scalar *minGasDensity__;
-    static Scalar *maxGasDensity__;
+    static Scalar* minGasDensity__;
+    static Scalar* maxGasDensity__;
 
     // 2D fields with the temperature and pressure as degrees of
     // freedom
-    static Scalar *gasEnthalpy_;
-    static Scalar *liquidEnthalpy_;
+    static Scalar* gasEnthalpy_;
+    static Scalar* liquidEnthalpy_;
 
-    static Scalar *gasHeatCapacity_;
-    static Scalar *liquidHeatCapacity_;
+    static Scalar* gasHeatCapacity_;
+    static Scalar* liquidHeatCapacity_;
 
-    static Scalar *gasDensity_;
-    static Scalar *liquidDensity_;
+    static Scalar* gasDensity_;
+    static Scalar* liquidDensity_;
 
-    static Scalar *gasViscosity_;
-    static Scalar *liquidViscosity_;
+    static Scalar* gasViscosity_;
+    static Scalar* liquidViscosity_;
 
-    static Scalar *gasThermalConductivity_;
-    static Scalar *liquidThermalConductivity_;
+    static Scalar* gasThermalConductivity_;
+    static Scalar* liquidThermalConductivity_;
 
     // 2D fields with the temperature and density as degrees of
     // freedom
-    static Scalar *gasPressure_;
-    static Scalar *liquidPressure_;
+    static Scalar* gasPressure_;
+    static Scalar* liquidPressure_;
 
     // temperature, pressure and density ranges
     static Scalar tempMin_;

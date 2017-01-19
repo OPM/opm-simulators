@@ -62,7 +62,7 @@ void testOperators(const Scalar tolerance)
     const Scalar x = 4.567;
     const Scalar y = 8.910;
     const Eval cEval = Eval::createConstant(c);
-    const Eval OPM_UNUSED c2Eval = c;
+    const Eval c2Eval OPM_UNUSED = c;
     const Eval xEval = Eval::createVariable(x, 0);
     const Eval yEval = Eval::createVariable(y, 1);
 
@@ -596,9 +596,13 @@ inline void testAll()
                            1e-6, 1e9);
 
     while (false) {
-        OPM_UNUSED Scalar val1(0.0), val2(1.0), resultVal;
+        Scalar val1 OPM_UNUSED = 0.0;
+        Scalar val2 OPM_UNUSED = 1.0;
+        Scalar resultVal OPM_UNUSED;
         typedef Opm::DenseAd::Evaluation<Scalar, numVars> TmpEval;
-        OPM_UNUSED TmpEval eval1(1.0), eval2(2.0), resultEval;
+        TmpEval eval1 OPM_UNUSED = 1.0;
+        TmpEval eval2 OPM_UNUSED = 2.0;
+        TmpEval resultEval OPM_UNUSED;
 
         // make sure that the convenince functions work (i.e., that everything can be
         // accessed without the MathToolbox<Scalar> detour.)

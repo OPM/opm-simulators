@@ -231,7 +231,7 @@ private:
 };
 
 template <class Scalar, class BaseFluidState>
-void checkFluidState(const BaseFluidState &fs)
+void checkFluidState(const BaseFluidState& fs)
 {
     // fluid states must be copy-able
     BaseFluidState tmpFs(fs);
@@ -261,7 +261,7 @@ void checkFluidState(const BaseFluidState &fs)
         val = fs.molarVolume(/*phaseIdx=*/0);
         val = fs.density(/*phaseIdx=*/0);
         val = fs.saturation(/*phaseIdx=*/0);
-        OPM_UNUSED bool b = fs.phaseIsPresent(/*phaseIdx=*/0);
+        bool b OPM_UNUSED = fs.phaseIsPresent(/*phaseIdx=*/0);
         val = fs.fugacity(/*phaseIdx=*/0, /*compIdx=*/0);
         val = fs.fugacityCoefficient(/*phaseIdx=*/0, /*compIdx=*/0);
         val = fs.enthalpy(/*phaseIdx=*/0);
@@ -372,7 +372,7 @@ void checkFluidSystem()
 
     // test for phaseName(), isLiquid() and isIdealGas()
     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-        std::string OPM_UNUSED name = FluidSystem::phaseName(phaseIdx);
+        std::string name OPM_UNUSED = FluidSystem::phaseName(phaseIdx);
         bool bVal = FluidSystem::isLiquid(phaseIdx);
         bVal = FluidSystem::isIdealGas(phaseIdx);
         bVal = !bVal; // get rid of GCC warning (only occurs with paranoid warning flags)

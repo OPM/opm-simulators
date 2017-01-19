@@ -62,9 +62,9 @@ public:
      * \brief Guess an initial value for the composition of the phase.
      */
     template <class FluidState>
-    static void guessInitial(FluidState &fluidState,
+    static void guessInitial(FluidState& fluidState,
                              unsigned phaseIdx,
-                             const ComponentVector &/*fugVec*/)
+                             const ComponentVector& /*fugVec*/)
     {
         if (FluidSystem::isIdealMixture(phaseIdx))
             return;
@@ -85,10 +85,10 @@ public:
      * The phase's fugacities must already be set.
      */
     template <class FluidState>
-    static void solve(FluidState &fluidState,
+    static void solve(FluidState& fluidState,
                       typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                       unsigned phaseIdx,
-                      const ComponentVector &targetFug)
+                      const ComponentVector& targetFug)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -191,10 +191,10 @@ protected:
     // mixture, i.e. the component's fugacity coefficients are
     // independent of the phase's composition.
     template <class FluidState>
-    static void solveIdealMix_(FluidState &fluidState,
+    static void solveIdealMix_(FluidState& fluidState,
                                typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                                unsigned phaseIdx,
-                               const ComponentVector &fugacities)
+                               const ComponentVector& fugacities)
     {
         for (unsigned i = 0; i < numComponents; ++ i) {
             const Evaluation& phi = FluidSystem::fugacityCoefficient(fluidState,
@@ -217,12 +217,12 @@ protected:
     }
 
     template <class FluidState>
-    static Scalar linearize_(Dune::FieldMatrix<Evaluation, numComponents, numComponents> &J,
-                             Dune::FieldVector<Evaluation, numComponents> &defect,
-                             FluidState &fluidState,
+    static Scalar linearize_(Dune::FieldMatrix<Evaluation, numComponents, numComponents>& J,
+                             Dune::FieldVector<Evaluation, numComponents>& defect,
+                             FluidState& fluidState,
                              typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
                              unsigned phaseIdx,
-                             const ComponentVector &targetFug)
+                             const ComponentVector& targetFug)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -291,12 +291,12 @@ protected:
     }
 
     template <class FluidState>
-    static Scalar update_(FluidState &fluidState,
+    static Scalar update_(FluidState& fluidState,
                           typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
-                          Dune::FieldVector<Evaluation, numComponents> &x,
-                          Dune::FieldVector<Evaluation, numComponents> &/*b*/,
+                          Dune::FieldVector<Evaluation, numComponents>& x,
+                          Dune::FieldVector<Evaluation, numComponents>& /*b*/,
                           unsigned phaseIdx,
-                          const Dune::FieldVector<Evaluation, numComponents> &targetFug)
+                          const Dune::FieldVector<Evaluation, numComponents>& targetFug)
     {
         typedef MathToolbox<Evaluation> Toolbox;
 
@@ -340,9 +340,9 @@ protected:
     }
 
     template <class FluidState>
-    static Scalar calculateDefect_(const FluidState &params,
+    static Scalar calculateDefect_(const FluidState& params,
                                    unsigned phaseIdx,
-                                   const ComponentVector &targetFug)
+                                   const ComponentVector& targetFug)
     {
         Scalar result = 0.0;
         for (unsigned i = 0; i < numComponents; ++i) {

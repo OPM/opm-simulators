@@ -139,8 +139,8 @@ public:
      */
     template <class ScalarArrayX, class ScalarArrayY>
     Spline(size_t nSamples,
-           const ScalarArrayX &x,
-           const ScalarArrayY &y,
+           const ScalarArrayX& x,
+           const ScalarArrayY& y,
            SplineType splineType = Natural,
            bool sortInputs = false)
     { this->setXYArrays(nSamples, x, y, splineType, sortInputs); }
@@ -154,7 +154,7 @@ public:
      */
     template <class PointArray>
     Spline(size_t nSamples,
-           const PointArray &points,
+           const PointArray& points,
            SplineType splineType = Natural,
            bool sortInputs = false)
     { this->setArrayOfPoints(nSamples, points, splineType, sortInputs); }
@@ -167,8 +167,8 @@ public:
      * \param periodic Indicates whether a natural or a periodic spline should be created
      */
     template <class ScalarContainer>
-    Spline(const ScalarContainer &x,
-           const ScalarContainer &y,
+    Spline(const ScalarContainer& x,
+           const ScalarContainer& y,
            SplineType splineType = Natural,
            bool sortInputs = false)
     { this->setXYContainers(x, y, splineType, sortInputs); }
@@ -180,7 +180,7 @@ public:
      * \param periodic Indicates whether a natural or a periodic spline should be created
      */
     template <class PointContainer>
-    Spline(const PointContainer &points,
+    Spline(const PointContainer& points,
            SplineType splineType = Natural,
            bool sortInputs = false)
     { this->setContainerOfPoints(points, splineType, sortInputs); }
@@ -197,8 +197,8 @@ public:
      */
     template <class ScalarArray>
     Spline(size_t nSamples,
-           const ScalarArray &x,
-           const ScalarArray &y,
+           const ScalarArray& x,
+           const ScalarArray& y,
            Scalar m0,
            Scalar m1,
            bool sortInputs = false)
@@ -215,7 +215,7 @@ public:
      */
     template <class PointArray>
     Spline(size_t nSamples,
-           const PointArray &points,
+           const PointArray& points,
            Scalar m0,
            Scalar m1,
            bool sortInputs = false)
@@ -231,8 +231,8 @@ public:
      * \param sortInputs Indicates whether the sample points should be sorted (this is not necessary if they are already sorted in ascending or descending order)
      */
     template <class ScalarContainerX, class ScalarContainerY>
-    Spline(const ScalarContainerX &x,
-           const ScalarContainerY &y,
+    Spline(const ScalarContainerX& x,
+           const ScalarContainerY& y,
            Scalar m0,
            Scalar m1,
            bool sortInputs = false)
@@ -247,7 +247,7 @@ public:
      * \param sortInputs Indicates whether the sample points should be sorted (this is not necessary if they are already sorted in ascending or descending order)
      */
     template <class PointContainer>
-    Spline(const PointContainer &points,
+    Spline(const PointContainer& points,
            Scalar m0,
            Scalar m1,
            bool sortInputs = false)
@@ -321,8 +321,8 @@ public:
      */
     template <class ScalarArrayX, class ScalarArrayY>
     void setXYArrays(size_t nSamples,
-                     const ScalarArrayX &x,
-                     const ScalarArrayY &y,
+                     const ScalarArrayX& x,
+                     const ScalarArrayY& y,
                      Scalar m0, Scalar m1,
                      bool sortInputs = false)
     {
@@ -354,8 +354,8 @@ public:
      * and the Y containers must be equal and larger than 1.
      */
     template <class ScalarContainerX, class ScalarContainerY>
-    void setXYContainers(const ScalarContainerX &x,
-                         const ScalarContainerY &y,
+    void setXYContainers(const ScalarContainerX& x,
+                         const ScalarContainerY& y,
                          Scalar m0, Scalar m1,
                          bool sortInputs = false)
     {
@@ -389,7 +389,7 @@ public:
      */
     template <class PointArray>
     void setArrayOfPoints(size_t nSamples,
-                          const PointArray &points,
+                          const PointArray& points,
                           Scalar m0,
                           Scalar m1,
                           bool sortInputs = false)
@@ -425,7 +425,7 @@ public:
      * in the X and the Y containers must be equal and larger than 1.
      */
     template <class XYContainer>
-    void setContainerOfPoints(const XYContainer &points,
+    void setContainerOfPoints(const XYContainer& points,
                               Scalar m0,
                               Scalar m1,
                               bool sortInputs = false)
@@ -467,7 +467,7 @@ public:
      * and the Y containers must be equal and larger than 1.
      */
     template <class XYContainer>
-    void setContainerOfTuples(const XYContainer &points,
+    void setContainerOfTuples(const XYContainer& points,
                               Scalar m0,
                               Scalar m1,
                               bool sortInputs = false)
@@ -509,8 +509,8 @@ public:
      */
     template <class ScalarArrayX, class ScalarArrayY>
     void setXYArrays(size_t nSamples,
-                     const ScalarArrayX &x,
-                     const ScalarArrayY &y,
+                     const ScalarArrayX& x,
+                     const ScalarArrayY& y,
                      SplineType splineType = Natural,
                      bool sortInputs = false)
     {
@@ -549,8 +549,8 @@ public:
      * and the Y containers must be equal and larger than 1.
      */
     template <class ScalarContainerX, class ScalarContainerY>
-    void setXYContainers(const ScalarContainerX &x,
-                         const ScalarContainerY &y,
+    void setXYContainers(const ScalarContainerX& x,
+                         const ScalarContainerY& y,
                          SplineType splineType = Natural,
                          bool sortInputs = false)
     {
@@ -590,7 +590,7 @@ public:
      */
     template <class PointArray>
     void setArrayOfPoints(size_t nSamples,
-                          const PointArray &points,
+                          const PointArray& points,
                           SplineType splineType = Natural,
                           bool sortInputs = false)
     {
@@ -631,7 +631,7 @@ public:
      * in the X and the Y containers must be equal and larger than 1.
      */
     template <class XYContainer>
-    void setContainerOfPoints(const XYContainer &points,
+    void setContainerOfPoints(const XYContainer& points,
                               SplineType splineType = Natural,
                               bool sortInputs = false)
     {
@@ -677,7 +677,7 @@ public:
      * and the Y containers must be equal and larger than 1.
      */
     template <class XYContainer>
-    void setContainerOfTuples(const XYContainer &points,
+    void setContainerOfTuples(const XYContainer& points,
                               SplineType splineType = Natural,
                               bool sortInputs = false)
     {
@@ -747,7 +747,7 @@ public:
      "spline.csv" using 1:4 w p ti "Monotonic"
      ----------- snap -----------
     */
-    void printCSV(Scalar xi0, Scalar xi1, size_t k, std::ostream &os = std::cout) const
+    void printCSV(Scalar xi0, Scalar xi1, size_t k, std::ostream& os = std::cout) const
     {
         Scalar x0 = std::min(xi0, xi1);
         Scalar x1 = std::max(xi0, xi1);
@@ -950,7 +950,7 @@ public:
      * In the corner case that the spline is constant within the given
      * interval, this method returns 3.
      */
-    int monotonic(Scalar x0, Scalar x1, OPM_OPTIM_UNUSED bool extrapolate = false) const
+    int monotonic(Scalar x0, Scalar x1, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(std::abs(x0 - x1) > 1e-30);
 
@@ -1025,14 +1025,14 @@ protected:
      */
     struct ComparatorX_
     {
-        ComparatorX_(const std::vector<Scalar> &x)
+        ComparatorX_(const std::vector<Scalar>& x)
             : x_(x)
         {}
 
         bool operator ()(unsigned idxA, unsigned idxB) const
         { return x_.at(idxA) < x_.at(idxB); }
 
-        const std::vector<Scalar> &x_;
+        const std::vector<Scalar>& x_;
     };
 
     /*!
@@ -1166,10 +1166,10 @@ protected:
      * although the input must be ordered already!
      */
     template <class DestVector, class SourceVector>
-    void assignSamplingPoints_(DestVector &destX,
-                               DestVector &destY,
-                               const SourceVector &srcX,
-                               const SourceVector &srcY,
+    void assignSamplingPoints_(DestVector& destX,
+                               DestVector& destY,
+                               const SourceVector& srcX,
+                               const SourceVector& srcY,
                                unsigned nSamples)
     {
         assert(nSamples >= 2);
@@ -1186,10 +1186,10 @@ protected:
     }
 
     template <class DestVector, class ListIterator>
-    void assignFromArrayList_(DestVector &destX,
-                              DestVector &destY,
-                              const ListIterator &srcBegin,
-                              const ListIterator &srcEnd,
+    void assignFromArrayList_(DestVector& destX,
+                              DestVector& destY,
+                              const ListIterator& srcBegin,
+                              const ListIterator& srcEnd,
                               unsigned nSamples)
     {
         assert(nSamples >= 2);
@@ -1220,8 +1220,8 @@ protected:
      * if the sampling point.
      */
     template <class DestVector, class ListIterator>
-    void assignFromTupleList_(DestVector &destX,
-                              DestVector &destY,
+    void assignFromTupleList_(DestVector& destX,
+                              DestVector& destY,
                               ListIterator srcBegin,
                               ListIterator srcEnd,
                               unsigned nSamples)
@@ -1254,7 +1254,7 @@ protected:
      *        in the moments of the full spline.
      */
     template <class Vector, class Matrix>
-    void makeFullSystem_(Matrix &M, Vector &d, Scalar m0, Scalar m1)
+    void makeFullSystem_(Matrix& M, Vector& d, Scalar m0, Scalar m1)
     {
         makeNaturalSystem_(M, d);
 
@@ -1278,7 +1278,7 @@ protected:
      *        in the moments of the natural spline.
      */
     template <class Vector, class Matrix>
-    void makeNaturalSystem_(Matrix &M, Vector &d)
+    void makeNaturalSystem_(Matrix& M, Vector& d)
     {
         M = 0.0;
 
@@ -1324,7 +1324,7 @@ protected:
      *        in the moments of the periodic spline.
      */
     template <class Matrix, class Vector>
-    void makePeriodicSystem_(Matrix &M, Vector &d)
+    void makePeriodicSystem_(Matrix& M, Vector& d)
     {
         M = 0.0;
 
@@ -1386,7 +1386,7 @@ protected:
      * http://en.wikipedia.org/wiki/Monotone_cubic_interpolation
      */
     template <class Vector>
-    void makeMonotonicSpline_(Vector &slopes)
+    void makeMonotonicSpline_(Vector& slopes)
     {
         auto n = numSamples();
 
@@ -1435,7 +1435,7 @@ protected:
      * not continuous.
      */
     template <class MomentsVector, class SlopeVector>
-    void setSlopesFromMoments_(SlopeVector &slopes, const MomentsVector &moments)
+    void setSlopesFromMoments_(SlopeVector& slopes, const MomentsVector& moments)
     {
         size_t n = numSamples();
 
@@ -1633,7 +1633,7 @@ protected:
     // 1: spline is monotonously increasing in the specified interval
     // 0: spline is not monotonic (or constant) in the specified interval
     // -1: spline is monotonously decreasing in the specified interval
-    int monotonic_(size_t i, Scalar x0, Scalar x1, int &r) const
+    int monotonic_(size_t i, Scalar x0, Scalar x1, int& r) const
     {
         // coefficients of derivative in monomial basis
         Scalar a = 3*a_(i);
@@ -1701,7 +1701,7 @@ protected:
      *        with a cubic polynomial within a specified interval.
      */
     template <class Evaluation>
-    size_t intersectSegment_(Evaluation *sol,
+    size_t intersectSegment_(Evaluation* sol,
                              size_t segIdx,
                              const Evaluation& a,
                              const Evaluation& b,

@@ -134,9 +134,9 @@ public:
      * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
-    static void capillaryPressures(ContainerT &values,
-                                   const Params &params,
-                                   const FluidState &state)
+    static void capillaryPressures(ContainerT& values,
+                                   const Params& params,
+                                   const FluidState& state)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
         values[gasPhaseIdx] = pcgn<FluidState, Evaluation>(params, state);
@@ -157,8 +157,8 @@ public:
      * \f]
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcgn(const Params &params,
-                           const FluidState &fs)
+    static Evaluation pcgn(const Params& params,
+                           const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -176,8 +176,8 @@ public:
      * \f]
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation pcnw(const Params &params,
-                           const FluidState &fs)
+    static Evaluation pcnw(const Params& params,
+                           const FluidState& fs)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -245,9 +245,9 @@ public:
      * technical description.
      */
     template <class ContainerT, class FluidState>
-    static void relativePermeabilities(ContainerT &values,
-                                       const Params &params,
-                                       const FluidState &fluidState)
+    static void relativePermeabilities(ContainerT& values,
+                                       const Params& params,
+                                       const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
@@ -260,8 +260,8 @@ public:
      * \brief The relative permeability of the gas phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krg(const Params &params,
-                          const FluidState &fluidState)
+    static Evaluation krg(const Params& params,
+                          const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -273,8 +273,8 @@ public:
      * \brief The relative permeability of the wetting phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krw(const Params &params,
-                          const FluidState &fluidState)
+    static Evaluation krw(const Params& params,
+                          const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -286,8 +286,8 @@ public:
      * \brief The relative permeability of the non-wetting (i.e., oil) phase.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation krn(const Params &params,
-                          const FluidState &fluidState)
+    static Evaluation krn(const Params& params,
+                          const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -312,7 +312,7 @@ public:
      * error. (But not calling it will still work.)
      */
     template <class FluidState>
-    static void updateHysteresis(Params &params, const FluidState &fluidState)
+    static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 

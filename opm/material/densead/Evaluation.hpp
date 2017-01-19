@@ -407,27 +407,27 @@ protected:
 };
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-bool operator<(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+bool operator<(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 { return b > a; }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-bool operator>(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+bool operator>(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 { return b < a; }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-bool operator<=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+bool operator<=(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 { return b >= a; }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-bool operator>=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+bool operator>=(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 { return b <= a; }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-bool operator!=(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+bool operator!=(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 { return a != b.value(); }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
     Evaluation<ValueType, numVars> result(b);
 
@@ -437,7 +437,7 @@ Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation
 }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
     Evaluation<ValueType, numVars> result;
 
@@ -449,7 +449,7 @@ Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation
 }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
     Evaluation<ValueType, numVars> result;
 
@@ -464,7 +464,7 @@ Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation
 }
 
 template <class RhsValueType, class ValueType, unsigned numVars>
-Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation<ValueType, numVars> &b)
+Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
     Evaluation<ValueType, numVars> result;
 

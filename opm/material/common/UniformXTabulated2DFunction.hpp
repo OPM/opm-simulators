@@ -144,7 +144,7 @@ public:
      * sample point.
       */
     template <class Evaluation>
-    Evaluation xToI(const Evaluation& x, OPM_OPTIM_UNUSED bool extrapolate = false) const
+    Evaluation xToI(const Evaluation& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(extrapolate || (xMin() <= x && x <= xMax()));
 
@@ -186,10 +186,10 @@ public:
      * sample point.
      */
     template <class Evaluation>
-    Evaluation yToJ(size_t i, const Evaluation& y, OPM_OPTIM_UNUSED bool extrapolate = false) const
+    Evaluation yToJ(size_t i, const Evaluation& y, bool extrapolate OPM_OPTIM_UNUSED = false) const
     {
         assert(0 <= i && i < numX());
-        const auto &colSamplePoints = samples_.at(i);
+        const auto& colSamplePoints = samples_.at(i);
 
         assert(extrapolate || (yMin(i) <= y && y <= yMax(i)));
 
@@ -226,8 +226,8 @@ public:
             return false;
 
         Scalar i = xToI(x, /*extrapolate=*/false);
-        const auto &col1SamplePoints = samples_.at(unsigned(i));
-        const auto &col2SamplePoints = samples_.at(unsigned(i));
+        const auto& col1SamplePoints = samples_.at(unsigned(i));
+        const auto& col2SamplePoints = samples_.at(unsigned(i));
         Scalar alpha = i - static_cast<int>(i);
 
         Scalar minY =
@@ -350,7 +350,7 @@ public:
      * It will produce the data in CSV format on stdout, so that it can be visualized
      * using e.g. gnuplot.
      */
-    void print(std::ostream &os = std::cout) const
+    void print(std::ostream& os = std::cout) const
     {
         Scalar x0 = xMin();
         Scalar x1 = xMax();

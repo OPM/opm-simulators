@@ -86,10 +86,10 @@ void testGenericApi()
         static const int numPhases = MaterialLaw::numPhases;
 
         // check for the presence of the is*Dependent values
-        OPM_UNUSED static const bool isSaturationDependent = MaterialLaw::isSaturationDependent;
-        OPM_UNUSED static const bool isPressureDependent = MaterialLaw::isPressureDependent;
-        OPM_UNUSED static const bool isTemperatureDependent = MaterialLaw::isTemperatureDependent;
-        OPM_UNUSED static const bool isCompositionDependent = MaterialLaw::isCompositionDependent;
+        static const bool OPM_UNUSED isSaturationDependent = MaterialLaw::isSaturationDependent;
+        static const bool OPM_UNUSED isPressureDependent = MaterialLaw::isPressureDependent;
+        static const bool OPM_UNUSED isTemperatureDependent = MaterialLaw::isTemperatureDependent;
+        static const bool OPM_UNUSED isCompositionDependent = MaterialLaw::isCompositionDependent;
 
         // Make sure that the Traits, Params and Scalar typedefs are
         // exported by the material law
@@ -149,8 +149,8 @@ void testTwoPhaseApi()
                       "This material law is expected to implement "
                       "the two-phase API!");
 
-        OPM_UNUSED static const int wettingPhaseIdx = MaterialLaw::wettingPhaseIdx;
-        OPM_UNUSED static const int nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx;
+        static const int OPM_UNUSED wettingPhaseIdx = MaterialLaw::wettingPhaseIdx;
+        static const int OPM_UNUSED nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx;
 
         // make sure the two-phase specific methods are present
         const FluidState fs;
@@ -192,7 +192,7 @@ void testTwoPhaseSatApi()
                       "Capillary pressure laws which implement the twophase saturation only "
                       "API cannot be dependent on the phase compositions!");
 
-        OPM_UNUSED static const int numPhases = MaterialLaw::numPhases;
+        static const int OPM_UNUSED numPhases = MaterialLaw::numPhases;
 
         // make sure the two-phase specific methods are present
         const typename MaterialLaw::Params params;
@@ -226,9 +226,9 @@ void testThreePhaseApi()
                       "The number of fluid phases for a threephase "
                       "capillary pressure law must be 3");
 
-        OPM_UNUSED static const int wettingPhaseIdx = MaterialLaw::wettingPhaseIdx;
-        OPM_UNUSED static const int nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx;
-        OPM_UNUSED static const int gasPhaseIdx = MaterialLaw::gasPhaseIdx;
+        static const int OPM_UNUSED wettingPhaseIdx = MaterialLaw::wettingPhaseIdx;
+        static const int OPM_UNUSED nonWettingPhaseIdx = MaterialLaw::nonWettingPhaseIdx;
+        static const int OPM_UNUSED gasPhaseIdx = MaterialLaw::gasPhaseIdx;
 
         // make sure the two-phase specific methods are present
         const FluidState fs;

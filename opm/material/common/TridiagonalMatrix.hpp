@@ -50,12 +50,12 @@ template <class Scalar>
 class TridiagonalMatrix
 {
     struct TridiagRow_ {
-        TridiagRow_(TridiagonalMatrix &m, size_t rowIdx)
+        TridiagRow_(TridiagonalMatrix& m, size_t rowIdx)
             : matrix_(m)
             , rowIdx_(rowIdx)
         {}
 
-        Scalar &operator[](size_t colIdx)
+        Scalar& operator[](size_t colIdx)
         { return matrix_.at(rowIdx_, colIdx); }
 
         Scalar operator[](size_t colIdx) const
@@ -64,31 +64,31 @@ class TridiagonalMatrix
         /*!
          * \brief Prefix increment operator
          */
-        TridiagRow_ &operator++()
+        TridiagRow_& operator++()
         { ++ rowIdx_; return *this; }
 
         /*!
          * \brief Prefix decrement operator
          */
-        TridiagRow_ &operator--()
+        TridiagRow_& operator--()
         { -- rowIdx_; return *this; }
 
         /*!
          * \brief Comparision operator
          */
-        bool operator==(const TridiagRow_ &other) const
+        bool operator==(const TridiagRow_& other) const
         { return other.rowIdx_ == rowIdx_ && &other.matrix_ == &matrix_; }
 
         /*!
          * \brief Comparision operator
          */
-        bool operator!=(const TridiagRow_ &other) const
+        bool operator!=(const TridiagRow_& other) const
         { return !operator==(other); }
 
         /*!
          * \brief Dereference operator
          */
-        TridiagRow_ &operator*()
+        TridiagRow_& operator*()
         { return *this; }
 
         /*!
@@ -100,7 +100,7 @@ class TridiagonalMatrix
         { return rowIdx_; }
 
     private:
-        TridiagonalMatrix &matrix_;
+        TridiagonalMatrix& matrix_;
         mutable size_t rowIdx_;
     };
 
@@ -125,7 +125,7 @@ public:
     /*!
      * \brief Copy constructor.
      */
-    TridiagonalMatrix(const TridiagonalMatrix &source)
+    TridiagonalMatrix(const TridiagonalMatrix& source)
     { *this = source; }
 
     /*!
@@ -161,7 +161,7 @@ public:
     /*!
      * \brief Access an entry.
      */
-    Scalar &at(size_t rowIdx, size_t colIdx)
+    Scalar& at(size_t rowIdx, size_t colIdx)
     {
         size_t n = size();
 
@@ -201,7 +201,7 @@ public:
     /*!
      * \brief Assignment operator from another tridiagonal matrix.
      */
-    TridiagonalMatrix &operator=(const TridiagonalMatrix &source)
+    TridiagonalMatrix& operator=(const TridiagonalMatrix& source)
     {
         for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx)
             diag_[diagIdx] = source.diag_[diagIdx];
@@ -212,7 +212,7 @@ public:
     /*!
      * \brief Assignment operator from a Scalar.
      */
-    TridiagonalMatrix &operator=(Scalar value)
+    TridiagonalMatrix& operator=(Scalar value)
     {
         for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx)
             diag_[diagIdx].assign(size(), value);
@@ -253,7 +253,7 @@ public:
     /*!
      * \brief Multiplication with a Scalar
      */
-    TridiagonalMatrix &operator*=(Scalar alpha)
+    TridiagonalMatrix& operator*=(Scalar alpha)
     {
         unsigned n = size();
         for (unsigned diagIdx = 0; diagIdx < 3; ++ diagIdx) {
@@ -268,7 +268,7 @@ public:
     /*!
      * \brief Division by a Scalar
      */
-    TridiagonalMatrix &operator/=(Scalar alpha)
+    TridiagonalMatrix& operator/=(Scalar alpha)
     {
         alpha = 1.0/alpha;
         unsigned n = size();
@@ -284,13 +284,13 @@ public:
     /*!
      * \brief Subtraction operator
      */
-    TridiagonalMatrix &operator-=(const TridiagonalMatrix &other)
+    TridiagonalMatrix& operator-=(const TridiagonalMatrix& other)
     { return axpy(-1.0, other); }
 
     /*!
      * \brief Addition operator
      */
-    TridiagonalMatrix &operator+=(const TridiagonalMatrix &other)
+    TridiagonalMatrix& operator+=(const TridiagonalMatrix& other)
     { return axpy(1.0, other); }
 
 
@@ -307,7 +307,7 @@ public:
      * A += alpha*C
      * \endcode
      */
-    TridiagonalMatrix &axpy(Scalar alpha, const TridiagonalMatrix &other)
+    TridiagonalMatrix& axpy(Scalar alpha, const TridiagonalMatrix& other)
     {
         assert(size() == other.size());
 
@@ -332,7 +332,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void mv(const Vector &source, Vector &dest) const
+    void mv(const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -372,7 +372,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void umv(const Vector &source, Vector &dest) const
+    void umv(const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -412,7 +412,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void mmv(const Vector &source, Vector &dest) const
+    void mmv(const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -452,7 +452,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void usmv(Scalar alpha, const Vector &source, Vector &dest) const
+    void usmv(Scalar alpha, const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -495,7 +495,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void mtv(const Vector &source, Vector &dest) const
+    void mtv(const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -535,7 +535,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void umtv(const Vector &source, Vector &dest) const
+    void umtv(const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -575,7 +575,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void mmtv (const Vector &source, Vector &dest) const
+    void mmtv (const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -615,7 +615,7 @@ public:
      * \endcode
      */
     template<class Vector>
-    void usmtv(Scalar alpha, const Vector &source, Vector &dest) const
+    void usmtv(Scalar alpha, const Vector& source, Vector& dest) const
     {
         assert(source.size() == size());
         assert(dest.size() == size());
@@ -711,7 +711,7 @@ public:
      * tridiagonal matrix.
      */
     template <class XVector, class BVector>
-    void solve(XVector &x, const BVector &b) const
+    void solve(XVector& x, const BVector& b) const
     {
         if (size() > 2 && std::abs(diag_[2][0]) < 1e-30)
             solveWithUpperRight_(x, b);
@@ -722,7 +722,7 @@ public:
     /*!
      * \brief Print the matrix to a given output stream.
      */
-    void print(std::ostream &os = std::cout) const
+    void print(std::ostream& os = std::cout) const
     {
         size_t n = size();
 
@@ -761,7 +761,7 @@ public:
 
 private:
     template <class XVector, class BVector>
-    void solveWithUpperRight_(XVector &x, const BVector &b) const
+    void solveWithUpperRight_(XVector& x, const BVector& b) const
     {
         size_t n = size();
 
@@ -802,7 +802,7 @@ private:
     }
 
     template <class XVector, class BVector>
-    void solveWithoutUpperRight_(XVector &x, const BVector &b) const
+    void solveWithoutUpperRight_(XVector& x, const BVector& b) const
     {
         size_t n = size();
 
@@ -846,7 +846,7 @@ private:
 } // namespace Opm
 
 template <class Scalar>
-std::ostream &operator<<(std::ostream &os, const Opm::TridiagonalMatrix<Scalar> &mat)
+std::ostream& operator<<(std::ostream& os, const Opm::TridiagonalMatrix<Scalar>& mat)
 {
     mat.print(os);
     return os;

@@ -49,7 +49,7 @@ public:
     /*!
      * \brief A human readable name for the mesitylene
      */
-    static const char *name()
+    static const char* name()
     { return "mesitylene"; }
 
     /*!

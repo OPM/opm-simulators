@@ -83,9 +83,9 @@ public:
     static const int gasPhaseIdx = 1;
 
     //! \copydoc BaseFluidSystem::phaseName
-    static const char *phaseName(unsigned phaseIdx)
+    static const char* phaseName(unsigned phaseIdx)
     {
-        static const char *name[] = {
+        static const char* name[] = {
             "liquid",
             "gas"
         };
@@ -154,9 +154,9 @@ public:
     typedef SimpleN2 N2;
 
     //! \copydoc BaseFluidSystem::componentName
-    static const char *componentName(unsigned compIdx)
+    static const char* componentName(unsigned compIdx)
     {
-        static const char *name[] = {
+        static const char* name[] = {
             H2O::name(),
             N2::name()
         };
@@ -266,11 +266,11 @@ public:
      * University of Stuttgart, 2008
      */
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval density(const FluidState &fluidState,
-                           const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval density(const FluidState& fluidState,
+                           const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         typedef Opm::MathToolbox<LhsEval> LhsToolbox;
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -323,11 +323,11 @@ public:
 
     //! \copydoc BaseFluidSystem::viscosity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval viscosity(const FluidState &fluidState,
-                             const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval viscosity(const FluidState& fluidState,
+                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         typedef Opm::MathToolbox<LhsEval> LhsToolbox;
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -384,13 +384,13 @@ public:
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval fugacityCoefficient(const FluidState &fluidState,
-                                       const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval fugacityCoefficient(const FluidState& fluidState,
+                                       const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
-        assert(0 <= compIdx  && compIdx < numComponents);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
+        assert(0 <= compIdx && compIdx < numComponents);
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -413,8 +413,8 @@ public:
 
     //! \copydoc BaseFluidSystem::diffusionCoefficient
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval diffusionCoefficient(const FluidState &fluidState,
-                                        const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval diffusionCoefficient(const FluidState& fluidState,
+                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                         unsigned phaseIdx,
                                         unsigned /*compIdx*/)
 
@@ -435,8 +435,8 @@ public:
 
     //! \copydoc BaseFluidSystem::enthalpy
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval enthalpy(const FluidState &fluidState,
-                            const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval enthalpy(const FluidState& fluidState,
+                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -469,11 +469,11 @@ public:
 
     //! \copydoc BaseFluidSystem::thermalConductivity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval thermalConductivity(const FluidState &fluidState,
-                                       const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval thermalConductivity(const FluidState& fluidState,
+                                       const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx)
     {
-        assert(0 <= phaseIdx  && phaseIdx < numPhases);
+        assert(0 <= phaseIdx && phaseIdx < numPhases);
 
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
 
@@ -504,8 +504,8 @@ public:
 
     //! \copydoc BaseFluidSystem::heatCapacity
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
-    static LhsEval heatCapacity(const FluidState &fluidState,
-                                const ParameterCache<ParamCacheEval> &/*paramCache*/,
+    static LhsEval heatCapacity(const FluidState& fluidState,
+                                const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                 unsigned phaseIdx)
     {
         typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;

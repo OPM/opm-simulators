@@ -123,9 +123,9 @@ public:
      * \param state The fluid state
      */
     template <class ContainerT, class FluidState>
-    static void capillaryPressures(ContainerT &values,
-                                   const Params &params,
-                                   const FluidState &fluidState)
+    static void capillaryPressures(ContainerT& values,
+                                   const Params& params,
+                                   const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -252,9 +252,9 @@ public:
      * technical description.
      */
     template <class ContainerT, class FluidState>
-    static void relativePermeabilities(ContainerT &values,
-                                       const Params &params,
-                                       const FluidState &fluidState)
+    static void relativePermeabilities(ContainerT& values,
+                                       const Params& params,
+                                       const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
@@ -328,7 +328,7 @@ public:
      * error. (But not calling it will still work.)
      */
     template <class FluidState>
-    static void updateHysteresis(Params &params, const FluidState &fluidState)
+    static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
         typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 

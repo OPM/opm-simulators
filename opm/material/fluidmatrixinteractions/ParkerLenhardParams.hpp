@@ -61,7 +61,7 @@ public:
 #endif
     }
 
-    ParkerLenhardParams(const ParkerLenhardParams &p)
+    ParkerLenhardParams(const ParkerLenhardParams& p)
     {
         currentSnr_ = 0;
         SwrPc_ = p.SwrPc_;
@@ -91,28 +91,28 @@ public:
      * \brief Returns the parameters of the main imbibition curve (which uses
      *        the van Genuchten capillary pressure model).
      */
-    const VanGenuchtenParams &micParams() const
+    const VanGenuchtenParams& micParams() const
     { assertFinalized_(); return *micParams_; }
 
     /*!
      * \brief Sets the parameters of the main imbibition curve (which uses
      *        the van Genuchten capillary pressure model).
      */
-    void setMicParams(const VanGenuchtenParams *val)
+    void setMicParams(const VanGenuchtenParams* val)
     { micParams_ = val; }
 
     /*!
      * \brief Returns the parameters of the main drainage curve (which uses
      *        the van Genuchten capillary pressure model).
      */
-    const VanGenuchtenParams &mdcParams() const
+    const VanGenuchtenParams& mdcParams() const
     { assertFinalized_(); return *mdcParams_; }
 
     /*!
      * \brief Sets the parameters of the main drainage curve (which uses
      *        the van Genuchten capillary pressure model).
      */
-    void setMdcParams(const VanGenuchtenParams *val)
+    void setMdcParams(const VanGenuchtenParams* val)
     { mdcParams_ = val; }
 
     /*!
@@ -167,37 +167,37 @@ public:
     /*!
      * \brief Returns the main drainage curve
      */
-    ScanningCurve *mdc() const
+    ScanningCurve* mdc() const
     { assertFinalized_(); return mdc_; }
 
     /*!
      * \brief Set the main drainage curve.
      */
-    void setMdc(ScanningCurve *val)
+    void setMdc(ScanningCurve* val)
     { mdc_ = val; }
 
     /*!
      * \brief Returns the primary imbibition scanning curve
      */
-    ScanningCurve *pisc() const
+    ScanningCurve* pisc() const
     { assertFinalized_(); return pisc_; }
 
     /*!
      * \brief Set the primary imbibition scanning curve.
      */
-    void setPisc(ScanningCurve *val)
+    void setPisc(ScanningCurve* val)
     { pisc_ = val; }
 
     /*!
      * \brief Returns the current scanning curve
      */
-    ScanningCurve *csc() const
+    ScanningCurve* csc() const
     { assertFinalized_(); return csc_; }
 
     /*!
      * \brief Set the current scanning curve.
      */
-    void setCsc(ScanningCurve *val)
+    void setCsc(ScanningCurve* val)
     { csc_ = val; }
 
 private:
@@ -211,15 +211,15 @@ private:
     { }
 #endif
 
-    const VanGenuchtenParams *micParams_;
-    const VanGenuchtenParams *mdcParams_;
+    const VanGenuchtenParams* micParams_;
+    const VanGenuchtenParams* mdcParams_;
     Scalar SwrPc_;
     Scalar SwrKr_;
     Scalar Snr_;
     Scalar currentSnr_;
-    mutable ScanningCurve *mdc_;
-    mutable ScanningCurve *pisc_;
-    mutable ScanningCurve *csc_;
+    mutable ScanningCurve* mdc_;
+    mutable ScanningCurve* pisc_;
+    mutable ScanningCurve* csc_;
 };
 } // namespace Opm
 

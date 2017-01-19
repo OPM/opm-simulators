@@ -55,24 +55,24 @@ public:
      * like the underlying fluid state, provided that the underlying
      * fluid state is in thermal equilibrium.
      */
-    TemperatureOverlayFluidState(const FluidState &fs)
+    TemperatureOverlayFluidState(const FluidState& fs)
         : fs_(&fs)
     {
         temperature_ = fs.temperature(/*phaseIdx=*/0);
     }
 
-    TemperatureOverlayFluidState(Scalar T, const FluidState &fs)
+    TemperatureOverlayFluidState(Scalar T, const FluidState& fs)
         : temperature_(T), fs_(&fs)
     { }
 
     // copy constructor
-    TemperatureOverlayFluidState(const TemperatureOverlayFluidState &fs)
+    TemperatureOverlayFluidState(const TemperatureOverlayFluidState& fs)
         : fs_(fs.fs_)
         , temperature_(fs.temperature_)
     {}
 
     // assignment operator
-    TemperatureOverlayFluidState &operator=(const TemperatureOverlayFluidState &fs)
+    TemperatureOverlayFluidState& operator=(const TemperatureOverlayFluidState& fs)
     {
         fs_ = fs.fs_;
         temperature_ = fs.temperature_;
@@ -230,7 +230,7 @@ public:
     }
 
 protected:
-    const FluidState *fs_;
+    const FluidState* fs_;
     Scalar temperature_;
 };
 
