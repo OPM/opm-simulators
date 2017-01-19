@@ -184,21 +184,26 @@ public:
                 unsigned insideFaceIdx  = intersection.indexInInside();
                 unsigned outsideFaceIdx = intersection.indexInOutside();
 
+                int faceIdx = intersection.id();
+                DimVector faceCenterInside = gridManager_.grid().faceCenterEcl(insideElemIdx,insideFaceIdx);
+                DimVector faceCenterOutside = gridManager_.grid().faceCenterEcl(outsideElemIdx,outsideFaceIdx);
+                DimVector faceAreaNormal = gridManager_.grid().faceAreaNormalEcl(faceIdx);
+
                 Scalar halfTrans1;
                 Scalar halfTrans2;
 
                 computeHalfTrans_(halfTrans1,
-                                  intersection,
+                                  faceAreaNormal,
                                   insideFaceIdx,
-                                  distanceVector_(intersection,
+                                  distanceVector_(faceCenterInside,
                                                   intersection.indexInInside(),
                                                   insideElemIdx,
                                                   axisCentroids),
                                   permeability_[insideElemIdx]);
                 computeHalfTrans_(halfTrans2,
-                                  intersection,
+                                  faceAreaNormal,
                                   outsideFaceIdx,
-                                  distanceVector_(intersection,
+                                  distanceVector_(faceCenterOutside,
                                                   intersection.indexInOutside(),
                                                   outsideElemIdx,
                                                   axisCentroids),
@@ -308,36 +313,31 @@ private:
     }
 
     void computeHalfTrans_(Scalar& halfTrans,
-                           const Intersection& is,
+                           const DimVector& areaNormal,
                            unsigned faceIdx, // in the reference element that contains the intersection
                            const DimVector& distance,
                            const DimMatrix& perm) const
     {
-        Scalar isArea = is.geometry().volume();
-        DimVector n = is.centerUnitOuterNormal();
-        n *= isArea;
-
         unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
         halfTrans = perm[dimIdx][dimIdx];
-        //halfTrans *= isArea;
 
         Scalar val = 0;
-        for (unsigned i = 0; i < n.size(); ++i)
-            val += n[i]*distance[i];
+        for (unsigned i = 0; i < areaNormal.size(); ++i)
+            val += areaNormal[i]*distance[i];
 
         halfTrans *= std::abs<Scalar>(val);
         halfTrans /= distance.two_norm2();
     }
 
-    DimVector distanceVector_(const Intersection& is,
+    DimVector distanceVector_(const DimVector& center,
                               unsigned faceIdx, // in the reference element that contains the intersection
                               unsigned elemIdx,
                               const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const
     {
         unsigned dimIdx = faceIdx/2;
         assert(dimIdx < dimWorld);
-        DimVector x = is.geometry().center();
+        DimVector x = center;
         x -= axisCentroids[dimIdx][elemIdx];
 
         return x;
