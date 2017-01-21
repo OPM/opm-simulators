@@ -29,6 +29,7 @@
 #define EWOMS_GROUND_WATER_PROBLEM_HH
 
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
+#include <ewoms/linear/parallelistlbackend.hh>
 
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
@@ -99,8 +100,13 @@ SET_SCALAR_PROP(GroundWaterBaseProblem, InitialTimeStepSize, 1);
 
 // The default DGF file to load
 SET_STRING_PROP(GroundWaterBaseProblem, GridFile, "./data/groundwater_2d.dgf");
-} // namespace Properties
-} // namespace Ewoms
+
+// Use the conjugated gradient linear solver with the default preconditioner (i.e.,
+// ILU-0) from dune-istl
+SET_TAG_PROP(GroundWaterBaseProblem, LinearSolverSplice, ParallelIstlLinearSolver);
+SET_TYPE_PROP(GroundWaterBaseProblem, LinearSolverWrapper,
+              Ewoms::Linear::SolverWrapperConjugatedGradients<TypeTag>);
+}} // namespace Properties, Ewoms
 
 namespace Ewoms {
 /*!
