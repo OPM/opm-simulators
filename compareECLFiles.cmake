@@ -76,8 +76,8 @@ endmacro (add_test_compareECLInitFiles)
 #   - casename: basename (no extension)
 #
 macro (add_test_parallelECLFiles casename filename simulator)
-  set(abs_tol 0.02)
-  set(rel_tol 1e-5)
+  set(abs_tol 0.20)
+  set(rel_tol 4e-4)
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${simulator}+${casename})
 
   # Add test that runs flow_mpi and outputs the results to file
