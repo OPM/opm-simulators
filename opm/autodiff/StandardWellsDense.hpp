@@ -1120,12 +1120,14 @@ enum WellVariablePositions {
                             if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
                                 if (wells().type[w]==PRODUCER) {
 
+                                    const double* distr = well_controls_iget_distr(wc, current);
+
                                     double F_target = 0.0;
                                     for (int p = 0; p < np; ++p) {
-                                        F_target += wells().comp_frac[np*w + p] * F[p];
+                                        F_target += distr[p] * F[p];
                                     }
                                     for (int p = 0; p < np; ++p) {
-                                        well_state.wellRates()[np*w + p] = F[p] * target_rate /F_target;
+                                        well_state.wellRates()[np*w + p] = F[p] * target_rate / F_target;
                                     }
                                 } else {
 
@@ -1771,23 +1773,56 @@ enum WellVariablePositions {
                 if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP ) {
                     return wellVariables_[nw*XvarWell + wellIdx] * wellVolumeFractionScaled(wellIdx,phaseIdx);
                 }
+
                 if (well_controls_get_current_type(wc) == SURFACE_RATE) {
-                    const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
+                    // checking how many phases are included in the rate control
+                    // to decide wheter it is a single phase rate control or not
+                    const double* distr = well_controls_get_current_distr(wc);
+                    int num_phases_under_rate_control = 0;
+                    for (int phase = 0; phase < np; ++phase) {
+                        if (distr[phase] > 0.0) {
+                            num_phases_under_rate_control += 1;
+                        }
+                    }
 
-                    if (comp_frac == 1.0) {
-                        qs.setValue(target_rate);
-                        return qs;
-                    }
-                    int currentControlIdx = 0;
-                    for (int i = 0; i < np; ++i) {
-                        currentControlIdx += wells().comp_frac[np*wellIdx + i] * i;
+                    // there should be at least one phase involved
+                    assert(num_phases_under_rate_control > 0);
+
+                    // when it is a single phase rate limit
+                    if (num_phases_under_rate_control == 1) {
+                        if (distr[phaseIdx] == 1.0) {
+                            qs.setValue(target_rate);
+                            return qs;
+                        }
+
+                        const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
+
+                        int currentControlIdx = 0;
+                        for (int i = 0; i < np; ++i) {
+                            currentControlIdx += wells().comp_frac[np*wellIdx + i] * i;
+                        }
+
+                        const double eps = 1e-6;
+                        if (wellVolumeFractionScaled(wellIdx,currentControlIdx) < eps) {
+                            return qs;
+                        }
+                        return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx,currentControlIdx));
                     }
 
-                    const double eps = 1e-6;
-                    if (wellVolumeFractionScaled(wellIdx,currentControlIdx) < eps) {
-                        return qs;
+                    // when it is a combined two phase rate limit, such like LRAT
+                    // we neec to calculate the rate for the certain phase
+                    if (num_phases_under_rate_control == 2) {
+                        EvalWell combined_volume_fraction = 0.;
+                        for (int p = 0; p < np; ++p) {
+                            if (distr[p] == 1.0) {
+                                combined_volume_fraction += wellVolumeFractionScaled(wellIdx, p);
+                            }
+                        }
+                        return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / combined_volume_fraction);
                     }
-                    return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx,currentControlIdx));
+
+                    // suppose three phase combined limit is the same with RESV
+                    // not tested yet.
                 }
                 // ReservoirRate
                 return target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx);
