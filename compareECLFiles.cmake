@@ -8,10 +8,6 @@
 # command line parameters. See the opm_add_test() documentation for
 # details on the parameters passed to the macro.
 
-# Set absolute tolerance to be used for testing
-set(abs_tol 2e-2)
-set(rel_tol 1e-5)
-
 # Define some paths
 set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 
@@ -24,7 +20,7 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 #
 # Details:
 #   - This test class compares output from a simulation to reference files.
-macro (add_test_compareECLFiles casename filename simulator prefix)
+macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol prefix)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/${simulator}+${casename})
   opm_add_test(${prefix}_${simulator}+${filename} NO_COMPILE
@@ -48,7 +44,7 @@ endmacro (add_test_compareECLFiles)
 # Details:
 #   - This test class compares the output from a restarted simulation
 #     to that of a non-restarted simulation.
-macro (add_test_compare_restarted_simulation casename filename simulator)
+macro (add_test_compare_restarted_simulation casename filename simulator abs_tol rel_tol)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${simulator}+${casename})
   opm_add_test(compareRestartedSim_${simulator}+${filename} NO_COMPILE
@@ -72,9 +68,7 @@ endmacro (add_test_compare_restarted_simulation)
 # Details:
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
-macro (add_test_compare_parallel_simulation casename filename simulator)
-  set(abs_tol 0.20)
-  set(rel_tol 4e-4)
+macro (add_test_compare_parallel_simulation casename filename simulator abs_tol rel_tol)
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${simulator}+${casename})
 
   # Add test that runs flow_mpi and outputs the results to file
@@ -96,27 +90,35 @@ endif()
 # Regression tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 
-add_test_compareECLFiles(spe1 SPE1CASE2 flow compareECLFiles)
-add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential compareECLFiles)
-add_test_compareECLFiles(spe3 SPE3CASE1 flow compareECLFiles)
-add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow compareECLFiles)
+# Set absolute tolerance to be used passed to the macros in the following tests
+set(abs_tol 2e-2)
+set(rel_tol 1e-5)
+
+add_test_compareECLFiles(spe1 SPE1CASE2 flow ${abs_tol} ${rel_tol} compareECLFiles)
+add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles)
+add_test_compareECLFiles(spe3 SPE3CASE1 flow ${abs_tol} ${rel_tol} compareECLFiles)
+add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol} compareECLFiles)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
-add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM flow)
-add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow)
+add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM flow ${abs_tol} ${rel_tol})
+add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol})
 
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
-add_test_compareECLFiles(norne NORNE_ATW2013 flow compareECLInitFiles)
+add_test_compareECLFiles(norne NORNE_ATW2013 flow ${abs_tol} ${rel_tol} compareECLInitFiles)
 
 # Parallel tests
 if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
-  add_test_compare_parallel_simulation(spe1 SPE1CASE2 flow_mpi)
-  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi)
-  add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT flow_mpi)
+  # Different tolerances for these tests
+  set(abs_tol 0.20)
+  set(rel_tol 4e-4)
+
+  add_test_compare_parallel_simulation(spe1 SPE1CASE2 flow_mpi ${abs_tol} ${rel_tol})
+  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi ${abs_tol} ${rel_tol})
+  add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT flow_mpi ${abs_tol} ${rel_tol})
 endif()
