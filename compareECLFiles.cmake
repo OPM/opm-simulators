@@ -39,7 +39,7 @@ macro (add_test_compareECLFiles casename filename simulator)
 endmacro (add_test_compareECLFiles)
 
 ###########################################################################
-# TEST: compareECLRestartFiles
+# TEST: add_test_compare_restarted_simulation
 ###########################################################################
 
 # Input:
@@ -48,10 +48,10 @@ endmacro (add_test_compareECLFiles)
 # Details:
 #   - This test class compares the output from a restarted simulation
 #     to that of a non-restarted simulation.
-macro (add_test_compareECLRestartFiles casename filename simulator)
+macro (add_test_compare_restarted_simulation casename filename simulator)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${simulator}+${casename})
-  opm_add_test(compareECLRestartFiles_${simulator}+${filename} NO_COMPILE
+  opm_add_test(compareRestartedSim_${simulator}+${filename} NO_COMPILE
                EXE_NAME ${simulator}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
@@ -60,7 +60,7 @@ macro (add_test_compareECLRestartFiles casename filename simulator)
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
                TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename})
-endmacro (add_test_compareECLRestartFiles)
+endmacro (add_test_compare_restarted_simulation)
 
 ###########################################################################
 # TEST: compareECLInitFiles
@@ -86,7 +86,7 @@ macro (add_test_compareECLInitFiles casename filename simulator)
 endmacro (add_test_compareECLInitFiles)
 
 ###########################################################################
-# TEST: parallelECLFiles
+# TEST: add_test_compare_parallel_simulation
 ###########################################################################
 
 # Input:
@@ -95,13 +95,13 @@ endmacro (add_test_compareECLInitFiles)
 # Details:
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
-macro (add_test_parallelECLFiles casename filename simulator)
+macro (add_test_compare_parallel_simulation casename filename simulator)
   set(abs_tol 0.20)
   set(rel_tol 4e-4)
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${simulator}+${casename})
 
   # Add test that runs flow_mpi and outputs the results to file
-  opm_add_test(parallelECLFiles_${simulator}+${filename} NO_COMPILE
+  opm_add_test(compareParallelSim_${simulator}+${filename} NO_COMPILE
                EXE_NAME ${simulator}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
@@ -110,7 +110,7 @@ macro (add_test_parallelECLFiles casename filename simulator)
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
                TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename})
-endmacro (add_test_parallelECLFiles)
+endmacro (add_test_compare_parallel_simulation)
 
 if(NOT TARGET test-suite)
   add_custom_target(test-suite)
@@ -127,8 +127,8 @@ add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow)
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
-add_test_compareECLRestartFiles(spe1 SPE1CASE2_ACTNUM flow)
-add_test_compareECLRestartFiles(spe9 SPE9_CP_SHORT flow)
+add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM flow)
+add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow)
 
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
@@ -139,7 +139,7 @@ add_test_compareECLInitFiles(norne NORNE_ATW2013 flow)
 if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
-  add_test_parallelECLFiles(spe1 SPE1CASE2 flow_mpi)
-  add_test_parallelECLFiles(spe3 SPE3CASE1 flow_mpi)
-  add_test_parallelECLFiles(spe9 SPE9_CP_SHORT flow_mpi)
+  add_test_compare_parallel_simulation(spe1 SPE1CASE2 flow_mpi)
+  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi)
+  add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT flow_mpi)
 endif()
