@@ -1,3 +1,13 @@
+# This script manages the addition of tests.
+# The tests are orchestrated by a shell script,
+# configured using opm_set_test_driver()
+# and then the appropriate helper macro is called to
+# register the ctest entry through the opm_add_test macro.
+# Information such as the binary to call and test tolerances
+# are passed from the build system to the driver script through
+# command line parameters. See the opm_add_test() documentation for
+# details on the parameters passed to the macro.
+
 # Set absolute tolerance to be used for testing
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
@@ -12,6 +22,8 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 # Input:
 #   - casename: basename (no extension)
 #
+# Details:
+#   - This test class compares output from a simulation to reference files.
 macro (add_test_compareECLFiles casename filename simulator)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/${simulator}+${casename})
@@ -33,6 +45,9 @@ endmacro (add_test_compareECLFiles)
 # Input:
 #   - casename: basename (no extension)
 #
+# Details:
+#   - This test class compares the output from a restarted simulation
+#     to that of a non-restarted simulation.
 macro (add_test_compareECLRestartFiles casename filename simulator)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${simulator}+${casename})
@@ -54,6 +69,8 @@ endmacro (add_test_compareECLRestartFiles)
 # Input:
 #   - casename: basename (no extension)
 #
+# Details:
+#   - This test class compares the init file from a simulation to a reference file.
 macro (add_test_compareECLInitFiles casename filename simulator)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/init/${simulator}+${casename})
@@ -75,6 +92,9 @@ endmacro (add_test_compareECLInitFiles)
 # Input:
 #   - casename: basename (no extension)
 #
+# Details:
+#   - This test class compares the output from a parallel simulation
+#     to the output from the serial instance of the same model.
 macro (add_test_parallelECLFiles casename filename simulator)
   set(abs_tol 0.20)
   set(rel_tol 4e-4)
