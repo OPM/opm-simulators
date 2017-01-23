@@ -102,8 +102,11 @@ add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol} compareEC
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
-add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM flow ${abs_tol} ${rel_tol})
-add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol})
+# Cruder tolerances for the restarted tests
+set(abs_tol_restart 2e-1)
+set(rel_tol_restart 4e-5)
+add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM flow ${abs_tol_restart} ${rel_tol_restart})
+add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow ${abs_tol_restart} ${rel_tol_restart})
 
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
