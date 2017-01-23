@@ -118,10 +118,10 @@ if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
   # Different tolerances for these tests
-  set(abs_tol 0.20)
-  set(rel_tol 4e-4)
+  set(abs_tol_parallel 0.20)
+  set(rel_tol_parallel 4e-4)
 
-  add_test_compare_parallel_simulation(spe1 SPE1CASE2 flow_mpi ${abs_tol} ${rel_tol})
-  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi ${abs_tol} ${rel_tol})
-  add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT flow_mpi ${abs_tol} ${rel_tol})
+  add_test_compare_parallel_simulation(spe1 SPE1CASE2 flow_mpi ${abs_tol_parallel} ${rel_tol_parallel})
+  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi ${abs_tol_parallel} ${rel_tol_parallel})
+  add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT flow_mpi ${abs_tol_parallel} ${rel_tol_parallel})
 endif()
