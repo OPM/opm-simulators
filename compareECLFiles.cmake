@@ -24,10 +24,10 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 #
 # Details:
 #   - This test class compares output from a simulation to reference files.
-macro (add_test_compareECLFiles casename filename simulator)
+macro (add_test_compareECLFiles casename filename simulator prefix)
 
   set(RESULT_PATH ${BASE_RESULT_PATH}/${simulator}+${casename})
-  opm_add_test(compareECLFiles_${simulator}+${filename} NO_COMPILE
+  opm_add_test(${prefix}_${simulator}+${filename} NO_COMPILE
                EXE_NAME ${simulator}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
@@ -63,29 +63,6 @@ macro (add_test_compare_restarted_simulation casename filename simulator)
 endmacro (add_test_compare_restarted_simulation)
 
 ###########################################################################
-# TEST: compareECLInitFiles
-###########################################################################
-
-# Input:
-#   - casename: basename (no extension)
-#
-# Details:
-#   - This test class compares the init file from a simulation to a reference file.
-macro (add_test_compareECLInitFiles casename filename simulator)
-
-  set(RESULT_PATH ${BASE_RESULT_PATH}/init/${simulator}+${casename})
-  opm_add_test(compareECLInitFiles_${simulator}+${filename} NO_COMPILE
-               EXE_NAME ${simulator}
-               DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
-                           ${CMAKE_BINARY_DIR}/bin
-                           ${filename}
-                           ${abs_tol} ${rel_tol}
-                           ${COMPARE_SUMMARY_COMMAND}
-                           ${COMPARE_ECL_COMMAND}
-               TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename})
-endmacro (add_test_compareECLInitFiles)
-
-###########################################################################
 # TEST: add_test_compare_parallel_simulation
 ###########################################################################
 
@@ -119,10 +96,10 @@ endif()
 # Regression tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 
-add_test_compareECLFiles(spe1 SPE1CASE2 flow)
-add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential)
-add_test_compareECLFiles(spe3 SPE3CASE1 flow)
-add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow)
+add_test_compareECLFiles(spe1 SPE1CASE2 flow compareECLFiles)
+add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential compareECLFiles)
+add_test_compareECLFiles(spe3 SPE3CASE1 flow compareECLFiles)
+add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow compareECLFiles)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
@@ -133,7 +110,7 @@ add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow)
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
-add_test_compareECLInitFiles(norne NORNE_ATW2013 flow)
+add_test_compareECLFiles(norne NORNE_ATW2013 flow compareECLInitFiles)
 
 # Parallel tests
 if(MPI_FOUND)
