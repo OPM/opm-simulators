@@ -54,6 +54,8 @@
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <opm/simulators/WellSwitchingLogger.hpp>
+
 namespace Opm {
 
 enum WellVariablePositions {
@@ -1160,11 +1162,18 @@ enum WellVariablePositions {
             {
                 if( !localWellsActive() ) return ;
 
-                std::string modestring[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
-                // Find, for each well, if any constraints are broken. If so,
-                // switch control to first broken constraint.
+
                 const int np = wells().number_of_phases;
                 const int nw = wells().number_of_wells;
+
+                // keeping a copy of the current controls, to see whether group control changes the control index
+                std::vector<int> old_control_index(nw, 0);
+                for (int w = 0; w < nw; ++w) {
+                    old_control_index[w] = xw.currentControls()[w];
+                }
+
+                // Find, for each well, if any constraints are broken. If so,
+                // switch control to first broken constraint.
         #pragma omp parallel for schedule(dynamic)
                 for (int w = 0; w < nw; ++w) {
                     WellControls* wc = wells().ctrls[w];
@@ -1193,19 +1202,9 @@ enum WellVariablePositions {
                     }
                     if (ctrl_index != nwc) {
                         // Constraint number ctrl_index was broken, switch to it.
-                        // We disregard terminal_ouput here as with it only messages
-                        // for wells on one process will be printed.
-                        std::ostringstream ss;
-                        ss << "    Switching control mode for well " << wells().name[w]
-                           << " from " << modestring[well_controls_iget_type(wc, current)]
-                           << " to " << modestring[well_controls_iget_type(wc, ctrl_index)];
-                        OpmLog::info(ss.str());
                         xw.currentControls()[w] = ctrl_index;
                         current = xw.currentControls()[w];
                         well_controls_set_current( wc, current);
-
-                        // update the well state based on the changed well control
-                        updateWellStateWithTarget(wc, current, w, xw);
                     }
 
                     // update whether well is under group control
@@ -1228,6 +1227,24 @@ enum WellVariablePositions {
                 if (wellCollection()->groupControlActive()) {
                     applyVREPGroupControl(xw);
                     wellCollection()->updateWellTargets(xw.wellRates());
+                }
+
+                // the new well control indices after all the related update
+                std::vector<int> updated_control_index(nw, 0);
+                for (int w = 0; w < nw; ++w) {
+                    updated_control_index[w] = xw.currentControls()[w];
+                }
+
+                // checking whether control changed
+                wellhelpers::WellSwitchingLogger logger;
+                for (int w = 0; w < nw; ++w) {
+                    if (updated_control_index[w] != old_control_index[w]) {
+                        WellControls* wc = wells().ctrls[w];
+                        logger.wellSwitched(wells().name[w],
+                                            well_controls_iget_type(wc, old_control_index[w]),
+                                            well_controls_iget_type(wc, updated_control_index[w]));
+                        updateWellStateWithTarget(wc, updated_control_index[w], w, xw);
+                    }
                 }
             }
 
