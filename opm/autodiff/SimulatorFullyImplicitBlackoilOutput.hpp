@@ -291,6 +291,10 @@ namespace Opm
 
         bool isRestart() const;
 
+  protected:
+    template <class Grid>
+    void buildCell2FaceMapping( const Grid& grid );
+
     protected:
         const bool output_;
         std::unique_ptr< ParallelDebugOutputInterface > parallelOutput_;
@@ -309,6 +313,10 @@ namespace Opm
         const EclipseState& eclipseState_;
 
         std::unique_ptr< ThreadHandle > asyncOutput_;
+
+        // Map cell indices to interior faces, including non-nb connections.
+        // (Support (I+, J+, K+, N+)-representation of face-based entities.)
+        std::vector<std::vector<int> > map_c2f_;
     };
 
 
@@ -351,7 +359,7 @@ namespace Opm
                 Opm::OpmLog::warning("Parallel Output Config",
                                      "Velocity output for matlab is broken in parallel.");
             }
-                
+
             if( parallelOutput_->isIORank() ) {
 
                 if ( output_matlab )
@@ -392,10 +400,69 @@ namespace Opm
                 {
                     backupfile_.open( backupfilename.c_str() );
                 }
+
+                // setup cell2face mapping
+                buildCell2FaceMapping( grid );
             }
         }
     }
 
+    template <class Grid>
+    inline void
+    BlackoilOutputWriter::buildCell2FaceMapping( const Grid& grid )
+    {
+        // Map cells indices to appropriate interior faces to prepare
+        //  for cell-wise representation of face-based quantities.
+        // Assuming 3D and include non-nb connections (NNC).
+        const size_t num_faces = Opm::UgGridHelpers::numFaces(grid);
+        auto fc = Opm::UgGridHelpers::faceCells(grid);
+        auto gc = Opm::UgGridHelpers::globalCell(grid);
+        auto dims = UgGridHelpers::cartDims(grid);
+        size_t num_cells = Opm::UgGridHelpers::numCells(grid);
+        map_c2f_.resize(4);
+        map_c2f_[0].resize(num_cells,-1); // I+
+        map_c2f_[1].resize(num_cells,-1); // J+
+        map_c2f_[2].resize(num_cells,-1); // K+
+        map_c2f_[3].resize(num_cells,-1); // N+
+        int interior_face_idx = 0;
+        for (size_t face_idx = 0; face_idx < num_faces; ++face_idx) {
+          auto c1 = fc(face_idx, 0);
+          auto c2 = fc(face_idx, 1);
+
+          if (c1 == -1 || c2 == -1)
+            continue; // face on grid boundary
+
+          int gc1 = gc ? gc[c1] : c1;
+          int gc2 = gc ? gc[c2] : c2;
+          int gdiff = std::abs(gc2-gc1);
+          if (gdiff == dims[0]*dims[1]) { // K+
+            if (gc1>gc2)
+              map_c2f_[2][c2] = interior_face_idx;
+            else
+              map_c2f_[2][c1] = interior_face_idx;
+          }
+          else if (gdiff == dims[0]) { // J+
+            if (gc1>gc2)
+              map_c2f_[1][c2] = interior_face_idx;
+            else
+              map_c2f_[1][c1] = interior_face_idx;
+          }
+          else if (gdiff == 1) { // I+
+            if (gc1>gc2)
+              map_c2f_[0][c2] = interior_face_idx;
+            else
+              map_c2f_[0][c1] = interior_face_idx;
+          }
+          else { // N+ (non-nb)
+            if (gc1>gc2)
+              map_c2f_[3][c2] = interior_face_idx;
+            else
+              map_c2f_[3][c1] = interior_face_idx;
+          }
+
+          ++interior_face_idx;
+        }
+    }
 
     template <class Grid>
     inline void
@@ -464,6 +531,7 @@ namespace Opm
          */
         template<class Model>
         void getRestartData(data::Solution& output,
+                            const std::vector< std::vector< int > >& map_c2f,
                             const Opm::PhaseUsage& phaseUsage,
                             const Model& physicalModel,
                             const RestartConfig& restartConfig,
@@ -485,6 +553,39 @@ namespace Opm
             const int aqua_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Aqua];
             const int liquid_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Liquid];
             const int vapour_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Vapour];
+
+            /**
+             * Interblock flows for water, oil, gas
+             */
+            if (rstKeywords["FLOWS"] > 0) {
+                rstKeywords["FLOWS"] = 0;
+                const double dayInSec = unit::convert::from( 1.0, unit::day ); // 24.0*60.0*60.0;
+                const int active[3] = {aqua_active, liquid_active, vapour_active};
+                const int index[3] = {aqua_idx, liquid_idx, vapour_idx};
+                const std::string mass[3] = {"WAT", "OIL", "GAS"};
+                const std::string direction[4] = {"I+", "J+", "K+", "N+"};
+                const Opm::UnitSystem::measure unit_meas[3] = {Opm::UnitSystem::measure::liquid_surface_volume,
+                                                               Opm::UnitSystem::measure::liquid_surface_volume,
+                                                               Opm::UnitSystem::measure::gas_surface_volume};
+                for (int i=0; i<3; ++i) {
+                    if (active[i]) {
+                        for (int dir=0; dir<int(map_c2f.size()); ++dir) {
+                            if (*std::max_element(map_c2f[dir].begin(), map_c2f[dir].end()) > -1) {
+                                std::vector<double> fv(map_c2f[dir].size(), 0.0);
+                                for (int cell=0; cell<int(map_c2f[dir].size()); ++cell) {
+                                    if (map_c2f[dir][cell] >=0) {
+                                        fv[cell] = dayInSec * sd.rq[index[i]].mflux.value()[map_c2f[dir][cell]];
+                                    }
+                                }
+                                output.insert("FLO"+mass[i]+direction[dir],
+                                              unit_meas[i],
+                                              fv,
+                                              data::TargetType::RESTART_AUXILLARY);
+                            }
+                        }
+                    }
+                }
+            }
 
 
             /**
@@ -636,7 +737,7 @@ namespace Opm
             /**
              * Bubble point and dew point pressures
              */
-            if (log && vapour_active && 
+            if (log && vapour_active &&
                 liquid_active && rstKeywords["PBPD"] > 0) {
                 rstKeywords["PBPD"] = 0;
                 Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
@@ -790,15 +891,15 @@ namespace Opm
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
-        
+
         if( output_ )
         {
             localCellData = simToSolution(localState, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
-            detail::getRestartData( localCellData, phaseUsage_, physicalModel,
+            detail::getRestartData( localCellData, map_c2f_, phaseUsage_, physicalModel,
                                     restartConfig, reportStepNum, logMessages );
             detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig );
         }
-        
+
         writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, substep);
     }
 }
