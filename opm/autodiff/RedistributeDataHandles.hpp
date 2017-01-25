@@ -24,6 +24,8 @@
 
 #include <unordered_set>
 #include <string>
+#include <type_traits>
+#include <iterator>
 
 #include <opm/core/simulator/BlackoilState.hpp>
 
@@ -51,6 +53,69 @@ distributeGridAndData( Grid& ,
 {
     return std::unordered_set<std::string>();
 }
+
+/// \brief A handle that copies a fixed number data per index.
+///
+/// It works on Iterators to allow for communicating C arrays.
+/// \tparam Iter1 Constant random access iterator type.
+/// \tparam Iter1 Mutable random access iterator type.
+template<class Iter1, class Iter2=Iter1>
+class FixedSizeIterCopyHandle
+{
+    typedef typename std::iterator_traits<Iter1>::value_type DataType2;
+
+public:
+    typedef typename std::iterator_traits<Iter1>::value_type DataType;
+
+    /// \brief Constructor.
+    /// \param send_begin The begin iterator for sending.
+    /// \param receive_begin The begin iterator for receiving.
+    FixedSizeIterCopyHandle(const Iter1& send_begin,
+                            const Iter2& receive_begin,
+                            std::size_t size = 1)
+        : send_(send_begin), receive_(receive_begin), size_(size)
+    {
+        static_assert(std::is_same<DataType,DataType2>::value,
+                      "Iter1 and Iter2 have to have the same value_type!");
+    }
+
+    template<class Buffer>
+    void gather(Buffer& buffer, std::size_t i)
+    {
+        for(auto index = i*size(i), end = (i+1)*size(i);
+            index < end; ++index)
+        {
+            buffer.write(send_[index]);
+        }
+    }
+
+    template<class Buffer>
+    void scatter(Buffer& buffer, std::size_t i, std::size_t s)
+    {
+        assert(s==size(i));
+
+        for(auto index = i*size(i), end = (i+1)*size(i);
+            index < end; ++index)
+        {
+            buffer.read(receive_[index]);
+        }
+    }
+
+    bool fixedsize()
+    {
+        return true;
+    }
+
+    std::size_t size(std::size_t)
+    {
+        return size_;
+    }
+private:
+    Iter1 send_;
+    Iter2 receive_;
+    std::size_t size_;
+};
+
 
 #if HAVE_OPM_GRID && HAVE_MPI
 /// \brief a data handle to distribute the threshold pressures
