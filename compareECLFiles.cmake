@@ -102,8 +102,11 @@ add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol} compareEC
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
-add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM flow ${abs_tol} ${rel_tol})
-add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol})
+# Cruder tolerances for the restarted tests
+set(abs_tol_restart 2e-1)
+set(rel_tol_restart 4e-5)
+add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM flow ${abs_tol_restart} ${rel_tol_restart})
+add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow ${abs_tol_restart} ${rel_tol_restart})
 
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
@@ -115,10 +118,10 @@ if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
   # Different tolerances for these tests
-  set(abs_tol 0.20)
-  set(rel_tol 4e-4)
+  set(abs_tol_parallel 0.02)
+  set(rel_tol_parallel 1e-5)
 
-  add_test_compare_parallel_simulation(spe1 SPE1CASE2 flow_mpi ${abs_tol} ${rel_tol})
-  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi ${abs_tol} ${rel_tol})
-  add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT flow_mpi ${abs_tol} ${rel_tol})
+  add_test_compare_parallel_simulation(spe1 SPE1CASE2 flow_mpi ${abs_tol_parallel} ${rel_tol_parallel})
+  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi ${abs_tol_parallel} ${rel_tol_parallel})
+  add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT flow_mpi ${abs_tol_parallel} ${rel_tol_parallel})
 endif()
