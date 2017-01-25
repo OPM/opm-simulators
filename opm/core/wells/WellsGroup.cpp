@@ -1223,6 +1223,7 @@ namespace Opm
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
             // it should only apply for nodes with GRUP injeciton control
             individual_control_ = false;
+            set_current_control(self_index_, group_control_index_, wells_);
         } else {
             well_controls_iset_type(wells_->ctrls[self_index_] , group_control_index_ , RESERVOIR_RATE);
             well_controls_iset_target(wells_->ctrls[self_index_] , group_control_index_ , ntarget);
