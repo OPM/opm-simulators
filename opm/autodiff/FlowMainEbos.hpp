@@ -372,6 +372,10 @@ namespace Opm
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
+            // Create a grid with a global view.
+            globalGrid_.reset(new Grid(grid()));
+            globalGrid_->switchToGlobalView();
+
             try {
                 if (output_cout_) {
                     MissingFeatures::checkKeywords(deck());
@@ -766,7 +770,7 @@ namespace Opm
         { return ebosSimulator_->gridManager().grid(); }
 
         const Grid& globalGrid()
-        { return ebosSimulator_->gridManager().equilGrid(); }
+        { return *globalGrid_; }
 
         Problem& ebosProblem()
         { return ebosSimulator_->problem(); }
@@ -799,6 +803,8 @@ namespace Opm
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
         std::unique_ptr<Simulator> simulator_;
         std::string logFile_;
+        // Needs to be shared pointer because it gets initialzed before MPI_Init.
+        std::shared_ptr<Grid> globalGrid_;
     };
 } // namespace Opm
 
