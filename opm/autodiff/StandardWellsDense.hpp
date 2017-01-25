@@ -254,12 +254,13 @@ enum WellVariablePositions {
 
                         for (int p1 = 0; p1 < np; ++p1) {
 
+                            // the cq_s entering mass balance equations need to consider the efficiency factors.
+                            const EvalWell cq_s_effective = cq_s[p1] * well_perforation_efficiency_factors_[perf];
+
                             if (!only_wells) {
                                 // subtract sum of phase fluxes in the reservoir equation.
-                                // applying the efficiency factor to the flux rate
-                                // TODO: not sure whether the way applying efficiency factor to Jacs are completely correct
-                                // It should enter the mass balance equation, while should not enter the well equations
-                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= well_perforation_efficiency_factors_[perf] * cq_s[p1].value();
+                                // need to consider the efficiency factor
+                                ebosResid[cell_idx][flowPhaseToEbosCompIdx(p1)] -= cq_s_effective.value();
                             }
 
                             // subtract sum of phase fluxes in the well equations.
@@ -268,9 +269,10 @@ enum WellVariablePositions {
                             // assemble the jacobians
                             for (int p2 = 0; p2 < np; ++p2) {
                                 if (!only_wells) {
-                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= well_perforation_efficiency_factors_[perf] * cq_s[p1].derivative(p2);
-                                    duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s[p1].derivative(p2+blocksize); // intput in transformed matrix
-                                    duneC_[w][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2);
+                                    // also need to consider the efficiency factor when manipulating the jacobians.
+                                    ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s_effective.derivative(p2);
+                                    duneB_[w][cell_idx][flowToEbosPvIdx(p2)][flowPhaseToEbosCompIdx(p1)] -= cq_s_effective.derivative(p2+blocksize); // intput in transformed matrix
+                                    duneC_[w][cell_idx][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s_effective.derivative(p2);
                                 }
                                 invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] -= cq_s[p1].derivative(p2+blocksize);
                             }
@@ -1166,7 +1168,7 @@ enum WellVariablePositions {
                 const int np = wells().number_of_phases;
                 const int nw = wells().number_of_wells;
 
-                // keeping a copy of the current controls, to see whether group control changes the control index
+                // keeping a copy of the current controls, to see whether control changes later.
                 std::vector<int> old_control_index(nw, 0);
                 for (int w = 0; w < nw; ++w) {
                     old_control_index[w] = xw.currentControls()[w];
@@ -1223,13 +1225,13 @@ enum WellVariablePositions {
                     }
                 }
 
-                // upate the well targets following the group control
+                // upate the well targets following group controls
                 if (wellCollection()->groupControlActive()) {
                     applyVREPGroupControl(xw);
                     wellCollection()->updateWellTargets(xw.wellRates());
                 }
 
-                // the new well control indices after all the related update
+                // the new well control indices after all the related updates,
                 std::vector<int> updated_control_index(nw, 0);
                 for (int w = 0; w < nw; ++w) {
                     updated_control_index[w] = xw.currentControls()[w];
@@ -2090,7 +2092,6 @@ enum WellVariablePositions {
                             //}
                         }
                     } else if (well_type == PRODUCER) {
-
                         // only set target as initial rates for single phase
                         // producers. (orat, grat and wrat, and not lrat)
                         // lrat will result in numPhasesWithTargetsUnderThisControl == 2
@@ -2110,7 +2111,7 @@ enum WellVariablePositions {
                     }
 
                     break;
-                } // end of switching
+                } // end of switch
 
 
                 std::vector<double> g = {1.0, 1.0, 0.01};
