@@ -106,7 +106,6 @@ struct SetupMSW {
                                         Opm::UgGridHelpers::dimensions(grid),
                                         Opm::UgGridHelpers::cell2Faces(grid),
                                         Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                        fluidprops->permeability(),
                                         dummy_dynamic_list,
                                         false
                                         // We need to pass the optionaly arguments
