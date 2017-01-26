@@ -20,9 +20,8 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 #
 # Details:
 #   - This test class compares output from a simulation to reference files.
-macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol prefix)
-
-  set(RESULT_PATH ${BASE_RESULT_PATH}/${simulator}+${casename})
+macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol prefix dirprefix)
+  set(RESULT_PATH ${BASE_RESULT_PATH}${dirprefix}/${simulator}+${casename})
   opm_add_test(${prefix}_${simulator}+${filename} NO_COMPILE
                EXE_NAME ${simulator}
                DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
@@ -94,10 +93,10 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 
-add_test_compareECLFiles(spe1 SPE1CASE2 flow ${abs_tol} ${rel_tol} compareECLFiles)
-add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles)
-add_test_compareECLFiles(spe3 SPE3CASE1 flow ${abs_tol} ${rel_tol} compareECLFiles)
-add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol} compareECLFiles)
+add_test_compareECLFiles(spe1 SPE1CASE2 flow ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe3 SPE3CASE1 flow ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol} compareECLFiles "")
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
@@ -111,7 +110,7 @@ add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT flow ${abs_tol_restart}
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
-add_test_compareECLFiles(norne NORNE_ATW2013 flow ${abs_tol} ${rel_tol} compareECLInitFiles)
+add_test_compareECLFiles(norne NORNE_ATW2013 flow ${abs_tol} ${rel_tol} compareECLInitFiles /init)
 
 # Parallel tests
 if(MPI_FOUND)
