@@ -29,6 +29,7 @@
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
+#include <opm/autodiff/createGlobalCellArray.hpp>
 
 #include<boost/any.hpp>
 
