@@ -14,11 +14,13 @@ copyToReferenceDir () {
   FILETYPES=${@:4};
 
   for filetype in $FILETYPES; do
-    echo cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
+    cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
   done
 }
 
-for test_name in ${@:2}; do
+tests=${@:2}
+test -z "$tests" && tests="spe11 spe12 spe3 spe9 norne_init"
+for test_name in ${tests}; do
   if grep -q "spe11" <<< $test_name
   then
     copyToReferenceDir \
@@ -40,7 +42,7 @@ for test_name in ${@:2}; do
   if grep -q "spe3" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_sequential+spe3/ \
+      $configuration/build-opm-simulators/tests/results/flow+spe3/ \
       $OPM_DATA_ROOT/spe3/opm-simulation-reference/ \
       SPE3CASE1 \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
@@ -54,14 +56,37 @@ for test_name in ${@:2}; do
       SPE9_CP_SHORT \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
   fi
+
+  if grep -q "norne_init" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/init/flow+norne/ \
+      $OPM_DATA_ROOT/norne/opm-simulation-reference/ \
+      NORNE_ATW2013 \
+      EGRID INIT
+  fi
 done
 
+if [ -z "${@:2}" ]
+then
+  # User did not specify tests to update, probe
+  pushd $OPM_DATA_ROOT > /dev/null
+  tests=""
+  git status | grep "SPE1CASE1" && tests="spe11"
+  git status | grep "SPE1CASE2" && tests="$tests spe12"
+  git status | grep "SPE3CASE1" && tests="$tests spe3"
+  git status | grep "SPE9_CP" && tests="$tests spe9"
+  git status | grep "NORNE_ATW2013" && tests="$tests norne_init"
+  popd > /dev/null
+fi
 
-
-
-
-echo -e "update reference data for ${@:2}\n" > /tmp/cmsg
-echo -e "Reason: fill in this\n" >> /tmp/cmsg
+echo -e "update reference data for $tests\n" > /tmp/cmsg
+if [ -z "$REASON" ]
+then
+  echo -e "Reason: fill in this\n" >> /tmp/cmsg
+else
+  echo -e "Reason: $REASON\n" >> /tmp/cmsg
+fi
 for dep in ert opm-common opm-core opm-grid opm-material opm-parser opm-output ewoms
 do
   pushd $WORKSPACE/deps/$dep > /dev/null
@@ -73,4 +98,14 @@ done
 echo -e "opm-simulators = `git rev-parse HEAD`" >> /tmp/cmsg
 
 cd $OPM_DATA_ROOT
-git commit -a -t /tmp/cmsg
+if [ -n "$BRANCH_NAME" ]
+then
+  git checkout -b $BRANCH_NAME origin/master
+fi
+
+if [ -z "$REASON" ]
+then
+  git commit -a -t /tmp/cmsg
+else
+  git commit -a -F /tmp/cmsg
+fi
