@@ -49,7 +49,7 @@ try
     RockCompressibility rock_comp(eclipseState);
 
     // Finally handle the wells
-    WellsManager wells(eclipseState , 0 , *grid.c_grid(), incomp_properties.permeability());
+    WellsManager wells(eclipseState , 0 , *grid.c_grid());
 
     double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
     Opm::LinearSolverFactory linsolver(parameters);
