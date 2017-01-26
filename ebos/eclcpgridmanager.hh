@@ -41,10 +41,13 @@ class EclCpGridManager;
 namespace Properties {
 NEW_TYPE_TAG(EclCpGridManager, INHERITS_FROM(EclBaseGridManager));
 
+NEW_PROP_TAG(ExportGlobalTransmissibility);
+
 // declare the properties
 SET_TYPE_PROP(EclCpGridManager, GridManager, Ewoms::EclCpGridManager<TypeTag>);
 SET_TYPE_PROP(EclCpGridManager, Grid, Dune::CpGrid);
 SET_TYPE_PROP(EclCpGridManager, EquilGrid, typename GET_PROP_TYPE(TypeTag, Grid));
+SET_BOOL_PROP(EclCpGridManager, ExportGlobalTransmissibility, false);
 } // namespace Properties
 
 /*!
@@ -84,6 +87,7 @@ public:
         delete equilCartesianIndexMapper_;
         delete grid_;
         delete equilGrid_;
+        delete globalTrans_;
     }
 
     /*!
@@ -145,8 +149,8 @@ public:
             // transmissibilities are relatively expensive to compute, we only do it if
             // more than a single process is involved in the simulation.
             cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
-            EclTransmissibility<TypeTag> eclTrans(*this);
-            eclTrans.update();
+            globalTrans_ = new EclTransmissibility<TypeTag>(*this);
+            globalTrans_->update();
 
             // convert to transmissibility for faces
             // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
@@ -177,7 +181,7 @@ public:
                     // FIXME (?): this is not portable!
                     unsigned faceIdx = is.id();
 
-                    faceTrans[faceIdx] = eclTrans.transmissibility(I, J);
+                    faceTrans[faceIdx] = globalTrans_->transmissibility(I, J);
                 }
             }
 
@@ -187,6 +191,11 @@ public:
 
             delete cartesianIndexMapper_;
             cartesianIndexMapper_ = nullptr;
+
+            if (!GET_PROP_VALUE(TypeTag, ExportGlobalTransmissibility)) {
+                delete globalTrans_;
+                globalTrans_ = nullptr;
+            }
         }
 #endif
 
@@ -208,6 +217,15 @@ public:
 
     std::unordered_set<std::string> defunctWellNames() const
     { return defunctWellNames_; }
+
+    const EclTransmissibility<TypeTag>& globalTransmissibility() const
+    { return *globalTrans_; }
+
+    void releaseGlobalTransmissibility()
+    {
+        delete globalTrans_;
+        globalTrans_ = nullptr;
+    }
 
 protected:
     void createGrids_()
@@ -237,6 +255,7 @@ protected:
     CartesianIndexMapper* cartesianIndexMapper_;
     CartesianIndexMapper* equilCartesianIndexMapper_;
 
+    EclTransmissibility<TypeTag>* globalTrans_;
     std::unordered_set<std::string> defunctWellNames_;
 };
 
