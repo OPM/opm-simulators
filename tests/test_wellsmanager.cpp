@@ -185,19 +185,19 @@ BOOST_AUTO_TEST_CASE(New_Constructor_Works) {
     Opm::GridManager gridManager(eclipseState.getInputGrid());
 
     {
-        Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid());
         wells_static_check(wellsManager.c_wells());
         check_controls_epoch0(wellsManager.c_wells()->ctrls);
     }
 
     {
-        Opm::WellsManager wellsManager(eclipseState, 1, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 1, *gridManager.c_grid());
         wells_static_check(wellsManager.c_wells());
         check_controls_epoch1(wellsManager.c_wells()->ctrls);
     }
 
     {
-        Opm::WellsManager wellsManager(eclipseState, 3, *gridManager.c_grid(), NULL);
+        Opm::WellsManager wellsManager(eclipseState, 3, *gridManager.c_grid());
         const Wells* wells = wellsManager.c_wells();
 
         // There is 3 wells in total in the deck at the 3rd schedule step.
@@ -220,8 +220,8 @@ BOOST_AUTO_TEST_CASE(WellsEqual) {
     Opm::EclipseState eclipseState(deck, parseContext);
     Opm::GridManager gridManager(eclipseState.getInputGrid());
 
-    Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid(), NULL);
-    Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid(), NULL);
+    Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid());
+    Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid());
 
     BOOST_CHECK(wells_equal( wellsManager0.c_wells() , wellsManager0.c_wells(),false));
     BOOST_CHECK(!wells_equal( wellsManager0.c_wells() , wellsManager1.c_wells(),false));
@@ -235,8 +235,8 @@ BOOST_AUTO_TEST_CASE(ControlsEqual) {
     Opm::EclipseState eclipseState(deck, parseContext);
     Opm::GridManager gridManager(eclipseState.getInputGrid());
 
-    Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid(), NULL);
-    Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid(), NULL);
+    Opm::WellsManager wellsManager0(eclipseState, 0, *gridManager.c_grid());
+    Opm::WellsManager wellsManager1(eclipseState, 1, *gridManager.c_grid());
 
     BOOST_CHECK(well_controls_equal( wellsManager0.c_wells()->ctrls[0] , wellsManager0.c_wells()->ctrls[0] , false));
     BOOST_CHECK(well_controls_equal( wellsManager0.c_wells()->ctrls[1] , wellsManager0.c_wells()->ctrls[1] , false));
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(WellShutOK) {
     Opm::EclipseState eclipseState(deck, parseContext);
     Opm::GridManager gridManager(eclipseState.getInputGrid());
 
-    Opm::WellsManager wellsManager2(eclipseState, 2, *gridManager.c_grid(), NULL);
+    Opm::WellsManager wellsManager2(eclipseState, 2, *gridManager.c_grid());
 
     // Shut wells are not added to the deck. i.e number of wells should be 2-1
     BOOST_CHECK(wellsManager2.c_wells()->number_of_wells == 1);
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE(WellSTOPOK) {
     Opm::EclipseState eclipseState(deck, parseContext);
     Opm::GridManager gridManager(eclipseState.getInputGrid());
 
-    Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid(), NULL);
+    Opm::WellsManager wellsManager(eclipseState, 0, *gridManager.c_grid());
 
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];

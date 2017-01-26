@@ -74,8 +74,7 @@ namespace Opm
     RockFromDeck::RockFromDeck(std::size_t number_of_cells)
         : porosity_(number_of_cells, 0),
           // full permeability tensor in 3D stores 9 scalars
-          permeability_(number_of_cells*9, 0.0),
-          permfield_valid_(number_of_cells, false)
+          permeability_(number_of_cells*9, 0.0)
     {
     }
 
@@ -84,10 +83,13 @@ namespace Opm
                             const int* cart_dims)
     {
         assignPorosity(eclState, number_of_cells, global_cell);
-        permfield_valid_.assign(number_of_cells, false);
         const double perm_threshold = 0.0; // Maybe turn into parameter?
-        assignPermeability(eclState, number_of_cells, global_cell, cart_dims,
-                           perm_threshold);
+        extractInterleavedPermeability(eclState,
+                                       number_of_cells,
+                                       global_cell,
+                                       cart_dims,
+                                       perm_threshold,
+                                       permeability_);
     }
 
     void RockFromDeck::assignPorosity(const Opm::EclipseState& eclState,
@@ -105,11 +107,12 @@ namespace Opm
         }
     }
 
-    void RockFromDeck::assignPermeability(const Opm::EclipseState& eclState,
-                                          int number_of_cells,
-                                          const int* global_cell,
-                                          const int* cartdims,
-                                          double perm_threshold)
+    void RockFromDeck::extractInterleavedPermeability(const Opm::EclipseState& eclState,
+                                                      const int number_of_cells,
+                                                      const int* global_cell,
+                                                      const int* cartdims,
+                                                      const double perm_threshold,
+                                                      std::vector<double>& permeability)
     {
         const int dim              = 3;
         const int nc = number_of_cells;
@@ -117,7 +120,7 @@ namespace Opm
         assert(cartdims[0]*cartdims[1]*cartdims[2] > 0);
         static_cast<void>(cartdims); // Squash warning in release mode.
 
-        permeability_.assign(dim * dim * nc, 0.0);
+        permeability.assign(dim * dim * nc, 0.0);
 
         std::vector<PermComponent> tensor;
         tensor.reserve(6);
@@ -132,7 +135,6 @@ namespace Opm
         assert (! tensor.empty());
         {
             int off = 0;
-
             for (int c = 0; c < nc; ++c, off += dim*dim) {
                 // SharedPermTensor K(dim, dim, &permeability_[off]);
                 int kix = 0;
@@ -146,16 +148,14 @@ namespace Opm
                         // values in the resulting array are the same
                         // in either order when viewed contiguously
                         // because fillTensor() enforces symmetry.
-                        permeability_[off + (i + dim*j)] =
+                        permeability[off + (i + dim*j)] =
                             tensor[kmap[kix]][c];
                     }
 
                     // K(i,i) = std::max(K(i,i), perm_threshold);
-                    double& kii = permeability_[off + i*(dim + 1)];
+                    double& kii = permeability[off + i*(dim + 1)];
                     kii = std::max(kii, perm_threshold);
                 }
-
-                permfield_valid_[c] = std::vector<unsigned char>::value_type(1);
             }
         }
     }

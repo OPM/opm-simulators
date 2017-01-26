@@ -328,8 +328,7 @@ namespace Opm
     /// Construct wells from deck.
     WellsManager::WellsManager(const Opm::EclipseState& eclipseState,
                                const size_t timeStep,
-                               const UnstructuredGrid& grid,
-                               const double* permeability)
+                               const UnstructuredGrid& grid)
         : w_(0), is_parallel_run_(false)
     {
         std::vector<double> dummy_well_potentials;
@@ -340,7 +339,7 @@ namespace Opm
              UgGridHelpers::globalCell(grid), UgGridHelpers::cartDims(grid), 
              UgGridHelpers::dimensions(grid),
              UgGridHelpers::cell2Faces(grid), UgGridHelpers::beginFaceCentroids(grid),
-             permeability, dummy_list_econ_limited, dummy_well_potentials,
+             dummy_list_econ_limited, dummy_well_potentials,
              std::unordered_set<std::string>());
 
     }

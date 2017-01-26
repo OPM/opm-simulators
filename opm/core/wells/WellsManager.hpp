@@ -91,7 +91,6 @@ namespace Opm
                      int dimensions,
                      const F2C& f2c,
                      FC begin_face_centroids,
-                     const double* permeability,
                      const DynamicListEconLimited& list_econ_limited,
                      bool is_parallel_run=false,
                      const std::vector<double>& well_potentials=std::vector<double>(),
@@ -99,8 +98,7 @@ namespace Opm
 
         WellsManager(const Opm::EclipseState& eclipseState,
                      const size_t timeStep,
-                     const UnstructuredGrid& grid,
-                     const double* permeability);
+                     const UnstructuredGrid& grid);
         /// Destructor.
         ~WellsManager();
 
@@ -163,7 +161,6 @@ namespace Opm
                   int dimensions,
                   const C2F& cell_to_faces,
                   FC begin_face_centroids,
-                  const double* permeability,
                   const DynamicListEconLimited& list_econ_limited,
                   const std::vector<double>& well_potentials,
                   const std::unordered_set<std::string>& deactivated_wells);
