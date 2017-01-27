@@ -42,6 +42,7 @@
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -138,6 +139,10 @@ namespace Opm {
         typedef ISTLSolver< MatrixBlockType, VectorBlockType >  ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
+        // For the conversion between the surface volume rate and resrevoir voidage rate
+        using RateConverterType = RateConverter::
+            SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
+
         struct FIPData {
             enum FipId {
                 FIP_AQUA = Opm::Water,
@@ -187,6 +192,7 @@ namespace Opm {
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
+        , rate_converter_(fluid_.phaseUsage(), fluid_.cellPvtRegionIndex(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
@@ -194,7 +200,7 @@ namespace Opm {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
-            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv);
+            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv, &rate_converter_);
             wellModel().setWellsActive( localWellsActive() );
             global_nc_ =  Opm::AutoDiffGrid::numCells(grid_);
             // compute global sum of number of cells
@@ -368,6 +374,11 @@ namespace Opm {
             using namespace Opm::AutoDiffGrid;
 
             SimulatorReport report;
+
+            // when having VREP group control, update the rate converter based on reservoir state
+            if ( wellModel().wellCollection()->havingVREPGroups() ) {
+                updateRateConverter(reservoir_state);
+            }
 
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx, reservoir_state);
@@ -1229,6 +1240,9 @@ namespace Opm {
         /// \brief The number of cells of the global grid.
         long int global_nc_;
 
+        // rate converter between the surface volume rates and reservoir voidage rates
+        RateConverterType rate_converter_;
+
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         BVector dx_old_;
@@ -1426,6 +1440,33 @@ namespace Opm {
         {
             const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
             return flowToEbos[ phaseIdx ];
+        }
+
+
+        void updateRateConverter(const ReservoirState& reservoir_state)
+        {
+            const int nw = numWells();
+            int global_number_wells = nw;
+
+#if HAVE_MPI
+            if ( istlSolver_->parallelInformation().type() == typeid(ParallelISTLInformation) )
+            {
+                const auto& info =
+                    boost::any_cast<const ParallelISTLInformation&>(istlSolver_->parallelInformation());
+                global_number_wells = info.communicator().sum(global_number_wells);
+                if ( global_number_wells )
+                {
+                    rate_converter_.defineState(reservoir_state, boost::any_cast<const ParallelISTLInformation&>(istlSolver_->parallelInformation()));
+                }
+            }
+            else
+#endif
+            {
+                if ( global_number_wells )
+                {
+                    rate_converter_.defineState(reservoir_state);
+                }
+            }
         }
 
 
