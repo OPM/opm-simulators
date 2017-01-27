@@ -556,10 +556,12 @@ namespace Opm
         //   output_writer_
         void setupOutputWriter()
         {
+            const PhaseUsage pu = Opm::phaseUsageFromDeck(deck());
             output_writer_.reset(new OutputWriter(grid(),
                                                   param_,
                                                   eclState(),
-                                                  std::move(eclIO_));
+                                                  *eclIO_,
+                                                  pu));
         }
 
         // Run the simulator.
