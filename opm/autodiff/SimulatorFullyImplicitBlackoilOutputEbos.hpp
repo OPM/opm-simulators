@@ -69,7 +69,7 @@ namespace Opm
         BlackoilOutputWriterEbos(const Grid& grid,
                                  const parameter::ParameterGroup& param,
                                  const EclipseState& eclipseState,
-                                 std::unique_ptr<EclipseIO>&& eclIO,
+                                 EclipseIO& eclIO,
                                  const Opm::PhaseUsage &phaseUsage);
 
         /*!
@@ -159,7 +159,7 @@ namespace Opm
 
         std::ofstream backupfile_;
         Opm::PhaseUsage phaseUsage_;
-        std::unique_ptr<EclipseIO> eclIO_;
+        EclipseIO& eclIO_;
         const EclipseState& eclipseState_;
 
         std::unique_ptr< ThreadHandle > asyncOutput_;
@@ -177,7 +177,7 @@ namespace Opm
     BlackoilOutputWriterEbos(const Grid& grid,
                              const parameter::ParameterGroup& param,
                              const Opm::EclipseState& eclipseState,
-                             std::unique_ptr<EclipseIO>&& eclIO,
+                             EclipseIO& eclIO,
                              const Opm::PhaseUsage &phaseUsage)
       : output_( param.getDefault("output", true) ),
         parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, phaseUsage ) : 0 ),
@@ -185,13 +185,12 @@ namespace Opm
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
+        eclIO_(eclIO),
         eclipseState_(eclipseState),
         asyncOutput_()
     {
         // For output.
         if (output_ && parallelOutput_->isIORank() ) {
-            eclIO_ = std::move(eclIO);
-
             // Ensure that output dir exists
             boost::filesystem::path fpath(outputDir_);
             try {
@@ -262,7 +261,7 @@ namespace Opm
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate, phaseusage ); //Resize for restart step
-        auto state = eclIO_->loadRestart(solution_keys);
+        auto state = eclIO_.loadRestart(solution_keys);
         solutionToSim( state.first, phaseusage, simulatorstate );
         wellsToState( state.second, phaseusage, wellstate );
     }

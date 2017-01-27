@@ -156,7 +156,7 @@ namespace Opm
                         bool substep)
     {
         // ECL output
-        if ( eclIO_ )
+        if (output())
         {
             const auto& initConfig = eclipseState_.getInitConfig();
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
@@ -164,11 +164,11 @@ namespace Opm
             } else {
                 data::Solution combined_sol = simToSolution(state, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...)
                 combined_sol.insert(sol.begin(), sol.end());           // ... insert "extra" data (KR, VISC, ...)
-                eclIO_->writeTimeStep(timer.reportStepNum(),
-                                      substep,
-                                      timer.simulationTimeElapsed(),
-                                      combined_sol,
-                                      wellState.report(phaseUsage_));
+                eclIO_.writeTimeStep(timer.reportStepNum(),
+                                     substep,
+                                     timer.simulationTimeElapsed(),
+                                     combined_sol,
+                                     wellState.report(phaseUsage_));
             }
         }
 
