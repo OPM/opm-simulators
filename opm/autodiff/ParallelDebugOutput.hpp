@@ -241,6 +241,11 @@ namespace Opm
 
         enum { ioRank = 0 };
 
+        /// \brief Constructor
+        /// \param otherGrid The grid with the distributed(!) view  activated.
+        /// \param eclipseState The eclipse file parser output
+        /// \param numPhases The number of active phases.
+        /// \param permeability The permeabilities  for the global(!) view.
         ParallelDebugOutput( const Dune::CpGrid& otherGrid,
                              const EclipseState& eclipseState,
                              const int numPhases,
