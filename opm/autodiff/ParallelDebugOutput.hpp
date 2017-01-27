@@ -242,7 +242,7 @@ namespace Opm
         enum { ioRank = 0 };
 
         /// \brief Constructor
-        /// \param otherGrid The grid with the distributed(!) view  activated.
+        /// \param otherGrid The grid after loadbalance was run.
         /// \param eclipseState The eclipse file parser output
         /// \param numPhases The number of active phases.
         /// \param permeability The permeabilities  for the global(!) view.
@@ -252,16 +252,22 @@ namespace Opm
                              const Opm::PhaseUsage& phaseUsage)
             : grid_(),
               eclipseState_( eclipseState ),
-              toIORankComm_( otherGrid.comm() ),
               globalCellData_(new data::Solution),
-              isIORank_( otherGrid.comm().rank() == ioRank ),
+              isIORank_(true),
               phaseUsage_(phaseUsage)
 
         {
+            // Switch to distributed view unconditionally for safety.
+            Dune::CpGrid distributed_grid = otherGrid;
+
             const CollectiveCommunication& comm = otherGrid.comm();
             if( comm.size() > 1 )
             {
                 std::set< int > send, recv;
+                distributed_grid.switchToDistributedView();
+                toIORankComm_ = distributed_grid.comm();
+                isIORank_ = (distributed_grid.comm().rank() == ioRank);
+
                 // the I/O rank receives from all other ranks
                 if( isIORank() )
                 {
@@ -301,10 +307,10 @@ namespace Opm
                 }
 
                 localIndexMap_.clear();
-                localIndexMap_.reserve( otherGrid.size( 0 ) );
+                localIndexMap_.reserve( distributed_grid.size( 0 ) );
 
                 unsigned int index = 0;
-                auto localView = otherGrid.leafGridView();
+                auto localView = distributed_grid.leafGridView();
                 for( auto it = localView.begin< 0 >(),
                      end = localView.end< 0 >(); it != end; ++it, ++index )
                 {
@@ -327,13 +333,13 @@ namespace Opm
                 }
 
                 // distribute global id's to io rank for later association of dof's
-                DistributeIndexMapping distIndexMapping( globalIndex_, otherGrid.globalCell(), localIndexMap_, indexMaps_ );
+                DistributeIndexMapping distIndexMapping( globalIndex_, distributed_grid.globalCell(), localIndexMap_, indexMaps_ );
                 toIORankComm_.exchange( distIndexMapping );
             }
             else // serial run
             {
                 // copy global cartesian index
-                globalIndex_ = otherGrid.globalCell();
+                globalIndex_ = distributed_grid.globalCell();
             }
         }
 
@@ -702,7 +708,7 @@ namespace Opm
         // this needs to be revised
         WellStateFullyImplicitBlackoil            globalWellState_;
         // true if we are on I/O rank
-        const bool                                isIORank_;
+        bool                                      isIORank_;
         // Phase usage needed to convert solution to simulation data container
         Opm::PhaseUsage phaseUsage_;
     };
