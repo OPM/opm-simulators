@@ -286,7 +286,7 @@ try
 
             // Create new wells, polymer inflow controls.
             eclipseState.reset( new EclipseState( deck ) );
-            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
+            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {

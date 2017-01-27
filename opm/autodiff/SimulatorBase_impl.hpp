@@ -92,7 +92,7 @@ namespace Opm
 
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
-            output_writer_.initFromRestartFile(props_.phaseUsage(), props_.permeability(), grid_, state, prev_well_state);
+            output_writer_.initFromRestartFile(props_.phaseUsage(), grid_, state, prev_well_state);
             initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid_), has_disgas_, has_vapoil_);
         }
 
@@ -170,7 +170,6 @@ namespace Opm
                                        Opm::UgGridHelpers::dimensions(grid_),
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
-                                       props_.permeability(),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
                                        well_potentials,

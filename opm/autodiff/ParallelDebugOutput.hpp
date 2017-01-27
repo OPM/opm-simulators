@@ -82,7 +82,6 @@ namespace Opm
         ParallelDebugOutput ( const GridImpl& grid,
                               const EclipseState& /* eclipseState */,
                               const int,
-                              const double*,
                               const Opm::PhaseUsage& )
             : grid_( grid ) {}
 
@@ -245,11 +244,9 @@ namespace Opm
         ParallelDebugOutput( const Dune::CpGrid& otherGrid,
                              const EclipseState& eclipseState,
                              const int numPhases,
-                             const double* permeability,
                              const Opm::PhaseUsage& phaseUsage)
             : grid_(),
               eclipseState_( eclipseState ),
-              permeability_( permeability ),
               toIORankComm_( otherGrid.comm() ),
               globalCellData_(new data::Solution),
               isIORank_( otherGrid.comm().rank() == ioRank ),
@@ -628,16 +625,14 @@ namespace Opm
                                            Opm::UgGridHelpers::dimensions( globalGrid ),
                                            Opm::UgGridHelpers::cell2Faces( globalGrid ),
                                            Opm::UgGridHelpers::beginFaceCentroids( globalGrid ),
-                                           permeability_,
                                            dynamic_list_econ_limited,
-                                           false
+                                           false,
                                            // We need to pass the optionaly arguments
                                            // as we get the following error otherwise
                                            // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
                                            // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructor
-                                           , std::vector<double>(),
-                                           std::unordered_set<std::string>()
-                                           );
+                                           std::vector<double>(),
+                                           std::unordered_set<std::string>());
 
                 const Wells* wells = wells_manager.c_wells();
                 globalWellState_.init(wells, *globalReservoirState_, globalWellState_ );
@@ -693,7 +688,6 @@ namespace Opm
     protected:
         std::unique_ptr< Dune::CpGrid >           grid_;
         const EclipseState&                       eclipseState_;
-        const double*                             permeability_;
         P2PCommunicatorType                       toIORankComm_;
         IndexMapType                              globalIndex_;
         IndexMapType                              localIndexMap_;

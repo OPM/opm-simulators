@@ -556,15 +556,10 @@ namespace Opm
         //   output_writer_
         void setupOutputWriter()
         {
-            // create output writer after grid is distributed, otherwise the parallel output
-            // won't work correctly since we need to create a mapping from the distributed to
-            // the global view
             output_writer_.reset(new OutputWriter(grid(),
                                                   param_,
                                                   eclState(),
-                                                  std::move(eclIO_),
-                                                  Opm::phaseUsageFromDeck(deck()),
-                                                  fluidprops_->permeability()));
+                                                  std::move(eclIO_));
         }
 
         // Run the simulator.

@@ -320,7 +320,7 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, polymer inflow controls.
-            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
+            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {

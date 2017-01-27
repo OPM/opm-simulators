@@ -208,8 +208,7 @@ namespace Opm
                              const parameter::ParameterGroup& param,
                              const Opm::EclipseState& eclipseState,
                              std::unique_ptr<EclipseIO>&& eclIO,
-                             const Opm::PhaseUsage &phaseUsage,
-                             const double* permeability );
+                             const Opm::PhaseUsage &phaseUsage);
 
         /** \copydoc Opm::OutputWriter::writeInit */
         void writeInit(const data::Solution& simProps, const NNC& nnc);
@@ -283,7 +282,6 @@ namespace Opm
 
         template <class Grid>
         void initFromRestartFile(const PhaseUsage& phaseusage,
-                                 const double* permeability,
                                  const Grid& grid,
                                  SimulationDataContainer& simulatorstate,
                                  WellStateFullyImplicitBlackoil& wellstate);
@@ -323,10 +321,9 @@ namespace Opm
                          const parameter::ParameterGroup& param,
                          const Opm::EclipseState& eclipseState,
                          std::unique_ptr<EclipseIO>&& eclIO,
-                         const Opm::PhaseUsage &phaseUsage,
-                         const double* permeability )
+                         const Opm::PhaseUsage &phaseUsage)
       : output_( param.getDefault("output", true) ),
-        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, permeability, phaseUsage ) : 0 ),
+        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, phaseUsage ) : 0 ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
         lastBackupReportStep_( -1 ),
@@ -400,7 +397,6 @@ namespace Opm
     inline void
     BlackoilOutputWriter::
     initFromRestartFile( const PhaseUsage& phaseusage,
-                         const double* permeability,
                          const Grid& grid,
                          SimulationDataContainer& simulatorstate,
                          WellStateFullyImplicitBlackoil& wellstate)
@@ -422,7 +418,6 @@ namespace Opm
                                   Opm::UgGridHelpers::dimensions(grid),
                                   Opm::UgGridHelpers::cell2Faces(grid),
                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                  permeability,
                                   dummy_list_econ_limited
                                   // We need to pass the optionaly arguments
                                   // as we get the following error otherwise

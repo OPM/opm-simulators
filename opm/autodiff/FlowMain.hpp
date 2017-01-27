@@ -781,8 +781,7 @@ namespace Opm
                                                   param_,
                                                   *eclipse_state_,
                                                   std::move(eclipse_writer_),
-                                                  Opm::phaseUsageFromDeck(*deck_),
-                                                  fluidprops_->permeability()));
+                                                  Opm::phaseUsageFromDeck(*deck_)));
         }
 
 

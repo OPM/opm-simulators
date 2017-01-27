@@ -106,7 +106,6 @@ namespace Opm
                                        Opm::UgGridHelpers::dimensions(grid_),
                                        Opm::UgGridHelpers::cell2Faces(grid_),
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
-                                       props_.permeability(),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
                                        // We need to pass the optionaly arguments

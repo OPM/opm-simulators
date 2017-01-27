@@ -252,7 +252,7 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid(), props->permeability());
+            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every report step,
             // since number of wells may change etc.
