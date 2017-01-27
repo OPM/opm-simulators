@@ -234,7 +234,7 @@ namespace Opm
         // distributeData()
         boost::any parallel_information_;
         // setupOutputWriter()
-        std::unique_ptr<EclipseWriter> eclipse_writer_;
+        std::unique_ptr<EclipseIO> eclipse_writer_;
         std::unique_ptr<OutputWriter> output_writer_;
         // setupLinearSolver
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
@@ -762,7 +762,7 @@ namespace Opm
             if( output && output_ecl && output_cout_)
             {
                 const EclipseGrid& inputGrid = eclipse_state_->getInputGrid();
-                eclipse_writer_.reset(new EclipseWriter(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid )));
+                eclipse_writer_.reset(new EclipseIO(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid )));
                 eclipse_writer_->writeInitial(geoprops_->simProps(grid),
                                               geoprops_->nonCartesianConnections());
             }

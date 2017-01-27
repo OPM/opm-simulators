@@ -37,7 +37,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-#include <opm/output/eclipse/EclipseWriter.hpp>
+#include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
@@ -239,11 +239,11 @@ try
     std::cout << "\n\n================    Starting main simulation loop     ===============\n"
               << std::flush;
 
-    std::unique_ptr<Opm::EclipseWriter>
-        eclipseWriter(new Opm::EclipseWriter(*eclipseState,
-                                             UgGridHelpers
-                                             ::createEclipseGrid( cGrid ,
-                                                                  eclipseState->getInputGrid())));
+    std::unique_ptr<Opm::EclipseIO>
+        eclipseWriter(new Opm::EclipseIO(*eclipseState,
+                                         UgGridHelpers
+                                         ::createEclipseGrid( cGrid ,
+                                                              eclipseState->getInputGrid())));
     Opm::BlackoilOutputWriter
         outputWriter(cGrid, param, *eclipseState, std::move(eclipseWriter), pu,
                      new_props->permeability() );
