@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
 
     // Both wells are open in the first schedule step
     {
-    Opm::WellsManager wellsManager(eclipseState , 0 , *gridManager.c_grid(), NULL);
+    Opm::WellsManager wellsManager(eclipseState , 0 , *gridManager.c_grid());
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];
     const struct WellControls* ctrls1 = wells->ctrls[1];
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(TestStoppedWells)
 
     // The injector is stopped
     {
-    Opm::WellsManager wellsManager(eclipseState , 1 , *gridManager.c_grid(), NULL);
+    Opm::WellsManager wellsManager(eclipseState , 1 , *gridManager.c_grid());
     const Wells* wells = wellsManager.c_wells();
     const struct WellControls* ctrls0 = wells->ctrls[0];
     const struct WellControls* ctrls1 = wells->ctrls[1];

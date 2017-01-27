@@ -4,6 +4,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
+#include <opm/core/props/rock/RockFromDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/CompletionSet.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -311,7 +312,6 @@ WellsManager(const Opm::EclipseState& eclipseState,
              int                             dimensions,
              const C2F&                      cell_to_faces,
              FC                              begin_face_centroids,
-             const double*                   permeability,
              const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
              const std::vector<double>&      well_potentials,
@@ -320,7 +320,7 @@ WellsManager(const Opm::EclipseState& eclipseState,
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
-         cell_to_faces, begin_face_centroids, permeability, list_econ_limited, well_potentials, deactivated_wells);
+         cell_to_faces, begin_face_centroids, list_econ_limited, well_potentials, deactivated_wells);
 }
 
 /// Construct wells from deck.
@@ -334,7 +334,6 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
                    int                             dimensions,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
-                   const double*                   permeability,
                    const DynamicListEconLimited&   list_econ_limited,
                    const std::vector<double>&      well_potentials,
                    const std::unordered_set<std::string>&    deactivated_wells)
@@ -392,13 +391,22 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
         }
     }
 
+
+    std::vector<double> interleavedPerm;
+    RockFromDeck::extractInterleavedPermeability(eclipseState,
+                                                 number_of_cells,
+                                                 global_cell,
+                                                 cart_dims,
+                                                 0.0,
+                                                 interleavedPerm);
+
     createWellsFromSpecs(wells, timeStep, cell_to_faces,
                          cart_dims,
                          begin_face_centroids,
                          dimensions,
                          dz,
                          well_names, well_data, well_names_to_index,
-                         pu, cartesian_to_compressed, permeability, ntg,
+                         pu, cartesian_to_compressed, interleavedPerm.data(), ntg,
                          wells_on_proc, deactivated_wells, list_econ_limited);
 
     setupWellControls(wells, timeStep, well_names, pu, wells_on_proc, list_econ_limited);

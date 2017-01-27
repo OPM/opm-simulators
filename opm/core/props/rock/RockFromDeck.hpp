@@ -77,15 +77,27 @@ namespace Opm
             return &permeability_[0];
         }
 
+        /// Convert the permeabilites for the logically Cartesian grid in EclipseState to
+        /// an array of size number_of_cells*dim*dim for the compressed array.
+        /// \param  eclState        The EclipseState (processed deck) produced by the opm-parser code
+        /// \param  number_of_cells The number of cells in the grid.
+        /// \param  global_cell     The mapping fom local to global cell indices.
+        ///                         global_cell[i] is the corresponding global index of i.
+        /// \param  cart_dims       The size of the underlying cartesian grid.
+        /// \param  perm_threshold  The threshold for permeability
+        /// \param  permeability    The result array
+        static
+        void extractInterleavedPermeability(const Opm::EclipseState& eclState,
+                                            const int number_of_cells,
+                                            const int* global_cell,
+                                            const int* cart_dims,
+                                            const double perm_threshold,
+                                            std::vector<double>& permeability);
+
     private:
         void assignPorosity(const Opm::EclipseState& eclState,
                             int number_of_cells,
                             const int* global_cell);
-        void assignPermeability(const Opm::EclipseState& eclState,
-                                int number_of_cells,
-                                const int* global_cell,
-                                const int* cart_dims,
-                                double perm_threshold);
 
         std::vector<double> porosity_;
         std::vector<double> permeability_;
