@@ -20,6 +20,16 @@ copyToReferenceDir () {
 
 tests=${@:2}
 test -z "$tests" && tests="spe11 spe12 spe3 spe9 norne_init"
+if grep -q -i "norne " <<< $ghprbCommentBody
+then
+  if test -d $WORKSPACE/deps/opm-data/norne/flow
+  then
+    tests="$tests norne_full"
+  fi
+fi
+
+echo $tests
+
 for test_name in ${tests}; do
   if grep -q "spe11" <<< $test_name
   then
@@ -65,6 +75,15 @@ for test_name in ${tests}; do
       NORNE_ATW2013 \
       EGRID INIT
   fi
+
+  if grep -q "norne_full" <<< $test_name
+  then
+    copyToReferenceDir \
+      deps/opm-data/norne/flow/ \
+      $OPM_DATA_ROOT/norne/opm-simulation-reference/ \
+      NORNE_ATW2013 \
+      UNSMRY
+  fi
 done
 
 if [ -z "${@:2}" ]
@@ -76,7 +95,8 @@ then
   git status | grep "SPE1CASE2" && tests="$tests spe12"
   git status | grep "SPE3CASE1" && tests="$tests spe3"
   git status | grep "SPE9_CP" && tests="$tests spe9"
-  git status | grep "NORNE_ATW2013" && tests="$tests norne_init"
+  git status | grep "NORNE_ATW2013.INIT" && tests="$tests norne_init"
+  git status | grep "NORNE_ATW2013.UNSMRY" && tests="$tests norne_full"
   popd > /dev/null
 fi
 
