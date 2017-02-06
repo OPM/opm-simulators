@@ -288,6 +288,8 @@ namespace Opm
 
         bool isRestart() const;
 
+        bool requireFIPNUM() const;
+
     protected:
         const bool output_;
         std::unique_ptr< ParallelDebugOutputInterface > parallelOutput_;

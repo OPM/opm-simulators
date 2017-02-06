@@ -299,4 +299,9 @@ namespace Opm
         const auto& initconfig = eclipseState_.getInitConfig();
         return initconfig.restartRequested();
     }
+
+
+    bool BlackoilOutputWriterEbos::requireFIPNUM() const {
+        return eclipseState_.getSummaryConfig().requireFIPNUM();
+    }
 }

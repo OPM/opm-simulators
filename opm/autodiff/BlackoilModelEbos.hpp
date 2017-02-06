@@ -1005,6 +1005,14 @@ namespace Opm {
             return fluid_.numPhases();
         }
 
+        /// Wrapper required due to not following generic API
+        template<class T>
+        std::vector<std::vector<double> >
+        computeFluidInPlace(const T&, const std::vector<int>& fipnum) const
+        {
+            return computeFluidInPlace(fipnum);
+        }
+
         std::vector<std::vector<double> >
         computeFluidInPlace(const std::vector<int>& fipnum) const
         {
