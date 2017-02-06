@@ -372,9 +372,7 @@ struct EclEpsScalingPointsInfo
             if (jfuncFlag == Opm::JFunc::Flag::WATER || jfuncFlag == Opm::JFunc::Flag::BOTH) {
                 // note that we use the surface tension in terms of [dyn/cm]
                 Scalar gamma =
-                    jfunc.owSurfaceTension()
-                    * (/*dyn/N=*/1e5 * /*m/cm=*/1e-2);
-
+                    jfunc.owSurfaceTension();
                 pcowLeverettFactor = commonFactor*gamma*Uconst;
             }
 
@@ -382,9 +380,7 @@ struct EclEpsScalingPointsInfo
             if (jfuncFlag == Opm::JFunc::Flag::GAS || jfuncFlag == Opm::JFunc::Flag::BOTH) {
                 // note that we use the surface tension in terms of [dyn/cm]
                 Scalar gamma =
-                    jfunc.goSurfaceTension()
-                    * (/*dyn/N=*/1e5 * /*m/cm=*/1e-2);
-
+                    jfunc.goSurfaceTension();
                 pcgoLeverettFactor = commonFactor*gamma*Uconst;
             }
         }
