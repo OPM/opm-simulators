@@ -288,6 +288,8 @@ namespace Opm
         const WellStateFullyImplicitBlackoil& wellState  = (parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalWellState() : localWellState;
 
         // serial output is only done on I/O rank
+        int err = 0;
+        std::string emsg;
         if( isIORank )
         {
             if( asyncOutput_ ) {
@@ -296,7 +298,25 @@ namespace Opm
             }
             else {
                 // just write the data to disk
-                writeTimeStepSerial( timer, state, wellState, cellData, substep );
+                try {
+                    writeTimeStepSerial( timer, state, wellState, cellData, substep );
+                } catch (std::runtime_error& msg) {
+                    err = 1;
+                    emsg = msg.what();
+                }
+            }
+        }
+
+        if (!asyncOutput_) {
+#if HAVE_MPI
+            MPI_Bcast(&err, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#endif
+            if (err) {
+                if (isIORank) {
+                    throw std::runtime_error(emsg);
+                } else {
+                    throw std::runtime_error("I/O process encountered problems.");
+                }
             }
         }
     }
