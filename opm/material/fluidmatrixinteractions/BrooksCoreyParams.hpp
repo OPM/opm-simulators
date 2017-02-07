@@ -28,6 +28,7 @@
 #define OPM_BROOKS_COREY_PARAMS_HPP
 
 #include <opm/common/Valgrind.hpp>
+#include <opm/material/common/AssertFinalized.hpp>
 
 #include <cassert>
 
@@ -42,36 +43,25 @@ namespace Opm {
  *\see BrooksCorey
  */
 template <class TraitsT>
-class BrooksCoreyParams
+class BrooksCoreyParams : public AssertFinalized
 {
     typedef typename TraitsT::Scalar Scalar;
-
+protected:
+    using AssertFinalized :: assertFinalized_;
 public:
+    using AssertFinalized :: finalize;
+
     typedef TraitsT Traits;
 
     BrooksCoreyParams()
     {
         Valgrind::SetUndefined(*this);
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     BrooksCoreyParams(Scalar ePressure, Scalar shapeParam)
         : entryPressure_(ePressure), lambda_(shapeParam)
     {
         finalize();
-    }
-
-    /*!
-     * \brief Calculate all dependent quantities once the independent
-     *        quantities of the parameter object have been set.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -100,16 +90,6 @@ public:
     { lambda_ = v; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Scalar entryPressure_;
     Scalar lambda_;
 };

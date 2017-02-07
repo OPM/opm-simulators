@@ -28,6 +28,7 @@
 #define OPM_SPLINE_TWO_PHASE_MATERIAL_PARAMS_HPP
 
 #include <opm/material/common/Spline.hpp>
+#include <opm/material/common/AssertFinalized.hpp>
 
 #include <vector>
 #include <cassert>
@@ -40,9 +41,13 @@ namespace Opm {
  *        uses a table and spline-based interpolation.
  */
 template<class TraitsT>
-class SplineTwoPhaseMaterialParams
+class SplineTwoPhaseMaterialParams : public AssertFinalized
 {
     typedef typename TraitsT::Scalar Scalar;
+protected:
+    using AssertFinalized :: assertFinalized_;
+public:
+    using AssertFinalized :: finalize;
 
 public:
     typedef std::vector<Scalar> SamplePoints;
@@ -53,20 +58,6 @@ public:
 
     SplineTwoPhaseMaterialParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
-    }
-
-    /*!
-     * \brief Calculate all dependent quantities once the independent
-     *        quantities of the parameter object have been set.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -137,16 +128,6 @@ public:
     }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Spline SwSpline_;
     Spline pcwnSpline_;
     Spline krwSpline_;

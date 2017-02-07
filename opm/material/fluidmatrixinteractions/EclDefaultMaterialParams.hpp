@@ -31,6 +31,8 @@
 #include <cassert>
 #include <memory>
 
+#include <opm/material/common/AssertFinalized.hpp>
+
 namespace Opm {
 
 /*!
@@ -42,11 +44,15 @@ namespace Opm {
  * the twophase capillary pressure laws.
  */
 template<class Traits, class GasOilParamsT, class OilWaterParamsT>
-class EclDefaultMaterialParams
+class EclDefaultMaterialParams : public AssertFinalized
 {
     typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
+protected:
+    using AssertFinalized :: assertFinalized_;
 public:
+    using AssertFinalized :: finalize;
+
     typedef GasOilParamsT GasOilParams;
     typedef OilWaterParamsT OilWaterParams;
 
@@ -55,19 +61,6 @@ public:
      */
     EclDefaultMaterialParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
-    }
-
-    /*!
-     * \brief Finish the initialization of the parameter object.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -139,16 +132,6 @@ public:
     { return true; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     std::shared_ptr<GasOilParams> gasOilParams_;
     std::shared_ptr<OilWaterParams> oilWaterParams_;
 
