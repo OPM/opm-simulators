@@ -34,6 +34,8 @@
 
 #include <cassert>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -55,9 +57,6 @@ public:
         : BrooksCoreyParams()
         , pcnwLowSw_(0.01)
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     RegularizedBrooksCoreyParams(Scalar entryPressure, Scalar lambda)
@@ -77,10 +76,6 @@ public:
         pcnwSlopeLow_ = dPcnw_dSw_(pcnwLowSw_);
         pcnwHigh_ = BrooksCorey::twoPhaseSatPcnw(*this, 1.0);
         pcnwSlopeHigh_ = dPcnw_dSw_(1.0);
-
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -88,14 +83,14 @@ public:
      *        capillary pressure is regularized.
      */
     Scalar pcnwLowSw() const
-    { assertFinalized_(); return pcnwLowSw_; }
+    { EnsureFinalized::check(); return pcnwLowSw_; }
 
     /*!
      * \brief Return the capillary pressure at the low threshold
      *        saturation of the wetting phase.
      */
     Scalar pcnwLow() const
-    { assertFinalized_(); return pcnwLow_; }
+    { EnsureFinalized::check(); return pcnwLow_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -104,7 +99,7 @@ public:
      * For this case, we extrapolate the curve using a straight line.
      */
     Scalar pcnwSlopeLow() const
-    { assertFinalized_(); return pcnwSlopeLow_; }
+    { EnsureFinalized::check(); return pcnwSlopeLow_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary
@@ -121,7 +116,7 @@ public:
      *        saturation of the wetting phase.
      */
     Scalar pcnwHigh() const
-    { assertFinalized_(); return pcnwHigh_; }
+    { EnsureFinalized::check(); return pcnwHigh_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -130,19 +125,9 @@ public:
      * For this case, we extrapolate the curve using a straight line.
      */
     Scalar pcnwSlopeHigh() const
-    { assertFinalized_(); return pcnwSlopeHigh_; }
+    { EnsureFinalized::check(); return pcnwSlopeHigh_; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Scalar dPcnw_dSw_(Scalar Sw) const
     {
         // use finite differences to calculate the derivative w.r.t. Sw of the

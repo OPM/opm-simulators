@@ -31,6 +31,8 @@
 #include <cassert>
 #include <memory>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 enum EclTwoPhaseApproach {
     EclTwoPhaseGasOil,
@@ -46,11 +48,14 @@ enum EclTwoPhaseApproach {
  * the twophase capillary pressure laws.
  */
 template<class Traits, class GasOilParamsT, class OilWaterParamsT>
-class EclTwoPhaseMaterialParams
+class EclTwoPhaseMaterialParams : public EnsureFinalized
 {
     typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
 public:
+    using EnsureFinalized :: finalize;
+
+
     typedef GasOilParamsT GasOilParams;
     typedef OilWaterParamsT OilWaterParams;
 
@@ -59,19 +64,6 @@ public:
      */
     EclTwoPhaseMaterialParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
-    }
-
-    /*!
-     * \brief Finish the initialization of the parameter object.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     void setApproach(EclTwoPhaseApproach newApproach)
@@ -84,13 +76,13 @@ public:
      * \brief The parameter object for the gas-oil twophase law.
      */
     const GasOilParams& gasOilParams() const
-    { assertFinalized_(); return *gasOilParams_; }
+    { EnsureFinalized::check(); return *gasOilParams_; }
 
     /*!
      * \brief The parameter object for the gas-oil twophase law.
      */
     GasOilParams& gasOilParams()
-    { assertFinalized_(); return *gasOilParams_; }
+    { EnsureFinalized::check(); return *gasOilParams_; }
 
     /*!
      * \brief Set the parameter object for the gas-oil twophase law.
@@ -102,13 +94,13 @@ public:
      * \brief The parameter object for the oil-water twophase law.
      */
     const OilWaterParams& oilWaterParams() const
-    { assertFinalized_(); return *oilWaterParams_; }
+    { EnsureFinalized::check(); return *oilWaterParams_; }
 
     /*!
      * \brief The parameter object for the oil-water twophase law.
      */
     OilWaterParams& oilWaterParams()
-    { assertFinalized_(); return *oilWaterParams_; }
+    { EnsureFinalized::check(); return *oilWaterParams_; }
 
     /*!
      * \brief Set the parameter object for the oil-water twophase law.
@@ -117,16 +109,6 @@ public:
     { oilWaterParams_ = val; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     EclTwoPhaseApproach approach_;
 
     std::shared_ptr<GasOilParams> gasOilParams_;

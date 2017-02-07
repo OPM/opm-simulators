@@ -50,6 +50,8 @@ class RegularizedVanGenuchtenParams : public VanGenuchtenParams<TraitsT>
     typedef Opm::VanGenuchten<TraitsT> VanGenuchten;
 
 public:
+    using Parent :: finalize;
+
     typedef TraitsT Traits;
 
     RegularizedVanGenuchtenParams()
@@ -83,10 +85,6 @@ public:
         pcnwHighSpline_.set(pcnwHighSw_, 1.0, // x0, x1
                             pcnwHigh_, 0, // y0, y1
                             mThreshold, pcnwSlopeHigh_); // m0, m1
-
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -94,14 +92,14 @@ public:
      *        capillary pressure is regularized.
      */
     Scalar pcnwLowSw() const
-    { assertFinalized_(); return pcnwLowSw_; }
+    { EnsureFinalized::check(); return pcnwLowSw_; }
 
     /*!
      * \brief Return the capillary pressure at the low threshold
      *        saturation of the wetting phase.
      */
     Scalar pcnwLow() const
-    { assertFinalized_(); return pcnwLow_; }
+    { EnsureFinalized::check(); return pcnwLow_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -110,7 +108,7 @@ public:
      * For this case, we extrapolate the curve using a straight line.
      */
     Scalar pcnwSlopeLow() const
-    { assertFinalized_(); return pcnwSlopeLow_; }
+    { EnsureFinalized::check(); return pcnwSlopeLow_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary
@@ -124,21 +122,21 @@ public:
      *        capillary pressure is regularized.
      */
     Scalar pcnwHighSw() const
-    { assertFinalized_(); return pcnwHighSw_; }
+    { EnsureFinalized::check(); return pcnwHighSw_; }
 
     /*!
      * \brief Return the capillary pressure at the high threshold
      *        saturation of the wetting phase.
      */
     Scalar pcnwHigh() const
-    { assertFinalized_(); return pcnwHigh_; }
+    { EnsureFinalized::check(); return pcnwHigh_; }
 
     /*!
      * \brief Return the spline curve which ought to be used between
      *        the upper threshold saturation and 1.
      */
     const Spline<Scalar>& pcnwHighSpline() const
-    { assertFinalized_(); return pcnwHighSpline_; }
+    { EnsureFinalized::check(); return pcnwHighSpline_; }
 
     /*!
      * \brief Return the slope capillary pressure curve if Sw is
@@ -147,7 +145,7 @@ public:
      * For this case, we extrapolate the curve using a straight line.
      */
     Scalar pcnwSlopeHigh() const
-    { assertFinalized_(); return pcnwSlopeHigh_; }
+    { EnsureFinalized::check(); return pcnwSlopeHigh_; }
 
     /*!
      * \brief Set the threshold saturation below which the capillary
@@ -157,16 +155,6 @@ public:
     { pcnwHighSw_ = value; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Scalar dPcnw_dSw_(Scalar Sw) const
     {
         // use finite differences to calculate the derivative w.r.t. Sw of the

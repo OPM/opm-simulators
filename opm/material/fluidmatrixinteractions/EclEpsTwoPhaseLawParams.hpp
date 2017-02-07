@@ -40,6 +40,8 @@
 #include <cassert>
 #include <algorithm>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -48,7 +50,7 @@ namespace Opm {
  *        which implements ECL endpoint scaleing .
  */
 template <class EffLawT>
-class EclEpsTwoPhaseLawParams
+class EclEpsTwoPhaseLawParams : public EnsureFinalized
 {
     typedef typename EffLawT::Params EffLawParams;
     typedef typename EffLawParams::Traits::Scalar Scalar;
@@ -59,9 +61,6 @@ public:
 
     EclEpsTwoPhaseLawParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     /*!
@@ -76,9 +75,8 @@ public:
             assert(unscaledPoints_);
         }
         assert(effectiveLawParams_);
-
-        finalized_ = true;
 #endif
+        EnsureFinalized :: finalize();
     }
 
     /*!
@@ -136,17 +134,6 @@ public:
     { return *effectiveLawParams_; }
 
 private:
-
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     std::shared_ptr<EffLawParams> effectiveLawParams_;
 
     std::shared_ptr<EclEpsConfig> config_;

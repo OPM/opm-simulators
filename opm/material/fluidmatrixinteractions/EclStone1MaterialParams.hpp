@@ -42,7 +42,7 @@ namespace Opm {
  * the twophase capillary pressure laws.
  */
 template<class Traits, class GasOilLawT, class OilWaterLawT>
-class EclStone1MaterialParams
+class EclStone1MaterialParams : public EnsureFinalized
 {
     typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
@@ -56,9 +56,6 @@ public:
      */
     EclStone1MaterialParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     /*!
@@ -68,22 +65,20 @@ public:
     {
         krocw_ = OilWaterLawT::twoPhaseSatKrn(*oilWaterParams_, Swl_);
 
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
+        EnsureFinalized :: finalize();
     }
 
     /*!
      * \brief The parameter object for the gas-oil twophase law.
      */
     const GasOilParams& gasOilParams() const
-    { assertFinalized_(); return *gasOilParams_; }
+    { EnsureFinalized::check(); return *gasOilParams_; }
 
     /*!
      * \brief The parameter object for the gas-oil twophase law.
      */
     GasOilParams& gasOilParams()
-    { assertFinalized_(); return *gasOilParams_; }
+    { EnsureFinalized::check(); return *gasOilParams_; }
 
     /*!
      * \brief Set the parameter object for the gas-oil twophase law.
@@ -95,13 +90,13 @@ public:
      * \brief The parameter object for the oil-water twophase law.
      */
     const OilWaterParams& oilWaterParams() const
-    { assertFinalized_(); return *oilWaterParams_; }
+    { EnsureFinalized::check(); return *oilWaterParams_; }
 
     /*!
      * \brief The parameter object for the oil-water twophase law.
      */
     OilWaterParams& oilWaterParams()
-    { assertFinalized_(); return *oilWaterParams_; }
+    { EnsureFinalized::check(); return *oilWaterParams_; }
 
     /*!
      * \brief Set the parameter object for the oil-water twophase law.
@@ -127,14 +122,14 @@ public:
      * \brief Return the saturation of "connate" water.
      */
     Scalar Swl() const
-    { assertFinalized_(); return Swl_; }
+    { EnsureFinalized::check(); return Swl_; }
 
     /*!
      * \brief Return the oil relperm for the oil-water system at the connate water
      *        saturation.
      */
     Scalar krocw() const
-    { assertFinalized_(); return krocw_; }
+    { EnsureFinalized::check(); return krocw_; }
 
     /*!
      * \brief Set the exponent of the extended Stone 1 model.
@@ -146,19 +141,9 @@ public:
      * \brief Return the exponent of the extended Stone 1 model.
      */
     Scalar eta() const
-    { assertFinalized_(); return eta_; }
+    { EnsureFinalized::check(); return eta_; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     std::shared_ptr<GasOilParams> gasOilParams_;
     std::shared_ptr<OilWaterParams> oilWaterParams_;
 

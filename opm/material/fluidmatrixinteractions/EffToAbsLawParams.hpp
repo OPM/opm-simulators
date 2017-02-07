@@ -29,6 +29,8 @@
 
 #include <cassert>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -52,10 +54,6 @@ public:
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
             residualSaturation_[phaseIdx] = 0.0;
-
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     /*!
@@ -69,23 +67,19 @@ public:
             sumResidualSaturations_ += residualSaturation_[phaseIdx];
 
         EffLawParams::finalize();
-
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
      * \brief Return the residual saturation of a phase.
      */
     Scalar residualSaturation(unsigned phaseIdx) const
-    { assertFinalized_(); return residualSaturation_[phaseIdx]; }
+    { EnsureFinalized::check(); return residualSaturation_[phaseIdx]; }
 
     /*!
      * \brief Return the sum of the residual saturations.
      */
     Scalar sumResidualSaturations() const
-    { assertFinalized_(); return sumResidualSaturations_; }
+    { EnsureFinalized::check(); return sumResidualSaturations_; }
 
     /*!
      * \brief Set the residual saturation of a phase.
@@ -94,15 +88,6 @@ public:
     { residualSaturation_[phaseIdx] = value; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
 
     Scalar residualSaturation_[numPhases];
     Scalar sumResidualSaturations_;

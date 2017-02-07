@@ -28,6 +28,7 @@
 #define OPM_SPLINE_TWO_PHASE_MATERIAL_PARAMS_HPP
 
 #include <opm/material/common/Spline.hpp>
+#include <opm/material/common/EnsureFinalized.hpp>
 
 #include <vector>
 #include <cassert>
@@ -40,9 +41,11 @@ namespace Opm {
  *        uses a table and spline-based interpolation.
  */
 template<class TraitsT>
-class SplineTwoPhaseMaterialParams
+class SplineTwoPhaseMaterialParams : public EnsureFinalized
 {
     typedef typename TraitsT::Scalar Scalar;
+public:
+    using EnsureFinalized :: finalize;
 
 public:
     typedef std::vector<Scalar> SamplePoints;
@@ -53,20 +56,6 @@ public:
 
     SplineTwoPhaseMaterialParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
-    }
-
-    /*!
-     * \brief Calculate all dependent quantities once the independent
-     *        quantities of the parameter object have been set.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -75,7 +64,7 @@ public:
      * This curve is assumed to depend on the wetting phase saturation
      */
     const Spline& pcnwSpline() const
-    { assertFinalized_(); return pcwnSpline_; }
+    { EnsureFinalized::check(); return pcwnSpline_; }
 
     /*!
      * \brief Set the sampling points for the capillary pressure curve.
@@ -97,7 +86,7 @@ public:
      * This curve is assumed to depend on the wetting phase saturation
      */
     const Spline& krwSpline() const
-    { assertFinalized_(); return krwSpline_; }
+    { EnsureFinalized::check(); return krwSpline_; }
 
     /*!
      * \brief Set the sampling points for the relative permeability
@@ -120,7 +109,7 @@ public:
      * This curve is assumed to depend on the wetting phase saturation
      */
     const Spline& krnSpline() const
-    { assertFinalized_(); return krnSpline_; }
+    { EnsureFinalized::check(); return krnSpline_; }
 
     /*!
      * \brief Set the sampling points for the relative permeability
@@ -137,16 +126,6 @@ public:
     }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Spline SwSpline_;
     Spline pcwnSpline_;
     Spline krwSpline_;
