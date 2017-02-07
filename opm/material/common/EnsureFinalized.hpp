@@ -30,7 +30,12 @@
 #include <cassert>
 #include <opm/common/ErrorMacros.hpp>
 
+// TODO: move this variable to config.h
 #define OPM_CHECK_PARAM_FINALIZED 1
+
+#if ! defined(NDEBUG) && OPM_CHECK_PARAM_FINALIZED
+#define USE_OPM_CHECK_PARAM_FINALIZED 1
+#endif
 
 namespace Opm {
 
@@ -40,7 +45,7 @@ namespace Opm {
  */
 class EnsureFinalized
 {
-#if OPM_CHECK_PARAM_FINALIZED
+#if USE_OPM_CHECK_PARAM_FINALIZED
     bool finalized_;
 #endif
 
@@ -49,7 +54,7 @@ protected:
      * \brief The default constructor.
      */
     EnsureFinalized()
-#if OPM_CHECK_PARAM_FINALIZED
+#if USE_OPM_CHECK_PARAM_FINALIZED
         : finalized_( false )
 #endif
     {
@@ -57,7 +62,7 @@ protected:
 
     void check() const
     {
-#if OPM_CHECK_PARAM_FINALIZED
+#if USE_OPM_CHECK_PARAM_FINALIZED
         if( ! finalized_ )
         {
             OPM_THROW(std::runtime_error,"Parameter class has not been finalized before usage!");
@@ -71,11 +76,13 @@ public:
      */
     void finalize()
     {
-#if OPM_CHECK_PARAM_FINALIZED
+#if USE_OPM_CHECK_PARAM_FINALIZED
         finalized_ = true;
 #endif
     }
 };
+
+#undef USE_OPM_CHECK_PARAM_FINALIZED
 
 } // namespace Opm
 #endif
