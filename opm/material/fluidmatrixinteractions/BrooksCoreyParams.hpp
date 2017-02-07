@@ -28,7 +28,7 @@
 #define OPM_BROOKS_COREY_PARAMS_HPP
 
 #include <opm/common/Valgrind.hpp>
-#include <opm/material/common/AssertFinalized.hpp>
+#include <opm/material/common/EnsureFinalized.hpp>
 
 #include <cassert>
 
@@ -43,13 +43,11 @@ namespace Opm {
  *\see BrooksCorey
  */
 template <class TraitsT>
-class BrooksCoreyParams : public AssertFinalized
+class BrooksCoreyParams : public EnsureFinalized
 {
     typedef typename TraitsT::Scalar Scalar;
-protected:
-    using AssertFinalized :: assertFinalized_;
 public:
-    using AssertFinalized :: finalize;
+    using EnsureFinalized :: finalize;
 
     typedef TraitsT Traits;
 
@@ -68,7 +66,7 @@ public:
      * \brief Returns the entry pressure [Pa]
      */
     Scalar entryPressure() const
-    { assertFinalized_(); return entryPressure_; }
+    { EnsureFinalized::check(); return entryPressure_; }
 
     /*!
      * \brief Set the entry pressure [Pa]
@@ -81,7 +79,7 @@ public:
      * \brief Returns the lambda shape parameter
      */
     Scalar lambda() const
-    { assertFinalized_(); return lambda_; }
+    { EnsureFinalized::check(); return lambda_; }
 
     /*!
      * \brief Set the lambda shape parameter

@@ -22,14 +22,15 @@
 */
 /*!
  * \file
- * \copydoc Opm::AssertFinalized
+ * \copydoc Opm::EnsureFinalized
  */
-#ifndef OPM_MATERIAL_ASSERT_FINALIZED_HPP
-#define OPM_MATERIAL_ASSERT_FINALIZED_HPP
+#ifndef OPM_MATERIAL_ENSURE_FINALIZED_HPP
+#define OPM_MATERIAL_ENSURE_FINALIZED_HPP
 
-#include <type_traits>
 #include <cassert>
-#include <memory>
+#include <opm/common/ErrorMacros.hpp>
+
+#define OPM_CHECK_PARAM_FINALIZED 1
 
 namespace Opm {
 
@@ -37,7 +38,7 @@ namespace Opm {
  * \brief Default implementation for asserting finalization of parameter objects.
  *
  */
-class AssertFinalized
+class EnsureFinalized
 {
 #if OPM_CHECK_PARAM_FINALIZED
     bool finalized_;
@@ -47,17 +48,20 @@ protected:
     /*!
      * \brief The default constructor.
      */
-    AssertFinalized()
+    EnsureFinalized()
 #if OPM_CHECK_PARAM_FINALIZED
         : finalized_( false )
 #endif
     {
     }
 
-    void assertFinalized_() const
+    void check() const
     {
 #if OPM_CHECK_PARAM_FINALIZED
-        assert(finalized_);
+        if( ! finalized_ )
+        {
+            OPM_THROW(std::runtime_error,"Parameter class has not been finalized before usage!");
+        }
 #endif
     }
 

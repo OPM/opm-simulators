@@ -31,7 +31,7 @@
 #include <cassert>
 #include <memory>
 
-#include <opm/material/common/AssertFinalized.hpp>
+#include <opm/material/common/EnsureFinalized.hpp>
 
 namespace Opm {
 
@@ -44,14 +44,12 @@ namespace Opm {
  * the twophase capillary pressure laws.
  */
 template<class Traits, class GasOilParamsT, class OilWaterParamsT>
-class EclDefaultMaterialParams : public AssertFinalized
+class EclDefaultMaterialParams : public EnsureFinalized
 {
     typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
-protected:
-    using AssertFinalized :: assertFinalized_;
 public:
-    using AssertFinalized :: finalize;
+    using EnsureFinalized :: finalize;
 
     typedef GasOilParamsT GasOilParams;
     typedef OilWaterParamsT OilWaterParams;
@@ -67,13 +65,13 @@ public:
      * \brief The parameter object for the gas-oil twophase law.
      */
     const GasOilParams& gasOilParams() const
-    { assertFinalized_(); return *gasOilParams_; }
+    { EnsureFinalized::check(); return *gasOilParams_; }
 
     /*!
      * \brief The parameter object for the gas-oil twophase law.
      */
     GasOilParams& gasOilParams()
-    { assertFinalized_(); return *gasOilParams_; }
+    { EnsureFinalized::check(); return *gasOilParams_; }
 
     /*!
      * \brief Set the parameter object for the gas-oil twophase law.
@@ -85,13 +83,13 @@ public:
      * \brief The parameter object for the oil-water twophase law.
      */
     const OilWaterParams& oilWaterParams() const
-    { assertFinalized_(); return *oilWaterParams_; }
+    { EnsureFinalized::check(); return *oilWaterParams_; }
 
     /*!
      * \brief The parameter object for the oil-water twophase law.
      */
     OilWaterParams& oilWaterParams()
-    { assertFinalized_(); return *oilWaterParams_; }
+    { EnsureFinalized::check(); return *oilWaterParams_; }
 
     /*!
      * \brief Set the parameter object for the oil-water twophase law.
@@ -117,7 +115,7 @@ public:
      * \brief Return the saturation of "connate" water.
      */
     Scalar Swl() const
-    { assertFinalized_(); return Swl_; }
+    { EnsureFinalized::check(); return Swl_; }
 
     /*!
      * \brief Specify whether inconsistent saturations should be used to update the
