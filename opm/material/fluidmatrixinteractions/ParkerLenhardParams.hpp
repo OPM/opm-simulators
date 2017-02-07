@@ -28,6 +28,7 @@
 #define OPM_PARKER_LENHARD_PARAMS_HPP
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
+#include <opm/material/common/EnsureFinalized.hpp>
 
 #include <cassert>
 
@@ -42,9 +43,11 @@ class PLScanningCurve;
  *        model.
  */
 template <class TraitsT>
-class ParkerLenhardParams
+class ParkerLenhardParams : public EnsureFinalized
 {
 public:
+    using EnsureFinalized :: finalize;
+
     typedef typename TraitsT::Scalar Scalar;
     typedef Opm::RegularizedVanGenuchten<TraitsT> VanGenuchten;
     typedef typename VanGenuchten::Params VanGenuchtenParams;
@@ -55,44 +58,26 @@ public:
         currentSnr_ = 0;
         mdc_ = new ScanningCurve(/*Swr=*/0);
         pisc_ = csc_ = NULL;
-
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     ParkerLenhardParams(const ParkerLenhardParams& p)
+        : EnsureFinalized( p )
     {
         currentSnr_ = 0;
         SwrPc_ = p.SwrPc_;
         mdc_ = new ScanningCurve(SwrPc_);
         pisc_ = csc_ = NULL;
-
-#ifndef NDEBUG
-        finalized_ = p.finalized_;
-#endif
     }
 
     ~ParkerLenhardParams()
     { delete mdc_; }
 
     /*!
-     * \brief Calculate all dependent quantities once the independent
-     *        quantities of the parameter object have been set.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
-    }
-
-    /*!
      * \brief Returns the parameters of the main imbibition curve (which uses
      *        the van Genuchten capillary pressure model).
      */
     const VanGenuchtenParams& micParams() const
-    { assertFinalized_(); return *micParams_; }
+    { EnsureFinalized::check(); return *micParams_; }
 
     /*!
      * \brief Sets the parameters of the main imbibition curve (which uses
@@ -106,7 +91,7 @@ public:
      *        the van Genuchten capillary pressure model).
      */
     const VanGenuchtenParams& mdcParams() const
-    { assertFinalized_(); return *mdcParams_; }
+    { EnsureFinalized::check(); return *mdcParams_; }
 
     /*!
      * \brief Sets the parameters of the main drainage curve (which uses
@@ -119,7 +104,7 @@ public:
      * \brief Returns non-wetting phase residual saturation.
      */
     Scalar Snr() const
-    { assertFinalized_(); return Snr_; }
+    { EnsureFinalized::check(); return Snr_; }
 
     /*!
      * \brief Set the  non-wetting phase residual saturation.
@@ -131,13 +116,13 @@ public:
      * \brief Returns wetting phase residual saturation for the capillary pressure curve.
      */
     Scalar SwrPc() const
-    { assertFinalized_(); return SwrPc_; }
+    { EnsureFinalized::check(); return SwrPc_; }
 
     /*!
      * \brief Returns wetting phase residual saturation for the residual saturation curves.
      */
     Scalar SwrKr() const
-    { assertFinalized_(); return SwrKr_; }
+    { EnsureFinalized::check(); return SwrKr_; }
 
     /*!
      * \brief Set the wetting phase residual saturation for the
@@ -156,7 +141,7 @@ public:
      * \brief Returns the current effective residual saturation.
      */
     Scalar currentSnr() const
-    { assertFinalized_(); return currentSnr_; }
+    { EnsureFinalized::check(); return currentSnr_; }
 
     /*!
      * \brief Set the current effective residual saturation.
@@ -168,7 +153,7 @@ public:
      * \brief Returns the main drainage curve
      */
     ScanningCurve* mdc() const
-    { assertFinalized_(); return mdc_; }
+    { EnsureFinalized::check(); return mdc_; }
 
     /*!
      * \brief Set the main drainage curve.
@@ -180,7 +165,7 @@ public:
      * \brief Returns the primary imbibition scanning curve
      */
     ScanningCurve* pisc() const
-    { assertFinalized_(); return pisc_; }
+    { EnsureFinalized::check(); return pisc_; }
 
     /*!
      * \brief Set the primary imbibition scanning curve.
@@ -192,7 +177,7 @@ public:
      * \brief Returns the current scanning curve
      */
     ScanningCurve* csc() const
-    { assertFinalized_(); return csc_; }
+    { EnsureFinalized::check(); return csc_; }
 
     /*!
      * \brief Set the current scanning curve.
@@ -201,16 +186,6 @@ public:
     { csc_ = val; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     const VanGenuchtenParams* micParams_;
     const VanGenuchtenParams* mdcParams_;
     Scalar SwrPc_;

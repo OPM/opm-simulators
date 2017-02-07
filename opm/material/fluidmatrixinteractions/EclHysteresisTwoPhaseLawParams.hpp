@@ -40,6 +40,8 @@
 #include <cassert>
 #include <algorithm>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -48,7 +50,7 @@ namespace Opm {
  *        implements the ECL relative permeability and capillary pressure hysteresis
  */
 template <class EffLawT>
-class EclHysteresisTwoPhaseLawParams
+class EclHysteresisTwoPhaseLawParams : public EnsureFinalized
 {
     typedef typename EffLawT::Params EffLawParams;
     typedef typename EffLawParams::Traits::Scalar Scalar;
@@ -64,10 +66,6 @@ public:
 
         deltaSwImbKrn_ = 0.0;
         // deltaSwImbKrw_ = 0.0;
-
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     /*!
@@ -82,9 +80,7 @@ public:
             updateDynamicParams_();
         }
 
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
+        EnsureFinalized :: finalize();
     }
 
     /*!
@@ -275,17 +271,6 @@ public:
     }
 
 private:
-
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     void updateDynamicParams_()
     {
         // HACK: Eclipse seems to disable the wetting-phase relperm even though this is

@@ -29,6 +29,8 @@
 
 #include <cassert>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 
 /*!
@@ -36,13 +38,15 @@ namespace Opm {
  *        material material.
  */
 template<class TraitsT>
-class LinearMaterialParams
+class LinearMaterialParams : public EnsureFinalized
 {
     enum { numPhases = TraitsT::numPhases };
 
     typedef typename TraitsT::Scalar Scalar;
 
 public:
+    using EnsureFinalized :: finalize;
+
     typedef TraitsT Traits;
 
     /*!
@@ -56,21 +60,6 @@ public:
             setPcMinSat(phaseIdx, 0.0);
             setPcMaxSat(phaseIdx, 0.0);
         }
-
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
-    }
-
-    /*!
-     * \brief Calculate all dependent quantities once the independent
-     *        quantities of the parameter object have been set.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -79,7 +68,7 @@ public:
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=0\f$.
      */
     Scalar pcMinSat(unsigned phaseIdx) const
-    { assertFinalized_();return pcMinSat_[phaseIdx]; }
+    { EnsureFinalized::check();return pcMinSat_[phaseIdx]; }
 
     /*!
      * \brief Set the relative phase pressure at the minimum saturation of a phase.
@@ -95,7 +84,7 @@ public:
      * This means \f$p_{c\alpha}\f$ at \f$S_\alpha=1\f$.
      */
     Scalar pcMaxSat(unsigned phaseIdx) const
-    { assertFinalized_(); return pcMaxSat_[phaseIdx]; }
+    { EnsureFinalized::check(); return pcMaxSat_[phaseIdx]; }
 
     /*!
      * \brief Set the relative phase pressure at the maximum saturation of a phase.
@@ -106,16 +95,6 @@ public:
     { pcMaxSat_[phaseIdx] = val; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Scalar pcMaxSat_[numPhases];
     Scalar pcMinSat_[numPhases];
 };

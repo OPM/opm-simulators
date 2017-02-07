@@ -36,6 +36,8 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 #include <cassert>
 
 namespace Opm {
@@ -50,9 +52,11 @@ namespace Opm {
  * model-specific.
  */
 template<class TraitsT>
-class ThreePhaseParkerVanGenuchtenParams
+class ThreePhaseParkerVanGenuchtenParams : public EnsureFinalized
 {
 public:
+    using EnsureFinalized :: finalize;
+
     typedef TraitsT Traits;
     typedef typename Traits::Scalar Scalar;
 
@@ -60,20 +64,6 @@ public:
     {
         betaNW_ = 1.0;
         betaGN_ = 1.0;
-
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
-    }
-
-    /*!
-     * \brief Finish the initialization of the parameter object.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     /*!
@@ -81,7 +71,7 @@ public:
      *        curve.
      */
     Scalar vgAlpha() const
-    { assertFinalized_(); return vgAlpha_; }
+    { EnsureFinalized::check(); return vgAlpha_; }
 
     /*!
      * \brief Set the \f$\alpha\f$ shape parameter of van Genuchten's
@@ -95,7 +85,7 @@ public:
      *        curve.
      */
     Scalar vgM() const
-    { assertFinalized_(); return vgM_; }
+    { EnsureFinalized::check(); return vgM_; }
 
     /*!
      * \brief Set the \f$m\f$ shape parameter of van Genuchten's
@@ -111,7 +101,7 @@ public:
      *        curve.
      */
     Scalar vgN() const
-    { assertFinalized_(); return vgN_; }
+    { EnsureFinalized::check(); return vgN_; }
 
     /*!
      * \brief Set the \f$n\f$ shape parameter of van Genuchten's
@@ -126,7 +116,7 @@ public:
      * \brief Return the residual wetting saturation.
      */
     Scalar Swr() const
-    { assertFinalized_(); return Swr_; }
+    { EnsureFinalized::check(); return Swr_; }
 
     /*!
      * \brief Set the residual wetting saturation.
@@ -138,7 +128,7 @@ public:
      * \brief Return the residual non-wetting saturation.
      */
     Scalar Snr() const
-    { assertFinalized_(); return Snr_; }
+    { EnsureFinalized::check(); return Snr_; }
 
     /*!
      * \brief Set the residual non-wetting saturation.
@@ -150,7 +140,7 @@ public:
      * \brief Return the residual gas saturation.
      */
     Scalar Sgr() const
-    { assertFinalized_(); return Sgr_; }
+    { EnsureFinalized::check(); return Sgr_; }
 
     /*!
      * \brief Set the residual gas saturation.
@@ -159,7 +149,7 @@ public:
     { Sgr_ = input; }
 
     Scalar Swrx() const
-    { assertFinalized_(); return Swrx_; }
+    { EnsureFinalized::check(); return Swrx_; }
 
     /*!
      * \brief Set the residual gas saturation.
@@ -180,10 +170,10 @@ public:
      * \brief Return the values for the beta scaling parameters of capillary pressure between the phases
      */
     Scalar betaNW() const
-    { assertFinalized_(); return betaNW_; }
+    { EnsureFinalized::check(); return betaNW_; }
 
     Scalar betaGN() const
-    { assertFinalized_(); return betaGN_; }
+    { EnsureFinalized::check(); return betaGN_; }
 
     /*!
      * \brief defines if residual n-phase saturation should be regarded in its relative permeability.
@@ -194,7 +184,7 @@ public:
      * \brief Calls if residual n-phase saturation should be regarded in its relative permeability.
      */
     bool krRegardsSnr() const
-    { assertFinalized_(); return krRegardsSnr_; }
+    { EnsureFinalized::check(); return krRegardsSnr_; }
 
     void checkDefined() const
     {
@@ -211,16 +201,6 @@ public:
     }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Scalar vgAlpha_;
     Scalar vgM_;
     Scalar vgN_;

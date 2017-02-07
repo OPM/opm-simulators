@@ -31,6 +31,8 @@
 #include <cassert>
 #include <cstddef>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -39,7 +41,7 @@ namespace Opm {
  *        uses a table and piecewise constant interpolation.
  */
 template<class TraitsT>
-class PiecewiseLinearTwoPhaseMaterialParams
+class PiecewiseLinearTwoPhaseMaterialParams : public EnsureFinalized
 {
     typedef typename TraitsT::Scalar Scalar;
 
@@ -50,9 +52,6 @@ public:
 
     PiecewiseLinearTwoPhaseMaterialParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     /*!
@@ -61,9 +60,7 @@ public:
      */
     void finalize()
     {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
+        EnsureFinalized :: finalize ();
 
         // revert the order of the sampling points if they were given
         // in reverse direction.
@@ -83,19 +80,19 @@ public:
      * \brief Return the wetting-phase saturation values of all sampling points.
      */
     const ValueVector& SwKrwSamples() const
-    { assertFinalized_(); return SwKrwSamples_; }
+    { EnsureFinalized::check(); return SwKrwSamples_; }
 
     /*!
      * \brief Return the wetting-phase saturation values of all sampling points.
      */
     const ValueVector& SwKrnSamples() const
-    { assertFinalized_(); return SwKrnSamples_; }
+    { EnsureFinalized::check(); return SwKrnSamples_; }
 
     /*!
      * \brief Return the wetting-phase saturation values of all sampling points.
      */
     const ValueVector& SwPcwnSamples() const
-    { assertFinalized_(); return SwPcwnSamples_; }
+    { EnsureFinalized::check(); return SwPcwnSamples_; }
 
     /*!
      * \brief Return the sampling points for the capillary pressure curve.
@@ -103,7 +100,7 @@ public:
      * This curve is assumed to depend on the wetting phase saturation
      */
     const ValueVector& pcnwSamples() const
-    { assertFinalized_(); return pcwnSamples_; }
+    { EnsureFinalized::check(); return pcwnSamples_; }
 
     /*!
      * \brief Set the sampling points for the capillary pressure curve.
@@ -130,7 +127,7 @@ public:
      * This curve is assumed to depend on the wetting phase saturation
      */
     const ValueVector& krwSamples() const
-    { assertFinalized_(); return krwSamples_; }
+    { EnsureFinalized::check(); return krwSamples_; }
 
     /*!
      * \brief Set the sampling points for the relative permeability
@@ -158,7 +155,7 @@ public:
      * This curve is assumed to depend on the wetting phase saturation
      */
     const ValueVector& krnSamples() const
-    { assertFinalized_(); return krnSamples_; }
+    { EnsureFinalized::check(); return krnSamples_; }
 
     /*!
      * \brief Set the sampling points for the relative permeability
@@ -180,16 +177,6 @@ public:
     }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     void swapOrder_(ValueVector& swValues, ValueVector& values) const
     {
         if (swValues.front() > values.back()) {

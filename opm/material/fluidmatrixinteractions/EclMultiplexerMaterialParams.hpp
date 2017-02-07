@@ -36,6 +36,8 @@
 #include <cassert>
 #include <memory>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 
 enum EclMultiplexerApproach {
@@ -53,7 +55,7 @@ enum EclMultiplexerApproach {
  * provides some methods to convert to it.
  */
 template<class Traits, class GasOilMaterialLawT, class OilWaterMaterialLawT>
-class EclMultiplexerMaterialParams : public Traits
+class EclMultiplexerMaterialParams : public Traits, public EnsureFinalized
 {
     typedef typename Traits::Scalar Scalar;
     enum { numPhases = 3 };
@@ -69,25 +71,19 @@ class EclMultiplexerMaterialParams : public Traits
     typedef typename TwoPhaseMaterial::Params TwoPhaseParams;
 
 public:
+    using EnsureFinalized :: finalize;
+
     /*!
      * \brief The multiplexer constructor.
      */
     EclMultiplexerMaterialParams()
     {
         realParams_ = 0;
-
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     EclMultiplexerMaterialParams(const EclMultiplexerMaterialParams& /*other*/)
     {
         realParams_ = 0;
-
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     ~EclMultiplexerMaterialParams()
@@ -109,16 +105,6 @@ public:
             delete static_cast<TwoPhaseParams*>(realParams_);
             break;
         }
-    }
-
-    /*!
-     * \brief Finish the initialization of the parameter object.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
     }
 
     void setApproach(EclMultiplexerApproach newApproach)
@@ -217,16 +203,6 @@ public:
     }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     EclMultiplexerApproach approach_;
     void* realParams_;
 };

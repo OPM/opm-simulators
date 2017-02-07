@@ -29,6 +29,8 @@
 
 #include <cassert>
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 namespace Opm {
 /*!
  * \ingroup FluidMatrixInteractions
@@ -41,18 +43,17 @@ namespace Opm {
  * set independently.
  */
 template<class TraitsT>
-class VanGenuchtenParams
+class VanGenuchtenParams : public EnsureFinalized
 {
     typedef typename TraitsT::Scalar Scalar;
 
 public:
+    using EnsureFinalized :: finalize;
+
     typedef TraitsT Traits;
 
     VanGenuchtenParams()
     {
-#ifndef NDEBUG
-        finalized_ = false;
-#endif
     }
 
     VanGenuchtenParams(Scalar alphaParam, Scalar nParam)
@@ -63,22 +64,11 @@ public:
     }
 
     /*!
-     * \brief Calculate all dependent quantities once the independent
-     *        quantities of the parameter object have been set.
-     */
-    void finalize()
-    {
-#ifndef NDEBUG
-        finalized_ = true;
-#endif
-    }
-
-    /*!
      * \brief Return the \f$\alpha\f$ shape parameter of van Genuchten's
      *        curve.
      */
     Scalar vgAlpha() const
-    { assertFinalized_(); return vgAlpha_; }
+    { EnsureFinalized::check(); return vgAlpha_; }
 
     /*!
      * \brief Set the \f$\alpha\f$ shape parameter of van Genuchten's
@@ -92,7 +82,7 @@ public:
      *        curve.
      */
     Scalar vgM() const
-    { assertFinalized_(); return vgM_; }
+    { EnsureFinalized::check(); return vgM_; }
 
     /*!
      * \brief Set the \f$m\f$ shape parameter of van Genuchten's
@@ -108,7 +98,7 @@ public:
      *        curve.
      */
     Scalar vgN() const
-    { assertFinalized_(); return vgN_; }
+    { EnsureFinalized::check(); return vgN_; }
 
     /*!
      * \brief Set the \f$n\f$ shape parameter of van Genuchten's
@@ -120,16 +110,6 @@ public:
     { vgN_ = n; vgM_ = 1 - 1/vgN_; }
 
 private:
-#ifndef NDEBUG
-    void assertFinalized_() const
-    { assert(finalized_); }
-
-    bool finalized_;
-#else
-    void assertFinalized_() const
-    { }
-#endif
-
     Scalar vgAlpha_;
     Scalar vgM_;
     Scalar vgN_;
