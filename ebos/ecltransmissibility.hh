@@ -326,7 +326,7 @@ private:
         for (unsigned i = 0; i < areaNormal.size(); ++i)
             val += areaNormal[i]*distance[i];
 
-        halfTrans *= std::abs<Scalar>(val);
+        halfTrans *= std::abs(val);
         halfTrans /= distance.two_norm2();
     }
 
