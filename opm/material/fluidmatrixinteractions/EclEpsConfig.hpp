@@ -145,38 +145,6 @@ public:
     { enableLeverettScaling_ = yesno; }
 
     /*!
-     * \brief Specify the conversion factor between deck and SI pressure units
-     *
-     * i.e. for METRIC decks this should be set to 10^5, for FIELD decks to 6894.7573,
-     * and so on. This factor is required to be set if Leverett pressure scaling is
-     * enabled because the ECL Leverett function implementation "misuses" the pressure
-     * column of the underlying tables (SWOF, SGOF, SWFN, etc.) for the (dimensionless)
-     * J-Function. Since opm-parser automatically applies the conversion factor for deck
-     * to SI pressure values to the column, opm-material needs this value in order to
-     * restore the value of the J-function from the "pressure" value.
-     *
-     * Note that this is a BIG *FAT* *_HACK_*
-     */
-    void setDeckPressureConversionFactor(double pToSiFactor)
-    { pToSiFactor_ = pToSiFactor; }
-
-    /*!
-     * \brief Returns the conversion factor between deck and SI pressure units
-     *
-     * i.e. for METRIC decks this should be set to 10^5, for FIELD decks to 6894.7573,
-     * and so on. This factor is required to be set if Leverett pressure scaling is
-     * enabled because the ECL Leverett function implementation "misuses" the pressure
-     * column of the underlying tables (SWOF, SGOF, SWFN, etc.) for the (dimensionless)
-     * J-Function. Since opm-parser automatically applies the conversion factor for deck
-     * to SI pressure values to the column, opm-material needs this value in order to
-     * restore the value of the J-function from the "pressure" value.
-     *
-     * Note that this is a BIG *FAT* *_HACK_*
-     */
-    double deckPressureConversionFactor() const
-    { return pToSiFactor_; }
-
-    /*!
      * \brief Returns whether the Leverett capillary pressure scaling is enabled.
      *
      * If this returns true, Leverett capillary pressure scaling will be used instead of
@@ -232,9 +200,6 @@ public:
         }
         else
             enableThreePointKrSatScaling_ = false;
-
-        // determine the conversion factor for deck pressures to Pascals
-        pToSiFactor_ = deck.getActiveUnitSystem().getDimension("Pressure").getSIScaling();
 
         auto& props = eclState.get3DProperties();
         // check if we are supposed to scale the Y axis of the capillary pressure
@@ -295,9 +260,6 @@ public:
 #endif
 
 private:
-    // conversion factor for deck pressure units to SI quantities
-    double pToSiFactor_;
-
     // enable scaling of the input saturations (i.e., rescale the x-Axis)
     bool enableSatScaling_;
 

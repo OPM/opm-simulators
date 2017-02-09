@@ -469,14 +469,8 @@ private:
     static Evaluation unscaledToScaledPcnw_(const Params& params, const Evaluation& unscaledPcnw)
     {
         if (params.config().enableLeverettScaling()) {
-            // HACK: we need to divide the "unscaled capillary pressure" by the
-            // conversion factor for deck to SI pressures because this quantity is
-            // actually *not* a pressure but the (dimensionless) value of the
-            // J-function. Since opm-parser currently always treads this column as a
-            // pressure, it multiplies it with the conversion factor and we have to
-            // revert this here.
             Scalar alpha = params.scaledPoints().leverettFactor();
-            return unscaledPcnw*(alpha/params.config().deckPressureConversionFactor());
+            return unscaledPcnw*alpha;
         }
         else if (params.config().enablePcScaling()) {
             Scalar alpha = params.scaledPoints().maxPcnw()/params.unscaledPoints().maxPcnw();
@@ -490,11 +484,8 @@ private:
     static Evaluation scaledToUnscaledPcnw_(const Params& params, const Evaluation& scaledPcnw)
     {
         if (params.config().enableLeverettScaling()) {
-            // HACK: we need to multiply the "scaled capillary pressure" by the conversion
-            // factor for deck to SI pressures because this quantity is actually *not* a
-            // pressure but the (dimensionless) value of the J-function.
             Scalar alpha = params.scaledPoints().leverettFactor();
-            return scaledPcnw*(params.config().deckPressureConversionFactor()/alpha);
+            return scaledPcnw/alpha;
         }
         else if (params.config().enablePcScaling()) {
             Scalar alpha = params.unscaledPoints().maxPcnw()/params.scaledPoints().maxPcnw();
