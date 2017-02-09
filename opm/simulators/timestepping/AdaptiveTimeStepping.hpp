@@ -72,6 +72,7 @@ namespace Opm {
                     in a sub cycle of time steps
 
             \param  timer        simulator timer providing time and timestep
+            \param  fipnum       Fluid-in-place numbering array
             \param  solver       solver object that must implement a method step( dt, state, well_state )
             \param  state        current state of the solution variables
             \param  well_state   additional well state object
@@ -80,13 +81,15 @@ namespace Opm {
         template <class Solver, class State, class WellState, class Output>
         SimulatorReport step( const SimulatorTimer& timer,
                               Solver& solver, State& state, WellState& well_state,
-                              Output& outputWriter );
+                              Output& outputWriter,
+                              const std::vector<int>* fipnum = nullptr);
 
     protected:
         template <class Solver, class State, class WellState, class Output>
         SimulatorReport stepImpl( const SimulatorTimer& timer,
                                   Solver& solver, State& state, WellState& well_state,
-                                  Output* outputWriter);
+                                  Output* outputWriter,
+                                  const std::vector<int>* fipnum);
 
         void init(const parameter::ParameterGroup& param);
 

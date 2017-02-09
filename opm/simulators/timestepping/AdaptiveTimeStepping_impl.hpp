@@ -152,15 +152,17 @@ namespace Opm {
     SimulatorReport AdaptiveTimeStepping::
     step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state )
     {
-        return stepImpl( simulatorTimer, solver, state, well_state );
+        return stepImpl( simulatorTimer, solver, state, well_state,  nullptr, nullptr );
     }
 
     template <class Solver, class State, class WellState, class Output>
     SimulatorReport AdaptiveTimeStepping::
-    step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state,
-          Output& outputWriter )
+    step( const SimulatorTimer& simulatorTimer,
+          Solver& solver, State& state, WellState& well_state,
+          Output& outputWriter,
+          const std::vector<int>* fipnum)
     {
-        return stepImpl( simulatorTimer, solver, state, well_state, &outputWriter );
+        return stepImpl( simulatorTimer, solver, state, well_state, &outputWriter, fipnum );
     }
 
 
@@ -169,7 +171,8 @@ namespace Opm {
     SimulatorReport AdaptiveTimeStepping::
     stepImpl( const SimulatorTimer& simulatorTimer,
               Solver& solver, State& state, WState& well_state,
-              Output* outputWriter )
+              Output* outputWriter,
+              const std::vector<int>* fipnum)
     {
         SimulatorReport report;
         const double timestep = simulatorTimer.currentStepLength();
@@ -279,6 +282,9 @@ namespace Opm {
                 // to write it as this will be done by the simulator
                 // anyway.
                 if( outputWriter && !substepTimer.done() ) {
+                    if (fipnum) {
+                        solver.computeFluidInPlace(state, *fipnum);
+                    }
                     Opm::time::StopWatch perfTimer;
                     perfTimer.start();
                     bool substep = true;
