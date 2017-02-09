@@ -232,7 +232,8 @@ namespace Opm
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                report += adaptiveTimeStepping->step( timer, *solver, state, well_state, output_writer_ );
+                report += adaptiveTimeStepping->step( timer, *solver, state, well_state, output_writer_, 
+                                                     output_writer_.requireFIPNUM() ? &fipnum : nullptr );
             }
             else {
                 // solve for complete report step

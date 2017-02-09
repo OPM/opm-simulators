@@ -147,6 +147,8 @@ namespace Opm
 
         bool isRestart() const;
 
+        bool requireFIPNUM() const;
+
     protected:
         const bool output_;
         std::unique_ptr< ParallelDebugOutputInterface > parallelOutput_;
@@ -600,7 +602,7 @@ namespace Opm
                 const std::vector<double>& oipg = vapour_active ? fip.fip[Model::FIPData::FIP_VAPORIZED_OIL] : std::vector<double>(size,0.0);
                 std::vector<double> oip = oipl;
                 if (vapour_active) {
-                    oip.insert(oip.end(), oipg.begin(), oipg.end());
+                    std::transform(oip.begin(), oip.end(), oipg.begin(), oip.begin(), std::plus<double>());
                 }
 
                 //Oil in place (liquid phase only)
@@ -636,7 +638,7 @@ namespace Opm
                 const std::vector<double>& gipl= liquid_active ? fip.fip[Model::FIPData::FIP_DISSOLVED_GAS] : std::vector<double>(size,0.0);
                 std::vector<double> gip = gipg;
                 if (liquid_active) {
-                    gip.insert(gip.end(), gipl.begin(), gipl.end());
+                    std::transform(gip.begin(), gip.end(), gipl.begin(), gip.begin(), std::plus<double>());
                 }
 
                 // Gas in place (gas phase only)
