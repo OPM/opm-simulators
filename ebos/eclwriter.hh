@@ -323,7 +323,7 @@ private:
     {
         static bool warningPrinted = false;
         for (size_t i = 0; i < b.size(); ++i) {
-            Valgrind::CheckDefined(b[i]);
+            Opm::Valgrind::CheckDefined(b[i]);
 
             if (!warningPrinted && !std::isfinite(b[i])) {
                 std::cerr << "WARNING: data field written to disk contains non-finite entries!\n";

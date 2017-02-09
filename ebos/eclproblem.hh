@@ -1243,8 +1243,8 @@ private:
             Dune::FieldVector< Scalar, numPhases > pc( 0 );
             const auto& matParams = materialLawParams(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
-            Valgrind::CheckDefined(oilPressure);
-            Valgrind::CheckDefined(pc);
+            Opm::Valgrind::CheckDefined(oilPressure);
+            Opm::Valgrind::CheckDefined(pc);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
 

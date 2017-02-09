@@ -450,7 +450,7 @@ public:
             // require the black-oil model for now anyway, so this should not be too much
             // of a problem...
             assert(numModelEq == numComponents);
-            Valgrind::CheckDefined(q);
+            Opm::Valgrind::CheckDefined(q);
             auto& matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
             matrixEntry = 0.0;
             for (unsigned eqIdx = 0; eqIdx < numModelEq; ++ eqIdx)
@@ -1131,7 +1131,7 @@ public:
                 q[eqIdx] += modelRate[eqIdx];
         }
 
-        Valgrind::CheckDefined(q);
+        Opm::Valgrind::CheckDefined(q);
     }
 
 protected:
@@ -1224,13 +1224,13 @@ protected:
                 OPM_THROW(std::logic_error,
                           "Type of well \"" << name() << "\" is undefined");
 
-            Valgrind::CheckDefined(pbh);
-            Valgrind::CheckDefined(p);
-            Valgrind::CheckDefined(g);
-            Valgrind::CheckDefined(rho);
-            Valgrind::CheckDefined(lambda);
-            Valgrind::CheckDefined(depth);
-            Valgrind::CheckDefined(refDepth_);
+            Opm::Valgrind::CheckDefined(pbh);
+            Opm::Valgrind::CheckDefined(p);
+            Opm::Valgrind::CheckDefined(g);
+            Opm::Valgrind::CheckDefined(rho);
+            Opm::Valgrind::CheckDefined(lambda);
+            Opm::Valgrind::CheckDefined(depth);
+            Opm::Valgrind::CheckDefined(refDepth_);
 
             // pressure in the borehole ("hole pressure") at the given location
             ResultEval ph = pbh + rho*g*(depth - refDepth_);
@@ -1238,9 +1238,9 @@ protected:
             // volumetric reservoir rate for the phase
             volRates[phaseIdx] = Twj*lambda*(ph - p);
 
-            Valgrind::CheckDefined(g);
-            Valgrind::CheckDefined(ph);
-            Valgrind::CheckDefined(volRates[phaseIdx]);
+            Opm::Valgrind::CheckDefined(g);
+            Opm::Valgrind::CheckDefined(ph);
+            Opm::Valgrind::CheckDefined(volRates[phaseIdx]);
         }
     }
 
@@ -1505,10 +1505,10 @@ protected:
         // injectors. (i.e., the target bottom hole pressure is an upper limit for
         // injectors and a lower limit for producers.) Note that with this approach, one
         // of the limits must always be reached to get the well equation to zero...
-        Valgrind::CheckDefined(maximumSurfaceRate_);
-        Valgrind::CheckDefined(maximumReservoirRate_);
-        Valgrind::CheckDefined(surfaceRate);
-        Valgrind::CheckDefined(resvRate);
+        Opm::Valgrind::CheckDefined(maximumSurfaceRate_);
+        Opm::Valgrind::CheckDefined(maximumReservoirRate_);
+        Opm::Valgrind::CheckDefined(surfaceRate);
+        Opm::Valgrind::CheckDefined(resvRate);
 
         BhpEval result = 1e30;
 

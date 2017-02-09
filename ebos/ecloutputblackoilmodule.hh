@@ -188,7 +188,7 @@ public:
                         continue;
 
                     saturation_[phaseIdx][globalDofIdx] = Toolbox::value(fs.saturation(phaseIdx));
-                    Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
+                    Opm::Valgrind::CheckDefined(saturation_[phaseIdx][globalDofIdx]);
                 }
             }
             if (pressuresOutput_()) {
@@ -197,35 +197,35 @@ public:
                         continue;
 
                     pressure_[phaseIdx][globalDofIdx] = Toolbox::value(fs.pressure(phaseIdx));
-                    Valgrind::CheckDefined(pressure_[phaseIdx][globalDofIdx]);
+                    Opm::Valgrind::CheckDefined(pressure_[phaseIdx][globalDofIdx]);
                 }
             }
             if (gasDissolutionFactorOutput_()) {
                 Scalar SoMax = elemCtx.model().maxOilSaturation(globalDofIdx);
                 gasDissolutionFactor_[globalDofIdx] =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx, SoMax);
-                Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
+                Opm::Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
             }
             if (oilVaporizationFactorOutput_()) {
                 Scalar SoMax = elemCtx.model().maxOilSaturation(globalDofIdx);
                 gasDissolutionFactor_[globalDofIdx] =
                     FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx, SoMax);
-                Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
+                Opm::Valgrind::CheckDefined(gasDissolutionFactor_[globalDofIdx]);
             }
             if (gasFormationVolumeFactorOutput_()) {
                 gasFormationVolumeFactor_[globalDofIdx] =
                     1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, gasPhaseIdx, pvtRegionIdx);
-                Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
+                Opm::Valgrind::CheckDefined(gasFormationVolumeFactor_[globalDofIdx]);
             }
             if (saturatedOilFormationVolumeFactorOutput_()) {
                 saturatedOilFormationVolumeFactor_[globalDofIdx] =
                     1.0/FluidSystem::template saturatedInverseFormationVolumeFactor<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
-                Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
+                Opm::Valgrind::CheckDefined(saturatedOilFormationVolumeFactor_[globalDofIdx]);
             }
             if (oilSaturationPressureOutput_()) {
                 oilSaturationPressure_[globalDofIdx] =
                     FluidSystem::template saturationPressure<FluidState, Scalar>(fs, oilPhaseIdx, pvtRegionIdx);
-                Valgrind::CheckDefined(oilSaturationPressure_[globalDofIdx]);
+                Opm::Valgrind::CheckDefined(oilSaturationPressure_[globalDofIdx]);
             }
         }
     }

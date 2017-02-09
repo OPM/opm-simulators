@@ -212,7 +212,7 @@ protected:
      */
     void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
-        Valgrind::SetUndefined(*this);
+        Opm::Valgrind::SetUndefined(*this);
 
         const auto& problem = elemCtx.problem();
         const auto& stencil = elemCtx.stencil(timeIdx);
