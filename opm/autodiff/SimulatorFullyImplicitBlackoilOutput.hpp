@@ -280,11 +280,11 @@ namespace Opm
                      const int desiredReportStep);
 
 
-        template <class Grid>
-        void initFromRestartFile(const PhaseUsage& phaseusage,
+        template <class Grid, class WellStateFullyImplicitBlackOel>
+        void initFromRestartFile(const PhaseUsage& phaseUsage,
                                  const Grid& grid,
                                  SimulationDataContainer& simulatorstate,
-                                 WellStateFullyImplicitBlackoil& wellstate);
+                                 WellStateFullyImplicitBlackOel& wellstate);
 
         bool isRestart() const;
 
@@ -349,7 +349,7 @@ namespace Opm
                 Opm::OpmLog::warning("Parallel Output Config",
                                      "Velocity output for matlab is broken in parallel.");
             }
-                
+
             if( parallelOutput_->isIORank() ) {
 
                 if ( output_matlab )
@@ -395,13 +395,13 @@ namespace Opm
     }
 
 
-    template <class Grid>
+    template <class Grid, class WellStateFullyImplicitBlackOel>
     inline void
     BlackoilOutputWriter::
-    initFromRestartFile( const PhaseUsage& phaseusage,
+    initFromRestartFile( const PhaseUsage& phaseUsage,
                          const Grid& grid,
                          SimulationDataContainer& simulatorstate,
-                         WellStateFullyImplicitBlackoil& wellstate)
+                         WellStateFullyImplicitBlackOel& wellstate)
     {
         std::map<std::string, UnitSystem::measure> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
                                                                   {"SWAT" , UnitSystem::measure::identity},
@@ -430,11 +430,11 @@ namespace Opm
                                   std::unordered_set<std::string>());
 
         const Wells* wells = wellsmanager.c_wells();
-        wellstate.resize(wells, simulatorstate); //Resize for restart step
+        wellstate.resize(wells, simulatorstate, phaseUsage ); //Resize for restart step
         auto state = eclIO_->loadRestart(solution_keys);
 
-        solutionToSim( state.first, phaseusage, simulatorstate );
-        wellsToState( state.second, phaseusage, wellstate );
+        solutionToSim( state.first, phaseUsage, simulatorstate );
+        wellsToState( state.second, phaseUsage, wellstate );
     }
 
 
@@ -443,50 +443,130 @@ namespace Opm
 
     namespace detail {
 
-        /**
-         * Converts an ADB::V into a standard vector by copy
-         */
-        inline std::vector<double> adbVToDoubleVector(const Opm::AutoDiffBlock<double>::V& adb_v) {
-            std::vector<double> vec(adb_v.data(), adb_v.data() + adb_v.size());
-            return vec;
+
+        template <class V>
+        void addToSimData( SimulationDataContainer& simData,
+                           const std::string& name,
+                           const V& vec )
+        {
+            typedef std::vector< double > OutputVectorType;
+
+            // get data map
+            auto& dataMap = simData.cellData();
+
+            // insert name,vector into data map
+            dataMap.insert( std::make_pair( name, OutputVectorType( vec.data(), vec.data() + vec.size() ) ) );
+        }
+
+        template <class Scalar>
+        void addToSimData( SimulationDataContainer& simData,
+                           const std::string& name,
+                           const AutoDiffBlock<Scalar>& adb )
+        {
+            // forward value of ADB to output
+            addToSimData( simData, name, adb.value() );
         }
 
 
-        /**
-         * Converts an ADB into a standard vector by copy
-         */
-        inline std::vector<double> adbToDoubleVector(const Opm::AutoDiffBlock<double>& adb) {
-            return adbVToDoubleVector(adb.value());
+        // this method basically converts all Eigen vectors to std::vectors
+        // stored in a SimulationDataContainer
+        template <class SimulatorData>
+        SimulationDataContainer
+        convertToSimulationDataContainer( const SimulatorData& sd,
+                                          const SimulationDataContainer& localState,
+                                          const Opm::PhaseUsage& phaseUsage )
+        {
+            // copy local state and then add missing data
+            SimulationDataContainer simData( localState );
+
+            //Get shorthands for water, oil, gas
+            const int aqua_active   = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
+            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
+            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
+
+            const int aqua_idx   = phaseUsage.phase_pos[Opm::PhaseUsage::Aqua];
+            const int liquid_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Liquid];
+            const int vapour_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Vapour];
+
+            // WATER
+            if( aqua_active ) {
+                addToSimData( simData, "1OVERBW",  sd.rq[aqua_idx].b   );
+                addToSimData( simData, "WAT_DEN",  sd.rq[aqua_idx].rho );
+                addToSimData( simData, "WAT_VISC", sd.rq[aqua_idx].mu  );
+                addToSimData( simData, "WATKR",    sd.rq[aqua_idx].kr  );
+            }
+
+            // OIL
+            if( liquid_active ) {
+                addToSimData( simData, "1OVERBO",  sd.rq[liquid_idx].b   );
+                addToSimData( simData, "OIL_DEN",  sd.rq[liquid_idx].rho );
+                addToSimData( simData, "OIL_VISC", sd.rq[liquid_idx].mu  );
+                addToSimData( simData, "OILKR",    sd.rq[liquid_idx].kr  );
+            }
+
+            // GAS
+            if( vapour_active ) {
+                addToSimData( simData, "1OVERBG",  sd.rq[vapour_idx].b   );
+                addToSimData( simData, "GAS_DEN",  sd.rq[vapour_idx].rho );
+                addToSimData( simData, "GAS_VISC", sd.rq[vapour_idx].mu  );
+                addToSimData( simData, "GASKR",    sd.rq[vapour_idx].kr  );
+            }
+
+            // RS and RV
+            addToSimData( simData, "RSSAT", sd.rsSat );
+            addToSimData( simData, "RVSAT", sd.rvSat );
+
+            return std::move( simData );
         }
 
+        // in case the data is already in a SimulationDataContainer no
+        // conversion is needed
+        inline
+        SimulationDataContainer&&
+        convertToSimulationDataContainer( SimulationDataContainer&& sd,
+                                          const SimulationDataContainer& ,
+                                          const Opm::PhaseUsage& )
+        {
+            return std::move( sd );
+        }
 
         /**
          * Returns the data requested in the restartConfig
          */
         template<class Model>
         void getRestartData(data::Solution& output,
+                            SimulationDataContainer&& sd,
                             const Opm::PhaseUsage& phaseUsage,
                             const Model& physicalModel,
                             const RestartConfig& restartConfig,
                             const int reportStepNum,
-                            const bool log) {
-
-            const typename Model::SimulatorData& sd = physicalModel.getSimulatorData();
+                            const bool log)
+        {
             //Get the value of each of the keys for the restart keywords
             std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
             for (auto& keyValue : rstKeywords) {
                 keyValue.second = restartConfig.getKeyword(keyValue.first, reportStepNum);
             }
 
-            //Get shorthands for water, oil, gas
-            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
-            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
-            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
+            const bool aqua_active   = sd.hasCellData("1OVERBW");
+            const bool liquid_active = sd.hasCellData("1OVERBO");
+            const bool vapour_active = sd.hasCellData("1OVERBG");
 
-            const int aqua_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Aqua];
-            const int liquid_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Liquid];
-            const int vapour_idx = phaseUsage.phase_pos[Opm::PhaseUsage::Vapour];
-
+            assert( aqua_active == (sd.hasCellData("WAT_DEN")  &&
+                                    sd.hasCellData("WAT_VISC") &&
+                                    sd.hasCellData("WATKR")
+                                   )
+                  );
+            assert( liquid_active == (sd.hasCellData("OIL_DEN")  &&
+                                      sd.hasCellData("OIL_VISC") &&
+                                      sd.hasCellData("OILKR")
+                                   )
+                  );
+            assert( vapour_active == (sd.hasCellData("GAS_DEN")  &&
+                                      sd.hasCellData("GAS_VISC") &&
+                                      sd.hasCellData("GASKR")
+                                   )
+                  );
 
             /**
              * Formation volume factors for water, oil, gas
@@ -495,21 +575,21 @@ namespace Opm
                 rstKeywords["BW"] = 0;
                 output.insert("1OVERBW",
                               Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
-                              adbToDoubleVector(sd.rq[aqua_idx].b),
+                              std::move( sd.getCellData("1OVERBW") ),
                               data::TargetType::RESTART_AUXILLARY);
             }
             if (liquid_active && rstKeywords["BO"]  > 0) {
                 rstKeywords["BO"] = 0;
                 output.insert("1OVERBO",
                               Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
-                              adbToDoubleVector(sd.rq[liquid_idx].b),
+                              std::move( sd.getCellData("1OVERBO") ),
                               data::TargetType::RESTART_AUXILLARY);
             }
             if (vapour_active && rstKeywords["BG"] > 0) {
                 rstKeywords["BG"] = 0;
                 output.insert("1OVERBG",
                               Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
-                              adbToDoubleVector(sd.rq[vapour_idx].b),
+                              std::move( sd.getCellData("1OVERBG") ),
                               data::TargetType::RESTART_AUXILLARY);
             }
 
@@ -521,19 +601,19 @@ namespace Opm
                 if (aqua_active) {
                     output.insert("WAT_DEN",
                                   Opm::UnitSystem::measure::density,
-                                  adbToDoubleVector(sd.rq[aqua_idx].rho),
+                                  std::move( sd.getCellData("WAT_DEN") ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
                 if (liquid_active) {
                     output.insert("OIL_DEN",
                                   Opm::UnitSystem::measure::density,
-                                  adbToDoubleVector(sd.rq[liquid_idx].rho),
+                                  std::move( sd.getCellData("OIL_DEN") ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
                 if (vapour_active) {
                     output.insert("GAS_DEN",
                                   Opm::UnitSystem::measure::density,
-                                  adbToDoubleVector(sd.rq[vapour_idx].rho),
+                                  std::move( sd.getCellData("GAS_DEN") ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
             }
@@ -546,19 +626,19 @@ namespace Opm
                 if (aqua_active) {
                     output.insert("WAT_VISC",
                                   Opm::UnitSystem::measure::viscosity,
-                                  adbToDoubleVector(sd.rq[aqua_idx].mu),
+                                  std::move( sd.getCellData("WAT_VISC") ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
                 if (liquid_active) {
                     output.insert("OIL_VISC",
                                   Opm::UnitSystem::measure::viscosity,
-                                  adbToDoubleVector(sd.rq[liquid_idx].mu),
+                                  std::move( sd.getCellData("OIL_VISC") ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
                 if (vapour_active) {
                     output.insert("GAS_VISC",
                                   Opm::UnitSystem::measure::viscosity,
-                                  adbToDoubleVector(sd.rq[vapour_idx].mu),
+                                  std::move( sd.getCellData("GAS_VISC") ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
             }
@@ -567,11 +647,12 @@ namespace Opm
              * Relative permeabilities for water, oil, gas
              */
             if (aqua_active && rstKeywords["KRW"] > 0) {
-                if (sd.rq[aqua_idx].kr.size() > 0) {
+                auto& krWater = sd.getCellData("WATKR");
+                if (krWater.size() > 0) {
                     rstKeywords["KRW"] = 0;
-                    output.insert("WATKR",
+                    output.insert("WATKR", // WAT_KR ???
                                   Opm::UnitSystem::measure::identity,
-                                  adbToDoubleVector(sd.rq[aqua_idx].kr),
+                                  std::move( krWater ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
                 else {
@@ -583,11 +664,12 @@ namespace Opm
                 }
             }
             if (liquid_active && rstKeywords["KRO"] > 0) {
-                if (sd.rq[liquid_idx].kr.size() > 0) {
+                auto& krOil = sd.getCellData("OILKR");
+                if (krOil.size() > 0) {
                     rstKeywords["KRO"] = 0;
                     output.insert("OILKR",
                                   Opm::UnitSystem::measure::identity,
-                                  adbToDoubleVector(sd.rq[liquid_idx].kr),
+                                  std::move( krOil ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
                 else {
@@ -599,11 +681,12 @@ namespace Opm
                 }
             }
             if (vapour_active && rstKeywords["KRG"] > 0) {
-                if (sd.rq[vapour_idx].kr.size() > 0) {
+                auto& krGas = sd.getCellData("GASKR");
+                if (krGas.size() > 0) {
                     rstKeywords["KRG"] = 0;
                     output.insert("GASKR",
                                   Opm::UnitSystem::measure::identity,
-                                  adbToDoubleVector(sd.rq[vapour_idx].kr),
+                                  std::move( krGas ),
                                   data::TargetType::RESTART_AUXILLARY);
                 }
                 else {
@@ -622,14 +705,14 @@ namespace Opm
                 rstKeywords["RSSAT"] = 0;
                 output.insert("RSSAT",
                               Opm::UnitSystem::measure::gas_oil_ratio,
-                              adbToDoubleVector(sd.rsSat),
+                              std::move( sd.getCellData("RSSAT") ),
                               data::TargetType::RESTART_AUXILLARY);
             }
             if (vapour_active && liquid_active && rstKeywords["RVSAT"] > 0) {
                 rstKeywords["RVSAT"] = 0;
                 output.insert("RVSAT",
                               Opm::UnitSystem::measure::oil_gas_ratio,
-                              adbToDoubleVector(sd.rvSat),
+                              std::move( sd.getCellData("RVSAT") ),
                               data::TargetType::RESTART_AUXILLARY);
             }
 
@@ -637,7 +720,7 @@ namespace Opm
             /**
              * Bubble point and dew point pressures
              */
-            if (log && vapour_active && 
+            if (log && vapour_active &&
                 liquid_active && rstKeywords["PBPD"] > 0) {
                 rstKeywords["PBPD"] = 0;
                 Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
@@ -683,9 +766,10 @@ namespace Opm
                             const Model& physicalModel,
                             const SummaryConfig& summaryConfig) {
 
-            typedef Opm::AutoDiffBlock<double> ADB;
+            typedef typename Model::FIPDataType FIPDataType;
+            typedef typename FIPDataType::VectorType VectorType;
 
-            const typename Model::SimulatorData& sd = physicalModel.getSimulatorData();
+            FIPDataType fd = physicalModel.getFIPData();
 
             //Get shorthands for water, oil, gas
             const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
@@ -699,60 +783,79 @@ namespace Opm
             if (aqua_active && hasFRBKeyword(summaryConfig, "WIP")) {
                 output.insert("WIP",
                               Opm::UnitSystem::measure::volume,
-                              adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_AQUA]),
+                              std::move( fd.fip[ FIPDataType::FIP_AQUA ] ),
                               data::TargetType::SUMMARY );
             }
             if (liquid_active) {
-                const ADB::V& oipl = sd.fip[Model::SimulatorData::FIP_LIQUID];
-                const ADB::V& oipg = vapour_active ? sd.fip[Model::SimulatorData::FIP_VAPORIZED_OIL] : ADB::V();
-                const ADB::V& oip = vapour_active ? oipl + oipg : oipl;
+                const VectorType& oipl = fd.fip[FIPDataType::FIP_LIQUID];
+                VectorType  oip ( oipl );
+                const size_t size = oip.size();
+
+                const VectorType& oipg = vapour_active ? fd.fip[FIPDataType::FIP_VAPORIZED_OIL] : VectorType(size, 0.0);
+                if( vapour_active )
+                {
+                    // oip = oipl + oipg
+                    for( size_t i=0; i<size; ++ i ) {
+                        oip[ i ] += oipg[ i ];
+                    }
+                }
 
                 //Oil in place (liquid phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPL")) {
                     output.insert("OIPL",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(oipl),
+                                  std::move( oipl ),
                                   data::TargetType::SUMMARY );
                 }
                 //Oil in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "OIPG")) {
                     output.insert("OIPG",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(oipg),
+                                  std::move( oipg ),
                                   data::TargetType::SUMMARY );
                 }
                 // Oil in place (in liquid and gas phases)
                 if (hasFRBKeyword(summaryConfig, "OIP")) {
                     output.insert("OIP",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(oip),
+                                  std::move( oip ),
                                   data::TargetType::SUMMARY );
                 }
             }
             if (vapour_active) {
-                const ADB::V& gipg = sd.fip[Model::SimulatorData::FIP_VAPOUR];
-                const ADB::V& gipl = liquid_active ? sd.fip[Model::SimulatorData::FIP_DISSOLVED_GAS] : ADB::V();
-                const ADB::V& gip = liquid_active ? gipg + gipl : gipg;
+                const VectorType& gipg = fd.fip[ FIPDataType::FIP_VAPOUR];
+                VectorType  gip( gipg );
+                const size_t size = gip.size();
+
+                const VectorType& gipl = liquid_active ? fd.fip[ FIPDataType::FIP_DISSOLVED_GAS ] : VectorType(size,0.0);
+                if( liquid_active )
+                {
+                    // gip = gipg + gipl
+                    for( size_t i=0; i<size; ++ i ) {
+                        gip[ i ] += gipl[ i ];
+                    }
+                }
 
                 // Gas in place (gas phase only)
                 if (hasFRBKeyword(summaryConfig, "GIPG")) {
                     output.insert("GIPG",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(gipg),
+                                  std::move( gipg ),
                                   data::TargetType::SUMMARY );
                 }
+
                 // Gas in place (liquid phase only)
                 if (hasFRBKeyword(summaryConfig, "GIPL")) {
                     output.insert("GIPL",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(gipl),
+                                  std::move( gipl ),
                                   data::TargetType::SUMMARY );
                 }
                 // Gas in place (in both liquid and gas phases)
                 if (hasFRBKeyword(summaryConfig, "GIP")) {
                     output.insert("GIP",
                                   Opm::UnitSystem::measure::volume,
-                                  adbVToDoubleVector(gip),
+                                  std::move( gip ),
                                   data::TargetType::SUMMARY );
                 }
             }
@@ -760,14 +863,14 @@ namespace Opm
             if (hasFRBKeyword(summaryConfig, "RPV")) {
                 output.insert("RPV",
                               Opm::UnitSystem::measure::volume,
-                              adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_PV]),
+                              std::move( fd.fip[FIPDataType::FIP_PV]),
                               data::TargetType::SUMMARY );
             }
             // Pressure averaged value (hydrocarbon pore volume weighted)
             if (summaryConfig.hasKeyword("FPRH") || summaryConfig.hasKeyword("RPRH")) {
                 output.insert("PRH",
                               Opm::UnitSystem::measure::pressure,
-                              adbVToDoubleVector(sd.fip[Model::SimulatorData::FIP_WEIGHTED_PRESSURE]),
+                              std::move(fd.fip[FIPDataType::FIP_WEIGHTED_PRESSURE]),
                               data::TargetType::SUMMARY );
             }
         }
@@ -791,15 +894,26 @@ namespace Opm
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
-        
+
         if( output_ )
         {
-            localCellData = simToSolution(localState, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
-            detail::getRestartData( localCellData, phaseUsage_, physicalModel,
-                                    restartConfig, reportStepNum, logMessages );
+            {
+                // get all data that need to be included in output from the model
+                // for flow_legacy and polymer this is a struct holding the data
+                // while for flow_ebos a SimulationDataContainer is returned
+                // this is addressed in the above specialized methods
+                SimulationDataContainer sd =
+                    detail::convertToSimulationDataContainer( physicalModel.getSimulatorData(), localState, phaseUsage_ );
+
+                localCellData = simToSolution( sd, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
+
+                detail::getRestartData( localCellData, std::move(sd), phaseUsage_, physicalModel,
+                                        restartConfig, reportStepNum, logMessages );
+                // sd will be invalid after getRestartData has been called
+            }
             detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig );
         }
-        
+
         writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, substep);
     }
 }

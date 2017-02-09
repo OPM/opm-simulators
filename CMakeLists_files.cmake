@@ -35,7 +35,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/ImpesTPFAAD.cpp
   opm/autodiff/moduleVersion.cpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.cpp
   opm/autodiff/SimulatorIncompTwophaseAd.cpp
   opm/autodiff/TransportSolverTwophaseAd.cpp
   opm/autodiff/BlackoilPropsAdFromDeck.cpp
@@ -203,7 +202,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/SimulatorFullyImplicitBlackoilSolvent_impl.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment_impl.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.hpp
   opm/autodiff/SimulatorIncompTwophaseAd.hpp
   opm/autodiff/SimulatorSequentialBlackoil.hpp
   opm/autodiff/TransportSolverTwophaseAd.hpp

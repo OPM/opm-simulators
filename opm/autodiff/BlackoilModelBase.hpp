@@ -39,6 +39,8 @@
 #include <opm/core/simulator/SimulatorTimerInterface.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 
+#include <opm/common/data/SimulationDataContainer.hpp>
+
 #include <array>
 
 struct Wells;
@@ -50,7 +52,6 @@ namespace Opm {
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
     class VFPProperties;
-    class SimulationDataContainer;
 
     /// Traits to encapsulate the types used by classes using or
     /// extending this model. Forward declared here, must be
@@ -92,23 +93,20 @@ namespace Opm {
             ADB              mob;   // Phase mobility (per cell)
         };
 
-        struct SimulatorData {
+        struct SimulatorData : public Opm::FIPDataEnums {
             SimulatorData(int num_phases);
 
-            enum FipId {
-                FIP_AQUA = Opm::Water,
-                FIP_LIQUID = Opm::Oil,
-                FIP_VAPOUR = Opm::Gas,
-                FIP_DISSOLVED_GAS = 3,
-                FIP_VAPORIZED_OIL = 4,
-                FIP_PV = 5,                    //< Pore volume
-                FIP_WEIGHTED_PRESSURE = 6
-            };
+            using Opm::FIPDataEnums :: FipId ;
+            using Opm::FIPDataEnums :: fipValues ;
+
             std::vector<ReservoirResidualQuant> rq;
             ADB rsSat; // Saturated gas-oil ratio
             ADB rvSat; // Saturated oil-gas ratio
-            std::array<V, 7> fip;
+
+            std::array<V, fipValues> fip;
         };
+
+        typedef Opm::FIPData FIPDataType;
 
         typedef typename ModelTraits<Implementation>::ReservoirState ReservoirState;
         typedef typename ModelTraits<Implementation>::WellState WellState;
@@ -262,6 +260,11 @@ namespace Opm {
         /// Return reservoir simulation data (for output functionality)
         const SimulatorData& getSimulatorData() const {
             return sd_;
+        }
+
+        /// Return fluid-in-place data (for output functionality)
+        FIPDataType getFIPData() const {
+            return FIPDataType( sd_.fip );
         }
 
         /// Compute fluid in place.

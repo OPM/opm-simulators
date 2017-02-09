@@ -56,6 +56,7 @@ namespace Opm {
         typedef BlackoilPressureModel<Grid, WellModel> PressureModel;
         typedef BlackoilTransportModel<Grid, WellModel> TransportModel;
         typedef typename TransportModel::SimulatorData SimulatorData;
+        typedef typename TransportModel::FIPDataType   FIPDataType;
 
         /// Construct the model. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -274,6 +275,11 @@ namespace Opm {
         /// Return reservoir simulation data (for output functionality)
         const SimulatorData& getSimulatorData() const {
             return transport_solver_.model().getSimulatorData();
+        }
+
+        /// Return fluid-in-place data (for output functionality)
+        FIPDataType getFIPData() const {
+            return transport_solver_.model().getFIPData();
         }
 
 
