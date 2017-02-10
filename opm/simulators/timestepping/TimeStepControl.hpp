@@ -25,7 +25,7 @@
 
 #include <boost/any.hpp>
 #include <boost/range/iterator_range.hpp>
-#include <opm/core/simulator/TimeStepControlInterface.hpp>
+#include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 
 namespace Opm
 {

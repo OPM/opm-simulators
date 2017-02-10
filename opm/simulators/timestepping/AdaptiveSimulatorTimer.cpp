@@ -25,7 +25,7 @@
 #include <numeric>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
+#include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 
 namespace Opm
 {

@@ -29,7 +29,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/core/simulator/TimeStepControl.hpp>
+#include <opm/simulators/timestepping/TimeStepControl.hpp>
 
 namespace Opm
 {

@@ -27,7 +27,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
-#include <opm/core/simulator/TimeStepControlInterface.hpp>
+#include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 
 namespace Opm {
 
@@ -108,5 +108,5 @@ namespace Opm {
     };
 }
 
-#include <opm/core/simulator/AdaptiveTimeStepping_impl.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping_impl.hpp>
 #endif

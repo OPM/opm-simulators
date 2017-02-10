@@ -32,7 +32,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <string>

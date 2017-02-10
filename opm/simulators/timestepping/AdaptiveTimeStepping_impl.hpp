@@ -24,8 +24,8 @@
 #include <utility>
 
 #include <opm/core/simulator/SimulatorTimer.hpp>
-#include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
-#include <opm/core/simulator/TimeStepControl.hpp>
+#include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
+#include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>

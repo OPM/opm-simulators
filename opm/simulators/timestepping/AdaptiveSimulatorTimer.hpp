@@ -26,7 +26,7 @@
 #include <algorithm>
 #include <numeric>
 
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 namespace Opm
 {

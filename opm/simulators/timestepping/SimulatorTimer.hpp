@@ -21,7 +21,7 @@
 #define OPM_SIMULATORTIMER_HEADER_INCLUDED
 
 #include <opm/parser/eclipse/EclipseState/Schedule/TimeMap.hpp>
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <iosfwd>
 #include <vector>
