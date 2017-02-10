@@ -33,7 +33,7 @@
 #include <opm/core/pressure/flow_bc.h>
 
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/utility/DataMap.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/simulators/vtk/writeVtkData.hpp>

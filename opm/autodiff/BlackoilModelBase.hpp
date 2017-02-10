@@ -36,7 +36,7 @@
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/NNC.hpp>
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 
 #include <array>

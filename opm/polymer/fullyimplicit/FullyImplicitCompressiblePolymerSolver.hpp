@@ -31,7 +31,7 @@
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 struct UnstructuredGrid;
 struct Wells;

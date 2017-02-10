@@ -28,7 +28,7 @@
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/autodiff/StandardWells.hpp>
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 namespace Opm {
 
