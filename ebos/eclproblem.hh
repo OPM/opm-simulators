@@ -271,6 +271,8 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef Ewoms::EclSummaryWriter<TypeTag> EclSummaryWriter;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
 
+    typedef EclWriter<TypeTag> EclWriterType;
+
     struct RockParams {
         Scalar referencePressure;
         Scalar compressibility;
@@ -305,7 +307,8 @@ public:
         , thresholdPressures_(simulator)
         , wellManager_(simulator)
         , deckUnits_(simulator)
-        , eclWriter_(simulator)
+        , eclWriter_( EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput)
+                        ? new EclWriterType(simulator) : nullptr )
         , summaryWriter_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
     {
@@ -570,16 +573,16 @@ public:
         Scalar t = this->simulator().time() + this->simulator().timeStepSize();
 
         // prepare the ECL and the VTK writers
-        if (enableEclOutput_())
-            eclWriter_.beginWrite(t);
+        if ( eclWriter_ )
+            eclWriter_->beginWrite(t);
 
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
         ParentType::writeOutput(verbose);
 
-        if (enableEclOutput_()) {
-            this->model().appendOutputFields(eclWriter_);
-            eclWriter_.endWrite();
+        if ( eclWriter_ ) {
+            this->model().appendOutputFields(*eclWriter_);
+            eclWriter_->endWrite();
         }
     }
 
@@ -918,9 +921,6 @@ public:
     }
 
 private:
-    static bool enableEclOutput_()
-    { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
-
     Scalar cellCenterDepth( const Element& element ) const
     {
         typedef typename Element :: Geometry Geometry;
@@ -1412,7 +1412,7 @@ private:
 
     EclDeckUnits<TypeTag> deckUnits_;
 
-    EclWriter<TypeTag> eclWriter_;
+    std::unique_ptr< EclWriterType > eclWriter_;
     EclSummaryWriter summaryWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
