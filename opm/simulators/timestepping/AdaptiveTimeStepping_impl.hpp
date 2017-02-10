@@ -23,7 +23,7 @@
 #include <string>
 #include <utility>
 
-#include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/core/utility/StopWatch.hpp>

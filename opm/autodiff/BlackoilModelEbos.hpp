@@ -55,7 +55,7 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>

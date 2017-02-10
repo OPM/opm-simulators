@@ -31,7 +31,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/simulator/initState.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
-#include <opm/core/simulator/SimulatorTimer.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
