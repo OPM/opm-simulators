@@ -362,7 +362,7 @@ public:
             molarRate[conti0EqIdx + NAPLIdx] = -0.001;
 
             values.setMolarRate(molarRate);
-            Valgrind::CheckDefined(values);
+            Opm::Valgrind::CheckDefined(values);
         }
         else
             values.setNoFlow();
@@ -390,7 +390,7 @@ public:
 
         const auto& matParams = materialLawParams(context, spaceIdx, timeIdx);
         values.assignMassConservative(fs, matParams, /*inEquilibrium=*/true);
-        Valgrind::CheckDefined(values);
+        Opm::Valgrind::CheckDefined(values);
     }
 
     /*!
@@ -448,8 +448,8 @@ private:
             Sw = 1 - Sgr;
         Scalar Sg = 1 - Sw;
 
-        Valgrind::CheckDefined(Sw);
-        Valgrind::CheckDefined(Sg);
+        Opm::Valgrind::CheckDefined(Sw);
+        Opm::Valgrind::CheckDefined(Sg);
 
         fs.setSaturation(waterPhaseIdx, Sw);
         fs.setSaturation(gasPhaseIdx, Sg);
