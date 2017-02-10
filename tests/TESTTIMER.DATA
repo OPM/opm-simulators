@@ -1,0 +1,49 @@
+RUNSPEC
+
+START
+  26 'MAR' 2014  /
+
+TSTEP
+1.0 2*5.0  
+  /
+
+TSTEP
+  7*10.0 14*25.0
+ /
+
+TSTEP
+  19.0 
+  /
+
+TSTEP
+  18*13.0
+  /
+
+TSTEP
+ 17*10.0
+  /
+
+TSTEP
+  13.0
+  /
+
+TSTEP
+  18.0
+  /
+
+TSTEP
+  11.0 
+  /
+
+TSTEP
+  17*5.0
+  /
+
+TSTEP
+  19*6.0
+  /
+
+TSTEP
+  21*5.0 /
+
+END     ==

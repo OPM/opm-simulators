@@ -42,14 +42,14 @@
 
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/simulator/SimulatorTimer.hpp>
-//#include <opm/core/simulator/AdaptiveSimulatorTimer.hpp>
+//#include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/miscUtilitiesBlackoil.hpp>
 
 #include <opm/core/props/rock/RockCompressibility.hpp>
 
-//#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
+//#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 //#include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>

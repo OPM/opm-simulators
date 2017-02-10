@@ -67,6 +67,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/SimulatorIncompTwophase.cpp
   opm/simulators/WellSwitchingLogger.cpp
   opm/simulators/vtk/writeVtkData.cpp
+  opm/simulators/timestepping/TimeStepControl.cpp
+  opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
+  opm/simulators/timestepping/SimulatorTimer.cpp
   )
 
 
@@ -89,6 +92,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_multisegmentwells.cpp
   # tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
+  tests/test_timer.cpp
   )
 
 list (APPEND TEST_DATA_FILES
@@ -96,6 +100,7 @@ list (APPEND TEST_DATA_FILES
   tests/VFPPROD1
   tests/VFPPROD2
   tests/msw.data
+  tests/TESTTIMER.DATA
   )
 
 
@@ -117,6 +122,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/sim_poly2p_incomp_reorder.cpp
   examples/sim_poly_fi2p_comp_ad.cpp
   examples/flow_polymer.cpp
+  examples/wells_example.cpp
   )
 
 # programs listed here will not only be compiled, but also marked for
@@ -259,5 +265,12 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/thresholdPressures.hpp
   opm/simulators/WellSwitchingLogger.hpp
   opm/simulators/vtk/writeVtkData.hpp
+  opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
+  opm/simulators/timestepping/AdaptiveTimeStepping.hpp
+  opm/simulators/timestepping/AdaptiveTimeStepping_impl.hpp
+  opm/simulators/timestepping/TimeStepControl.hpp
+  opm/simulators/timestepping/TimeStepControlInterface.hpp
+  opm/simulators/timestepping/SimulatorTimer.hpp
+  opm/simulators/timestepping/SimulatorTimerInterface.hpp
   )
 
