@@ -245,4 +245,418 @@ namespace Opm {
     }
 
 
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    template <typename Simulator>
+    bool
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    allow_cross_flow(const int w, Simulator& ebosSimulator) const
+    {
+        if (wells().allow_cf[w]) {
+            return true;
+        }
+
+        // check for special case where all perforations have cross flow
+        // then the wells must allow for cross flow
+        for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
+            const int cell_idx = wells().well_cells[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& fs = intQuants.fluidState();
+            EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+            EvalWell bhp = getBhp(w);
+
+            // Pressure drawdown (also used to determine direction of flow)
+            EvalWell well_pressure = bhp + wellPerforationPressureDiffs()[perf];
+            EvalWell drawdown = pressure - well_pressure;
+
+            if (drawdown.value() < 0 && wells().type[w] == INJECTOR)  {
+                return false;
+            }
+
+            if (drawdown.value() > 0 && wells().type[w] == PRODUCER)  {
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    localInvert(Mat& istlA) const
+    {
+        for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
+            for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
+                //std::cout << (*col) << std::endl;
+                (*col).invert();
+            }
+        }
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    print(Mat& istlA) const
+    {
+        for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
+            for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
+                std::cout << row.index() << " " << col.index() << "/n \n"<<(*col) << std::endl;
+            }
+        }
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    apply( BVector& r) const
+    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
+
+        assert( invDrw_.size() == invDuneD_.N() );
+
+        invDuneD_.mv(resWell_,invDrw_);
+        duneB_.mmtv(invDrw_, r);
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    apply(const BVector& x, BVector& Ax)
+    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
+
+        assert( Cx_.size() == duneC_.N() );
+
+        BVector& invDCx = invDrw_;
+        assert( invDCx.size() == invDuneD_.N());
+
+        duneC_.mv(x, Cx_);
+        invDuneD_.mv(Cx_, invDCx);
+        duneB_.mmtv(invDCx,Ax);
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax)
+    {
+        if ( ! localWellsActive() ) {
+            return;
+        }
+
+        if( scaleAddRes_.size() != Ax.size() ) {
+            scaleAddRes_.resize( Ax.size() );
+        }
+
+        scaleAddRes_ = 0.0;
+        apply( x, scaleAddRes_ );
+        Ax.axpy( alpha, scaleAddRes_ );
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    recoverVariable(const BVector& x, BVector& xw) const
+    {
+        if ( ! localWellsActive() ) {
+             return;
+        }
+        BVector resWell = resWell_;
+        duneC_.mmv(x, resWell);
+        invDuneD_.mv(resWell, xw);
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    int
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    flowPhaseToEbosCompIdx( const int phaseIdx ) const
+    {
+        const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
+        return phaseToComp[ phaseIdx ];
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    int
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    flowToEbosPvIdx( const int flowPv ) const
+    {
+        const int flowToEbos[ 3 ] = {
+                                     BlackoilIndices::pressureSwitchIdx,
+                                     BlackoilIndices::waterSaturationIdx,
+                                     BlackoilIndices::compositionSwitchIdx
+                                    };
+        return flowToEbos[ flowPv ];
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    int
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    ebosCompToFlowPhaseIdx( const int compIdx ) const
+    {
+        const int compToPhase[ 3 ] = { Oil, Water, Gas };
+        return compToPhase[ compIdx ];
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    std::vector<double>
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    extractPerfData(const std::vector<double>& in) const
+    {
+        const int nw   = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+        std::vector<double> out(nperf);
+        for (int w = 0; w < nw; ++w) {
+            for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
+                const int well_idx = wells().well_cells[perf];
+                out[perf] = in[well_idx];
+            }
+        }
+        return out;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    int
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    numPhases() const
+    {
+        return wells().number_of_phases;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    int
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    numCells() const
+    {
+        return pv_.size();
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    resetWellControlFromState(WellState xw)
+    {
+        const int        nw   = wells_->number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            WellControls* wc = wells_->ctrls[w];
+            well_controls_set_current( wc, xw.currentControls()[w]);
+        }
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    const Wells&
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wells() const
+    {
+        assert(wells_ != 0);
+        return *(wells_);
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    const Wells*
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wellsPointer() const
+    {
+        return wells_;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    bool
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wellsActive() const
+    {
+        return wells_active_;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    setWellsActive(const bool wells_active)
+    {
+        wells_active_ = wells_active;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    bool
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    localWellsActive() const
+    {
+        return wells_ ? (wells_->number_of_wells > 0 ) : false;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    int
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    numWellVars() const
+    {
+        if ( !localWellsActive() ) {
+            return 0;
+        }
+
+        // For each well, we have a bhp variable, and one flux per phase.
+        const int nw = wells().number_of_wells;
+        return (numPhases() + 1) * nw;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    const std::vector<double>&
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wellPerforationDensities() const
+    {
+         return well_perforation_densities_;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    const std::vector<double>&
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wellPerforationPressureDiffs() const
+    {
+        return well_perforation_pressure_diffs_;
+    }
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    extendEval(Eval in) const {
+        EvalWell out = 0.0;
+        out.setValue(in.value());
+        for(int i = 0; i < blocksize;++i) {
+            out.setDerivative(i, in.derivative(flowToEbosPvIdx(i)));
+        }
+        return out;
+    }
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    setWellVariables(const WellState& xw)
+    {
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+            for (int w = 0; w < nw; ++w) {
+                wellVariables_[w + nw*phaseIdx] = 0.0;
+                wellVariables_[w + nw*phaseIdx].setValue(xw.wellSolutions()[w + nw* phaseIdx]);
+                wellVariables_[w + nw*phaseIdx].setDerivative(blocksize + phaseIdx, 1.0);
+            }
+        }
+    }
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    print(EvalWell in) const
+    {
+        std::cout << in.value() << std::endl;
+        for (int i = 0; i < in.size; ++i) {
+            std::cout << in.derivative(i) << std::endl;
+        }
+    }
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    computeAccumWells()
+    {
+        const int np = wells().number_of_phases;
+        const int nw = wells().number_of_wells;
+        for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+            for (int w = 0; w < nw; ++w) {
+                F0_[w + nw * phaseIdx] = wellVolumeFraction(w,phaseIdx).value();
+            }
+        }
+    }
+
+
 } // namespace Opm

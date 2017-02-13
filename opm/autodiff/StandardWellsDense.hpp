@@ -114,247 +114,68 @@ enum WellVariablePositions {
                                 bool only_wells);
 
             template <typename Simulator>
-            bool allow_cross_flow(const int w, Simulator& ebosSimulator) const {
+            bool allow_cross_flow(const int w, Simulator& ebosSimulator) const;
 
-                if (wells().allow_cf[w]) {
-                    return true;
-                }
-                // check for special case where all perforations have cross flow
-                // then the wells must allow for cross flow
-                for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
-                    const int cell_idx = wells().well_cells[perf];
-                    const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                    const auto& fs = intQuants.fluidState();
-                    EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-                    EvalWell bhp = getBhp(w);
-                    // Pressure drawdown (also used to determine direction of flow)
-                    EvalWell well_pressure = bhp + wellPerforationPressureDiffs()[perf];
-                    EvalWell drawdown = pressure - well_pressure;
+            void localInvert(Mat& istlA) const;
 
-                    if ( drawdown.value() < 0 && wells().type[w] == INJECTOR)  {
-                        return false;
-                    }
-                    if ( drawdown.value() > 0 && wells().type[w] == PRODUCER)  {
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            void localInvert(Mat& istlA) const {
-                for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
-                    for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
-                        //std::cout << (*col) << std::endl;
-                        (*col).invert();
-                    }
-                }
-            }
-
-            void print(Mat& istlA) const {
-                for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
-                    for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
-                        std::cout << row.index() << " " << col.index() << "/n \n"<<(*col) << std::endl;
-                    }
-                }
-            }
+            void print(Mat& istlA) const;
 
             // substract Binv(D)rw from r;
-            void apply( BVector& r) const {
-                if ( ! localWellsActive() ) {
-                    return;
-                }
-
-                assert( invDrw_.size() == invDuneD_.N() );
-
-                invDuneD_.mv(resWell_,invDrw_);
-                duneB_.mmtv(invDrw_, r);
-            }
+            void apply( BVector& r) const;
 
             // subtract B*inv(D)*C * x from A*x
-            void apply(const BVector& x, BVector& Ax) {
-                if ( ! localWellsActive() ) {
-                    return;
-                }
-                assert( Cx_.size() == duneC_.N() );
-
-                BVector& invDCx = invDrw_;
-                assert( invDCx.size() == invDuneD_.N());
-
-                duneC_.mv(x, Cx_);
-                invDuneD_.mv(Cx_, invDCx);
-                duneB_.mmtv(invDCx,Ax);
-            }
+            void apply(const BVector& x, BVector& Ax);
 
             // apply well model with scaling of alpha
-            void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax)
-            {
-                if ( ! localWellsActive() ) {
-                    return;
-                }
-
-                if( scaleAddRes_.size() != Ax.size() ) {
-                    scaleAddRes_.resize( Ax.size() );
-                }
-
-                scaleAddRes_ = 0.0;
-                apply( x, scaleAddRes_ );
-                Ax.axpy( alpha, scaleAddRes_ );
-            }
+            void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax);
 
             // xw = inv(D)*(rw - C*x)
-            void recoverVariable(const BVector& x, BVector& xw) const {
-                if ( ! localWellsActive() ) {
-                    return;
-                }
-                BVector resWell = resWell_;
-                duneC_.mmv(x, resWell);
-                invDuneD_.mv(resWell, xw);
-            }
+            void recoverVariable(const BVector& x, BVector& xw) const;
 
+            int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 
-            int flowPhaseToEbosCompIdx( const int phaseIdx ) const
-            {
-                const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
-                return phaseToComp[ phaseIdx ];
-            }
+            int flowToEbosPvIdx( const int flowPv ) const;
 
-            int flowToEbosPvIdx( const int flowPv ) const
-            {
-                const int flowToEbos[ 3 ] = {
-                                              BlackoilIndices::pressureSwitchIdx,
-                                              BlackoilIndices::waterSaturationIdx,
-                                              BlackoilIndices::compositionSwitchIdx
-                                            };
-                return flowToEbos[ flowPv ];
-            }
-
-            int ebosCompToFlowPhaseIdx( const int compIdx ) const
-            {
-                const int compToPhase[ 3 ] = { Oil, Water, Gas };
-                return compToPhase[ compIdx ];
-            }
-
-
+            int ebosCompToFlowPhaseIdx( const int compIdx ) const;
 
             std::vector<double>
-            extractPerfData(const std::vector<double>& in) const {
-                const int nw   = wells().number_of_wells;
-                const int nperf = wells().well_connpos[nw];
-                std::vector<double> out(nperf);
-                for (int w = 0; w < nw; ++w) {
-                    for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
-                        const int well_idx = wells().well_cells[perf];
-                        out[perf] = in[well_idx];
-                    }
-                }
-                return out;
-            }
+            extractPerfData(const std::vector<double>& in) const;
 
-            int numPhases() const { return wells().number_of_phases; }
+            int numPhases() const;
 
-            int numCells() const { return pv_.size();}
+            int numCells() const;
 
-            template<class WellState>
-            void resetWellControlFromState(WellState xw) {
-                const int        nw   = wells_->number_of_wells;
-                for (int w = 0; w < nw; ++w) {
-                    WellControls* wc = wells_->ctrls[w];
-                    well_controls_set_current( wc, xw.currentControls()[w]);
-                }
-            }
+            void resetWellControlFromState(WellState xw);
 
-            const Wells& wells() const
-            {
-                assert(wells_ != 0);
-                return *(wells_);
-            }
+            const Wells& wells() const;
 
-            const Wells* wellsPointer() const
-            {
-                return wells_;
-            }
+            const Wells* wellsPointer() const;
 
             /// return true if wells are available in the reservoir
-            bool wellsActive() const
-            {
-                return wells_active_;
-            }
-            void setWellsActive(const bool wells_active)
-            {
-                wells_active_ = wells_active;
-            }
+            bool wellsActive() const;
+
+            void setWellsActive(const bool wells_active);
+
             /// return true if wells are available on this process
-            bool localWellsActive() const
-            {
-                return wells_ ? (wells_->number_of_wells > 0 ) : false;
-            }
+            bool localWellsActive() const;
 
-            int numWellVars() const
-            {
-                if ( !localWellsActive() )
-                {
-                    return 0;
-                }
-
-                // For each well, we have a bhp variable, and one flux per phase.
-                const int nw = wells().number_of_wells;
-                return (numPhases() + 1) * nw;
-            }
+            int numWellVars() const;
 
             /// Density of each well perforation
-            std::vector<double> wellPerforationDensities() const     {
-                return well_perforation_densities_;
-            }
+            const std::vector<double>& wellPerforationDensities() const;
 
             /// Diff to bhp for each well perforation.
-            std::vector<double> wellPerforationPressureDiffs() const
-            {
-                return well_perforation_pressure_diffs_;
-            }
-
+            const std::vector<double>& wellPerforationPressureDiffs() const;
 
             typedef DenseAd::Evaluation<double, /*size=*/blocksize> Eval;
-            EvalWell extendEval(Eval in) const {
-                EvalWell out = 0.0;
-                out.setValue(in.value());
-                for(int i = 0; i < blocksize;++i) {
-                    out.setDerivative(i, in.derivative(flowToEbosPvIdx(i)));
-                }
-                return out;
-            }
 
-            void
-            setWellVariables(const WellState& xw) {
-                const int np = wells().number_of_phases;
-                const int nw = wells().number_of_wells;
-                for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                    for (int w = 0; w < nw; ++w) {
-                        wellVariables_[w + nw*phaseIdx] = 0.0;
-                        wellVariables_[w + nw*phaseIdx].setValue(xw.wellSolutions()[w + nw* phaseIdx]);
-                        wellVariables_[w + nw*phaseIdx].setDerivative(blocksize + phaseIdx, 1.0);
-                    }
-                }
-            }
+            EvalWell extendEval(Eval in) const;
 
-            void print(EvalWell in) const {
-                std::cout << in.value() << std::endl;
-                for (int i = 0; i < in.size; ++i) {
-                    std::cout << in.derivative(i) << std::endl;
-                }
-            }
+            void setWellVariables(const WellState& xw);
 
-            void
-            computeAccumWells() {
-                const int np = wells().number_of_phases;
-                const int nw = wells().number_of_wells;
-                for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                    for (int w = 0; w < nw; ++w) {
-                        F0_[w + nw * phaseIdx] = wellVolumeFraction(w,phaseIdx).value();
-                    }
-                }
-            }
+            void print(EvalWell in) const;
 
-
+            void computeAccumWells();
 
             template<typename intensiveQuants>
             void
