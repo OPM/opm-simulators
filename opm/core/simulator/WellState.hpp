@@ -233,6 +233,7 @@ namespace Opm
 
                 auto& well = dw[ itr.first ];
                 well.bhp = this->bhp().at( well_index );
+                well.thp = this->thp().at( well_index );
                 well.temperature = this->temperature().at( well_index );
 
                 const auto wellrate_index = well_index * pu.num_phases;
