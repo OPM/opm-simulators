@@ -36,6 +36,7 @@
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/GridProperty.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -91,7 +92,6 @@ public:
     void finishInit()
     {
         const auto& gridView = simulator_.gridView();
-        const auto& deck = simulator_.gridManager().deck();
 
         unsigned numElements = gridView.size(/*codim=*/0);
 
@@ -109,8 +109,7 @@ public:
         if (!enableThresholdPressure_)
             return;
 
-        numEquilRegions_ =
-            deck.getKeyword("EQLDIMS").getRecord(0).getItem("NTEQUL").template get<int>(0);
+        numEquilRegions_ = eclState.getTableManager().getEqldims().getNumEquilRegions();
         if (numEquilRegions_ > 0xff) {
             // make sure that the index of an equilibration region can be stored in a
             // single byte
