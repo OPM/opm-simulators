@@ -32,7 +32,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/props/rock/RockCompressibility.hpp>
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/common/ErrorMacros.hpp>

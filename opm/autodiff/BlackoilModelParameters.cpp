@@ -73,7 +73,7 @@ namespace Opm
         max_residual_allowed_ = 1e7;
         tolerance_mb_    = 1.0e-5;
         tolerance_cnv_   = 1.0e-2;
-        tolerance_wells_ = 1.0e-3;
+        tolerance_wells_ = 1.0e-4;
         tolerance_well_control_ = 1.0e-7;
         maxSinglePrecisionTimeStep_ = unit::convert::from( 20.0, unit::day );
         solve_welleq_initially_ = true;

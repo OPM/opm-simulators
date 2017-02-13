@@ -20,7 +20,7 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILOUTPUT_HEADER_INCLUDED
 #include <opm/core/grid.h>
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/autodiff/Compat.hpp>
 #include <opm/core/utility/DataMap.hpp>

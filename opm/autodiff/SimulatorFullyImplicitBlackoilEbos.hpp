@@ -33,7 +33,7 @@
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/SimFIBODetails.hpp>
 
-#include <opm/core/simulator/AdaptiveTimeStepping.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/utility/StopWatch.hpp>
 

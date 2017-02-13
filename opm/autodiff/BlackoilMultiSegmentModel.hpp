@@ -26,7 +26,7 @@
 #include <opm/autodiff/WellStateMultiSegment.hpp>
 #include <opm/autodiff/WellMultiSegment.hpp>
 #include <opm/autodiff/StandardWells.hpp>
-#include <opm/core/simulator/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <opm/autodiff/MultisegmentWells.hpp>
 
