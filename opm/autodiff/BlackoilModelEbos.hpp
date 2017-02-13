@@ -1202,10 +1202,10 @@ namespace Opm {
             const auto& phaseUsage = fluid_.phaseUsage();
 
             // extract everything which can possibly be written to disk
-            const int numCells  = ebosModel.numGridDof();
-            const int numPhazes = numPhases();
+            const int numCells   = ebosModel.numGridDof();
+            const int num_phases = numPhases();
 
-            SimulationDataContainer simData( numCells, 0, numPhazes );
+            SimulationDataContainer simData( numCells, 0, num_phases );
 
             //Get shorthands for water, oil, gas
             const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
@@ -1275,7 +1275,7 @@ namespace Opm {
                 const auto& intQuants = *ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                const int satIdx = cellIdx * numPhazes;
+                const int satIdx = cellIdx * num_phases;
 
                 pressureOil[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value();
 
@@ -1305,13 +1305,14 @@ namespace Opm {
                                                                              intQuants.pvtRegionIndex(),
                                                                              /*maxOilSaturation=*/1.0).value();
                 }
-
-                // oil is always active
-                saturation[ satIdx + liquid_pos ] = fs.saturation(FluidSystem::oilPhaseIdx).value();
-                bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value();
-                rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value();
-                muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
-                krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
+                if( liquid_active )
+                {
+                    saturation[ satIdx + liquid_pos ] = fs.saturation(FluidSystem::oilPhaseIdx).value();
+                    bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value();
+                    rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value();
+                    muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
+                    krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
+                }
             }
 
             return std::move(simData);
