@@ -1315,7 +1315,7 @@ namespace Opm {
                 }
             }
 
-            return std::move(simData);
+            return simData;
         }
 
         const FIPDataType& getFIPData() const {

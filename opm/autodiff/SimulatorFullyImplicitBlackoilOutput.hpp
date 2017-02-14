@@ -516,7 +516,7 @@ namespace Opm
             addToSimData( simData, "RSSAT", sd.rsSat );
             addToSimData( simData, "RVSAT", sd.rvSat );
 
-            return std::move( simData );
+            return simData;
         }
 
         // in case the data is already in a SimulationDataContainer no
@@ -536,8 +536,8 @@ namespace Opm
         template<class Model>
         void getRestartData(data::Solution& output,
                             SimulationDataContainer&& sd,
-                            const Opm::PhaseUsage& phaseUsage,
-                            const Model& physicalModel,
+                            const Opm::PhaseUsage& /* phaseUsage */,
+                            const Model& /* physicalModel */,
                             const RestartConfig& restartConfig,
                             const int reportStepNum,
                             const bool log)
