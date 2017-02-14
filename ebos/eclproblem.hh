@@ -75,6 +75,7 @@
 #include <opm/common/Valgrind.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
@@ -827,8 +828,7 @@ public:
         // SWATINIT.
         const auto& deck = this->simulator().gridManager().deck();
         const auto& eclState = this->simulator().gridManager().eclState();
-        int numEquilRegions =
-            deck.getKeyword("EQLDIMS").getRecord(0).getItem("NTEQUL").template get<int>(0);
+        int numEquilRegions = eclState.getTableManager().getEqldims().getNumEquilRegions();
         bool useThpres = deck.hasKeyword("THPRES") && numEquilRegions > 1;
         bool useSwatinit =
             GET_PROP_VALUE(TypeTag, EnableSwatinit) &&
@@ -1101,9 +1101,7 @@ private:
     {
         const auto& deck = this->simulator().gridManager().deck();
         const auto& eclState = this->simulator().gridManager().eclState();
-        int numEquilRegions =
-            deck.getKeyword("EQLDIMS").getRecord(0).getItem("NTEQUL").template get<int>(0);
-
+        int numEquilRegions = eclState.getTableManager().getEqldims().getNumEquilRegions();
         bool useThpres = deck.hasKeyword("THPRES") && numEquilRegions > 1;
         bool useSwatinit =
             GET_PROP_VALUE(TypeTag, EnableSwatinit) &&
