@@ -22,6 +22,9 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <array>
+#include <vector>
+
 namespace Opm
 {
 
@@ -43,6 +46,44 @@ namespace Opm
         Qs = 3,
         Bhp = 4,
         Next // For extension.
+    };
+
+    struct FIPDataEnums {
+
+        enum FipId {
+            FIP_AQUA = Opm::Water,
+            FIP_LIQUID = Opm::Oil,
+            FIP_VAPOUR = Opm::Gas,
+            FIP_DISSOLVED_GAS = 3,
+            FIP_VAPORIZED_OIL = 4,
+            FIP_PV = 5,                    //< Pore volume
+            FIP_WEIGHTED_PRESSURE = 6
+        };
+
+        static const int fipValues = FIP_WEIGHTED_PRESSURE + 1 ;
+    };
+
+    class FIPData : public FIPDataEnums
+    {
+    public:
+        typedef std::vector<double> VectorType;
+
+        using FIPDataEnums :: FipId;
+        using FIPDataEnums :: fipValues ;
+        std::array< VectorType, fipValues> fip;
+
+        // default constructor
+        FIPData() {}
+
+        // initialize from array of Eigen vectors (or std::vectors)
+        template <class V>
+        explicit FIPData( const std::array< V, fipValues>& otherFip )
+        {
+            // copy fip vector from V to std::vector
+            for( int i=0; i<fipValues; ++i ) {
+                fip[ i ] = VectorType(otherFip[ i ].data(), otherFip[ i ].data() + otherFip[ i ].size() );
+            }
+        }
     };
 
 } // namespace Opm

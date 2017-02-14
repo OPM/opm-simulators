@@ -51,7 +51,6 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/common/data/SimulationDataContainer.hpp>
 
 #include <dune/common/timer.hh>
 
@@ -389,7 +388,6 @@ typedef Eigen::Array<double,
 
 
 
-
     template <class Grid, class WellModel, class Implementation>
     int
     BlackoilModelBase<Grid, WellModel, Implementation>::
@@ -441,7 +439,6 @@ typedef Eigen::Array<double,
         }
 
     }
-
 
 
 

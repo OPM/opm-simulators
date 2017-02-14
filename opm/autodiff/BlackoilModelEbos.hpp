@@ -143,19 +143,7 @@ namespace Opm {
         using RateConverterType = RateConverter::
             SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
 
-        struct FIPData {
-            enum FipId {
-                FIP_AQUA = Opm::Water,
-                FIP_LIQUID = Opm::Oil,
-                FIP_VAPOUR = Opm::Gas,
-                FIP_DISSOLVED_GAS = 3,
-                FIP_VAPORIZED_OIL = 4,
-                FIP_PV = 5,                    //< Pore volume
-                FIP_WEIGHTED_PRESSURE = 6
-            };
-            static const int fipValues = FIP_WEIGHTED_PRESSURE + 1 ;
-            std::array<std::vector<double>, fipValues> fip;
-        };
+        typedef Opm::FIPData FIPDataType;
 
         // ---------  Public methods  ---------
 
@@ -1022,7 +1010,7 @@ namespace Opm {
             const auto& pv = geo_.poreVolume();
             const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
 
-            for (int i = 0; i<FIPData::fipValues; i++) {
+            for (int i = 0; i<FIPDataType::fipValues; i++) {
                 fip_.fip[i].resize(nc,0.0);
             }
 
@@ -1051,14 +1039,14 @@ namespace Opm {
 
                 if (active_[ Oil ] && active_[ Gas ]) {
                     // Account for gas dissolved in oil and vaporized oil
-                    fip_.fip[FIPData::FIP_DISSOLVED_GAS][cellIdx] = fs.Rs().value() * fip_.fip[FIPData::FIP_LIQUID][cellIdx];
-                    fip_.fip[FIPData::FIP_VAPORIZED_OIL][cellIdx] = fs.Rv().value() * fip_.fip[FIPData::FIP_VAPOUR][cellIdx];
+                    fip_.fip[FIPDataType::FIP_DISSOLVED_GAS][cellIdx] = fs.Rs().value() * fip_.fip[FIPDataType::FIP_LIQUID][cellIdx];
+                    fip_.fip[FIPDataType::FIP_VAPORIZED_OIL][cellIdx] = fs.Rv().value() * fip_.fip[FIPDataType::FIP_VAPOUR][cellIdx];
                 }
             }
 
             // For a parallel run this is just a local maximum and needs to be updated later
             int dims = *std::max_element(fipnum.begin(), fipnum.end());
-            std::vector<std::vector<double>> values(dims, std::vector<double>(FIPData::fipValues,0.0));
+            std::vector<std::vector<double>> values(dims, std::vector<double>(FIPDataType::fipValues,0.0));
 
             std::vector<double> hcpv(dims, 0.0);
             std::vector<double> pres(dims, 0.0);
@@ -1082,8 +1070,8 @@ namespace Opm {
                     for (int c = 0; c < nc; ++c) {
                         const int region = fipnum[c] - 1;
                         if (region != -1) {
-                            values[region][FIPData::FIP_DISSOLVED_GAS] += fip_.fip[FIPData::FIP_DISSOLVED_GAS][c];
-                            values[region][FIPData::FIP_VAPORIZED_OIL] += fip_.fip[FIPData::FIP_VAPORIZED_OIL][c];
+                            values[region][FIPDataType::FIP_DISSOLVED_GAS] += fip_.fip[FIPDataType::FIP_DISSOLVED_GAS][c];
+                            values[region][FIPDataType::FIP_VAPORIZED_OIL] += fip_.fip[FIPDataType::FIP_VAPORIZED_OIL][c];
                         }
                     }
                 }
@@ -1102,7 +1090,7 @@ namespace Opm {
                     const int region = fipnum[c] - 1;
                     if (region != -1) {
 
-                        fip_.fip[FIPData::FIP_PV][c] = pv[c];
+                        fip_.fip[FIPDataType::FIP_PV][c] = pv[c];
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
@@ -1110,13 +1098,13 @@ namespace Opm {
                         //Compute hydrocarbon pore volume weighted average pressure.
                         //If we have no hydrocarbon in region, use pore volume weighted average pressure instead
                         if (hcpv[region] != 0) {
-                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
                         } else {
-                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
                         }
 
-                        values[region][FIPData::FIP_PV] += fip_.fip[FIPData::FIP_PV][c];
-                        values[region][FIPData::FIP_WEIGHTED_PRESSURE] += fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c];
+                        values[region][FIPDataType::FIP_PV] += fip_.fip[FIPDataType::FIP_PV][c];
+                        values[region][FIPDataType::FIP_WEIGHTED_PRESSURE] += fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c];
                     }
                 }
             }
@@ -1131,7 +1119,7 @@ namespace Opm {
                 auto comm = pinfo.communicator();
                 // Compute the global dims value and resize values accordingly.
                 dims = comm.max(dims);
-                values.resize(dims, std::vector<double>(FIPData::fipValues,0.0));
+                values.resize(dims, std::vector<double>(FIPDataType::fipValues,0.0));
 
                 //Accumulate phases for each region
                 for (int phase = 0; phase < maxnp; ++phase) {
@@ -1148,8 +1136,8 @@ namespace Opm {
                     for (int c = 0; c < nc; ++c) {
                         const int region = fipnum[c] - 1;
                         if (region != -1 && mask[c]) {
-                            values[region][FIPData::FIP_DISSOLVED_GAS] += fip_.fip[FIPData::FIP_DISSOLVED_GAS][c];
-                            values[region][FIPData::FIP_VAPORIZED_OIL] += fip_.fip[FIPData::FIP_VAPORIZED_OIL][c];
+                            values[region][FIPDataType::FIP_DISSOLVED_GAS] += fip_.fip[FIPDataType::FIP_DISSOLVED_GAS][c];
+                            values[region][FIPDataType::FIP_VAPORIZED_OIL] += fip_.fip[FIPDataType::FIP_VAPORIZED_OIL][c];
                         }
                     }
                 }
@@ -1174,19 +1162,19 @@ namespace Opm {
                 for (int c = 0; c < nc; ++c) {
                     const int region = fipnum[c] - 1;
                     if (region != -1 && mask[c]) {
-                        fip_.fip[FIPData::FIP_PV][c] = pv[c];
+                        fip_.fip[FIPDataType::FIP_PV][c] = pv[c];
                         const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(c, /*timeIdx=*/0);
                         const auto& fs = intQuants.fluidState();
                         const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
 
                         if (hcpv[region] != 0) {
-                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pv[c] * fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbon / hcpv[region];
                         } else {
-                            fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
+                            fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c] = pres[region] / pv[c];
                         }
 
-                        values[region][FIPData::FIP_PV] += fip_.fip[FIPData::FIP_PV][c];
-                        values[region][FIPData::FIP_WEIGHTED_PRESSURE] += fip_.fip[FIPData::FIP_WEIGHTED_PRESSURE][c];
+                        values[region][FIPDataType::FIP_PV] += fip_.fip[FIPDataType::FIP_PV][c];
+                        values[region][FIPDataType::FIP_WEIGHTED_PRESSURE] += fip_.fip[FIPDataType::FIP_WEIGHTED_PRESSURE][c];
                     }
                 }
 
@@ -1206,7 +1194,131 @@ namespace Opm {
             return values;
         }
 
-        const FIPData& getFIPData() const {
+        SimulationDataContainer getSimulatorData () const
+        {
+            typedef std::vector<double> VectorType;
+
+            const auto& ebosModel = ebosSimulator().model();
+            const auto& phaseUsage = fluid_.phaseUsage();
+
+            // extract everything which can possibly be written to disk
+            const int numCells   = ebosModel.numGridDof();
+            const int num_phases = numPhases();
+
+            SimulationDataContainer simData( numCells, 0, num_phases );
+
+            //Get shorthands for water, oil, gas
+            const int aqua_active = phaseUsage.phase_used[Opm::PhaseUsage::Aqua];
+            const int liquid_active = phaseUsage.phase_used[Opm::PhaseUsage::Liquid];
+            const int vapour_active = phaseUsage.phase_used[Opm::PhaseUsage::Vapour];
+
+            const int aqua_pos   = phaseUsage.phase_pos[ Opm::PhaseUsage::Aqua ];
+            const int liquid_pos = phaseUsage.phase_pos[ Opm::PhaseUsage::Liquid ];
+            const int vapour_pos = phaseUsage.phase_pos[ Opm::PhaseUsage::Vapour ];
+
+            VectorType zero;
+
+            VectorType& pressureOil = simData.pressure();
+            VectorType& temperature = simData.temperature();
+            VectorType& saturation = simData.saturation();
+
+            // WATER
+            if( aqua_active ) {
+                simData.registerCellData("1OVERBW", 1 );
+                simData.registerCellData("WAT_DEN", 1 );
+                simData.registerCellData("WAT_VISC", 1 );
+                simData.registerCellData("WATKR", 1 );
+            }
+
+            VectorType& bWater   = aqua_active ? simData.getCellData( "1OVERBW" ) : zero;
+            VectorType& rhoWater = aqua_active ? simData.getCellData( "WAT_DEN" ) : zero;
+            VectorType& muWater  = aqua_active ? simData.getCellData( "WAT_VISC" ) : zero;
+            VectorType& krWater  = aqua_active ? simData.getCellData( "WATKR" ) : zero;
+
+            // OIL
+            if( liquid_active ) {
+                simData.registerCellData("1OVERBO", 1 );
+                simData.registerCellData("OIL_DEN", 1 );
+                simData.registerCellData("OIL_VISC", 1 );
+                simData.registerCellData("OILKR", 1 );
+            }
+
+            VectorType& bOil   = liquid_active ? simData.getCellData( "1OVERBO" ) : zero;
+            VectorType& rhoOil = liquid_active ? simData.getCellData( "OIL_DEN" ) : zero;
+            VectorType& muOil  = liquid_active ? simData.getCellData( "OIL_VISC" ) : zero;
+            VectorType& krOil  = liquid_active ? simData.getCellData( "OILKR" ) : zero;
+
+            // GAS
+            if( vapour_active ) {
+                simData.registerCellData("1OVERBG", 1 );
+                simData.registerCellData("GAS_DEN", 1 );
+                simData.registerCellData("GAS_VISC", 1 );
+                simData.registerCellData("GASKR", 1 );
+            }
+
+            VectorType& bGas   = vapour_active ? simData.getCellData( "1OVERBG" ) : zero;
+            VectorType& rhoGas = vapour_active ? simData.getCellData( "GAS_DEN" ) : zero;
+            VectorType& muGas  = vapour_active ? simData.getCellData( "GAS_VISC" ) : zero;
+            VectorType& krGas  = vapour_active ? simData.getCellData( "GASKR" ) : zero;
+
+            simData.registerCellData( BlackoilState::GASOILRATIO, 1 );
+            simData.registerCellData( BlackoilState::RV, 1 );
+            simData.registerCellData("RSSAT", 1 );
+            simData.registerCellData("RVSAT", 1 );
+
+            VectorType& Rs    = simData.getCellData( BlackoilState::GASOILRATIO );
+            VectorType& Rv    = simData.getCellData( BlackoilState::RV );
+            VectorType& RsSat = simData.getCellData( "RSSAT" );
+            VectorType& RvSat = simData.getCellData( "RVSAT" );
+
+            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+                const auto& intQuants = *ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+
+                const int satIdx = cellIdx * num_phases;
+
+                pressureOil[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value();
+
+                temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value();
+
+                if (aqua_active) {
+                    saturation[ satIdx + aqua_pos ] = fs.saturation(FluidSystem::waterPhaseIdx).value();
+                    bWater[cellIdx] = fs.invB(FluidSystem::waterPhaseIdx).value();
+                    rhoWater[cellIdx] = fs.density(FluidSystem::waterPhaseIdx).value();
+                    muWater[cellIdx] = fs.viscosity(FluidSystem::waterPhaseIdx).value();
+                    krWater[cellIdx] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value();
+                }
+                if (vapour_active) {
+                    saturation[ satIdx + vapour_pos ]  = fs.saturation(FluidSystem::gasPhaseIdx).value();
+                    bGas[cellIdx] = fs.invB(FluidSystem::gasPhaseIdx).value();
+                    rhoGas[cellIdx] = fs.density(FluidSystem::gasPhaseIdx).value();
+                    muGas[cellIdx] = fs.viscosity(FluidSystem::gasPhaseIdx).value();
+                    krGas[cellIdx] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value();
+                    Rs[cellIdx] = fs.Rs().value();
+                    Rv[cellIdx] = fs.Rv().value();
+                    RsSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
+                                                                             FluidSystem::oilPhaseIdx,
+                                                                             intQuants.pvtRegionIndex(),
+                                                                             /*maxOilSaturation=*/1.0).value();
+                    RvSat[cellIdx] = FluidSystem::saturatedDissolutionFactor(fs,
+                                                                             FluidSystem::gasPhaseIdx,
+                                                                             intQuants.pvtRegionIndex(),
+                                                                             /*maxOilSaturation=*/1.0).value();
+                }
+                if( liquid_active )
+                {
+                    saturation[ satIdx + liquid_pos ] = fs.saturation(FluidSystem::oilPhaseIdx).value();
+                    bOil[cellIdx] = fs.invB(FluidSystem::oilPhaseIdx).value();
+                    rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value();
+                    muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
+                    krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
+                }
+            }
+
+            return simData;
+        }
+
+        const FIPDataType& getFIPData() const {
             return fip_;
         }
 
@@ -1254,7 +1366,7 @@ namespace Opm {
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         BVector dx_old_;
-        mutable FIPData fip_;
+        mutable FIPDataType fip_;
 
 
 

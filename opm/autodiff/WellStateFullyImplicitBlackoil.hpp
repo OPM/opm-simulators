@@ -20,7 +20,7 @@
 #ifndef OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
-
+#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
@@ -176,11 +176,15 @@ namespace Opm
         }
 
         template <class State>
-        void resize(const Wells* wells, const State& state) {
+        void resize(const Wells* wells, const State& state ) {
             const WellStateFullyImplicitBlackoil dummy_state{}; // Init with an empty previous state only resizes
             init(wells, state, dummy_state) ;
         }
 
+        template <class State>
+        void resize(const Wells* wells, const State& state, const PhaseUsage& ) {
+            resize( wells, state );
+        }
 
         /// One rate per phase and well connection.
         std::vector<double>& perfPhaseRates() { return perfphaserates_; }

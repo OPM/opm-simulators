@@ -76,7 +76,7 @@ namespace Opm {
             std::vector<ADB> ads;   // Adsorption term.
         };
 
-        struct SimulatorData {
+        struct SimulatorData : public Opm::FIPDataEnums {
             SimulatorData(int num_phases)
                 : rq(num_phases)
                 , rsSat(ADB::null())
@@ -85,20 +85,17 @@ namespace Opm {
             {
             }
 
-            enum FipId {
-                FIP_AQUA = Opm::Water,
-                FIP_LIQUID = Opm::Oil,
-                FIP_VAPOUR = Opm::Gas,
-                FIP_DISSOLVED_GAS = 3,
-                FIP_VAPORIZED_OIL = 4,
-                FIP_PV = 5,                    //< Pore volume
-                FIP_WEIGHTED_PRESSURE = 6
-            };
+			using Opm::FIPDataEnums::FipId;
+			using Opm::FIPDataEnums::fipValues;
+
             std::vector<ReservoirResidualQuant> rq;
             ADB rsSat;
             ADB rvSat;
-            std::array<V, 7> fip;
+            std::array<V, fipValues> fip;
         };
+
+		typedef Opm::FIPData  FIPDataType;
+
 
         /// Construct a solver. It will retain references to the
         /// arguments of this functions, and they are expected to
@@ -153,12 +150,17 @@ namespace Opm {
             return sd_;
         }
 
+        /// Return reservoir simulation data (for output functionality)
+        FIPDataType getFIPData() const {
+            return FIPDataType( sd_.fip );
+        }
+
         /// Compute fluid in place.
         /// \param[in]    ReservoirState
         /// \param[in]    WellState
         /// \param[in]    FIPNUM for active cells not global cells.
-        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas. 
-        std::vector<std::vector<double> > 
+        /// \return fluid in place, number of fip regions, each region contains 5 values which are liquid, vapour, water, free gas and dissolved gas.
+        std::vector<std::vector<double> >
         computeFluidInPlace(const PolymerBlackoilState& x,
                             const std::vector<int>& fipnum);
 
@@ -224,7 +226,7 @@ namespace Opm {
         void
         assemble(const double             	 dt,
                  const PolymerBlackoilState& x,
-                 const WellStateFullyImplicitBlackoil& xw,  
+                 const WellStateFullyImplicitBlackoil& xw,
                  const std::vector<double>& polymer_inflow);
 
         V solveJacobianSystem() const;
@@ -298,10 +300,10 @@ namespace Opm {
 
         ADB
         transMult(const ADB& p) const;
-        
+
         const std::vector<PhasePresence>
         phaseCondition() const { return phaseCondition_; }
-        
+
         void
         classifyCondition(const PolymerBlackoilState& state);
     };

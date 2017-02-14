@@ -22,7 +22,8 @@
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
 //#include <opm/autodiff/SimulatorBase.hpp>
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.hpp>
+//#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.hpp>
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
@@ -59,7 +60,7 @@ public:
 
     typedef WellStateFullyImplicitBlackoilDense WellState;
     typedef BlackoilState ReservoirState;
-    typedef BlackoilOutputWriterEbos OutputWriter;
+    typedef BlackoilOutputWriter OutputWriter;
     typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
@@ -98,7 +99,7 @@ public:
                                        const bool has_disgas,
                                        const bool has_vapoil,
                                        const EclipseState& /* eclState */,
-                                       BlackoilOutputWriterEbos& output_writer,
+                                       OutputWriter& output_writer,
                                        const std::unordered_set<std::string>& defunct_well_names)
         : ebosSimulator_(ebosSimulator),
           param_(param),
