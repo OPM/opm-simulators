@@ -433,6 +433,19 @@ namespace Opm {
     template<typename FluidSystem, typename BlackoilIndices>
     int
     StandardWellsDense<FluidSystem, BlackoilIndices>::
+    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
+    {
+        const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
+        return flowToEbos[ phaseIdx ];
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    int
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
     ebosCompToFlowPhaseIdx( const int compIdx ) const
     {
         const int compToPhase[ 3 ] = { Oil, Water, Gas };
@@ -1421,5 +1434,239 @@ namespace Opm {
         }
     }
 
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    updateListEconLimited(const Schedule& schedule,
+                          const int current_step,
+                          const Wells* wells_struct,
+                          const WellState& well_state,
+                          DynamicListEconLimited& list_econ_limited) const
+    {
+        // With no wells (on process) wells_struct is a null pointer
+        const int nw = (wells_struct)? wells_struct->number_of_wells : 0;
+
+        for (int w = 0; w < nw; ++w) {
+             // flag to check if the mim oil/gas rate limit is violated
+             bool rate_limit_violated = false;
+             const std::string& well_name = wells_struct->name[w];
+             const Well* well_ecl = schedule.getWell(well_name);
+             const WellEconProductionLimits& econ_production_limits = well_ecl->getEconProductionLimits(current_step);
+
+             // economic limits only apply for production wells.
+             if (wells_struct->type[w] != PRODUCER) {
+                continue;
+             }
+
+             // if no limit is effective here, then continue to the next well
+             if ( !econ_production_limits.onAnyEffectiveLimit() ) {
+                 continue;
+             }
+             // for the moment, we only handle rate limits, not handling potential limits
+             // the potential limits should not be difficult to add
+             const WellEcon::QuantityLimitEnum& quantity_limit = econ_production_limits.quantityLimit();
+             if (quantity_limit == WellEcon::POTN) {
+                const std::string msg = std::string("POTN limit for well ") + well_name + std::string(" is not supported for the moment. \n")
+                                      + std::string("All the limits will be evaluated based on RATE. ");
+                OpmLog::warning("NOT_SUPPORTING_POTN", msg);
+             }
+
+             const WellMapType& well_map = well_state.wellMap();
+             const typename WellMapType::const_iterator i_well = well_map.find(well_name);
+             assert(i_well != well_map.end()); // should always be found?
+             const WellMapEntryType& map_entry = i_well->second;
+             const int well_number = map_entry[0];
+
+             if (econ_production_limits.onAnyRateLimit()) {
+                rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state, well_number);
+             }
+
+             if (rate_limit_violated) {
+                if (econ_production_limits.endRun()) {
+                    const std::string warning_message = std::string("ending run after well closed due to economic limits is not supported yet \n")
+                                                      + std::string("the program will keep running after ") + well_name + std::string(" is closed");
+                    OpmLog::warning("NOT_SUPPORTING_ENDRUN", warning_message);
+                }
+
+                if (econ_production_limits.validFollowonWell()) {
+                    OpmLog::warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
+                }
+
+                if (well_ecl->getAutomaticShutIn()) {
+                    list_econ_limited.addShutWell(well_name);
+                    const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to economic limit");
+                    OpmLog::info(msg);
+                } else {
+                    list_econ_limited.addStoppedWell(well_name);
+                    const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to economic limit");
+                    OpmLog::info(msg);
+                }
+                // the well is closed, not need to check other limits
+                continue;
+            }
+
+            // checking for ratio related limits, mostly all kinds of ratio.
+            bool ratio_limits_violated = false;
+            RatioCheckTuple ratio_check_return;
+
+            if (econ_production_limits.onAnyRatioLimit()) {
+                ratio_check_return = checkRatioEconLimits(econ_production_limits, well_state, map_entry);
+                ratio_limits_violated = std::get<0>(ratio_check_return);
+            }
+
+            if (ratio_limits_violated) {
+                const bool last_connection = std::get<1>(ratio_check_return);
+                const int worst_offending_connection = std::get<2>(ratio_check_return);
+
+                const int perf_start = map_entry[1];
+
+                assert((worst_offending_connection >= 0) && (worst_offending_connection <  map_entry[2]));
+
+                const int cell_worst_offending_connection = wells_struct->well_cells[perf_start + worst_offending_connection];
+                list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
+                const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
+                                      + well_name + std::string(" will be closed due to economic limit");
+                OpmLog::info(msg);
+
+                if (last_connection) {
+                    list_econ_limited.addShutWell(well_name);
+                    const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
+                    OpmLog::info(msg2);
+                }
+            }
+
+        } // for (int w = 0; w < nw; ++w)
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    computeWellConnectionDensitesPressures(const WellState& xw,
+                                           const std::vector<double>& b_perf,
+                                           const std::vector<double>& rsmax_perf,
+                                           const std::vector<double>& rvmax_perf,
+                                           const std::vector<double>& surf_dens_perf,
+                                           const std::vector<double>& depth_perf,
+                                           const double grav)
+    {
+        // Compute densities
+        well_perforation_densities_ =
+                  WellDensitySegmented::computeConnectionDensities(
+                          wells(), xw, phase_usage_,
+                          b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+
+        // Compute pressure deltas
+        well_perforation_pressure_diffs_ =
+                  WellDensitySegmented::computeConnectionPressureDelta(
+                          wells(), depth_perf, well_perforation_densities_, grav);
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    template <typename Simulator>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    computeWellPotentials(const Simulator& ebosSimulator,
+                          WellState& well_state)  const
+    {
+
+        // number of wells and phases
+        const int nw = wells().number_of_wells;
+        const int np = wells().number_of_phases;
+
+        for (int w = 0; w < nw; ++w) {
+            // bhp needs to be determined for the well potential calculation
+            double bhp = 0.;
+
+            const WellControls* well_control = wells().ctrls[w];
+            // The number of the well controls
+            const int nwc = well_controls_get_num(well_control);
+
+            // Finding a BHP control or a THP control
+            // IF we find a THP control, we calculate the BHP value.
+            // TODO: there is option to ignore the THP limit when calculating well potentials,
+            // we are not handling it for the moment.
+            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                if (well_controls_iget_type(well_control, ctrl_index) == BHP) {
+                    // set bhp to the bhp value
+                    bhp = well_controls_iget_target(well_control, ctrl_index);
+                }
+
+                if (well_controls_iget_type(well_control, ctrl_index) == THP) {
+                    double aqua = 0.0;
+                    double liquid = 0.0;
+                    double vapour = 0.0;
+
+                    const Opm::PhaseUsage& pu = phase_usage_;
+
+                    if (active_[ Water ]) {
+                        aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                    }
+                    if (active_[ Oil ]) {
+                        liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+                    }
+                    if (active_[ Gas ]) {
+                        vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
+                    }
+
+                    const int vfp        = well_controls_iget_vfp(well_control, ctrl_index);
+                    const double& thp    = well_controls_iget_target(well_control, ctrl_index);
+                    const double& alq    = well_controls_iget_alq(well_control, ctrl_index);
+
+                    // Calculating the BHP value based on THP
+                    const WellType& well_type = wells().type[w];
+                    const int first_perf = wells().well_connpos[w]; //first perforation
+
+                    if (well_type == INJECTOR) {
+                        const double dp = wellhelpers::computeHydrostaticCorrection(
+                                          wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
+                                          wellPerforationDensities()[first_perf], gravity_);
+                        const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                        // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
+                        if (bhp_calculated < bhp) {
+                            bhp = bhp_calculated;
+                        }
+                    }
+                    else if (well_type == PRODUCER) {
+                        const double dp = wellhelpers::computeHydrostaticCorrection(
+                                          wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
+                                          wellPerforationDensities()[first_perf], gravity_);
+                        const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                        // apply the strictest of the bhp controlls i.e. largest bhp for producers
+                            if (bhp_calculated > bhp) {
+                                bhp = bhp_calculated;
+                            }
+                    } else {
+                       OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                    }
+                }
+            }
+
+            assert(bhp != 0.0);
+
+            // Should we consider crossflow when calculating well potentionals?
+            const bool allow_cf = allow_cross_flow(w, ebosSimulator);
+            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
+                const int cell_index = wells().well_cells[perf];
+                const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
+                std::vector<EvalWell> well_potentials(np, 0.0);
+                computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials);
+                for(int p = 0; p < np; ++p) {
+                    well_state.wellPotentials()[perf * np + p] = well_potentials[p].value();
+                }
+            }
+        } // for (int w = 0; w < nw; ++w)
+    }
 
 } // namespace Opm
