@@ -1271,6 +1271,13 @@ namespace Opm {
             VectorType& RsSat = simData.getCellData( "RSSAT" );
             VectorType& RvSat = simData.getCellData( "RVSAT" );
 
+            simData.registerCellData( "PBUB", 1 );
+            simData.registerCellData( "PDEW", 1 );
+
+            VectorType& Pb = simData.getCellData( "PBUB" );
+            VectorType& Pd = simData.getCellData( "PDEW" );
+
+
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
                 const auto& intQuants = *ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
@@ -1304,6 +1311,8 @@ namespace Opm {
                                                                              FluidSystem::gasPhaseIdx,
                                                                              intQuants.pvtRegionIndex(),
                                                                              /*maxOilSaturation=*/1.0).value();
+                    Pb[cellIdx] = FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()).value();
+                    Pd[cellIdx] = FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()).value();
                 }
                 if( liquid_active )
                 {

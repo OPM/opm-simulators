@@ -723,9 +723,14 @@ namespace Opm
             if (log && vapour_active &&
                 liquid_active && rstKeywords["PBPD"] > 0) {
                 rstKeywords["PBPD"] = 0;
-                Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
-                        "Writing bubble points and dew points (PBPD) to file is unsupported, "
-                        "as the simulator does not use these internally.");
+                output.insert("PBUB",
+                        Opm::UnitSystem::measure::pressure,
+                        std::move( sd.getCellData("PBUB") ),
+                        data::TargetType::RESTART_AUXILLARY);
+                output.insert("PDEW",
+                        Opm::UnitSystem::measure::pressure,
+                        std::move( sd.getCellData("PDEW") ),
+                        data::TargetType::RESTART_AUXILLARY);
             }
 
             //Warn for any unhandled keyword
