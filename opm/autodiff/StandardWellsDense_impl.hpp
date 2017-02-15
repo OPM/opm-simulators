@@ -1350,6 +1350,69 @@ namespace Opm {
                     break;
             } // end of switch (well_controls_iget_type(wc, current))
         } // end of for (int w = 0; w < nw; ++w)
+
+
+        // for the wells having a THP constaint, we should update their thp value
+        // If it is under THP control, it will be set to be the target value. Otherwise,
+        // the thp value will be calculated based on the bhp value, assuming the bhp value is correctly calculated.
+        for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells().ctrls[w];
+            const int nwc = well_controls_get_num(wc);
+            // Looping over all controls until we find a THP constraint
+            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                if (well_controls_iget_type(wc, ctrl_index) == THP) {
+                    // the current control
+                    const int current = well_state.currentControls()[w];
+                    // If under THP control at the moment
+                    if (current == ctrl_index) {
+                        const double thp_target = well_controls_iget_target(wc, current);
+                        well_state.thp()[w] = thp_target;
+                    } else { // otherwise we calculate the thp from the bhp value
+                        double aqua = 0.0;
+                        double liquid = 0.0;
+                        double vapour = 0.0;
+
+                        const Opm::PhaseUsage& pu = phase_usage_;
+
+                        if (active_[ Water ]) {
+                            aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
+                        }
+                        if (active_[ Oil ]) {
+                            liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
+                        }
+                        if (active_[ Gas ]) {
+                            vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
+                        }
+
+                        const double alq = well_controls_iget_alq(wc, ctrl_index);
+                        const int table_id = well_controls_iget_vfp(wc, ctrl_index);
+
+                        const WellType& well_type = wells().type[w];
+                        const int perf = wells().well_connpos[w]; //first perforation.
+                        if (well_type == INJECTOR) {
+                            const double dp = wellhelpers::computeHydrostaticCorrection(
+                                              wells(), w, vfp_properties_->getInj()->getTable(table_id)->getDatumDepth(),
+                                              wellPerforationDensities()[perf], gravity_);
+
+                            const double bhp = well_state.bhp()[w];
+                            well_state.thp()[w] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
+                        } else if (well_type == PRODUCER) {
+                            const double dp = wellhelpers::computeHydrostaticCorrection(
+                                              wells(), w, vfp_properties_->getProd()->getTable(table_id)->getDatumDepth(),
+                                              wellPerforationDensities()[perf], gravity_);
+
+                            const double bhp = well_state.bhp()[w];
+                            well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
+                        } else {
+                            OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
+                        }
+                    }
+
+                    // the THP control is found, we leave the loop now
+                    break;
+                }
+            }  // end of for loop for seaching THP constraints
+        } // end of for (int w = 0; w < nw; ++w)
     }
 
 
