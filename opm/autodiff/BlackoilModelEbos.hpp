@@ -1224,10 +1224,10 @@ namespace Opm {
 
             // WATER
             if( aqua_active ) {
-                simData.registerCellData("1OVERBW", 1 );
-                simData.registerCellData("WAT_DEN", 1 );
-                simData.registerCellData("WAT_VISC", 1 );
-                simData.registerCellData("WATKR", 1 );
+                simData.registerCellData( "1OVERBW", 1 );
+                simData.registerCellData( "WAT_DEN", 1 );
+                simData.registerCellData( "WAT_VISC", 1 );
+                simData.registerCellData( "WATKR", 1 );
             }
 
             VectorType& bWater   = aqua_active ? simData.getCellData( "1OVERBW" ) : zero;
@@ -1237,10 +1237,10 @@ namespace Opm {
 
             // OIL
             if( liquid_active ) {
-                simData.registerCellData("1OVERBO", 1 );
-                simData.registerCellData("OIL_DEN", 1 );
-                simData.registerCellData("OIL_VISC", 1 );
-                simData.registerCellData("OILKR", 1 );
+                simData.registerCellData( "1OVERBO", 1 );
+                simData.registerCellData( "OIL_DEN", 1 );
+                simData.registerCellData( "OIL_VISC", 1 );
+                simData.registerCellData( "OILKR", 1 );
             }
 
             VectorType& bOil   = liquid_active ? simData.getCellData( "1OVERBO" ) : zero;
@@ -1250,10 +1250,10 @@ namespace Opm {
 
             // GAS
             if( vapour_active ) {
-                simData.registerCellData("1OVERBG", 1 );
-                simData.registerCellData("GAS_DEN", 1 );
-                simData.registerCellData("GAS_VISC", 1 );
-                simData.registerCellData("GASKR", 1 );
+                simData.registerCellData( "1OVERBG", 1 );
+                simData.registerCellData( "GAS_DEN", 1 );
+                simData.registerCellData( "GAS_VISC", 1 );
+                simData.registerCellData( "GASKR", 1 );
             }
 
             VectorType& bGas   = vapour_active ? simData.getCellData( "1OVERBG" ) : zero;
@@ -1263,8 +1263,8 @@ namespace Opm {
 
             simData.registerCellData( BlackoilState::GASOILRATIO, 1 );
             simData.registerCellData( BlackoilState::RV, 1 );
-            simData.registerCellData("RSSAT", 1 );
-            simData.registerCellData("RVSAT", 1 );
+            simData.registerCellData( "RSSAT", 1 );
+            simData.registerCellData( "RVSAT", 1 );
 
             VectorType& Rs    = simData.getCellData( BlackoilState::GASOILRATIO );
             VectorType& Rv    = simData.getCellData( BlackoilState::RV );
