@@ -994,6 +994,27 @@ public:
     }
 
     /*!
+     * \brief Returns the bubble point pressure $P_b$ using the current Rs
+     */
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval bubblePointPressure(const FluidState& fluidState,
+                                       unsigned regionIdx)
+    {
+        return saturationPressure(fluidState, oilPhaseIdx, regionIdx);
+    }
+
+
+    /*!
+     * \brief Returns the dew point pressure $P_d$ using the current Rv
+     */
+    template <class FluidState, class LhsEval = typename FluidState::Scalar>
+    static LhsEval dewPointPressure(const FluidState& fluidState,
+                                       unsigned regionIdx)
+    {
+        return saturationPressure(fluidState, gasPhaseIdx, regionIdx);
+    }
+
+    /*!
      * \brief Returns the saturation pressure of a given phase [Pa] depending on its
      *        composition.
      *

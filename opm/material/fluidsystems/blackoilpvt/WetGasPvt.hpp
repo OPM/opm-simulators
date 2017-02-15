@@ -568,7 +568,10 @@ public:
                 return pSat;
         }
 
-        OPM_THROW(NumericalProblem, "Could find the gas saturation pressure for X_g^O = " << Rv);
+        std::stringstream errlog;
+        errlog << "Could find the gas saturation pressure for X_g^O = " << Rv;
+        OpmLog::problem("wetgas saturationpressure", errlog.str());
+        OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
 
 private:
