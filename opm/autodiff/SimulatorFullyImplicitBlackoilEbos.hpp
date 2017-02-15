@@ -191,7 +191,6 @@ public:
         SimulatorReport report;
         SimulatorReport stepReport;
 
-        bool ooip_computed = false;
         std::vector<int> fipnum_global = eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
         //Get compressed cell fipnum.
         std::vector<int> fipnum(Opm::UgGridHelpers::numCells(grid()));
@@ -202,7 +201,9 @@ public:
                 fipnum[c] = fipnum_global[Opm::UgGridHelpers::globalCell(grid())[c]];
             }
         }
-        std::vector<std::vector<double>> OOIP;
+        std::vector<std::vector<double>> originalFluidInPlace;
+        std::vector<double> originalFluidInPlaceTotals;
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -256,11 +257,15 @@ public:
 
             auto solver = createSolver(well_model);
 
-            // Compute orignal FIP;
-            if (!ooip_computed) {
-                OOIP = solver->computeFluidInPlace(fipnum);
-                FIPUnitConvert(eclState().getUnits(), OOIP);
-                ooip_computed = true;
+            // Compute orignal fluid in place if this has not been done yet
+            if (originalFluidInPlace.empty()) {
+                solver->model().convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
+                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
+                originalFluidInPlace = solver->computeFluidInPlace(fipnum);
+                originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace, state);
+                FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
+                FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
             }
 
             if( terminal_output_ )
@@ -315,20 +320,18 @@ public:
             report.solver_time += solver_timer.secsSinceStart();
 
             // Compute current fluid in place.
-            std::vector<std::vector<double>> COIP;
-            COIP = solver->computeFluidInPlace(fipnum);
-            std::vector<double> OOIP_totals = FIPTotals(OOIP, state);
-            std::vector<double> COIP_totals = FIPTotals(COIP, state);
+            std::vector<std::vector<double>> currentFluidInPlace;
+            currentFluidInPlace = solver->computeFluidInPlace(fipnum);
+            std::vector<double> currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
 
-            FIPUnitConvert(eclState().getUnits(), COIP);
-            FIPUnitConvert(eclState().getUnits(), OOIP_totals);
-            FIPUnitConvert(eclState().getUnits(), COIP_totals);
+            FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
+            FIPUnitConvert(eclState().getUnits(), currentFluidInPlaceTotals);
 
             if (terminal_output_ )
             {
-                outputFluidInPlace(OOIP_totals, COIP_totals,eclState().getUnits(), 0);
-                for (size_t reg = 0; reg < OOIP.size(); ++reg) {
-                    outputFluidInPlace(OOIP[reg], COIP[reg], eclState().getUnits(), reg+1);
+                outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
+                for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
+                    outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
                 }
 
                 std::string msg;
