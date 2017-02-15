@@ -615,27 +615,15 @@ namespace Opm
                 double sgn = 2.0 * (faceCells(faceIdx, 0) == cellIdx) - 1;
                 const int dim = Opm::UgGridHelpers::dimensions(grid);
 
-                const double* faceNormal = Opm::UgGridHelpers::faceNormal(grid, faceIdx);
-#if HAVE_OPM_GRID
-                assert( dim <= 3 );
-                Dune::FieldVector< double, 3 > scaledFaceNormal( 0 );
-                for (int indx = 0; indx < dim; ++indx) {
-                    scaledFaceNormal[ indx ] = faceNormal[ indx ];
-                }
-                // compute unit normal incase the normal is already scaled
-                scaledFaceNormal /= scaledFaceNormal.two_norm();
-                // compute proper normal scaled with face area
-                scaledFaceNormal *= Opm::UgGridHelpers::faceArea(grid, faceIdx);
-#else
-                const double* scaledFaceNormal = faceNormal;
-#endif
-
                 int cartesianCellIdx = AutoDiffGrid::globalCell(grid)[cellIdx];
                 auto cellCenter = eclGrid.getCellCenter(cartesianCellIdx);
+                const auto& faceCenter = Opm::UgGridHelpers::faceCenterEcl(grid, cellIdx, faceTag);
+                const auto& faceAreaNormalEcl = Opm::UgGridHelpers::faceAreaNormalEcl(grid, faceIdx);
+
                 for (int indx = 0; indx < dim; ++indx) {
-                    const double Ci = Opm::UgGridHelpers::faceCentroid(grid, faceIdx)[indx] - cellCenter[indx];
+                    const double Ci = faceCenter[indx] - cellCenter[indx];
                     dist += Ci*Ci;
-                    cn += sgn * Ci * scaledFaceNormal[ indx ];
+                    cn += sgn * Ci * faceAreaNormalEcl[ indx ];
                 }
 
                 if (cn < 0){
@@ -656,6 +644,7 @@ namespace Opm
                     cn = -cn;
                 }
                 hTrans[cellFaceIdx] = perm[cellIdx*dim*dim + d] * cn / dist;
+
             }
         }
 
