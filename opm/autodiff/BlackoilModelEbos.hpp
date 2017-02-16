@@ -1277,6 +1277,8 @@ namespace Opm {
             VectorType& Pb = simData.getCellData( "PBUB" );
             VectorType& Pd = simData.getCellData( "PDEW" );
 
+            std::vector<int> failed_cells_pb;
+            std::vector<int> failed_cells_pd;
 
             for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
                 const auto& intQuants = *ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
@@ -1311,8 +1313,18 @@ namespace Opm {
                                                                              FluidSystem::gasPhaseIdx,
                                                                              intQuants.pvtRegionIndex(),
                                                                              /*maxOilSaturation=*/1.0).value();
-                    Pb[cellIdx] = FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()).value();
-                    Pd[cellIdx] = FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()).value();
+                    try {
+                        Pb[cellIdx] = FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()).value();
+                    }
+                    catch (const NumericalProblem& e) {
+                        failed_cells_pb.push_back(cellIdx);
+                    }
+                    try {
+                        Pd[cellIdx] = FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()).value();
+                    }
+                    catch (const NumericalProblem& e) {
+                        failed_cells_pd.push_back(cellIdx);
+                    }
                 }
                 if( liquid_active )
                 {
@@ -1322,6 +1334,36 @@ namespace Opm {
                     muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
                     krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
                 }
+            }
+
+            const size_t max_num_cells_faillog = 20;
+            if (failed_cells_pb.size() > 0) {
+                std::stringstream errlog;
+                errlog << "Finding the dew point pressure failed for " << failed_cells_pb.size() << " cells [";
+                errlog << failed_cells_pb[0];
+                const int max_elems = std::min(max_num_cells_faillog, failed_cells_pb.size());
+                for (size_t i = 1; i < max_elems; ++i) {
+                    errlog << ", " << failed_cells_pb[i];
+                }
+                if (failed_cells_pb.size() > max_num_cells_faillog) {
+                    errlog << ", ...";
+                }
+                errlog << "]";
+                OpmLog::problem("pb numerical problem", errlog.str());
+            }
+            if (failed_cells_pd.size() > 0) {
+                std::stringstream errlog;
+                errlog << "Finding the dew point pressure failed for " << failed_cells_pd.size() << " cells [";
+                errlog << failed_cells_pd[0];
+                const int max_elems = std::min(max_num_cells_faillog, failed_cells_pd.size());
+                for (size_t i = 1; i < max_elems; ++i) {
+                    errlog << ", " << failed_cells_pd[i];
+                }
+                if (failed_cells_pd.size() > max_num_cells_faillog) {
+                    errlog << ", ...";
+                }
+                errlog << "]";
+                OpmLog::problem("pd numerical problem", errlog.str());
             }
 
             return simData;
