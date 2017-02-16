@@ -576,21 +576,21 @@ namespace Opm
                 output.insert("1OVERBW",
                               Opm::UnitSystem::measure::water_inverse_formation_volume_factor,
                               std::move( sd.getCellData("1OVERBW") ),
-                              data::TargetType::RESTART_AUXILLARY);
+                              data::TargetType::RESTART_AUXILIARY);
             }
             if (liquid_active && rstKeywords["BO"]  > 0) {
                 rstKeywords["BO"] = 0;
                 output.insert("1OVERBO",
                               Opm::UnitSystem::measure::oil_inverse_formation_volume_factor,
                               std::move( sd.getCellData("1OVERBO") ),
-                              data::TargetType::RESTART_AUXILLARY);
+                              data::TargetType::RESTART_AUXILIARY);
             }
             if (vapour_active && rstKeywords["BG"] > 0) {
                 rstKeywords["BG"] = 0;
                 output.insert("1OVERBG",
                               Opm::UnitSystem::measure::gas_inverse_formation_volume_factor,
                               std::move( sd.getCellData("1OVERBG") ),
-                              data::TargetType::RESTART_AUXILLARY);
+                              data::TargetType::RESTART_AUXILIARY);
             }
 
             /**
@@ -602,19 +602,19 @@ namespace Opm
                     output.insert("WAT_DEN",
                                   Opm::UnitSystem::measure::density,
                                   std::move( sd.getCellData("WAT_DEN") ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
                 if (liquid_active) {
                     output.insert("OIL_DEN",
                                   Opm::UnitSystem::measure::density,
                                   std::move( sd.getCellData("OIL_DEN") ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
                 if (vapour_active) {
                     output.insert("GAS_DEN",
                                   Opm::UnitSystem::measure::density,
                                   std::move( sd.getCellData("GAS_DEN") ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
             }
 
@@ -627,19 +627,19 @@ namespace Opm
                     output.insert("WAT_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("WAT_VISC") ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
                 if (liquid_active) {
                     output.insert("OIL_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("OIL_VISC") ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
                 if (vapour_active) {
                     output.insert("GAS_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("GAS_VISC") ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
             }
 
@@ -653,7 +653,7 @@ namespace Opm
                     output.insert("WATKR", // WAT_KR ???
                                   Opm::UnitSystem::measure::identity,
                                   std::move( krWater ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
                 else {
                     if ( log )
@@ -670,7 +670,7 @@ namespace Opm
                     output.insert("OILKR",
                                   Opm::UnitSystem::measure::identity,
                                   std::move( krOil ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
                 else {
                     if ( log )
@@ -687,7 +687,7 @@ namespace Opm
                     output.insert("GASKR",
                                   Opm::UnitSystem::measure::identity,
                                   std::move( krGas ),
-                                  data::TargetType::RESTART_AUXILLARY);
+                                  data::TargetType::RESTART_AUXILIARY);
                 }
                 else {
                     if ( log )
@@ -706,14 +706,14 @@ namespace Opm
                 output.insert("RSSAT",
                               Opm::UnitSystem::measure::gas_oil_ratio,
                               std::move( sd.getCellData("RSSAT") ),
-                              data::TargetType::RESTART_AUXILLARY);
+                              data::TargetType::RESTART_AUXILIARY);
             }
             if (vapour_active && liquid_active && rstKeywords["RVSAT"] > 0) {
                 rstKeywords["RVSAT"] = 0;
                 output.insert("RVSAT",
                               Opm::UnitSystem::measure::oil_gas_ratio,
                               std::move( sd.getCellData("RVSAT") ),
-                              data::TargetType::RESTART_AUXILLARY);
+                              data::TargetType::RESTART_AUXILIARY);
             }
 
 
