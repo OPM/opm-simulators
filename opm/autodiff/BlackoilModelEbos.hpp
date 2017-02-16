@@ -677,6 +677,11 @@ namespace Opm {
                     switch (hydroCarbonState) {
                     case HydroCarbonState::GasAndOil: {
 
+                        // for the Gas and Oil case rs=rsSat and rv=rvSat
+                        rs = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+                        // use gas pressure?
+                        rv = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
+
                         if (sw > (1.0 - epsilon)) // water only i.e. do nothing
                             break;
 
@@ -684,15 +689,12 @@ namespace Opm {
                             reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
                             sg = 0;
                             so = 1.0 - sw - sg;
-                            const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
-                            rs = rsSat*(1-epsilon);
+                            rs *= (1-epsilon);
                         } else if (so <= 0.0 && has_vapoil_) {
                             reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasOnly; // sg --> rv
                             so = 0;
                             sg = 1.0 - sw - so;
-                            // use gas pressure?
-                            const double& rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
-                            rv = rvSat*(1-epsilon);
+                            rv *= (1-epsilon);
                         }
                         break;
                     }
