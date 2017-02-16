@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This runs a simulator from start to end, then a restarted
+# run of the simulator, before comparing the output from the two runs.
+# This is meant to track regressions in the restart support.
+
 INPUT_DATA_PATH="$1"
 RESULT_PATH="$2"
 BINPATH="$3"
@@ -25,9 +29,14 @@ ${COMPARE_SUMMARY_COMMAND} -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/${FILENA
 if [ $? -ne 0 ]
 then
   ecode=1
+  `dirname $0`/analyze_summary_failure.sh ${COMPARE_SUMMARY_COMMAND} -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/${FILENAME}_RESTART ${ABS_TOL} ${REL_TOL}
 fi
 
 ${COMPARE_ECL_COMMAND} -l ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/${FILENAME}_RESTART ${ABS_TOL} ${REL_TOL}
-test $? -eq 0 || ecode=1
+if [ $? -ne 0 ]
+then
+  ecode=1
+  `dirname $0`/analyze_ecl_failure.sh ${COMPARE_ECL_COMMAND} UNRST ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/${FILENAME}_RESTART ${ABS_TOL} ${REL_TOL}
+fi
 
 exit $ecode
