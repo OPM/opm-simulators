@@ -171,6 +171,22 @@ namespace Opm
                             currentControls()[ newIndex ] = 0;
                         }
                     }
+
+
+                    // If in the new step, there is no THP related target/limit anymore, its thp value should be
+                    // set to zero.
+                    const WellControls* ctrl = wells->ctrls[w];
+                    const int nwc = well_controls_get_num(ctrl);
+                    int ctrl_index = 0;
+                    for (; ctrl_index < nwc; ++ctrl_index) {
+                        if (well_controls_iget_type(ctrl, ctrl_index) == THP) {
+                            break;
+                        }
+                    }
+                    // not finding any thp related control/limits
+                    if (ctrl_index == nwc) {
+                        thp()[w] = 0.;
+                    }
                 }
             }
         }
