@@ -984,7 +984,6 @@ namespace Opm
     } // namespace detail
 
 
-
 } // namespace Opm
 
 #endif // OPM_FLOWMAIN_HEADER_INCLUDED
