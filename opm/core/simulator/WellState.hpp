@@ -104,13 +104,6 @@ namespace Opm
                             const int first_cell = wells->well_cells[wells->well_connpos[w]];
                             bhp_[w] = state.pressure()[first_cell];
                         }
-                        // 3. Thp: assign thp equal to thp control, if applicable,
-                        //    otherwise assign equal to bhp value.
-                        if (well_controls_get_current_type(ctrl) == THP) {
-                            thp_[w] = well_controls_get_current_target( ctrl );
-                        } else {
-                            thp_[w] = bhp_[w];
-                        }
                     } else {
                         // Open well:
                         // 1. Rates: initialize well rates to match controls
@@ -145,13 +138,16 @@ namespace Opm
                             const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
                             bhp_[w] = safety_factor*state.pressure()[first_cell];
                         }
+                    }
 
-                        // 3. Thp: assign thp equal to thp control, if applicable,
-                        //    otherwise assign equal to bhp value.
-                        if (well_controls_get_current_type(ctrl) == THP) {
-                            thp_[w] = well_controls_get_current_target( ctrl );
-                        } else {
-                            thp_[w] = bhp_[w];
+                    // 3. Thp: assign thp equal to thp target/limit, if applicable,
+                    //    otherwise keep it zero. Basically, the value should not be used
+                    //    in the simulation at all.
+                    const int nwc = well_controls_get_num(ctrl);
+                    for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                        if (well_controls_iget_type(ctrl, ctrl_index) == THP) {
+                            thp_[w] = well_controls_iget_target(ctrl, ctrl_index);
+                            break;
                         }
                     }
                 }
