@@ -537,7 +537,10 @@ public:
                 return pSat;
         }
 
-        OPM_THROW(NumericalProblem, "Could find the oil saturation pressure for X_o^G = " << Rs);
+        std::stringstream errlog;
+        errlog << "Could find the oil saturation pressure for X_o^G = " << Rs;
+        OpmLog::problem("liveoil saturationpressure", errlog.str());
+        OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
 
 private:
