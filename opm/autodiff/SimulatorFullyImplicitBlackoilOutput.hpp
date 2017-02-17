@@ -726,11 +726,11 @@ namespace Opm
                 output.insert("PBUB",
                         Opm::UnitSystem::measure::pressure,
                         std::move( sd.getCellData("PBUB") ),
-                        data::TargetType::RESTART_AUXILLARY);
+                        data::TargetType::RESTART_AUXILIARY);
                 output.insert("PDEW",
                         Opm::UnitSystem::measure::pressure,
                         std::move( sd.getCellData("PDEW") ),
-                        data::TargetType::RESTART_AUXILLARY);
+                        data::TargetType::RESTART_AUXILIARY);
             }
 
             //Warn for any unhandled keyword
