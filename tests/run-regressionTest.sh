@@ -1,5 +1,7 @@
 #!/bin/bash
-set -e
+
+# This runs a simulator, then compares the summary, restart and init
+# files against a reference.
 
 INPUT_DATA_PATH="$1"
 RESULT_PATH="$2"
@@ -19,8 +21,26 @@ cd ${RESULT_PATH}
 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}
 cd ..
 
+ecode=0
 ${COMPARE_SUMMARY_COMMAND} -r ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
+if [ $? -ne 0 ]
+then
+  ecode=1
+  `dirname $0`/analyze_summary_failure.sh ${COMPARE_SUMMARY_COMMAND} -r ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
+fi
 
 ${COMPARE_ECL_COMMAND}  ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
+if [ $? -ne 0 ]
+then
+  ecode=1
+  `dirname $0`/analyze_ecl_failure.sh ${COMPARE_ECL_COMMAND} UNRST ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
+fi
 
 ${COMPARE_ECL_COMMAND} -t INIT ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
+if [ $? -ne 0 ]
+then
+  ecode=1
+  `dirname $0`/analyze_ecl_failure.sh ${COMPARE_ECL_COMMAND} INIT ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
+fi
+
+exit $ecode
