@@ -1013,9 +1013,11 @@ namespace Opm {
             }
 
             ElementContext elemCtx(ebosSimulator_);
-            auto elemIt = elemCtx.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = elemCtx.gridView().template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
+            for (auto elemIt = elemCtx.gridView().template begin</*codim=*/0>();
+                 elemIt != elemEndIt;
+                 ++elemIt)
+            {
                 const auto& elem = *elemIt;
                 if (elem.partitionType() != Dune::InteriorEntity) {
                     continue;
@@ -1085,8 +1087,10 @@ namespace Opm {
             std::vector<double> hcpv(dims, 0.0);
             std::vector<double> pres(dims, 0.0);
 
-            elemIt = elemCtx.gridView().template begin</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
+            for (auto elemIt = elemCtx.gridView().template begin</*codim=*/0>();
+                 elemIt != elemEndIt;
+                 ++elemIt)
+            {
                 const auto& elem = *elemIt;
                 if (elem.partitionType() != Dune::InteriorEntity) {
                     continue;
@@ -1121,8 +1125,10 @@ namespace Opm {
             comm.sum(hcpv.data(), hcpv.size());
             comm.sum(pres.data(), pres.size());
 
-            elemIt = elemCtx.gridView().template begin</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
+            for (auto elemIt = elemCtx.gridView().template begin</*codim=*/0>();
+                 elemIt != elemEndIt;
+                 ++elemIt)
+            {
                 const auto& elem = *elemIt;
                 if (elem.partitionType() != Dune::InteriorEntity) {
                     continue;
