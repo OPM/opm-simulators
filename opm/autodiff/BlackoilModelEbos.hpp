@@ -1029,7 +1029,7 @@ namespace Opm {
                 const auto& fs = intQuants.fluidState();
                 const double pv =
                     ebosSimulator_.model().dofTotalVolume(cellIdx)
-                    * ebosSimulator_.problem().porosity(cellIdx);
+                    * intQuants.porosity().value();
 
                 for (int phase = 0; phase < maxnp; ++phase) {
                     const double b = fs.invB(flowPhaseToEbosPhaseIdx(phase)).value();
@@ -1095,7 +1095,7 @@ namespace Opm {
                     const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
                     const double pv =
                         ebosSimulator_.model().dofTotalVolume(cellIdx)
-                        * ebosSimulator_.problem().porosity(cellIdx);
+                        * intQuants.porosity().value();
                     hcpv[region] += pv * hydrocarbon;
                     pres[region] += pv * fs.pressure(FluidSystem::oilPhaseIdx).value();
                 }
@@ -1121,7 +1121,7 @@ namespace Opm {
                     const auto& fs = intQuants.fluidState();
                     const double pv =
                         ebosSimulator_.model().dofTotalVolume(cellIdx)
-                        * ebosSimulator_.problem().porosity(cellIdx);
+                        * intQuants.porosity().value();
                     fip_.fip[FIPDataType::FIP_PV][cellIdx] = pv;
                     const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
 
