@@ -1027,6 +1027,14 @@ namespace Opm {
                 const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
+
+                // calculate the pore volume of the current cell. Note that the porosity
+                // returned by the intensive quantities is defined as the ratio of pore
+                // space to total cell volume and includes all pressure dependent (->
+                // rock compressibility) and static modifiers (MULTPV, MULTREGP, NTG,
+                // PORV, MINPV and friends). Also note that because of this, the porosity
+                // returned by the intensive quantities can be outside of the physical
+                // range [0, 1] in pathetic cases.
                 const double pv =
                     ebosSimulator_.model().dofTotalVolume(cellIdx)
                     * intQuants.porosity().value();
@@ -1093,9 +1101,18 @@ namespace Opm {
                     const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
                     const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+
+                    // calculate the pore volume of the current cell. Note that the
+                    // porosity returned by the intensive quantities is defined as the
+                    // ratio of pore space to total cell volume and includes all pressure
+                    // dependent (-> rock compressibility) and static modifiers (MULTPV,
+                    // MULTREGP, NTG, PORV, MINPV and friends). Also note that because of
+                    // this, the porosity returned by the intensive quantities can be
+                    // outside of the physical range [0, 1] in pathetic cases.
                     const double pv =
                         ebosSimulator_.model().dofTotalVolume(cellIdx)
                         * intQuants.porosity().value();
+
                     hcpv[region] += pv * hydrocarbon;
                     pres[region] += pv * fs.pressure(FluidSystem::oilPhaseIdx).value();
                 }
@@ -1119,9 +1136,18 @@ namespace Opm {
                 if (region != -1) {
                     const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
+
+                    // calculate the pore volume of the current cell. Note that the
+                    // porosity returned by the intensive quantities is defined as the
+                    // ratio of pore space to total cell volume and includes all pressure
+                    // dependent (-> rock compressibility) and static modifiers (MULTPV,
+                    // MULTREGP, NTG, PORV, MINPV and friends). Also note that because of
+                    // this, the porosity returned by the intensive quantities can be
+                    // outside of the physical range [0, 1] in pathetic cases.
                     const double pv =
                         ebosSimulator_.model().dofTotalVolume(cellIdx)
                         * intQuants.porosity().value();
+
                     fip_.fip[FIPDataType::FIP_PV][cellIdx] = pv;
                     const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
 
