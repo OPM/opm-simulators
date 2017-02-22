@@ -621,25 +621,31 @@ namespace Opm
             /**
              * Viscosities for water, oil gas
              */
-            if (rstKeywords["VISC"] > 0) {
+            {
+                const bool has_vwat = (rstKeywords["VISC"] > 0) || (rstKeywords["VWAT"] > 0);
+                const bool has_voil = (rstKeywords["VISC"] > 0) || (rstKeywords["VOIL"] > 0);
+                const bool has_vgas = (rstKeywords["VISC"] > 0) || (rstKeywords["VGAS"] > 0);
                 rstKeywords["VISC"] = 0;
                 if (aqua_active) {
                     output.insert("WAT_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("WAT_VISC") ),
                                   data::TargetType::RESTART_AUXILIARY);
+                    rstKeywords["VWAT"] = 0;
                 }
                 if (liquid_active) {
                     output.insert("OIL_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("OIL_VISC") ),
                                   data::TargetType::RESTART_AUXILIARY);
+                    rstKeywords["VOIL"] = 0;
                 }
                 if (vapour_active) {
                     output.insert("GAS_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("GAS_VISC") ),
                                   data::TargetType::RESTART_AUXILIARY);
+                    rstKeywords["VGAS"] = 0;
                 }
             }
 
