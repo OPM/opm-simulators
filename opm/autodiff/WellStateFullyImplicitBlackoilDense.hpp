@@ -35,6 +35,7 @@
 #include <map>
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace Opm
 {
