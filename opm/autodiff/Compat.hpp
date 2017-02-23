@@ -31,6 +31,7 @@ namespace Opm {
     // Forward declarations
     class SimulationDataContainer;
     class WellStateFullyImplicitBlackoil;
+    class WellStateFullyImplicitBlackoilDense;
 
     std::vector< double > destripe( const std::vector< double >& v,
                                     size_t stride,
@@ -51,6 +52,10 @@ namespace Opm {
     void wellsToState( const data::Wells& wells,
                        PhaseUsage phases,
                        WellStateFullyImplicitBlackoil& state );
+
+    void wellsToState( const data::Wells& wells,
+                       PhaseUsage phases,
+                       WellStateFullyImplicitBlackoilDense& state );
 
 }
 
