@@ -67,14 +67,63 @@ namespace Opm
             // call init on base class
             BaseType :: init(wells, state, prevState);
 
-            // if there are no well, do nothing in init
+            setWellSolutions(wells, pu);
+            setWellSolutionsFromPrevState(wells, prevState);
+        }
+
+
+        template <class PrevState>
+        void setWellSolutionsFromPrevState(const Wells* wells, const PrevState& prevState)
+        {
+            // Set nw and np, or return if no wells.
             if (wells == 0) {
                 return;
             }
-
             const int nw = wells->number_of_wells;
-            if( nw == 0 ) return ;
+            if (nw == 0) {
+                return;
+            }
+            const int np = wells->number_of_phases;
 
+            // intialize wells that have been there before
+            // order may change so the mapping is based on the well name
+            // if there are no well, do nothing in init
+            if( ! prevState.wellMap().empty() )
+            {
+                typedef typename WellMapType :: const_iterator const_iterator;
+                const_iterator end = prevState.wellMap().end();
+                int nw_old = prevState.bhp().size();
+                for (int w = 0; w < nw; ++w) {
+                    std::string name( wells->name[ w ] );
+                    const_iterator it = prevState.wellMap().find( name );
+                    if( it != end )
+                    {
+                        const int oldIndex = (*it).second[ 0 ];
+                        const int newIndex = w;
+
+                        // wellSolutions
+                        for( int i = 0;  i < np; ++i)
+                        {
+                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
+                        }
+
+                    }
+                }
+            }
+        }
+
+
+        /// Set wellSolutions() based on the base class members.
+        void setWellSolutions(const Wells* wells, const PhaseUsage& pu)
+        {
+            // Set nw and np, or return if no wells.
+            if (wells == 0) {
+                return;
+            }
+            const int nw = wells->number_of_wells;
+            if (nw == 0) {
+                return;
+            }
             const int np = wells->number_of_phases;
 
             well_solutions_.clear();
@@ -93,7 +142,6 @@ namespace Opm
                 switch (well_controls_iget_type(wc, current)) {
                 case THP: // Intentional fall-through
                 case BHP:
-                {
                     if (well_type == INJECTOR) {
                         for (int p = 0; p < np; ++p)  {
                             well_solutions_[w] += wellRates()[np*w + p] * wells->comp_frac[np*w + p];
@@ -103,16 +151,10 @@ namespace Opm
                             well_solutions_[w] += g[p] * wellRates()[np*w + p];
                         }
                     }
-                }
                     break;
-
-
                 case RESERVOIR_RATE: // Intentional fall-through
                 case SURFACE_RATE:
-                {
                     wellSolutions()[w] = bhp()[w];
-
-                }
                     break;
                 }
 
@@ -142,33 +184,8 @@ namespace Opm
                     }
                 }
             }
-
-
-            // intialize wells that have been there before
-            // order may change so the mapping is based on the well name
-            if( ! prevState.wellMap().empty() )
-            {
-                typedef typename WellMapType :: const_iterator const_iterator;
-                const_iterator end = prevState.wellMap().end();
-                int nw_old = prevState.bhp().size();
-                for (int w = 0; w < nw; ++w) {
-                    std::string name( wells->name[ w ] );
-                    const_iterator it = prevState.wellMap().find( name );
-                    if( it != end )
-                    {
-                        const int oldIndex = (*it).second[ 0 ];
-                        const int newIndex = w;
-
-                        // wellSolutions
-                        for( int i = 0;  i < np; ++i)
-                        {
-                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
-                        }
-
-                    }
-                }
-            }
         }
+
 
         template <class State>
         void resize(const Wells* wells, const State& state, const PhaseUsage& pu ) {
@@ -185,6 +202,7 @@ namespace Opm
             data::Wells res = BaseType::report(pu);
             return res;
         }
+
 
     private:
         std::vector<double> well_solutions_;
