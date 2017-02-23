@@ -68,23 +68,23 @@ namespace Opm
             // call init on base class
             BaseType :: init(wells, state, prevState);
 
-            setWellSolutions(wells, pu);
-            setWellSolutionsFromPrevState(wells, prevState);
+            setWellSolutions(pu);
+            setWellSolutionsFromPrevState(prevState);
         }
 
 
         template <class PrevState>
-        void setWellSolutionsFromPrevState(const Wells* wells, const PrevState& prevState)
+        void setWellSolutionsFromPrevState(const PrevState& prevState)
         {
             // Set nw and np, or return if no wells.
-            if (wells == 0) {
+            if (wells_.get() == nullptr) {
                 return;
             }
-            const int nw = wells->number_of_wells;
+            const int nw = wells_->number_of_wells;
             if (nw == 0) {
                 return;
             }
-            const int np = wells->number_of_phases;
+            const int np = wells_->number_of_phases;
 
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
@@ -95,7 +95,7 @@ namespace Opm
                 const_iterator end = prevState.wellMap().end();
                 int nw_old = prevState.bhp().size();
                 for (int w = 0; w < nw; ++w) {
-                    std::string name( wells->name[ w ] );
+                    std::string name( wells_->name[ w ] );
                     const_iterator it = prevState.wellMap().find( name );
                     if( it != end )
                     {
@@ -115,37 +115,37 @@ namespace Opm
 
 
         /// Set wellSolutions() based on the base class members.
-        void setWellSolutions(const Wells* wells, const PhaseUsage& pu)
+        void setWellSolutions(const PhaseUsage& pu)
         {
             // Set nw and np, or return if no wells.
-            if (wells == 0) {
+            if (wells_.get() == nullptr) {
                 return;
             }
-            const int nw = wells->number_of_wells;
+            const int nw = wells_->number_of_wells;
             if (nw == 0) {
                 return;
             }
-            const int np = wells->number_of_phases;
+            const int np = wells_->number_of_phases;
 
             well_solutions_.clear();
             well_solutions_.resize(nw * np, 0.0);
             std::vector<double> g = {1.0,1.0,0.01};
             for (int w = 0; w < nw; ++w) {
-                WellControls* wc = wells->ctrls[w];
+                WellControls* wc = wells_->ctrls[w];
 
                 // The current control in the well state overrides
                 // the current control set in the Wells struct, which
                 // is instead treated as a default.
                 const int current = currentControls()[w];
                 well_controls_set_current( wc, current);
-                const WellType& well_type = wells->type[w];
+                const WellType& well_type = wells_->type[w];
 
                 switch (well_controls_iget_type(wc, current)) {
                 case THP: // Intentional fall-through
                 case BHP:
                     if (well_type == INJECTOR) {
                         for (int p = 0; p < np; ++p)  {
-                            well_solutions_[w] += wellRates()[np*w + p] * wells->comp_frac[np*w + p];
+                            well_solutions_[w] += wellRates()[np*w + p] * wells_->comp_frac[np*w + p];
                         }
                     } else {
                         for (int p = 0; p < np; ++p) {
@@ -178,10 +178,10 @@ namespace Opm
                     }
                 } else {
                     if( pu.phase_used[Water] ) {
-                        wellSolutions()[nw + w] = wells->comp_frac[np*w + waterpos];
+                        wellSolutions()[nw + w] = wells_->comp_frac[np*w + waterpos];
                     }
                     if( pu.phase_used[Gas] ) {
-                        wellSolutions()[2*nw + w] = wells->comp_frac[np*w + gaspos];
+                        wellSolutions()[2*nw + w] = wells_->comp_frac[np*w + gaspos];
                     }
                 }
             }
