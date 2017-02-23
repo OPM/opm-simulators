@@ -32,7 +32,6 @@
 #include <opm/material/common/OpmFinal.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
-#include <opm/material/common/Spline.hpp>
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -51,7 +50,6 @@ class LiveOilPvt
 {
     typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
-    typedef Opm::Spline<Scalar> Spline;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
@@ -136,7 +134,7 @@ public:
                 gasDissolutionFac.setXYContainers(tmpPressureColumn, tmpGasSolubilityColumn);
             }
 
-            updateSaturationPressureSpline_(regionIdx);
+            updateSaturationPressure_(regionIdx);
             // make sure to have at least two sample points per Rs value
             for (unsigned xIdx = 0; xIdx < invOilB.numX(); ++xIdx) {
                 // a single sample point is definitely needed
@@ -245,7 +243,7 @@ public:
         oilMuTable_.resize(numRegions);
         saturatedOilMuTable_.resize(numRegions);
         saturatedGasDissolutionFactorTable_.resize(numRegions);
-        saturationPressureSpline_.resize(numRegions);
+        saturationPressure_.resize(numRegions);
     }
 
     /*!
@@ -282,7 +280,7 @@ public:
         Scalar T = 273.15 + 15.56; // [K]
         auto& invOilB = inverseOilBTable_[regionIdx];
 
-        updateSaturationPressureSpline_(regionIdx);
+        updateSaturationPressure_(regionIdx);
 
         // calculate a table of estimated densities of undersatured gas
         for (size_t pIdx = 0; pIdx < samplePoints.size(); ++pIdx) {
@@ -302,7 +300,7 @@ public:
     }
 
     /*!
-     * \brief Initialize the spline for the oil formation volume factor
+     * \brief Initialize the function for the oil formation volume factor
      *
      * The oil formation volume factor \f$B_o\f$ is a function of \f$(p_o, X_o^G)\f$ and
      * represents the partial density of the oil component in the oil phase at a given
@@ -401,7 +399,7 @@ public:
             invSatOilB.setXYContainers(satPressuresArray, invSatOilBArray);
             invSatOilBMu.setXYContainers(satPressuresArray, invSatOilBMuArray);
 
-            updateSaturationPressureSpline_(regionIdx);
+            updateSaturationPressure_(regionIdx);
         }
     }
 
@@ -518,8 +516,8 @@ public:
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        // use the saturation pressure spline to get a pretty good initial value
-        Evaluation pSat = saturationPressureSpline_[regionIdx].eval(Rs, /*extrapolate=*/true);
+        // use the saturation pressure function to get a pretty good initial value
+        Evaluation pSat = saturationPressure_[regionIdx].eval(Rs, /*extrapolate=*/true);
         Evaluation eps = pSat*1e-11;
 
         // Newton method to do the remaining work. If the initial
@@ -544,12 +542,12 @@ public:
     }
 
 private:
-    void updateSaturationPressureSpline_(unsigned regionIdx)
+    void updateSaturationPressure_(unsigned regionIdx)
     {
         auto& gasDissolutionFac = saturatedGasDissolutionFactorTable_[regionIdx];
 
-        // create the spline representing saturation pressure
-        // depending of the mass fraction in gas
+        // create the function representing saturation pressure depending of the mass
+        // fraction in gas
         size_t n = gasDissolutionFac.numSamples()*5;
         Scalar delta = (gasDissolutionFac.xMax() - gasDissolutionFac.xMin())/(n + 1);
 
@@ -564,8 +562,7 @@ private:
             std::pair<Scalar, Scalar> val(Rs, pSat);
             pSatSamplePoints.push_back(val);
         }
-        saturationPressureSpline_[regionIdx].setContainerOfTuples(pSatSamplePoints,
-                                                                  /*type=*/Spline::Monotonic);
+        saturationPressure_[regionIdx].setContainerOfTuples(pSatSamplePoints);
     }
 
     std::vector<Scalar> gasReferenceDensity_;
@@ -577,7 +574,7 @@ private:
     std::vector<TabulatedOneDFunction> inverseSaturatedOilBTable_;
     std::vector<TabulatedOneDFunction> inverseSaturatedOilBMuTable_;
     std::vector<TabulatedOneDFunction> saturatedGasDissolutionFactorTable_;
-    std::vector<Spline> saturationPressureSpline_;
+    std::vector<TabulatedOneDFunction> saturationPressure_;
 
     Scalar vapPar2_;
 };

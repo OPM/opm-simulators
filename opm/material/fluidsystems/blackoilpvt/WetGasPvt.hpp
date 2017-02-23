@@ -28,12 +28,9 @@
 #define OPM_WET_GAS_PVT_HPP
 
 #include <opm/material/Constants.hpp>
-
-
 #include <opm/material/common/OpmFinal.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
-#include <opm/material/common/Spline.hpp>
 
 #if HAVE_OPM_PARSER
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -51,7 +48,6 @@ class WetGasPvt
 {
     typedef Opm::UniformXTabulated2DFunction<Scalar> TabulatedTwoDFunction;
     typedef Opm::Tabulated1DFunction<Scalar> TabulatedOneDFunction;
-    typedef Opm::Spline<Scalar> Spline;
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
 
 public:
@@ -248,7 +244,7 @@ public:
         inverseSaturatedGasBMu_.resize(numRegions);
         gasMu_.resize(numRegions);
         saturatedOilVaporizationFactorTable_.resize(numRegions);
-        saturationPressureSpline_.resize(numRegions);
+        saturationPressure_.resize(numRegions);
     }
 
     /*!
@@ -300,10 +296,10 @@ public:
         Scalar rhogRef = gasReferenceDensity_[regionIdx];
         Scalar rhooRef = oilReferenceDensity_[regionIdx];
 
-        Spline gasFormationVolumeFactorSpline;
-        gasFormationVolumeFactorSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
+        TabulatedOneDFunction gasFormationVolumeFactor;
+        gasFormationVolumeFactor.setContainerOfTuples(samplePoints);
 
-        updateSaturationPressureSpline_(regionIdx);
+        updateSaturationPressure_(regionIdx);
 
         // calculate a table of estimated densities depending on pressure and gas mass
         // fraction. note that this assumes oil of constant compressibility. (having said
@@ -318,7 +314,7 @@ public:
                 Scalar pg = poMin + (poMax - poMin)*pIdx/nP;
 
                 Scalar poSat = saturationPressure(regionIdx, T, Rv);
-                Scalar BgSat = gasFormationVolumeFactorSpline.eval(poSat, /*extrapolate=*/true);
+                Scalar BgSat = gasFormationVolumeFactor.eval(poSat, /*extrapolate=*/true);
                 Scalar drhoo_dp = (1.1200 - 1.1189)/((5000 - 4000)*6894.76);
                 Scalar rhoo = rhooRef/BgSat*(1 + drhoo_dp*(pg - poSat));
 
@@ -372,8 +368,8 @@ public:
         size_t nRv = 20;
         size_t nP = samplePoints.size()*2;
 
-        Spline mugSpline;
-        mugSpline.setContainerOfTuples(samplePoints, /*type=*/Spline::Monotonic);
+        TabulatedOneDFunction mug;
+        mug.setContainerOfTuples(samplePoints);
 
         // calculate a table of estimated densities depending on pressure and gas mass
         // fraction
@@ -384,7 +380,7 @@ public:
 
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar pg = poMin + (poMax - poMin)*pIdx/nP;
-                Scalar mug = mugSpline.eval(pg, /*extrapolate=*/true);
+                Scalar mug = mug.eval(pg, /*extrapolate=*/true);
 
                 gasMu_[regionIdx].appendSamplePoint(RvIdx, pg, mug);
             }
@@ -435,7 +431,7 @@ public:
             invSatGasB.setXYContainers(satPressuresArray, invSatGasBArray);
             invSatGasBMu.setXYContainers(satPressuresArray, invSatGasBMuArray);
 
-            updateSaturationPressureSpline_(regionIdx);
+            updateSaturationPressure_(regionIdx);
         }
     }
 
@@ -550,8 +546,8 @@ public:
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        // use the saturation pressure spline to get a pretty good initial value
-        Evaluation pSat = saturationPressureSpline_[regionIdx].eval(Rv, /*extrapolate=*/true);
+        // use the tabulated saturation pressure function to get a pretty good initial value
+        Evaluation pSat = saturationPressure_[regionIdx].eval(Rv, /*extrapolate=*/true);
         const Evaluation& eps = pSat*1e-11;
 
         // Newton method to do the remaining work. If the initial
@@ -575,12 +571,12 @@ public:
     }
 
 private:
-    void updateSaturationPressureSpline_(unsigned regionIdx)
+    void updateSaturationPressure_(unsigned regionIdx)
     {
         auto& oilVaporizationFac = saturatedOilVaporizationFactorTable_[regionIdx];
 
-        // create the spline representing saturation pressure
-        // depending of the mass fraction in gas
+        // create the taublated function representing saturation pressure depending of
+        // Rv
         size_t n = oilVaporizationFac.numSamples()*5;
         Scalar delta = (oilVaporizationFac.xMax() - oilVaporizationFac.xMin())/(n + 1);
 
@@ -593,8 +589,7 @@ private:
             std::pair<Scalar, Scalar> val(Rv, pSat);
             pSatSamplePoints.push_back(val);
         }
-        saturationPressureSpline_[regionIdx].setContainerOfTuples(pSatSamplePoints,
-                                                                  /*type=*/Spline::Monotonic);
+        saturationPressure_[regionIdx].setContainerOfTuples(pSatSamplePoints);
     }
 
     std::vector<Scalar> gasReferenceDensity_;
@@ -605,7 +600,7 @@ private:
     std::vector<TabulatedTwoDFunction> inverseGasBMu_;
     std::vector<TabulatedOneDFunction> inverseSaturatedGasBMu_;
     std::vector<TabulatedOneDFunction> saturatedOilVaporizationFactorTable_;
-    std::vector<Spline> saturationPressureSpline_;
+    std::vector<TabulatedOneDFunction> saturationPressure_;
 
     Scalar vapPar1_;
 };
