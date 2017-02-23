@@ -33,26 +33,41 @@ namespace Opm {
     class WellStateFullyImplicitBlackoil;
     class WellStateFullyImplicitBlackoilDense;
 
+    /// Extract single data vector from striped data.
+    /// \return   u such that u[i] = v[offset + i*stride].
     std::vector< double > destripe( const std::vector< double >& v,
                                     size_t stride,
                                     size_t offset );
 
+    /// Inject single data vector into striped data.
+    /// \return   reference to dst input, that is changed so that
+    ///           dst[offset + i*stride] = v[i]. This is done for
+    ///           i = 0..(dst.size()/stride).
     std::vector< double >& stripe( const std::vector< double >& v,
                                    size_t stride,
                                    size_t offset,
                                    std::vector< double >& dst );
 
+    /// Returns Solution with the following fields:
+    ///   PRESSURE, TEMP (unconditionally)
+    ///   SWAT, SGAS, RS, RV, SSOL (if appropriate fields present in input)
     data::Solution simToSolution( const SimulationDataContainer& reservoir,
                                   PhaseUsage phases );
 
+    /// Copies the following fields from sol into state (all conditionally):
+    ///   PRESSURE, TEMP, SWAT, SGAS, RS, RV, SSOL
     void solutionToSim( const data::Solution& sol,
                         PhaseUsage phases,
                         SimulationDataContainer& state );
 
+    /// Copies the following fields from wells into state.
+    ///   bhp, temperature, currentControls, wellRates, perfPress, perfRates, perfPhaseRates
     void wellsToState( const data::Wells& wells,
                        PhaseUsage phases,
                        WellStateFullyImplicitBlackoil& state );
 
+    /// As the WellStateFullyImplicitBlackoil overload, but also sets
+    /// the wellSolution field from the values of the other fields.
     void wellsToState( const data::Wells& wells,
                        PhaseUsage phases,
                        WellStateFullyImplicitBlackoilDense& state );
