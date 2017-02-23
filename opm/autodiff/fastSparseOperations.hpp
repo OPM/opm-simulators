@@ -187,7 +187,14 @@ equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
     // check complete sparsity pattern
     if( equal )
     {
+//Eigen 3.3 series uses StorageIndex instead of Index
+#if (EIGEN_WORLD_VERSION > 3) \
+  || (EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3) \
+  || (EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION == 2 && EIGEN_MINOR_VERSION >= 90)
+        typedef typename Eigen::internal::remove_all<Lhs>::type::StorageIndex Index;
+#else
         typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
+#endif
         const Index outerSize = lhs.outerSize();
         if( outerSize != rhs.outerSize() )
         {
