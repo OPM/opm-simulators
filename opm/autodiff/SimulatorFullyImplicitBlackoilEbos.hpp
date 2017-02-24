@@ -245,6 +245,17 @@ public:
 
             auto solver = createSolver(well_model);
 
+            // Compute orignal fluid in place if this has not been done yet
+            if (originalFluidInPlace.empty()) {
+                solver->model().convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
+                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
+                originalFluidInPlace = solver->computeFluidInPlace(fipnum);
+                originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace, state);
+                FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
+                FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
+            }
+
             // write the inital state at the report stage
             if (timer.initialStep()) {
                 Dune::Timer perfTimer;
@@ -255,17 +266,6 @@ public:
                 output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
 
                 report.output_write_time += perfTimer.stop();
-            }
-
-            // Compute orignal fluid in place if this has not been done yet
-            if (originalFluidInPlace.empty()) {
-                solver->model().convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
-                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-
-                originalFluidInPlace = solver->computeFluidInPlace(fipnum);
-                originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace, state);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
             }
 
             if( terminal_output_ )
