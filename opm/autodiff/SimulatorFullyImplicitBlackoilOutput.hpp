@@ -198,6 +198,7 @@ namespace Opm
     };
 
 
+    /// Extra data to read/write for OPM restarting
     struct ExtraData
     {
         double suggested_step;

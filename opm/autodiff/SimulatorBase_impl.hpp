@@ -89,10 +89,10 @@ namespace Opm
     {
         WellState prev_well_state;
 
-
+        ExtraData extra;
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
-            output_writer_.initFromRestartFile(props_.phaseUsage(), grid_, state, prev_well_state);
+            output_writer_.initFromRestartFile(props_.phaseUsage(), grid_, state, prev_well_state, extra);
             initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid_), has_disgas_, has_vapoil_);
         }
 
@@ -116,6 +116,9 @@ namespace Opm
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule.getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+            }
+            if (output_writer_.isRestart()) {
+                adaptiveTimeStepping->setSuggestedNextStep(extra.suggested_step);
             }
         }
 
