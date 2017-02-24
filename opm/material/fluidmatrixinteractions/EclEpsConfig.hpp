@@ -33,9 +33,11 @@
 #include <opm/parser/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/parser/eclipse/Deck/DeckRecord.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#endif
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
-#endif
+#include <opm/common/Unused.hpp>
 
 #include <string>
 #include <cassert>
@@ -160,13 +162,13 @@ public:
      *
      * This requires that the opm-parser module is available.
      */
-    void initFromDeck(const Opm::Deck& deck,
+    void initFromDeck(const Opm::Deck& deck OPM_UNUSED,
                       const Opm::EclipseState& eclState,
                       Opm::EclTwoPhaseSystemType twoPhaseSystemType)
     {
-        const auto& endscale = eclState.runspec().endpoint_scaling();
+        const auto& endscale = eclState.runspec().endpointScaling();
         // find out if endpoint scaling is used in the first place
-        if( !endscale ) {
+        if (!endscale) {
             // it is not used, i.e., just set all enable$Foo attributes to 0 and be done
             // with it.
             enableSatScaling_ = false;
