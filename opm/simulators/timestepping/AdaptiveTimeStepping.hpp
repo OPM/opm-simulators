@@ -63,10 +63,12 @@ namespace Opm {
             \param  solver      solver object that must implement a method step( dt, state, well_state )
             \param  state       current state of the solution variables
             \param  well_state  additional well state object
+            \param  event        event status for possible tuning
         */
         template <class Solver, class State, class WellState>
         SimulatorReport step( const SimulatorTimer& timer,
-                              Solver& solver, State& state, WellState& well_state );
+                              Solver& solver, State& state, WellState& well_state, 
+                              const bool event);
 
         /** \brief  step method that acts like the solver::step method
                     in a sub cycle of time steps
@@ -76,11 +78,13 @@ namespace Opm {
             \param  solver       solver object that must implement a method step( dt, state, well_state )
             \param  state        current state of the solution variables
             \param  well_state   additional well state object
+            \param  event        event status for possible tuning
             \param  outputWriter writer object to write sub steps
         */
         template <class Solver, class State, class WellState, class Output>
         SimulatorReport step( const SimulatorTimer& timer,
                               Solver& solver, State& state, WellState& well_state,
+                              const bool event,
                               Output& outputWriter,
                               const std::vector<int>* fipnum = nullptr);
 
@@ -92,6 +96,7 @@ namespace Opm {
         template <class Solver, class State, class WellState, class Output>
         SimulatorReport stepImpl( const SimulatorTimer& timer,
                                   Solver& solver, State& state, WellState& well_state,
+                                  const bool event,
                                   Output* outputWriter,
                                   const std::vector<int>* fipnum);
 
@@ -109,6 +114,8 @@ namespace Opm {
         const bool timestep_verbose_;         //!< timestep verbosity
         double suggested_next_timestep_;      //!< suggested size of next timestep
         bool full_timestep_initially_;        //!< beginning with the size of the time step from data file
+        const double timestep_after_event_;   //!< suggested size of timestep after an event
+        bool use_newton_iteration_;           //!< use newton iteration count for adaptive time step control
     };
 }
 

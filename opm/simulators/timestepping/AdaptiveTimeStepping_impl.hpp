@@ -89,6 +89,8 @@ namespace Opm {
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) && terminal_output )
         , suggested_next_timestep_( tuning.getTSINIT(time_step) )
         , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
+        , timestep_after_event_( tuning.getTMAXWC(time_step))
+        , use_newton_iteration_(false)
     {
         init(param);
 
@@ -107,6 +109,8 @@ namespace Opm {
         , timestep_verbose_( param.getDefault("timestep.verbose", bool(true) ) && terminal_output )
         , suggested_next_timestep_( unit::convert::from(param.getDefault("timestep.initial_timestep_in_days", -1.0 ), unit::day) )
         , full_timestep_initially_( param.getDefault("full_timestep_initially", bool(false) ) )
+        , timestep_after_event_( unit::convert::from(param.getDefault("timestep.timestep_in_days_after_event", -1.0 ), unit::day))
+        , use_newton_iteration_(false)
     {
         init(param);
     }
@@ -118,6 +122,7 @@ namespace Opm {
         std::string control = param.getDefault("timestep.control", std::string("pid") );
         // iterations is the accumulation of all linear iterations over all newton steops per time step
         const int defaultTargetIterations = 30;
+        const int defaultTargetNewtonIterations = 8;
 
         const double tol = param.getDefault("timestep.control.tol", double(1e-1) );
         if( control == "pid" ) {
@@ -127,6 +132,12 @@ namespace Opm {
         {
             const int iterations   = param.getDefault("timestep.control.targetiteration", defaultTargetIterations );
             timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol ) );
+        }
+        else if ( control == "pid+newtoniteration" )
+        {
+            const int iterations   = param.getDefault("timestep.control.targetiteration", defaultTargetNewtonIterations );
+            timeStepControl_ = TimeStepControlType( new PIDAndIterationCountTimeStepControl( iterations, tol ) );
+            use_newton_iteration_ = true;
         }
         else if ( control == "iterationcount" )
         {
@@ -150,19 +161,20 @@ namespace Opm {
 
     template <class Solver, class State, class WellState>
     SimulatorReport AdaptiveTimeStepping::
-    step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state )
+    step( const SimulatorTimer& simulatorTimer, Solver& solver, State& state, WellState& well_state, const bool event )
     {
-        return stepImpl( simulatorTimer, solver, state, well_state,  nullptr, nullptr );
+        return stepImpl( simulatorTimer, solver, state, well_state, event, nullptr, nullptr );
     }
 
     template <class Solver, class State, class WellState, class Output>
     SimulatorReport AdaptiveTimeStepping::
     step( const SimulatorTimer& simulatorTimer,
           Solver& solver, State& state, WellState& well_state,
+          const bool event,
           Output& outputWriter,
           const std::vector<int>* fipnum)
     {
-        return stepImpl( simulatorTimer, solver, state, well_state, &outputWriter, fipnum );
+        return stepImpl( simulatorTimer, solver, state, well_state, event, &outputWriter, fipnum );
     }
 
 
@@ -171,6 +183,7 @@ namespace Opm {
     SimulatorReport AdaptiveTimeStepping::
     stepImpl( const SimulatorTimer& simulatorTimer,
               Solver& solver, State& state, WState& well_state,
+              const bool event,
               Output* outputWriter,
               const std::vector<int>* fipnum)
     {
@@ -186,8 +199,10 @@ namespace Opm {
             suggested_next_timestep_ = timestep;
         }
 
-        // TODO
-        // take change in well state into account
+        // use seperate time step after event
+        if (event && timestep_after_event_ > 0) {
+            suggested_next_timestep_ = timestep_after_event_;
+        }
 
         // create adaptive step timer with previously used sub step size
         AdaptiveSimulatorTimer substepTimer( simulatorTimer, suggested_next_timestep_, max_time_step_ );
@@ -249,8 +264,10 @@ namespace Opm {
                     relativeChange( solver, last_state, state );
 
                 // compute new time step estimate
-                double dtEstimate =
-                    timeStepControl_->computeTimeStepSize( dt, substepReport.total_linear_iterations, relativeChange, substepTimer.simulationTimeElapsed());
+                const int iterations = use_newton_iteration_ ? substepReport.total_newton_iterations
+                                                             : substepReport.total_linear_iterations;
+                double dtEstimate = timeStepControl_->computeTimeStepSize( dt, iterations, relativeChange,
+                                                                           substepTimer.simulationTimeElapsed());
 
                 // limit the growth of the timestep size by the growth factor
                 dtEstimate = std::min( dtEstimate, double(max_growth_ * dt) );
