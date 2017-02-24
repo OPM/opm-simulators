@@ -75,10 +75,18 @@ std::vector< double >& stripe( const std::vector< double >& v,
 
 
 data::Solution simToSolution( const SimulationDataContainer& reservoir,
+                              const bool use_si_units,
                               PhaseUsage phases ) {
+
+    // Set up unit system to use to suppress conversion if use_si_units is true.
+    const UnitSystem::measure press_unit = use_si_units ? UnitSystem::measure::identity : UnitSystem::measure::pressure;
+    const UnitSystem::measure temp_unit = use_si_units ? UnitSystem::measure::identity : UnitSystem::measure::temperature;
+    const UnitSystem::measure rs_unit = use_si_units ? UnitSystem::measure::identity : UnitSystem::measure::gas_oil_ratio;
+    const UnitSystem::measure rv_unit = use_si_units ? UnitSystem::measure::identity : UnitSystem::measure::oil_gas_ratio;
+
     data::Solution sol;
-    sol.insert( "PRESSURE", UnitSystem::measure::pressure, reservoir.pressure() , data::TargetType::RESTART_SOLUTION);
-    sol.insert( "TEMP"    , UnitSystem::measure::temperature, reservoir.temperature() , data::TargetType::RESTART_SOLUTION );
+    sol.insert( "PRESSURE", press_unit, reservoir.pressure() , data::TargetType::RESTART_SOLUTION);
+    sol.insert( "TEMP"    , temp_unit, reservoir.temperature() , data::TargetType::RESTART_SOLUTION );
 
     const auto ph = reservoir.numPhases();
     const auto& sat = reservoir.saturation();
@@ -95,11 +103,11 @@ data::Solution simToSolution( const SimulationDataContainer& reservoir,
     }
 
     if( reservoir.hasCellData( BlackoilState::GASOILRATIO ) ) {
-        sol.insert( "RS", UnitSystem::measure::gas_oil_ratio, reservoir.getCellData( BlackoilState::GASOILRATIO ) , data::TargetType::RESTART_SOLUTION );
+        sol.insert( "RS", rs_unit, reservoir.getCellData( BlackoilState::GASOILRATIO ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if( reservoir.hasCellData( BlackoilState::RV ) ) {
-        sol.insert( "RV", UnitSystem::measure::oil_gas_ratio, reservoir.getCellData( BlackoilState::RV ) , data::TargetType::RESTART_SOLUTION );
+        sol.insert( "RV", rv_unit, reservoir.getCellData( BlackoilState::RV ) , data::TargetType::RESTART_SOLUTION );
     }
 
     if (reservoir.hasCellData( BlackoilSolventState::SSOL)) {
