@@ -66,7 +66,7 @@ public:
     Tabulated1DFunction(size_t nSamples,
                         const ScalarArrayX& x,
                         const ScalarArrayY& y,
-                        bool sortInputs = false)
+                        bool sortInputs = true)
     { this->setXYArrays(nSamples, x, y, sortInputs); }
 
     /*!
@@ -80,7 +80,7 @@ public:
     template <class ScalarContainer>
     Tabulated1DFunction(const ScalarContainer& x,
                         const ScalarContainer& y,
-                        bool sortInputs = false)
+                        bool sortInputs = true)
     { this->setXYContainers(x, y, sortInputs); }
 
     /*!
@@ -91,7 +91,7 @@ public:
      */
     template <class PointContainer>
     Tabulated1DFunction(const PointContainer& points,
-                        bool sortInputs = false)
+                        bool sortInputs = true)
     { this->setContainerOfTuples(points, sortInputs); }
 
     /*!
@@ -103,7 +103,7 @@ public:
     void setXYArrays(size_t nSamples,
                      const ScalarArrayX& x,
                      const ScalarArrayY& y,
-                     bool sortInputs = false)
+                     bool sortInputs = true)
     {
         assert(nSamples > 1);
 
@@ -127,7 +127,7 @@ public:
     template <class ScalarContainerX, class ScalarContainerY>
     void setXYContainers(const ScalarContainerX& x,
                          const ScalarContainerY& y,
-                         bool sortInputs = false)
+                         bool sortInputs = true)
     {
         assert(x.size() == y.size());
         assert(x.size() > 1);
@@ -148,7 +148,7 @@ public:
     template <class PointArray>
     void setArrayOfPoints(size_t nSamples,
                           const PointArray& points,
-                          bool sortInputs = false)
+                          bool sortInputs = true)
     {
         // a linear function with less than two sampling points? what an incredible
         // bad idea!
@@ -182,7 +182,7 @@ public:
      */
     template <class XYContainer>
     void setContainerOfTuples(const XYContainer& points,
-                              bool sortInputs = false)
+                              bool sortInputs = true)
     {
         // a linear function with less than two sampling points? what an incredible
         // bad idea!
@@ -248,7 +248,7 @@ public:
      *                    failed assertation.
      */
     template <class Evaluation>
-    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
+    Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
@@ -283,7 +283,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalDerivative(const Evaluation& x, bool /*extrapolate*/=false) const
+    Evaluation evalDerivative(const Evaluation& x, bool extrapolate OPM_UNUSED = false) const
     {
         unsigned segIdx = findSegmentIndex_(x);
 

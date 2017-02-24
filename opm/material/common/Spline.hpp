@@ -142,7 +142,7 @@ public:
            const ScalarArrayX& x,
            const ScalarArrayY& y,
            SplineType splineType = Natural,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setXYArrays(nSamples, x, y, splineType, sortInputs); }
 
     /*!
@@ -156,7 +156,7 @@ public:
     Spline(size_t nSamples,
            const PointArray& points,
            SplineType splineType = Natural,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setArrayOfPoints(nSamples, points, splineType, sortInputs); }
 
     /*!
@@ -170,7 +170,7 @@ public:
     Spline(const ScalarContainer& x,
            const ScalarContainer& y,
            SplineType splineType = Natural,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setXYContainers(x, y, splineType, sortInputs); }
 
     /*!
@@ -182,7 +182,7 @@ public:
     template <class PointContainer>
     Spline(const PointContainer& points,
            SplineType splineType = Natural,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setContainerOfPoints(points, splineType, sortInputs); }
 
     /*!
@@ -201,7 +201,7 @@ public:
            const ScalarArray& y,
            Scalar m0,
            Scalar m1,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setXYArrays(nSamples, x, y, m0, m1, sortInputs); }
 
     /*!
@@ -218,7 +218,7 @@ public:
            const PointArray& points,
            Scalar m0,
            Scalar m1,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setArrayOfPoints(nSamples, points, m0, m1, sortInputs); }
 
     /*!
@@ -235,7 +235,7 @@ public:
            const ScalarContainerY& y,
            Scalar m0,
            Scalar m1,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setXYContainers(x, y, m0, m1, sortInputs); }
 
     /*!
@@ -250,7 +250,7 @@ public:
     Spline(const PointContainer& points,
            Scalar m0,
            Scalar m1,
-           bool sortInputs = false)
+           bool sortInputs = true)
     { this->setContainerOfPoints(points, m0, m1, sortInputs); }
 
     /*!
@@ -324,7 +324,7 @@ public:
                      const ScalarArrayX& x,
                      const ScalarArrayY& y,
                      Scalar m0, Scalar m1,
-                     bool sortInputs = false)
+                     bool sortInputs = true)
     {
         assert(nSamples > 1);
 
@@ -357,7 +357,7 @@ public:
     void setXYContainers(const ScalarContainerX& x,
                          const ScalarContainerY& y,
                          Scalar m0, Scalar m1,
-                         bool sortInputs = false)
+                         bool sortInputs = true)
     {
         assert(x.size() == y.size());
         assert(x.size() > 1);
@@ -392,7 +392,7 @@ public:
                           const PointArray& points,
                           Scalar m0,
                           Scalar m1,
-                          bool sortInputs = false)
+                          bool sortInputs = true)
     {
         // a spline with no or just one sampling points? what an
         // incredible bad idea!
@@ -428,7 +428,7 @@ public:
     void setContainerOfPoints(const XYContainer& points,
                               Scalar m0,
                               Scalar m1,
-                              bool sortInputs = false)
+                              bool sortInputs = true)
     {
         // a spline with no or just one sampling points? what an
         // incredible bad idea!
@@ -470,7 +470,7 @@ public:
     void setContainerOfTuples(const XYContainer& points,
                               Scalar m0,
                               Scalar m1,
-                              bool sortInputs = false)
+                              bool sortInputs = true)
     {
         // resize internal arrays
         setNumSamples_(points.size());
@@ -512,7 +512,7 @@ public:
                      const ScalarArrayX& x,
                      const ScalarArrayY& y,
                      SplineType splineType = Natural,
-                     bool sortInputs = false)
+                     bool sortInputs = true)
     {
         assert(nSamples > 1);
 
@@ -552,7 +552,7 @@ public:
     void setXYContainers(const ScalarContainerX& x,
                          const ScalarContainerY& y,
                          SplineType splineType = Natural,
-                         bool sortInputs = false)
+                         bool sortInputs = true)
     {
         assert(x.size() == y.size());
         assert(x.size() > 1);
@@ -592,7 +592,7 @@ public:
     void setArrayOfPoints(size_t nSamples,
                           const PointArray& points,
                           SplineType splineType = Natural,
-                          bool sortInputs = false)
+                          bool sortInputs = true)
     {
         // a spline with no or just one sampling points? what an
         // incredible bad idea!
@@ -633,7 +633,7 @@ public:
     template <class XYContainer>
     void setContainerOfPoints(const XYContainer& points,
                               SplineType splineType = Natural,
-                              bool sortInputs = false)
+                              bool sortInputs = true)
     {
         // a spline with no or just one sampling points? what an
         // incredible bad idea!
@@ -679,7 +679,7 @@ public:
     template <class XYContainer>
     void setContainerOfTuples(const XYContainer& points,
                               SplineType splineType = Natural,
-                              bool sortInputs = false)
+                              bool sortInputs = true)
     {
         // resize internal arrays
         setNumSamples_(points.size());
@@ -796,7 +796,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation eval(const Evaluation& x, bool extrapolate=false) const
+    Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
         assert(extrapolate || applies(x));
 
@@ -831,7 +831,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalDerivative(const Evaluation& x, bool extrapolate=false) const
+    Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         assert(extrapolate || applies(x));
         if (extrapolate) {
@@ -857,7 +857,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate=false) const
+    Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         assert(extrapolate || applies(x));
         if (extrapolate)
@@ -879,7 +879,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate=false) const
+    Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate = false) const
     {
         assert(extrapolate || applies(x));
         if (extrapolate)
@@ -1610,19 +1610,19 @@ protected:
 
     // third derivative of the hermite basis functions
     template <class Evaluation>
-    Scalar h00_prime3_(const Evaluation& /*t*/) const
+    Scalar h00_prime3_(const Evaluation& t OPM_UNUSED) const
     { return 2*3*2; }
 
     template <class Evaluation>
-    Scalar h10_prime3_(const Evaluation& /*t*/) const
+    Scalar h10_prime3_(const Evaluation& t OPM_UNUSED) const
     { return 2*3; }
 
     template <class Evaluation>
-    Scalar h01_prime3_(const Evaluation& /*t*/) const
+    Scalar h01_prime3_(const Evaluation& t OPM_UNUSED) const
     { return -2*3*2; }
 
     template <class Evaluation>
-    Scalar h11_prime3_(const Evaluation& /*t*/) const
+    Scalar h11_prime3_(const Evaluation& t OPM_UNUSED) const
     { return 2*3; }
 
     // returns the monotonicality of an interval of a spline segment
