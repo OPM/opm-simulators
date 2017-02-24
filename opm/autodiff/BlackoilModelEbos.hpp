@@ -1351,7 +1351,7 @@ namespace Opm {
                 errlog << "Finding the dew point pressure failed for " << failed_cells_pb.size() << " cells [";
                 errlog << failed_cells_pb[0];
                 const int max_elems = std::min(max_num_cells_faillog, failed_cells_pb.size());
-                for (size_t i = 1; i < max_elems; ++i) {
+                for (int i = 1; i < max_elems; ++i) {
                     errlog << ", " << failed_cells_pb[i];
                 }
                 if (failed_cells_pb.size() > max_num_cells_faillog) {
@@ -1365,7 +1365,7 @@ namespace Opm {
                 errlog << "Finding the dew point pressure failed for " << failed_cells_pd.size() << " cells [";
                 errlog << failed_cells_pd[0];
                 const int max_elems = std::min(max_num_cells_faillog, failed_cells_pd.size());
-                for (size_t i = 1; i < max_elems; ++i) {
+                for (int i = 1; i < max_elems; ++i) {
                     errlog << ", " << failed_cells_pd[i];
                 }
                 if (failed_cells_pd.size() > max_num_cells_faillog) {
