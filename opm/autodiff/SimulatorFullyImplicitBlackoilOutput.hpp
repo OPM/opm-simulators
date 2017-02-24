@@ -628,21 +628,21 @@ namespace Opm
                 const bool has_voil = (rstKeywords["VISC"] > 0) || (rstKeywords["VOIL"] > 0);
                 const bool has_vgas = (rstKeywords["VISC"] > 0) || (rstKeywords["VGAS"] > 0);
                 rstKeywords["VISC"] = 0;
-                if (aqua_active) {
+                if (aqua_active && has_vwat) {
                     output.insert("WAT_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("WAT_VISC") ),
                                   data::TargetType::RESTART_AUXILIARY);
                     rstKeywords["VWAT"] = 0;
                 }
-                if (liquid_active) {
+                if (liquid_active && has_voil) {
                     output.insert("OIL_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("OIL_VISC") ),
                                   data::TargetType::RESTART_AUXILIARY);
                     rstKeywords["VOIL"] = 0;
                 }
-                if (vapour_active) {
+                if (vapour_active && has_vgas) {
                     output.insert("GAS_VISC",
                                   Opm::UnitSystem::measure::viscosity,
                                   std::move( sd.getCellData("GAS_VISC") ),
