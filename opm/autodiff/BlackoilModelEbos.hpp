@@ -1177,24 +1177,6 @@ namespace Opm {
             return values;
         }
 
-        void updateSimCache() const
-        {
-            const auto& simulator = ebosSimulator();
-            // Force update of the cache for all elements
-            const auto& gridView = simulator.gridView();
-            auto elemIt = gridView.template begin</*codim=*/ 0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
-            ElementContext elemCtx(simulator);
-            for (; elemIt != elemEndIt; ++elemIt) {
-
-                const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
-                    continue;
-
-                elemCtx.updateAll(elem);
-            }
-        }
-
         SimulationDataContainer getSimulatorData () const
         {
             typedef std::vector<double> VectorType;
@@ -1280,16 +1262,22 @@ namespace Opm {
 
             std::vector<int> failed_cells_pb;
             std::vector<int> failed_cells_pd;
+            const auto& gridView = ebosSimulator().gridView();
+            auto elemIt = gridView.template begin</*codim=*/ 0>();
+            const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
+            ElementContext elemCtx(ebosSimulator());
 
-            if ( ebosModel.cachedIntensiveQuantities(/*cellIdx=*/0, /*timeIdx=*/0) == nullptr ) {
-                updateSimCache();
-            }
+            for (; elemIt != elemEndIt; ++elemIt) {
+                const auto& elem = *elemIt;
+                if (elem.partitionType() != Dune::InteriorEntity) {
+                    continue;
+                }
 
-            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                const auto* intQuantsPtr = ebosModel.cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
-                assert(intQuantsPtr != nullptr);
-                const auto& intQuants = *intQuantsPtr;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
+                const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
 
                 const auto& fs = intQuants.fluidState();
 
