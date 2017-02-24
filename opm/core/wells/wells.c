@@ -118,16 +118,18 @@ perfs_allocate(int nperf, struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
     int   ok;
-    void *well_cells, *WI;
+    void *well_cells, *WI, *sat_table_id;
 
     well_cells = realloc(W->well_cells, nperf * sizeof *W->well_cells);
     WI         = realloc(W->WI        , nperf * sizeof *W->WI        );
+    sat_table_id         = realloc(W->sat_table_id        , nperf * sizeof *W->sat_table_id        );
 
     ok = 0;
     if (well_cells != NULL) { W->well_cells = well_cells; ok++; }
     if (WI         != NULL) { W->WI         = WI        ; ok++; }
+    if (sat_table_id         != NULL) { W->sat_table_id         = sat_table_id        ; ok++; }
 
-    return ok == 2;
+    return ok == 3;
 }
 
 
@@ -185,6 +187,7 @@ initialise_new_perfs(int nperf, struct Wells *W)
     for (k = m->perf_cpty; k < nperf; k++) {
         W->well_cells[k] = -1 ;
         W->WI        [k] = 0.0;
+        W->sat_table_id[k] = -1;
     }
 }
 
@@ -275,6 +278,7 @@ create_wells(int nphases, int nwells, int nperf)
         W->well_connpos    = malloc(1 * sizeof *W->well_connpos);
         W->well_cells      = NULL;
         W->WI              = NULL;
+        W->sat_table_id = NULL;
 
         W->ctrls           = NULL;
         W->name            = NULL;
@@ -326,6 +330,7 @@ destroy_wells(struct Wells *W)
         free(W->name);
         free(W->ctrls);
         free(W->WI);
+        free(W->sat_table_id);
         free(W->well_cells);
         free(W->well_connpos);
         free(W->comp_frac);
@@ -363,6 +368,7 @@ add_well(enum WellType  type     ,
          const double  *comp_frac, /* Injection fraction or NULL */
          const int     *cells    ,
          const double  *WI       , /* Well index per perf (or NULL) */
+         const int     *sat_table_id, /*Saturation table id per perf (or NULL) */
          const char    *name     , /* Well name (or NULL) */
          int            allow_cf ,
          struct Wells  *W        )
@@ -399,6 +405,9 @@ add_well(enum WellType  type     ,
 
         if (WI != NULL) {
             memcpy(W->WI + off, WI, nperf * sizeof *W->WI);
+        }
+        if (sat_table_id != NULL) {
+            memcpy(W->sat_table_id + off, sat_table_id, nperf * sizeof *W->sat_table_id);
         }
     }
 
@@ -485,7 +494,7 @@ clone_wells(const struct Wells *W)
 /* ---------------------------------------------------------------------- */
 {
     int                  np, nperf, ok, pos, w;
-    const int           *cells;
+    const int           *cells, *sat_table_id;
     const double        *WI, *comp_frac;
 
     struct WellControls *ctrl;
@@ -508,10 +517,11 @@ clone_wells(const struct Wells *W)
                 cells = W->well_cells + pos;
 
                 WI        = W->WI        != NULL ? W->WI        + pos  : NULL;
+                sat_table_id = W->sat_table_id != NULL ? W->sat_table_id + pos : NULL;
                 comp_frac = W->comp_frac != NULL ? W->comp_frac + w*np : NULL;
 
                 ok = add_well(W->type[ w ], W->depth_ref[ w ], nperf,
-                              comp_frac, cells, WI, W->name[ w ], W->allow_cf[ w ],  newWells);
+                              comp_frac, cells, WI, sat_table_id, W->name[ w ], W->allow_cf[ w ],  newWells);
 
                 if (ok) {
                     ok = (ctrl = well_controls_clone(W->ctrls[w])) != NULL;
@@ -630,6 +640,7 @@ wells_equal(const struct Wells *W1, const struct Wells *W2 , bool verbose)
 
         are_equal = are_equal && (memcmp(W1->well_cells, W2->well_cells, number_of_perforations * sizeof *W1->well_cells ) == 0);
         are_equal = are_equal && (memcmp(W1->WI, W2->WI, number_of_perforations * sizeof *W1->WI ) == 0);
+        are_equal = are_equal && (memcmp(W1->sat_table_id, W2->sat_table_id, number_of_perforations * sizeof *W1->sat_table_id ) == 0);
     }
 
     return are_equal;

@@ -56,6 +56,7 @@ namespace Opm
     {
         int cell;
         double well_index;
+        int satnumid;
     };
     /// This class manages a Wells struct in the sense that it
     /// encapsulates creation and destruction of the wells

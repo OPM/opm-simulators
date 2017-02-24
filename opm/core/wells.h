@@ -91,6 +91,10 @@ struct Wells
      */
     double *WI;
 
+    /**
+     *  Saturation table number , same size and structure as well_cells.
+     */
+    int *sat_table_id;
 
     /**
      * Well controls, one set of controls for each well.
@@ -205,6 +209,7 @@ add_well(enum WellType  type     ,
          const double  *comp_frac,
          const int     *cells    ,
          const double  *WI       ,
+         const int     *sat_table_id,
          const char    *name     ,
          int            allow_cf ,
          struct Wells  *W        );

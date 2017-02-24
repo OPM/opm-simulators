@@ -53,14 +53,15 @@ BOOST_AUTO_TEST_CASE(Construction)
     if (W) {
         int          cells[] = { 0, 9 };
         double       WI      = 1.0;
+        int          sat_table_id = -1;
         const double ifrac[] = { 1.0, 0.0 };
 
         const bool ok0 = add_well(INJECTOR, 0.0, 1, &ifrac[0], &cells[0],
-                                  &WI, "INJECTOR", true, W.get());
+                                  &WI, &sat_table_id,"INJECTOR", true, W.get());
 
         const double pfrac[] = { 0.0, 0.0 };
         const bool ok1 = add_well(PRODUCER, 0.0, 1, &pfrac[0], &cells[1],
-                                  &WI, "PRODUCER", true, W.get());
+                                  &WI, &sat_table_id,"PRODUCER", true, W.get());
 
         if (ok0 && ok1) {
             BOOST_CHECK_EQUAL(W->number_of_phases, nphases);
@@ -97,9 +98,10 @@ BOOST_AUTO_TEST_CASE(Controls)
         int          cells[] = { 0  , 9   };
         double       WI   [] = { 1.0, 1.0 };
         const double ifrac[] = { 1.0, 0.0 };
+        int   sat_table_id = -1;
 
         const bool ok = add_well(INJECTOR, 0.0, nperfs, &ifrac[0], &cells[0],
-                                 &WI[0], "INJECTOR", true, W.get());
+                                 &WI[0], &sat_table_id,  "INJECTOR", true, W.get());
 
         if (ok) {
             const double distr[] = { 1.0, 0.0 };
@@ -149,13 +151,15 @@ BOOST_AUTO_TEST_CASE(Copy)
         int          cells[] = { 0, 9 };
         const double WI      = 1.0;
         const double ifrac[] = { 1.0, 0.0 };
+        int   sat_table_id = -1;
+
 
         const bool ok0 = add_well(INJECTOR, 0.0, 1, &ifrac[0], &cells[0],
-                                  &WI, "INJECTOR", true, W1.get());
+                                  &WI, &sat_table_id, "INJECTOR", true, W1.get());
 
         const double pfrac[] = { 0.0, 0.0 };
         const bool ok1 = add_well(PRODUCER, 0.0, 1, &pfrac[0], &cells[1],
-                                  &WI, "PRODUCER", true, W1.get());
+                                  &WI, &sat_table_id, "PRODUCER", true, W1.get());
 
         bool ok = ok0 && ok1;
         for (int w = 0; ok && (w < W1->number_of_wells); ++w) {

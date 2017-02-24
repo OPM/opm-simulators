@@ -220,6 +220,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                                                                          completion.getDirection(),
                                                                          ntg[cell]);
                             }
+                            pd.satnumid = completion.getSatTableId();
                             pd.well_index *= wellPi;
                         }
                         wellperf_data[active_well_index].push_back(pd);
@@ -272,10 +273,12 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
         const int           w_num_perf = wellperf_data[w].size();
         std::vector<int>    perf_cells  (w_num_perf);
         std::vector<double> perf_prodind(w_num_perf);
+        std::vector<int> perf_satnumid(w_num_perf);
 
         for (int perf = 0; perf < w_num_perf; ++perf) {
             perf_cells  [perf] = wellperf_data[w][perf].cell;
             perf_prodind[perf] = wellperf_data[w][perf].well_index;
+            perf_satnumid[perf] = wellperf_data[w][perf].satnumid;
         }
 
         const double* comp_frac = NULL;
@@ -289,6 +292,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
                      comp_frac,
                      perf_cells.data(),
                      perf_prodind.data(),
+                     perf_satnumid.data(),
                      well_names[w].c_str(),
                      well_data[w].allowCrossFlow,
                      w_);
