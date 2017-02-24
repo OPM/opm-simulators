@@ -395,13 +395,13 @@ namespace Opm
     }
 
 
-    template <class Grid, class WellStateFullyImplicitBlackOel>
+    template <class Grid, class WellState>
     inline void
     BlackoilOutputWriter::
     initFromRestartFile( const PhaseUsage& phaseUsage,
                          const Grid& grid,
                          SimulationDataContainer& simulatorstate,
-                         WellStateFullyImplicitBlackOel& wellstate)
+                         WellState& wellstate)
     {
         std::map<std::string, UnitSystem::measure> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
                                                                   {"SWAT" , UnitSystem::measure::identity},

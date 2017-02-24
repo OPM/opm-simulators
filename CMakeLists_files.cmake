@@ -26,6 +26,7 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
+  opm/autodiff/Compat.cpp
   opm/autodiff/ExtractParallelGridInformationToISTL.cpp
   opm/autodiff/NewtonIterationBlackoilCPR.cpp
   opm/autodiff/NewtonIterationBlackoilInterleaved.cpp

@@ -35,6 +35,7 @@
 #include <map>
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace Opm
 {
@@ -67,52 +68,94 @@ namespace Opm
             // call init on base class
             BaseType :: init(wells, state, prevState);
 
-            // if there are no well, do nothing in init
-            if (wells == 0) {
+            setWellSolutions(pu);
+            setWellSolutionsFromPrevState(prevState);
+        }
+
+
+        template <class PrevState>
+        void setWellSolutionsFromPrevState(const PrevState& prevState)
+        {
+            // Set nw and np, or return if no wells.
+            if (wells_.get() == nullptr) {
                 return;
             }
+            const int nw = wells_->number_of_wells;
+            if (nw == 0) {
+                return;
+            }
+            const int np = wells_->number_of_phases;
 
-            const int nw = wells->number_of_wells;
-            if( nw == 0 ) return ;
+            // intialize wells that have been there before
+            // order may change so the mapping is based on the well name
+            // if there are no well, do nothing in init
+            if( ! prevState.wellMap().empty() )
+            {
+                typedef typename WellMapType :: const_iterator const_iterator;
+                const_iterator end = prevState.wellMap().end();
+                int nw_old = prevState.bhp().size();
+                for (int w = 0; w < nw; ++w) {
+                    std::string name( wells_->name[ w ] );
+                    const_iterator it = prevState.wellMap().find( name );
+                    if( it != end )
+                    {
+                        const int oldIndex = (*it).second[ 0 ];
+                        const int newIndex = w;
 
-            const int np = wells->number_of_phases;
+                        // wellSolutions
+                        for( int i = 0;  i < np; ++i)
+                        {
+                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
+                        }
+
+                    }
+                }
+            }
+        }
+
+
+        /// Set wellSolutions() based on the base class members.
+        void setWellSolutions(const PhaseUsage& pu)
+        {
+            // Set nw and np, or return if no wells.
+            if (wells_.get() == nullptr) {
+                return;
+            }
+            const int nw = wells_->number_of_wells;
+            if (nw == 0) {
+                return;
+            }
+            const int np = wells_->number_of_phases;
 
             well_solutions_.clear();
             well_solutions_.resize(nw * np, 0.0);
             std::vector<double> g = {1.0,1.0,0.01};
             for (int w = 0; w < nw; ++w) {
-                WellControls* wc = wells->ctrls[w];
+                WellControls* wc = wells_->ctrls[w];
 
                 // The current control in the well state overrides
                 // the current control set in the Wells struct, which
                 // is instead treated as a default.
                 const int current = currentControls()[w];
                 well_controls_set_current( wc, current);
-                const WellType& well_type = wells->type[w];
+                const WellType& well_type = wells_->type[w];
 
                 switch (well_controls_iget_type(wc, current)) {
                 case THP: // Intentional fall-through
                 case BHP:
-                {
                     if (well_type == INJECTOR) {
                         for (int p = 0; p < np; ++p)  {
-                            well_solutions_[w] += wellRates()[np*w + p] * wells->comp_frac[np*w + p];
+                            well_solutions_[w] += wellRates()[np*w + p] * wells_->comp_frac[np*w + p];
                         }
                     } else {
                         for (int p = 0; p < np; ++p) {
                             well_solutions_[w] += g[p] * wellRates()[np*w + p];
                         }
                     }
-                }
                     break;
-
-
                 case RESERVOIR_RATE: // Intentional fall-through
                 case SURFACE_RATE:
-                {
                     wellSolutions()[w] = bhp()[w];
-
-                }
                     break;
                 }
 
@@ -135,40 +178,15 @@ namespace Opm
                     }
                 } else {
                     if( pu.phase_used[Water] ) {
-                        wellSolutions()[nw + w] = wells->comp_frac[np*w + waterpos];
+                        wellSolutions()[nw + w] = wells_->comp_frac[np*w + waterpos];
                     }
                     if( pu.phase_used[Gas] ) {
-                        wellSolutions()[2*nw + w] = wells->comp_frac[np*w + gaspos];
-                    }
-                }
-            }
-
-
-            // intialize wells that have been there before
-            // order may change so the mapping is based on the well name
-            if( ! prevState.wellMap().empty() )
-            {
-                typedef typename WellMapType :: const_iterator const_iterator;
-                const_iterator end = prevState.wellMap().end();
-                int nw_old = prevState.bhp().size();
-                for (int w = 0; w < nw; ++w) {
-                    std::string name( wells->name[ w ] );
-                    const_iterator it = prevState.wellMap().find( name );
-                    if( it != end )
-                    {
-                        const int oldIndex = (*it).second[ 0 ];
-                        const int newIndex = w;
-
-                        // wellSolutions
-                        for( int i = 0;  i < np; ++i)
-                        {
-                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
-                        }
-
+                        wellSolutions()[2*nw + w] = wells_->comp_frac[np*w + gaspos];
                     }
                 }
             }
         }
+
 
         template <class State>
         void resize(const Wells* wells, const State& state, const PhaseUsage& pu ) {
@@ -185,6 +203,7 @@ namespace Opm
             data::Wells res = BaseType::report(pu);
             return res;
         }
+
 
     private:
         std::vector<double> well_solutions_;
