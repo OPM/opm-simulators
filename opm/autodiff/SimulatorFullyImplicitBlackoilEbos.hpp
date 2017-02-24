@@ -144,9 +144,10 @@ public:
     {
         WellState prev_well_state;
 
+        ExtraData extra;
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
-            output_writer_.initFromRestartFile(props_.phaseUsage(), grid(), state, prev_well_state);
+            output_writer_.initFromRestartFile(props_.phaseUsage(), grid(), state, prev_well_state, extra);
             initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
         }
 
@@ -169,6 +170,10 @@ public:
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule.getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
+            }
+
+            if (output_writer_.isRestart()) {
+                adaptiveTimeStepping->setSuggestedNextStep(extra.suggested_step);
             }
         }
 
@@ -354,7 +359,8 @@ public:
             // write simulation state at the report stage
             Dune::Timer perfTimer;
             perfTimer.start();
-            output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+            const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
+            output_writer_.writeTimeStep( timer, state, well_state, solver->model(), false, nextstep );
             report.output_write_time += perfTimer.stop();
 
             prev_well_state = well_state;
