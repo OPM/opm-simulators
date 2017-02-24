@@ -60,6 +60,9 @@ public:
 
     EclHysteresisTwoPhaseLawParams()
     {
+        // These are initialized to two (even though they represent saturations)
+        // to signify that the values are larger than physically possible, and force
+        // using the drainage curve before the first saturation update.
         pcSwMdc_ = 2.0;
         krnSwMdc_ = 2.0;
         // krwSwMdc_ = 2.0;
@@ -152,7 +155,7 @@ public:
     { pcSwMdc_ = value; }
 
     /*!
-     * \brief Set the saturation of the wetting phase where the last switch from the main
+     * \brief Get the saturation of the wetting phase where the last switch from the main
      *        drainage curve to imbibition happend on the capillary pressure curve.
      */
     Scalar pcSwMdc() const
@@ -168,7 +171,7 @@ public:
     //    { krwSwMdc_ = value; };
 
     /*!
-     * \brief Set the saturation of the wetting phase where the last switch from the main
+     * \brief Get the saturation of the wetting phase where the last switch from the main
      *        drainage curve to imbibition happend on the relperm curve for the
      *        wetting phase.
      */
@@ -185,7 +188,7 @@ public:
     { krnSwMdc_ = value; }
 
     /*!
-     * \brief Set the saturation of the wetting phase where the last switch from the main
+     * \brief Get the saturation of the wetting phase where the last switch from the main
      *        drainage curve to imbibition happend on the relperm curve for the
      *        non-wetting phase.
      */
@@ -286,9 +289,9 @@ private:
         Scalar SwKrnMdcImbibition = EffLawT::twoPhaseSatKrnInv(imbibitionParams(), krnMdcDrainage);
         deltaSwImbKrn_ = SwKrnMdcImbibition - krnSwMdc_;
 
-        Scalar pcMdcDrainage = EffLawT::twoPhaseSatPcnw(drainageParams(), pcSwMdc_);
-        Scalar SwPcMdcImbibition = EffLawT::twoPhaseSatPcnwInv(imbibitionParams(), pcMdcDrainage);
-        deltaSwImbPc_ = SwPcMdcImbibition - pcSwMdc_;
+        // Scalar pcMdcDrainage = EffLawT::twoPhaseSatPcnw(drainageParams(), pcSwMdc_);
+        // Scalar SwPcMdcImbibition = EffLawT::twoPhaseSatPcnwInv(imbibitionParams(), pcMdcDrainage);
+        // deltaSwImbPc_ = SwPcMdcImbibition - pcSwMdc_;
 
 //        assert(std::abs(EffLawT::twoPhaseSatPcnw(imbibitionParams(), pcSwMdc_ + deltaSwImbPc_)
 //                        - EffLawT::twoPhaseSatPcnw(drainageParams(), pcSwMdc_)) < 1e-8);
@@ -311,16 +314,16 @@ private:
     // largest wettinging phase saturation which is on the main-drainage curve. These are
     // three different values because the sourounding code can choose to use different
     // definitions for the saturations for different quantities
-//    Scalar krwSwMdc_;
+    //Scalar krwSwMdc_;
     Scalar krnSwMdc_;
     Scalar pcSwMdc_;
 
     // offsets added to wetting phase saturation uf using the imbibition curves need to
     // be used to calculate the wetting phase relperm, the non-wetting phase relperm and
     // the capillary pressure
-//    Scalar deltaSwImbKrw_;
+    //Scalar deltaSwImbKrw_;
     Scalar deltaSwImbKrn_;
-    Scalar deltaSwImbPc_;
+    //Scalar deltaSwImbPc_;
 
     // trapped non-wetting phase saturation
     //Scalar Sncrt_;

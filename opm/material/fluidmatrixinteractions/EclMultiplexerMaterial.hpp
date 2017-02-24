@@ -159,6 +159,138 @@ public:
         }
     }
 
+    /*
+     * Hysteresis parameters for oil-water
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void oilWaterHysteresisParams(Scalar& pcSwMdc,
+                                         Scalar& krnSwMdc,
+                                         const Params& params)
+    {
+        switch (params.approach()) {
+        case EclStone1Approach:
+            Stone1Material::oilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone1Approach>());
+            break;
+
+        case EclStone2Approach:
+            Stone2Material::oilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone2Approach>());
+            break;
+
+        case EclDefaultApproach:
+            DefaultMaterial::oilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclDefaultApproach>());
+            break;
+
+        case EclTwoPhaseApproach:
+            TwoPhaseMaterial::oilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclTwoPhaseApproach>());
+            break;
+        }
+    }
+
+    /*
+     * Hysteresis parameters for oil-water
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void setOilWaterHysteresisParams(const Scalar& pcSwMdc,
+                                            const Scalar& krnSwMdc,
+                                            Params& params)
+    {
+        switch (params.approach()) {
+        case EclStone1Approach:
+            Stone1Material::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone1Approach>());
+            break;
+
+        case EclStone2Approach:
+            Stone2Material::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone2Approach>());
+            break;
+
+        case EclDefaultApproach:
+            DefaultMaterial::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclDefaultApproach>());
+            break;
+
+        case EclTwoPhaseApproach:
+            TwoPhaseMaterial::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclTwoPhaseApproach>());
+            break;
+        }
+    }
+
+    /*
+     * Hysteresis parameters for gas-oil
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void gasOilHysteresisParams(Scalar& pcSwMdc,
+                                       Scalar& krnSwMdc,
+                                       const Params& params)
+    {
+        switch (params.approach()) {
+        case EclStone1Approach:
+            Stone1Material::gasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone1Approach>());
+            break;
+
+        case EclStone2Approach:
+            Stone2Material::gasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone2Approach>());
+            break;
+
+        case EclDefaultApproach:
+            DefaultMaterial::gasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclDefaultApproach>());
+            break;
+
+        case EclTwoPhaseApproach:
+            TwoPhaseMaterial::gasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclTwoPhaseApproach>());
+            break;
+        }
+    }
+
+    /*
+     * Hysteresis parameters for gas-oil
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void setGasOilHysteresisParams(const Scalar& pcSwMdc,
+                                          const Scalar& krnSwMdc,
+                                          Params& params)
+    {
+        switch (params.approach()) {
+        case EclStone1Approach:
+            Stone1Material::setGasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone1Approach>());
+            break;
+
+        case EclStone2Approach:
+            Stone2Material::setGasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclStone2Approach>());
+            break;
+
+        case EclDefaultApproach:
+            DefaultMaterial::setGasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclDefaultApproach>());
+            break;
+
+        case EclTwoPhaseApproach:
+            TwoPhaseMaterial::setGasOilHysteresisParams(pcSwMdc, krnSwMdc,
+                                     params.template getRealParams<EclTwoPhaseApproach>());
+            break;
+        }
+    }
+
     /*!
      * \brief Capillary pressure between the gas and the non-wetting
      *        liquid (i.e., oil) phase.

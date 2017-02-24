@@ -148,6 +148,68 @@ public:
         Valgrind::CheckDefined(values[waterPhaseIdx]);
     }
 
+    /*
+     * Hysteresis parameters for oil-water
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void oilWaterHysteresisParams(Scalar& pcSwMdc,
+                                         Scalar& krnSwMdc,
+                                         const Params& params)
+    {
+        pcSwMdc = params.oilWaterParams().pcSwMdc();
+        krnSwMdc = params.oilWaterParams().krnSwMdc();
+
+        Valgrind::CheckDefined(pcSwMdc);
+        Valgrind::CheckDefined(krnSwMdc);
+    }
+
+    /*
+     * Hysteresis parameters for oil-water
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void setOilWaterHysteresisParams(const Scalar& pcSwMdc,
+                                            const Scalar& krnSwMdc,
+                                            Params& params)
+    {
+        const double krwSw = 2.0; //Should not be used
+        params.oilWaterParams().update(pcSwMdc, krwSw, krnSwMdc);
+    }
+
+    /*
+     * Hysteresis parameters for gas-oil
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void gasOilHysteresisParams(Scalar& pcSwMdc,
+                                       Scalar& krnSwMdc,
+                                       const Params& params)
+    {
+        pcSwMdc = params.gasOilParams().pcSwMdc();
+        krnSwMdc = params.gasOilParams().krnSwMdc();
+
+        Valgrind::CheckDefined(pcSwMdc);
+        Valgrind::CheckDefined(krnSwMdc);
+    }
+
+    /*
+     * Hysteresis parameters for gas-oil
+     * @see EclHysteresisTwoPhaseLawParams::pcSwMdc(...)
+     * @see EclHysteresisTwoPhaseLawParams::krnSwMdc(...)
+     * \param params Parameters
+     */
+    static void setGasOilHysteresisParams(const Scalar& pcSwMdc,
+                                          const Scalar& krnSwMdc,
+                                          Params& params)
+    {
+        const double krwSw = 2.0; //Should not be used
+        params.gasOilParams().update(pcSwMdc, krwSw, krnSwMdc);
+    }
+
     /*!
      * \brief Capillary pressure between the gas and the non-wetting
      *        liquid (i.e., oil) phase.
