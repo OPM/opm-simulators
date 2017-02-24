@@ -149,17 +149,7 @@ public:
             // This is a restart, populate WellState and ReservoirState state objects from restart file
             output_writer_.initFromRestartFile(props_.phaseUsage(), grid(), state, prev_well_state, extra);
             initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
-            {
-                const int num_cells = Opm::UgGridHelpers::numCells(grid());
-
-                typedef std::vector<double> VectorType;
-
-                const VectorType& somax = state.getCellData( "SOMAX" );
-
-                for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
-                    ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
-                }
-            }
+            initHysteresisParams(state);
         }
 
         // Create timers and file for writing timing info.
@@ -795,6 +785,37 @@ protected:
                 eclProblem.pvtRegionIndex(cellIdx);
         }
     }
+
+    void initHysteresisParams(ReservoirState& state) {
+        const int num_cells = Opm::UgGridHelpers::numCells(grid());
+
+        typedef std::vector<double> VectorType;
+
+        const VectorType& somax = state.getCellData( "SOMAX" );
+
+        for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
+            ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
+        }
+
+        VectorType& pcSwMdc_ow = state.getCellData( "PCSWMDC_OW" );
+        VectorType& krnSwMdc_ow = state.getCellData( "KRNSWMDC_OW" );
+
+        VectorType& pcSwMdc_go = state.getCellData( "PCSWMDC_GO" );
+        VectorType& krnSwMdc_go = state.getCellData( "KRNSWMDC_GO" );
+
+        for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
+            auto matLawManager = ebosSimulator_.problem().materialLawManager();
+            matLawManager->setOilWaterHysteresisParams(
+                    pcSwMdc_ow[cellIdx],
+                    krnSwMdc_ow[cellIdx],
+                    cellIdx);
+            matLawManager->setGasOilHysteresisParams(
+                    pcSwMdc_go[cellIdx],
+                    krnSwMdc_go[cellIdx],
+                    cellIdx);
+        }
+    }
+
 
     // Data.
     Simulator& ebosSimulator_;

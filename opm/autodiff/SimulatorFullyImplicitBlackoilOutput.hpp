@@ -425,7 +425,11 @@ namespace Opm
                                                                   {"TEMP" , UnitSystem::measure::temperature},
                                                                   {"RS" , UnitSystem::measure::gas_oil_ratio},
                                                                   {"RV" , UnitSystem::measure::oil_gas_ratio},
-                                                                  {"SOMAX", UnitSystem::measure::identity}};
+                                                                  {"SOMAX", UnitSystem::measure::identity},
+                                                                  {"PCSWM_OW", UnitSystem::measure::identity},
+                                                                  {"KRNSW_OW", UnitSystem::measure::identity},
+                                                                  {"PCSWM_GO", UnitSystem::measure::identity},
+                                                                  {"KRNSW_GO", UnitSystem::measure::identity}};
         std::map<std::string, bool> extra_keys {{"OPMEXTRA" , false}};
 
         if (restart_double_si_) {
@@ -781,6 +785,32 @@ namespace Opm
                 output.insert("SOMAX",
                         Opm::UnitSystem::measure::identity,
                         std::move( sd.getCellData("SOMAX") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+
+            if (sd.hasCellData("PCSWMDC_OW")) {
+                output.insert("PCSWM_OW", //FIXME: Eight-long variable name
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("PCSWMDC_OW") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+            if (sd.hasCellData("KRNSWMDC_OW")) {
+                output.insert("KRNSW_OW",
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("KRNSWMDC_OW") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+
+            if (sd.hasCellData("PCSWMDC_GO")) {
+                output.insert("PCSWM_GO", //FIXME: Eight-long variable name
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("PCSWMDC_GO") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+            if (sd.hasCellData("KRNSWMDC_GO")) {
+                output.insert("KRNSW_GO",
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("KRNSWMDC_GO") ),
                         data::TargetType::RESTART_AUXILIARY);
             }
 

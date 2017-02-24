@@ -170,13 +170,33 @@ void solutionToSim( const data::Solution& sol,
         state.getCellData( "RV" ) = sol.data( "RV" );
     }
 
-    if (sol.has( "SSOL" ) ) {
+    if ( sol.has( "SSOL" ) ) {
         state.getCellData("SSOL") = sol.data("SSOL");
     }
 
     if ( sol.has( "SOMAX" ) ) {
         state.registerCellData("SOMAX", 1);
         state.getCellData("SOMAX") = sol.data("SOMAX");
+    }
+
+    if ( sol.has( "PCSWM_OW" ) ) {
+        state.registerCellData("PCSWMDC_OW", 1);
+        state.getCellData("PCSWMDC_OW") = sol.data("PCSWM_OW");
+    }
+
+    if ( sol.has( "KRNSW_OW" ) ) {
+        state.registerCellData("KRNSWMDC_OW", 1);
+        state.getCellData("KRNSWMDC_OW") = sol.data("KRNSW_OW");
+    }
+
+    if ( sol.has( "PCSWM_GO" ) ) {
+        state.registerCellData("PCSWMDC_GO", 1);
+        state.getCellData("PCSWMDC_GO") = sol.data("PCSWM_GO");
+    }
+
+    if ( sol.has( "KRNSW_GO" ) ) {
+        state.registerCellData("KRNSWMDC_GO", 1);
+        state.getCellData("KRNSWMDC_GO") = sol.data("KRNSW_GO");
     }
 }
 

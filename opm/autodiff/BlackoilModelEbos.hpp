@@ -1250,6 +1250,20 @@ namespace Opm {
             simData.registerCellData( "SOMAX", 1 );
             VectorType& somax = simData.getCellData( "SOMAX" );
 
+            // Two components for hysteresis parameters
+            // pcSwMdc/krnSwMdc, one for oil-water and one for gas-oil
+            simData.registerCellData( "PCSWMDC_GO", 1 );
+            simData.registerCellData( "KRNSWMDC_GO", 1 );
+
+            simData.registerCellData( "PCSWMDC_OW", 1 );
+            simData.registerCellData( "KRNSWMDC_OW", 1 );
+
+            VectorType& pcSwMdc_go = simData.getCellData( "PCSWMDC_GO" );
+            VectorType& krnSwMdc_go = simData.getCellData( "KRNSWMDC_GO" );
+
+            VectorType& pcSwMdc_ow = simData.getCellData( "PCSWMDC_OW" );
+            VectorType& krnSwMdc_ow = simData.getCellData( "KRNSWMDC_OW" );
+
             std::vector<int> failed_cells_pb;
             std::vector<int> failed_cells_pd;
             const auto& gridView = ebosSimulator().gridView();
@@ -1275,6 +1289,16 @@ namespace Opm {
                 temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
                 somax[cellIdx] = ebosSimulator().model().maxOilSaturation(cellIdx);
+
+                const auto matLawManager = ebosSimulator().problem().materialLawManager();
+                matLawManager->oilWaterHysteresisParams(
+                        pcSwMdc_ow[cellIdx],
+                        krnSwMdc_ow[cellIdx],
+                        cellIdx);
+                matLawManager->gasOilHysteresisParams(
+                        pcSwMdc_go[cellIdx],
+                        krnSwMdc_go[cellIdx],
+                        cellIdx);
 
                 if (aqua_active) {
                     saturation[ satIdx + aqua_pos ] = fs.saturation(FluidSystem::waterPhaseIdx).value();
