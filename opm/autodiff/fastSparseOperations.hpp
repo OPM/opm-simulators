@@ -187,23 +187,17 @@ equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
     // check complete sparsity pattern
     if( equal )
     {
-//Eigen 3.3 series uses StorageIndex instead of Index
-#if (EIGEN_WORLD_VERSION > 3) \
-  || (EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION >= 3) \
-  || (EIGEN_WORLD_VERSION == 3 && EIGEN_MAJOR_VERSION == 2 && EIGEN_MINOR_VERSION >= 90)
-        typedef typename Eigen::internal::remove_all<Lhs>::type::StorageIndex Index;
-#else
-        typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
-#endif
+        typedef std::size_t Index;
         const Index outerSize = lhs.outerSize();
-        if( outerSize != rhs.outerSize() )
+        const Index rhsOuterSize = rhs.outerSize();
+        if( outerSize != rhsOuterSize )
         {
             return false;
         }
 
         // outer indices
-        const Index* rhsOuter = rhs.outerIndexPtr();
-        const Index* lhsOuter = lhs.outerIndexPtr();
+        const auto rhsOuter = rhs.outerIndexPtr();
+        const auto lhsOuter = lhs.outerIndexPtr();
         for(Index i=0; i<=outerSize; ++i )
         {
             if( lhsOuter[ i ] != rhsOuter[ i ] ) {
@@ -212,8 +206,8 @@ equalSparsityPattern(const Lhs& lhs, const Rhs& rhs)
         }
 
         // inner indices
-        const Index* rhsInner = rhs.innerIndexPtr();
-        const Index* lhsInner = lhs.innerIndexPtr();
+        const auto rhsInner = rhs.innerIndexPtr();
+        const auto lhsInner = lhs.innerIndexPtr();
 
         const Index nnz = lhs.nonZeros();
         for( Index i=0; i<nnz; ++i)
@@ -236,7 +230,7 @@ fastSparseAdd(Lhs& lhs, const Rhs& rhs)
     if( equalSparsityPattern( lhs, rhs ) )
     {
         typedef typename Eigen::internal::remove_all<Lhs>::type::Scalar Scalar;
-        typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
+        typedef std::size_t Index;
 
         const Index nnz = lhs.nonZeros();
 
@@ -265,7 +259,7 @@ fastSparseSubstract(Lhs& lhs, const Rhs& rhs)
     if( equalSparsityPattern( lhs, rhs ) )
     {
         typedef typename Eigen::internal::remove_all<Lhs>::type::Scalar Scalar;
-        typedef typename Eigen::internal::remove_all<Lhs>::type::Index Index;
+        typedef std::size_t Index;
 
         const Index nnz = lhs.nonZeros();
 
