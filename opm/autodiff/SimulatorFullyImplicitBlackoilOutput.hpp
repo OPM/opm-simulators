@@ -532,6 +532,8 @@ namespace Opm
 
         /**
          * Returns the data requested in the restartConfig
+         * NOTE: Since this function steals data from the SimulationDataContainer (std::move),
+         * the variable sd becomes "invalid" after calling this function.
          */
         template<class Model>
         void getRestartData(data::Solution& output,

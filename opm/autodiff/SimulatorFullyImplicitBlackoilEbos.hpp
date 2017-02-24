@@ -235,18 +235,6 @@ public:
             // give the polymer and surfactant simulators the chance to do their stuff
             handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
-            // write the inital state at the report stage
-            if (timer.initialStep()) {
-                Dune::Timer perfTimer;
-                perfTimer.start();
-
-                // No per cell data is written for initial step, but will be
-                // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
-
-                report.output_write_time += perfTimer.stop();
-            }
-
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
 
@@ -256,6 +244,18 @@ public:
             const WellModel well_model(wells, &(wells_manager.wellCollection()), model_param_, terminal_output_);
 
             auto solver = createSolver(well_model);
+
+            // write the inital state at the report stage
+            if (timer.initialStep()) {
+                Dune::Timer perfTimer;
+                perfTimer.start();
+
+                // No per cell data is written for initial step, but will be
+                // for subsequent steps, when we have started simulating
+                output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+
+                report.output_write_time += perfTimer.stop();
+            }
 
             // Compute orignal fluid in place if this has not been done yet
             if (originalFluidInPlace.empty()) {
