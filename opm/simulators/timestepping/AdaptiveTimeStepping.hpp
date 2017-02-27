@@ -84,6 +84,10 @@ namespace Opm {
                               Output& outputWriter,
                               const std::vector<int>* fipnum = nullptr);
 
+        double suggestedNextStep() const { return suggested_next_timestep_; }
+
+        void setSuggestedNextStep(const double x) { suggested_next_timestep_ = x; }
+
     protected:
         template <class Solver, class State, class WellState, class Output>
         SimulatorReport stepImpl( const SimulatorTimer& timer,

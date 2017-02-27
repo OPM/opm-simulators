@@ -243,7 +243,7 @@ namespace Opm
         data::Solution localCellData{};
         if( output_ )
         {
-            localCellData = simToSolution(localState, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
+            localCellData = simToSolution(localState, restart_double_si_, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
         }
         writeTimeStepWithCellProperties(timer, localState, localCellData ,
                                         localWellState, substep);
@@ -348,7 +348,8 @@ namespace Opm
                                       substep,
                                       timer.simulationTimeElapsed(),
                                       simProps,
-                                      wellState.report(phaseUsage_));
+                                      wellState.report(phaseUsage_),
+                                      restart_double_si_);
             }
         }
 

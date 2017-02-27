@@ -197,6 +197,14 @@ namespace Opm
             const Grid& grid_;
     };
 
+
+    /// Extra data to read/write for OPM restarting
+    struct ExtraData
+    {
+        double suggested_step;
+    };
+
+
     /** \brief Wrapper class for VTK, Matlab, and ECL output. */
     class BlackoilOutputWriter
     {
@@ -224,7 +232,8 @@ namespace Opm
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const Model& physicalModel,
-                           bool substep = false);
+                           bool substep = false,
+                           const double nextstep = -1.0);
 
 
         /*!
@@ -280,11 +289,12 @@ namespace Opm
                      const int desiredReportStep);
 
 
-        template <class Grid, class WellStateFullyImplicitBlackOel>
+        template <class Grid, class WellState>
         void initFromRestartFile(const PhaseUsage& phaseUsage,
                                  const Grid& grid,
                                  SimulationDataContainer& simulatorstate,
-                                 WellStateFullyImplicitBlackOel& wellstate);
+                                 WellState& wellstate,
+                                 ExtraData& extra);
 
         bool isRestart() const;
 
@@ -297,6 +307,7 @@ namespace Opm
         // Parameters for output.
         const std::string outputDir_;
         const int output_interval_;
+        const bool restart_double_si_;
 
         int lastBackupReportStep_;
 
@@ -328,6 +339,7 @@ namespace Opm
         parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, phaseUsage ) : 0 ),
         outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
         output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
+        restart_double_si_( output_ ? param.getDefault("restart_double_si", false) : false ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
         eclipseState_(eclipseState),
@@ -401,14 +413,23 @@ namespace Opm
     initFromRestartFile( const PhaseUsage& phaseUsage,
                          const Grid& grid,
                          SimulationDataContainer& simulatorstate,
-                         WellState& wellstate)
+                         WellState& wellstate,
+                         ExtraData& extra )
     {
         std::map<std::string, UnitSystem::measure> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
-                                                                  {"SWAT" , UnitSystem::measure::identity},
-                                                                  {"SGAS" , UnitSystem::measure::identity},
-                                                                  {"TEMP" , UnitSystem::measure::temperature},
-                                                                  {"RS" , UnitSystem::measure::gas_oil_ratio},
-                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio}};
+                                                                  {"SWAT"     , UnitSystem::measure::identity},
+                                                                  {"SGAS"     , UnitSystem::measure::identity},
+                                                                  {"TEMP"     , UnitSystem::measure::temperature},
+                                                                  {"RS"       , UnitSystem::measure::gas_oil_ratio},
+                                                                  {"RV"       , UnitSystem::measure::oil_gas_ratio},
+                                                                  {"OPMEXTRA" , UnitSystem::measure::identity}};
+
+        if (restart_double_si_) {
+            // Avoid any unit conversions, treat restart input as SI units.
+            for (auto& elem : solution_keys) {
+                elem.second = UnitSystem::measure::identity;
+            }
+        }
 
         // gives a dummy dynamic_list_econ_limited
         DynamicListEconLimited dummy_list_econ_limited;
@@ -435,6 +456,12 @@ namespace Opm
 
         solutionToSim( state.first, phaseUsage, simulatorstate );
         wellsToState( state.second, phaseUsage, wellstate );
+
+        if (state.first.has( "OPMEXTRA" ) ) {
+            std::vector<double> opmextra = state.first.data( "OPMEXTRA" );
+            assert(opmextra.size() == 1);
+            extra.suggested_step = opmextra[0];
+        }
     }
 
 
@@ -899,7 +926,8 @@ namespace Opm
                   const SimulationDataContainer& localState,
                   const WellStateFullyImplicitBlackoil& localWellState,
                   const Model& physicalModel,
-                  bool substep)
+                  bool substep,
+                  const double nextstep)
     {
         data::Solution localCellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
@@ -917,13 +945,20 @@ namespace Opm
                 SimulationDataContainer sd =
                     detail::convertToSimulationDataContainer( physicalModel.getSimulatorData(), localState, phaseUsage_ );
 
-                localCellData = simToSolution( sd, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
+                localCellData = simToSolution( sd, restart_double_si_, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
 
                 detail::getRestartData( localCellData, std::move(sd), phaseUsage_, physicalModel,
                                         restartConfig, reportStepNum, logMessages );
                 // sd will be invalid after getRestartData has been called
             }
             detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig );
+
+            // Hack: add suggested next timestep.
+            assert(!localCellData.empty());
+            localCellData.insert("OPMEXTRA",
+                                 UnitSystem::measure::identity,
+                                 std::vector<double>(1, nextstep),
+                                 data::TargetType::RESTART_SOLUTION);
         }
 
         writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, substep);
