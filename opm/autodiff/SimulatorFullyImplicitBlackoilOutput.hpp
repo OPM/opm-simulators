@@ -728,8 +728,7 @@ namespace Opm
             /**
              * Bubble point and dew point pressures
              */
-            if (log && vapour_active &&
-                liquid_active && rstKeywords["PBPD"] > 0) {
+            if (vapour_active && liquid_active && rstKeywords["PBPD"] > 0) {
                 rstKeywords["PBPD"] = 0;
                 output.insert("PBUB",
                         Opm::UnitSystem::measure::pressure,
