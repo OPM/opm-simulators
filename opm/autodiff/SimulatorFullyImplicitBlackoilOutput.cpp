@@ -203,6 +203,7 @@ namespace Opm
             const SimulationDataContainer state_;
             const WellStateFullyImplicitBlackoil wellState_;
             data::Solution simProps_;
+            std::map<std::string, std::vector<double>> extraData_;
             const bool substep_;
 
             explicit WriterCall( BlackoilOutputWriter& writer,
@@ -210,12 +211,14 @@ namespace Opm
                                  const SimulationDataContainer& state,
                                  const WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
+                                 const std::map<std::string, std::vector<double>>& extraData,
                                  bool substep )
                 : writer_( writer ),
                   timer_( timer.clone() ),
                   state_( state ),
                   wellState_( wellState ),
                   simProps_( simProps ),
+                  extraData_( extraData ),
                   substep_( substep )
             {
             }
@@ -224,7 +227,7 @@ namespace Opm
             void run ()
             {
                 // write data
-                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, substep_ );
+                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, extraData_, substep_ );
             }
         };
     }
@@ -238,6 +241,7 @@ namespace Opm
                   const SimulatorTimerInterface& timer,
                   const SimulationDataContainer& localState,
                   const WellStateFullyImplicitBlackoil& localWellState,
+                  const std::map<std::string, std::vector<double>>& extraData,
                   bool substep)
     {
         data::Solution localCellData{};
@@ -246,7 +250,7 @@ namespace Opm
             localCellData = simToSolution(localState, restart_double_si_, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
         }
         writeTimeStepWithCellProperties(timer, localState, localCellData ,
-                                        localWellState, substep);
+                                        localWellState, extraData, substep);
     }
 
 
@@ -260,6 +264,7 @@ namespace Opm
                   const SimulationDataContainer& localState,
                   const data::Solution& localCellData,
                   const WellStateFullyImplicitBlackoil& localWellState,
+                  const std::map<std::string, std::vector<double>>& extraData,
                   bool substep)
     {
         // VTK output (is parallel if grid is parallel)
@@ -281,6 +286,7 @@ namespace Opm
             isIORank = parallelOutput_->collectToIORank( localState, localWellState,
                                                          localCellData,
                                                          wellStateStepNumber );
+            // Note that at this point the extraData are assumed to be global, i.e. identical across all processes.
         }
 
         const data::Solution& cellData = ( parallelOutput_ && parallelOutput_->isParallel() ) ? parallelOutput_->globalCellData() : localCellData;
@@ -294,12 +300,12 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, substep ) );
+                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, extraData, substep ) );
             }
             else {
                 // just write the data to disk
                 try {
-                    writeTimeStepSerial( timer, state, wellState, cellData, substep );
+                    writeTimeStepSerial( timer, state, wellState, cellData, extraData, substep );
                 } catch (std::runtime_error& msg) {
                     err = 1;
                     emsg = msg.what();
@@ -329,6 +335,7 @@ namespace Opm
                         const SimulationDataContainer& state,
                         const WellStateFullyImplicitBlackoil& wellState,
                         const data::Solution& simProps,
+                        const std::map<std::string, std::vector<double>>& extraData,
                         bool substep)
     {
         // Matlab output
@@ -349,6 +356,7 @@ namespace Opm
                                       timer.simulationTimeElapsed(),
                                       simProps,
                                       wellState.report(phaseUsage_),
+                                      extraData,
                                       restart_double_si_);
             }
         }
@@ -417,7 +425,7 @@ namespace Opm
 
                 // No per cell data is written for restore steps, but will be
                 // for subsequent steps, when we have started simulating
-                writeTimeStepWithoutCellProperties( timer, state, wellState );
+                writeTimeStepWithoutCellProperties( timer, state, wellState, {} );
 
                 // some output
                 std::cout << "Restored step " << timer.reportStepNum() << " at day "

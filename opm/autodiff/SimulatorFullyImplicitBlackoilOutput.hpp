@@ -50,6 +50,8 @@
 #include <iomanip>
 #include <fstream>
 #include <thread>
+#include <map>
+#include <set>
 
 #include <boost/filesystem.hpp>
 
@@ -201,7 +203,7 @@ namespace Opm
     /// Extra data to read/write for OPM restarting
     struct ExtraData
     {
-        double suggested_step;
+        double suggested_step = -1.0;
     };
 
 
@@ -239,13 +241,14 @@ namespace Opm
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
          *        visualization tools like ResInsight. This function will write all
-         *        CellData in simProps to the file as well.
+         *        CellData in simProps to the file as well as the extraData.
          */
         void writeTimeStepWithCellProperties(
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const data::Solution& cellData,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
+                           const std::map<std::string, std::vector<double>>& extraData,
                            bool substep = false);
 
         /*!
@@ -257,6 +260,7 @@ namespace Opm
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
+                           const std::map<std::string, std::vector<double>>& extraData,
                            bool substep = false);
 
         /*!
@@ -268,6 +272,7 @@ namespace Opm
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
+                                 const std::map<std::string, std::vector<double>>& extraData,
                                  bool substep);
 
         /** \brief return output directory */
@@ -421,8 +426,8 @@ namespace Opm
                                                                   {"SGAS"     , UnitSystem::measure::identity},
                                                                   {"TEMP"     , UnitSystem::measure::temperature},
                                                                   {"RS"       , UnitSystem::measure::gas_oil_ratio},
-                                                                  {"RV"       , UnitSystem::measure::oil_gas_ratio},
-                                                                  {"OPMEXTRA" , UnitSystem::measure::identity}};
+                                                                  {"RV"       , UnitSystem::measure::oil_gas_ratio}};
+        std::set<std::string> extra_keys {"OPMEXTRA"};
 
         if (restart_double_si_) {
             // Avoid any unit conversions, treat restart input as SI units.
@@ -452,15 +457,18 @@ namespace Opm
 
         const Wells* wells = wellsmanager.c_wells();
         wellstate.resize(wells, simulatorstate, phaseUsage ); //Resize for restart step
-        auto state = eclIO_->loadRestart(solution_keys);
+        auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
 
-        solutionToSim( state.first, phaseUsage, simulatorstate );
-        wellsToState( state.second, phaseUsage, wellstate );
+        solutionToSim( restart_values.solution, phaseUsage, simulatorstate );
+        wellsToState( restart_values.wells, phaseUsage, wellstate );
 
-        if (state.first.has( "OPMEXTRA" ) ) {
-            std::vector<double> opmextra = state.first.data( "OPMEXTRA" );
+        const auto opmextra_iter = restart_values.extra.find("OPMEXTRA");
+        if (opmextra_iter != restart_values.extra.end()) {
+            std::vector<double> opmextra = opmextra_iter->second;
             assert(opmextra.size() == 1);
             extra.suggested_step = opmextra[0];
+        } else {
+            OPM_THROW(std::runtime_error, "Cannot restart, restart data is missing OPMEXTRA field.");
         }
     }
 
@@ -934,6 +942,7 @@ namespace Opm
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
+        std::map<std::string, std::vector<double>> extraData;
 
         if( output_ )
         {
@@ -952,16 +961,13 @@ namespace Opm
                 // sd will be invalid after getRestartData has been called
             }
             detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig );
-
-            // Hack: add suggested next timestep.
             assert(!localCellData.empty());
-            localCellData.insert("OPMEXTRA",
-                                 UnitSystem::measure::identity,
-                                 std::vector<double>(1, nextstep),
-                                 data::TargetType::RESTART_SOLUTION);
+
+            // Add suggested next timestep to extra data.
+            extraData["OPMEXTRA"] = std::vector<double>(1, nextstep);
         }
 
-        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, substep);
+        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, extraData, substep);
     }
 }
 #endif
