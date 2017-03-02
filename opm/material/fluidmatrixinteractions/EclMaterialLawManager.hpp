@@ -138,8 +138,8 @@ public:
         readGlobalThreePhaseOptions_(deck);
 
         unscaledEpsInfo_.resize(numSatRegions);
-        for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx)
-            unscaledEpsInfo_[satnumIdx].extractUnscaled(deck, eclState, satnumIdx);
+        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx)
+            unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
 
         initParamsForElements_(deck, eclState, compressedToCartesianElemIdx, satnumRegionArray);
     }
@@ -211,6 +211,19 @@ public:
     {
         assert(0 <= elemIdx && elemIdx <  materialLawParams_.size());
         return *materialLawParams_[elemIdx];
+    }
+
+    /*!
+     * \brief Returns a material parameter object for a given saturation region.
+     *
+     * In the context of ECL reservoir simulators, this is required to properly handle
+     * wells. These objects cannot consider hysteresis and enpoint scaling because these
+     * two features need one material parameter object element/connection.
+     */
+    const MaterialLawParams& satRegionMaterialLawParams(unsigned satRegionIdx) const
+    {
+        assert(0 <= satRegionIdx && satRegionIdx < satRegionMaterialLawParams_.size());
+        return *satRegionMaterialLawParams_[satRegionIdx];
     }
 
     std::shared_ptr<MaterialLawParams>& materialLawParamsPointerReferenceHack(unsigned elemIdx)
@@ -335,17 +348,17 @@ private:
         OilWaterScalingPointsVector oilWaterUnscaledPointsVector(numSatRegions);
         GasOilEffectiveParamVector gasOilEffectiveParamVector(numSatRegions);
         OilWaterEffectiveParamVector oilWaterEffectiveParamVector(numSatRegions);
-        for (unsigned satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
+        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
             // unscaled points for end-point scaling
-            readGasOilUnscaledPoints_(gasOilUnscaledPointsVector, gasOilConfig, deck, eclState, satnumIdx);
-            readOilWaterUnscaledPoints_(oilWaterUnscaledPointsVector, oilWaterConfig, deck, eclState, satnumIdx);
+            readGasOilUnscaledPoints_(gasOilUnscaledPointsVector, gasOilConfig, deck, eclState, satRegionIdx);
+            readOilWaterUnscaledPoints_(oilWaterUnscaledPointsVector, oilWaterConfig, deck, eclState, satRegionIdx);
 
             // the parameters for the effective two-phase matererial laws
-            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, deck, eclState, satnumIdx);
-            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, deck, eclState, satnumIdx);
+            readGasOilEffectiveParameters_(gasOilEffectiveParamVector, deck, eclState, satRegionIdx);
+            readOilWaterEffectiveParameters_(oilWaterEffectiveParamVector, deck, eclState, satRegionIdx);
 
             // read the end point scaling info for the saturation region
-            unscaledEpsInfo_[satnumIdx].extractUnscaled(deck, eclState, satnumIdx);
+            unscaledEpsInfo_[satRegionIdx].extractUnscaled(deck, eclState, satRegionIdx);
 
         }
 
@@ -425,7 +438,7 @@ private:
         const auto& imbnumData = eclState.get3DProperties().getIntGridProperty("IMBNUM").getData();
         assert(numCompressedElems == satnumRegionArray.size());
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
-            unsigned satnumIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
+            unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
 
             gasOilParams[elemIdx] = std::make_shared<GasOilTwoPhaseHystParams>();
             oilWaterParams[elemIdx] = std::make_shared<OilWaterTwoPhaseHystParams>();
@@ -436,9 +449,9 @@ private:
             if (hasGas && hasOil) {
                 auto gasOilDrainParams = std::make_shared<GasOilEpsTwoPhaseParams>();
                 gasOilDrainParams->setConfig(gasOilConfig);
-                gasOilDrainParams->setUnscaledPoints(gasOilUnscaledPointsVector[satnumIdx]);
+                gasOilDrainParams->setUnscaledPoints(gasOilUnscaledPointsVector[satRegionIdx]);
                 gasOilDrainParams->setScaledPoints(gasOilScaledPointsVector[elemIdx]);
-                gasOilDrainParams->setEffectiveLawParams(gasOilEffectiveParamVector[satnumIdx]);
+                gasOilDrainParams->setEffectiveLawParams(gasOilEffectiveParamVector[satRegionIdx]);
                 gasOilDrainParams->finalize();
 
                 gasOilParams[elemIdx]->setDrainageParams(gasOilDrainParams,
@@ -449,9 +462,9 @@ private:
             if (hasOil && hasWater) {
                 auto oilWaterDrainParams = std::make_shared<OilWaterEpsTwoPhaseParams>();
                 oilWaterDrainParams->setConfig(oilWaterConfig);
-                oilWaterDrainParams->setUnscaledPoints(oilWaterUnscaledPointsVector[satnumIdx]);
+                oilWaterDrainParams->setUnscaledPoints(oilWaterUnscaledPointsVector[satRegionIdx]);
                 oilWaterDrainParams->setScaledPoints(oilWaterScaledEpsPointsDrainage[elemIdx]);
-                oilWaterDrainParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satnumIdx]);
+                oilWaterDrainParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satRegionIdx]);
                 oilWaterDrainParams->finalize();
 
                 oilWaterParams[elemIdx]->setDrainageParams(oilWaterDrainParams,
@@ -500,17 +513,64 @@ private:
         materialLawParams_.resize(numCompressedElems);
         for (unsigned elemIdx = 0; elemIdx < numCompressedElems; ++elemIdx) {
             materialLawParams_[elemIdx] = std::make_shared<MaterialLawParams>();
-            unsigned satnumIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
+            unsigned satRegionIdx = static_cast<unsigned>(satnumRegionArray[elemIdx]);
 
             initThreePhaseParams_(deck,
                                   eclState,
                                   *materialLawParams_[elemIdx],
-                                  satnumIdx,
+                                  satRegionIdx,
                                   *oilWaterScaledEpsInfoDrainage_[elemIdx],
                                   oilWaterParams[elemIdx],
                                   gasOilParams[elemIdx]);
 
             materialLawParams_[elemIdx]->finalize();
+        }
+
+        // create the material parameter objects for the saturation regions
+        auto nohystConfig = std::make_shared<EclHysteresisConfig>();
+        auto noepsGasOilConfig = std::make_shared<Opm::EclEpsConfig>();
+        auto noepsOilWaterConfig = std::make_shared<Opm::EclEpsConfig>();
+
+        satRegionMaterialLawParams_.resize(numSatRegions);
+        for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++satRegionIdx) {
+            satRegionMaterialLawParams_[satRegionIdx] = std::make_shared<MaterialLawParams>();
+
+            // set up the oil-water twophase objects
+            auto noepsNohystOilWaterParams = std::make_shared<OilWaterEpsTwoPhaseParams>();
+            noepsNohystOilWaterParams->setConfig(noepsOilWaterConfig);
+            noepsNohystOilWaterParams->setEffectiveLawParams(oilWaterEffectiveParamVector[satRegionIdx]);
+            noepsNohystOilWaterParams->finalize();
+
+            auto oilWaterParams = std::make_shared<OilWaterTwoPhaseHystParams>();
+            oilWaterParams->setConfig(nohystConfig);
+            oilWaterParams->setDrainageParams(noepsNohystOilWaterParams,
+                                              *gasOilScaledInfoVector[0], // don't care
+                                              EclOilWaterSystem);
+            oilWaterParams->finalize();
+
+            // set up the gas-oil twophase objects
+            auto noepsNohystGasOilParams = std::make_shared<GasOilEpsTwoPhaseParams>();
+            noepsNohystGasOilParams->setConfig(noepsGasOilConfig);
+            noepsNohystGasOilParams->setEffectiveLawParams(gasOilEffectiveParamVector[satRegionIdx]);
+            noepsNohystGasOilParams->finalize();
+
+            auto gasOilParams = std::make_shared<GasOilTwoPhaseHystParams>();
+            gasOilParams->setConfig(nohystConfig);
+            gasOilParams->setDrainageParams(noepsNohystGasOilParams,
+                                            *gasOilScaledInfoVector[0], // don't care
+                                            EclGasOilSystem);
+            gasOilParams->finalize();
+
+            // set up the threephase object for the saturation region
+            initThreePhaseParams_(deck,
+                                  eclState,
+                                  *satRegionMaterialLawParams_[satRegionIdx],
+                                  satRegionIdx,
+                                  *oilWaterScaledEpsInfoDrainage_[0], // don't care
+                                  oilWaterParams,
+                                  gasOilParams);
+            satRegionMaterialLawParams_[satRegionIdx]->finalize();
+
         }
     }
 
@@ -581,7 +641,7 @@ private:
     void readGasOilEffectiveParameters_(Container& dest,
                                         const Opm::Deck& deck,
                                         const Opm::EclipseState& eclState,
-                                        unsigned satnumIdx)
+                                        unsigned satRegionIdx)
     {
         bool hasGas = deck.hasKeyword("GAS");
         bool hasOil = deck.hasKeyword("OIL");
@@ -590,13 +650,13 @@ private:
             // we don't read anything if either the gas or the oil phase is not active
             return;
 
-        dest[satnumIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
+        dest[satRegionIdx] = std::make_shared<GasOilEffectiveTwoPhaseParams>();
 
-        auto& effParams = *dest[satnumIdx];
+        auto& effParams = *dest[satRegionIdx];
 
         // the situation for the gas phase is complicated that all saturations are
         // shifted by the connate water saturation.
-        Scalar Swco = unscaledEpsInfo_[satnumIdx].Swl;
+        Scalar Swco = unscaledEpsInfo_[satRegionIdx].Swl;
         const auto& tableManager = eclState.getTableManager();
 
         switch (getSaturationFunctionFamily(deck, eclState)) {
@@ -607,18 +667,18 @@ private:
             if (!sgofTables.empty())
                 readGasOilEffectiveParametersSgof_(effParams,
                                                    Swco,
-                                                   sgofTables.getTable<SgofTable>(satnumIdx));
+                                                   sgofTables.getTable<SgofTable>(satRegionIdx));
             else if (!slgofTables.empty())
                 readGasOilEffectiveParametersSlgof_(effParams,
                                                     Swco,
-                                                    slgofTables.getTable<SlgofTable>(satnumIdx));
+                                                    slgofTables.getTable<SlgofTable>(satRegionIdx));
             break;
         }
 
         case FamilyII:
         {
-            const Sof3Table& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>( satnumIdx );
-            const SgfnTable& sgfnTable = tableManager.getSgfnTables().getTable<SgfnTable>( satnumIdx );
+            const Sof3Table& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>( satRegionIdx );
+            const SgfnTable& sgfnTable = tableManager.getSgfnTables().getTable<SgfnTable>( satRegionIdx );
             readGasOilEffectiveParametersFamily2_(effParams,
                                                   Swco,
                                                   sof3Table,
@@ -691,7 +751,7 @@ private:
     void readOilWaterEffectiveParameters_(Container& dest,
                                           const Opm::Deck& deck,
                                           const Opm::EclipseState& eclState,
-                                          unsigned satnumIdx)
+                                          unsigned satRegionIdx)
     {
         bool hasWater = deck.hasKeyword("WATER");
         bool hasOil = deck.hasKeyword("OIL");
@@ -700,14 +760,14 @@ private:
             // we don't read anything if either the water or the oil phase is not active
             return;
 
-        dest[satnumIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
+        dest[satRegionIdx] = std::make_shared<OilWaterEffectiveTwoPhaseParams>();
 
         const auto& tableManager = eclState.getTableManager();
-        auto& effParams = *dest[satnumIdx];
+        auto& effParams = *dest[satRegionIdx];
 
         switch (getSaturationFunctionFamily(deck, eclState)) {
         case FamilyI: {
-            const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satnumIdx);
+            const auto& swofTable = tableManager.getSwofTables().getTable<SwofTable>(satRegionIdx);
             std::vector<double> SwColumn = swofTable.getColumn("SW").vectorCopy();
 
             effParams.setKrwSamples(SwColumn, swofTable.getColumn("KRW").vectorCopy());
@@ -718,8 +778,8 @@ private:
         }
         case FamilyII:
         {
-            const auto& swfnTable = tableManager.getSwfnTables().getTable<SwfnTable>(satnumIdx);
-            const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satnumIdx);
+            const auto& swfnTable = tableManager.getSwfnTables().getTable<SwfnTable>(satRegionIdx);
+            const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satRegionIdx);
             std::vector<double> SwColumn = swfnTable.getColumn("SW").vectorCopy();
 
             // convert the saturations of the SOF3 keyword from oil to water saturations
@@ -747,7 +807,7 @@ private:
                                    std::shared_ptr<EclEpsConfig> config,
                                    const Opm::Deck& deck,
                                    const Opm::EclipseState& /* eclState */,
-                                   unsigned satnumIdx)
+                                   unsigned satRegionIdx)
     {
         bool hasGas = deck.hasKeyword("GAS");
         bool hasOil = deck.hasKeyword("OIL");
@@ -756,8 +816,8 @@ private:
             // we don't read anything if either the gas or the oil phase is not active
             return;
 
-        dest[satnumIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
-        dest[satnumIdx]->init(unscaledEpsInfo_[satnumIdx], *config, EclGasOilSystem);
+        dest[satRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
+        dest[satRegionIdx]->init(unscaledEpsInfo_[satRegionIdx], *config, EclGasOilSystem);
     }
 
     template <class Container>
@@ -765,7 +825,7 @@ private:
                                      std::shared_ptr<EclEpsConfig> config,
                                      const Opm::Deck& deck,
                                      const Opm::EclipseState& /* eclState */,
-                                     unsigned satnumIdx)
+                                     unsigned satRegionIdx)
     {
         bool hasWater = deck.hasKeyword("WATER");
         bool hasOil = deck.hasKeyword("OIL");
@@ -774,8 +834,8 @@ private:
             // we don't read anything if either the water or the oil phase is not active
             return;
 
-        dest[satnumIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
-        dest[satnumIdx]->init(unscaledEpsInfo_[satnumIdx], *config, EclOilWaterSystem);
+        dest[satRegionIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
+        dest[satRegionIdx]->init(unscaledEpsInfo_[satRegionIdx], *config, EclOilWaterSystem);
     }
 
     template <class InfoContainer, class PointsContainer>
@@ -787,9 +847,9 @@ private:
                                  unsigned elemIdx,
                                  unsigned cartElemIdx)
     {
-        unsigned satnumIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
+        unsigned satRegionIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
 
-        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumIdx]);
+        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
         destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
 
         destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
@@ -805,9 +865,9 @@ private:
                                    unsigned elemIdx,
                                    unsigned cartElemIdx)
     {
-        unsigned satnumIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
+        unsigned satRegionIdx = static_cast<unsigned>((*epsGridProperties.satnum)[cartElemIdx]) - 1; // ECL uses Fortran indices!
 
-        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satnumIdx]);
+        destInfo[elemIdx] = std::make_shared<EclEpsScalingPointsInfo<Scalar> >(unscaledEpsInfo_[satRegionIdx]);
         destInfo[elemIdx]->extractScaled(eclState, epsGridProperties, cartElemIdx);
 
         destPoints[elemIdx] = std::make_shared<EclEpsScalingPoints<Scalar> >();
@@ -817,7 +877,7 @@ private:
     void initThreePhaseParams_(const Opm::Deck& deck,
                                const Opm::EclipseState& /* eclState */,
                                MaterialLawParams& materialParams,
-                               unsigned satnumIdx,
+                               unsigned satRegionIdx,
                                const EclEpsScalingPointsInfo<Scalar>& epsInfo,
                                std::shared_ptr<OilWaterTwoPhaseHystParams> oilWaterParams,
                                std::shared_ptr<GasOilTwoPhaseHystParams> gasOilParams)
@@ -833,7 +893,7 @@ private:
 
             if (deck.hasKeyword("STONE1EX")) {
                 Scalar eta =
-                    deck.getKeyword("STONE1EX").getRecord(satnumIdx).getItem(0).getSIDouble(0);
+                    deck.getKeyword("STONE1EX").getRecord(satRegionIdx).getItem(0).getSIDouble(0);
                 realParams.setEta(eta);
             }
             else
@@ -884,6 +944,7 @@ private:
     enum EclTwoPhaseApproach twoPhaseApproach_;
 
     std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
+    std::vector<std::shared_ptr<MaterialLawParams> > satRegionMaterialLawParams_;
 };
 } // namespace Opm
 
