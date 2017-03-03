@@ -128,13 +128,10 @@ endif (NOT EIGEN3_FOUND)
 
 
 if (HAVE_OPM_DATA)
-    add_test( NAME flow_MSW2DH__ COMMAND flow_multisegment ${OPM_DATA_ROOT}/wells_test_suite/MSW/2D_H__/2D_H__.DATA)
-
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
- endif()
+endif()
 
  # create a symbolic link from flow to flow_legacy
-message("create symlink")
 ADD_CUSTOM_TARGET(flow ALL
 	                COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_legacy" "${CMAKE_BINARY_DIR}/bin/flow")
 
