@@ -112,7 +112,9 @@ endforeach()
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
-add_test_compareECLFiles(norne NORNE_ATW2013 flow ${abs_tol} ${rel_tol} compareECLInitFiles /init)
+foreach(sim flow flow_ebos)
+  add_test_compareECLFiles(norne NORNE_ATW2013 ${sim} ${abs_tol} ${rel_tol} compareECLInitFiles /init)
+endforeach()
 
 # Parallel tests
 if(MPI_FOUND)
