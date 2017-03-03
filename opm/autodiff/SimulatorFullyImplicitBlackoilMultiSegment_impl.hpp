@@ -88,6 +88,19 @@ namespace Opm
         unsigned int totalLinearIterations = 0;
         DynamicListEconLimited dynamic_list_econ_limited;
 
+        bool ooip_computed = false;
+        std::vector<int> fipnum_global = eclipse_state_->get3DProperties().getIntGridProperty("FIPNUM").getData();
+        //Get compressed cell fipnum.
+        std::vector<int> fipnum(AutoDiffGrid::numCells(grid_));
+        if (fipnum_global.empty()) {
+            std::fill(fipnum.begin(), fipnum.end(), 0);
+        } else {
+            for (size_t c = 0; c < fipnum.size(); ++c) {
+                fipnum[c] = fipnum_global[AutoDiffGrid::globalCell(grid_)[c]];
+            }
+        }
+        std::vector<std::vector<double> > OOIP;
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -132,7 +145,7 @@ namespace Opm
             if (timer.initialStep()) {
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state );
+                output_writer_.writeTimeStepWithoutCellProperties( timer, state, well_state, {} );
             }
 
             // Max oil saturation (for VPPARS), hysteresis update.
@@ -146,6 +159,13 @@ namespace Opm
             solver_timer.start();
 
             auto solver = createSolver(well_model);
+
+            // Compute orignal FIP;
+            if (!ooip_computed) {
+                OOIP = solver->computeFluidInPlace(state, fipnum);
+                Base::FIPUnitConvert(eclipse_state_->getUnits(), OOIP);
+                ooip_computed = true;
+            }
 
             // If sub stepping is enabled allow the solver to sub cycle
             // in case the report steps are too large for the solver to converge
@@ -169,6 +189,25 @@ namespace Opm
 
             // Report timing.
             const double st = solver_timer.secsSinceStart();
+
+            // Compute current FIP.
+            std::vector<std::vector<double> > COIP;
+            COIP = solver->computeFluidInPlace(state, fipnum);
+            std::vector<double> OOIP_totals = Base::FIPTotals(OOIP, state);
+            std::vector<double> COIP_totals = Base::FIPTotals(COIP, state);
+
+            //Convert to correct units
+            Base::FIPUnitConvert(eclipse_state_->getUnits(), COIP);
+            Base::FIPUnitConvert(eclipse_state_->getUnits(), OOIP_totals);
+            Base::FIPUnitConvert(eclipse_state_->getUnits(), COIP_totals);
+
+            if ( terminal_output_ )
+            {
+                Base::outputFluidInPlace(OOIP_totals, COIP_totals,eclipse_state_->getUnits(), 0);
+                for (size_t reg = 0; reg < OOIP.size(); ++reg) {
+                    Base::outputFluidInPlace(OOIP[reg], COIP[reg], eclipse_state_->getUnits(), reg+1);
+                }
+            }
 
             if ( terminal_output_ )
             {

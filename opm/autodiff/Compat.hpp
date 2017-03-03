@@ -51,7 +51,10 @@ namespace Opm {
     /// Returns Solution with the following fields:
     ///   PRESSURE, TEMP (unconditionally)
     ///   SWAT, SGAS, RS, RV, SSOL (if appropriate fields present in input)
+    /// If use_si_units is true, the fields will have the measure UnitSystem::measure::identity,
+    /// and therefore *not* be converted to customary units (depending on family) upon output.
     data::Solution simToSolution( const SimulationDataContainer& reservoir,
+                                  const bool use_si_units,
                                   PhaseUsage phases );
 
     /// Copies the following fields from sol into state (all conditionally):
