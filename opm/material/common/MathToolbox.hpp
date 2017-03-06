@@ -304,11 +304,11 @@ pow(const Evaluation1& base, const Evaluation2& exp)
 { return Opm::MathToolbox<typename ReturnEval_<Evaluation1, Evaluation2>::type>::pow(base, exp); }
 
 template <class Evaluation>
-Evaluation isfinite(const Evaluation& value)
+bool isfinite(const Evaluation& value)
 { return Opm::MathToolbox<Evaluation>::isfinite(value); }
 
 template <class Evaluation>
-Evaluation isnan(const Evaluation& value)
+bool isnan(const Evaluation& value)
 { return Opm::MathToolbox<Evaluation>::isnan(value); }
 
 } // namespace Opm
