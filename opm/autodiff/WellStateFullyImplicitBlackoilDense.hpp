@@ -69,48 +69,6 @@ namespace Opm
             BaseType :: init(wells, state, prevState);
 
             setWellSolutions(pu);
-            setWellSolutionsFromPrevState(prevState);
-        }
-
-
-        template <class PrevState>
-        void setWellSolutionsFromPrevState(const PrevState& prevState)
-        {
-            // Set nw and np, or return if no wells.
-            if (wells_.get() == nullptr) {
-                return;
-            }
-            const int nw = wells_->number_of_wells;
-            if (nw == 0) {
-                return;
-            }
-            const int np = wells_->number_of_phases;
-
-            // intialize wells that have been there before
-            // order may change so the mapping is based on the well name
-            // if there are no well, do nothing in init
-            if( ! prevState.wellMap().empty() )
-            {
-                typedef typename WellMapType :: const_iterator const_iterator;
-                const_iterator end = prevState.wellMap().end();
-                int nw_old = prevState.bhp().size();
-                for (int w = 0; w < nw; ++w) {
-                    std::string name( wells_->name[ w ] );
-                    const_iterator it = prevState.wellMap().find( name );
-                    if( it != end )
-                    {
-                        const int oldIndex = (*it).second[ 0 ];
-                        const int newIndex = w;
-
-                        // wellSolutions
-                        for( int i = 0;  i < np; ++i)
-                        {
-                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
-                        }
-
-                    }
-                }
-            }
         }
 
 
