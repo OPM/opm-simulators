@@ -2077,6 +2077,26 @@ namespace Opm {
 
 
     template<typename FluidSystem, typename BlackoilIndices>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wellSurfaceVolumeFraction(const int well_index, const int phase) const
+    {
+        EvalWell sum_volume_fraction_scaled = 0.;
+        const int np = wells().number_of_phases;
+        for (int p = 0; p < np; ++p) {
+            sum_volume_fraction_scaled += wellVolumeFractionScaled(well_index, p);
+        }
+
+        assert(sum_volume_fraction_scaled.value() != 0.);
+
+        return wellVolumeFractionScaled(well_index, phase) / sum_volume_fraction_scaled;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
     bool
     StandardWellsDense<FluidSystem, BlackoilIndices>::
     checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
