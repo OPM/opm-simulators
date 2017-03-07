@@ -1953,6 +1953,8 @@ namespace Opm {
         const int nw = wells().number_of_wells;
         const double target_rate = well_controls_get_current_target(wc);
 
+        // TODO: the formulation for the injectors decides it only work with single phase
+        // surface rate injection control. Improvement will be required.
         if (wells().type[wellIdx] == INJECTOR) {
             const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
             if (comp_frac == 0.0) {
@@ -2016,12 +2018,19 @@ namespace Opm {
                 return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / combined_volume_fraction);
             }
 
-            // suppose three phase combined limit is the same with RESV
-            // not tested yet.
+            // TODO: three phase surface rate control is not tested yet
+            if (num_phases_under_rate_control == 3) {
+                return target_rate * wellSurfaceVolumeFraction(wellIdx, phaseIdx);
+            }
+        } else if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+            // ReservoirRate
+            return target_rate * wellVolumeFractionScaled(wellIdx, phaseIdx);
+        } else {
+            OPM_THROW(std::logic_error, "Unknown control type for well " << wells().name[wellIdx]);
         }
 
-        // ReservoirRate
-        return target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx);
+        // avoid warning of condition reaches end of non-void function
+        return qs;
     }
 
 
