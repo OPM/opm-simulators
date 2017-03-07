@@ -1124,8 +1124,10 @@ namespace Opm
             // The well only had its own controls, no group controls.
             append_well_controls(wct, effective_target, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
-            // It will possibly be changed when initializing WellState
-            // set_current_control(self_index_, group_control_index_, wells_);
+            // Put the well under group control immediately when GRUP control mdoe is specified
+            if (injSpec().control_mode_ == InjectionSpecification::GRUP) {
+                set_current_control(self_index_, group_control_index_, wells_);
+            }
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
@@ -1307,8 +1309,10 @@ namespace Opm
             // The well only had its own controls, no group controls.
             append_well_controls(wct, ntarget, invalid_alq, invalid_vfp, distr, self_index_, wells_);
             group_control_index_ = well_controls_get_num(wells_->ctrls[self_index_]) - 1;
-            // It will possibly be changed when initializing WellState.
-            // set_current_control(self_index_, group_control_index_, wells_);
+            // Put the well under group control immediately when GRUP control mdoe is specified
+            if (prodSpec().control_mode_ == ProductionSpecification::GRUP) {
+                set_current_control(self_index_, group_control_index_, wells_);
+            }
         } else {
             // We will now modify the last control, that
             // "belongs to" the group control.
