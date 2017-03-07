@@ -1247,6 +1247,9 @@ namespace Opm {
             VectorType& Pb = simData.getCellData( "PBUB" );
             VectorType& Pd = simData.getCellData( "PDEW" );
 
+            simData.registerCellData( "SOMAX", 1 );
+            VectorType& somax = simData.getCellData( "SOMAX" );
+
             std::vector<int> failed_cells_pb;
             std::vector<int> failed_cells_pd;
             const auto& gridView = ebosSimulator().gridView();
@@ -1270,6 +1273,8 @@ namespace Opm {
                 pressureOil[cellIdx] = fs.pressure(FluidSystem::oilPhaseIdx).value();
 
                 temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value();
+
+                somax[cellIdx] = ebosSimulator().model().maxOilSaturation(cellIdx);
 
                 if (aqua_active) {
                     saturation[ satIdx + aqua_pos ] = fs.saturation(FluidSystem::waterPhaseIdx).value();
