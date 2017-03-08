@@ -545,7 +545,7 @@ namespace Opm {
     template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
-    resetWellControlFromState(WellState xw) const
+    resetWellControlFromState(const WellState& xw) const
     {
         const int        nw   = wells_->number_of_wells;
         for (int w = 0; w < nw; ++w) {

@@ -155,7 +155,7 @@ enum WellVariablePositions {
 
             int numCells() const;
 
-            void resetWellControlFromState(WellState xw) const;
+            void resetWellControlFromState(const WellState& xw) const;
 
             const Wells& wells() const;
 
