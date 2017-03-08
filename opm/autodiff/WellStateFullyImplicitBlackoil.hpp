@@ -123,6 +123,9 @@ namespace Opm
                         // bhp
                         bhp()[ newIndex ] = prevState.bhp()[ oldIndex ];
 
+                        // thp
+                        thp()[ newIndex ] = prevState.thp()[ oldIndex ];
+
                         // wellrates
                         for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
                         {

@@ -2481,9 +2481,13 @@ namespace Opm {
         switch (well_controls_iget_type(wc, current)) {
         case BHP:
             xw.bhp()[well_index] = target;
+            // TODO: similar to the way below to handle THP
+            // we should not something related to thp here when there is thp constraint
             break;
 
         case THP: {
+            xw.thp()[well_index] = target;
+
             double aqua = 0.0;
             double liquid = 0.0;
             double vapour = 0.0;
