@@ -231,7 +231,7 @@ namespace Opm {
 
             // add vol * dF/dt + Q to the well equations;
             for (int p1 = 0; p1 < np; ++p1) {
-                EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
+                EvalWell resWell_loc = (wellSurfaceVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
                 resWell_loc += getQs(w, p1);
                 for (int p2 = 0; p2 < np; ++p2) {
                     invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivative(p2+blocksize);
@@ -680,7 +680,7 @@ namespace Opm {
         const int nw = wells().number_of_wells;
         for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
             for (int w = 0; w < nw; ++w) {
-                F0_[w + nw * phaseIdx] = wellVolumeFraction(w,phaseIdx).value();
+                F0_[w + nw * phaseIdx] = wellSurfaceVolumeFraction(w, phaseIdx).value();
             }
         }
     }
@@ -703,7 +703,7 @@ namespace Opm {
         std::vector<EvalWell> cmix_s(np,0.0);
         for (int phase = 0; phase < np; ++phase) {
             //int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
-            cmix_s[phase] = wellVolumeFraction(w,phase);
+            cmix_s[phase] = wellSurfaceVolumeFraction(w, phase);
         }
 
         const auto& fs = intQuants.fluidState();
