@@ -1989,21 +1989,29 @@ namespace Opm {
 
             // when it is a single phase rate limit
             if (num_phases_under_rate_control == 1) {
-                if (distr[phaseIdx] == 1.0) {
+
+                // looking for the phase under control
+                int phase_under_control = -1;
+                for (int phase = 0; phase < np; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        phase_under_control = phase;
+                        break;
+                    }
+                }
+
+                assert(phase_under_control >= 0);
+
+                if (phaseIdx == phase_under_control) {
                     qs.setValue(target_rate);
                     return qs;
                 }
 
-                int currentControlIdx = 0;
-                for (int i = 0; i < np; ++i) {
-                    currentControlIdx += wells().comp_frac[np*wellIdx + i] * i;
-                }
-
+                // TODO: not sure why the single phase under control will have near zero fraction
                 const double eps = 1e-6;
-                if (wellVolumeFractionScaled(wellIdx,currentControlIdx) < eps) {
+                if (wellVolumeFractionScaled(wellIdx, phase_under_control) < eps) {
                     return qs;
                 }
-                return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx,currentControlIdx));
+                return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx, phase_under_control));
             }
 
             // when it is a combined two phase rate limit, such like LRAT
