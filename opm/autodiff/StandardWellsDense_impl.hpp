@@ -898,6 +898,11 @@ namespace Opm {
 
         if (!converged) {
             well_state = well_state0;
+            // also recover the old well controls
+            for (int w = 0; w < nw; ++w) {
+                WellControls* wc = wells().ctrls[w];
+                well_controls_set_current(wc, well_state.currentControls()[w]);
+            }
         }
 
         SimulatorReport report;
