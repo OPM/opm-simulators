@@ -775,7 +775,7 @@ namespace Opm {
         EvalWell well_pressure = bhp + cdp;
         EvalWell drawdown = pressure - well_pressure;
 
-        // injection perforations
+        // producing perforations
         if ( drawdown.value() > 0 )  {
             //Do nothing if crossflow is not allowed
             if (!allow_cf && wells().type[w] == INJECTOR) {
