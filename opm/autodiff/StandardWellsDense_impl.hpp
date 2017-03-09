@@ -2048,11 +2048,14 @@ namespace Opm {
             computeWellVoidageRates(well_state, well_voidage_rates, voidage_conversion_coeffs);
             wellCollection()->applyVREPGroupControls(well_voidage_rates, voidage_conversion_coeffs);
 
-            // for the wells under group control, update the currentControls for the well_state
+            // for the wells under group control, update the control index for the well_state and well_controls
             for (const WellNode* well_node : wellCollection()->getLeafNodes()) {
                 if (well_node->isInjector() && !well_node->individualControl()) {
                     const int well_index = well_node->selfIndex();
                     well_state.currentControls()[well_index] = well_node->groupControlIndex();
+
+                    WellControls* wc = wells().ctrls[well_index];
+                    well_controls_set_current(wc, well_node->groupControlIndex());
                 }
             }
         }
