@@ -1426,7 +1426,8 @@ namespace Opm {
             const WellControls* wc = wells().ctrls[w];
             const int nwc = well_controls_get_num(wc);
             // Looping over all controls until we find a THP constraint
-            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+            int ctrl_index = 0;
+            for ( ; ctrl_index < nwc; ++ctrl_index) {
                 if (well_controls_iget_type(wc, ctrl_index) == THP) {
                     // the current control
                     const int current = well_state.currentControls()[w];
@@ -1479,6 +1480,11 @@ namespace Opm {
                     break;
                 }
             }  // end of for loop for seaching THP constraints
+
+            // no THP constraint found
+            if (ctrl_index == nwc) { // not finding a THP contstraints
+                well_state.thp()[w] = 0.0;
+            }
         } // end of for (int w = 0; w < nw; ++w)
     }
 
