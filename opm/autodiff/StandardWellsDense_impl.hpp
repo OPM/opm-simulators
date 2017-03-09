@@ -148,7 +148,7 @@ namespace Opm {
             return report;
         }
 
-        resetWellControlFromState(well_state);
+        // resetWellControlFromState(well_state);
         updateWellControls(well_state);
         // Set the primary variables for the wells
         setWellVariables(well_state);
