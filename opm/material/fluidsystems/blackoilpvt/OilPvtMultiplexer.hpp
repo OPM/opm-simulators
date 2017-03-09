@@ -219,8 +219,8 @@ public:
      */
     template <class Evaluation>
     Evaluation saturationPressure(unsigned regionIdx,
-                                     const Evaluation& temperature,
-                                     const Evaluation& Rs) const
+                                  const Evaluation& temperature,
+                                  const Evaluation& Rs) const
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.saturationPressure(regionIdx, temperature, Rs)); return 0; }
 
     void setApproach(OilPvtApproach appr)
