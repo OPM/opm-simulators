@@ -129,6 +129,20 @@ namespace Opm {
              const double dt,
              WellState& well_state)
     {
+
+        // after restarting, the well_controls can be modified while
+        // the well_state still uses the old control index
+        // we need to synchronize these two.
+        const int nw = wells().number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            const int ctrl_index = well_state.currentControls()[w];
+            WellControls* wc = wells().ctrls[w];
+            const int ctrl_index_2 = well_controls_get_current(wc);
+            if (ctrl_index_2 != ctrl_index) {
+                well_controls_set_current(wc, ctrl_index);
+            }
+        }
+
         SimulatorReport report;
         if ( ! localWellsActive() ) {
             return report;
