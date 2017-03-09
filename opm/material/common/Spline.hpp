@@ -30,6 +30,7 @@
 #include <opm/material/common/TridiagonalMatrix.hpp>
 #include <opm/material/common/PolynomialUtils.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/common/Unused.hpp>
 
 #include <ostream>
@@ -798,7 +799,11 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
-        assert(extrapolate || applies(x));
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
+        if (!extrapolate && !applies(x))
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate a spline outside of its range");
 
         // handle extrapolation
         if (extrapolate) {
@@ -815,7 +820,7 @@ public:
             }
         }
 
-        return eval_(x, segmentIdx_(x));
+        return eval_(x, segmentIdx_(Toolbox::scalarValue(x)));
     }
 
     /*!
@@ -833,7 +838,13 @@ public:
     template <class Evaluation>
     Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        assert(extrapolate || applies(x));
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
+        if (!extrapolate && !applies(x))
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate the derivative of a spline outside of its range");
+
+        // handle extrapolation
         if (extrapolate) {
             if (x < xAt(0))
                 return evalDerivative_(xAt(0), /*segmentIdx=*/0);
@@ -841,7 +852,7 @@ public:
                 return evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples() - 2);
         }
 
-        return evalDerivative_(x, segmentIdx_(x));
+        return evalDerivative_(x, segmentIdx_(Toolbox::scalarValue(x)));
     }
 
     /*!
@@ -859,11 +870,15 @@ public:
     template <class Evaluation>
     Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        assert(extrapolate || applies(x));
-        if (extrapolate)
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
+        if (!extrapolate && !applies(x))
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate the second derivative of a spline outside of its range");
+        else if (extrapolate)
             return 0.0;
 
-        return evalDerivative2_(x, segmentIdx_(x));
+        return evalDerivative2_(x, segmentIdx_(Toolbox::scalarValue(x)));
     }
 
     /*!
@@ -881,11 +896,15 @@ public:
     template <class Evaluation>
     Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        assert(extrapolate || applies(x));
-        if (extrapolate)
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
+
+        if (!extrapolate && !applies(x))
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate the third derivative of a spline outside of its range");
+        else if (extrapolate)
             return 0.0;
 
-        return evalDerivative3_(x, segmentIdx_(x));
+        return evalDerivative3_(x, segmentIdx_(Toolbox::scalarValue(x)));
     }
 
     /*!
@@ -1730,13 +1749,8 @@ protected:
     }
 
     // find the segment index for a given x coordinate
-    template <class Evaluation>
-    size_t segmentIdx_(const Evaluation& xEval) const
+    size_t segmentIdx_(Scalar x) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
-        Scalar x = Toolbox::scalarValue(xEval);
-
         // bisection
         size_t iLow = 0;
         size_t iHigh = numSamples() - 1;

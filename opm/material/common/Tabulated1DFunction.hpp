@@ -27,10 +27,10 @@
 #ifndef OPM_TABULATED_1D_FUNCTION_HPP
 #define OPM_TABULATED_1D_FUNCTION_HPP
 
+#include <opm/material/densead/Math.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/Unused.hpp>
-#include <opm/material/densead/Math.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -235,7 +235,8 @@ public:
     /*!
      * \brief Return true iff the given x is in range [x1, xn].
      */
-    bool applies(Scalar x) const
+    template <class Evaluation>
+    bool applies(const Evaluation& x) const
     { return xValues_[0] <= x && x <= xValues_[numSamples() - 1]; }
 
     /*!
@@ -252,15 +253,18 @@ public:
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
+        if (!extrapolate && !applies(x))
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate a tabulated function outside of its range");
+
         size_t segIdx;
+
         if (extrapolate && x < xValues_.front())
             segIdx = 0;
         else if (extrapolate && x > xValues_.back())
             segIdx = numSamples() - 2;
-        else {
-            assert(xValues_.front() <= x && x <= xValues_.back());
+        else
             segIdx = findSegmentIndex_(Toolbox::scalarValue(x));
-        }
 
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
@@ -283,11 +287,18 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalDerivative(const Evaluation& x, bool extrapolate OPM_UNUSED = false) const
+    Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        unsigned segIdx = findSegmentIndex_(x);
+        typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-        return evalDerivative(x, segIdx);
+        if (!extrapolate && !applies(x)) {
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate a derivative of a tabulated"
+                      " function outside of its range");
+        }
+
+        unsigned segIdx = findSegmentIndex_(Toolbox::scalarValue(x));
+        return evalDerivative_(x, segIdx);
     }
 
     /*!
@@ -305,9 +316,14 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalSecondDerivative(const Evaluation OPM_OPTIM_UNUSED& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
+    Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        assert(extrapolate || applies(x));
+        if (!extrapolate && !applies(x)) {
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate a second derivative of a tabulated "
+                      " function outside of its range");
+        }
+
         return 0.0;
     }
 
@@ -326,9 +342,14 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalThirdDerivative(const Evaluation OPM_OPTIM_UNUSED& x, bool extrapolate OPM_OPTIM_UNUSED = false) const
+    Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        assert(extrapolate || applies(x));
+        if (!extrapolate && !applies(x)) {
+            OPM_THROW(Opm::NumericalProblem,
+                      "Tried to evaluate a third derivative of a tabulated "
+                      " function outside of its range");
+        }
+
         return 0.0;
     }
 
