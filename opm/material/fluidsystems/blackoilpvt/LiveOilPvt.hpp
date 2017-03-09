@@ -530,6 +530,15 @@ public:
             const Evaluation& fPrime = RsTable.evalDerivative(pSat, /*extrapolate=*/true);
 
             const Evaluation& delta = f/fPrime;
+
+            if (!Opm::isfinite(delta)) {
+                 std::stringstream errlog;
+                 errlog << "Obtain delta with non-finite value for Rs = " << Rs << " in the "
+                        << i << "th iteration during finding saturation pressure iteratively";
+                 OpmLog::problem("wetgas NaN delta value", errlog.str());
+                 OPM_THROW_NOLOG(NumericalProblem, errlog.str());
+            }
+
             pSat -= delta;
 
             if (pSat < 0.0) {
