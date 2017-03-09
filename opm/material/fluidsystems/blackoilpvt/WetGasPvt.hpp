@@ -92,12 +92,9 @@ public:
             auto& invSatGasBMu = inverseSaturatedGasBMu_[regionIdx];
             auto& oilVaporizationFac = saturatedOilVaporizationFactorTable_[regionIdx];
 
-            {
-                std::vector<double> pressure = saturatedTable.getColumn("PG").vectorCopy( );
-                std::vector<double> rv = saturatedTable.getColumn("RV").vectorCopy( );
-                oilVaporizationFac.setXYArrays(saturatedTable.numRows(),
-                                               pressure , rv );
-            }
+            oilVaporizationFac.setXYArrays(saturatedTable.numRows(),
+                                           saturatedTable.getColumn("PG"),
+                                           saturatedTable.getColumn("RV"));
 
             std::vector<Scalar> invSatGasBArray;
             std::vector<Scalar> invSatGasBMuArray;
@@ -541,31 +538,53 @@ public:
      */
     template <class Evaluation>
     Evaluation saturationPressure(unsigned regionIdx,
-                                  const Evaluation& temperature,
+                                  const Evaluation& temperature OPM_UNUSED,
                                   const Evaluation& Rv) const
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
+        const auto& RvTable = saturatedOilVaporizationFactorTable_[regionIdx];
+        static constexpr Scalar eps = std::numeric_limits<typename Toolbox::Scalar>::epsilon()*1e6;
+
         // use the tabulated saturation pressure function to get a pretty good initial value
         Evaluation pSat = saturationPressure_[regionIdx].eval(Rv, /*extrapolate=*/true);
-        const Evaluation& eps = pSat*1e-11;
 
         // Newton method to do the remaining work. If the initial
         // value is good, this should only take two to three
         // iterations...
+        bool onProbation = false;
         for (unsigned i = 0; i < 20; ++i) {
-            const Evaluation& f = saturatedOilVaporizationFactor(regionIdx, temperature, pSat) - Rv;
-            const Evaluation& fPrime = ((saturatedOilVaporizationFactor(regionIdx, temperature, pSat + eps) - Rv) - f)/eps;
+            const Evaluation& f = RvTable.eval(pSat, /*extrapolate=*/true) - Rv;
+            const Evaluation& fPrime = RvTable.evalDerivative(pSat, /*extrapolate=*/true);
 
             const Evaluation& delta = f/fPrime;
+
+            if (!Opm::isfinite(delta)) {
+                 std::stringstream errlog;
+                 errlog << "Obtain delta with non-finite value for Rv = " << Rv << " in the "
+                        << i << "th iteration during finding saturation pressure iteratively";
+                 OpmLog::problem("wetgas NaN delta value", errlog.str());
+                 OPM_THROW_NOLOG(NumericalProblem, errlog.str());
+            }
+
             pSat -= delta;
 
-            if (std::abs(Toolbox::scalarValue(delta)) < std::abs(Toolbox::scalarValue(pSat)) * 1e-10)
+            if (pSat < 0.0) {
+                // if the pressure is lower than 0 Pascals, we set it back to 0. if this
+                // happens twice, we give up and just return 0 Pa...
+                if (onProbation)
+                    return 0.0;
+
+                onProbation = true;
+                pSat = 0.0;
+            }
+
+            if (std::abs(Toolbox::scalarValue(delta)) < std::abs(Toolbox::scalarValue(pSat))*eps)
                 return pSat;
         }
 
         std::stringstream errlog;
-        errlog << "Could find the gas saturation pressure for X_g^O = " << Rv;
+        errlog << "Could find the gas saturation pressure for Rv = " << Rv;
         OpmLog::problem("wetgas saturationpressure", errlog.str());
         OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
@@ -577,14 +596,14 @@ private:
 
         // create the taublated function representing saturation pressure depending of
         // Rv
-        size_t n = oilVaporizationFac.numSamples()*5;
+        size_t n = oilVaporizationFac.numSamples();
         Scalar delta = (oilVaporizationFac.xMax() - oilVaporizationFac.xMin())/(n + 1);
 
         SamplingPoints pSatSamplePoints;
         Scalar Rv = 0;
         for (size_t i = 0; i <= n; ++ i) {
             Scalar pSat = oilVaporizationFac.xMin() + i*delta;
-            Rv = saturatedOilVaporizationFactor(regionIdx, /*temperature=*/Scalar(1e100), pSat);
+            Rv = saturatedOilVaporizationFactor(regionIdx, /*temperature=*/Scalar(1e30), pSat);
 
             std::pair<Scalar, Scalar> val(Rv, pSat);
             pSatSamplePoints.push_back(val);

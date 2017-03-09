@@ -125,9 +125,8 @@ public:
             // update the tables for the formation volume factor and for the gas
             // dissolution factor of saturated oil
             {
-                std::vector<double> tmpPressureColumn = saturatedTable.getColumn("P").vectorCopy();
-                std::vector<double> tmpGasSolubilityColumn = saturatedTable.getColumn("RS").vectorCopy();
-                std::vector<double> tmpMuColumn = saturatedTable.getColumn("MU").vectorCopy();
+                const auto& tmpPressureColumn = saturatedTable.getColumn("P");
+                const auto& tmpGasSolubilityColumn = saturatedTable.getColumn("RS");
 
                 invSatOilB.setXYContainers(tmpPressureColumn, invSatOilBArray);
                 satOilMu.setXYContainers(tmpPressureColumn, satOilMuArray);
@@ -483,10 +482,10 @@ public:
      */
     template <class Evaluation>
     Evaluation saturatedGasDissolutionFactor(unsigned regionIdx,
-                                              const Evaluation& /*temperature*/,
-                                              const Evaluation& pressure,
-                                              const Evaluation& oilSaturation,
-                                              Scalar maxOilSaturation) const
+                                             const Evaluation& /*temperature*/,
+                                             const Evaluation& pressure,
+                                             const Evaluation& oilSaturation,
+                                             Scalar maxOilSaturation) const
     {
         typedef typename Opm::MathToolbox<Evaluation> Toolbox;
         Evaluation tmp =
@@ -511,32 +510,53 @@ public:
      */
     template <class Evaluation>
     Evaluation saturationPressure(unsigned regionIdx,
-                                  const Evaluation& temperature,
+                                  const Evaluation& temperature OPM_UNUSED,
                                   const Evaluation& Rs) const
     {
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
+        const auto& RsTable = saturatedGasDissolutionFactorTable_[regionIdx];
+        static constexpr Scalar eps = std::numeric_limits<typename Toolbox::Scalar>::epsilon()*1e6;
+
         // use the saturation pressure function to get a pretty good initial value
         Evaluation pSat = saturationPressure_[regionIdx].eval(Rs, /*extrapolate=*/true);
-        Evaluation eps = pSat*1e-11;
 
         // Newton method to do the remaining work. If the initial
         // value is good, this should only take two to three
         // iterations...
+        bool onProbation = false;
         for (int i = 0; i < 20; ++i) {
-            const Evaluation& f = saturatedGasDissolutionFactor(regionIdx, temperature, pSat) - Rs;
-            const Evaluation& fPrime = ((saturatedGasDissolutionFactor(regionIdx, temperature, pSat + eps) - Rs) - f)/eps;
+            const Evaluation& f = RsTable.eval(pSat, /*extrapolate=*/true) - Rs;
+            const Evaluation& fPrime = RsTable.evalDerivative(pSat, /*extrapolate=*/true);
 
             const Evaluation& delta = f/fPrime;
+
+            if (!Opm::isfinite(delta)) {
+                 std::stringstream errlog;
+                 errlog << "Obtain delta with non-finite value for Rs = " << Rs << " in the "
+                        << i << "th iteration during finding saturation pressure iteratively";
+                 OpmLog::problem("wetgas NaN delta value", errlog.str());
+                 OPM_THROW_NOLOG(NumericalProblem, errlog.str());
+            }
+
             pSat -= delta;
 
-            Scalar absDelta = std::abs(Toolbox::scalarValue(delta));
-            if (absDelta < Toolbox::scalarValue(pSat) * 1e-10 || absDelta < 1e-4)
+            if (pSat < 0.0) {
+                // if the pressure is lower than 0 Pascals, we set it back to 0. if this
+                // happens twice, we give up and just return 0 Pa...
+                if (onProbation)
+                    return 0.0;
+
+                onProbation = true;
+                pSat = 0.0;
+            }
+
+            if (std::abs(Toolbox::scalarValue(delta)) < std::abs(Toolbox::scalarValue(pSat))*eps)
                 return pSat;
         }
 
         std::stringstream errlog;
-        errlog << "Could find the oil saturation pressure for X_o^G = " << Rs;
+        errlog << "Could find the oil saturation pressure for Rs = " << Rs;
         OpmLog::problem("liveoil saturationpressure", errlog.str());
         OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
@@ -548,7 +568,7 @@ private:
 
         // create the function representing saturation pressure depending of the mass
         // fraction in gas
-        size_t n = gasDissolutionFac.numSamples()*5;
+        size_t n = gasDissolutionFac.numSamples();
         Scalar delta = (gasDissolutionFac.xMax() - gasDissolutionFac.xMin())/(n + 1);
 
         SamplingPoints pSatSamplePoints;
