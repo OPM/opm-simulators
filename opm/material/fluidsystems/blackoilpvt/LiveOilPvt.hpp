@@ -125,9 +125,8 @@ public:
             // update the tables for the formation volume factor and for the gas
             // dissolution factor of saturated oil
             {
-                std::vector<double> tmpPressureColumn = saturatedTable.getColumn("P").vectorCopy();
-                std::vector<double> tmpGasSolubilityColumn = saturatedTable.getColumn("RS").vectorCopy();
-                std::vector<double> tmpMuColumn = saturatedTable.getColumn("MU").vectorCopy();
+                const auto& tmpPressureColumn = saturatedTable.getColumn("P");
+                const auto& tmpGasSolubilityColumn = saturatedTable.getColumn("RS");
 
                 invSatOilB.setXYContainers(tmpPressureColumn, invSatOilBArray);
                 satOilMu.setXYContainers(tmpPressureColumn, satOilMuArray);

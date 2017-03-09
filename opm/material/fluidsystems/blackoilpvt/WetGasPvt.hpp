@@ -92,12 +92,9 @@ public:
             auto& invSatGasBMu = inverseSaturatedGasBMu_[regionIdx];
             auto& oilVaporizationFac = saturatedOilVaporizationFactorTable_[regionIdx];
 
-            {
-                std::vector<double> pressure = saturatedTable.getColumn("PG").vectorCopy( );
-                std::vector<double> rv = saturatedTable.getColumn("RV").vectorCopy( );
-                oilVaporizationFac.setXYArrays(saturatedTable.numRows(),
-                                               pressure , rv );
-            }
+            oilVaporizationFac.setXYArrays(saturatedTable.numRows(),
+                                           saturatedTable.getColumn("PG"),
+                                           saturatedTable.getColumn("RV"));
 
             std::vector<Scalar> invSatGasBArray;
             std::vector<Scalar> invSatGasBMuArray;
