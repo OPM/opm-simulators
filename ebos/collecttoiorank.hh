@@ -247,7 +247,7 @@ namespace Ewoms
 #else
                     int elemIdx = elemMapper.map( element );
 #endif
-                    distributedCartesianIndex.push_back( gridManager.cartesianIndex( elemIdx ) );
+                    distributedCartesianIndex[elemIdx] = gridManager.cartesianIndex( elemIdx );
 
                     // only store interior element for collection
                     if( element.partitionType() == Dune :: InteriorEntity )
