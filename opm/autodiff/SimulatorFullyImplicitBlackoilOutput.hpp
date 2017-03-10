@@ -51,7 +51,6 @@
 #include <fstream>
 #include <thread>
 #include <map>
-#include <set>
 
 #include <boost/filesystem.hpp>
 
@@ -427,7 +426,7 @@ namespace Opm
                                                                   {"TEMP"     , UnitSystem::measure::temperature},
                                                                   {"RS"       , UnitSystem::measure::gas_oil_ratio},
                                                                   {"RV"       , UnitSystem::measure::oil_gas_ratio}};
-        std::set<std::string> extra_keys {"OPMEXTRA"};
+        std::map<std::string, bool> extra_keys {{"OPMEXTRA" , false}};
 
         if (restart_double_si_) {
             // Avoid any unit conversions, treat restart input as SI units.
