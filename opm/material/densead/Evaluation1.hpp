@@ -27,8 +27,8 @@
  *        of variables in the localized OPM automatic differentiation (AD) framework.
  */
 
-#ifndef OPM_LOCAL_AD_EVALUATION_HPP
-#define OPM_LOCAL_AD_EVALUATION_HPP
+#ifndef OPM_LOCAL_AD_EVALUATION_1_HPP
+#define OPM_LOCAL_AD_EVALUATION_1_HPP
 
 #include "Math.hpp"
 
@@ -48,9 +48,10 @@ namespace DenseAd {
  * \brief Represents a function evaluation and its derivatives w.r.t. a fixed set of
  *        variables.
  */
-template <class ValueT, int numVars>
-class Evaluation
+template <class ValueT>
+class Evaluation< ValueT, 1 >
 {
+    static constexpr int numVars = 1;
 public:
     //! field type
     typedef ValueT ValueType;
@@ -110,17 +111,7 @@ public:
     // set all derivatives to zero
     void clearDerivatives()
     {
-        for (int i = dstart_; i < dend_; ++i)
-            data_[ i ] = 0.0;
-    }
-
-    // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
-    template <class RhsValueType>
-    static Evaluation createVariable(const RhsValueType& value, int varPos)
-    {
-        // copy function value and set all derivatives to 0, except for the variable
-        // which is represented by the value (which is set to 1.0)
-        return Evaluation( value, varPos );
+        data_[ 1 ] = 0;
     }
 
 
@@ -135,6 +126,17 @@ public:
             result.data_[idx] = df_dg*b.data_[idx];
         }
         return result;
+    }
+
+
+
+    // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
+    template <class RhsValueType>
+    static Evaluation createVariable(const RhsValueType& value, int varPos)
+    {
+        // copy function value and set all derivatives to 0, except for the variable
+        // which is represented by the value (which is set to 1.0)
+        return Evaluation( value, varPos );
     }
 
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
@@ -158,17 +160,15 @@ public:
     // copy all derivatives from other
     void copyDerivatives(const Evaluation& other)
     {
-        for (int varIdx = dstart_; varIdx < dend_; ++varIdx)
-            data_[ varIdx ] = other.data_[ varIdx ];
+       data_[ 1 ] = other.data_[ 1 ];
     }
 
 
     // add value and derivatives from other to this values and derivatives
     Evaluation& operator+=(const Evaluation& other)
     {
-        // value and derivatives are added
-        for (int varIdx = 0; varIdx < length_; ++ varIdx)
-            data_[ varIdx ] += other.data_[ varIdx ];
+        data_[ 0 ] += other.data_[ 0 ];
+        data_[ 1 ] += other.data_[ 1 ];
 
         return *this;
     }
@@ -186,8 +186,8 @@ public:
     Evaluation& operator-=(const Evaluation& other)
     {
         // value and derivatives are subtracted
-        for (int idx = 0 ; idx < length_ ; ++ idx)
-            data_[idx] -= other.data_[idx];
+        data_[ 0 ] -= other.data_[ 0 ];
+        data_[ 1 ] -= other.data_[ 1 ];
 
         return *this;
     }
@@ -210,36 +210,31 @@ public:
         const ValueType u = value();
         const ValueType v = other.value();
 
-        data_[ valuepos_ ] *= v ;
-        for (int idx = dstart_; idx < dend_; ++idx) {
-            data_[idx] = data_[idx] * v + other.data_[idx] * u;
-        }
+        data_[ 0 ] = u * v ;
+        data_[ 1 ] = data_[ 1 ] * v + other.data_[ 1 ] * u;
 
         return *this;
     }
 
     // m(u*v)' = (v'u + u'v)
     template <class RhsValueType>
-    Evaluation& operator*=(const RhsValueType& other)
+    Evaluation& operator*=(RhsValueType other)
     {
-        // values and derivatives are multiplied
-        for (int idx = 0 ; idx < length_ ; ++ idx)
-            data_[idx] *= other;
-
+        data_[ 0 ] *= other;
+        data_[ 1 ] *= other;
         return *this;
     }
 
     // m(u*v)' = (v'u + u'v)
     Evaluation& operator/=(const Evaluation& other)
     {
-        // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u - u'v)/v^2.
+        // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u -
+        // u'v)/v^2.
         const ValueType v_vv = 1.0 / other.value();
         const ValueType u_vv = value() * v_vv * v_vv;
 
-        data_[ valuepos_ ] *= v_vv;
-        for (int idx = dstart_; idx < dend_; ++idx) {
-            data_[idx] = data_[idx] * v_vv - other.data_[idx] * u_vv;
-        }
+        data_[ 0 ]  *= v_vv;
+        data_[ 1 ]   = data_[ 1 ] * v_vv - other.data_[ 1 ] * u_vv ;
 
         return *this;
     }
@@ -249,8 +244,10 @@ public:
     Evaluation& operator/=(const RhsValueType& other)
     {
         // values and derivatives are divided
-        const ValueType factor = (1.0/other);
-        return this->operator *=( factor );
+        ValueType factor = (1.0/other);
+        data_[ 0 ] *= factor;
+        data_[ 1 ] *= factor;
+        return *this;
     }
 
     // add two evaluation objects
@@ -413,134 +410,7 @@ protected:
     std::array<ValueType, length_> data_;
 };
 
-template <class RhsValueType, class ValueType, int numVars>
-bool operator<(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{ return b > a; }
-
-template <class RhsValueType, class ValueType, int numVars>
-bool operator>(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{ return b < a; }
-
-template <class RhsValueType, class ValueType, int numVars>
-bool operator<=(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{ return b >= a; }
-
-template <class RhsValueType, class ValueType, int numVars>
-bool operator>=(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{ return b <= a; }
-
-template <class RhsValueType, class ValueType, int numVars>
-bool operator!=(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{ return a != b.value(); }
-
-template <class RhsValueType, class ValueType, int numVars>
-Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{
-    Evaluation<ValueType, numVars> result(b);
-
-    result += a;
-
-    return result;
-}
-
-template <class RhsValueType, class ValueType, int numVars>
-Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{
-    Evaluation<ValueType, numVars> result( a );
-    result -= b;
-    return result;
-}
-
-template <class RhsValueType, class ValueType, int numVars>
-Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{
-    return Evaluation<ValueType, numVars>::devide( a, b );
-}
-
-template <class RhsValueType, class ValueType, int numVars>
-Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
-{
-    Evaluation<ValueType, numVars> result( b );
-    result *= a;
-    return result;
-}
-
-template <class ValueType, int numVars>
-std::ostream& operator<<(std::ostream& os, const Evaluation<ValueType, numVars>& eval)
-{
-    os << eval.value();
-    return os;
-}
-
-} // namespace DenseAd
-} // namespace Opm
-
-// In Dune 2.3, the Evaluation.hpp header must be included before the fmatrix.hh
-// header. Dune 2.4+ does not suffer from this because of some c++-foo.
-//
-// for those who are wondering: in C++ function templates cannot be partially
-// specialized, and function argument overloads must be known _before_ they are used. The
-// latter is what we do for the 'Dune::fvmeta::absreal()' function.
-//
-// consider the following test program:
-//
-// double foo(double i)
-// { return i; }
-//
-// void bar()
-// { std::cout << foo(0) << "\n"; }
-//
-// int foo(int i)
-// { return i + 1; }
-//
-// void foobar()
-// { std::cout << foo(0) << "\n"; }
-//
-// this will print '0' for bar() and '1' for foobar()...
-#if !(DUNE_VERSION_NEWER(DUNE_COMMON, 2,4))
-
-namespace Opm {
-namespace DenseAd {
-template <class ValueType, int numVars>
-Evaluation<ValueType, numVars> abs(const Evaluation<ValueType, numVars>&);
-}}
-
-namespace std {
-template <class ValueType, int numVars>
-const Opm::DenseAd::Evaluation<ValueType, numVars> abs(const Opm::DenseAd::Evaluation<ValueType, numVars>& x)
-{ return Opm::DenseAd::abs(x); }
-
-} // namespace std
-
-#if defined DUNE_DENSEMATRIX_HH
-#warning \
- "Due to some C++ peculiarity regarding function overloads, the 'Evaluation.hpp'" \
- "header file must be included before Dune's 'densematrix.hh' for Dune < 2.4. " \
- "(If Evaluations are to be used in conjunction with a dense matrix.)"
-#endif
-
-#endif
-
-// this makes the Dune matrix/vector classes happy...
-#include <dune/common/ftraits.hh>
-
-namespace Dune {
-template <class ValueType, int numVars>
-struct FieldTraits<Opm::DenseAd::Evaluation<ValueType, numVars> >
-{
-public:
-    typedef Opm::DenseAd::Evaluation<ValueType, numVars> field_type;
-    // setting real_type to field_type here potentially leads to slightly worse
-    // performance, but at least it makes things compile.
-    typedef field_type real_type;
-};
-
+} // namespace DenseAD
 } // namespace Dune
-
-#include <opm/material/densead/Evaluation1.hpp>
-#include <opm/material/densead/Evaluation2.hpp>
-#include <opm/material/densead/Evaluation3.hpp>
-#include <opm/material/densead/Evaluation6.hpp>
-#include <opm/material/densead/Evaluation12.hpp>
 
 #endif
