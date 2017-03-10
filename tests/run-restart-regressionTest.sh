@@ -25,6 +25,7 @@ ${BINPATH}/${EXE_NAME} ${TEST_ARGS}_RESTART.DATA timestep.adaptive=false
 test $? -eq 0 || exit 1
 
 ecode=0
+echo "=== Executing comparison for summary file ==="
 ${COMPARE_SUMMARY_COMMAND} -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/${FILENAME}_RESTART ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
@@ -32,6 +33,7 @@ then
   `dirname $0`/analyze_summary_failure.sh ${COMPARE_SUMMARY_COMMAND} -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/${FILENAME}_RESTART ${ABS_TOL} ${REL_TOL}
 fi
 
+echo "=== Executing comparison for restart file ==="
 ${COMPARE_ECL_COMMAND} -l ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/${FILENAME}_RESTART ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
