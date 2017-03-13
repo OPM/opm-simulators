@@ -22,6 +22,7 @@ ${BINPATH}/${EXE_NAME} ${TEST_ARGS}
 cd ..
 
 ecode=0
+echo "=== Executing comparison for summary file ==="
 ${COMPARE_SUMMARY_COMMAND} -r ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
@@ -29,6 +30,7 @@ then
   `dirname $0`/analyze_summary_failure.sh ${COMPARE_SUMMARY_COMMAND} -r ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
+echo "=== Executing comparison for restart file ==="
 ${COMPARE_ECL_COMMAND}  ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
@@ -36,6 +38,7 @@ then
   `dirname $0`/analyze_ecl_failure.sh ${COMPARE_ECL_COMMAND} UNRST ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
+echo "=== Executing comparison for init file ==="
 ${COMPARE_ECL_COMMAND} -t INIT ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
