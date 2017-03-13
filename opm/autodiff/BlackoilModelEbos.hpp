@@ -633,7 +633,6 @@ namespace Opm {
                 double step = dsMax()/maxVal;
                 step = std::min(step, 1.0);
 
-
                 const Opm::PhaseUsage& pu = fluid_.phaseUsage();
                 if (active_[Water]) {
                     double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
@@ -668,7 +667,6 @@ namespace Opm {
                     double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
                     double& rs = reservoir_state.gasoilratio()[cell_idx];
                     double& rv = reservoir_state.rv()[cell_idx];
-
 
                     // phase translation sg <-> rs
                     const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
@@ -706,9 +704,6 @@ namespace Opm {
                             break;
                         }
 
-
-
-
                         const double& rsSat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                         if (rs > ( rsSat * (1+epsilon) ) ) {
                             reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
@@ -727,6 +722,7 @@ namespace Opm {
                             //std::cout << "watonly rv -> sg" << cell_idx << std::endl;
                             break;
                         }
+
                         const double& rvSat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), reservoir_state.temperature()[cell_idx], reservoir_state.pressure()[cell_idx]);
                         if (rv > rvSat * (1+epsilon) ) {
                             reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasAndOil;
@@ -1382,18 +1378,15 @@ namespace Opm {
             return fip_;
         }
 
-
-
         const Simulator& ebosSimulator() const
         { return ebosSimulator_; }
 
-      protected:
+    protected:
         const ISTLSolverType& istlSolver() const
         {
             assert( istlSolver_ );
             return *istlSolver_;
         }
-
 
         // ---------  Data members  ---------
 
@@ -1427,10 +1420,6 @@ namespace Opm {
         double current_relaxation_;
         BVector dx_old_;
         mutable FIPDataType fip_;
-
-
-
-        // ---------  Protected methods  ---------
 
     public:
 
@@ -1714,9 +1703,7 @@ namespace Opm {
                 std::cout << "equation scaling not suported yet" << std::endl;
                 //updateEquationsScaling();
             }
-
         }
-
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
