@@ -32,7 +32,7 @@
 #include <opm/autodiff/StandardWellsDense.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/SimFIBODetails.hpp>
-
+#include <opm/autodiff/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/utility/StopWatch.hpp>
@@ -324,16 +324,28 @@ public:
             // update timing.
             report.solver_time += solver_timer.secsSinceStart();
 
+            if ( output_writer_.output() ) {
+                if ( output_writer_.isIORank() )
+                {
+                    stepReport.reportParam(tstep_os);
+                }
+            }
+
+            // Increment timer, remember well state.
+            ++timer;
+
             // Compute current fluid in place.
             std::vector<std::vector<double>> currentFluidInPlace;
             currentFluidInPlace = solver->computeFluidInPlace(fipnum);
             std::vector<double> currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
+            const std::string version = moduleVersionName();
 
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlaceTotals);
 
             if (terminal_output_ )
             {
+                outputTimestampFIP(timer, version);
                 outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
                 for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
                     outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
@@ -345,16 +357,6 @@ public:
                     "total solver time " + std::to_string(report.solver_time) + " seconds.";
                 OpmLog::note(msg);
             }
-
-            if ( output_writer_.output() ) {
-                if ( output_writer_.isIORank() )
-                {
-                    stepReport.reportParam(tstep_os);
-                }
-            }
-
-            // Increment timer, remember well state.
-            ++timer;
 
             // write simulation state at the report stage
             Dune::Timer perfTimer;
@@ -690,6 +692,20 @@ protected:
         return totals;
     }
 
+    
+    void outputTimestampFIP(SimulatorTimer& timer, const std::string version)
+    {   
+        std::ostringstream ss;
+        boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
+        ss.imbue(std::locale(std::locale::classic(), facet));
+        ss << "\n                              **************************************************************************\n"
+        << "  Balance  at" << std::setw(10) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day) << "  Days"
+        << " *" << std::setw(30) << eclState().getTitle() << "                                          *\n"
+        << "  Report " << std::setw(4) << timer.reportStepNum() << "    " << timer.currentDateTime()
+        << "  *                                             Flow  version " << std::setw(11) << version << "  *\n"
+        << "                              **************************************************************************\n";
+        OpmLog::note(ss.str());
+    }
 
 
     void outputFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg)
