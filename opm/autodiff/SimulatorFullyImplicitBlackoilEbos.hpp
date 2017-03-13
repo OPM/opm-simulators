@@ -250,6 +250,9 @@ public:
 
             auto solver = createSolver(well_model);
 
+            std::vector<std::vector<double>> currentFluidInPlace;
+            std::vector<double> currentFluidInPlaceTotals;
+
             // Compute orignal fluid in place if this has not been done yet
             if (originalFluidInPlace.empty()) {
                 solver->model().convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
@@ -259,12 +262,22 @@ public:
                 originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace, state);
                 FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
                 FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
+
+                currentFluidInPlace = originalFluidInPlace;
+                currentFluidInPlaceTotals = originalFluidInPlaceTotals;
             }
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
                 Dune::Timer perfTimer;
                 perfTimer.start();
+
+                if (terminal_output_) {
+                    outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
+                    for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
+                        outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
+                    }
+                }
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
@@ -335,9 +348,9 @@ public:
             ++timer;
 
             // Compute current fluid in place.
-            std::vector<std::vector<double>> currentFluidInPlace;
             currentFluidInPlace = solver->computeFluidInPlace(fipnum);
-            std::vector<double> currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
+            currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
+
             const std::string version = moduleVersionName();
 
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
