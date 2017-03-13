@@ -32,7 +32,7 @@
 #include <opm/autodiff/StandardWellsDense.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/SimFIBODetails.hpp>
-
+#include <opm/autodiff/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/core/utility/initHydroCarbonState.hpp>
 #include <opm/core/utility/StopWatch.hpp>
@@ -328,23 +328,10 @@ public:
             std::vector<std::vector<double>> currentFluidInPlace;
             currentFluidInPlace = solver->computeFluidInPlace(fipnum);
             std::vector<double> currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
+			      const std::string version = moduleVersionName();
 
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlaceTotals);
-
-            if (terminal_output_ )
-            {
-                outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
-                for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
-                    outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
-                }
-
-                std::string msg;
-                msg =
-                    "Time step took " + std::to_string(stepReport.solver_time) + " seconds; "
-                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
-                OpmLog::note(msg);
-            }
 
             if ( output_writer_.output() ) {
                 if ( output_writer_.isIORank() )
@@ -355,6 +342,32 @@ public:
 
             // Increment timer, remember well state.
             ++timer;
+			
+            if (terminal_output_ )
+            {
+                std::ostringstream ss;
+                boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
+                ss.imbue(std::locale(std::locale::classic(), facet));
+                ss <<"\n                              **************************************************************************   "
+                   <<"\n  Balance  at"<< std::setw(10) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)<<"  Days"
+                   << " *" << std::setw(30) <<eclState().getTitle()<<"                                          * "
+                   << "FLOW  Version " + version + "\n"
+                   << "  Report "<< std::setw(4) <<timer.reportStepNum() - 1<< "    " <<timer.currentDateTime()
+                   << "  *                                                                        *\n"
+                   << "                              **************************************************************************\n";
+                OpmLog::note(ss.str());	      
+
+                outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
+                for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
+                    outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
+                }
+	
+                std::string msg;
+                msg =
+                    "Time step took " + std::to_string(stepReport.solver_time) + " seconds; "
+                    "total solver time " + std::to_string(report.solver_time) + " seconds.";
+                OpmLog::note(msg);
+            }			
 
             // write simulation state at the report stage
             Dune::Timer perfTimer;
