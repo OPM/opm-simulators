@@ -68,52 +68,52 @@ static const char* fam1DeckString =
     "GRID\n"
     "\n"
     "DX\n"
-    "   	300*1000 /\n"
+    "       300*1000 /\n"
     "DY\n"
-    "	300*1000 /\n"
+    "   300*1000 /\n"
     "DZ\n"
-    "	100*20 100*30 100*50 /\n"
+    "   100*20 100*30 100*50 /\n"
     "\n"
     "TOPS\n"
-    "	100*8325 /\n"
+    "   100*8325 /\n"
     "\n"
     "\n"
     "PROPS\n"
     "\n"
     "SWOF\n"
-    "0.12	0    		 	1	0\n"
-    "0.18	4.64876033057851E-008	1	0\n"
-    "0.24	0.000000186		0.997	0\n"
-    "0.3	4.18388429752066E-007	0.98	0\n"
-    "0.36	7.43801652892562E-007	0.7	0\n"
-    "0.42	1.16219008264463E-006	0.35	0\n"
-    "0.48	1.67355371900826E-006	0.2	0\n"
-    "0.54	2.27789256198347E-006	0.09	0\n"
-    "0.6	2.97520661157025E-006	0.021	0\n"
-    "0.66	3.7654958677686E-006	0.01	0\n"
-    "0.72	4.64876033057851E-006	0.001	0\n"
-    "0.78	0.000005625		0.0001	0\n"
-    "0.84	6.69421487603306E-006	0	0\n"
-    "0.91	8.05914256198347E-006	0	0\n"
-    "1	    0.984 			0	0 /\n"
+    "0.12   0               1   0\n"
+    "0.18   4.64876033057851E-008   1   0\n"
+    "0.24   0.000000186     0.997   0\n"
+    "0.3    4.18388429752066E-007   0.98    0\n"
+    "0.36   7.43801652892562E-007   0.7 0\n"
+    "0.42   1.16219008264463E-006   0.35    0\n"
+    "0.48   1.67355371900826E-006   0.2 0\n"
+    "0.54   2.27789256198347E-006   0.09    0\n"
+    "0.6    2.97520661157025E-006   0.021   0\n"
+    "0.66   3.7654958677686E-006    0.01    0\n"
+    "0.72   4.64876033057851E-006   0.001   0\n"
+    "0.78   0.000005625     0.0001  0\n"
+    "0.84   6.69421487603306E-006   0   0\n"
+    "0.91   8.05914256198347E-006   0   0\n"
+    "1      0.984           0   0 /\n"
     "\n"
     "\n"
     "SGOF\n"
-    "0	0	1	0\n"
-    "0.001	0	1	0\n"
-    "0.02	0	0.997	0\n"
-    "0.05	0.005	0.980	0\n"
-    "0.12	0.025	0.700	0\n"
-    "0.2	0.075	0.350	0\n"
-    "0.25	0.125	0.200	0\n"
-    "0.3	0.190	0.090	0\n"
-    "0.4	0.410	0.021	0\n"
-    "0.45	0.60	0.010	0\n"
-    "0.5	0.72	0.001	0\n"
-    "0.6	0.87	0.0001	0\n"
-    "0.7	0.94	0.000	0\n"
-    "0.85	0.98	0.000	0\n"
-    "0.88	0.984	0.000	0 /\n";
+    "0  0   1   0\n"
+    "0.001  0   1   0\n"
+    "0.02   0   0.997   0\n"
+    "0.05   0.005   0.980   0\n"
+    "0.12   0.025   0.700   0\n"
+    "0.2    0.075   0.350   0\n"
+    "0.25   0.125   0.200   0\n"
+    "0.3    0.190   0.090   0\n"
+    "0.4    0.410   0.021   0\n"
+    "0.45   0.60    0.010   0\n"
+    "0.5    0.72    0.001   0\n"
+    "0.6    0.87    0.0001  0\n"
+    "0.7    0.94    0.000   0\n"
+    "0.85   0.98    0.000   0\n"
+    "0.88   0.984   0.000   0 /\n";
 
 static const char* fam2DeckString =
     "RUNSPEC\n"
@@ -135,62 +135,62 @@ static const char* fam2DeckString =
     "GRID\n"
     "\n"
     "DX\n"
-    "   	300*1000 /\n"
+    "       300*1000 /\n"
     "DY\n"
-    "	300*1000 /\n"
+    "   300*1000 /\n"
     "DZ\n"
-    "	100*20 100*30 100*50 /\n"
+    "   100*20 100*30 100*50 /\n"
     "\n"
     "TOPS\n"
-    "	100*8325 /\n"
+    "   100*8325 /\n"
     "\n"
     "\n"
     "PROPS\n"
     "\n"
     "PVTW\n"
-    "    	4017.55 1.038 3.22E-6 0.318 0.0 /\n"
+    "       4017.55 1.038 3.22E-6 0.318 0.0 /\n"
     "\n"
     "\n"
     "SWFN\n"
-    "0.12	0    		 	0\n"
-    "0.18	4.64876033057851E-008	0\n"
-    "0.24	0.000000186		0\n"
-    "0.3	4.18388429752066E-007	0\n"
-    "0.36	7.43801652892562E-007	0\n"
-    "0.42	1.16219008264463E-006	0\n"
-    "0.48	1.67355371900826E-006	0\n"
-    "0.54	2.27789256198347E-006	0\n"
-    "0.6	2.97520661157025E-006	0\n"
-    "0.66	3.7654958677686E-006	0\n"
-    "0.72	4.64876033057851E-006	0\n"
-    "0.78	0.000005625		0\n"
-    "0.84	6.69421487603306E-006	0\n"
-    "0.91	8.05914256198347E-006	0\n"
-    "1	0.984			0 /\n"
+    "0.12   0               0\n"
+    "0.18   4.64876033057851E-008   0\n"
+    "0.24   0.000000186     0\n"
+    "0.3    4.18388429752066E-007   0\n"
+    "0.36   7.43801652892562E-007   0\n"
+    "0.42   1.16219008264463E-006   0\n"
+    "0.48   1.67355371900826E-006   0\n"
+    "0.54   2.27789256198347E-006   0\n"
+    "0.6    2.97520661157025E-006   0\n"
+    "0.66   3.7654958677686E-006    0\n"
+    "0.72   4.64876033057851E-006   0\n"
+    "0.78   0.000005625     0\n"
+    "0.84   6.69421487603306E-006   0\n"
+    "0.91   8.05914256198347E-006   0\n"
+    "1  0.984           0 /\n"
     "\n"
     "\n"
     "SGFN\n"
-    "0	0	0\n"
-    "0.001	0	0\n"
-    "0.02	0	0\n"
-    "0.05	0.005	0\n"
-    "0.12	0.025	0\n"
-    "0.2	0.075	0\n"
-    "0.25	0.125	0\n"
-    "0.3	0.190	0\n"
-    "0.4	0.410	0\n"
-    "0.45	0.60	0\n"
-    "0.5	0.72	0\n"
-    "0.6	0.87	0\n"
-    "0.7	0.94	0\n"
-    "0.85	0.98	0\n"
-    "0.88	0.984	0 /\n"
+    "0  0   0\n"
+    "0.001  0   0\n"
+    "0.02   0   0\n"
+    "0.05   0.005   0\n"
+    "0.12   0.025   0\n"
+    "0.2    0.075   0\n"
+    "0.25   0.125   0\n"
+    "0.3    0.190   0\n"
+    "0.4    0.410   0\n"
+    "0.45   0.60    0\n"
+    "0.5    0.72    0\n"
+    "0.6    0.87    0\n"
+    "0.7    0.94    0\n"
+    "0.85   0.98    0\n"
+    "0.88   0.984   0 /\n"
     "\n"
     "SOF3\n"
     "    0        0        0 \n"
     "    0.03     0        0 \n"
     "    0.09     0        0 \n"
-    "    0.16     0	      0 \n"
+    "    0.16     0       0 \n"
     "    0.18     1*       0 \n"
     "    0.22     0.0001   1* \n"
     "    0.28     0.001    0.0001 \n"
@@ -212,6 +212,82 @@ static const char* fam2DeckString =
     "    0.879    1        1 \n"
     "    0.88     1        1    /  \n"
     "\n";
+
+//Taken as a mix of the SPE1 cases above, and Norne to enable hysteresis
+static const char* hysterDeckString =
+    "RUNSPEC\n"
+    "\n"
+    "DIMENS\n"
+    "   10 10 3 /\n"
+    "\n"
+    "TABDIMS\n"
+    "/\n"
+    "\n"
+    "OIL\n"
+    "GAS\n"
+    "WATER\n"
+    "\n"
+    "DISGAS\n"
+    "\n"
+    "FIELD\n"
+    "\n"
+    "GRID\n"
+    "\n"
+    "DX\n"
+    "       300*1000 /\n"
+    "DY\n"
+    "   300*1000 /\n"
+    "DZ\n"
+    "   100*20 100*30 100*50 /\n"
+    "\n"
+    "TOPS\n"
+    "   100*8325 /\n"
+    "\n"
+    "\n"
+    "EHYSTR\n"
+    "0.1   0  0.1 1* KR /\n"
+    "\n"
+    "SATOPTS\n"
+    "HYSTER /\n"
+    "\n"
+    "PROPS\n"
+    "\n"
+    "SWOF\n"
+    "0.12   0               1   0\n"
+    "0.18   4.64876033057851E-008   1   0\n"
+    "0.24   0.000000186     0.997   0\n"
+    "0.3    4.18388429752066E-007   0.98    0\n"
+    "0.36   7.43801652892562E-007   0.7 0\n"
+    "0.42   1.16219008264463E-006   0.35    0\n"
+    "0.48   1.67355371900826E-006   0.2 0\n"
+    "0.54   2.27789256198347E-006   0.09    0\n"
+    "0.6    2.97520661157025E-006   0.021   0\n"
+    "0.66   3.7654958677686E-006    0.01    0\n"
+    "0.72   4.64876033057851E-006   0.001   0\n"
+    "0.78   0.000005625     0.0001  0\n"
+    "0.84   6.69421487603306E-006   0   0\n"
+    "0.91   8.05914256198347E-006   0   0\n"
+    "1      0.984           0   0 /\n"
+    "\n"
+    "\n"
+    "SGOF\n"
+    "0  0   1   0\n"
+    "0.001  0   1   0\n"
+    "0.02   0   0.997   0\n"
+    "0.05   0.005   0.980   0\n"
+    "0.12   0.025   0.700   0\n"
+    "0.2    0.075   0.350   0\n"
+    "0.25   0.125   0.200   0\n"
+    "0.3    0.190   0.090   0\n"
+    "0.4    0.410   0.021   0\n"
+    "0.45   0.60    0.010   0\n"
+    "0.5    0.72    0.001   0\n"
+    "0.6    0.87    0.0001  0\n"
+    "0.7    0.94    0.000   0\n"
+    "0.85   0.98    0.000   0\n"
+    "0.88   0.984   0.000   0 /\n";
+
+
 
 template <class Scalar>
 inline void testAll()
@@ -280,8 +356,24 @@ inline void testAll()
             OPM_THROW(std::logic_error,
                       "Discrepancy between the deck and the EclMaterialLawManager");
 
+        const auto hysterDeck = parser.parseString(hysterDeckString, parseContext);
+        const Opm::EclipseState hysterEclState(hysterDeck, parseContext);
+
+        Opm::EclMaterialLawManager<MaterialTraits> hysterMaterialLawManager;
+        hysterMaterialLawManager.initFromDeck(hysterDeck, hysterEclState, compressedToCartesianIdx);
+
+        if (hysterMaterialLawManager.enableEndPointScaling())
+            OPM_THROW(std::logic_error,
+                      "Discrepancy between the deck and the EclMaterialLawManager");
+
+        if (hysterMaterialLawManager.enableHysteresis() != true)
+            OPM_THROW(std::logic_error,
+                      "Discrepancy between the deck and the EclMaterialLawManager");
+
+
+
         // make sure that the saturation functions for both keyword families are
-        // identical
+        // identical, and that setting and getting the hysteresis parameters works
         for (unsigned elemIdx = 0; elemIdx < n; ++ elemIdx) {
             for (int i = -10; i < 120; ++ i) {
                 Scalar Sw = Scalar(i)/100;
@@ -318,7 +410,43 @@ inline void testAll()
                                       "Discrepancy between capillary pressure of family 1 and family 2 keywords");
                         if (std::abs(krFam1[phaseIdx] - krFam2[phaseIdx]) > 1e-1)
                             OPM_THROW(std::logic_error,
-                                      "Discrepancy between capillary pressure of family 1 and family 2 keywords");
+                                      "Discrepancy between relative permeabilities of family 1 and family 2 keywords");
+                    }
+
+
+                    // This should ideally test each of the materials (stone1, stone2, default, two-phase),
+                    // but currently only tests default
+                    const Scalar pcSwMdc_in[2] = { 1.0/2.0, 1.0/3.0 };
+                    const Scalar krnSwMdc_in[2] = { 1.0/5.0, 1.0/7.0 };
+                    hysterMaterialLawManager.setOilWaterHysteresisParams(
+                            pcSwMdc_in[0],
+                            krnSwMdc_in[0],
+                            elemIdx);
+                    hysterMaterialLawManager.setGasOilHysteresisParams(
+                            pcSwMdc_in[1],
+                            krnSwMdc_in[1],
+                            elemIdx);
+
+                    Scalar pcSwMdc_out[2];
+                    Scalar krnSwMdc_out[2];
+                    Scalar deltaSwImbKrn_out[2];
+                    hysterMaterialLawManager.oilWaterHysteresisParams(
+                            pcSwMdc_out[0],
+                            krnSwMdc_out[0],
+                            elemIdx);
+                    hysterMaterialLawManager.gasOilHysteresisParams(
+                            pcSwMdc_out[1],
+                            krnSwMdc_out[1],
+                            elemIdx);
+
+                    for (unsigned phasePairIdx = 0; phasePairIdx < 2; ++ phasePairIdx) {
+                        if ((pcSwMdc_in[phasePairIdx] - pcSwMdc_out[phasePairIdx]) != 0.0)
+                            OPM_THROW(std::logic_error,
+                                      "Hysteresis parameters did not propagate correctly");
+                        if ((krnSwMdc_in[phasePairIdx] - krnSwMdc_out[phasePairIdx]) != 0.0)
+                            OPM_THROW(std::logic_error,
+                                      "Hysteresis parameters did not propagate correctly");
+
                     }
                 }
             }

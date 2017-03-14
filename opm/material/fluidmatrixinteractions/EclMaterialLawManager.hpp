@@ -242,6 +242,50 @@ public:
         MaterialLaw::updateHysteresis(*threePhaseParams, fluidState);
     }
 
+    void oilWaterHysteresisParams(Scalar& pcSwMdc,
+                                  Scalar& krnSwMdc,
+                                  unsigned elemIdx) const
+    {
+        if (!enableHysteresis()) {
+            OPM_THROW(std::runtime_error, "Cannot get hysteresis parameters if hysteresis not enabled.");
+        }
+        const auto& params = materialLawParams(elemIdx);
+        MaterialLaw::oilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
+    }
+
+    void setOilWaterHysteresisParams(const Scalar& pcSwMdc,
+                                     const Scalar& krnSwMdc,
+                                     unsigned elemIdx)
+    {
+        if (!enableHysteresis()) {
+            OPM_THROW(std::runtime_error, "Cannot set hysteresis parameters if hysteresis not enabled.");
+        }
+        auto& params = materialLawParams(elemIdx);
+        MaterialLaw::setOilWaterHysteresisParams(pcSwMdc, krnSwMdc, params);
+    }
+
+    void gasOilHysteresisParams(Scalar& pcSwMdc,
+                                Scalar& krnSwMdc,
+                                unsigned elemIdx) const
+    {
+        if (!enableHysteresis()) {
+            OPM_THROW(std::runtime_error, "Cannot get hysteresis parameters if hysteresis not enabled.");
+        }
+        const auto& params = materialLawParams(elemIdx);
+        MaterialLaw::gasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
+    }
+
+    void setGasOilHysteresisParams(const Scalar& pcSwMdc,
+                                   const Scalar& krnSwMdc,
+                                   unsigned elemIdx)
+    {
+        if (!enableHysteresis()) {
+            OPM_THROW(std::runtime_error, "Cannot set hysteresis parameters if hysteresis not enabled.");
+        }
+        auto& params = materialLawParams(elemIdx);
+        MaterialLaw::setGasOilHysteresisParams(pcSwMdc, krnSwMdc, params);
+    }
+
     EclEpsScalingPoints<Scalar>& oilWaterScaledEpsPointsDrainage(unsigned elemIdx)
     {
         auto& materialParams = *materialLawParams_[elemIdx];
