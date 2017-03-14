@@ -774,11 +774,23 @@ namespace Opm {
             R_sum.resize(np);
             maxNormWell.resize(np);
 
+            const std::vector<double>* mask = nullptr;
+
+#if HAVE_MPI
+            if ( comm.size() > 1 )
+            {
+                // mask[c] is 1 if we need to compute something in parallel
+                const auto & pinfo =
+                        boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation());
+                mask = &pinfo.updateOwnerMask( B[ 0 ] );
+            }
+#endif
+
             // computation
             for ( int idx = 0; idx < np; ++idx )
             {
-                B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(), 0.0 ) / double(ncGlobal);
-                R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(), 0.0 );
+                B_avg[idx] = accumulateMaskedValues(B[ idx ], mask) / double(ncGlobal);
+                R_sum[idx] = accumulateMaskedValues(R[ idx ], mask);
                 maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
 
                 assert(np >= np);
@@ -790,8 +802,8 @@ namespace Opm {
                 }
             }
 
-            // Compute total pore volume
-            double pvSum = std::accumulate(pv.begin(), pv.end(), 0.0);
+            // Compute total pore volume (use only owned entries)
+            double pvSum = accumulateMaskedValues(pv, mask);
 
             if( comm.size() > 1 )
             {
