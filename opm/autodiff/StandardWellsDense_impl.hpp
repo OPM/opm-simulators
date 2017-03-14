@@ -1664,16 +1664,22 @@ namespace Opm {
 
         for (int w = 0; w < nw; ++w) {
             // bhp needs to be determined for the well potential calculation
+            // There can be more than one BHP/THP constraints.
+            // TODO: there is an option to ignore the THP limit when calculating well potentials,
+            // we are not handling it for the moment, while easy to incorporate
 
-            // default bhp constraints
+            // the bhp will be used to compute well potentials
+            double bhp;
+
+            // type of the well, INJECTOR or PRODUCER
             const WellType& well_type = wells().type[w];
-            double bhp = 0.;
+            // initial bhp value, making the value not usable
             switch(well_type) {
                 case INJECTOR:
-                    bhp = 6.895e8; // defaulted high limit
+                    bhp = std::numeric_limits<double>::max();
                     break;
                 case PRODUCER:
-                    bhp = 1.013e5; // defaulted low limit
+                    bhp = -std::numeric_limits<double>::max();
                     break;
                 default:
                     OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[w]);
@@ -1681,51 +1687,32 @@ namespace Opm {
 
             // the well controls
             const WellControls* well_control = wells().ctrls[w];
-            // The number of the well controls
+            // The number of the well controls/constraints
             const int nwc = well_controls_get_num(well_control);
 
-            // Finding BHP control or THP controls, not sure whether there can be more than one BHP controls, THP can be more than one
-            // IF we find a THP control, we calculate the BHP value.
-            // TODO: there is option to ignore the THP limit when calculating well potentials,
-            // we are not handling it for the moment.
-
-            // getting the bhp constraints from the well control
-            double bhp_from_wellcontrol = -1.e5; // intial nagative value, assumming we can not specify negative BHP constraints
             for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                // finding a BHP constraint
                 if (well_controls_iget_type(well_control, ctrl_index) == BHP) {
                     // get the bhp constraint value, it should always be postive assummingly
                     const double bhp_target = well_controls_iget_target(well_control, ctrl_index);
 
-                    // assuming we can not specify negative bhp constraints
-                    assert(bhp_target > 0.);
-
-                    if (bhp_from_wellcontrol < 0.) {
-                        bhp_from_wellcontrol = bhp_target; // first time finding a bhp constraint
-                    } else {
-                        switch(well_type) {
-                            case INJECTOR: // using the lower bhp contraint from Injectors
-                                if (bhp_target < bhp_from_wellcontrol) {
-                                    bhp_from_wellcontrol = bhp_target;
-                                }
-                                break;
-                            case PRODUCER:
-                                if (bhp_target > bhp_from_wellcontrol) {
-                                    bhp_from_wellcontrol = bhp_target;
-                                }
-                                break;
-                            default:
-                                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[w]);
-                        } // end of switch
-                    } // end of else
+                    switch(well_type) {
+                        case INJECTOR: // using the lower bhp contraint from Injectors
+                            if (bhp_target < bhp) {
+                                bhp = bhp_target;
+                            }
+                            break;
+                        case PRODUCER:
+                            if (bhp_target > bhp) {
+                                bhp = bhp_target;
+                            }
+                            break;
+                        default:
+                            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[w]);
+                    } // end of switch
                 }
-            }
 
-            if (bhp_from_wellcontrol > 0.) { // finding at least one bhp constaint
-                bhp = bhp_from_wellcontrol;
-            }
-
-            // checking for bhp contraints resulting from thp constraints
-            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                // finding a THP constraint
                 if (well_controls_iget_type(well_control, ctrl_index) == THP) {
                     double aqua = 0.0;
                     double liquid = 0.0;
@@ -1767,14 +1754,17 @@ namespace Opm {
                                           wellPerforationDensities()[first_perf], gravity_);
                         const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
                         // apply the strictest of the bhp controlls i.e. largest bhp for producers
-                            if (bhp_calculated > bhp) {
-                                bhp = bhp_calculated;
-                            }
+                        if (bhp_calculated > bhp) {
+                            bhp = bhp_calculated;
+                        }
                     } else {
                        OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
                     }
                 }
             }
+
+            // there should be always some avaible bhp/thp constraints there
+            assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
             // Should we consider crossflow when calculating well potentionals?
             const bool allow_cf = allow_cross_flow(w, ebosSimulator);
