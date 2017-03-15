@@ -97,6 +97,7 @@ add_test_compareECLFiles(spe1 SPE1CASE2 flow ${abs_tol} ${rel_tol} compareECLFil
 add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe3 SPE3CASE1 flow ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(msw_2d_h 2D_H__ flow_multisegment ${abs_tol} ${rel_tol} compareECLFiles "")
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
