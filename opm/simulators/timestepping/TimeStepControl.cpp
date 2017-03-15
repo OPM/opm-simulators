@@ -177,16 +177,20 @@ namespace Opm
     double PIDAndIterationCountTimeStepControl::
     computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange,  const double simulationTimeElapsed ) const
     {
-        double dtEstimate = BaseType :: computeTimeStepSize( dt, iterations, relChange, simulationTimeElapsed);
+        double dtEstimatePID = BaseType :: computeTimeStepSize( dt, iterations, relChange, simulationTimeElapsed);
 
-        // further reduce step size if to many iterations were used
-        if( iterations > target_iterations_ )
-        {
-            // if iterations was the same or dts were the same, do some magic
-            dtEstimate *= double( target_iterations_ ) / double(iterations);
+        // adjust timesteps based on target iteration
+        double dtEstimateIter;
+        if (iterations > target_iterations_) {
+            double off_target_fraction = double(iterations - target_iterations_) / target_iterations_;
+            dtEstimateIter = dt / (1.0 + off_target_fraction);
+        } else {
+            double off_target_fraction = double(target_iterations_ - iterations) / target_iterations_;
+            // Be a bit more careful when increasing. The 1.2 factor is from ebos.
+            dtEstimateIter = dt * (1.0 + off_target_fraction / 1.2);
         }
 
-        return dtEstimate;
+        return std::min(dtEstimatePID, dtEstimateIter);
     }
 
 } // end namespace Opm

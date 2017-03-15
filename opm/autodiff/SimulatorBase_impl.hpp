@@ -105,9 +105,9 @@ namespace Opm
         std::ofstream tstep_os(tstep_filename.c_str());
 
         const auto& schedule = eclipse_state_->getSchedule();
-        const auto& events = schedule.getEvents();
 
         // adaptive time stepping
+        const auto& events = schedule.getEvents();
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
@@ -234,8 +234,12 @@ namespace Opm
             //
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
-            if( adaptiveTimeStepping ) {
-                report += adaptiveTimeStepping->step( timer, *solver, state, well_state, output_writer_, 
+            if( adaptiveTimeStepping ) {  
+                bool event = events.hasEvent(ScheduleEvents::NEW_WELL, timer.currentStepNum()) ||
+                        events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
+                        events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
+                        events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
+                report += adaptiveTimeStepping->step( timer, *solver, state, well_state, event, output_writer_,
                                                      output_writer_.requireFIPNUM() ? &fipnum : nullptr );
             }
             else {
