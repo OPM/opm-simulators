@@ -41,6 +41,8 @@ private:
     typedef Evaluation<ValueT, 9 > Eval;
 
 public:
+    typedef std::array<ValueT, 10 > DataVector;
+
     static inline void assign(Eval& a, const Eval& b)
     {
 

@@ -66,6 +66,8 @@ private:
     static constexpr int dend_ = Eval::dend_ ;
 
 public:
+    typedef std::array<ValueT, length_> DataVector;
+
     static inline void clearDerivatives(Eval& a)
     {
         for (int i = dstart_; i < dend_; ++i)
@@ -472,7 +474,7 @@ public:
     }
 
 protected:
-    std::array<ValueType, length_> data_;
+    typename Ops::DataVector data_;
 };
 
 template <class RhsValueType, class ValueType, int numVars>

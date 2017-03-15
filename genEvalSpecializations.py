@@ -50,6 +50,8 @@ private:
     typedef Evaluation<ValueT, {{numDerivs}} > Eval;
 
 public:
+    typedef std::array<ValueT, {{numDerivs + 1}} > DataVector;
+
     static inline void assign(Eval& a, const Eval& b)
     {
 {% for i in range(0, numDerivs+1) %}
@@ -187,6 +189,7 @@ includeSpecializationsTemplate = \
 
 {% for fileName in fileNames %}#include <{{ fileName }}>
 {% endfor %}
+
 #endif // OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 """
 
