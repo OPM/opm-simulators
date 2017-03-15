@@ -250,6 +250,9 @@ public:
 
             auto solver = createSolver(well_model);
 
+            std::vector<std::vector<double>> currentFluidInPlace;
+            std::vector<double> currentFluidInPlaceTotals;
+
             // Compute orignal fluid in place if this has not been done yet
             if (originalFluidInPlace.empty()) {
                 solver->model().convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
@@ -259,12 +262,22 @@ public:
                 originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace, state);
                 FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
                 FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
+
+                currentFluidInPlace = originalFluidInPlace;
+                currentFluidInPlaceTotals = originalFluidInPlaceTotals;
             }
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
                 Dune::Timer perfTimer;
                 perfTimer.start();
+
+                if (terminal_output_) {
+                    outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
+                    for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
+                        outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
+                    }
+                }
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
@@ -335,9 +348,9 @@ public:
             ++timer;
 
             // Compute current fluid in place.
-            std::vector<std::vector<double>> currentFluidInPlace;
             currentFluidInPlace = solver->computeFluidInPlace(fipnum);
-            std::vector<double> currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
+            currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
+
             const std::string version = moduleVersionName();
 
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
@@ -639,56 +652,54 @@ protected:
                 totals[i] += fip[reg][i];
             }
         }
-        const int numCells = Opm::AutoDiffGrid::numCells(grid());
-        const auto& pv = geo_.poreVolume();
+
+        const auto& gridView = ebosSimulator_.gridManager().gridView();
+        const auto& comm = gridView.comm();
         double pv_hydrocarbon_sum = 0.0;
         double p_pv_hydrocarbon_sum = 0.0;
 
-        if ( ! is_parallel_run_ )
+        ElementContext elemCtx(ebosSimulator_);
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (auto elemIt = gridView.template begin</*codim=*/0>();
+             elemIt != elemEndIt;
+             ++elemIt)
         {
-            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
-
-                const double& p = fs.pressure(FluidSystem::oilPhaseIdx).value();
-                const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-
-                totals[5] += pv[cellIdx];
-                pv_hydrocarbon_sum += pv[cellIdx] * hydrocarbon;
-                p_pv_hydrocarbon_sum += p * pv[cellIdx] * hydrocarbon;
-            }
-        }
-        else
-        {
-#if HAVE_MPI
-            const auto & pinfo =
-                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
-            // Mask with 1 for owned cell and 0 otherwise
-            const auto& mask = pinfo.updateOwnerMask(pv);
-
-            for (int cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                const auto& intQuants = *ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
-
-                const double& p = fs.pressure(FluidSystem::oilPhaseIdx).value();
-                const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
-
-                if( mask[cellIdx] )
-                {
-                    totals[5] += pv[cellIdx];
-                    pv_hydrocarbon_sum += pv[cellIdx] * hydrocarbon;
-                    p_pv_hydrocarbon_sum += p * pv[cellIdx] * hydrocarbon;
-                }
+            const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity) {
+                continue;
             }
 
-            totals[5] = pinfo.communicator().sum(totals[5]);
-            pv_hydrocarbon_sum = pinfo.communicator().sum(pv_hydrocarbon_sum);
-            p_pv_hydrocarbon_sum= pinfo.communicator().sum(p_pv_hydrocarbon_sum);
-#else
-            OPM_THROW(std::logic_error, "Requested a parallel run without MPI available!");
-#endif
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+
+            const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
+            const double hydrocarbon = fs.saturation(FluidSystem::oilPhaseIdx).value() + fs.saturation(FluidSystem::gasPhaseIdx).value();
+
+            // calculate the pore volume of the current cell. Note that the
+            // porosity returned by the intensive quantities is defined as the
+            // ratio of pore space to total cell volume and includes all pressure
+            // dependent (-> rock compressibility) and static modifiers (MULTPV,
+            // MULTREGP, NTG, PORV, MINPV and friends). Also note that because of
+            // this, the porosity returned by the intensive quantities can be
+            // outside of the physical range [0, 1] in pathetic cases.
+            const double pv =
+                ebosSimulator_.model().dofTotalVolume(cellIdx)
+                * intQuants.porosity().value();
+
+            totals[5] += pv;
+            pv_hydrocarbon_sum += pv*hydrocarbon;
+            p_pv_hydrocarbon_sum += p*pv*hydrocarbon;
         }
+
+        pv_hydrocarbon_sum = comm.sum(pv_hydrocarbon_sum);
+        p_pv_hydrocarbon_sum = comm.sum(p_pv_hydrocarbon_sum);
+        totals[5] = comm.sum(totals[5]);
         totals[6] = (p_pv_hydrocarbon_sum / pv_hydrocarbon_sum);
+
         return totals;
     }
 
@@ -734,7 +745,7 @@ protected:
                << std::fixed << std::setprecision(0)
                << "                                                  :      PORV =" << std::setw(14) << cip[5] << "   RB                  :\n";
             if (!reg) {
-                ss << "                                                  : Pressure is weighted by hydrocarbon pore voulme :\n"
+                ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
                    << "                                                  : Pore volumes are taken at reference conditions  :\n";
             }
             ss << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
