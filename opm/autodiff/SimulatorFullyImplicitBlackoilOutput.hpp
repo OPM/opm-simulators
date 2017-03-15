@@ -551,6 +551,8 @@ namespace Opm
             addToSimData( simData, "RSSAT", sd.rsSat );
             addToSimData( simData, "RVSAT", sd.rvSat );
 
+            addToSimData( simData, "SOMAX", sd.soMax );
+
             return simData;
         }
 

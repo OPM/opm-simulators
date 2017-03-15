@@ -154,7 +154,7 @@ public:
 
                 typedef std::vector<double> VectorType;
 
-                VectorType& somax = state.getCellData( "SOMAX" );
+                const VectorType& somax = state.getCellData( "SOMAX" );
 
                 for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
                     ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
