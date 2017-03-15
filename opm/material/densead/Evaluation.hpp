@@ -39,11 +39,130 @@
 #include <array>
 #include <cmath>
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <algorithm>
 
 namespace Opm {
 namespace DenseAd {
+template <class ValueT, int numVars>
+class Evaluation;
+
+/*!
+ * \brief Provides operations on Evaluations, so that these can be specialized without
+ *        having to copy-and-paste the whole Evaluation class.
+ *
+ * \internal
+ */
+template <class ValueT, int numVars>
+struct EvaluationOps
+{
+private:
+    typedef Evaluation<ValueT, numVars> Eval;
+
+    static constexpr int length_ = Eval::length_;
+    static constexpr int valuepos_ = Eval::valuepos_;
+    static constexpr int dstart_ = Eval::dstart_;
+    static constexpr int dend_ = Eval::dend_ ;
+
+public:
+    static inline void clearDerivatives(Eval& a)
+    {
+        for (int i = dstart_; i < dend_; ++i)
+            a.data_[i] = 0.0;
+    }
+
+    static inline void assign(Eval& a, const Eval& b)
+    {
+        a.data_ = b.data_;
+    }
+
+    static inline void assignNegative(Eval& a, const Eval& b)
+    {
+        for (int idx = 0; idx < length_; ++idx)
+            a.data_[idx] = - b.data_[idx];
+    }
+
+    static inline Eval& addEq(Eval& a, const Eval& b)
+    {
+        for (int i = 0; i < length_; ++i)
+            a.data_[i] += b.data_[i];
+
+        return a;
+    }
+
+    static inline Eval& subEq(Eval& a, const Eval& b)
+    {
+        for (int i = 0; i < length_; ++i)
+            a.data_[i] -= b.data_[i];
+
+        return a;
+    }
+
+    static inline Eval& mulEq(Eval& a, const Eval& b)
+    {
+        // while the values are multiplied, the derivatives follow the product rule,
+        // i.e., (u*v)' = (v'u + u'v).
+        const ValueT u = a.value();
+        const ValueT v = b.value();
+
+        a.data_[valuepos_] *= v ;
+        for (int idx = dstart_; idx < dend_; ++idx)
+            a.data_[idx] = a.data_[idx] * v + b.data_[idx] * u;
+
+        return a;
+    }
+
+    template <class RhsValueType>
+    static inline Eval& scalarMulEq(Eval& a, const RhsValueType& other)
+    {
+        // values and derivatives are multiplied
+        for (int idx = 0 ; idx < length_; ++ idx)
+            a.data_[idx] *= other;
+
+        return a;
+    }
+
+    static inline Eval& divEq(Eval& a, const Eval& b)
+    {
+        // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u - u'v)/v^2.
+        const ValueT v_vv = 1.0 / b.value();
+        const ValueT u_vv = a.value() * v_vv * v_vv;
+
+        a.data_[valuepos_] *= v_vv;
+        for (int idx = dstart_; idx < dend_; ++idx)
+            a.data_[idx] = a.data_[idx] * v_vv - b.data_[idx] * u_vv;
+
+        return a;
+    }
+
+    template <class RhsValueType>
+    static inline Eval& scalarDivEq(Eval& a, const RhsValueType& other)
+    {
+        // values and derivatives are divided
+        for (int idx = 0 ; idx <= length_; ++ idx)
+            a.data_[idx] /= other;
+
+        return a;
+    }
+
+    // a/b with 'a' being a scalar and 'b' an Evaluation
+    template <class RhsValueType>
+    static inline Eval devide(const RhsValueType& a, const Eval& b )
+    {
+        Eval result;
+
+        result.setValue( a/b.value() );
+
+        const ValueT df_dg = - result.value()/b.value();
+        for (int idx = dstart_; idx < dend_; ++idx)
+            result.data_[idx] = df_dg*b.data_[idx];
+
+        return result;
+    }
+};
+
+
 /*!
  * \brief Represents a function evaluation and its derivatives w.r.t. a fixed set of
  *        variables.
@@ -51,6 +170,10 @@ namespace DenseAd {
 template <class ValueT, int numVars>
 class Evaluation
 {
+    typedef EvaluationOps<ValueT, numVars> Ops;
+
+    friend Ops;
+
 public:
     //! field type
     typedef ValueT ValueType;
@@ -75,8 +198,9 @@ public:
     {}
 
     //! copy other function evaluation
-    Evaluation(const Evaluation& other) : data_( other.data_ )
+    Evaluation(const Evaluation& other)
     {
+        Ops::assign(*this, other);
     }
 
     // create an evaluation which represents a constant function
@@ -110,8 +234,7 @@ public:
     // set all derivatives to zero
     void clearDerivatives()
     {
-        for (int i = dstart_; i < dend_; ++i)
-            data_[ i ] = 0.0;
+        Ops::clearDerivatives(*this);
     }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
@@ -121,20 +244,6 @@ public:
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
         return Evaluation( value, varPos );
-    }
-
-
-    // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
-    template <class RhsValueType>
-    static Evaluation devide(const RhsValueType& a, const Evaluation& b )
-    {
-        Evaluation<ValueType, numVars> result;
-        result.setValue( a/b.value() );
-        const ValueType df_dg = - result.value()/b.value();
-        for (int idx = dstart_; idx < dend_; ++idx) {
-            result.data_[idx] = df_dg*b.data_[idx];
-        }
-        return result;
     }
 
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
@@ -165,13 +274,7 @@ public:
 
     // add value and derivatives from other to this values and derivatives
     Evaluation& operator+=(const Evaluation& other)
-    {
-        // value and derivatives are added
-        for (int varIdx = 0; varIdx < length_; ++ varIdx)
-            data_[ varIdx ] += other.data_[ varIdx ];
-
-        return *this;
-    }
+    { return Ops::addEq(*this, other); }
 
     // add value from other to this values
     template <class RhsValueType>
@@ -184,13 +287,7 @@ public:
 
     // subtract other's value and derivatives from this values
     Evaluation& operator-=(const Evaluation& other)
-    {
-        // value and derivatives are subtracted
-        for (int idx = 0 ; idx < length_ ; ++ idx)
-            data_[idx] -= other.data_[idx];
-
-        return *this;
-    }
+    { return Ops::subEq(*this, other); }
 
     // subtract other's value from this values
     template <class RhsValueType>
@@ -204,54 +301,21 @@ public:
 
     // multiply values and apply chain rule to derivatives: (u*v)' = (v'u + u'v)
     Evaluation& operator*=(const Evaluation& other)
-    {
-        // while the values are multiplied, the derivatives follow the product rule,
-        // i.e., (u*v)' = (v'u + u'v).
-        const ValueType u = value();
-        const ValueType v = other.value();
-
-        data_[ valuepos_ ] *= v ;
-        for (int idx = dstart_; idx < dend_; ++idx) {
-            data_[idx] = data_[idx] * v + other.data_[idx] * u;
-        }
-
-        return *this;
-    }
+    { return Ops::mulEq(*this, other); }
 
     // m(u*v)' = (v'u + u'v)
     template <class RhsValueType>
     Evaluation& operator*=(const RhsValueType& other)
-    {
-        // values and derivatives are multiplied
-        for (int idx = 0 ; idx < length_ ; ++ idx)
-            data_[idx] *= other;
-
-        return *this;
-    }
+    { return Ops::scalarMulEq(*this, other); }
 
     // m(u*v)' = (v'u + u'v)
     Evaluation& operator/=(const Evaluation& other)
-    {
-        // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u - u'v)/v^2.
-        const ValueType v_vv = 1.0 / other.value();
-        const ValueType u_vv = value() * v_vv * v_vv;
-
-        data_[ valuepos_ ] *= v_vv;
-        for (int idx = dstart_; idx < dend_; ++idx) {
-            data_[idx] = data_[idx] * v_vv - other.data_[idx] * u_vv;
-        }
-
-        return *this;
-    }
+    { return Ops::divEq(*this, other); }
 
     // multiply value and derivatives by value of other
     template <class RhsValueType>
     Evaluation& operator/=(const RhsValueType& other)
-    {
-        // values and derivatives are divided
-        const ValueType factor = (1.0/other);
-        return this->operator *=( factor );
-    }
+    { return Ops::scalarDivEq(*this, other); }
 
     // add two evaluation objects
     Evaluation operator+(const Evaluation& other) const
@@ -274,8 +338,7 @@ public:
     Evaluation operator-(const Evaluation& other) const
     {
         Evaluation result(*this);
-        result -= other;
-        return result;
+        return (result -= other);
     }
 
     // subtract constant from evaluation object
@@ -283,8 +346,7 @@ public:
     Evaluation operator-(const RhsValueType& other) const
     {
         Evaluation result(*this);
-        result -= other;
-        return result;
+        return (result -= other);
     }
 
     // negation (unary minus) operator
@@ -292,8 +354,7 @@ public:
     {
         Evaluation result;
         // set value and derivatives to negative
-        for (int idx = 0; idx < length_; ++idx)
-            result.data_[idx] = - data_[idx];
+        Ops::assignNegative(result, *this);
 
         return result;
     }
@@ -339,7 +400,7 @@ public:
     // copy assignment from evaluation
     Evaluation& operator=(const Evaluation& other)
     {
-        data_ = other.data_;
+        Ops::assign(*this, other);
         return *this;
     }
 
@@ -392,7 +453,8 @@ public:
     { return data_[valuepos_]; }
 
     // set value of variable
-    void setValue(const ValueType& val)
+    template <class RhsValueType>
+    void setValue(const RhsValueType& val)
     { data_[valuepos_] = val; }
 
     // return varIdx'th derivative
@@ -437,9 +499,7 @@ template <class RhsValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
     Evaluation<ValueType, numVars> result(b);
-
     result += a;
-
     return result;
 }
 
@@ -454,7 +514,9 @@ Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation
 template <class RhsValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
-    return Evaluation<ValueType, numVars>::devide( a, b );
+    typedef EvaluationOps<ValueType, numVars> Ops;
+
+    return Ops::devide( a, b );
 }
 
 template <class RhsValueType, class ValueType, int numVars>
@@ -537,10 +599,6 @@ public:
 
 } // namespace Dune
 
-#include <opm/material/densead/Evaluation1.hpp>
-#include <opm/material/densead/Evaluation2.hpp>
-#include <opm/material/densead/Evaluation3.hpp>
-#include <opm/material/densead/Evaluation6.hpp>
-#include <opm/material/densead/Evaluation12.hpp>
+#include <opm/material/densead/EvaluationSpecializations.hpp>
 
 #endif
