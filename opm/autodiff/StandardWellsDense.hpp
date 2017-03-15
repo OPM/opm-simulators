@@ -251,6 +251,11 @@ enum WellVariablePositions {
             computeWellPotentials(const Simulator& ebosSimulator,
                                   WellState& well_state)  const;
 
+
+            // TODO: temporary function name for now before changing the simulator and also WellsMananger
+            void computeWellPotentials(const WellState& well_state,
+                                       std::vector<double>& well_potentials) const;
+
             WellCollection* wellCollection() const;
 
             const std::vector<double>&
