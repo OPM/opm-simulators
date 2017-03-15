@@ -778,34 +778,20 @@ namespace Opm {
 
                 const int oilpos = pu.phase_pos[Oil];
                 const int gaspos = pu.phase_pos[Gas];
-                EvalWell rvPerf = 0.0;
-                if (cmix_s[gaspos] > 0) {
-                    rvPerf = cmix_s[oilpos] / cmix_s[gaspos];
-                }
-
-                if (rvPerf.value() > rvSatEval.value()) {
-                    rvPerf = rvSatEval;
-                    //rvPerf.setValue(rvSatEval.value());
-                }
-
-                EvalWell rsPerf = 0.0;
-                if (cmix_s[oilpos] > 0) {
-                    rsPerf = cmix_s[gaspos] / cmix_s[oilpos];
-                }
-
-                if (rsPerf.value() > rsSatEval.value()) {
-                    //rsPerf = 0.0;
-                    rsPerf= rsSatEval;
-                }
 
                 // Incorporate RS/RV factors if both oil and gas active
-                const EvalWell d = 1.0 - rvPerf * rsPerf;
+                const EvalWell d = 1.0 - rv * rs;
 
-                const EvalWell tmp_oil = (cmix_s[oilpos] - rvPerf * cmix_s[gaspos]) / d;
+                if (d.value() == 0.0) {
+                    OPM_THROW(Opm::NumericalProblem, "Zero d value obtained for well " << wells().name[w] << " during flux calcuation"
+                                                  << " with rs " << rs << " and rv " << rv);
+                }
+
+                const EvalWell tmp_oil = (cmix_s[oilpos] - rv * cmix_s[gaspos]) / d;
                 //std::cout << "tmp_oil " <<tmp_oil << std::endl;
                 volumeRatio += tmp_oil / b_perfcells_dense[oilpos];
 
-                const EvalWell tmp_gas = (cmix_s[gaspos] - rsPerf * cmix_s[oilpos]) / d;
+                const EvalWell tmp_gas = (cmix_s[gaspos] - rs * cmix_s[oilpos]) / d;
                 //std::cout << "tmp_gas " <<tmp_gas << std::endl;
                 volumeRatio += tmp_gas / b_perfcells_dense[gaspos];
             }
