@@ -148,7 +148,7 @@ public:
 
     // a/b with 'a' being a scalar and 'b' an Evaluation
     template <class RhsValueType>
-    static inline Eval devide(const RhsValueType& a, const Eval& b )
+    static inline Eval divide(const RhsValueType& a, const Eval& b )
     {
         Eval result;
 
@@ -506,7 +506,7 @@ Evaluation<ValueType, numVars> operator+(const RhsValueType& a, const Evaluation
 template <class RhsValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> operator-(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
-    Evaluation<ValueType, numVars> result( a );
+    Evaluation<ValueType, numVars> result(a);
     result -= b;
     return result;
 }
@@ -516,13 +516,13 @@ Evaluation<ValueType, numVars> operator/(const RhsValueType& a, const Evaluation
 {
     typedef EvaluationOps<ValueType, numVars> Ops;
 
-    return Ops::devide( a, b );
+    return Ops::divide(a, b);
 }
 
 template <class RhsValueType, class ValueType, int numVars>
 Evaluation<ValueType, numVars> operator*(const RhsValueType& a, const Evaluation<ValueType, numVars>& b)
 {
-    Evaluation<ValueType, numVars> result( b );
+    Evaluation<ValueType, numVars> result(b);
     result *= a;
     return result;
 }

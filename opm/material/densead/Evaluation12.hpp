@@ -230,7 +230,7 @@ public:
     }
 
     template <class RhsValueType>
-    static inline Eval devide(const RhsValueType& a, const Eval& b)
+    static inline Eval divide(const RhsValueType& a, const Eval& b)
     {
         Eval result;
         result.setValue( a/b.value() );
