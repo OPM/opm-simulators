@@ -122,6 +122,50 @@ struct MatrixDimension< MatrixBlock< Scalar, n, m > >
 {
 };
 
+
+#if HAVE_UMFPACK
+
+/// \brief UMFPack specialization for MatrixBlock to make AMG happy
+///
+/// Without this the empty default implementation would be used.
+template<typename T, typename A, int n, int m>
+class UMFPack<BCRSMatrix<MatrixBlock<T,n,m>, A> >
+    : public UMFPack<BCRSMatrix<FieldMatrix<T,n,m>, A> >
+{
+    typedef UMFPack<BCRSMatrix<FieldMatrix<T,n,m>, A> > Base;
+    typedef BCRSMatrix<FieldMatrix<T,n,m>, A> Matrix;
+
+public:
+    typedef BCRSMatrix<MatrixBlock<T,n,m>, A> RealMatrix;
+
+    UMFPack(const RealMatrix& matrix, int verbose, bool)
+        : Base(reinterpret_cast<const Matrix&>(matrix), verbose)
+    {}
+};
+#endif
+
+#if HAVE_SUPERLU
+
+/// \brief SuperLU specialization for MatrixBlock to make AMG happy
+///
+/// Without this the empty default implementation would be used.
+template<typename T, typename A, int n, int m>
+class SuperLU<BCRSMatrix<MatrixBlock<T,n,m>, A> >
+    : public SuperLU<BCRSMatrix<FieldMatrix<T,n,m>, A> >
+{
+    typedef SuperLU<BCRSMatrix<FieldMatrix<T,n,m>, A> > Base;
+    typedef BCRSMatrix<FieldMatrix<T,n,m>, A> Matrix;
+
+public:
+    typedef BCRSMatrix<MatrixBlock<T,n,m>, A> RealMatrix;
+
+    SuperLU(const RealMatrix& matrix, int verbose, bool reuse=true)
+        : Base(reinterpret_cast<const Matrix&>(matrix), verbose, reuse)
+    {}
+};
+#endif
+
+
 } // end namespace Dune
 
 namespace Opm
