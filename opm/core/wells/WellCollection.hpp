@@ -146,6 +146,12 @@ namespace Opm
         // The strategy may need to be adjusted when more complicated multi-layered group control situation applied, not sure about thatyet.
         bool groupTargetConverged(const std::vector<double>& well_rates) const;
 
+
+        /// Setting the guide rates with well potentials
+        void setGuideRatesWithPotentials(const Wells* wells,
+                                         const PhaseUsage& phase_usage,
+                                         const std::vector<double>& well_potentials) const;
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;

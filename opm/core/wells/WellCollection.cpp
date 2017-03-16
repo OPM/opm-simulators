@@ -336,4 +336,142 @@ namespace Opm
         return true;
     }
 
+
+
+    void WellCollection::
+    setGuideRatesWithPotentials(const Wells* wells,
+                                const PhaseUsage& phase_usage,
+                                const std::vector<double>& well_potentials) const
+    {
+        // TODO: assuming the order of well_potentials is the same with the order in wells struct
+        // TODO: it will overwrite the well potentials from other means. It should be changed after
+        // fixing the other part of the code. It makes the current flow only support guide rates based on
+        // well potentials.
+        const int np = wells->number_of_phases;
+        const int nw = wells->number_of_wells;
+
+        for (int w = 0; w < nw; ++w) {
+            const std::string well_name = wells->name[w];
+
+            WellNode& well_node = findWellNode(well_name);
+
+            const WellType well_type = wells->type[w];
+            // TODO: eventually the following standard will be wrong, it will belong to FIELD group
+            if (well_node.getParent() != nullptr) { // If it does not belong a group, will it belong to FIELD?
+                const WellsGroupInterface* group = well_node.getParent();
+                if (well_type == PRODUCER) {
+                    // The guide rates is calculated based on the group control
+                    // Currently only supporting WRAT, ORAT and GRAT.
+                    ProductionSpecification::ControlMode control_mode = group->prodSpec().control_mode_;
+                    if (control_mode == ProductionSpecification::FLD) {
+                        if (group->getParent() !=  nullptr) {
+                            // TODO: only handle one level FLD control
+                            const WellsGroupInterface* higher_group = group->getParent();
+                            control_mode = higher_group->prodSpec().control_mode_;
+                        } else {
+                            OPM_THROW(std::runtime_error, "Group " << group->name() << " is under FLD control while no higher level of group is specified.");
+                        }
+                    }
+
+                    switch (control_mode) {
+                    case ProductionSpecification::WRAT: {
+                       if (!phase_usage.phase_used[BlackoilPhases::Aqua]) {
+                           OPM_THROW(std::runtime_error, "Water phase not used, yet found water rate controlled well.");
+                       }
+                       const int water_index = phase_usage.phase_pos[BlackoilPhases::Aqua];
+                       well_node.prodSpec().guide_rate_ = well_potentials[np * w + water_index];
+                       well_node.prodSpec().guide_rate_type_ = ProductionSpecification::WATER;
+                       break;
+                    }
+                    case ProductionSpecification::ORAT: {
+                        if (!phase_usage.phase_used[BlackoilPhases::Liquid]) {
+                            OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil rate controlled well.");
+                        }
+                        const int oil_index = phase_usage.phase_pos[BlackoilPhases::Liquid];
+                        well_node.prodSpec().guide_rate_ = well_potentials[np * w + oil_index];
+                        well_node.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
+                        break;
+                    }
+                    case ProductionSpecification::GRAT: {
+                        if (!phase_usage.phase_used[BlackoilPhases::Vapour]) {
+                            OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas rate controlled well.");
+                        }
+                        const int gas_index = phase_usage.phase_pos[BlackoilPhases::Vapour];
+                        well_node.prodSpec().guide_rate_ = well_potentials[np * w + gas_index];
+                        well_node.prodSpec().guide_rate_type_ = ProductionSpecification::GAS;
+                        break;
+                    }
+                    case ProductionSpecification::FLD: {
+                        OPM_THROW(std::logic_error, "Not support more than one continous level of FLD control");
+                    }
+                    case ProductionSpecification::LRAT: {
+                        double guide_rate = 0;
+                        if (phase_usage.phase_used[BlackoilPhases::Liquid]) {
+                            const int oil_index = phase_usage.phase_pos[BlackoilPhases::Liquid];
+                            const double potential_oil = well_potentials[np * w + oil_index];
+                            guide_rate += potential_oil;
+                        }
+                        if (phase_usage.phase_used[BlackoilPhases::Aqua]) {
+                            const int water_index = phase_usage.phase_pos[BlackoilPhases::Aqua];
+                            const double potential_water = well_potentials[np * w + water_index];
+                            guide_rate += potential_water;
+                        }
+                        // not sure if no water and no oil, what will happen here, zero guide_rate?
+                        well_node.prodSpec().guide_rate_ = guide_rate;
+                        well_node.prodSpec().guide_rate_type_ = ProductionSpecification::LIQ;
+                    }
+                    case ProductionSpecification::NONE: {
+                        // Group control is not in use for this group.
+                        break;
+                    }
+                    default:
+                        OPM_THROW(std::logic_error, "Not supported control_mode for guide rate computed" <<
+                                  " from well potentials: " << ProductionSpecification::toString(group->prodSpec().control_mode_) );
+                    }
+
+                } else if (well_type == INJECTOR) {
+                    // The guide rates is calculated based on the group injector type
+                    switch (group->injSpec().injector_type_) {
+                    case InjectionSpecification::WATER: {
+                        if (!phase_usage.phase_used[BlackoilPhases::Aqua]) {
+                            OPM_THROW(std::runtime_error, "Water phase not used, yet found water injecting well.");
+                        }
+                        const int water_index = phase_usage.phase_pos[BlackoilPhases::Aqua];
+                        well_node.injSpec().guide_rate_ = well_potentials[np * w + water_index];
+                        // Guide rates applies to the phase that the well is injecting i.e water
+                        well_node.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                        break;
+                    }
+                    case InjectionSpecification::OIL: {
+                        if (!phase_usage.phase_used[BlackoilPhases::Liquid]) {
+                            OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil injecting well.");
+                        }
+                        const int oil_index = phase_usage.phase_pos[BlackoilPhases::Liquid];
+                        well_node.injSpec().guide_rate_ = well_potentials[np * w + oil_index];
+                        // Guide rates applies to the phase that the well is injecting i.e. oil
+                        well_node.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                        break;
+                    }
+                    case InjectionSpecification::GAS: {
+                        if (!phase_usage.phase_used[BlackoilPhases::Vapour]) {
+                            OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas injecting well.");
+                        }
+                        const int gas_index = phase_usage.phase_pos[BlackoilPhases::Vapour];
+                        well_node.injSpec().guide_rate_ = well_potentials[np * w + gas_index];
+                        // Guide rates applies to the phase that the well is injecting i.e gas
+                        well_node.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
+                        break;
+                    }
+                    default:
+                        OPM_THROW(std::logic_error, "Not supported injector type for guide rate computed" <<
+                                  " from well potentials: " << InjectionSpecification::toString(group->injSpec().injector_type_) );
+                    }
+                } else { // neither injector nor producer
+                    OPM_THROW(std::logic_error, "Expected well type to be either INJECTOR or PRODUCER for well " << well_node.name() );
+
+                }
+            } // end of if (well_node.getParent() != nullptr)
+        } // end of for (int w = 0; w < nw; ++w)
+    }
+
 }
