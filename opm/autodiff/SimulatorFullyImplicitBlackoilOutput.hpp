@@ -310,7 +310,6 @@ namespace Opm
 
         // Parameters for output.
         const std::string outputDir_;
-        const int output_interval_;
         const bool restart_double_si_;
 
         int lastBackupReportStep_;
@@ -341,8 +340,7 @@ namespace Opm
                          const Opm::PhaseUsage &phaseUsage)
       : output_( param.getDefault("output", true) ),
         parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, phaseUsage ) : 0 ),
-        outputDir_( output_ ? param.getDefault("output_dir", std::string("output")) : "." ),
-        output_interval_( output_ ? param.getDefault("output_interval", 1): 0 ),
+        outputDir_( eclipseState.getIOConfig().getOutputDir() ),
         restart_double_si_( output_ ? param.getDefault("restart_double_si", false) : false ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
