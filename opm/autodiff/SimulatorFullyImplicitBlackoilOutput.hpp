@@ -29,6 +29,7 @@
 #include <opm/core/utility/miscUtilities.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
+#include <opm/core/simulator/BlackoilState.hpp>
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
@@ -952,7 +953,7 @@ namespace Opm
                 // while for flow_ebos a SimulationDataContainer is returned
                 // this is addressed in the above specialized methods
                 SimulationDataContainer sd =
-                    detail::convertToSimulationDataContainer( physicalModel.getSimulatorData(), localState, phaseUsage_ );
+                    detail::convertToSimulationDataContainer( physicalModel.getSimulatorData(localState), localState, phaseUsage_ );
 
                 localCellData = simToSolution( sd, restart_double_si_, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
 

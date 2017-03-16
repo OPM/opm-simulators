@@ -1179,7 +1179,7 @@ namespace Opm {
             return values;
         }
 
-        SimulationDataContainer getSimulatorData () const
+        SimulationDataContainer getSimulatorData ( const SimulationDataContainer& localState) const
         {
             typedef std::vector<double> VectorType;
 
@@ -1333,7 +1333,48 @@ namespace Opm {
                     muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
                     krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
                 }
+
+                // hack to make the intial output of rs and rv Ecl compatible.
+                // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
+                // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
+                // rs and rv with the values passed by the localState.
+                // Volume factors and densities needs to be recalculated with the updated rs and rv values.
+                if (ebosSimulator_.episodeIndex() < 0 && vapour_active && liquid_active ) {
+
+                    Rs[cellIdx] = localState.getCellData( BlackoilState::GASOILRATIO )[cellIdx];
+                    Rv[cellIdx] = localState.getCellData( BlackoilState::RV)[cellIdx];
+
+                    // copy the fluidstate and set the new rs and rv values
+                    auto fs_updated = fs;
+                    auto rs_eval = fs_updated.Rs();
+                    rs_eval.setValue( Rs[cellIdx] );
+                    fs_updated.setRs(rs_eval);
+                    auto rv_eval = fs_updated.Rv();
+                    rv_eval.setValue( Rv[cellIdx] );
+                    fs_updated.setRv(rv_eval);
+
+                    //re-compute the volume factors and densities.
+                    rhoOil[cellIdx] = FluidSystem::density(fs_updated,
+                                                           FluidSystem::oilPhaseIdx,
+                                                           intQuants.pvtRegionIndex()).value();
+                    rhoGas[cellIdx] = FluidSystem::density(fs_updated,
+                                                           FluidSystem::gasPhaseIdx,
+                                                           intQuants.pvtRegionIndex()).value();
+
+                    bOil[cellIdx] = FluidSystem::inverseFormationVolumeFactor(fs_updated,
+                                                           FluidSystem::oilPhaseIdx,
+                                                           intQuants.pvtRegionIndex()).value();
+                    bGas[cellIdx] = FluidSystem::inverseFormationVolumeFactor(fs_updated,
+                                                           FluidSystem::gasPhaseIdx,
+                                                           intQuants.pvtRegionIndex()).value();
+
+                }
+
+
             }
+
+
+
 
             const size_t max_num_cells_faillog = 20;
             if (failed_cells_pb.size() > 0) {
