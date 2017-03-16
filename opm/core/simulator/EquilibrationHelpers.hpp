@@ -273,7 +273,7 @@ namespace Opm
                     if (sat_gas > 0.0) {
                         return satRs(press, temp);
                     } else {
-                        return std::min(satRs(press, temp), linearInterpolation(depth_, rs_, depth));
+                        return std::min(satRs(press, temp), linearInterpolationNoExtrapolation(depth_, rs_, depth));
                     }
                 }
 
@@ -353,7 +353,7 @@ namespace Opm
                     if (std::abs(sat_oil) > 1e-16) {
                         return satRv(press, temp);
                     } else {
-                        return std::min(satRv(press, temp), linearInterpolation(depth_, rv_, depth));
+                        return std::min(satRv(press, temp), linearInterpolationNoExtrapolation(depth_, rv_, depth));
                     }
                 }
 
