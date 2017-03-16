@@ -467,7 +467,8 @@ namespace Opm
             assert(opmextra.size() == 1);
             extra.suggested_step = opmextra[0];
         } else {
-            OPM_THROW(std::runtime_error, "Cannot restart, restart data is missing OPMEXTRA field.");
+            OpmLog::warning("Restart data is missing OPMEXTRA field, restart run may deviate from original run.");
+            extra.suggested_step = -1.0;
         }
     }
 
