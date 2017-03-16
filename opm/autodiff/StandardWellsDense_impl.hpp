@@ -1834,7 +1834,45 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename Simulator>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    prepareTimeStep(const Simulator& ebos_simulator,
+                    WellState& well_state)
+    {
+
+        // TODO: we should remove the wellPotentials() from the well_state.
+
+        if (well_collection_->groupControlActive()) {
+            // calculate the well potentials
+            // two functions will probably be merged in the final version
+            // and also the well potentials related parts in well state.
+            if (param_.compute_well_potentials_) {
+                setWellVariables(well_state);
+                computeWellConnectionPressures(ebos_simulator, well_state);
+
+                computeWellPotentials(ebos_simulator, well_state);
+
+                // To store well potentials for each well
+                std::vector<double> well_potentials;
+
+                computeWellPotentials(well_state, well_potentials);
+
+                // update/setup guide rates for each well based on the well_potentials
+                well_collection_->setGuideRates(wellsPointer(), phase_usage_, well_potentials);
+            }
+            applyVREPGroupControl(well_state);
+            wellCollection()->updateWellTargets(well_state.wellRates());
+        }
+    }
+
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
     WellCollection*
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellCollection() const

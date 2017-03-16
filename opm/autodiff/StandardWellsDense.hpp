@@ -251,10 +251,15 @@ enum WellVariablePositions {
             computeWellPotentials(const Simulator& ebosSimulator,
                                   WellState& well_state)  const;
 
-
             // TODO: temporary function name for now before changing the simulator and also WellsMananger
             void computeWellPotentials(const WellState& well_state,
                                        std::vector<double>& well_potentials) const;
+
+            // TODO: some preparation work, mostly related to group control and RESV,
+            // at the beginning of each time step (Not report step)
+            template<typename Simulator>
+            void prepareTimeStep(const Simulator& ebos_simulator,
+                                 WellState& well_state);
 
             WellCollection* wellCollection() const;
 

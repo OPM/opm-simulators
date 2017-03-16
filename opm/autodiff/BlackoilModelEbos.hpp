@@ -213,8 +213,9 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         void prepareStep(const SimulatorTimerInterface& /*timer*/,
                          const ReservoirState& /*reservoir_state*/,
-                         const WellState& /* well_state */)
+                         WellState& well_state)
         {
+            well_model_.prepareTimeStep(ebosSimulator_, well_state);
         }
 
 
