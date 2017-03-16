@@ -1,8 +1,25 @@
 #! /usr/bin/python
-
+#
+# This script provides "hand loop-unrolled" specializations of the
+# Evaluation class of dense automatic differentiation so that the
+# compiler can more easily emit SIMD instructions. In an ideal world,
+# C++ compilers should be smart enough to do this themselfs, but
+# contemporary compilers don't seem to exhibit enough brains.
+#
+# Usage: In the opm-material top-level source directory, run
+# `./bin/genEvalSpecializations.py [MAX_DERIVATIVES]`. The script then
+# generates specializations for Evaluations with up to MAX_DERIVATIVES
+# derivatives. The default for MAX_DERIVATIVES is 12. To run this
+# script, you need a python 2 installation where the Jinja2 module is
+# available.
+#
 import os
 import sys
 import jinja2
+
+maxDerivs = 12
+if len(sys.argv) == 2:
+    maxDerivs = int(sys.argv[1])
 
 fileNames = []
 
@@ -193,7 +210,7 @@ includeSpecializationsTemplate = \
 #endif // OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 """
 
-for numDerivs in range(1, 12 + 1):
+for numDerivs in range(1, maxDerivs + 1):
     print "Generating specialization for %d derivatives"%numDerivs
 
     fileName = "opm/material/densead/Evaluation%d.hpp"%numDerivs
