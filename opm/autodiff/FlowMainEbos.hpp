@@ -66,12 +66,14 @@ namespace Opm
                                          const ConstIter& local_begin,
                                          const Iter& global_begin)
     {
+#if HAVE_MPI
         FixedSizeIterCopyHandle<ConstIter,Iter> handle(local_begin,
                                                    global_begin);
         const auto& gatherScatterInf = grid.cellScatterGatherInterface();
         Dune::VariableSizeCommunicator<> comm(grid.comm(),
                                               gatherScatterInf);
         comm.backward(handle);
+#endif
     }
 
 
