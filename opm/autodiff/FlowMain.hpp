@@ -145,8 +145,8 @@ namespace Opm
             if (!ok) {
                 return EXIT_FAILURE;
             }
-            asImpl().setupOutput();
             asImpl().readDeckInput();
+            asImpl().setupOutput();
             asImpl().setupLogging();
             asImpl().extractMessages();
             asImpl().setupGridAndProps();
@@ -365,14 +365,17 @@ namespace Opm
         // Throws std::runtime_error if failed to create (if requested) output dir.
         void setupOutput()
         {
-            // Write parameters used for later reference. (only if rank is zero)
             output_to_files_ = output_cout_ && param_.getDefault("output", true);
-            // Always read output_dir as it will be set unconditionally later.
-            // Not doing this might cause files to be created in the current
-            // directory.
-            output_dir_ =
-                param_.getDefault("output_dir", std::string("."));
 
+            // Setup output directory.
+            auto& ioConfig = eclipse_state_->getIOConfig();
+            // Default output directory is the directory where the deck is found.
+            const std::string default_output_dir = ioConfig.getOutputDir();
+            output_dir_ = param_.getDefault("output_dir", default_output_dir);
+            // Override output directory if user specified.
+            ioConfig.setOutputDir(output_dir_);
+
+            // Write parameters used for later reference. (only if rank is zero)
             if (output_to_files_) {
                 // Create output directory if needed.
                 boost::filesystem::path fpath(output_dir_);
@@ -409,13 +412,9 @@ namespace Opm
             } else {
                 baseName = path(fpath.filename()).string();
             }
-            if (param_.has("output_dir")) {
-                logFileStream << output_dir_ << "/";
-                debugFileStream << output_dir_ + "/";
-            }
 
-            logFileStream << baseName;
-            debugFileStream << "." << baseName;
+            logFileStream << output_dir_ << "/" << baseName;
+            debugFileStream << output_dir_ << "/" << "." << baseName;
 
             if ( must_distribute_ && mpi_rank_ != 0 )
             {
@@ -511,8 +510,6 @@ namespace Opm
                 }
 
                 eclipse_state_.reset(new EclipseState(*deck_, parseContext));
-                auto& ioConfig = eclipse_state_->getIOConfig();
-                ioConfig.setOutputDir(output_dir_);
             }
             catch (const std::invalid_argument& e) {
                 std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;
