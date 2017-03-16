@@ -21,7 +21,7 @@ TEST_ARGS="$@"
 rm -Rf  ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS} nosim=true
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} nosim=true output_dir=${RESULT_PATH}
 cd ..
 
 ecode=0
