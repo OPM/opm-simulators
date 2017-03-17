@@ -32,6 +32,7 @@
 #include <opm/autodiff/MissingFeatures.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
+#include <opm/autodiff/RedistributeDataHandles.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
@@ -52,6 +53,30 @@
 
 namespace Opm
 {
+
+    /// \brief Gather cell data to global random access iterator
+    /// \tparam ConstIter The type of constant iterator.
+    /// \tparam Iter The type of the mutable iterator.
+    /// \param grid The distributed CpGrid where loadbalance has been run.
+    /// \param local The local container from which the data should be sent.
+    /// \param global The global container to gather to.
+    /// \warning The global container has to have the correct size!
+    template<class ConstIter, class Iter>
+    void gatherCellDataToGlobalIterator(const Dune::CpGrid& grid,
+                                         const ConstIter& local_begin,
+                                         const Iter& global_begin)
+    {
+#if HAVE_MPI
+        FixedSizeIterCopyHandle<ConstIter,Iter> handle(local_begin,
+                                                   global_begin);
+        const auto& gatherScatterInf = grid.cellScatterGatherInterface();
+        Dune::VariableSizeCommunicator<> comm(grid.comm(),
+                                              gatherScatterInf);
+        comm.backward(handle);
+#endif
+    }
+
+
     // The FlowMain class is the ebos based black-oil simulator.
     class FlowMainEbos
     {
@@ -348,6 +373,10 @@ namespace Opm
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
+            // Create a grid with a global view.
+            globalGrid_.reset(new Grid(grid()));
+            globalGrid_->switchToGlobalView();
+
             try {
                 if (output_cout_) {
                     MissingFeatures::checkKeywords(deck());
@@ -373,7 +402,7 @@ namespace Opm
             }
         }
 
-        // Create grid and property objects.
+        // Create distributed property objects.
         // Writes to:
         //   fluidprops_
         void setupGridAndProps()
@@ -538,13 +567,51 @@ namespace Opm
         {
             bool output      = param_.getDefault("output", true);
             bool output_ecl  = param_.getDefault("output_ecl", true);
-            const Grid& grid = this->grid();
-            if( output && output_ecl && output_cout_)
+            if( output && output_ecl )
             {
-                const EclipseGrid& inputGrid = eclState().getInputGrid();
-                eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
-                eclIO_->writeInitial(geoprops_->simProps(grid),
-                                              geoprops_->nonCartesianConnections());
+                const Grid& grid = this->globalGrid();
+
+                if( output_cout_ ){
+                    const EclipseGrid& inputGrid = eclState().getInputGrid();
+                    eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
+                }
+
+                const NNC* nnc = &geoprops_->nonCartesianConnections();
+                data::Solution globaltrans;
+
+                if ( must_distribute_ )
+                {
+                    // dirty and dangerous hack!
+                    // We rely on opmfil in GeoProps being hardcoded to true
+                    // which prevents the pinch processing from running.
+                    // Ergo the nncs are unchanged.
+                    nnc = &eclState().getInputNNC();
+
+                    // Gather the global simProps
+                    data::Solution localtrans = geoprops_->simProps(this->grid());
+                    for( const auto& localkeyval: localtrans)
+                    {
+                        auto& globalval = globaltrans[localkeyval.first].data;
+                        const auto& localval  = localkeyval.second.data;
+
+                        if( output_cout_ )
+                        {
+                            globalval.resize( grid.size(0));
+                        }
+                        gatherCellDataToGlobalIterator(this->grid(), localval.begin(),
+                                                       globalval.begin());
+                    }
+                }
+                else
+                {
+                    globaltrans = geoprops_->simProps(grid);
+                }
+
+                if( output_cout_ )
+                {
+                eclIO_->writeInitial(globaltrans,
+                                              *nnc);
+                }
             }
         }
 
@@ -553,10 +620,13 @@ namespace Opm
         //   output_writer_
         void setupOutputWriter()
         {
+            // create output writer after grid is distributed, otherwise the parallel output
+            // won't work correctly since we need to create a mapping from the distributed to
+            // the global view
             output_writer_.reset(new OutputWriter(grid(),
                                                   param_,
                                                   eclState(),
-                                                  std::move( eclIO_ ),
+                                                  std::move(eclIO_),
                                                   Opm::phaseUsageFromDeck(deck())) );
         }
 
@@ -693,6 +763,9 @@ namespace Opm
         Grid& grid()
         { return ebosSimulator_->gridManager().grid(); }
 
+        const Grid& globalGrid()
+        { return *globalGrid_; }
+
         Problem& ebosProblem()
         { return ebosSimulator_->problem(); }
 
@@ -724,6 +797,8 @@ namespace Opm
         std::unique_ptr<NewtonIterationBlackoilInterface> fis_solver_;
         std::unique_ptr<Simulator> simulator_;
         std::string logFile_;
+        // Needs to be shared pointer because it gets initialzed before MPI_Init.
+        std::shared_ptr<Grid> globalGrid_;
     };
 } // namespace Opm
 
