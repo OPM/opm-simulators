@@ -205,8 +205,13 @@ public:
     // copy all derivatives from other
     void copyDerivatives(const Evaluation& other)
     {
-        for (int i = dstart_; 0 < dend_; ++i)
+{% if numDerivs < 0 %}
+        for (int i = dstart_; i < dend_; ++i)
             data_[i] = other.data_[i];
+{% else %}
+{% for i in range(1, numDerivs+1) %}
+        data_[{{i}}] = other.data_[{{i}}];{% endfor %}
+{% endif %}
     }
 
 
@@ -269,7 +274,7 @@ public:
 
         //  derivatives
 {% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+        for (int i = dstart_; i < dend_; ++i)
             this->data_[i] = this->data_[i]*v + other.data_[i] * u;
 {% else %}
 {% for i in range(1, numDerivs+1) %}
@@ -306,7 +311,7 @@ public:
 
         //  derivatives
 {% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+        for (int i = dstart_; i < dend_; ++i)
             data_[i] = data_[i]*v_vv - other.data_[i]*u_vv;
 {% else %}
 {% for i in range(1, numDerivs+1) %}

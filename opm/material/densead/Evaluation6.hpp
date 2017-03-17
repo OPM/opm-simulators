@@ -169,8 +169,15 @@ public:
     // copy all derivatives from other
     void copyDerivatives(const Evaluation& other)
     {
-        for (int i = dstart_; 0 < dend_; ++i)
-            data_[i] = other.data_[i];
+
+
+        data_[1] = other.data_[1];
+        data_[2] = other.data_[2];
+        data_[3] = other.data_[3];
+        data_[4] = other.data_[4];
+        data_[5] = other.data_[5];
+        data_[6] = other.data_[6];
+
     }
 
 
