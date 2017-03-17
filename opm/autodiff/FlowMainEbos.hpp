@@ -623,11 +623,6 @@ namespace Opm
         //   output_writer_
         void setupOutputWriter()
         {
-            output_writer_.reset(new OutputWriter(grid(),
-                                                  param_,
-                                                  eclState(),
-                                                  std::move( eclIO_ ),
-                                                  Opm::phaseUsageFromDeck(deck())) );
             // create output writer after grid is distributed, otherwise the parallel output
             // won't work correctly since we need to create a mapping from the distributed to
             // the global view
