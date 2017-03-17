@@ -174,7 +174,9 @@ public:
             }
 
             if (output_writer_.isRestart()) {
-                adaptiveTimeStepping->setSuggestedNextStep(extra.suggested_step);
+                if (extra.suggested_step > 0.0) {
+                    adaptiveTimeStepping->setSuggestedNextStep(extra.suggested_step);
+                }
             }
         }
 
