@@ -310,6 +310,9 @@ enum WellVariablePositions {
 
             EvalWell wellVolumeFractionScaled(const int wellIdx, const int phaseIdx) const;
 
+            // Q_p / (Q_w + Q_g + Q_o) for three phase cases.
+            EvalWell wellSurfaceVolumeFraction(const int well_index, const int phase) const;
+
             bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                      const WellState& well_state,
                                      const int well_number) const;

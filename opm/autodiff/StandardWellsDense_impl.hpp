@@ -231,7 +231,7 @@ namespace Opm {
 
             // add vol * dF/dt + Q to the well equations;
             for (int p1 = 0; p1 < np; ++p1) {
-                EvalWell resWell_loc = (wellVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
+                EvalWell resWell_loc = (wellSurfaceVolumeFraction(w, p1) - F0_[w + nw*p1]) * volume / dt;
                 resWell_loc += getQs(w, p1);
                 for (int p2 = 0; p2 < np; ++p2) {
                     invDuneD_[w][w][flowPhaseToEbosCompIdx(p1)][flowToEbosPvIdx(p2)] += resWell_loc.derivative(p2+blocksize);
@@ -680,7 +680,7 @@ namespace Opm {
         const int nw = wells().number_of_wells;
         for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
             for (int w = 0; w < nw; ++w) {
-                F0_[w + nw * phaseIdx] = wellVolumeFraction(w,phaseIdx).value();
+                F0_[w + nw * phaseIdx] = wellSurfaceVolumeFraction(w, phaseIdx).value();
             }
         }
     }
@@ -703,7 +703,7 @@ namespace Opm {
         std::vector<EvalWell> cmix_s(np,0.0);
         for (int phase = 0; phase < np; ++phase) {
             //int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
-            cmix_s[phase] = wellVolumeFraction(w,phase);
+            cmix_s[phase] = wellSurfaceVolumeFraction(w, phase);
         }
 
         const auto& fs = intQuants.fluidState();
@@ -1939,6 +1939,8 @@ namespace Opm {
         const int nw = wells().number_of_wells;
         const double target_rate = well_controls_get_current_target(wc);
 
+        // TODO: the formulation for the injectors decides it only work with single phase
+        // surface rate injection control. Improvement will be required.
         if (wells().type[wellIdx] == INJECTOR) {
             const double comp_frac = wells().comp_frac[np*wellIdx + phaseIdx];
             if (comp_frac == 0.0) {
@@ -1973,21 +1975,29 @@ namespace Opm {
 
             // when it is a single phase rate limit
             if (num_phases_under_rate_control == 1) {
-                if (distr[phaseIdx] == 1.0) {
+
+                // looking for the phase under control
+                int phase_under_control = -1;
+                for (int phase = 0; phase < np; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        phase_under_control = phase;
+                        break;
+                    }
+                }
+
+                assert(phase_under_control >= 0);
+
+                if (phaseIdx == phase_under_control) {
                     qs.setValue(target_rate);
                     return qs;
                 }
 
-                int currentControlIdx = 0;
-                for (int i = 0; i < np; ++i) {
-                    currentControlIdx += wells().comp_frac[np*wellIdx + i] * i;
-                }
-
+                // TODO: not sure why the single phase under control will have near zero fraction
                 const double eps = 1e-6;
-                if (wellVolumeFractionScaled(wellIdx,currentControlIdx) < eps) {
+                if (wellVolumeFractionScaled(wellIdx, phase_under_control) < eps) {
                     return qs;
                 }
-                return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx,currentControlIdx));
+                return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / wellVolumeFractionScaled(wellIdx, phase_under_control));
             }
 
             // when it is a combined two phase rate limit, such like LRAT
@@ -2002,12 +2012,19 @@ namespace Opm {
                 return (target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx) / combined_volume_fraction);
             }
 
-            // suppose three phase combined limit is the same with RESV
-            // not tested yet.
+            // TODO: three phase surface rate control is not tested yet
+            if (num_phases_under_rate_control == 3) {
+                return target_rate * wellSurfaceVolumeFraction(wellIdx, phaseIdx);
+            }
+        } else if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+            // ReservoirRate
+            return target_rate * wellVolumeFractionScaled(wellIdx, phaseIdx);
+        } else {
+            OPM_THROW(std::logic_error, "Unknown control type for well " << wells().name[wellIdx]);
         }
 
-        // ReservoirRate
-        return target_rate * wellVolumeFractionScaled(wellIdx,phaseIdx);
+        // avoid warning of condition reaches end of non-void function
+        return qs;
     }
 
 
@@ -2056,6 +2073,26 @@ namespace Opm {
         }
         std::vector<double> g = {1,1,0.01};
         return (wellVolumeFraction(wellIdx, phaseIdx) / g[phaseIdx]);
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wellSurfaceVolumeFraction(const int well_index, const int phase) const
+    {
+        EvalWell sum_volume_fraction_scaled = 0.;
+        const int np = wells().number_of_phases;
+        for (int p = 0; p < np; ++p) {
+            sum_volume_fraction_scaled += wellVolumeFractionScaled(well_index, p);
+        }
+
+        assert(sum_volume_fraction_scaled.value() != 0.);
+
+        return wellVolumeFractionScaled(well_index, phase) / sum_volume_fraction_scaled;
     }
 
 
