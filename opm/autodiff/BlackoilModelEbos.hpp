@@ -190,9 +190,8 @@ namespace Opm {
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
             well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv, &rate_converter_);
             wellModel().setWellsActive( localWellsActive() );
-            global_nc_ =  Opm::AutoDiffGrid::numCells(grid_);
             // compute global sum of number of cells
-            global_nc_ = grid_.comm().sum( global_nc_ );
+            global_nc_ = detail::countGlobalCells(grid_);
 
             if (!istlSolver_)
             {
