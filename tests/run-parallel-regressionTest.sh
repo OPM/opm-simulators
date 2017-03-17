@@ -19,11 +19,11 @@ TEST_ARGS="$@"
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8
+${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8 output_dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 mkdir mpi
 cd mpi
-mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8
+mpirun -np 4 ${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA linear_solver_reduction=1e-7 tolerance_cnv=5e-6 tolerance_mb=1e-8 output_dir=${RESULT_PATH}/mpi
 test $? -eq 0 || exit 1
 cd ..
 

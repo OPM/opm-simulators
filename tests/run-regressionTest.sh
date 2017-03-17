@@ -18,7 +18,7 @@ TEST_ARGS="$@"
 rm -Rf  ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS}
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} output_dir=${RESULT_PATH}
 cd ..
 
 ecode=0

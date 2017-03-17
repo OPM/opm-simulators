@@ -19,9 +19,9 @@ TEST_ARGS="$@"
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA timestep.adaptive=false
+${BINPATH}/${EXE_NAME} ${TEST_ARGS}.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
-${BINPATH}/${EXE_NAME} ${TEST_ARGS}_RESTART.DATA timestep.adaptive=false
+${BINPATH}/${EXE_NAME} ${TEST_ARGS}_RESTART.DATA timestep.adaptive=false output_dir=${RESULT_PATH}
 test $? -eq 0 || exit 1
 
 ecode=0

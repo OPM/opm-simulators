@@ -87,8 +87,8 @@ namespace Opm
                     return EXIT_FAILURE;
                 }
 
-                setupOutput();
                 setupEbosSimulator();
+                setupOutput();
                 setupLogging();
                 extractMessages();
                 setupGridAndProps();
@@ -225,14 +225,17 @@ namespace Opm
         // Throws std::runtime_error if failed to create (if requested) output dir.
         void setupOutput()
         {
-            // Write parameters used for later reference. (only if rank is zero)
             output_to_files_ = output_cout_ && param_.getDefault("output", true);
-            // Always read output_dir as it will be set unconditionally later.
-            // Not doing this might cause files to be created in the current
-            // directory.
-            output_dir_ =
-                param_.getDefault("output_dir", std::string("."));
 
+            // Setup output directory.
+            auto& ioConfig = eclState().getIOConfig();
+            // Default output directory is the directory where the deck is found.
+            const std::string default_output_dir = ioConfig.getOutputDir();
+            output_dir_ = param_.getDefault("output_dir", default_output_dir);
+            // Override output directory if user specified.
+            ioConfig.setOutputDir(output_dir_);
+
+            // Write parameters used for later reference. (only if rank is zero)
             if (output_to_files_) {
                 // Create output directory if needed.
                 boost::filesystem::path fpath(output_dir_);
@@ -265,13 +268,9 @@ namespace Opm
             } else {
                 baseName = path(fpath.filename()).string();
             }
-            if (param_.has("output_dir")) {
-                logFileStream << output_dir_ << "/";
-                debugFileStream << output_dir_ + "/";
-            }
 
-            logFileStream << baseName;
-            debugFileStream << "." << baseName;
+            logFileStream << output_dir_ << "/" << baseName;
+            debugFileStream << output_dir_ << "/" << "." << baseName;
 
             if ( must_distribute_ && mpi_rank_ != 0 )
             {
@@ -354,12 +353,10 @@ namespace Opm
                     MissingFeatures::checkKeywords(deck());
                 }
 
-                IOConfig& ioConfig = eclState().getIOConfig();
-                ioConfig.setOutputDir(output_dir_);
-
                 // Possible to force initialization only behavior (NOSIM).
                 if (param_.has("nosim")) {
                     const bool nosim = param_.get<bool>("nosim");
+                    auto& ioConfig = eclState().getIOConfig();
                     ioConfig.overrideNOSIM( nosim );
                 }
             }
