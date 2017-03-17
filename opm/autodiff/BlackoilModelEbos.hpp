@@ -377,6 +377,10 @@ namespace Opm {
             try
             {
                 report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state);
+
+                // apply well residual to the residual.
+                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+                wellModel().apply(ebosResid);
             }
             catch ( const Dune::FMatrixError& e  )
             {
@@ -459,12 +463,6 @@ namespace Opm {
         {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-
-            if( xw.size() > 0 )
-            {
-                // apply well residual to the residual.
-                wellModel().apply(ebosResid);
-            }
 
             // set initial guess
             x = 0.0;
