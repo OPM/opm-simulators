@@ -273,8 +273,8 @@ namespace Opm {
 
 
         /// Return reservoir simulation data (for output functionality)
-        const SimulatorData& getSimulatorData() const {
-            return transport_solver_.model().getSimulatorData();
+        const SimulatorData& getSimulatorData(const SimulationDataContainer& localState) const {
+            return transport_solver_.model().getSimulatorData(localState);
         }
 
         /// Return fluid-in-place data (for output functionality)

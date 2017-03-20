@@ -258,7 +258,7 @@ namespace Opm {
         const WellModel& wellModel() const { return well_model_; }
 
         /// Return reservoir simulation data (for output functionality)
-        const SimulatorData& getSimulatorData() const {
+        const SimulatorData& getSimulatorData(const SimulationDataContainer&) const {
             return sd_;
         }
 

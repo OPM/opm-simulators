@@ -32,6 +32,7 @@
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
+#include <opm/common/data/SimulationDataContainer.hpp>
 
 struct UnstructuredGrid;
 struct Wells;
@@ -146,7 +147,7 @@ namespace Opm {
                               const PolymerBlackoilState& current ) const;
 
         /// Return reservoir simulation data (for output functionality)
-        const SimulatorData& getSimulatorData() const {
+        const SimulatorData& getSimulatorData(const SimulationDataContainer&) const {
             return sd_;
         }
 
