@@ -59,17 +59,14 @@ namespace DenseAd {
  */
 template <class ValueT, int numDerivs>
 class Evaluation
-
 {
 public:
     //! field type
     typedef ValueT ValueType;
 
-    //! number of derivatives
-
+    //! number of derivatives 
     static constexpr int size = numDerivs;
-
-
+ 
 protected:
     //! length of internal data vector
     static constexpr int length_ = size + 1;
@@ -82,17 +79,14 @@ protected:
     static constexpr int dend_ = length_;
 
 public:
-
     //! default constructor
     Evaluation() : data_()
     {}
 
     //! copy other function evaluation
     Evaluation(const Evaluation& other)
-
        : data_(other.data_)
     { }
-
 
     // create an evaluation which represents a constant function
     //
@@ -124,11 +118,10 @@ public:
 
     // set all derivatives to zero
     void clearDerivatives()
-    {
-
-        for (int i = dstart_; i < dend_; ++i)
+    { 
+        for (int i = dstart_; i < dend_; ++i) {
             data_[i] = 0.0;
-
+        }
     }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
@@ -154,28 +147,27 @@ public:
         // print value
         os << "v: " << value() << " / d:";
         // print derivatives
-        for (int varIdx = 0; varIdx < size; ++varIdx)
+        for (int varIdx = 0; varIdx < size; ++varIdx) {
             os << " " << derivative(varIdx);
+        }
     }
 
     // copy all derivatives from other
     void copyDerivatives(const Evaluation& other)
-    {
-
-        for (int i = dstart_; i < dend_; ++i)
+    { 
+        for (int i = dstart_; i < dend_; ++i) {
             data_[i] = other.data_[i];
-
-    }
+        }
+     }
 
 
     // add value and derivatives from other to this values and derivatives
     Evaluation& operator+=(const Evaluation& other)
-    {
-
-        for (int i = 0; i < length_; ++i)
+    {  
+        for (int i = 0; i < length_; ++i) {
             data_[i] += other.data_[i];
-
-
+        }
+  
         return *this;
     }
 
@@ -190,11 +182,11 @@ public:
 
     // subtract other's value and derivatives from this values
     Evaluation& operator-=(const Evaluation& other)
-    {
-
-        for (int i = 0; i < length_; ++i)
+    { 
+        for (int i = 0; i < length_; ++i) {
             data_[i] -= other.data_[i];
-
+        }
+ 
         return *this;
     }
 
@@ -213,17 +205,16 @@ public:
     {
         // while the values are multiplied, the derivatives follow the product rule,
         // i.e., (u*v)' = (v'u + u'v).
-        const ValueT u = this->value();
-        const ValueT v = other.value();
+        const ValueType u = this->value();
+        const ValueType v = other.value();
 
         // value
-        this->data_[valuepos_] *= v ;
+        data_[valuepos_] *= v ;
 
         //  derivatives
-
-        for (int i = dstart_; i < dend_; ++i)
-            this->data_[i] = this->data_[i]*v + other.data_[i] * u;
-
+        for (int i = dstart_; i < dend_; ++i) {
+            data_[i] = data_[i] * v + other.data_[i] * u;
+        }
 
         return *this;
     }
@@ -231,12 +222,11 @@ public:
     // m(c*u)' = c*u'
     template <class RhsValueType>
     Evaluation& operator*=(const RhsValueType& other)
-    {
-
-        for (int i = 0; i < length_; ++i)
+    { 
+        for (int i = 0; i < length_; ++i) {
             data_[i] *= other;
-
-
+        }
+ 
         return *this;
     }
 
@@ -244,18 +234,17 @@ public:
     Evaluation& operator/=(const Evaluation& other)
     {
         // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u - u'v)/v^2.
-        const ValueT v_vv = 1.0 / other.value();
-        const ValueT u_vv = value() * v_vv * v_vv;
+        const ValueType v_vv = 1.0 / other.value();
+        const ValueType u_vv = value() * v_vv * v_vv;
 
         // value
         data_[valuepos_] *= v_vv;
 
-        //  derivatives
-
-        for (int i = dstart_; i < dend_; ++i)
-            data_[i] = data_[i]*v_vv - other.data_[i]*u_vv;
-
-
+        //  derivatives 
+        for (int i = dstart_; i < dend_; ++i) {
+            data_[i] = data_[i] * v_vv - other.data_[i] * u_vv;
+        }
+ 
         return *this;
     }
 
@@ -263,12 +252,12 @@ public:
     template <class RhsValueType>
     Evaluation& operator/=(const RhsValueType& other)
     {
-        ValueType tmp = 1.0/other;
-
-        for (int i = 0; i < length_; ++i)
+        const ValueType tmp = 1.0/other;
+ 
+        for (int i = 0; i < length_; ++i) {
             data_[i] *= tmp;
-
-
+        }
+ 
         return *this;
     }
 
@@ -277,14 +266,14 @@ public:
     static inline Evaluation divide(const RhsValueType& a, const Evaluation& b)
     {
         Evaluation result;
-        ValueType tmp = 1.0/b.value();
+        const ValueType tmp = 1.0/b.value();
         result.setValue( a*tmp );
-        const ValueT df_dg = - result.value()*tmp;
-
-
-        for (int i = dstart_; i < dend_; ++i)
-            result.data_[i] = df_dg*b.data_[i];
-
+        const ValueType df_dg = - result.value()*tmp;
+ 
+        for (int i = dstart_; i < dend_; ++i) {
+            result.data_[i] = df_dg * b.data_[i];
+        }
+ 
         return result;
     }
 
@@ -324,12 +313,11 @@ public:
     Evaluation operator-() const
     {
         Evaluation result;
-        // set value and derivatives to negative
-
-        for (int i = 0; i < length_; ++i)
+        // set value and derivatives to negative 
+        for (int i = 0; i < length_; ++i) {
             result.data_[i] = - data_[i];
-
-
+        }
+ 
         return result;
     }
 
@@ -373,12 +361,11 @@ public:
 
     // copy assignment from evaluation
     Evaluation& operator=(const Evaluation& other)
-    {
-
-        for (int i = 0; i < length_; ++i)
+    { 
+        for (int i = 0; i < length_; ++i) {
             data_[i] = other.data_[i];
-
-
+        }
+ 
         return *this;
     }
 
@@ -388,10 +375,11 @@ public:
 
     bool operator==(const Evaluation& other) const
     {
-        for (int idx = 0; idx < length_; ++idx)
-            if (data_[idx] != other.data_[idx])
+        for (int idx = 0; idx < length_; ++idx) {
+            if (data_[idx] != other.data_[idx]) {
                 return false;
-
+            }
+        }
         return true;
     }
 
