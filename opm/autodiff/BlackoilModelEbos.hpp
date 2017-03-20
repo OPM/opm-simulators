@@ -586,7 +586,17 @@ namespace Opm {
             const int np = fluid_.numPhases();
             const int nc = numCells(grid_);
 
-            for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
+            ElementContext elemCtx(ebosSimulator_);
+            const auto& gridView = grid_.leafGridView();
+            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            for (auto elemIt = gridView.template begin</*codim=*/0>();
+                 elemIt != elemEndIt;
+                 ++elemIt)
+            {
+                const auto& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const double& dp = dx[cell_idx][flowPhaseToEbosCompIdx(0)];
                 //reservoir_state.pressure()[cell_idx] -= dp;
                 double& p = reservoir_state.pressure()[cell_idx];
@@ -668,7 +678,7 @@ namespace Opm {
 
                     // phase translation sg <-> rs
                     const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
-                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
                     switch (hydroCarbonState) {
                     case HydroCarbonState::GasAndOil: {
