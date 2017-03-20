@@ -584,10 +584,9 @@ namespace Opm {
         {
             using namespace Opm::AutoDiffGrid;
             const int np = fluid_.numPhases();
-            const int nc = numCells(grid_);
 
-            ElementContext elemCtx(ebosSimulator_);
-            const auto& gridView = grid_.leafGridView();
+            ElementContext elemCtx( ebosSimulator_ );
+            const auto& gridView = ebosSimulator_.gridView();
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
             for (auto elemIt = gridView.template begin</*codim=*/0>();
                  elemIt != elemEndIt;
@@ -886,28 +885,28 @@ namespace Opm {
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             ElementContext elemCtx(ebosSimulator_);
-            const auto& gridView = grid_.leafGridView();
+            const auto& gridView = ebosSimulator().gridView();
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
 
-            for ( int idx = 0; idx < np; ++idx )
+            for (auto elemIt = gridView.template begin</*codim=*/0>();
+              elemIt != elemEndIt;
+              ++elemIt)
             {
-                Vector& R2_idx = R2[ idx ];
-                Vector& B_idx  = B[ idx ];
-                const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
-                const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
+                const auto& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
 
-                for (auto elemIt = gridView.template begin</*codim=*/0>();
-                  elemIt != elemEndIt;
-                  ++elemIt)
+                for ( int idx = 0; idx < np; ++idx )
                 {
-                    const auto& elem = *elemIt;
-                    elemCtx.updatePrimaryStencil(elem);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                    const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                    const auto& fs = intQuants.fluidState();
+                    Vector& R2_idx = R2[ idx ];
+                    Vector& B_idx  = B[ idx ];
+                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
+                    const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
 
-                    B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
+                    B_idx [cell_idx] = 1.0 / fs.invB(ebosPhaseIdx).value();
                     R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
                 }
             }
@@ -1034,7 +1033,7 @@ namespace Opm {
         computeFluidInPlace(const std::vector<int>& fipnum) const
         {
             const auto& comm = grid_.comm();
-            const auto& gridView = grid_.leafGridView();
+            const auto& gridView = ebosSimulator().gridView();
             const int nc = gridView.size(/*codim=*/0);
             const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
             int ntFip = *std::max_element(fipnum.begin(), fipnum.end());
