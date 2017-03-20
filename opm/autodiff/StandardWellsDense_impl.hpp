@@ -2394,7 +2394,7 @@ namespace Opm {
             // surface condition.  In this case, use existing
             // flow rates as initial conditions as reservoir
             // rate acts only in aggregate.
-            break;
+            // break;
 
         case SURFACE_RATE:
             // assign target value as initial guess for injectors and
@@ -2403,26 +2403,52 @@ namespace Opm {
             if (well_type == INJECTOR) {
                 for (int phase = 0; phase < np; ++phase) {
                     const double& compi = wells().comp_frac[np * well_index + phase];
-                    // TODO: it was commented out from the master branch already.
-                    //if (compi > 0.0) {
-                    xw.wellRates()[np*well_index + phase] = target * compi;
-                    //}
+                    if (compi > 0.0) {
+                        assert(distr[phase] > 0.);
+                        xw.wellRates()[np*well_index + phase] = target * compi / distr[phase];
+                    } else {
+                        xw.wellRates()[np * well_index + phase] = target * compi;
+                    }
                 }
             } else if (well_type == PRODUCER) {
-                // only set target as initial rates for single phase
-                // producers. (orat, grat and wrat, and not lrat)
-                // lrat will result in numPhasesWithTargetsUnderThisControl == 2
+                // checking the number of the phases under control
                 int numPhasesWithTargetsUnderThisControl = 0;
                 for (int phase = 0; phase < np; ++phase) {
                     if (distr[phase] > 0.0) {
                         numPhasesWithTargetsUnderThisControl += 1;
                     }
                 }
+
+                assert(numPhasesWithTargetsUnderThisControl > 0);
+
+                // update the rates of phases under control based on the target,
+                // and also update rates of phases not under control to keep the rate ratio,
+                // assuming the mobility ratio does not change for the production wells
+                double orignal_rates_under_phase_control = 0.0;
                 for (int phase = 0; phase < np; ++phase) {
-                    if (distr[phase] > 0.0 && numPhasesWithTargetsUnderThisControl < 2 ) {
-                        xw.wellRates()[np*well_index + phase] = target * distr[phase];
+                    if (distr[phase] > 0.0) {
+                        orignal_rates_under_phase_control += xw.wellRates()[np * well_index + phase] * distr[phase];
                     }
                 }
+
+                if (orignal_rates_under_phase_control != 0.0 ) {
+                    double scaling_factor = target / orignal_rates_under_phase_control;
+
+                    for (int phase = 0; phase < np; ++phase) {
+                        xw.wellRates()[np * well_index + phase] *= scaling_factor;
+                    }
+                } else { // scaling factor is not well defied when orignal_rates_under_phase_control is zero
+                    if (orignal_rates_under_phase_control == 0.0) {
+                        // only handle single-phase control
+                        if (numPhasesWithTargetsUnderThisControl == 1) {
+                            for (int phase = 0; phase < np; ++phase) {
+                                if (distr[phase] > 0.0) {
+                                    xw.wellRates()[np * well_index + phase] = target;
+                                }
+                            }
+                        }
+                    }
+               }
             } else {
                 OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
             }
