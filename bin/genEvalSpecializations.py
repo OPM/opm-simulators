@@ -89,23 +89,22 @@ namespace DenseAd {
  *        variables.
  */
 template <class ValueT, int numDerivs>
-class Evaluation
+class Evaluation\
 {% else %}
 template <class ValueT>
-class Evaluation<ValueT, {{ numDerivs }}>
+class Evaluation<ValueT, {{ numDerivs }}>\
 {% endif %}
 {
 public:
     //! field type
     typedef ValueT ValueType;
 
-    //! number of derivatives
-{% if numDerivs < 0 %}
+    //! number of derivatives\
+ {% if numDerivs < 0 %}
     static constexpr int size = numDerivs;
-{% else %}
+ {% else %}
     static constexpr int size = {{ numDerivs }};
-{% endif %}
-
+ {% endif %}
 protected:
     //! length of internal data vector
     static constexpr int length_ = size + 1;
@@ -118,22 +117,21 @@ protected:
     static constexpr int dend_ = length_;
 
 public:
-
     //! default constructor
     Evaluation() : data_()
     {}
 
     //! copy other function evaluation
     Evaluation(const Evaluation& other)
-{% if numDerivs < 0 %}
+{% if numDerivs < 0 %}\
        : data_(other.data_)
     { }
-{% else %}
-    {
-{% for i in range(0, numDerivs+1) %}
+{% else %}\
+    {\
+ {% for i in range(0, numDerivs+1) %}
         data_[{{i}}] = other.data_[{{i}}];{% endfor %}
     }
-{% endif %}
+{% endif %}\
 
     // create an evaluation which represents a constant function
     //
@@ -165,14 +163,15 @@ public:
 
     // set all derivatives to zero
     void clearDerivatives()
-    {
-{% if numDerivs < 0 %}
-        for (int i = dstart_; i < dend_; ++i)
+    {\
+ {% if numDerivs < 0 %}
+        for (int i = dstart_; i < dend_; ++i) {
             data_[i] = 0.0;
-{% else %}
-{% for i in range(1, numDerivs+1) %}
+        }
+{% else %}\
+ {% for i in range(1, numDerivs+1) %}
         data_[{{i}}] = 0.0;{% endfor %}
-{% endif %}
+{% endif %}\
     }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
@@ -198,33 +197,36 @@ public:
         // print value
         os << "v: " << value() << " / d:";
         // print derivatives
-        for (int varIdx = 0; varIdx < size; ++varIdx)
+        for (int varIdx = 0; varIdx < size; ++varIdx) {
             os << " " << derivative(varIdx);
+        }
     }
 
     // copy all derivatives from other
     void copyDerivatives(const Evaluation& other)
-    {
-{% if numDerivs < 0 %}
-        for (int i = dstart_; i < dend_; ++i)
+    {\
+ {% if numDerivs < 0 %}
+        for (int i = dstart_; i < dend_; ++i) {
             data_[i] = other.data_[i];
-{% else %}
-{% for i in range(1, numDerivs+1) %}
+        }
+ {% else %}\
+    {% for i in range(1, numDerivs+1) %}
         data_[{{i}}] = other.data_[{{i}}];{% endfor %}
-{% endif %}
+ {% endif %}\
     }
 
 
     // add value and derivatives from other to this values and derivatives
     Evaluation& operator+=(const Evaluation& other)
-    {
-{% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+    {\
+  {% if numDerivs < 0 %}
+        for (int i = 0; i < length_; ++i) {
             data_[i] += other.data_[i];
-{% else %}
-{% for i in range(0, numDerivs+1) %}
+        }
+  {% else %}\
+    {% for i in range(0, numDerivs+1) %}
         data_[{{i}}] += other.data_[{{i}}];{% endfor %}
-{% endif %}
+  {% endif %}\
 
         return *this;
     }
@@ -240,14 +242,15 @@ public:
 
     // subtract other's value and derivatives from this values
     Evaluation& operator-=(const Evaluation& other)
-    {
-{% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+    {\
+ {% if numDerivs < 0 %}
+        for (int i = 0; i < length_; ++i) {
             data_[i] -= other.data_[i];
-{% else %}
-{% for i in range(0, numDerivs+1) %}
+        }
+ {% else %}\
+ {% for i in range(0, numDerivs+1) %}
         data_[{{i}}] -= other.data_[{{i}}];{% endfor %}
-{% endif %}
+ {% endif %}
         return *this;
     }
 
@@ -266,20 +269,21 @@ public:
     {
         // while the values are multiplied, the derivatives follow the product rule,
         // i.e., (u*v)' = (v'u + u'v).
-        const ValueT u = this->value();
-        const ValueT v = other.value();
+        const ValueType u = this->value();
+        const ValueType v = other.value();
 
         // value
-        this->data_[valuepos_] *= v ;
+        data_[valuepos_] *= v ;
 
-        //  derivatives
+        //  derivatives\
 {% if numDerivs < 0 %}
-        for (int i = dstart_; i < dend_; ++i)
-            this->data_[i] = this->data_[i]*v + other.data_[i] * u;
-{% else %}
-{% for i in range(1, numDerivs+1) %}
-        this->data_[{{i}}] = this->data_[{{i}}]*v + other.data_[{{i}}] * u;{% endfor %}
-{% endif %}
+        for (int i = dstart_; i < dend_; ++i) {
+            data_[i] = data_[i] * v + other.data_[i] * u;
+        }
+{% else %}\
+ {% for i in range(1, numDerivs+1) %}
+        data_[{{i}}] = data_[{{i}}] * v + other.data_[{{i}}] * u;{% endfor %}
+{% endif %}\
 
         return *this;
     }
@@ -287,15 +291,15 @@ public:
     // m(c*u)' = c*u'
     template <class RhsValueType>
     Evaluation& operator*=(const RhsValueType& other)
-    {
-{% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+    {\
+ {% if numDerivs < 0 %}
+        for (int i = 0; i < length_; ++i) {
             data_[i] *= other;
-{% else %}
-{% for i in range(0, numDerivs+1) %}
+        }
+ {% else %}\
+ {% for i in range(0, numDerivs+1) %}
         data_[{{i}}] *= other;{% endfor %}
-{% endif %}
-
+ {% endif %}
         return *this;
     }
 
@@ -303,21 +307,21 @@ public:
     Evaluation& operator/=(const Evaluation& other)
     {
         // values are divided, derivatives follow the rule for division, i.e., (u/v)' = (v'u - u'v)/v^2.
-        const ValueT v_vv = 1.0 / other.value();
-        const ValueT u_vv = value() * v_vv * v_vv;
+        const ValueType v_vv = 1.0 / other.value();
+        const ValueType u_vv = value() * v_vv * v_vv;
 
         // value
         data_[valuepos_] *= v_vv;
 
-        //  derivatives
-{% if numDerivs < 0 %}
-        for (int i = dstart_; i < dend_; ++i)
-            data_[i] = data_[i]*v_vv - other.data_[i]*u_vv;
-{% else %}
-{% for i in range(1, numDerivs+1) %}
-        data_[{{i}}] = data_[{{i}}]*v_vv - other.data_[{{i}}]*u_vv;{% endfor %}
-{% endif %}
-
+        //  derivatives\
+ {% if numDerivs < 0 %}
+        for (int i = dstart_; i < dend_; ++i) {
+            data_[i] = data_[i] * v_vv - other.data_[i] * u_vv;
+        }
+ {% else %}\
+ {% for i in range(1, numDerivs+1) %}
+        data_[{{i}}] = data_[{{i}}] * v_vv - other.data_[{{i}}] * u_vv;{% endfor %}
+ {% endif %}
         return *this;
     }
 
@@ -325,15 +329,15 @@ public:
     template <class RhsValueType>
     Evaluation& operator/=(const RhsValueType& other)
     {
-        ValueType tmp = 1.0/other;
-{% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+        const ValueType tmp = 1.0/other;
+ {% if numDerivs < 0 %}
+        for (int i = 0; i < length_; ++i) {
             data_[i] *= tmp;
-{% else %}
-{% for i in range(0, numDerivs+1) %}
+        }
+ {% else %}\
+ {% for i in range(0, numDerivs+1) %}
         data_[{{i}}] *= tmp;{% endfor %}
-{% endif %}
-
+ {% endif %}
         return *this;
     }
 
@@ -342,17 +346,17 @@ public:
     static inline Evaluation divide(const RhsValueType& a, const Evaluation& b)
     {
         Evaluation result;
-        ValueType tmp = 1.0/b.value();
+        const ValueType tmp = 1.0/b.value();
         result.setValue( a*tmp );
-        const ValueT df_dg = - result.value()*tmp;
-
-{% if numDerivs < 0 %}
-        for (int i = dstart_; i < dend_; ++i)
-            result.data_[i] = df_dg*b.data_[i];
-{% else %}
-{% for i in range(1, numDerivs+1) %}
-        result.data_[{{i}}] = df_dg*b.data_[{{i}}];{% endfor %}
-{% endif %}
+        const ValueType df_dg = - result.value()*tmp;
+ {% if numDerivs < 0 %}
+        for (int i = dstart_; i < dend_; ++i) {
+            result.data_[i] = df_dg * b.data_[i];
+        }
+ {% else %}\
+ {% for i in range(1, numDerivs+1) %}
+        result.data_[{{i}}] = df_dg * b.data_[{{i}}];{% endfor %}
+ {% endif %}
         return result;
     }
 
@@ -392,15 +396,15 @@ public:
     Evaluation operator-() const
     {
         Evaluation result;
-        // set value and derivatives to negative
-{% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+        // set value and derivatives to negative\
+ {% if numDerivs < 0 %}
+        for (int i = 0; i < length_; ++i) {
             result.data_[i] = - data_[i];
-{% else %}
-{% for i in range(0, numDerivs+1) %}
+        }
+ {% else %}\
+ {% for i in range(0, numDerivs+1) %}
         result.data_[{{i}}] = - data_[{{i}}];{% endfor %}
-{% endif %}
-
+ {% endif %}
         return result;
     }
 
@@ -444,15 +448,15 @@ public:
 
     // copy assignment from evaluation
     Evaluation& operator=(const Evaluation& other)
-    {
-{% if numDerivs < 0 %}
-        for (int i = 0; i < length_; ++i)
+    {\
+ {% if numDerivs < 0 %}
+        for (int i = 0; i < length_; ++i) {
             data_[i] = other.data_[i];
-{% else %}
-{% for i in range(0, numDerivs+1) %}
+        }
+ {% else %}\
+ {% for i in range(0, numDerivs+1) %}
         data_[{{i}}] = other.data_[{{i}}];{% endfor %}
-{% endif %}
-
+ {% endif %}
         return *this;
     }
 
@@ -462,10 +466,11 @@ public:
 
     bool operator==(const Evaluation& other) const
     {
-        for (int idx = 0; idx < length_; ++idx)
-            if (data_[idx] != other.data_[idx])
+        for (int idx = 0; idx < length_; ++idx) {
+            if (data_[idx] != other.data_[idx]) {
                 return false;
-
+            }
+        }
         return true;
     }
 
@@ -699,7 +704,7 @@ includeSpecializationsTemplate = \
 #endif // OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
 """
 
-print "Generating generic template class"
+print ("Generating generic template class")
 fileName = "opm/material/densead/Evaluation.hpp"
 template = jinja2.Template(specializationTemplate)
 fileContents = template.render(numDerivs=-1, scriptName=os.path.basename(sys.argv[0]))
@@ -709,7 +714,7 @@ f.write(fileContents)
 f.close()
 
 for numDerivs in range(1, maxDerivs + 1):
-    print "Generating specialization for %d derivatives"%numDerivs
+    print ("Generating specialization for %d derivatives"%numDerivs)
 
     fileName = "opm/material/densead/Evaluation%d.hpp"%numDerivs
     fileNames.append(fileName)
