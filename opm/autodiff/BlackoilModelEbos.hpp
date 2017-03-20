@@ -895,7 +895,6 @@ namespace Opm {
                 Vector& B_idx  = B[ idx ];
                 const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
                 const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
-                const auto& elemEndIt = gridView.template end</*codim=*/0>();
 
                 for (auto elemIt = gridView.template begin</*codim=*/0>();
                   elemIt != elemEndIt;
