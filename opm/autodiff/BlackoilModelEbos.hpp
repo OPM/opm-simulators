@@ -885,15 +885,27 @@ namespace Opm {
 
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
+            ElementContext elemCtx(ebosSimulator_);
+            const auto& gridView = grid_.leafGridView();
+            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+
             for ( int idx = 0; idx < np; ++idx )
             {
                 Vector& R2_idx = R2[ idx ];
                 Vector& B_idx  = B[ idx ];
                 const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
                 const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
+                const auto& elemEndIt = gridView.template end</*codim=*/0>();
 
-                for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
-                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                for (auto elemIt = gridView.template begin</*codim=*/0>();
+                  elemIt != elemEndIt;
+                  ++elemIt)
+                {
+                    const auto& elem = *elemIt;
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
 
                     B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
