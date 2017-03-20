@@ -647,31 +647,15 @@ inline void testAll()
 
 };//TestEnv
 
-template <class Scalar, int numVars>
-struct TestAll
-{
-    static void test()
-    {
-        TestEnv< Scalar, numVars >().testAll();
-        TestAll< Scalar, numVars-1>::test();
-    }
-};
-
-template <class Scalar>
-struct TestAll<Scalar, 2>
-{
-    static void test()
-    {
-        TestEnv< Scalar, 2 >().testAll();
-    }
-};
 
 int main(int argc, char **argv)
 {
     Dune::MPIHelper::instance(argc, argv);
 
-    TestAll<double, 15>::test();
-    TestAll<float, 15>::test();
+    TestEnv<double, 15>().testAll();
+    TestEnv<double, 2>().testAll();
+    TestEnv<float, 15>().testAll();
+    TestEnv<float, 2>().testAll();
 
     return 0;
 }
