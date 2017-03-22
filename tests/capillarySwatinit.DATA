@@ -11,15 +11,17 @@ OIL
 GAS
 
 DIMENS
-40 40 40 /
+1 1 20 /
 
 TABDIMS
   1    1   40   20    1   20  /
-  
+
 EQLDIMS
 -- NTEQUL
      1 /
 
+START
+   1 'JAN' 2015 /
 -------------------------------------
 GRID
 
@@ -27,19 +29,30 @@ GRID
 -- specify a fake one...
 
 DXV
-40*1 /
+1 /
 
 DYV
-40*1 /
+1 /
 
-DZV
-40*1 /
+DZ
+20*5 /
 
-DEPTHZ
-1681*123.456 /
+TOPS
+0 /
 
+PORO
+20*0.3 /
+
+PERMX
+20*500 /
+
+PERMZ
+20*500 /
 -------------------------------------
 PROPS
+
+ROCK
+        14.7 3E-6 /
 
 PVDO
 100 1.0 1.0
@@ -72,7 +85,7 @@ DENSITY
 SWATINIT
  5*0
  10*0.5
- 5*1 /
+5*1 /
 
 -------------------------------------
 SOLUTION
@@ -81,6 +94,9 @@ EQUIL
 50 150 50 0.25 20 0.35 1* 1* 0
 /
 
+RPTSOL
+ SWATINIT SWAT SGAS SOIL PCOG PCOW
+/
 -------------------------------------
 SCHEDULE
 -- empty section
