@@ -1049,17 +1049,13 @@ namespace Opm {
             }
 
             ElementContext elemCtx(ebosSimulator_);
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
+            const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
                  elemIt != elemEndIt;
                  ++elemIt)
             {
                 const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
-
-                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryStencil(*elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
                 const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -1114,14 +1110,11 @@ namespace Opm {
             comm.sum(tpv.data(), tpv.size());
             comm.sum(hcpv.data(), hcpv.size());
 
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
+            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
                  elemIt != elemEndIt;
                  ++elemIt)
             {
                 const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
 
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
@@ -1256,15 +1249,12 @@ namespace Opm {
             std::vector<int> failed_cells_pb;
             std::vector<int> failed_cells_pd;
             const auto& gridView = ebosSimulator().gridView();
-            auto elemIt = gridView.template begin</*codim=*/ 0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
+            auto elemIt = gridView.template begin</*codim=*/ 0, Dune::Interior_Partition>();
+            const auto& elemEndIt = gridView.template end</*codim=*/ 0, Dune::Interior_Partition>();
             ElementContext elemCtx(ebosSimulator());
 
             for (; elemIt != elemEndIt; ++elemIt) {
                 const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
 
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
