@@ -339,7 +339,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
                    const DynamicListEconLimited&   list_econ_limited,
-                   const std::vector<double>&      well_potentials,
+                   const std::vector<double>&      /* well_potentials */,
                    const std::unordered_set<std::string>&    deactivated_wells)
 {
     if (dimensions != 3) {

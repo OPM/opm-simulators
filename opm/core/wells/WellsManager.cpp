@@ -734,10 +734,9 @@ namespace Opm
 
     }
 
-    void WellsManager::setupGuideRates(std::vector< const Well* >& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
-                                       const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials)
+    // only handle the guide rates from the keyword WGRUPCON
+    void WellsManager::setupGuideRates(std::vector< const Well* >& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index)
     {
-        const int np = phaseUsage.num_phases;
         for (auto wellIter = wells.begin(); wellIter != wells.end(); ++wellIter ) {
             const auto* well = *wellIter;
 
@@ -749,6 +748,7 @@ namespace Opm
             const int wix = well_names_to_index[well->name()];
             WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
 
+            // TODO: looks like only handling OIL phase guide rate for producers
             if (well->getGuideRatePhase(timeStep) != GuideRate::UNDEFINED) {
                 if (well_data[wix].type == PRODUCER) {
                     wellnode.prodSpec().guide_rate_ = well->getGuideRate(timeStep);
@@ -769,125 +769,8 @@ namespace Opm
                 } else {
                     OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << well->name());
                 }
-            } else if (well_potentials.size() > 0) { // default: calculate guide rates from well potentials
-
-                // Note: Modification of the guide rate using GUIDERAT is not supported
-
-                // only set the guide rates if there is a parent group with valied control
-                if (wellnode.getParent() != nullptr) {
-                    const WellsGroupInterface& group = *wellnode.getParent();
-                    if ( well->isProducer(timeStep) ) {
-                        // The guide rates is calculated based on the group control
-                        // Currently only supporting WRAT, ORAT and GRAT.
-                        ProductionSpecification::ControlMode control_mode = group.prodSpec().control_mode_;
-                        if (control_mode == ProductionSpecification::FLD) {
-                            if (group.getParent() !=  nullptr) {
-                                const WellsGroupInterface& higher_group = *(group.getParent());
-                                control_mode = higher_group.prodSpec().control_mode_;
-                            } else {
-                                OPM_THROW(std::runtime_error, "Group " << group.name() << " is under FLD control while no higher level of group is specified.");
-                            }
-                        }
-
-                        switch (control_mode) {
-                        case ProductionSpecification::WRAT: {
-                            if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
-                                OPM_THROW(std::runtime_error, "Water phase not used, yet found water rate controlled well.");
-                            }
-                            const int water_index = phaseUsage.phase_pos[BlackoilPhases::Aqua];
-                            wellnode.prodSpec().guide_rate_ = well_potentials[np*wix + water_index];
-                            wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::WATER;
-                            break;
-                        }
-                        case ProductionSpecification::ORAT: {
-                            if (!phaseUsage.phase_used[BlackoilPhases::Liquid]) {
-                                OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil rate controlled well.");
-                            }
-                            const int oil_index = phaseUsage.phase_pos[BlackoilPhases::Liquid];
-                            wellnode.prodSpec().guide_rate_ = well_potentials[np*wix + oil_index];
-                            wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::OIL;
-                            break;
-                        }
-                        case ProductionSpecification::GRAT: {
-                            if (!phaseUsage.phase_used[BlackoilPhases::Vapour]) {
-                                OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas rate controlled well.");
-                            }
-                            const int gas_index = phaseUsage.phase_pos[BlackoilPhases::Vapour];
-                            wellnode.prodSpec().guide_rate_ = well_potentials[np*wix + gas_index];
-                            wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::GAS;
-                            break;
-                        }
-                        case ProductionSpecification::FLD: {
-                            OPM_THROW(std::logic_error, "Not support more than one continous level of FLD control");
-                        }
-                        case ProductionSpecification::LRAT: {
-                            double guide_rate = 0;
-                            if (phaseUsage.phase_used[BlackoilPhases::Liquid]) {
-                                const int oil_index = phaseUsage.phase_pos[BlackoilPhases::Liquid];
-                                const double potential_oil = well_potentials[np*wix + oil_index];
-                                guide_rate += potential_oil;
-                            }
-                            if (phaseUsage.phase_used[BlackoilPhases::Aqua]) {
-                                const int water_index = phaseUsage.phase_pos[BlackoilPhases::Aqua];
-                                const double potential_water = well_potentials[np*wix + water_index];
-                                guide_rate += potential_water;
-                            }
-                            // not sure if no water and no oil, what will happen here, zero guide_rate?
-                            wellnode.prodSpec().guide_rate_ = guide_rate;
-                            wellnode.prodSpec().guide_rate_type_ = ProductionSpecification::LIQ;
-                        }
-                        case ProductionSpecification::NONE: {
-                            // Group control is not in use for this group.
-                            break;
-                        }
-                        default:
-                            OPM_THROW(std::logic_error, "Not supported control_mode for guide rate computed" <<
-                                      " from well potentials: " << group.prodSpec().control_mode_);
-                        }
-                    } else {
-                        // The guide rates is calculated based on the group injector type
-                        switch (group.injSpec().injector_type_) {
-                        case InjectionSpecification::WATER: {
-                            if (!phaseUsage.phase_used[BlackoilPhases::Aqua]) {
-                                OPM_THROW(std::runtime_error, "Water phase not used, yet found water injecting well.");
-                            }
-                            const int water_index = phaseUsage.phase_pos[BlackoilPhases::Aqua];
-                            wellnode.injSpec().guide_rate_ = well_potentials[np*wix + water_index];
-                            // Guide rates applies to the phase that the well is injecting i.e water
-                            wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
-                            break;
-                        }
-                        case InjectionSpecification::OIL: {
-                            if (!phaseUsage.phase_used[BlackoilPhases::Liquid]) {
-                                OPM_THROW(std::runtime_error, "Oil phase not used, yet found oil injecting well.");
-                            }
-                            const int oil_index = phaseUsage.phase_pos[BlackoilPhases::Liquid];
-                            wellnode.injSpec().guide_rate_ = well_potentials[np*wix + oil_index];
-                            // Guide rates applies to the phase that the well is injecting i.e. oil
-                            wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
-                            break;
-                        }
-                        case InjectionSpecification::GAS: {
-                            if (!phaseUsage.phase_used[BlackoilPhases::Vapour]) {
-                                OPM_THROW(std::runtime_error, "Gas phase not used, yet found gas injecting well.");
-                            }
-                            const int gas_index = phaseUsage.phase_pos[BlackoilPhases::Vapour];
-                            wellnode.injSpec().guide_rate_ = well_potentials[np*wix + gas_index];
-                            // Guide rates applies to the phase that the well is injecting i.e gas
-                            wellnode.injSpec().guide_rate_type_ = InjectionSpecification::RAT;
-
-                            break;
-                        }
-                        default:
-                            OPM_THROW(std::logic_error, "Not supported injector type for guide rate computed" <<
-                                      " from well potentials: " << group.injSpec().injector_type_);
-                        }
-                    }
-
-                }
-            } // if neither WGRUPCON nor well_potentials is given, distribute the flow equaly
+            }
         }
-
     }
 
 } // namespace Opm

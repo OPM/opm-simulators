@@ -192,8 +192,8 @@ namespace Opm
                                    const std::unordered_set<std::string>& deactivated_wells,
                                    const DynamicListEconLimited& list_econ_limited);
 
-        void setupGuideRates(std::vector<const Well*>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index,
-                             const PhaseUsage& phaseUsage, const std::vector<double>& well_potentials);
+        void setupGuideRates(std::vector<const Well*>& wells, const size_t timeStep, std::vector<WellData>& well_data, std::map<std::string, int>& well_names_to_index);
+
         // Data
         Wells* w_;
         WellCollection well_collection_;
