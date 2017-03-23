@@ -91,9 +91,17 @@ public:
     {
     }
 
-    EclMultiplexerMaterialParams(const EclMultiplexerMaterialParams& /*other*/)
+    EclMultiplexerMaterialParams(const EclMultiplexerMaterialParams& other)
         : realParams_()
     {
+        setApproach( other.approach() );
+    }
+
+    EclMultiplexerMaterialParams& operator= ( const EclMultiplexerMaterialParams& other )
+    {
+        realParams_.reset();
+        setApproach( other.approach() );
+        return *this;
     }
 
     void setApproach(EclMultiplexerApproach newApproach)
