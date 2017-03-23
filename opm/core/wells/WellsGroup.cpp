@@ -1075,7 +1075,7 @@ namespace Opm
                                         const bool only_group)
     {
         if ( !isInjector() ) {
-            // assert(target == 0.0);
+            assert(target == 0.0 || std::isnan(target));
             return;
         }
 
@@ -1280,7 +1280,7 @@ namespace Opm
                                          const bool only_group)
     {
         if ( !isProducer() ) {
-            assert(target == 0.0);
+            assert(target == 0.0 || std::isnan(target));
             return;
         }
 
