@@ -1549,11 +1549,14 @@ namespace Opm {
         // checking whether control changed
         wellhelpers::WellSwitchingLogger logger;
         for (int w = 0; w < nw; ++w) {
+            const WellControls* wc = wells().ctrls[w];
             if (updated_control_index[w] != old_control_index[w]) {
-                WellControls* wc = wells().ctrls[w];
                 logger.wellSwitched(wells().name[w],
                                     well_controls_iget_type(wc, old_control_index[w]),
                                     well_controls_iget_type(wc, updated_control_index[w]));
+            }
+
+            if (updated_control_index[w] != old_control_index[w] || well_collection_->groupControlActive()) {
                 updateWellStateWithTarget(wc, updated_control_index[w], w, xw);
             }
         }
