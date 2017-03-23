@@ -68,8 +68,13 @@ namespace Opm
             // call init on base class
             BaseType :: init(wells, state, prevState);
 
+            // TODO: the reason to keep this is to avoid getting defaulted value BHP
+            // some facilities needed from opm-parser or opm-core
+            // It is a little tricky, since sometimes before applying group control, the only
+            // available constraints in the well_controls is the defaulted BHP value, and it
+            // is really not desirable to use this value to enter the Newton iterations.
             setWellSolutions(pu);
-            setWellSolutionsFromPrevState(prevState);
+            // setWellSolutionsFromPrevState(prevState);
         }
 
 
