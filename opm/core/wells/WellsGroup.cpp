@@ -863,13 +863,20 @@ namespace Opm
                 const double bigger_of_two = std::max(production_rate, production_target);
 
                 if (std::abs(production_target - production_rate) > relative_tolerance * bigger_of_two) {
-                    // underproducing the target while potentially can produce more
-                    // then we should not consider the effort to match the group target is done yet
-                    if (canProduceMore()) {
-                        return false;
-                    } else {
-                        // can not produce more to meet the target
-                        OpmLog::info("group " + name() + " can not meet its target!");
+                    if (production_rate < production_target) {
+                        // underproducing the target while potentially can produce more
+                        // then we should not consider the effort to match the group target is done yet
+                        if (canProduceMore()) {
+                            return false;
+                        } else {
+                            // can not produce more to meet the target
+                            OpmLog::info("group " + name() + " can not meet its target!");
+                        }
+                    } else { // overproducing the target, the only possibility is that all the wells/groups are under individual control
+                        // while somehow our algorithms did not make the wells/groups return group controls
+                        // either we should fix the algorithm of determining the target for well to return group controls
+                        // or we should do something here
+                        OpmLog::info("group " + name() + " is overproducing its target!");
                     }
                 }
             }
