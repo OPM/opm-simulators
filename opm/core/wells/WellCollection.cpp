@@ -194,6 +194,8 @@ namespace Opm
             roots_[i]->applyProdGroupControls();
             roots_[i]->applyInjGroupControls();
         }
+
+        group_control_applied_ = true;
     }
 
     /// Applies explicit reinjection controls. This must be called at each timestep to be correct.
@@ -321,6 +323,13 @@ namespace Opm
     bool WellCollection::groupControlActive() const
     {
         return group_control_active_;
+    }
+
+
+
+    bool WellCollection::groupControlApplied() const
+    {
+        return group_control_applied_;
     }
 
 

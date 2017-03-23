@@ -139,6 +139,9 @@ namespace Opm
         /// Whether we have active group control
         bool groupControlActive() const;
 
+        /// Whether we have applied the group control
+        bool groupControlApplied() const;
+
         /// Whether the group target is converged
         // It is considered converged if eitehr the group targets are matched or the group targets are not matched while the wells are
         // running under their own limits so that they can not produce more
@@ -163,7 +166,8 @@ namespace Opm
 
         bool group_control_active_ = false;
 
-
+        // This is used to mark whether apply or update the group control
+        bool group_control_applied_ = false;
     };
 
 } // namespace Opm
