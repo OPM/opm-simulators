@@ -529,15 +529,13 @@ public:
             const Evaluation& f = RsTable.eval(pSat, /*extrapolate=*/true) - Rs;
             const Evaluation& fPrime = RsTable.evalDerivative(pSat, /*extrapolate=*/true);
 
-            const Evaluation& delta = f/fPrime;
-
-            if (!Opm::isfinite(delta)) {
-                 std::stringstream errlog;
-                 errlog << "Obtain delta with non-finite value for Rs = " << Rs << " in the "
-                        << i << "th iteration during finding saturation pressure iteratively";
-                 OpmLog::problem("wetgas NaN delta value", errlog.str());
-                 OPM_THROW_NOLOG(NumericalProblem, errlog.str());
+            // If the derivative is "zero" Newton will not converge,
+            // so simply return our initial guess.
+            if (std::abs(Toolbox::scalarValue(fPrime)) < 1.0e-30) {
+                return pSat;
             }
+
+            const Evaluation& delta = f/fPrime;
 
             pSat -= delta;
 
@@ -556,15 +554,18 @@ public:
         }
 
         std::stringstream errlog;
-        errlog << "Could find the oil saturation pressure for Rs = " << Rs;
-        OpmLog::problem("liveoil saturationpressure", errlog.str());
+        errlog << "Finding saturation pressure did not converge:"
+               << " pSat = " << pSat
+               << ", Rs = " << Rs;
+        OpmLog::problem("liveoil psat", errlog.str());
         OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
 
 private:
     void updateSaturationPressure_(unsigned regionIdx)
     {
-        auto& gasDissolutionFac = saturatedGasDissolutionFactorTable_[regionIdx];
+        typedef std::pair<Scalar, Scalar> Pair;
+        const auto& gasDissolutionFac = saturatedGasDissolutionFactorTable_[regionIdx];
 
         // create the function representing saturation pressure depending of the mass
         // fraction in gas
@@ -579,9 +580,15 @@ private:
                                                /*temperature=*/Scalar(1e30),
                                                pSat);
 
-            std::pair<Scalar, Scalar> val(Rs, pSat);
+            Pair val(Rs, pSat);
             pSatSamplePoints.push_back(val);
         }
+
+        //Prune duplicate Rs values (can occur, and will cause problems in further interpolation)
+        auto x_coord_comparator = [](const Pair& a, const Pair& b) { return a.first == b.first; };
+        auto last = std::unique(pSatSamplePoints.begin(), pSatSamplePoints.end(), x_coord_comparator);
+        pSatSamplePoints.erase(last, pSatSamplePoints.end());
+
         saturationPressure_[regionIdx].setContainerOfTuples(pSatSamplePoints);
     }
 

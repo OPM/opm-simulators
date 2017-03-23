@@ -277,7 +277,7 @@ public:
     {
         auto& invGasB = inverseGasB_[regionIdx];
 
-        auto& RvTable = saturatedOilVaporizationFactorTable_[regionIdx];
+        const auto& RvTable = saturatedOilVaporizationFactorTable_[regionIdx];
 
         Scalar T = 273.15 + 15.56; // [K]
 
@@ -557,15 +557,13 @@ public:
             const Evaluation& f = RvTable.eval(pSat, /*extrapolate=*/true) - Rv;
             const Evaluation& fPrime = RvTable.evalDerivative(pSat, /*extrapolate=*/true);
 
-            const Evaluation& delta = f/fPrime;
-
-            if (!Opm::isfinite(delta)) {
-                 std::stringstream errlog;
-                 errlog << "Obtain delta with non-finite value for Rv = " << Rv << " in the "
-                        << i << "th iteration during finding saturation pressure iteratively";
-                 OpmLog::problem("wetgas NaN delta value", errlog.str());
-                 OPM_THROW_NOLOG(NumericalProblem, errlog.str());
+            // If the derivative is "zero" Newton will not converge,
+            // so simply return our initial guess.
+            if (std::abs(Toolbox::scalarValue(fPrime)) < 1.0e-30) {
+                return pSat;
             }
+
+            const Evaluation& delta = f/fPrime;
 
             pSat -= delta;
 
@@ -584,15 +582,18 @@ public:
         }
 
         std::stringstream errlog;
-        errlog << "Could find the gas saturation pressure for Rv = " << Rv;
-        OpmLog::problem("wetgas saturationpressure", errlog.str());
+        errlog << "Finding saturation pressure did not converge:"
+               << " pSat = " << pSat
+               << ", Rv = " << Rv;
+        OpmLog::problem("wetgas psat", errlog.str());
         OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
 
 private:
     void updateSaturationPressure_(unsigned regionIdx)
     {
-        auto& oilVaporizationFac = saturatedOilVaporizationFactorTable_[regionIdx];
+        typedef std::pair<Scalar, Scalar> Pair;
+        const auto& oilVaporizationFac = saturatedOilVaporizationFactorTable_[regionIdx];
 
         // create the taublated function representing saturation pressure depending of
         // Rv
@@ -605,9 +606,15 @@ private:
             Scalar pSat = oilVaporizationFac.xMin() + i*delta;
             Rv = saturatedOilVaporizationFactor(regionIdx, /*temperature=*/Scalar(1e30), pSat);
 
-            std::pair<Scalar, Scalar> val(Rv, pSat);
+            Pair val(Rv, pSat);
             pSatSamplePoints.push_back(val);
         }
+
+        //Prune duplicate Rv values (can occur, and will cause problems in further interpolation)
+        auto x_coord_comparator = [](const Pair& a, const Pair& b) { return a.first == b.first; };
+        auto last = std::unique(pSatSamplePoints.begin(), pSatSamplePoints.end(), x_coord_comparator);
+        pSatSamplePoints.erase(last, pSatSamplePoints.end());
+
         saturationPressure_[regionIdx].setContainerOfTuples(pSatSamplePoints);
     }
 
