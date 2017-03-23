@@ -211,6 +211,7 @@ namespace Opm
                                             const std::vector<double>& conversion_coeffs) = 0;
 
         virtual void applyVREPGroupControl(const double target,
+                                           const InjectionSpecification::InjectorType injector_type,
                                            const std::vector<double>& well_voidage_rates,
                                            const std::vector<double>& conversion_coeffs,
                                            const bool only_group) = 0;
@@ -366,6 +367,7 @@ namespace Opm
                                             const std::vector<double>& conversion_coeffs);
 
         virtual void applyVREPGroupControl(const double target,
+                                           const InjectionSpecification::InjectorType injector_type,
                                            const std::vector<double>& well_voidage_rates,
                                            const std::vector<double>& conversion_coeffs,
                                            const bool only_group);
@@ -484,6 +486,7 @@ namespace Opm
                                             const std::vector<double>& conversion_coeffs);
 
         virtual void applyVREPGroupControl(const double target,
+                                           const InjectionSpecification::InjectorType injector_type,
                                            const std::vector<double>& well_voidage_rates,
                                            const std::vector<double>& conversion_coeffs,
                                            const bool only_group);

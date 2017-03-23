@@ -694,14 +694,17 @@ namespace Opm
             const double total_reinjected = getTotalVoidageRate(well_voidage_rates);
             // TODO: we might need the reservoir condition well potentials here
             const double my_guide_rate = injectionGuideRate(false);
+            const InjectionSpecification::InjectorType injector_type = injSpec().injector_type_;
             for (size_t i = 0; i < children_.size(); ++i ) {
                 const double child_guide_rate = children_[i]->injectionGuideRate(false);
                 const double child_target = child_guide_rate / my_guide_rate * total_reinjected / efficiencyFactor()
                                           * injSpec().voidage_replacment_fraction_;
-                children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
+                children_[i]->applyVREPGroupControl(child_target, injector_type, well_voidage_rates, conversion_coeffs, false);
             }
         }
         break;
+        // TODO: It should not be put under default case. It should always perform, since there can be multi VREP controls
+        // for different group levels. The same applies to other different types apply**Controls
         default:
         {
             for (size_t i = 0; i < children_.size(); ++i ) {
@@ -714,6 +717,7 @@ namespace Opm
 
     // TODO: actually, it is not tested since it never get into this function.
     void WellsGroup::applyVREPGroupControl(const double target,
+                                           const InjectionSpecification::InjectorType injector_type,
                                            const std::vector<double>& well_voidage_rates,
                                            const std::vector<double>& conversion_coeffs,
                                            const bool only_group)
@@ -734,7 +738,7 @@ namespace Opm
             }
             for (size_t i = 0; i < children_.size(); ++i) {
                 const double child_target = target / efficiencyFactor() * children_[i]->injectionGuideRate(only_group) / my_guide_rate;
-                children_[i]->applyVREPGroupControl(child_target, well_voidage_rates, conversion_coeffs, false);
+                children_[i]->applyVREPGroupControl(child_target, injector_type, well_voidage_rates, conversion_coeffs, false);
             }
             // I do not know why here.
             injSpec().control_mode_ = InjectionSpecification::FLD;
@@ -1190,6 +1194,7 @@ namespace Opm
     }
 
     void WellNode::applyVREPGroupControl(const double target,
+                                         const InjectionSpecification::InjectorType injector_type,
                                          const std::vector<double>& /*well_voidage_rates*/,
                                          const std::vector<double>& conversion_coeffs,
                                          const bool only_group)
@@ -1209,11 +1214,37 @@ namespace Opm
         // WellControls* ctrl = wells_->ctrls[self_index_];
         // for this case, distr contains the FVF information
         // which results in the previous implementation of RESV keywords.
-        std::vector<double> distr(np);
-        std::copy(conversion_coeffs.begin() + np * self_index_,
-                  conversion_coeffs.begin() + np * (self_index_ + 1),
-                  distr.begin());
-
+        const int* phase_pos = phaseUsage().phase_pos;
+        const int* phase_used = phaseUsage().phase_used;
+        std::vector<double> distr(np, 0.0);
+        switch(injector_type) {
+        case InjectionSpecification::WATER: {
+            if (!phase_used[BlackoilPhases::Aqua]) {
+                OPM_THROW(std::runtime_error, "Water phase not active and Water VREP injection control specified.");
+            }
+            const int phase_position = phase_pos[BlackoilPhases::Aqua];
+            distr[phase_position] = conversion_coeffs[np * self_index_ + phase_position];
+            break;
+        }
+        case InjectionSpecification::OIL: {
+            if (!phase_used[BlackoilPhases::Liquid]) {
+                OPM_THROW(std::runtime_error, "Oil phase not active and Oil VREP injection control specified.");
+            }
+            const int phase_position = phase_pos[BlackoilPhases::Liquid];
+            distr[phase_position] = conversion_coeffs[np * self_index_ + phase_position];
+            break;
+        }
+        case InjectionSpecification::GAS: {
+            if (!phase_used[BlackoilPhases::Vapour]) {
+                OPM_THROW(std::runtime_error, "Gas phase not active and Gas VREP injection control specified.");
+            }
+            const int phase_position = phase_pos[BlackoilPhases::Vapour];
+            distr[phase_position] = conversion_coeffs[np * self_index_ + phase_position];
+            break;
+        }
+        default:
+            OPM_THROW(std::runtime_error, "Group VREP injection type not handled: " << InjectionSpecification::toString(injector_type));
+        }
 
         const double invalid_alq = -std::numeric_limits<double>::max();
         const int invalid_vfp = -std::numeric_limits<int>::max();
