@@ -1843,14 +1843,26 @@ namespace Opm {
     prepareTimeStep(const Simulator& ebos_simulator,
                     WellState& well_state)
     {
-
-        // TODO: we should remove the wellPotentials() from the well_state.
-
         if (well_collection_->groupControlActive()) {
             // calculate the well potentials
             // two functions will probably be merged in the final version
             // and also the well potentials related parts in well state.
             if (param_.compute_well_potentials_) {
+
+                // the following part should be made a function
+                const int nw = wells().number_of_wells;
+
+                for (int w = 0; w < nw; ++w) {
+                    WellControls* wc = wells().ctrls[w];
+                    const int control = well_controls_get_current(wc);
+                    well_state.currentControls()[w] = control;
+                    // TODO: when we under defaulted BHP value here, it is not
+                    // wise to update the WellState with this target.
+                    // It should only be the case with `GRUP` while we have not
+                    // applied group control.
+                    // updateWellStateWithTarget(wc, control, w, well_state);
+                }
+
                 setWellVariables(well_state);
                 computeWellConnectionPressures(ebos_simulator, well_state);
 
@@ -1860,10 +1872,24 @@ namespace Opm {
                 computeWellPotentials(ebos_simulator, well_state, well_potentials);
 
                 // update/setup guide rates for each well based on the well_potentials
-                well_collection_->setGuideRates(wellsPointer(), phase_usage_, well_potentials);
+                well_collection_->setGuideRatesWithPotentials(wellsPointer(), phase_usage_, well_potentials);
             }
             applyVREPGroupControl(well_state);
-            wellCollection()->updateWellTargets(well_state.wellRates());
+
+            if (!wellCollection()->groupControlApplied()) {
+                wellCollection()->applyGroupControls();
+            } else {
+                wellCollection()->updateWellTargets(well_state.wellRates());
+            }
+        }
+
+        // since the controls are all updated, we should update well_state accordingly
+        const int nw = wells().number_of_wells;
+        for (int w = 0; w < nw; ++w) {
+            WellControls* wc = wells().ctrls[w];
+            const int control = well_controls_get_current(wc);
+            well_state.currentControls()[w] = control;
+            updateWellStateWithTarget(wc, control, w, well_state);
         }
     }
 
