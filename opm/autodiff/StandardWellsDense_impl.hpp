@@ -134,10 +134,6 @@ namespace Opm {
             return report;
         }
 
-        if (param_.compute_well_potentials_) {
-            computeWellPotentials(ebosSimulator, well_state);
-        }
-
         resetWellControlFromState(well_state);
         updateWellControls(well_state);
         // Set the primary variables for the wells
@@ -1703,12 +1699,15 @@ namespace Opm {
     void
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellPotentials(const Simulator& ebosSimulator,
-                          WellState& well_state)  const
+                          const WellState& well_state,
+                          std::vector<double>& well_potentials)  const
     {
 
         // number of wells and phases
         const int nw = wells().number_of_wells;
         const int np = wells().number_of_phases;
+
+        well_potentials.resize(nw * np, 0.0);
 
         for (int w = 0; w < nw; ++w) {
             // bhp needs to be determined for the well potential calculation
@@ -1783,7 +1782,6 @@ namespace Opm {
                     const double& alq    = well_controls_iget_alq(well_control, ctrl_index);
 
                     // Calculating the BHP value based on THP
-                    const WellType& well_type = wells().type[w];
                     const int first_perf = wells().well_connpos[w]; //first perforation
 
                     if (well_type == INJECTOR) {
@@ -1819,12 +1817,12 @@ namespace Opm {
             for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
                 const int cell_index = wells().well_cells[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
-                std::vector<EvalWell> well_potentials(np, 0.0);
+                std::vector<EvalWell> well_potentials_perf(np, 0.0);
                 std::vector<EvalWell> mob(np, 0.0);
                 getMobility(ebosSimulator, perf, cell_index, mob);
-                computeWellFlux(w, wells().WI[perf], intQuants.fluidState(), mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials);
+                computeWellFlux(w, wells().WI[perf], intQuants.fluidState(), mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials_perf);
                 for(int p = 0; p < np; ++p) {
-                    well_state.wellPotentials()[perf * np + p] = well_potentials[p].value();
+                    well_potentials[w * np + p] += std::abs(well_potentials_perf[p].value());
                 }
             }
         } // end of for (int w = 0; w < nw; ++w)
@@ -1852,12 +1850,10 @@ namespace Opm {
                 setWellVariables(well_state);
                 computeWellConnectionPressures(ebos_simulator, well_state);
 
-                computeWellPotentials(ebos_simulator, well_state);
-
                 // To store well potentials for each well
                 std::vector<double> well_potentials;
 
-                computeWellPotentials(well_state, well_potentials);
+                computeWellPotentials(ebos_simulator, well_state, well_potentials);
 
                 // update/setup guide rates for each well based on the well_potentials
                 well_collection_->setGuideRates(wellsPointer(), phase_usage_, well_potentials);

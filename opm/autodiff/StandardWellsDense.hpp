@@ -243,17 +243,13 @@ enum WellVariablePositions {
                                                         const double grav);
 
 
-            // TODO: Later we might want to change the function to only handle one well,
-            // the requirement for well potential calculation can be based on individual wells.
-            // getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
+            // Calculating well potentials for each well
+            // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
             template<typename Simulator>
             void
             computeWellPotentials(const Simulator& ebosSimulator,
-                                  WellState& well_state)  const;
-
-            // TODO: temporary function name for now before changing the simulator and also WellsMananger
-            void computeWellPotentials(const WellState& well_state,
-                                       std::vector<double>& well_potentials) const;
+                                  const WellState& well_state,
+                                  std::vector<double>& well_potentials)  const;
 
             // TODO: some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
