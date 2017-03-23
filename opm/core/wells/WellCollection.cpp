@@ -284,9 +284,8 @@ namespace Opm
 
     void WellCollection::updateWellTargets(const std::vector<double>& well_rates)
     {
-        if ( !needUpdateWellTargets() && groupTargetConverged(well_rates)) {
-            return;
-        }
+
+        // TODO: if it gets converged, should we still update targets?
 
         // set the target_updated to be false
         for (WellNode* well_node : leaf_nodes_) {
@@ -298,8 +297,7 @@ namespace Opm
         // While there will be somre more complication invloved for sure.
         for (size_t i = 0; i < leaf_nodes_.size(); ++i) {
             // find a node needs to update targets, then update targets for all the wellls inside the group.
-            // if (leaf_nodes_[i]->shouldUpdateWellTargets() && !leaf_nodes_[i]->individualControl()) {
-            if (!leaf_nodes_[i]->individualControl() && !leaf_nodes_[i]->targetUpdated()) {
+            if (!leaf_nodes_[i]->targetUpdated()) {
                 WellsGroupInterface* parent_node = leaf_nodes_[i]->getParent();
                 // update the target within this group.
                 if (leaf_nodes_[i]->isProducer()) {
