@@ -445,8 +445,8 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     well_collection_.setWellsPointer(w_);
 
     if (well_collection_.groupControlActive()) {
-        setupGuideRates(wells, timeStep, well_data, well_names_to_index, pu, well_potentials);
-        well_collection_.applyGroupControls();
+        // here does not consider the well potentials related guide rate setting
+        setupGuideRates(wells, timeStep, well_data, well_names_to_index);
     }
 
     // Debug output.
