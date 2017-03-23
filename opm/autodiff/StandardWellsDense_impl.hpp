@@ -1282,7 +1282,11 @@ namespace Opm {
             if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
                 const double* distr = well_controls_iget_distr(wc, current);
                 for (int p = 0; p < np; ++p) {
-                    F[p] /= distr[p];
+                    if (distr[p] > 0.) { // For injection wells, there only one non-zero distr value
+                        F[p] /= distr[p];
+                    } else {
+                        F[p] = 0.;
+                    }
                 }
             } else {
                 for (int p = 0; p < np; ++p) {
@@ -2201,7 +2205,13 @@ namespace Opm {
         const WellControls* wc = wells().ctrls[wellIdx];
         if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             const double* distr = well_controls_get_current_distr(wc);
-            return wellVolumeFraction(wellIdx, phaseIdx) / distr[phaseIdx];
+            if (distr[phaseIdx] > 0.) {
+                return wellVolumeFraction(wellIdx, phaseIdx) / distr[phaseIdx];
+            } else {
+                // TODO: not sure why return EvalWell(0.) causing problem here
+                // Probably due to the wrong Jacobians.
+                return wellVolumeFraction(wellIdx, phaseIdx);
+            }
         }
         std::vector<double> g = {1,1,0.01};
         return (wellVolumeFraction(wellIdx, phaseIdx) / g[phaseIdx]);
