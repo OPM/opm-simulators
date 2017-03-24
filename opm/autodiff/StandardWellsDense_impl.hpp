@@ -919,21 +919,17 @@ namespace Opm {
     getWellConvergence(Simulator& ebosSimulator,
                        const int iteration) const
     {
-        typedef std::vector< double > Vector;
+        typedef double Scalar;
+        typedef std::vector< Scalar > Vector;
 
         const int np = numPhases();
         const int nc = numCells();
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
 
-        Vector R_sum(np);
-        Vector B_avg(np);
-        Vector maxCoeff(np);
-        Vector maxNormWell(np);
+        std::vector< Scalar > B_avg( np, Scalar() );
+        std::vector< Scalar > maxNormWell(np, Scalar() );
 
-        std::vector< Vector > B( np, Vector( nc ) );
-        std::vector< Vector > R2( np, Vector( nc ) );
-        std::vector< Vector > tempV( np, Vector( nc ) );
         auto& grid = ebosSimulator.gridManager().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator);
@@ -950,20 +946,33 @@ namespace Opm {
 
             for ( int idx = 0; idx < np; ++idx )
             {
-                Vector& B_idx  = B[ idx ];
+                auto& B  = B_avg[ idx ];
                 const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
 
-                B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
+                B += 1 / fs.invB(ebosPhaseIdx).value();
             }
         }
 
-        detail::convergenceReduction(B, tempV, R2,
-                                     R_sum, maxCoeff, B_avg, maxNormWell,
-                                     nc, np, pv_, residual() );
+        // compute global average
+        grid.comm().sum(B_avg.data(), B_avg.size());
+        for(auto& bval: B_avg)
+            bval/=nc;
+
+        auto res = residual();
+        const int nw = res.size() / np;
+
+        for ( int idx = 0; idx < np; ++idx )
+        {
+            for ( int w = 0; w < nw; ++w ) {
+                maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(res[nw*idx + w]));
+            }
+        }
+
+        grid.comm().max(maxNormWell.data(), maxNormWell.size());
 
         Vector well_flux_residual(np);
-
         bool converged_Well = true;
+
         // Finish computation
         for ( int idx = 0; idx < np; ++idx )
         {
