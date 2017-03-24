@@ -1,5 +1,3 @@
-#ifndef OPM_BLACKOILMODELEBOSTYPETAGS_HEADER_INCLUDED
-#define OPM_BLACKOILMODELEBOSTYPETAGS_HEADER_INCLUDED
 /*
   Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
   Copyright 2014, 2015 Statoil ASA.
@@ -21,6 +19,9 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#ifndef OPM_BLACKOILMODELEBOSTYPETAGS_HEADER_INCLUDED
+#define OPM_BLACKOILMODELEBOSTYPETAGS_HEADER_INCLUDED
 
 #include <ebos/eclproblem.hh>
 
