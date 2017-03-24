@@ -1,6 +1,7 @@
 /*
   Copyright 2016 SINTEF ICT, Applied Mathematics.
-  Copyright 2016 Statoil ASA.
+  Copyright 2016 - 2017 Statoil ASA.
+  Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
