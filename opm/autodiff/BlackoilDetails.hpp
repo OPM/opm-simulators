@@ -170,14 +170,11 @@ namespace detail {
             }
             std::size_t count = 0;
             const auto& gridView = grid.leafGridView();
-            for(auto cell = gridView.template begin<0>(),
-                    endCell = gridView.template end<0>();
+            for(auto cell = gridView.template begin<0, Dune::Interior_Partition>(),
+                    endCell = gridView.template end<0, Dune::Interior_Partition>();
                 cell != endCell; ++cell)
             {
-                if ( cell.partitionType() == Dune::InteriorEntity )
-                {
                     ++count;
-                }
             }
             return count;
         }
