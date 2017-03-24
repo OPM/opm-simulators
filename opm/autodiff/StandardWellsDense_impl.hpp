@@ -41,8 +41,12 @@ namespace Opm {
          const double gravity_arg,
          const std::vector<double>& depth_arg,
          const std::vector<double>& pv_arg,
-         const RateConverterType* rate_converter)
+         const RateConverterType* rate_converter,
+         long int global_nc)
     {
+        // has to be set always for the convergence check!
+        global_nc_   = global_nc;
+
         if ( ! localWellsActive() ) {
             return;
         }
@@ -923,7 +927,6 @@ namespace Opm {
         typedef std::vector< Scalar > Vector;
 
         const int np = numPhases();
-        const int nc = numCells();
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
 
@@ -956,7 +959,7 @@ namespace Opm {
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
         for(auto& bval: B_avg)
-            bval/=nc;
+            bval/=global_nc_;
 
         auto res = residual();
         const int nw = res.size() / np;

@@ -103,7 +103,8 @@ enum WellVariablePositions {
                       const double gravity_arg,
                       const std::vector<double>& depth_arg,
                       const std::vector<double>& pv_arg,
-                      const RateConverterType* rate_converter);
+                      const RateConverterType* rate_converter,
+                      long int global_nc);
 
 
             template <typename Simulator>
@@ -298,6 +299,8 @@ enum WellVariablePositions {
             Mat invDuneD_;
 
             BVector resWell_;
+
+            long int global_nc_;
 
             mutable BVector Cx_;
             mutable BVector invDrw_;
