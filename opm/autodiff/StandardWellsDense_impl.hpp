@@ -934,15 +934,24 @@ namespace Opm {
         std::vector< Vector > B( np, Vector( nc ) );
         std::vector< Vector > R2( np, Vector( nc ) );
         std::vector< Vector > tempV( np, Vector( nc ) );
+        auto& grid = ebosSimulator.gridManager().grid();
+        const auto& gridView = grid.leafGridView();
+        ElementContext elemCtx(ebosSimulator);
+        const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
 
-        for ( int idx = 0; idx < np; ++idx )
+        for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
+             elemIt != elemEndIt; ++elemIt)
         {
-            Vector& B_idx  = B[ idx ];
-            const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
-                const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                const auto& fs = intQuants.fluidState();
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+
+            for ( int idx = 0; idx < np; ++idx )
+            {
+                Vector& B_idx  = B[ idx ];
+                const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
 
                 B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
             }

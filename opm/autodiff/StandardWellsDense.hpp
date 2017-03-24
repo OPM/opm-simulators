@@ -23,6 +23,8 @@
 #ifndef OPM_STANDARDWELLSDENSE_HEADER_INCLUDED
 #define OPM_STANDARDWELLSDENSE_HEADER_INCLUDED
 
+#include <opm/autodiff/BlackoilModelEbosTypeTags.hpp>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -69,7 +71,9 @@ enum WellVariablePositions {
         template<typename FluidSystem, typename BlackoilIndices>
         class StandardWellsDense {
         public:
-
+            // --------- Ebos property system stuff -------
+            typedef typename TTAG(EclFlowProblem) TypeTag;
+            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoilDense WellState;
             typedef BlackoilModelParameters ModelParameters;
