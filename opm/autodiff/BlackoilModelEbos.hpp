@@ -1054,8 +1054,7 @@ namespace Opm {
                  elemIt != elemEndIt;
                  ++elemIt)
             {
-                const auto& elem = *elemIt;
-                elemCtx.updatePrimaryStencil(*elem);
+                elemCtx.updatePrimaryStencil(*elemIt);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
                 const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
