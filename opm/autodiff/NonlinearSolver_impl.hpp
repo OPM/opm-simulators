@@ -130,8 +130,7 @@ namespace Opm
         // TODO: this is not the correct fix, possibly breaking the sequential solver
         // TODO: the only reason to do this is that the wellPotentials() is part of the well_state, which will be modified
         // during the well_potential calculation
-        model_->prepareStep(timer, initial_reservoir_state, well_state);
-        // model_->prepareStep(timer, initial_reservoir_state, initial_reservoir_state);
+        model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
 
         int iteration = 0;
 

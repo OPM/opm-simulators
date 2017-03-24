@@ -130,6 +130,10 @@ namespace Opm {
              WellState& well_state)
     {
 
+        if (iterationIdx == 0) {
+            prepareTimeStep(ebosSimulator, well_state);
+        }
+
         // after restarting, the well_controls can be modified while
         // the well_state still uses the old control index
         // we need to synchronize these two.

@@ -213,13 +213,11 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         void prepareStep(const SimulatorTimerInterface& /*timer*/,
                          const ReservoirState& reservoir_state,
-                         WellState& well_state)
+                         const WellState& /* well_state */)
         {
             if ( wellModel().wellCollection()->havingVREPGroups() ) {
                 updateRateConverter(reservoir_state);
             }
-
-            well_model_.prepareTimeStep(ebosSimulator_, well_state);
         }
 
 
