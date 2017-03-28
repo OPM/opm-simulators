@@ -381,7 +381,9 @@ namespace Opm
                     create_directories(fpath);
                 }
                 catch (...) {
-                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
+                    if( fpath != "." ) {
+                        OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath << " " << outputDir_);
+                    }
                 }
 
                 // create output thread if enabled and rank is I/O rank
