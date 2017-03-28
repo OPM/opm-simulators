@@ -50,12 +50,9 @@
 #include <cassert>
 #include <stdexcept>
 
-//static const int numVars = 3;
+static const int numVars = 3;
 
-template <class Scalar, int numVars>
-struct TestEnv
-{
-
+template <class Scalar>
 void testOperators(const Scalar tolerance)
 {
     typedef Opm::DenseAd::Evaluation<Scalar, numVars> Eval;
@@ -259,7 +256,7 @@ void testOperators(const Scalar tolerance)
     }
 }
 
-template <class AdFn, class ClassicFn>
+template <class Scalar, class AdFn, class ClassicFn>
 void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar xMax = 1000)
 {
     typedef Opm::DenseAd::Evaluation<Scalar, numVars> Eval;
@@ -292,7 +289,8 @@ void test1DFunction(AdFn* adFn, ClassicFn* classicFn, Scalar xMin = 1e-6, Scalar
     }
 }
 
-template <class AdFn,
+template <class Scalar,
+          class AdFn,
           class ClassicFn>
 void test2DFunction1(AdFn* adFn, ClassicFn* classicFn, Scalar xMin, Scalar xMax, Scalar y)
 {
@@ -328,7 +326,8 @@ void test2DFunction1(AdFn* adFn, ClassicFn* classicFn, Scalar xMin, Scalar xMax,
     }
 }
 
-template <class AdFn,
+template <class Scalar,
+          class AdFn,
           class ClassicFn>
 void test2DFunction2(AdFn* adFn, ClassicFn* classicFn, Scalar x, Scalar yMin, Scalar yMax)
 {
@@ -364,6 +363,7 @@ void test2DFunction2(AdFn* adFn, ClassicFn* classicFn, Scalar x, Scalar yMin, Sc
     }
 }
 
+template <class Scalar>
 void testPowBase(Scalar baseMin = 1e-2, Scalar baseMax = 100)
 {
     typedef Opm::DenseAd::Evaluation<Scalar, numVars> Eval;
@@ -405,6 +405,7 @@ void testPowBase(Scalar baseMin = 1e-2, Scalar baseMax = 100)
     }
 }
 
+template <class Scalar>
 void testPowExp(Scalar expMin = -100, Scalar expMax = 100)
 {
     typedef Opm::DenseAd::Evaluation<Scalar, numVars> Eval;
@@ -446,6 +447,7 @@ void testPowExp(Scalar expMin = -100, Scalar expMax = 100)
     }
 }
 
+template <class Scalar>
 void testAtan2()
 {
     typedef Opm::DenseAd::Evaluation<Scalar, numVars> Eval;
@@ -495,12 +497,16 @@ void testAtan2()
 }
 
 // prototypes
-static double myScalarMin(double a, double b)
+double myScalarMin(double a, double b);
+double myScalarMax(double a, double b);
+
+double myScalarMin(double a, double b)
 { return std::min(a, b); }
 
-static double myScalarMax(double a, double b)
+double myScalarMax(double a, double b)
 { return std::max(a, b); }
 
+template <class Scalar>
 inline void testAll()
 {
     // the following is commented out because it is supposed to produce a compiler
@@ -510,82 +516,82 @@ inline void testAll()
 
     std::cout << "testing operators and constructors\n";
     const Scalar eps = std::numeric_limits<Scalar>::epsilon()*1e3;
-    testOperators(eps);
+    testOperators<Scalar>(eps);
 
     std::cout << "testing min()\n";
-    test2DFunction1(Opm::DenseAd::min<Scalar, numVars>,
+    test2DFunction1<Scalar>(Opm::DenseAd::min<Scalar, numVars>,
                             myScalarMin,
                             -1000, 1000,
                             /*p=*/1.234);
 
-    test2DFunction2(Opm::DenseAd::min<Scalar, numVars>,
+    test2DFunction2<Scalar>(Opm::DenseAd::min<Scalar, numVars>,
                             myScalarMin,
                             /*T=*/1.234,
                             -1000, 1000);
 
     std::cout << "testing max()\n";
-    test2DFunction1(Opm::DenseAd::max<Scalar, numVars>,
+    test2DFunction1<Scalar>(Opm::DenseAd::max<Scalar, numVars>,
                             myScalarMax,
                             -1000, 1000,
                             /*p=*/1.234);
 
-    test2DFunction2(Opm::DenseAd::max<Scalar, numVars>,
+    test2DFunction2<Scalar>(Opm::DenseAd::max<Scalar, numVars>,
                             myScalarMax,
                             /*T=*/1.234,
                             -1000, 1000);
 
     std::cout << "testing pow()\n";
-    testPowBase();
-    testPowExp();
+    testPowBase<Scalar>();
+    testPowExp<Scalar>();
 
     std::cout << "testing abs()\n";
-    test1DFunction(Opm::DenseAd::abs<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::abs<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::abs));
 
     std::cout << "testing sqrt()\n";
-    test1DFunction(Opm::DenseAd::sqrt<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::sqrt<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::sqrt));
 
     std::cout << "testing sin()\n";
-    test1DFunction(Opm::DenseAd::sin<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::sin<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::sin),
                            0, 2*M_PI);
 
     std::cout << "testing asin()\n";
-    test1DFunction(Opm::DenseAd::asin<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::asin<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::asin),
                            -1.0, 1.0);
 
     std::cout << "testing cos()\n";
-    test1DFunction(Opm::DenseAd::cos<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::cos<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::cos),
                            0, 2*M_PI);
 
     std::cout << "testing acos()\n";
-    test1DFunction(Opm::DenseAd::acos<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::acos<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::acos),
                            -1.0, 1.0);
 
     std::cout << "testing tan()\n";
-    test1DFunction(Opm::DenseAd::tan<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::tan<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::tan),
                            -M_PI / 2 * 0.95, M_PI / 2 * 0.95);
 
     std::cout << "testing atan()\n";
-    test1DFunction(Opm::DenseAd::atan<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::atan<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::atan),
                            -10*1000.0, 10*1000.0);
 
     std::cout << "testing atan2()\n";
-    testAtan2();
+    testAtan2<Scalar>();
 
     std::cout << "testing exp()\n";
-    test1DFunction(Opm::DenseAd::exp<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::exp<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::exp),
                            -100, 100);
 
     std::cout << "testing log()\n";
-    test1DFunction(Opm::DenseAd::log<Scalar, numVars>,
+    test1DFunction<Scalar>(Opm::DenseAd::log<Scalar, numVars>,
                            static_cast<Scalar (*)(Scalar)>(std::log),
                            1e-6, 1e9);
 
@@ -645,17 +651,12 @@ inline void testAll()
     }
 }
 
-};//TestEnv
-
-
 int main(int argc, char **argv)
 {
     Dune::MPIHelper::instance(argc, argv);
 
-    TestEnv<double, 15>().testAll();
-    TestEnv<double, 2>().testAll();
-    TestEnv<float, 15>().testAll();
-    TestEnv<float, 2>().testAll();
+    testAll<double>();
+    testAll<float>();
 
     return 0;
 }
