@@ -363,6 +363,8 @@ enum WellVariablePositions {
                                            const int well_index,
                                            WellState& xw) const;
 
+            bool wellHasTHPConstraints(const int well_index) const;
+
         };
 
 

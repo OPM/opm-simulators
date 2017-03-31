@@ -1739,6 +1739,11 @@ namespace Opm {
         well_potentials.resize(nw * np, 0.0);
 
         for (int w = 0; w < nw; ++w) {
+
+            bool is_thp_determined = wellHasTHPConstraints(w);
+
+            if (!is_thp_determined) {
+
             // bhp needs to be determined for the well potential calculation
             // There can be more than one BHP/THP constraints.
             // TODO: there is an option to ignore the THP limit when calculating well potentials,
@@ -2750,5 +2755,24 @@ namespace Opm {
 
     }
 
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    bool
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    wellHasTHPConstraints(const int well_index) const
+    {
+        const WellType& well_type = wells().type[well_index];
+        const WellControls* well_control = wells().ctrls[well_index];
+        const int nwc = well_controls_get_num(well_control);
+        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+            if (well_controls_iget_type(well_control, ctrl_index) == THP) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 } // namespace Opm
