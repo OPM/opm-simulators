@@ -1740,124 +1740,33 @@ namespace Opm {
 
         for (int w = 0; w < nw; ++w) {
 
+            // get the bhp value based on the bhp constraints
+            double bhp = leastStrictBhpFromBhpLimits(w);
+
+            // does the well have a THP related constraint?
             bool is_thp_determined = wellHasTHPConstraints(w);
+
+            std::vector<double> potentials(np);
 
             if (!is_thp_determined) {
 
-            // bhp needs to be determined for the well potential calculation
-            // There can be more than one BHP/THP constraints.
-            // TODO: there is an option to ignore the THP limit when calculating well potentials,
-            // we are not handling it for the moment, while easy to incorporate
+                assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
-            // the bhp will be used to compute well potentials
-            double bhp;
+                computeWellRatesWithBhp(ebosSimulator, bhp, w, potentials);
 
-            // type of the well, INJECTOR or PRODUCER
-            const WellType& well_type = wells().type[w];
-            // initial bhp value, making the value not usable
-            switch(well_type) {
-                case INJECTOR:
-                    bhp = std::numeric_limits<double>::max();
-                    break;
-                case PRODUCER:
-                    bhp = -std::numeric_limits<double>::max();
-                    break;
-                default:
-                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[w]);
+            } else { // the well has a THP related constraint
+                for (int p = 0; p < np; ++p) {
+                    // TODO: this is dangerous for new added well
+                    // since we are not handling the initialization correctly for now
+                    potentials[p] = well_state.wellRates()[w * np + p];
+                }
+
+                potentials = computeWellPotentialWithTHP(ebosSimulator, w, bhp, potentials);
             }
 
-            // the well controls
-            const WellControls* well_control = wells().ctrls[w];
-            // The number of the well controls/constraints
-            const int nwc = well_controls_get_num(well_control);
-
-            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
-                // finding a BHP constraint
-                if (well_controls_iget_type(well_control, ctrl_index) == BHP) {
-                    // get the bhp constraint value, it should always be postive assummingly
-                    const double bhp_target = well_controls_iget_target(well_control, ctrl_index);
-
-                    switch(well_type) {
-                        case INJECTOR: // using the lower bhp contraint from Injectors
-                            if (bhp_target < bhp) {
-                                bhp = bhp_target;
-                            }
-                            break;
-                        case PRODUCER:
-                            if (bhp_target > bhp) {
-                                bhp = bhp_target;
-                            }
-                            break;
-                        default:
-                            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[w]);
-                    } // end of switch
-                }
-
-                // finding a THP constraint
-                if (well_controls_iget_type(well_control, ctrl_index) == THP) {
-                    double aqua = 0.0;
-                    double liquid = 0.0;
-                    double vapour = 0.0;
-
-                    const Opm::PhaseUsage& pu = phase_usage_;
-
-                    if (active_[ Water ]) {
-                        aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
-                    }
-                    if (active_[ Oil ]) {
-                        liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
-                    }
-                    if (active_[ Gas ]) {
-                        vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
-                    }
-
-                    const int vfp        = well_controls_iget_vfp(well_control, ctrl_index);
-                    const double& thp    = well_controls_iget_target(well_control, ctrl_index);
-                    const double& alq    = well_controls_iget_alq(well_control, ctrl_index);
-
-                    // Calculating the BHP value based on THP
-                    const int first_perf = wells().well_connpos[w]; //first perforation
-
-                    if (well_type == INJECTOR) {
-                        const double dp = wellhelpers::computeHydrostaticCorrection(
-                                          wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
-                                          wellPerforationDensities()[first_perf], gravity_);
-                        const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                        // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
-                        if (bhp_calculated < bhp) {
-                            bhp = bhp_calculated;
-                        }
-                    }
-                    else if (well_type == PRODUCER) {
-                        const double dp = wellhelpers::computeHydrostaticCorrection(
-                                          wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
-                                          wellPerforationDensities()[first_perf], gravity_);
-                        const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                        // apply the strictest of the bhp controlls i.e. largest bhp for producers
-                        if (bhp_calculated > bhp) {
-                            bhp = bhp_calculated;
-                        }
-                    } else {
-                       OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
-                    }
-                }
-            }
-
-            // there should be always some avaible bhp/thp constraints there
-            assert(std::abs(bhp) != std::numeric_limits<double>::max());
-
-            // Should we consider crossflow when calculating well potentionals?
-            const bool allow_cf = allow_cross_flow(w, ebosSimulator);
-            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-                const int cell_index = wells().well_cells[perf];
-                const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
-                std::vector<EvalWell> well_potentials_perf(np, 0.0);
-                std::vector<EvalWell> mob(np, 0.0);
-                getMobility(ebosSimulator, perf, cell_index, mob);
-                computeWellFlux(w, wells().WI[perf], intQuants.fluidState(), mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials_perf);
-                for(int p = 0; p < np; ++p) {
-                    well_potentials[w * np + p] += std::abs(well_potentials_perf[p].value());
-                }
+            // putting the sucessfully calculated potentials to the well_potentials
+            for (int p = 0; p < np; ++p) {
+                well_potentials[w * np + p] = std::abs(potentials[p]);
             }
         } // end of for (int w = 0; w < nw; ++w)
     }
@@ -2861,6 +2770,124 @@ namespace Opm {
         }
 
         return bhp;
+    }
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    template <typename Simulator>
+    std::vector<double>
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    computeWellPotentialWithTHP(const Simulator& ebosSimulator,
+                                const int well_index,
+                                const double initial_bhp, // bhp from BHP constraints
+                                const std::vector<double>& initial_potential) const
+    {
+        // TODO: pay attention to the situation that finally the potential is calculated based on the bhp control
+        // TODO: should we consider the bhp constraints during the iterative process?
+        const int np = wells().number_of_phases;
+
+        assert( np == int(initial_potential.size()) );
+
+        std::vector<double> potentials = initial_potential;
+        std::vector<double> old_potentials = potentials; // keeping track of the old potentials
+
+        double bhp = initial_bhp;
+        double old_bhp = bhp;
+
+        bool converged = false;
+        const int max_iteration = 1000;
+        const double bhp_tolerance = 1000.; // 1000 pascal
+
+        int iteration = 0;
+
+        while ( !converged && iteration < max_iteration ) {
+            bhp = initial_bhp;
+
+            // the well controls
+            const WellControls* well_control = wells().ctrls[well_index];
+            // The number of the well controls/constraints
+            const int nwc = well_controls_get_num(well_control);
+
+            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                if (well_controls_iget_type(well_control, ctrl_index) == THP) {
+                    double aqua = 0.0;
+                    double liquid = 0.0;
+                    double vapour = 0.0;
+
+                    const Opm::PhaseUsage& pu = phase_usage_;
+
+                    if (active_[ Water ]) {
+                        aqua = potentials[pu.phase_pos[ Water ] ];
+                    }
+                    if (active_[ Oil ]) {
+                        liquid = potentials[pu.phase_pos[ Oil ] ];
+                    }
+                    if (active_[ Gas ]) {
+                        vapour = potentials[pu.phase_pos[ Gas ] ];
+                    }
+
+                    const int vfp        = well_controls_iget_vfp(well_control, ctrl_index);
+                    const double& thp    = well_controls_iget_target(well_control, ctrl_index);
+                    const double& alq    = well_controls_iget_alq(well_control, ctrl_index);
+
+                    // Calculating the BHP value based on THP
+                    const int first_perf = wells().well_connpos[well_index]; //first perforation
+
+                    const WellType& well_type = wells().type[well_index];
+                    if (well_type == INJECTOR) {
+                        const double dp = wellhelpers::computeHydrostaticCorrection(
+                                          wells(), well_index, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
+                                          wellPerforationDensities()[first_perf], gravity_);
+                        const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                        // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
+                        if (bhp_calculated < bhp) {
+                            bhp = bhp_calculated;
+                        }
+                    }
+                    else if (well_type == PRODUCER) {
+                        const double dp = wellhelpers::computeHydrostaticCorrection(
+                                          wells(), well_index, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
+                                          wellPerforationDensities()[first_perf], gravity_);
+                        const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                        // apply the strictest of the bhp controlls i.e. largest bhp for producers
+                        if (bhp_calculated > bhp) {
+                            bhp = bhp_calculated;
+                        }
+                    } else {
+                       OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                    }
+                }
+            }
+
+            // there should be always some avaible bhp/thp constraints there
+            if (std::isinf(bhp) || std::isnan(bhp)) {
+                OPM_THROW(std::runtime_error, "Unvalid bhp value obtained during the potential calculation for well " << wells().name[well_index]);
+            }
+
+            converged = std::abs(old_bhp - bhp) < bhp_tolerance;
+
+            computeWellRatesWithBhp(ebosSimulator, bhp, well_index, potentials);
+
+            if (!converged) {
+                old_bhp = bhp;
+                for (int p = 0; p < np; ++p) {
+                    // TODO: improve the interpolation, will it always be valid with the way below
+                    potentials[p] = 0.01 * potentials[p] + 0.99 * old_potentials[p];
+                    old_potentials[p] = potentials[p];
+                }
+            }
+
+            ++iteration;
+        }
+
+        if (!converged) {
+            OPM_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << wells().name[well_index]);
+        }
+
+        return potentials;
     }
 
 } // namespace Opm
