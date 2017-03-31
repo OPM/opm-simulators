@@ -365,6 +365,15 @@ enum WellVariablePositions {
 
             bool wellHasTHPConstraints(const int well_index) const;
 
+            // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
+            // calculation of the derivatives
+            template<typename Simulator>
+            void
+            computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                                    const EvalWell& bhp,
+                                    const int well_index,
+                                    std::vector<double>& well_flux) const;
+
         };
 
 

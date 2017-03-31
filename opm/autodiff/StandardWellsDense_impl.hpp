@@ -2775,4 +2775,35 @@ namespace Opm {
         return false;
     }
 
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    template <typename Simulator>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                            const EvalWell& bhp,
+                            const int well_index,
+                            std::vector<double>& well_flux) const
+    {
+        const int np = wells().number_of_phases;
+        well_flux.resize(np, 0.0);
+
+        const bool allow_cf = allow_cross_flow(well_index, ebosSimulator);
+        for (int perf = wells().well_connpos[well_index]; perf < wells().well_connpos[well_index + 1]; ++perf) {
+            const int cell_index = wells().well_cells[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
+            // flux for each perforation
+            std::vector<EvalWell> cq_s(np, 0.0);
+            computeWellFlux(well_index, wells().WI[perf], intQuants, bhp,
+                            wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
+
+            for(int p = 0; p < np; ++p) {
+                well_flux[p] += cq_s[p].value();
+            }
+        }
+    }
+
 } // namespace Opm
