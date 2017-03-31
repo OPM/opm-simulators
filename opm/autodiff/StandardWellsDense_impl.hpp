@@ -2806,4 +2806,61 @@ namespace Opm {
         }
     }
 
+
+
+
+
+
+    template<typename FluidSystem, typename BlackoilIndices>
+    double
+    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    leastStrictBhpFromBhpLimits(const int well_index) const
+    {
+        double bhp;
+
+        // type of the well, INJECTOR or PRODUCER
+        const WellType& well_type = wells().type[well_index];
+        // initial bhp value, making the value not usable
+        switch(well_type) {
+            case INJECTOR:
+                bhp = std::numeric_limits<double>::max();
+                break;
+            case PRODUCER:
+                bhp = -std::numeric_limits<double>::max();
+                break;
+            default:
+                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
+        }
+
+        // the well controls
+        const WellControls* well_control = wells().ctrls[well_index];
+        // The number of the well controls/constraints
+        const int nwc = well_controls_get_num(well_control);
+
+        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+            // finding a BHP constraint
+            if (well_controls_iget_type(well_control, ctrl_index) == BHP) {
+                // get the bhp constraint value, it should always be postive assummingly
+                const double bhp_target = well_controls_iget_target(well_control, ctrl_index);
+
+                switch(well_type) {
+                    case INJECTOR: // using the lower bhp contraint from Injectors
+                        if (bhp_target < bhp) {
+                            bhp = bhp_target;
+                        }
+                        break;
+                    case PRODUCER:
+                        if (bhp_target > bhp) {
+                            bhp = bhp_target;
+                        }
+                        break;
+                    default:
+                        OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
+                } // end of switch
+            }
+        }
+
+        return bhp;
+    }
+
 } // namespace Opm

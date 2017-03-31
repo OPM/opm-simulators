@@ -374,6 +374,7 @@ enum WellVariablePositions {
                                     const int well_index,
                                     std::vector<double>& well_flux) const;
 
+            double leastStrictBhpFromBhpLimits(const int well_index) const;
         };
 
 
