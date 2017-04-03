@@ -106,6 +106,8 @@ namespace Opm
             well_potentials_.clear();
             well_potentials_.resize(nperf * np, 0.0);
 
+            is_new_well_.resize(nw, true);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if( ! prevState.wellMap().empty() )
@@ -117,6 +119,9 @@ namespace Opm
                     const_iterator it = prevState.wellMap().find( name );
                     if( it != end )
                     {
+                        // this is not a new added well
+                        is_new_well_[w] = false;
+
                         const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
 
@@ -273,10 +278,26 @@ namespace Opm
             return res;
         }
 
+
+        bool isNewWell(const int w) const {
+            return is_new_well_[w];
+        }
+
+
+        void setNewWell(const int w, const bool is_new_well) {
+            is_new_well_[w] = is_new_well;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
         std::vector<double> well_potentials_;
+
+        // marking whether the well is just added
+        // for newly added well, the current initialized rates from WellState
+        // will have very wrong compsitions for productions wells, will mostly cause
+        // problem with VFP interpolation
+        std::vector<bool> is_new_well_;
     };
 
 } // namespace Opm

@@ -249,7 +249,7 @@ enum WellVariablePositions {
             void
             computeWellPotentials(const Simulator& ebosSimulator,
                                   const WellState& well_state,
-                                  std::vector<double>& well_potentials)  const;
+                                  std::vector<double>& well_potentials) const;
 
             // TODO: some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)

@@ -1729,7 +1729,7 @@ namespace Opm {
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
-                          std::vector<double>& well_potentials)  const
+                          std::vector<double>& well_potentials) const
     {
 
         // number of wells and phases
@@ -1755,10 +1755,21 @@ namespace Opm {
                 computeWellRatesWithBhp(ebosSimulator, bhp, w, potentials);
 
             } else { // the well has a THP related constraint
-                for (int p = 0; p < np; ++p) {
-                    // TODO: this is dangerous for new added well
-                    // since we are not handling the initialization correctly for now
-                    potentials[p] = well_state.wellRates()[w * np + p];
+                // checking whether a well is newly added, it only happens at the beginning of the report step
+                if ( !well_state.isNewWell(w) ) {
+                    for (int p = 0; p < np; ++p) {
+                        // TODO: this is dangerous for new added well
+                        // since we are not handling the initialization correctly for now
+                        potentials[p] = well_state.wellRates()[w * np + p];
+                    }
+                } else {
+                    // We need to generate a reasonable rates to start the iteration process
+                    computeWellRatesWithBhp(ebosSimulator, bhp, w, potentials);
+                    for (double& value : potentials) {
+                        // make the value a little safer in case the BHP limits are default ones
+                        // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
+                        value *= 0.001;
+                    }
                 }
 
                 potentials = computeWellPotentialWithTHP(ebosSimulator, w, bhp, potentials);
@@ -1875,6 +1886,12 @@ namespace Opm {
             const int control = well_controls_get_current(wc);
             well_state.currentControls()[w] = control;
             updateWellStateWithTarget(wc, control, w, well_state);
+
+            // The wells are not considered to be newly added
+            // for next time step
+            if (well_state.isNewWell(w) ) {
+                well_state.setNewWell(w, false);
+            }
         }
     }
 
