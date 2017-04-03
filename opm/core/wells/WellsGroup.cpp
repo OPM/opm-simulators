@@ -788,7 +788,7 @@ namespace Opm
         }
 
         // the rates left for the wells under group control to split
-        const double rate_for_group_control = target_rate - rate_individual_control;
+        const double rate_for_group_control = std::max(target_rate - rate_individual_control, 0.0);
 
         const double my_guide_rate = productionGuideRate(true);
 
