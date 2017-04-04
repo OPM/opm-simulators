@@ -311,7 +311,7 @@ namespace Opm
                 const std::string version = moduleVersionName();
                 std::cout << "**********************************************************************\n";
                 std::cout << "*                                                                    *\n";
-                std::cout << "*                   This is Flow (version " << version << ")"
+                std::cout << "*            This is flow_legacy (version " << version << ")"
                           << std::string(26 - version.size(), ' ') << "*\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";

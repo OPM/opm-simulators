@@ -2,7 +2,7 @@
 
 pushd .
 cd deps/opm-data
-test -z $SIM && SIM=flow
+test -z $SIM && SIM=flow_legacy
 
 # Run the norne case
 cd norne
