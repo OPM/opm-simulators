@@ -959,8 +959,10 @@ namespace Opm {
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
         for(auto& bval: B_avg)
+        {
             bval/=global_nc_;
-
+        }
+        
         auto res = residual();
         const int nw = res.size() / np;
 
