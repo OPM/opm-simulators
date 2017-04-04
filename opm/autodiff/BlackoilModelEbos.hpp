@@ -183,7 +183,7 @@ namespace Opm {
             // one process.
             int wellsActive = localWellsActive() ? 1 : 0;
             wellsActive = grid_.comm().max(wellsActive);
-            wellModel().setWellsActive( localWellsActive() );
+            wellModel().setWellsActive( wellsActive );
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
             well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv, &rate_converter_, global_nc_);
