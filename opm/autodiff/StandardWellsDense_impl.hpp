@@ -1741,7 +1741,7 @@ namespace Opm {
         for (int w = 0; w < nw; ++w) {
 
             // get the bhp value based on the bhp constraints
-            double bhp = leastStrictBhpFromBhpLimits(w);
+            double bhp = mostStrictBhpFromBhpLimits(w);
 
             // does the well have a THP related constraint?
             bool is_thp_determined = wellHasTHPConstraints(w);
@@ -1758,7 +1758,7 @@ namespace Opm {
                 // checking whether a well is newly added, it only happens at the beginning of the report step
                 if ( !well_state.isNewWell(w) ) {
                     for (int p = 0; p < np; ++p) {
-                        // TODO: this is dangerous for new added well
+                        // This is dangerous for new added well
                         // since we are not handling the initialization correctly for now
                         potentials[p] = well_state.wellRates()[w * np + p];
                     }
@@ -1823,22 +1823,7 @@ namespace Opm {
 
         if (well_collection_->groupControlActive()) {
             // calculate the well potentials
-            // two functions will probably be merged in the final version
-            // and also the well potentials related parts in well state.
             if (param_.compute_well_potentials_) {
-
-                // the following part should be made a function
-                // const int nw = wells().number_of_wells;
-                for (int w = 0; w < nw; ++w) {
-                    WellControls* wc = wells().ctrls[w];
-                    const int control = well_controls_get_current(wc);
-                    well_state.currentControls()[w] = control;
-                    // TODO: when we under defaulted BHP value here, it is not
-                    // wise to update the WellState with this target.
-                    // It should only be the case with `GRUP` while we have not
-                    // applied group control.
-                    // updateWellStateWithTarget(wc, control, w, well_state);
-                }
 
                 setWellVariables(well_state);
                 computeWellConnectionPressures(ebos_simulator, well_state);
@@ -1880,7 +1865,6 @@ namespace Opm {
         }
 
         // since the controls are all updated, we should update well_state accordingly
-        // const int nw = wells().number_of_wells;
         for (int w = 0; w < nw; ++w) {
             WellControls* wc = wells().ctrls[w];
             const int control = well_controls_get_current(wc);
@@ -1892,7 +1876,7 @@ namespace Opm {
             if (well_state.isNewWell(w) ) {
                 well_state.setNewWell(w, false);
             }
-        }
+        }  // end of for (int w = 0; w < nw; ++w)
     }
 
 
@@ -2533,12 +2517,6 @@ namespace Opm {
         }
 
         case RESERVOIR_RATE:
-            // No direct change to any observable quantity at
-            // surface condition.  In this case, use existing
-            // flow rates as initial conditions as reservoir
-            // rate acts only in aggregate.
-            // break;
-
         case SURFACE_RATE:
             // checking the number of the phases under control
             int numPhasesWithTargetsUnderThisControl = 0;
@@ -2564,7 +2542,6 @@ namespace Opm {
                     }
                 }
             } else if (well_type == PRODUCER) {
-
                 // update the rates of phases under control based on the target,
                 // and also update rates of phases not under control to keep the rate ratio,
                 // assuming the mobility ratio does not change for the production wells
@@ -2740,7 +2717,7 @@ namespace Opm {
     template<typename FluidSystem, typename BlackoilIndices>
     double
     StandardWellsDense<FluidSystem, BlackoilIndices>::
-    leastStrictBhpFromBhpLimits(const int well_index) const
+    mostStrictBhpFromBhpLimits(const int well_index) const
     {
         double bhp;
 
@@ -2748,14 +2725,14 @@ namespace Opm {
         const WellType& well_type = wells().type[well_index];
         // initial bhp value, making the value not usable
         switch(well_type) {
-            case INJECTOR:
-                bhp = std::numeric_limits<double>::max();
-                break;
-            case PRODUCER:
-                bhp = -std::numeric_limits<double>::max();
-                break;
-            default:
-                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
+        case INJECTOR:
+            bhp = std::numeric_limits<double>::max();
+            break;
+        case PRODUCER:
+            bhp = -std::numeric_limits<double>::max();
+            break;
+        default:
+            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
         }
 
         // the well controls
@@ -2770,18 +2747,18 @@ namespace Opm {
                 const double bhp_target = well_controls_iget_target(well_control, ctrl_index);
 
                 switch(well_type) {
-                    case INJECTOR: // using the lower bhp contraint from Injectors
-                        if (bhp_target < bhp) {
-                            bhp = bhp_target;
-                        }
-                        break;
-                    case PRODUCER:
-                        if (bhp_target > bhp) {
-                            bhp = bhp_target;
-                        }
-                        break;
-                    default:
-                        OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
+                case INJECTOR: // using the lower bhp contraint from Injectors
+                    if (bhp_target < bhp) {
+                        bhp = bhp_target;
+                    }
+                    break;
+                case PRODUCER:
+                    if (bhp_target > bhp) {
+                        bhp = bhp_target;
+                    }
+                    break;
+                default:
+                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
                 } // end of switch
             }
         }

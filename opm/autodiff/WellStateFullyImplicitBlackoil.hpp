@@ -167,22 +167,6 @@ namespace Opm
                                 perfPress()[ perf ] = prevState.perfPress()[ oldPerf_idx ];
                             }
                         }
-
-                        // currentControls
-                        // TODO: copying the control index from the previous state can provide better guess of the inital control
-                        // while it can cause problem when the combination of the controls/constraints change. In that situation, coying
-                        // the control index means specifying a rather random control. The VFP table provides some damaging values for
-                        // situatioin not desirable, entering with a random control will possibly crash the whole simulation. Restarting with smaller
-                        // time step might not help.
-                        /* const int old_control_index = prevState.currentControls()[ oldIndex ];
-                        if (old_control_index < well_controls_get_num(wells->ctrls[w])) {
-                            // If the set of controls have changed, this may not be identical
-                            // to the last control, but it must be a valid control.
-                            currentControls()[ newIndex ] = old_control_index;
-                        } else {
-                            assert(well_controls_get_num(wells->ctrls[w]) > 0);
-                            currentControls()[ newIndex ] = 0;
-                        } */
                     }
 
 
