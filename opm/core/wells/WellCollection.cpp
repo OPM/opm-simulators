@@ -426,6 +426,7 @@ namespace Opm
                         // not sure if no water and no oil, what will happen here, zero guide_rate?
                         well_node.prodSpec().guide_rate_ = guide_rate;
                         well_node.prodSpec().guide_rate_type_ = ProductionSpecification::LIQ;
+                        break;
                     }
                     case ProductionSpecification::NONE: {
                         // Group control is not in use for this group.
