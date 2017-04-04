@@ -156,6 +156,48 @@ namespace detail {
             }
         }
 
+        /// \brief Get the number of local interior cells in a grid.
+        /// \tparam The type of the DUNE grid.
+        /// \param grid The grid which cells we count
+        /// \return The number of interior cell in the partition of the
+        /// grid stored on this process.
+        template<class Grid>
+        std::size_t countLocalInteriorCells(const Grid& grid)
+        {
+            if ( grid.comm().size() == 1)
+            {
+                return grid.size(0);
+            }
+            std::size_t count = 0;
+            const auto& gridView = grid.leafGridView();
+            for(auto cell = gridView.template begin<0, Dune::Interior_Partition>(),
+                    endCell = gridView.template end<0, Dune::Interior_Partition>();
+                cell != endCell; ++cell)
+            {
+                    ++count;
+            }
+            return count;
+        }
+
+        /// \brief Get the number of cells of a global grid.
+        ///
+        /// In a parallel run this is the number of cells that a grid would
+        /// have if the whole grid was stored on one process only.
+        /// \tparam The type of the DUNE grid.
+        /// \param grid The grid which cells we count
+        /// \return The global number of cells.
+        template<class Grid>
+        std::size_t countGlobalCells(const Grid& grid)
+        {
+            if ( grid.comm().size() == 1)
+            {
+                return grid.size(0);
+            }
+            std::size_t count = countLocalInteriorCells(grid);
+            return grid.comm().sum(count);
+        }
+
+
         template <class Scalar>
         inline
         double
