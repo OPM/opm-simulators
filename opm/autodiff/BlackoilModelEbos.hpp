@@ -583,9 +583,18 @@ namespace Opm {
         {
             using namespace Opm::AutoDiffGrid;
             const int np = fluid_.numPhases();
-            const int nc = numCells(grid_);
 
-            for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
+            ElementContext elemCtx( ebosSimulator_ );
+            const auto& gridView = ebosSimulator_.gridView();
+            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            for (auto elemIt = gridView.template begin</*codim=*/0>();
+                 elemIt != elemEndIt;
+                 ++elemIt)
+            {
+                const auto& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const double& dp = dx[cell_idx][flowPhaseToEbosCompIdx(0)];
                 //reservoir_state.pressure()[cell_idx] -= dp;
                 double& p = reservoir_state.pressure()[cell_idx];
@@ -667,7 +676,7 @@ namespace Opm {
 
                     // phase translation sg <-> rs
                     const HydroCarbonState hydroCarbonState = reservoir_state.hydroCarbonState()[cell_idx];
-                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
                     switch (hydroCarbonState) {
                     case HydroCarbonState::GasAndOil: {
@@ -874,18 +883,29 @@ namespace Opm {
 
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
-            for ( int idx = 0; idx < np; ++idx )
+            ElementContext elemCtx(ebosSimulator_);
+            const auto& gridView = ebosSimulator().gridView();
+            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+
+            for (auto elemIt = gridView.template begin</*codim=*/0>();
+              elemIt != elemEndIt;
+              ++elemIt)
             {
-                Vector& R2_idx = R2[ idx ];
-                Vector& B_idx  = B[ idx ];
-                const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
-                const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
+                const auto& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
 
-                for (int cell_idx = 0; cell_idx < nc; ++cell_idx) {
-                    const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                    const auto& fs = intQuants.fluidState();
+                for ( int idx = 0; idx < np; ++idx )
+                {
+                    Vector& R2_idx = R2[ idx ];
+                    Vector& B_idx  = B[ idx ];
+                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
+                    const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
 
-                    B_idx [cell_idx] = 1 / fs.invB(ebosPhaseIdx).value();
+                    B_idx [cell_idx] = 1.0 / fs.invB(ebosPhaseIdx).value();
                     R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
                 }
             }
@@ -1012,7 +1032,7 @@ namespace Opm {
         computeFluidInPlace(const std::vector<int>& fipnum) const
         {
             const auto& comm = grid_.comm();
-            const auto& gridView = grid_.leafGridView();
+            const auto& gridView = ebosSimulator().gridView();
             const int nc = gridView.size(/*codim=*/0);
             const int maxnp = Opm::BlackoilPhases::MaxNumPhases;
             int ntFip = *std::max_element(fipnum.begin(), fipnum.end());
@@ -1028,17 +1048,12 @@ namespace Opm {
             }
 
             ElementContext elemCtx(ebosSimulator_);
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
+            const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
                  elemIt != elemEndIt;
                  ++elemIt)
             {
-                const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
-
-                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryStencil(*elemIt);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
                 const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -1093,14 +1108,11 @@ namespace Opm {
             comm.sum(tpv.data(), tpv.size());
             comm.sum(hcpv.data(), hcpv.size());
 
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
+            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
                  elemIt != elemEndIt;
                  ++elemIt)
             {
                 const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
 
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
@@ -1235,15 +1247,12 @@ namespace Opm {
             std::vector<int> failed_cells_pb;
             std::vector<int> failed_cells_pd;
             const auto& gridView = ebosSimulator().gridView();
-            auto elemIt = gridView.template begin</*codim=*/ 0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
+            auto elemIt = gridView.template begin</*codim=*/ 0, Dune::Interior_Partition>();
+            const auto& elemEndIt = gridView.template end</*codim=*/ 0, Dune::Interior_Partition>();
             ElementContext elemCtx(ebosSimulator());
 
             for (; elemIt != elemEndIt; ++elemIt) {
                 const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
 
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
