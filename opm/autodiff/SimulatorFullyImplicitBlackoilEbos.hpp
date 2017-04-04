@@ -64,7 +64,7 @@ public:
     typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
-    typedef StandardWellsDense<FluidSystem, BlackoilIndices> WellModel;
+    typedef StandardWellsDense<FluidSystem, BlackoilIndices,ElementContext> WellModel;
 
 
     /// Initialise from parameters and objects to observe.

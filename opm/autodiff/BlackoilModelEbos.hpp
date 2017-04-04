@@ -163,7 +163,7 @@ namespace Opm {
                           const ModelParameters&          param,
                           const BlackoilPropsAdFromDeck& fluid,
                           const DerivedGeology&           geo  ,
-                          const StandardWellsDense<FluidSystem, BlackoilIndices>& well_model,
+                          const StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
@@ -1423,7 +1423,7 @@ namespace Opm {
         ModelParameters                 param_;
 
         // Well Model
-        StandardWellsDense<FluidSystem, BlackoilIndices> well_model_;
+        StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext> well_model_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1441,8 +1441,10 @@ namespace Opm {
     public:
 
         /// return the StandardWells object
-        StandardWellsDense<FluidSystem, BlackoilIndices>& wellModel() { return well_model_; }
-        const StandardWellsDense<FluidSystem, BlackoilIndices>& wellModel() const { return well_model_; }
+        StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>&
+        wellModel() { return well_model_; }
+        const StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>&
+        wellModel() const { return well_model_; }
 
         /// return the Well struct in the StandardWells
         const Wells& wells() const { return well_model_.wells(); }
