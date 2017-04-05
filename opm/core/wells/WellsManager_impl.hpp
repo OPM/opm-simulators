@@ -318,13 +318,12 @@ WellsManager(const Opm::EclipseState& eclipseState,
              FC                              begin_face_centroids,
              const DynamicListEconLimited&   list_econ_limited,
              bool                            is_parallel_run,
-             const std::vector<double>&      well_potentials,
              const std::unordered_set<std::string>&    deactivated_wells)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
     init(eclipseState, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
-         cell_to_faces, begin_face_centroids, list_econ_limited, well_potentials, deactivated_wells);
+         cell_to_faces, begin_face_centroids, list_econ_limited, deactivated_wells);
 }
 
 /// Construct wells from deck.
@@ -339,7 +338,6 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
                    const C2F&                      cell_to_faces,
                    FC                              begin_face_centroids,
                    const DynamicListEconLimited&   list_econ_limited,
-                   const std::vector<double>&      /* well_potentials */,
                    const std::unordered_set<std::string>&    deactivated_wells)
 {
     if (dimensions != 3) {

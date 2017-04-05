@@ -94,7 +94,6 @@ namespace Opm
                      FC begin_face_centroids,
                      const DynamicListEconLimited& list_econ_limited,
                      bool is_parallel_run=false,
-                     const std::vector<double>& well_potentials=std::vector<double>(),
                      const std::unordered_set<std::string>& deactivated_wells = std::unordered_set<std::string> ());
 
         WellsManager(const Opm::EclipseState& eclipseState,
@@ -163,7 +162,6 @@ namespace Opm
                   const C2F& cell_to_faces,
                   FC begin_face_centroids,
                   const DynamicListEconLimited& list_econ_limited,
-                  const std::vector<double>& well_potentials,
                   const std::unordered_set<std::string>& deactivated_wells);
         // Disable copying and assignment.
         WellsManager(const WellsManager& other);
