@@ -57,7 +57,6 @@ namespace Opm
         using BaseType :: numPhases;
         using BaseType :: perfPhaseRates;
         using BaseType :: currentControls;
-        using BaseType :: wellPotentials;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()

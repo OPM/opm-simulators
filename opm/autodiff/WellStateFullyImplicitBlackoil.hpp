@@ -103,9 +103,6 @@ namespace Opm
                 current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
             }
 
-            well_potentials_.clear();
-            well_potentials_.resize(nperf * np, 0.0);
-
             is_new_well_.resize(nw, true);
 
             // intialize wells that have been there before
@@ -207,10 +204,6 @@ namespace Opm
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
 
-        /// One rate per phase and well connection.
-        std::vector<double>& wellPotentials() { return well_potentials_; }
-        const std::vector<double>& wellPotentials() const { return well_potentials_; }
-
         data::Wells report(const PhaseUsage &pu) const override {
             data::Wells res = WellState::report(pu);
 
@@ -275,7 +268,6 @@ namespace Opm
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
-        std::vector<double> well_potentials_;
 
         // marking whether the well is just added
         // for newly added well, the current initialized rates from WellState
