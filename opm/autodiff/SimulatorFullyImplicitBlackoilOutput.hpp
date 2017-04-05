@@ -445,7 +445,6 @@ namespace Opm
                                   // with c++ (Debian 4.9.2-10) 4.9.2 and -std=c++11
                                   // converting to ‘const std::unordered_set<std::basic_string<char> >’ from initializer list would use explicit constructo
                                   , false,
-                                  std::vector<double>(),
                                   std::unordered_set<std::string>());
 
         const Wells* wells = wellsmanager.c_wells();

@@ -138,8 +138,6 @@ namespace Opm
                                     desiredRestoreStep );
         }
 
-        bool is_well_potentials_computed = param_.getDefault("compute_well_potentials", false );
-        std::vector<double> well_potentials;
         DynamicListEconLimited dynamic_list_econ_limited;
         SimulatorReport report;
         SimulatorReport stepReport;
@@ -178,7 +176,6 @@ namespace Opm
                                        Opm::UgGridHelpers::beginFaceCentroids(grid_),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
-                                       well_potentials,
                                        defunct_well_names_);
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
@@ -328,11 +325,6 @@ namespace Opm
             report.output_write_time += perfTimer.stop();
 
             prev_well_state = well_state;
-            // The well potentials are only computed if they are needed
-            // For now thay are only used to determine default guide rates for group controlled wells
-            if ( is_well_potentials_computed ) {
-                asImpl().computeWellPotentials(wells, well_state, well_potentials);
-            }
 
             asImpl().updateListEconLimited(solver, eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
                                            well_state, dynamic_list_econ_limited);
@@ -491,23 +483,6 @@ namespace Opm
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));
     }
 
-    template <class Implementation>
-    void SimulatorBase<Implementation>::computeWellPotentials(const Wells* wells,
-                                                              const WellState& xw,
-                                                              std::vector<double>& well_potentials)
-    {
-        const int nw = wells->number_of_wells;
-        const int np = wells->number_of_phases;
-        well_potentials.clear();
-        well_potentials.resize(nw*np,0.0);
-        for (int w = 0; w < nw; ++w) {
-            for (int perf = wells->well_connpos[w]; perf < wells->well_connpos[w + 1]; ++perf) {
-                for (int phase = 0; phase < np; ++phase) {
-                    well_potentials[w*np + phase] += xw.wellPotentials()[perf*np + phase];
-                }
-            }
-        }
-    }
 
     template <class Implementation>
     void SimulatorBase<Implementation>::computeRESV(const std::size_t               step,

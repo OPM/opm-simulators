@@ -227,9 +227,6 @@ public:
                 OpmLog::note(ss.str());
             }
 
-            // TODO: not used at all, keeping it for interface purpose.
-
-            std::vector<double> well_potentials;
             // Create wells and well state.
             WellsManager wells_manager(eclState(),
                                        timer.currentStepNum(),
@@ -241,7 +238,6 @@ public:
                                        Opm::UgGridHelpers::beginFaceCentroids(grid()),
                                        dynamic_list_econ_limited,
                                        is_parallel_run_,
-                                       well_potentials,
                                        defunct_well_names_ );
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
