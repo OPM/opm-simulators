@@ -39,8 +39,8 @@ namespace Opm {
          const std::vector<bool>& active_arg,
          const VFPProperties*  vfp_properties_arg,
          const double gravity_arg,
-         const std::vector<double>& depth_arg,
-         const std::vector<double>& pv_arg,
+         const Eigen::ArrayXd& depth_arg,
+         const Eigen::ArrayXd& pv_arg,
          const RateConverterType* rate_converter,
          long int global_nc)
     {
@@ -56,7 +56,7 @@ namespace Opm {
         vfp_properties_ = vfp_properties_arg;
         gravity_ = gravity_arg;
         cell_depths_ = extractPerfData(depth_arg);
-        pv_ = pv_arg;
+        pv_.assign(pv_arg.data(), pv_arg.data()+pv_arg.size());
         rate_converter_ = rate_converter;
 
         calculateEfficiencyFactors();
@@ -463,7 +463,7 @@ namespace Opm {
     template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
     std::vector<double>
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
-    extractPerfData(const std::vector<double>& in) const
+    extractPerfData(const Eigen::ArrayXd& in) const
     {
         const int nw   = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];

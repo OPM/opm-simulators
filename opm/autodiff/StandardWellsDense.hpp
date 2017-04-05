@@ -57,6 +57,8 @@
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
+#include <Eigen/Eigen>
+
 namespace Opm {
 
 enum WellVariablePositions {
@@ -96,8 +98,8 @@ enum WellVariablePositions {
                       const std::vector<bool>& active_arg,
                       const VFPProperties*  vfp_properties_arg,
                       const double gravity_arg,
-                      const std::vector<double>& depth_arg,
-                      const std::vector<double>& pv_arg,
+                      const Eigen::ArrayXd& depth_arg,
+                      const Eigen::ArrayXd& pv_arg,
                       const RateConverterType* rate_converter,
                       long int global_nc);
 
@@ -142,7 +144,7 @@ enum WellVariablePositions {
             int ebosCompToFlowPhaseIdx( const int compIdx ) const;
 
             std::vector<double>
-            extractPerfData(const std::vector<double>& in) const;
+            extractPerfData(const Eigen::ArrayXd& in) const;
 
             int numPhases() const;
 
