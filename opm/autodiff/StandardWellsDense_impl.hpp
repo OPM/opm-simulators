@@ -1741,7 +1741,7 @@ namespace Opm {
         for (int w = 0; w < nw; ++w) {
 
             // get the bhp value based on the bhp constraints
-            double bhp = mostStrictBhpFromBhpLimits(w);
+            const double bhp = mostStrictBhpFromBhpLimits(w);
 
             // does the well have a THP related constraint?
             bool is_thp_determined = wellHasTHPConstraints(w);
@@ -1789,7 +1789,7 @@ namespace Opm {
     template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
     template<typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
     prepareTimeStep(const Simulator& ebos_simulator,
                     WellState& well_state)
     {
@@ -2662,9 +2662,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
     bool
-    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
     wellHasTHPConstraints(const int well_index) const
     {
         const WellType& well_type = wells().type[well_index];
@@ -2682,10 +2682,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
     template <typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
     computeWellRatesWithBhp(const Simulator& ebosSimulator,
                             const EvalWell& bhp,
                             const int well_index,
@@ -2714,9 +2714,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
     double
-    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
     mostStrictBhpFromBhpLimits(const int well_index) const
     {
         double bhp;
@@ -2770,10 +2770,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
     template <typename Simulator>
     std::vector<double>
-    StandardWellsDense<FluidSystem, BlackoilIndices>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
     computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                 const int well_index,
                                 const double initial_bhp, // bhp from BHP constraints
