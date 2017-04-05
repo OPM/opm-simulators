@@ -155,7 +155,6 @@ namespace detail {
                 return product;
             }
         }
-
         /// \brief Get the number of local interior cells in a grid.
         /// \tparam The type of the DUNE grid.
         /// \param grid The grid which cells we count
@@ -198,48 +197,6 @@ namespace detail {
         }
 
 
-        template <class Scalar>
-        inline
-        double
-        convergenceReduction(const std::vector< std::vector< Scalar > >& B,
-                             const std::vector< std::vector< Scalar > >& tempV,
-                             const std::vector< std::vector< Scalar > >& R,
-                             std::vector< Scalar >& R_sum,
-                             std::vector< Scalar >& maxCoeff,
-                             std::vector< Scalar >& B_avg,
-                             std::vector< Scalar >& maxNormWell,
-                             const int nc,
-                             const int np,
-                             const std::vector< Scalar >& pv,
-                             const std::vector< Scalar >& residual_well)
-        {
-            const int nw = residual_well.size() / np;
-            assert(nw * np == int(residual_well.size()));
-
-            // Do the global reductions
-            {
-                B_avg.resize(np);
-                maxCoeff.resize(np);
-                R_sum.resize(np);
-                maxNormWell.resize(np);
-                for ( int idx = 0; idx < np; ++idx )
-                {
-                    B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(), 0.0 ) / nc;
-                    R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(), 0.0 );
-                    maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
-
-                    assert(np >= np);
-                    if (idx < np) {
-                        maxNormWell[idx] = 0.0;
-                        for ( int w = 0; w < nw; ++w ) {
-                            maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
-                        }
-                    }
-                }
-                // Compute total pore volume
-                return std::accumulate(pv.begin(), pv.end(), 0.0);
-            }
-        }
     } // namespace detail
 } // namespace Opm
 

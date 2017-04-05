@@ -1,6 +1,7 @@
 /*
   Copyright 2016 SINTEF ICT, Applied Mathematics.
-  Copyright 2016 Statoil ASA.
+  Copyright 2016 - 2017 Statoil ASA.
+  Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2016 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
@@ -66,10 +67,9 @@ enum WellVariablePositions {
 
 
         /// Class for handling the standard well model.
-        template<typename FluidSystem, typename BlackoilIndices>
+        template<typename FluidSystem, typename BlackoilIndices, typename  ElementContext>
         class StandardWellsDense {
         public:
-
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoilDense WellState;
             typedef BlackoilModelParameters ModelParameters;
@@ -98,7 +98,8 @@ enum WellVariablePositions {
                       const double gravity_arg,
                       const std::vector<double>& depth_arg,
                       const std::vector<double>& pv_arg,
-                      const RateConverterType* rate_converter);
+                      const RateConverterType* rate_converter,
+                      long int global_nc);
 
 
             template <typename Simulator>
@@ -293,6 +294,8 @@ enum WellVariablePositions {
             Mat invDuneD_;
 
             BVector resWell_;
+
+            long int global_nc_;
 
             mutable BVector Cx_;
             mutable BVector invDrw_;

@@ -163,7 +163,7 @@ namespace Opm {
                           const ModelParameters&          param,
                           const BlackoilPropsAdFromDeck& fluid,
                           const DerivedGeology&           geo  ,
-                          const StandardWellsDense<FluidSystem, BlackoilIndices>& well_model,
+                          const StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
@@ -188,11 +188,14 @@ namespace Opm {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
             const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
-            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv, &rate_converter_);
-            wellModel().setWellsActive( localWellsActive() );
+            // Wells are active if they are active wells on at least
+            // one process.
+            int wellsActive = localWellsActive() ? 1 : 0;
+            wellsActive = grid_.comm().max(wellsActive);
+            wellModel().setWellsActive( wellsActive );
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
-
+            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv, &rate_converter_, global_nc_);
             if (!istlSolver_)
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
@@ -1420,7 +1423,7 @@ namespace Opm {
         ModelParameters                 param_;
 
         // Well Model
-        StandardWellsDense<FluidSystem, BlackoilIndices> well_model_;
+        StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext> well_model_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1438,8 +1441,10 @@ namespace Opm {
     public:
 
         /// return the StandardWells object
-        StandardWellsDense<FluidSystem, BlackoilIndices>& wellModel() { return well_model_; }
-        const StandardWellsDense<FluidSystem, BlackoilIndices>& wellModel() const { return well_model_; }
+        StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>&
+        wellModel() { return well_model_; }
+        const StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>&
+        wellModel() const { return well_model_; }
 
         /// return the Well struct in the StandardWells
         const Wells& wells() const { return well_model_.wells(); }
