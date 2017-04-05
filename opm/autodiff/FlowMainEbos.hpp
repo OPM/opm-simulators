@@ -85,6 +85,7 @@ namespace Opm
         typedef TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
+        typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -557,19 +558,14 @@ namespace Opm
             {
                 const Grid& grid = this->globalGrid();
 
-                if( output_cout_ ){
-                    const EclipseGrid& inputGrid = eclState().getInputGrid();
-                    eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
-                }
-
-                eclIO_->writeInitial(computeLegacySimProps_(), eclState().getInputNNC());
-                const NNC* nnc = &eclState().getInputNNC();
+                const EclipseGrid& inputGrid = eclState().getInputGrid();
+                eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
+                exportNncStructure_();
+                eclIO_->writeInitial(computeLegacySimProps_(), nnc_);
                 data::Solution globaltrans;
 
                 if ( must_distribute_ )
                 {
-                    nnc = &eclState().getInputNNC();
-
                     // Gather the global simProps
                     data::Solution localtrans = computeLegacySimProps_();
                     for( const auto& localkeyval: localtrans)
@@ -577,10 +573,7 @@ namespace Opm
                         auto& globalval = globaltrans[localkeyval.first].data;
                         const auto& localval  = localkeyval.second.data;
 
-                        if( output_cout_ )
-                        {
-                            globalval.resize( grid.size(0));
-                        }
+                        globalval.resize(grid.size(0));
                         gatherCellDataToGlobalIterator(this->grid(), localval.begin(),
                                                        globalval.begin());
                     }
@@ -590,11 +583,7 @@ namespace Opm
                     globaltrans = computeLegacySimProps_();
                 }
 
-                if( output_cout_ )
-                {
-                eclIO_->writeInitial(globaltrans,
-                                              *nnc);
-                }
+                eclIO_->writeInitial(globaltrans, nnc_);
             }
         }
 
@@ -806,6 +795,74 @@ namespace Opm
                 {"TRANZ" , tranz } };
         }
 
+        void exportNncStructure_()
+        {
+            nnc_ = eclState().getInputNNC();
+
+            int nx = eclState().getInputGrid().getNX();
+            int ny = eclState().getInputGrid().getNY();
+            //int nz = eclState().getInputGrid().getNZ()
+
+            Grid grid = ebosSimulator_->gridManager().grid();
+            grid.switchToGlobalView();
+            const auto& gridView = grid.leafGridView();
+            ElementMapper elemMapper(gridView);
+
+            const auto* eclTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
+            if (grid.comm().size() < 2) {
+                // in the sequential case we must use the transmissibilites defined by
+                // the problem. (because in the sequential case, the grid manager does
+                // not compute "global" transmissibilities for performance reasons. in
+                // the parallel case, the problem's transmissibilities can't be used
+                // because this object refers to the distributed grid and we need the
+                // sequential version here.)
+                eclTrans = &ebosSimulator_->problem().eclTransmissibilities();
+            }
+
+            auto elemIt = gridView.template begin</*codim=*/0>();
+            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            for (; elemIt != elemEndIt; ++ elemIt) {
+                const auto& elem = *elemIt;
+
+                auto isIt = gridView.ibegin(elem);
+                const auto& isEndIt = gridView.iend(elem);
+                for (; isIt != isEndIt; ++ isIt) {
+                    const auto& is = *isIt;
+
+                    if (!is.neighbor())
+                    {
+                        continue; // intersection is on the domain boundary
+                    }
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+                    unsigned c1 = elemMapper.index(is.inside());
+                    unsigned c2 = elemMapper.index(is.outside());
+#else
+                    unsigned c1 = elemMapper.map(is.inside());
+                    unsigned c2 = elemMapper.map(is.outside());
+#endif
+
+                    if (c1 > c2)
+                    {
+                        continue; // we only need to handle each connection once, thank you.
+                    }
+
+                    // TODO (?): use the cartesian index mapper to make this code work
+                    // with grids other than Dune::CpGrid. The problem is that we need
+                    // the a mapper for the sequential grid, not for the distributed one.
+                    int cc1 = grid.globalCell()[c1];
+                    int cc2 = grid.globalCell()[c2];
+
+                    if (std::abs(cc1 - cc2) != 1 &&
+                        std::abs(cc1 - cc2) != nx &&
+                        std::abs(cc1 - cc2) != nx*ny)
+                    {
+                        nnc_.addNNC(c1, c2, eclTrans->transmissibility(c1, c2));
+                    }
+                }
+            }
+        }
+
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
         bool output_cout_ = false;
@@ -815,6 +872,7 @@ namespace Opm
         std::string output_dir_ = std::string(".");
         std::unique_ptr<BlackoilPropsAdFromDeck> fluidprops_;
         std::unique_ptr<ReservoirState> state_;
+        NNC nnc_;
         std::unique_ptr<EclipseIO> eclIO_;
         std::unique_ptr<OutputWriter> output_writer_;
         boost::any parallel_information_;
