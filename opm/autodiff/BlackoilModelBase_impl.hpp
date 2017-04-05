@@ -820,12 +820,6 @@ typedef Eigen::Array<double,
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
 
-        if (param_.compute_well_potentials_) {
-            SolutionState state0 = state;
-            asImpl().makeConstantState(state0);
-            asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
-        }
-
         return report;
     }
 
