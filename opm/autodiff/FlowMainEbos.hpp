@@ -404,9 +404,6 @@ namespace Opm
                                                           materialLawManager(),
                                                           grid));
 
-            // Geological properties
-            bool use_local_perm = param_.getDefault("use_local_perm", true);
-            geoprops_.reset(new DerivedGeology(grid, *fluidprops_, eclState(), use_local_perm, &ebosProblem().gravity()[0]));
         }
 
         const Deck& deck() const
@@ -565,19 +562,16 @@ namespace Opm
                     eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
                 }
 
-                const NNC* nnc = &geoprops_->nonCartesianConnections();
+                eclIO_->writeInitial(computeLegacySimProps_(), eclState().getInputNNC());
+                const NNC* nnc = &eclState().getInputNNC();
                 data::Solution globaltrans;
 
                 if ( must_distribute_ )
                 {
-                    // dirty and dangerous hack!
-                    // We rely on opmfil in GeoProps being hardcoded to true
-                    // which prevents the pinch processing from running.
-                    // Ergo the nncs are unchanged.
                     nnc = &eclState().getInputNNC();
 
                     // Gather the global simProps
-                    data::Solution localtrans = geoprops_->simProps(this->grid());
+                    data::Solution localtrans = computeLegacySimProps_();
                     for( const auto& localkeyval: localtrans)
                     {
                         auto& globalval = globaltrans[localkeyval.first].data;
@@ -593,7 +587,7 @@ namespace Opm
                 }
                 else
                 {
-                    globaltrans = geoprops_->simProps(grid);
+                    globaltrans = computeLegacySimProps_();
                 }
 
                 if( output_cout_ )
@@ -690,7 +684,6 @@ namespace Opm
             // Create the simulator instance.
             simulator_.reset(new Simulator(*ebosSimulator_,
                                            param_,
-                                           *geoprops_,
                                            *fluidprops_,
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
@@ -771,6 +764,48 @@ namespace Opm
         std::unordered_set<std::string> defunctWellNames() const
         { return ebosSimulator_->gridManager().defunctWellNames(); }
 
+        data::Solution computeLegacySimProps_()
+        {
+            const int* dims = UgGridHelpers::cartDims(grid());
+            const int globalSize = dims[0]*dims[1]*dims[2];
+
+            data::CellData tranx = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+            data::CellData trany = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+            data::CellData tranz = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+
+            const auto& eclTrans = ebosSimulator_->problem().eclTransmissibilities();
+            const auto& globalCell = grid().globalCell();
+            size_t num_faces = grid().numFaces();
+            auto fc = UgGridHelpers::faceCells(grid());
+            for (size_t i = 0; i < num_faces; ++i) {
+                auto c1 = std::min(fc(i,0), fc(i,1));
+                auto c2 = std::max(fc(i,0), fc(i,1));
+
+                if (c1 == -1 || c2 == -1)
+                    // boundary
+                    continue;
+
+                int gc1 = globalCell.size()?globalCell[c1]:c1;
+                int gc2 = globalCell.size()?globalCell[c2]:c2;
+
+                if (gc2 - gc1 == 1) {
+                    tranx.data[c1] = eclTrans.transmissibility(c1, c2);
+                }
+
+                if (gc2 - gc1 == dims[0]) {
+                    trany.data[c1] = eclTrans.transmissibility(c1, c2);
+                }
+
+                if (gc2 - gc1 == dims[0]*dims[1]) {
+                    tranz.data[c1] = eclTrans.transmissibility(c1, c2);
+                }
+            }
+            return
+              { {"TRANX" , tranx},
+                {"TRANY" , trany} ,
+                {"TRANZ" , tranz } };
+        }
+
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
         bool output_cout_ = false;
@@ -779,7 +814,6 @@ namespace Opm
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
         std::unique_ptr<BlackoilPropsAdFromDeck> fluidprops_;
-        std::unique_ptr<DerivedGeology> geoprops_;
         std::unique_ptr<ReservoirState> state_;
         std::unique_ptr<EclipseIO> eclIO_;
         std::unique_ptr<OutputWriter> output_writer_;
