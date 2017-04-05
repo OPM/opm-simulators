@@ -25,6 +25,7 @@
 #include <opm/core/grid/GridManager.hpp>
 
 #if HAVE_OPM_GRID
+#include <dune/grid/polyhedralgrid.hh>
 #include <dune/grid/CpGrid.hpp>
 #endif
 
@@ -68,6 +69,30 @@ namespace Opm
 
 
 #if HAVE_OPM_GRID
+    /// Specialization for PolyhedralGrid.
+    template < int dim, int dimworld >
+    class GridInit< Dune::PolyhedralGrid< dim, dimworld > >
+    {
+    public:
+        typedef Dune::PolyhedralGrid< dim, dimworld > Grid;
+        /// Initialize from a deck and/or an eclipse state and (logical cartesian) specified pore volumes.
+        GridInit(const EclipseState& eclipse_state, const std::vector<double>& porv)
+            : grid_manager_(eclipse_state.getInputGrid(), porv),
+              grid_( *grid_manager_.c_grid() )
+        {
+        }
+
+        /// Access the created grid.
+        const Grid& grid()
+        {
+            return grid_;
+        }
+    private:
+        GridManager grid_manager_;
+        Grid        grid_;
+    };
+
+
     /// Specialization for CpGrid.
     template <>
     class GridInit<Dune::CpGrid>
