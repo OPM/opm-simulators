@@ -309,7 +309,7 @@ namespace Opm {
                     current_relaxation_ -= nonlinear_solver.relaxIncrement();
                     current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
                     if (terminalOutputEnabled()) {
-                        std::string msg = " Oscillating behavior detected: Relaxation set to "
+                        std::string msg = "    Oscillating behavior detected: Relaxation set to "
                             + std::to_string(current_relaxation_);
                         OpmLog::info(msg);
                     }
