@@ -553,6 +553,8 @@ namespace Opm {
             rv = rv.max(zero);
         }
 
+        sd_.soMax = fluid_.satOilMax();
+
         // Sg is used as primal variable for water only cells.
         const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
         auto watOnly = sw >  (1 - epsilon);
