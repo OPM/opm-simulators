@@ -57,6 +57,8 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+
 
     typedef WellStateFullyImplicitBlackoilDense WellState;
     typedef BlackoilState ReservoirState;
@@ -64,7 +66,7 @@ public:
     typedef BlackoilModelEbos Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
-    typedef StandardWellsDense<FluidSystem, BlackoilIndices,ElementContext> WellModel;
+    typedef StandardWellsDense<FluidSystem, BlackoilIndices,ElementContext,MaterialLaw> WellModel;
 
 
     /// Initialise from parameters and objects to observe.
