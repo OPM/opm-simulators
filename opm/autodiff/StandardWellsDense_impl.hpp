@@ -1835,26 +1835,24 @@ namespace Opm {
 
                 // update/setup guide rates for each well based on the well_potentials
                 well_collection_->setGuideRatesWithPotentials(wellsPointer(), phase_usage_, well_potentials);
-
-                // handling the situation that wells does not have a valid control
-                // it happens the well specified with GRUP and restarting due to non-convergencing
-                // putting the well under group control for this situation
-                if (wellCollection()->groupControlActive()) {
-                    for (int w = 0; w < nw; ++w) {
-                        WellControls* wc = wells().ctrls[w];
-                        const int ctrl_index = well_controls_get_current(wc);
-                        WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
-
-                        const int group_control_index = well_node.groupControlIndex();
-                        if (group_control_index >= 0 && ctrl_index < 0) {
-                            well_controls_set_current(wc, group_control_index);
-                            well_state.currentControls()[w] = group_control_index;
-                            well_node.setIndividualControl(false);
-                        }
-                    }
-                }
-
             }
+
+            // handling the situation that wells do not have a valid control
+            // it happens the well specified with GRUP and restarting due to non-convergencing
+            // putting the well under group control for this situation
+            for (int w = 0; w < nw; ++w) {
+                WellControls* wc = wells().ctrls[w];
+                const int ctrl_index = well_controls_get_current(wc);
+                WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+
+                const int group_control_index = well_node.groupControlIndex();
+                if (group_control_index >= 0 && ctrl_index < 0) {
+                    well_controls_set_current(wc, group_control_index);
+                    well_state.currentControls()[w] = group_control_index;
+                    well_node.setIndividualControl(false);
+                }
+            }
+
             applyVREPGroupControl(well_state);
 
             if (!wellCollection()->groupControlApplied()) {
