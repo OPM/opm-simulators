@@ -362,6 +362,9 @@ namespace Opm
         /// Update for max oil saturation.                  
         void updateSatOilMax(const std::vector<double>& saturation);
 
+        /// Returns the max oil saturation
+        const std::vector<double>& satOilMax() const;
+
         /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
         /// \param[in]  saturation Array of n*numPhases saturation values.
         /// \param[in]  pc         Array of n*numPhases capillary pressure values.

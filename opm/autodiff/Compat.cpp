@@ -174,6 +174,10 @@ void solutionToSim( const data::Solution& sol,
         state.getCellData("SSOL") = sol.data("SSOL");
     }
 
+    if ( sol.has( "SOMAX" ) ) {
+        state.registerCellData("SOMAX", 1);
+        state.getCellData("SOMAX") = sol.data("SOMAX");
+    }
 }
 
 

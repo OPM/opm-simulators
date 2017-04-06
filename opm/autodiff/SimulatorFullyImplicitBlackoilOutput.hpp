@@ -420,11 +420,12 @@ namespace Opm
                          ExtraData& extra )
     {
         std::map<std::string, UnitSystem::measure> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
-                                                                  {"SWAT"     , UnitSystem::measure::identity},
-                                                                  {"SGAS"     , UnitSystem::measure::identity},
-                                                                  {"TEMP"     , UnitSystem::measure::temperature},
-                                                                  {"RS"       , UnitSystem::measure::gas_oil_ratio},
-                                                                  {"RV"       , UnitSystem::measure::oil_gas_ratio}};
+                                                                  {"SWAT" , UnitSystem::measure::identity},
+                                                                  {"SGAS" , UnitSystem::measure::identity},
+                                                                  {"TEMP" , UnitSystem::measure::temperature},
+                                                                  {"RS" , UnitSystem::measure::gas_oil_ratio},
+                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio},
+                                                                  {"SOMAX", UnitSystem::measure::identity}};
         std::map<std::string, bool> extra_keys {{"OPMEXTRA" , false}};
 
         if (restart_double_si_) {
@@ -549,6 +550,8 @@ namespace Opm
             // RS and RV
             addToSimData( simData, "RSSAT", sd.rsSat );
             addToSimData( simData, "RVSAT", sd.rvSat );
+
+            addToSimData( simData, "SOMAX", sd.soMax );
 
             return simData;
         }
@@ -771,6 +774,13 @@ namespace Opm
                 output.insert("PDEW",
                         Opm::UnitSystem::measure::pressure,
                         std::move( sd.getCellData("PDEW") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+
+            if (sd.hasCellData("SOMAX")) {
+                output.insert("SOMAX",
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("SOMAX") ),
                         data::TargetType::RESTART_AUXILIARY);
             }
 

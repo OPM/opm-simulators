@@ -168,10 +168,10 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         if (deck.hasKeyword("VAPPARS") && deck.hasKeyword("VAPOIL") && deck.hasKeyword("DISGAS")) {
             vap1_ = deck.getKeyword("VAPPARS").getRecord(0).getItem(0).get< double >(0);
             vap2_ = deck.getKeyword("VAPPARS").getRecord(0).getItem(1).get< double >(0);
-            satOilMax_.resize(number_of_cells, 0.0);
         } else if (deck.hasKeyword("VAPPARS")) {
             OPM_THROW(std::runtime_error, "Input has VAPPARS, but missing VAPOIL and/or DISGAS\n");
         }
+        satOilMax_.resize(number_of_cells, 0.0);
 
         SaturationPropsFromDeck* ptr
             = new SaturationPropsFromDeck();
@@ -879,17 +879,20 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     /// Update for max oil saturation.
     void BlackoilPropsAdFromDeck::updateSatOilMax(const std::vector<double>& saturation)
     {
-        if (!satOilMax_.empty()) {
-            const int n = satOilMax_.size();
-            const int np = phase_usage_.num_phases;
-            const int posOil = phase_usage_.phase_pos[Oil];
-            const double* s = saturation.data();
-            for (int i=0; i<n; ++i) {
-                if (satOilMax_[i] < s[np*i+posOil]) {
-                    satOilMax_[i] = s[np*i+posOil];
-                }
+        const int n = satOilMax_.size();
+        const int np = phase_usage_.num_phases;
+        const int posOil = phase_usage_.phase_pos[Oil];
+        const double* s = saturation.data();
+        for (int i=0; i<n; ++i) {
+            if (satOilMax_[i] < s[np*i+posOil]) {
+                satOilMax_[i] = s[np*i+posOil];
             }
         }
+    }
+
+    const std::vector<double>& BlackoilPropsAdFromDeck::satOilMax() const
+    {
+        return satOilMax_;
     }
 
     /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
@@ -918,7 +921,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                            const std::vector<int>& cells,
                                            const double vap) const
     {
-        if (!satOilMax_.empty() && vap > 0.0) {
+        if (vap > 0.0) {
             const int n = cells.size();
             V factor = V::Ones(n, 1);
             const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
@@ -943,7 +946,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                            const std::vector<int>& cells,
                                            const double vap) const
     {
-        if (!satOilMax_.empty() && vap > 0.0) {
+        if (vap > 0.0) {
             const int n = cells.size();
             V factor = V::Ones(n, 1);
             const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());

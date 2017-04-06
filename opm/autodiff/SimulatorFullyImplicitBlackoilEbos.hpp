@@ -149,6 +149,17 @@ public:
             // This is a restart, populate WellState and ReservoirState state objects from restart file
             output_writer_.initFromRestartFile(props_.phaseUsage(), grid(), state, prev_well_state, extra);
             initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
+            {
+                const int num_cells = Opm::UgGridHelpers::numCells(grid());
+
+                typedef std::vector<double> VectorType;
+
+                const VectorType& somax = state.getCellData( "SOMAX" );
+
+                for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
+                    ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
+                }
+            }
         }
 
         // Create timers and file for writing timing info.
