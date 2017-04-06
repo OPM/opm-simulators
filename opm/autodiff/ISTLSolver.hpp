@@ -329,12 +329,14 @@ namespace Opm
             // TODO: Revise when linear solvers interface opm-core is done
             // Construct linear solver.
             // GMRes solver
+            int verbosity = ( isIORank_ ) ? parameters_.linear_solver_verbosity_ : 0;
+
             if ( parameters_.newton_use_gmres_ ) {
                 Dune::RestartedGMResSolver<Vector> linsolve(opA, sp, precond,
                           parameters_.linear_solver_reduction_,
                           parameters_.linear_solver_restart_,
                           parameters_.linear_solver_maxiter_,
-                          parameters_.linear_solver_verbosity_);
+                          verbosity);
                 // Solve system.
                 linsolve.apply(x, istlb, result);
             }
@@ -342,7 +344,7 @@ namespace Opm
                 Dune::BiCGSTABSolver<Vector> linsolve(opA, sp, precond,
                           parameters_.linear_solver_reduction_,
                           parameters_.linear_solver_maxiter_,
-                          parameters_.linear_solver_verbosity_);
+                          verbosity);
                 // Solve system.
                 linsolve.apply(x, istlb, result);
             }
