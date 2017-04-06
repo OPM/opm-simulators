@@ -41,6 +41,7 @@
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
 #include <opm/simulators/ParallelFileMerger.hpp>
+#include <opm/simulators/ensureDirectoryExists.hpp>
 
 #include <opm/core/wells.h>
 #include <opm/core/wells/WellsManager.hpp>
@@ -378,15 +379,7 @@ namespace Opm
             // Write parameters used for later reference. (only if rank is zero)
             if (output_to_files_) {
                 // Create output directory if needed.
-                boost::filesystem::path fpath(output_dir_);
-                if (!is_directory(fpath)) {
-                    try {
-                        create_directories(fpath);
-                    }
-                    catch (...) {
-                        OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-                    }
-                }
+                ensureDirectoryExists(output_dir_);
                 // Write simulation parameters.
                 param_.writeParam(output_dir_ + "/simulation.param");
             }

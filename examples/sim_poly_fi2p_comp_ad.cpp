@@ -70,6 +70,8 @@
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/simulators/ensureDirectoryExists.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -128,14 +130,7 @@ try
         // Create output directory if needed.
         output_dir =
             param.getDefault("output_dir", std::string("output"));
-        boost::filesystem::path fpath(output_dir);
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            std::cerr << "Creating directories failed: " << fpath << std::endl;
-            return EXIT_FAILURE;
-        }
+        ensureDirectoryExists(output_dir);
         // Write simulation parameters.
         param.writeParam(output_dir + "/simulation.param");
     }

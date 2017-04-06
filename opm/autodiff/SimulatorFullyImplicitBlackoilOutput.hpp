@@ -44,7 +44,7 @@
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-
+#include <opm/simulators/ensureDirectoryExists.hpp>
 
 #include <string>
 #include <sstream>
@@ -123,13 +123,7 @@ namespace Opm
         for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
             std::ostringstream fname;
             fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
+            ensureDirectoryExists(fname.str());
             fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
             std::ofstream file(fname.str().c_str());
             if (!file) {
@@ -376,13 +370,7 @@ namespace Opm
                 eclIO_ = std::move(eclIO);
 
                 // Ensure that output dir exists
-                boost::filesystem::path fpath(outputDir_);
-                try {
-                    create_directories(fpath);
-                }
-                catch (...) {
-                    OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-                }
+                ensureDirectoryExists(outputDir_);
 
                 // create output thread if enabled and rank is I/O rank
                 // async output is enabled by default if pthread are enabled
