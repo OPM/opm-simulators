@@ -140,7 +140,7 @@ void WellSwitchingLogger::logSwitch(const char* name, std::array<char,2> fromto,
             ss << "    Switching control mode for well " << name
                << " from " << modestring[WellControlType(fromto[0])]
                << " to " <<  modestring[WellControlType(fromto[1])]
-               << " on rank " << rank << std::endl;
+               << " on rank " << rank;
             OpmLog::info(ss.str());
 }
 #endif

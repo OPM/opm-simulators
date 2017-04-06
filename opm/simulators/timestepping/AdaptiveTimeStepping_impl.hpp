@@ -283,14 +283,14 @@ namespace Opm {
                 {
                     std::ostringstream ss;
                     ss << "    Substep summary: ";
-                    if (report.total_well_iterations != 0) {
-                        ss << "well iterations = " << report.total_well_iterations << ", ";
+                    if (substepReport.total_well_iterations != 0) {
+                        ss << "well its = " << std::setw(2) << substepReport.total_well_iterations << ", ";
                     }
-                    ss << "newton iterations = " << report.total_newton_iterations << ", "
-                       << "linearizations = " << report.total_linearizations
-                       << " (" << report.assemble_time << " sec), "
-                       << "linear iterations = " << report.total_linear_iterations
-                       << " (" << report.linear_solve_time << " sec)";
+                    ss << "newton its = " << std::setw(2) << substepReport.total_newton_iterations << ", "
+                       << "linearizations = "  << std::setw(2) << substepReport.total_linearizations
+                       << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << substepReport.assemble_time << " sec), "
+                       << "linear its = " << std::setw(3) << substepReport.total_linear_iterations
+                       << " ("  << std::fixed << std::setprecision(3) << std::setw(6) << substepReport.linear_solve_time << " sec)";
                     OpmLog::info(ss.str());
                 }
 
@@ -327,8 +327,8 @@ namespace Opm {
                 substepTimer.setLastStepFailed(true);
                 // increase restart counter
                 if( restarts >= solver_restart_max_ ) {
-                    const auto msg = std::string("Solver failed to converge after ")
-                        + std::to_string(restarts) + " restarts.";
+                    const auto msg = std::string("Solver failed to converge after cutting timestep ")
+                        + std::to_string(restarts) + " times.";
                     if (solver_verbose_) {
                         OpmLog::error(msg);
                     }
@@ -340,8 +340,8 @@ namespace Opm {
                 substepTimer.provideTimeStepEstimate( newTimeStep );
                 if( solver_verbose_ ) {
                     std::string msg;
-                    msg = "Solver convergence failed, restarting solver with new time step ("
-                        + std::to_string(unit::convert::to( newTimeStep, unit::day )) + " days).\n";
+                    msg = "Solver convergence failed, cutting timestep to "
+                        + std::to_string(unit::convert::to( newTimeStep, unit::day )) + " days.\n";
                     OpmLog::problem(msg);
                 }
                 // reset states

@@ -324,8 +324,9 @@ public:
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                report += adaptiveTimeStepping->step( timer, *solver, state, well_state, event, output_writer_,
-                                                      output_writer_.requireFIPNUM() ? &fipnum : nullptr );
+                stepReport = adaptiveTimeStepping->step( timer, *solver, state, well_state, event, output_writer_,
+                                                         output_writer_.requireFIPNUM() ? &fipnum : nullptr );
+                report += stepReport;
             }
             else {
                 // solve for complete report step
@@ -384,7 +385,7 @@ public:
 
                 std::string msg;
                 msg =
-                    "Time step took " + std::to_string(stepReport.solver_time) + " seconds; "
+                    "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
                     "total solver time " + std::to_string(report.solver_time) + " seconds.";
                 OpmLog::note(msg);
             }
