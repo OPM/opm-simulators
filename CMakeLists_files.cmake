@@ -63,6 +63,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/polymer/TransportSolverTwophasePolymer.cpp
   opm/polymer/fullyimplicit/FullyImplicitCompressiblePolymerSolver.cpp
   opm/polymer/fullyimplicit/PolymerPropsAd.cpp
+  opm/simulators/ensureDirectoryExists.cpp
   opm/simulators/SimulatorCompressibleTwophase.cpp
   opm/simulators/SimulatorIncompTwophase.cpp
   opm/simulators/WellSwitchingLogger.cpp
@@ -258,6 +259,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer_impl.hpp
   opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp
+  opm/simulators/ensureDirectoryExists.hpp
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/SimulatorCompressibleTwophase.hpp
   opm/simulators/SimulatorIncompTwophase.hpp
