@@ -558,6 +558,11 @@ namespace Opm {
                              std::vector<double>& maxNormWell,
                              int nc) const;
 
+        /// Set up the group control related at the beginning of each time step
+        void
+        setupGroupControl(const ReservoirState& reservoir_state,
+                          WellState& well_state);
+
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dbhpMaxRel() const {return param_.dbhp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
