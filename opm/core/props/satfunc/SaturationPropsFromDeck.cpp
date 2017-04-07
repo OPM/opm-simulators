@@ -270,6 +270,94 @@ namespace Opm
     }
 
 
+
+    /// Set hysteresis parameters for gas-oil
+    /// \param[in]  n        Number of data points.
+    /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void SaturationPropsFromDeck::setGasOilHystParams(const int n,
+                             const int* cells,
+                             const double* pcswmdc,
+                             const double* krnswdc)
+    {
+        assert(cells != 0);
+
+        if (materialLawManager_->enableHysteresis()) {
+            for (int i = 0; i < n; ++i) {
+                materialLawManager_->setGasOilHysteresisParams(pcswmdc[i], krnswdc[i], cells[i]);
+            }
+        }
+    }
+
+    /// Get hysteresis parameters for gas-oil
+    /// \param[in]  n        Number of data points.
+    /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void SaturationPropsFromDeck::getGasOilHystParams(const int n,
+                             const int* cells,
+                             double* pcswmdc,
+                             double* krnswdc) const
+    {
+        assert(cells != 0);
+
+        if (materialLawManager_->enableHysteresis()) {
+            for (int i = 0; i < n; ++i) {
+                materialLawManager_->gasOilHysteresisParams(pcswmdc[i], krnswdc[i], cells[i]);
+            }
+        }
+        else {
+            for (int i = 0; i < n; ++i) {
+                //Signify non-physical values since not enabled
+                pcswmdc[i] = 2.0;
+                krnswdc[i] = 2.0;
+            }
+        }
+    }
+
+    /// Set hysteresis parameters for oil-water
+    /// \param[in]  n        Number of data points.
+    /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void SaturationPropsFromDeck::setOilWaterHystParams(const int n,
+                               const int* cells,
+                               const double* pcswmdc,
+                               const double* krnswdc)
+    {
+        assert(cells != 0);
+
+        if (materialLawManager_->enableHysteresis()) {
+            for (int i = 0; i < n; ++i) {
+                materialLawManager_->setOilWaterHysteresisParams(pcswmdc[i], krnswdc[i], cells[i]);
+            }
+        }
+    }
+
+    /// Get hysteresis parameters for oil-water
+    /// \param[in]  n        Number of data points.
+    /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void SaturationPropsFromDeck::getOilWaterHystParams(const int n,
+                               const int* cells,
+                               double* pcswmdc,
+                               double* krnswdc) const
+    {
+        assert(cells != 0);
+
+        if (materialLawManager_->enableHysteresis()) {
+            for (int i = 0; i < n; ++i) {
+                materialLawManager_->oilWaterHysteresisParams(pcswmdc[i], krnswdc[i], cells[i]);
+            }
+        }
+        else {
+            for (int i = 0; i < n; ++i) {
+                //Signify non-physical values since not enabled
+                pcswmdc[i] = 2.0;
+                krnswdc[i] = 2.0;
+            }
+        }
+    }
+
+
     /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
     /// \param[in]     cell  Cell index.
     /// \param[in]     pcow  P_oil - P_water.
