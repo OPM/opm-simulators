@@ -262,7 +262,7 @@ namespace Opm {
     {
 
         const int np = wells().number_of_phases;
-        assert (mob.size() == np);
+        assert (int(mob.size()) == np);
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
         const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
 
@@ -2664,7 +2664,6 @@ namespace Opm {
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellHasTHPConstraints(const int well_index) const
     {
-        const WellType& well_type = wells().type[well_index];
         const WellControls* well_control = wells().ctrls[well_index];
         const int nwc = well_controls_get_num(well_control);
         for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
