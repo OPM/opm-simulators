@@ -665,7 +665,8 @@ namespace Opm
             if( isIORank() )
             {
                 // Update values in the globalReservoirState
-                solutionToSim(*globalCellData_, phaseUsage_, *globalReservoirState_);
+                const std::map<std::string, std::vector<double> > no_extra_data;
+                solutionToSim(*globalCellData_, no_extra_data, phaseUsage_, *globalReservoirState_);
             }
             return isIORank();
         }

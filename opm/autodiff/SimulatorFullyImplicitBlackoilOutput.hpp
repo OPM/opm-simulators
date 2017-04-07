@@ -424,13 +424,15 @@ namespace Opm
                                                                   {"SGAS" , UnitSystem::measure::identity},
                                                                   {"TEMP" , UnitSystem::measure::temperature},
                                                                   {"RS" , UnitSystem::measure::gas_oil_ratio},
-                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio},
-                                                                  {"SOMAX", UnitSystem::measure::identity},
-                                                                  {"PCSWM_OW", UnitSystem::measure::identity},
-                                                                  {"KRNSW_OW", UnitSystem::measure::identity},
-                                                                  {"PCSWM_GO", UnitSystem::measure::identity},
-                                                                  {"KRNSW_GO", UnitSystem::measure::identity}};
-        std::map<std::string, bool> extra_keys {{"OPMEXTRA" , false}};
+                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio}};
+        std::map<std::string, bool> extra_keys {
+            {"OPMEXTRA" , false},
+            {"SOMAX", false},
+            {"PCSWM_OW", false},
+            {"KRNSW_OW", false},
+            {"PCSWM_GO", false},
+            {"KRNSW_GO", false}
+        };
 
         if (restart_double_si_) {
             // Avoid any unit conversions, treat restart input as SI units.
@@ -462,7 +464,7 @@ namespace Opm
         wellstate.resize(wells, simulatorstate, phaseUsage ); //Resize for restart step
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
 
-        solutionToSim( restart_values.solution, phaseUsage, simulatorstate );
+        solutionToSim( restart_values.solution, restart_values.extra, phaseUsage, simulatorstate );
         wellsToState( restart_values.wells, phaseUsage, wellstate );
 
         const auto opmextra_iter = restart_values.extra.find("OPMEXTRA");

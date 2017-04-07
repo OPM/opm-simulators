@@ -123,6 +123,7 @@ data::Solution simToSolution( const SimulationDataContainer& reservoir,
 
 
 void solutionToSim( const data::Solution& sol,
+                    const std::map<std::string,std::vector<double> >& extra,
                     PhaseUsage phases,
                     SimulationDataContainer& state ) {
 
@@ -174,29 +175,29 @@ void solutionToSim( const data::Solution& sol,
         state.getCellData("SSOL") = sol.data("SSOL");
     }
 
-    if ( sol.has( "SOMAX" ) ) {
+    if ( extra.find("SOMAX") != extra.end() ) {
         state.registerCellData("SOMAX", 1);
-        state.getCellData("SOMAX") = sol.data("SOMAX");
+        state.getCellData("SOMAX") = extra.find("SOMAX")->second;
     }
 
-    if ( sol.has( "PCSWM_OW" ) ) {
+    if ( extra.find("PCSWM_OW") != extra.end() ) {
         state.registerCellData("PCSWMDC_OW", 1);
-        state.getCellData("PCSWMDC_OW") = sol.data("PCSWM_OW");
+        state.getCellData("PCSWMDC_OW") = extra.find("PCSWM_OW")->second;
     }
 
-    if ( sol.has( "KRNSW_OW" ) ) {
+    if ( extra.find("KRNSW_OW") != extra.end() ) {
         state.registerCellData("KRNSWMDC_OW", 1);
-        state.getCellData("KRNSWMDC_OW") = sol.data("KRNSW_OW");
+        state.getCellData("KRNSWMDC_OW") = extra.find("KRNSW_OW")->second;
     }
 
-    if ( sol.has( "PCSWM_GO" ) ) {
+    if ( extra.find("PCSWM_GO") != extra.end() ) {
         state.registerCellData("PCSWMDC_GO", 1);
-        state.getCellData("PCSWMDC_GO") = sol.data("PCSWM_GO");
+        state.getCellData("PCSWMDC_GO") = extra.find("PCSWM_GO")->second;
     }
 
-    if ( sol.has( "KRNSW_GO" ) ) {
+    if ( extra.find("KRNSW_GO") != extra.end() ) {
         state.registerCellData("KRNSWMDC_GO", 1);
-        state.getCellData("KRNSWMDC_GO") = sol.data("KRNSW_GO");
+        state.getCellData("KRNSWMDC_GO") = extra.find("KRNSW_GO")->second;
     }
 }
 
