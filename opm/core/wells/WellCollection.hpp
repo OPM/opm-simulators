@@ -155,6 +155,9 @@ namespace Opm
                                          const PhaseUsage& phase_usage,
                                          const std::vector<double>& well_potentials) const;
 
+
+        bool requireWellPotentials() const;
+
     private:
         // To account for the possibility of a forest
         std::vector<std::shared_ptr<WellsGroupInterface> > roots_;

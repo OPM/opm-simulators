@@ -482,4 +482,15 @@ namespace Opm
         } // end of for (int w = 0; w < nw; ++w)
     }
 
+
+    bool WellCollection::requireWellPotentials() const
+    {
+        for (const auto& well_node : leaf_nodes_) {
+            if (well_node->isGuideRateWellPotential()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

@@ -514,6 +514,10 @@ namespace Opm
 
         bool targetUpdated() const;
 
+        bool isGuideRateWellPotential() const;
+
+        void setIsGuideRateWellPotential(const bool flag);
+
         virtual void setTargetUpdated(const bool flag);
 
         virtual bool canProduceMore() const;
@@ -527,6 +531,10 @@ namespace Opm
         bool shut_well_;
         // TODO: used when updating well targets
         bool target_updated_;
+        // whether the guide rate is specified with well potential
+        // TODO: we have never handle the guide rates for groups, maybe this
+        // is something will go to WellsGroupInterface later
+        bool is_guiderate_wellpotential_;
     };
 
     /// Creates the WellsGroupInterface for the given well

@@ -921,7 +921,8 @@ namespace Opm
           self_index_(-1),
           group_control_index_(-1),
           shut_well_(true), // This is default for now
-          target_updated_(false) // This is default for now, not sure whether to use the default value
+          target_updated_(false), // This is default for now, not sure whether to use the default value
+          is_guiderate_wellpotential_(false)
     {
     }
 
@@ -1648,6 +1649,18 @@ namespace Opm
     void WellNode::setTargetUpdated(const bool flag)
     {
         target_updated_ = flag;
+    }
+
+
+    bool WellNode::isGuideRateWellPotential() const
+    {
+        return is_guiderate_wellpotential_;
+    }
+
+
+    void WellNode::setIsGuideRateWellPotential(const bool flag)
+    {
+        is_guiderate_wellpotential_ = flag;
     }
 
 

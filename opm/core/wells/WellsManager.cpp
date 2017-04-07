@@ -748,7 +748,7 @@ namespace Opm
             WellNode& wellnode = *well_collection_.getLeafNodes()[wix];
 
             // TODO: looks like only handling OIL phase guide rate for producers
-            if (well->getGuideRatePhase(timeStep) != GuideRate::UNDEFINED) {
+            if (well->getGuideRatePhase(timeStep) != GuideRate::UNDEFINED && well->getGuideRate(timeStep) >= 0.) {
                 if (well_data[wix].type == PRODUCER) {
                     wellnode.prodSpec().guide_rate_ = well->getGuideRate(timeStep);
                     if (well->getGuideRatePhase(timeStep) == GuideRate::OIL) {
@@ -768,6 +768,8 @@ namespace Opm
                 } else {
                     OPM_THROW(std::runtime_error, "Unknown well type " << well_data[wix].type << " for well " << well->name());
                 }
+            } else {
+                wellnode.setIsGuideRateWellPotential(true);
             }
         }
     }

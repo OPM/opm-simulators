@@ -34,7 +34,7 @@ namespace Opm
       BHP_limit_(-1e100),
       reinjection_fraction_target_(1),
       voidage_replacment_fraction_(1),
-      guide_rate_(1.0),
+      guide_rate_(-1.0),
       guide_rate_type_(NONE_GRT)
     {
 
