@@ -103,8 +103,6 @@ namespace Opm {
             ADB rsSat; // Saturated gas-oil ratio
             ADB rvSat; // Saturated oil-gas ratio
 
-            std::vector<double> soMax; // Maximum oil saturation
-
             std::array<V, fipValues> fip;
         };
 
