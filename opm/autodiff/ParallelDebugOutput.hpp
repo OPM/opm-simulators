@@ -105,8 +105,8 @@ namespace Opm
         virtual const WellStateFullyImplicitBlackoil& globalWellState() const { return *wellState_; }
         virtual bool isIORank () const { return true; }
         virtual bool isParallel () const { return false; }
-        virtual int numCells() const { return grid_.number_of_cells; }
-        virtual const int* globalCell() const { return grid_.global_cell; }
+        virtual int numCells() const { return Opm::AutoDiffGrid::numCells(grid_); }
+        virtual const int* globalCell() const { return Opm::AutoDiffGrid::globalCell(grid_); }
     };
 
 #if HAVE_OPM_GRID
