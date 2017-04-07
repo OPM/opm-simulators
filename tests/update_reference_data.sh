@@ -44,7 +44,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe1/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_legacy \
       SPE1CASE2 \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -53,7 +53,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_multisegment+msw_2d_h/ \
-      $OPM_DATA_ROOT/msw_2d_h/opm-simulation-reference/ \
+      $OPM_DATA_ROOT/msw_2d_h/opm-simulation-reference/flow_multisegment \
       2D_H__ \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -62,7 +62,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe3/ \
-      $OPM_DATA_ROOT/spe3/opm-simulation-reference/ \
+      $OPM_DATA_ROOT/spe3/opm-simulation-reference/flow_legacy \
       SPE3CASE1 \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
   fi
@@ -71,7 +71,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe9/ \
-      $OPM_DATA_ROOT/spe9/opm-simulation-reference/ \
+      $OPM_DATA_ROOT/spe9/opm-simulation-reference/flow_legacy \
       SPE9_CP_SHORT \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
   fi
@@ -80,7 +80,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/init/flow_legacy+norne/ \
-      $OPM_DATA_ROOT/norne/opm-simulation-reference/ \
+      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_legacy \
       NORNE_ATW2013 \
       EGRID INIT
   fi
@@ -89,7 +89,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       deps/opm-data/norne/flow_legacy/ \
-      $OPM_DATA_ROOT/norne/opm-simulation-reference/ \
+      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_legacy \
       NORNE_ATW2013 \
       UNSMRY
   fi
