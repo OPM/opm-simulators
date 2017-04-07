@@ -62,10 +62,6 @@ namespace Opm
         /// Update scaling factors for mass balance equations
         bool update_equations_scaling_;
 
-        /// Compute well potentials, needed to calculate default guide rates for group
-        /// controlled wells
-        bool compute_well_potentials_;
-
         /// Try to detect oscillation or stagnation.
         bool use_update_stabilization_;
 
