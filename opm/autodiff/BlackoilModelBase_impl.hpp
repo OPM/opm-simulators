@@ -2560,7 +2560,7 @@ typedef Eigen::Array<double,
     setupGroupControl(const ReservoirState& reservoir_state,
                       WellState& well_state)
     {
-        if (param_.compute_well_potentials_) {
+        if (asImpl().wellModel().wellCollection()->requireWellPotentials()) {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
             asImpl().makeConstantState(state);
             asImpl().wellModel().computeWellConnectionPressures(state, well_state);
@@ -2601,24 +2601,25 @@ typedef Eigen::Array<double,
             asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, well_state, state, well_potentials);
             asImpl().wellModel().wellCollection()->setGuideRatesWithPotentials(asImpl().wellModel().wellsPointer(),
                                                                                fluid_.phaseUsage(), well_potentials);
-            applyVREPGroupControl(reservoir_state, well_state);
+        } // end of if
 
-            if (asImpl().wellModel().wellCollection()->groupControlApplied()) {
-                asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
-            } else {
-                asImpl().wellModel().wellCollection()->applyGroupControls();
+        applyVREPGroupControl(reservoir_state, well_state);
 
-                // the well collections do not have access to Well State, so the currentControls() of Well State need to
-                // be updated based on the group control setup
-                const int nw = wells().number_of_wells;
-                for (int w = 0; w < nw; ++w) {
-                    const WellNode& well_node = asImpl().wellModel().wellCollection()->findWellNode(wells().name[w]);
-                    if (!well_node.individualControl()) {
-                        well_state.currentControls()[w] = well_node.groupControlIndex();
-                    }
+        if (asImpl().wellModel().wellCollection()->groupControlApplied()) {
+            asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+        } else {
+            asImpl().wellModel().wellCollection()->applyGroupControls();
+
+            // the well collections do not have access to Well State, so the currentControls() of Well State need to
+            // be updated based on the group control setup
+            const int nw = wells().number_of_wells;
+            for (int w = 0; w < nw; ++w) {
+                const WellNode& well_node = asImpl().wellModel().wellCollection()->findWellNode(wells().name[w]);
+                if (!well_node.individualControl()) {
+                    well_state.currentControls()[w] = well_node.groupControlIndex();
                 }
-            } // end of else
-        } // end of if (param_.compute_well_potentials_)
+            }
+        } // end of else
     }
 
 } // namespace Opm

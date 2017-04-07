@@ -1823,7 +1823,7 @@ namespace Opm {
 
         if (well_collection_->groupControlActive()) {
             // calculate the well potentials
-            if (param_.compute_well_potentials_) {
+            if (well_collection_->requireWellPotentials()) {
 
                 setWellVariables(well_state);
                 computeWellConnectionPressures(ebos_simulator, well_state);
