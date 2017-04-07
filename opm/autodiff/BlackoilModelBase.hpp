@@ -105,6 +105,12 @@ namespace Opm {
 
             std::vector<double> soMax; // Maximum oil saturation
 
+            //Hysteresis parameters
+            std::vector<double> krnswdc_ow;
+            std::vector<double> krnswdc_go;
+            std::vector<double> pcswmdc_ow;
+            std::vector<double> pcswmdc_go;
+
             std::array<V, fipValues> fip;
         };
 

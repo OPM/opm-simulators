@@ -464,6 +464,10 @@ typedef Eigen::Array<double,
         , rsSat(ADB::null())
         , rvSat(ADB::null())
         , soMax()
+        , krnswdc_ow()
+        , krnswdc_go()
+        , pcswmdc_ow()
+        , pcswmdc_go()
         , fip()
     {
     }
@@ -664,6 +668,8 @@ typedef Eigen::Array<double,
                         state.rv = sd_.rvSat;
                     }
                     sd_.soMax = fluid_.satOilMax();
+                    fluid_.getGasOilHystParams(sd_.krnswdc_go, sd_.pcswmdc_go, cells_);
+                    fluid_.getOilWaterHystParams(sd_.krnswdc_ow, sd_.pcswmdc_ow, cells_);
                 }
             }
             else {

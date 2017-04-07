@@ -1290,15 +1290,17 @@ namespace Opm {
 
                 somax[cellIdx] = ebosSimulator().model().maxOilSaturation(cellIdx);
 
-                const auto matLawManager = ebosSimulator().problem().materialLawManager();
-                matLawManager->oilWaterHysteresisParams(
-                        pcSwMdc_ow[cellIdx],
-                        krnSwMdc_ow[cellIdx],
-                        cellIdx);
-                matLawManager->gasOilHysteresisParams(
-                        pcSwMdc_go[cellIdx],
-                        krnSwMdc_go[cellIdx],
-                        cellIdx);
+                const auto& matLawManager = ebosSimulator().problem().materialLawManager();
+                if (matLawManager->enableHysteresis()) {
+                    matLawManager->oilWaterHysteresisParams(
+                            pcSwMdc_ow[cellIdx],
+                            krnSwMdc_ow[cellIdx],
+                            cellIdx);
+                    matLawManager->gasOilHysteresisParams(
+                            pcSwMdc_go[cellIdx],
+                            krnSwMdc_go[cellIdx],
+                            cellIdx);
+                }
 
                 if (aqua_active) {
                     saturation[ satIdx + aqua_pos ] = fs.saturation(FluidSystem::waterPhaseIdx).value();

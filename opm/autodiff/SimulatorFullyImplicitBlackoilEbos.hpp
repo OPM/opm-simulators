@@ -797,22 +797,25 @@ protected:
             ebosSimulator_.model().setMaxOilSaturation(somax[cellIdx], cellIdx);
         }
 
-        VectorType& pcSwMdc_ow = state.getCellData( "PCSWMDC_OW" );
-        VectorType& krnSwMdc_ow = state.getCellData( "KRNSWMDC_OW" );
-
-        VectorType& pcSwMdc_go = state.getCellData( "PCSWMDC_GO" );
-        VectorType& krnSwMdc_go = state.getCellData( "KRNSWMDC_GO" );
-
-        for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
+        if (ebosSimulator_.problem().materialLawManager()->enableHysteresis()) {
             auto matLawManager = ebosSimulator_.problem().materialLawManager();
-            matLawManager->setOilWaterHysteresisParams(
-                    pcSwMdc_ow[cellIdx],
-                    krnSwMdc_ow[cellIdx],
-                    cellIdx);
-            matLawManager->setGasOilHysteresisParams(
-                    pcSwMdc_go[cellIdx],
-                    krnSwMdc_go[cellIdx],
-                    cellIdx);
+
+            VectorType& pcSwMdc_ow = state.getCellData( "PCSWMDC_OW" );
+            VectorType& krnSwMdc_ow = state.getCellData( "KRNSWMDC_OW" );
+
+            VectorType& pcSwMdc_go = state.getCellData( "PCSWMDC_GO" );
+            VectorType& krnSwMdc_go = state.getCellData( "KRNSWMDC_GO" );
+
+            for (int cellIdx = 0; cellIdx < num_cells; ++cellIdx) {
+                matLawManager->setOilWaterHysteresisParams(
+                        pcSwMdc_ow[cellIdx],
+                        krnSwMdc_ow[cellIdx],
+                        cellIdx);
+                matLawManager->setGasOilHysteresisParams(
+                        pcSwMdc_go[cellIdx],
+                        krnSwMdc_go[cellIdx],
+                        cellIdx);
+            }
         }
     }
 

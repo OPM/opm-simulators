@@ -556,6 +556,10 @@ namespace Opm
             addToSimData( simData, "RVSAT", sd.rvSat );
 
             addToSimData( simData, "SOMAX", sd.soMax );
+            addToSimData( simData, "PCSWMDC_OW", sd.pcswmdc_ow);
+            addToSimData( simData, "KRNSWMDC_OW", sd.krnswdc_ow);
+            addToSimData( simData, "PCSWMDC_GO", sd.pcswmdc_go);
+            addToSimData( simData, "KRNSWMDC_GO", sd.krnswdc_go);
 
             return simData;
         }
