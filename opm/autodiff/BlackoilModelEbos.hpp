@@ -186,8 +186,6 @@ namespace Opm {
         , isBeginReportStep_(false)
         {
             const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
-            const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
             // Wells are active if they are active wells on at least
             // one process.
             int wellsActive = localWellsActive() ? 1 : 0;
@@ -195,7 +193,7 @@ namespace Opm {
             wellModel().setWellsActive( wellsActive );
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
-            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv, &rate_converter_, global_nc_);
+            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, geo_.z(), geo_.poreVolume(), &rate_converter_, global_nc_);
             if (!istlSolver_)
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
