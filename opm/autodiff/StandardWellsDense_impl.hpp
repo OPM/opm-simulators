@@ -1793,24 +1793,40 @@ namespace Opm {
     prepareTimeStep(const Simulator& ebos_simulator,
                     WellState& well_state)
     {
-        // after restarting, the well_controls can be modified while
-        // the well_state still uses the old control index
-        // we need to synchronize these two.
         const int nw = wells().number_of_wells;
         for (int w = 0; w < nw; ++w) {
-            const int ctrl_index = well_state.currentControls()[w];
-            WellControls* wc = wells().ctrls[w];
-            const int ctrl_index_2 = well_controls_get_current(wc);
-            if (ctrl_index_2 != ctrl_index) {
-                well_controls_set_current(wc, ctrl_index);
+            // after restarting, the well_controls can be modified while
+            // the well_state still uses the old control index
+            // we need to synchronize these two.
+            {
+                const int ctrl_index = well_state.currentControls()[w];
+                WellControls* wc = wells().ctrls[w];
+                const int ctrl_index_2 = well_controls_get_current(wc);
+                if (ctrl_index_2 != ctrl_index) {
+                    // using the ctrl_index from WellState for this case
+                    well_controls_set_current(wc, ctrl_index);
+                }
             }
 
-            // update whether well is under group control
             if (wellCollection()->groupControlActive()) {
-                // get well node in the well collection
+                WellControls* wc = wells().ctrls[w];
                 WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
 
-                // update whehter the well is under group control or individual control
+                // handling the situation that wells do not have a valid control
+                // it happens the well specified with GRUP and restarting due to non-convergencing
+                // putting the well under group control for this situation
+                int ctrl_index = well_controls_get_current(wc);
+
+                const int group_control_index = well_node.groupControlIndex();
+                if (group_control_index >= 0 && ctrl_index < 0) {
+                    // put well under group control
+                    well_controls_set_current(wc, group_control_index);
+                    well_state.currentControls()[w] = group_control_index;
+                }
+
+                // Final step, update whehter the well is under group control or individual control
+                // updated ctrl_index from the well control
+                ctrl_index = well_controls_get_current(wc);
                 if (well_node.groupControlIndex() >= 0 && ctrl_index == well_node.groupControlIndex()) {
                     // under group control
                     well_node.setIndividualControl(false);
@@ -1822,35 +1838,18 @@ namespace Opm {
         }
 
         if (well_collection_->groupControlActive()) {
-            // calculate the well potentials
             if (well_collection_->requireWellPotentials()) {
 
+                // calculate the well potentials
                 setWellVariables(well_state);
                 computeWellConnectionPressures(ebos_simulator, well_state);
 
                 // To store well potentials for each well
                 std::vector<double> well_potentials;
-
                 computeWellPotentials(ebos_simulator, well_state, well_potentials);
 
                 // update/setup guide rates for each well based on the well_potentials
                 well_collection_->setGuideRatesWithPotentials(wellsPointer(), phase_usage_, well_potentials);
-            }
-
-            // handling the situation that wells do not have a valid control
-            // it happens the well specified with GRUP and restarting due to non-convergencing
-            // putting the well under group control for this situation
-            for (int w = 0; w < nw; ++w) {
-                WellControls* wc = wells().ctrls[w];
-                const int ctrl_index = well_controls_get_current(wc);
-                WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
-
-                const int group_control_index = well_node.groupControlIndex();
-                if (group_control_index >= 0 && ctrl_index < 0) {
-                    well_controls_set_current(wc, group_control_index);
-                    well_state.currentControls()[w] = group_control_index;
-                    well_node.setIndividualControl(false);
-                }
             }
 
             applyVREPGroupControl(well_state);
