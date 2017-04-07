@@ -121,6 +121,42 @@ namespace Opm
                            const int* cells,
                            const double* s);
 
+        /// Set hysteresis parameters for gas-oil
+        /// \param[in]  n        Number of data points.
+        /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void setGasOilHystParams(const int n,
+                                 const int* cells,
+                                 const double* pcswmdc,
+                                 const double* krnswdc);
+
+        /// Get hysteresis parameters for gas-oil
+        /// \param[in]  n        Number of data points.
+        /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void getGasOilHystParams(const int n,
+                                 const int* cells,
+                                 double* pcswmdc,
+                                 double* krnswdc) const;
+
+        /// Set hysteresis parameters for oil-water
+        /// \param[in]  n        Number of data points.
+        /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void setOilWaterHystParams(const int n,
+                                   const int* cells,
+                                   const double* pcswmdc,
+                                   const double* krnswdc);
+
+        /// Get hysteresis parameters for oil-water
+        /// \param[in]  n        Number of data points.
+        /// \param[in]  pcswmdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Array of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void getOilWaterHystParams(const int n,
+                                   const int* cells,
+                                   double* pcswmdc,
+                                   double* krnswdc) const;
+
         /// Update capillary pressure scaling according to pressure diff. and initial water saturation.
         /// \param[in]     cell  Cell index. 
         /// \param[in]     pcow  P_oil - P_water.
