@@ -1786,10 +1786,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template<typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     prepareTimeStep(const Simulator& ebos_simulator,
                     WellState& well_state)
     {
@@ -1881,7 +1881,7 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     WellCollection*
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellCollection() const
@@ -2659,9 +2659,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     bool
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellHasTHPConstraints(const int well_index) const
     {
         const WellType& well_type = wells().type[well_index];
@@ -2679,10 +2679,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellRatesWithBhp(const Simulator& ebosSimulator,
                             const EvalWell& bhp,
                             const int well_index,
@@ -2697,7 +2697,9 @@ namespace Opm {
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
             // flux for each perforation
             std::vector<EvalWell> cq_s(np, 0.0);
-            computeWellFlux(well_index, wells().WI[perf], intQuants, bhp,
+            std::vector<EvalWell> mob(np, 0.0);
+            getMobility(ebosSimulator, perf, cell_index, mob);
+            computeWellFlux(well_index, wells().WI[perf], intQuants.fluidState(), mob, bhp,
                             wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
             for(int p = 0; p < np; ++p) {
@@ -2711,9 +2713,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     double
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     mostStrictBhpFromBhpLimits(const int well_index) const
     {
         double bhp;
@@ -2767,10 +2769,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     std::vector<double>
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                 const int well_index,
                                 const double initial_bhp, // bhp from BHP constraints
