@@ -3,8 +3,8 @@
 
 namespace Opm {
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     StandardWellsDense(const Wells* wells_arg,
                        WellCollection* well_collection,
                        const ModelParameters& param,
@@ -32,9 +32,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     init(const PhaseUsage phase_usage_arg,
          const std::vector<bool>& active_arg,
          const VFPProperties*  vfp_properties_arg,
@@ -120,10 +120,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     SimulatorReport
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     assemble(Simulator& ebosSimulator,
              const int iterationIdx,
              const double dt,
@@ -162,10 +162,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     assembleWellEq(Simulator& ebosSimulator,
                    const double dt,
                    WellState& well_state,
@@ -192,7 +192,10 @@ namespace Opm {
                 const int cell_idx = wells().well_cells[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                 std::vector<EvalWell> cq_s(np,0.0);
-                computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
+
+                std::vector<EvalWell> mob(np, 0.0);
+                getMobility(ebosSimulator, perf, cell_idx, mob);
+                computeWellFlux(w, wells().WI[perf], intQuants.fluidState(), mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
                 for (int p1 = 0; p1 < np; ++p1) {
 
@@ -249,13 +252,51 @@ namespace Opm {
     }
 
 
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    template <typename Simulator>
+    void
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
+    getMobility(const Simulator& ebosSimulator, const int perf, const int cell_idx, std::vector<EvalWell>& mob) const
+    {
+
+        const int np = wells().number_of_phases;
+        assert (mob.size() == np);
+        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
+
+        // either use mobility of the perforation cell or calcualte its own
+        // based on passing the saturation table index
+        const int satid = wells().sat_table_id[perf] - 1;
+        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
+        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
+
+            for (int phase = 0; phase < np; ++phase) {
+                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+                mob[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
+            }
+        } else {
+
+            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
+            Eval relativePerms[3];
+            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
+
+            // reset the satnumvalue back to original
+            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
+
+            // compute the mobility
+            for (int phase = 0; phase < np; ++phase) {
+                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+                mob[phase] = extendEval(relativePerms[ebosPhaseIdx] / intQuants.fluidState().viscosity(ebosPhaseIdx));
+            }
+        }
+    }
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     bool
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     allow_cross_flow(const int w, Simulator& ebosSimulator) const
     {
         if (wells().allow_cf[w]) {
@@ -290,9 +331,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     localInvert(Mat& istlA) const
     {
         for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
@@ -307,9 +348,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     print(Mat& istlA) const
     {
         for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
@@ -323,9 +364,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     apply( BVector& r) const
     {
         if ( ! localWellsActive() ) {
@@ -342,9 +383,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     apply(const BVector& x, BVector& Ax)
     {
         if ( ! localWellsActive() ) {
@@ -365,9 +406,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax)
     {
         if ( ! localWellsActive() ) {
@@ -387,9 +428,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     recoverVariable(const BVector& x, BVector& xw) const
     {
         if ( ! localWellsActive() ) {
@@ -404,9 +445,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     int
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
         const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
@@ -417,9 +458,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     int
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     flowToEbosPvIdx( const int flowPv ) const
     {
         const int flowToEbos[ 3 ] = {
@@ -434,9 +475,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     int
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
         const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
@@ -447,9 +488,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     int
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     ebosCompToFlowPhaseIdx( const int compIdx ) const
     {
         const int compToPhase[ 3 ] = { Oil, Water, Gas };
@@ -460,9 +501,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     std::vector<double>
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     extractPerfData(const std::vector<double>& in) const
     {
         const int nw   = wells().number_of_wells;
@@ -481,9 +522,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     int
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     numPhases() const
     {
         return wells().number_of_phases;
@@ -493,9 +534,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     int
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     numCells() const
     {
         return pv_.size();
@@ -505,9 +546,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     resetWellControlFromState(WellState xw) const
     {
         const int        nw   = wells_->number_of_wells;
@@ -521,9 +562,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     const Wells&
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wells() const
     {
         assert(wells_ != 0);
@@ -534,9 +575,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     const Wells*
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellsPointer() const
     {
         return wells_;
@@ -546,9 +587,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     bool
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellsActive() const
     {
         return wells_active_;
@@ -558,9 +599,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     setWellsActive(const bool wells_active)
     {
         wells_active_ = wells_active;
@@ -570,9 +611,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     bool
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     localWellsActive() const
     {
         return wells_ ? (wells_->number_of_wells > 0 ) : false;
@@ -582,9 +623,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     int
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     numWellVars() const
     {
         if ( !localWellsActive() ) {
@@ -600,9 +641,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     const std::vector<double>&
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellPerforationDensities() const
     {
          return well_perforation_densities_;
@@ -612,9 +653,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     const std::vector<double>&
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellPerforationPressureDiffs() const
     {
         return well_perforation_pressure_diffs_;
@@ -624,9 +665,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::EvalWell
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     extendEval(Eval in) const {
         EvalWell out = 0.0;
         out.setValue(in.value());
@@ -640,9 +681,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     setWellVariables(const WellState& xw)
     {
         const int np = wells().number_of_phases;
@@ -660,9 +701,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     print(EvalWell in) const
     {
         std::cout << in.value() << std::endl;
@@ -675,9 +716,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeAccumWells()
     {
         const int np = wells().number_of_phases;
@@ -693,12 +734,13 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    template<typename intensiveQuants>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    template<typename FluidState>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellFlux(const int& w, const double& Tw,
-                    const intensiveQuants& intQuants,
+                    const FluidState& fs,
+                    const std::vector<EvalWell>& mob_perfcells_dense,
                     const EvalWell& bhp, const double& cdp,
                     const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
     {
@@ -710,16 +752,13 @@ namespace Opm {
             cmix_s[phase] = wellSurfaceVolumeFraction(w, phase);
         }
 
-        const auto& fs = intQuants.fluidState();
         EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
         EvalWell rs = extendEval(fs.Rs());
         EvalWell rv = extendEval(fs.Rv());
         std::vector<EvalWell> b_perfcells_dense(np, 0.0);
-        std::vector<EvalWell> mob_perfcells_dense(np, 0.0);
         for (int phase = 0; phase < np; ++phase) {
             int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
             b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
-            mob_perfcells_dense[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
         }
 
         // Pressure drawdown (also used to determine direction of flow)
@@ -823,10 +862,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     SimulatorReport
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     solveWellEq(Simulator& ebosSimulator,
                 const double dt,
                 WellState& well_state)
@@ -875,9 +914,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     printIf(const int c, const double x, const double y, const double eps, const std::string type) const
     {
         if (std::abs(x-y) > eps) {
@@ -889,9 +928,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     std::vector<double>
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     residual() const
     {
         if( ! wellsActive() )
@@ -916,10 +955,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     bool
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     getWellConvergence(Simulator& ebosSimulator,
                        const int iteration) const
     {
@@ -1029,10 +1068,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellConnectionPressures(const Simulator& ebosSimulator,
                                    const WellState& xw)
     {
@@ -1053,10 +1092,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
                                                 const WellState& xw,
                                                 std::vector<double>& b_perf,
@@ -1156,9 +1195,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     updateWellState(const BVector& dwells,
                     WellState& well_state) const
     {
@@ -1428,9 +1467,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     updateWellControls(WellState& xw) const
     {
         if( !localWellsActive() ) return ;
@@ -1524,9 +1563,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     updateListEconLimited(const Schedule& schedule,
                           const int current_step,
                           const Wells* wells_struct,
@@ -1632,9 +1671,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellConnectionDensitesPressures(const WellState& xw,
                                            const std::vector<double>& b_perf,
                                            const std::vector<double>& rsmax_perf,
@@ -1659,10 +1698,10 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     template <typename Simulator>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           WellState& well_state)  const
     {
@@ -1781,7 +1820,9 @@ namespace Opm {
                 const int cell_index = wells().well_cells[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
                 std::vector<EvalWell> well_potentials(np, 0.0);
-                computeWellFlux(w, wells().WI[perf], intQuants, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials);
+                std::vector<EvalWell> mob(np, 0.0);
+                getMobility(ebosSimulator, perf, cell_index, mob);
+                computeWellFlux(w, wells().WI[perf], intQuants.fluidState(), mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, well_potentials);
                 for(int p = 0; p < np; ++p) {
                     well_state.wellPotentials()[perf * np + p] = well_potentials[p].value();
                 }
@@ -1793,9 +1834,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     WellCollection*
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellCollection() const
     {
         return well_collection_;
@@ -1804,9 +1845,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     const std::vector<double>&
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellPerfEfficiencyFactors() const
     {
         return well_perforation_efficiency_factors_;
@@ -1816,9 +1857,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     calculateEfficiencyFactors()
     {
         if ( !localWellsActive() ) {
@@ -1844,9 +1885,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     computeWellVoidageRates(const WellState& well_state,
                             std::vector<double>& well_voidage_rates,
                             std::vector<double>& voidage_conversion_coeffs) const
@@ -1904,9 +1945,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     applyVREPGroupControl(WellState& well_state) const
     {
         if ( wellCollection()->havingVREPGroups() ) {
@@ -1929,9 +1970,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::EvalWell
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     getBhp(const int wellIdx) const {
         const WellControls* wc = wells().ctrls[wellIdx];
         if (well_controls_get_current_type(wc) == BHP) {
@@ -1985,9 +2026,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::EvalWell
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     getQs(const int wellIdx, const int phaseIdx) const
     {
         EvalWell qs = 0.0;
@@ -2088,9 +2129,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::EvalWell
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellVolumeFraction(const int wellIdx, const int phaseIdx) const
     {
         const int nw = wells().number_of_wells;
@@ -2118,9 +2159,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::EvalWell
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellVolumeFractionScaled(const int wellIdx, const int phaseIdx) const
     {
         const WellControls* wc = wells().ctrls[wellIdx];
@@ -2136,9 +2177,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::EvalWell
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::EvalWell
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     wellSurfaceVolumeFraction(const int well_index, const int phase) const
     {
         EvalWell sum_volume_fraction_scaled = 0.;
@@ -2156,9 +2197,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     bool
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                         const WellState& well_state,
                         const int well_number) const
@@ -2207,9 +2248,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::RatioCheckTuple
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::RatioCheckTuple
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                          const WellState& well_state,
                          const WellMapEntryType& map_entry) const
@@ -2265,9 +2306,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
-    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::RatioCheckTuple
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
+    typename StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::RatioCheckTuple
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                           const WellState& well_state,
                           const WellMapEntryType& map_entry) const
@@ -2345,9 +2386,9 @@ namespace Opm {
 
 
 
-    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext>
+    template<typename FluidSystem, typename BlackoilIndices, typename ElementContext, typename MaterialLaw>
     void
-    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext>::
+    StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     updateWellStateWithTarget(const WellControls* wc,
                               const int current,
                               const int well_index,

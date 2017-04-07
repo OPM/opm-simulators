@@ -67,7 +67,7 @@ enum WellVariablePositions {
 
 
         /// Class for handling the standard well model.
-        template<typename FluidSystem, typename BlackoilIndices, typename  ElementContext>
+        template<typename FluidSystem, typename BlackoilIndices, typename  ElementContext, typename MaterialLaw>
         class StandardWellsDense {
         public:
             // ---------      Types      ---------
@@ -113,6 +113,13 @@ enum WellVariablePositions {
                                 const double dt,
                                 WellState& well_state,
                                 bool only_wells);
+
+            template <typename Simulator>
+            void
+            getMobility(const Simulator& ebosSimulator,
+                        const int perf,
+                        const int cell_idx,
+                        std::vector<EvalWell>& mob) const;
 
             template <typename Simulator>
             bool allow_cross_flow(const int w, Simulator& ebosSimulator) const;
@@ -180,9 +187,9 @@ enum WellVariablePositions {
 
             void computeAccumWells();
 
-            template<typename intensiveQuants>
+            template<typename FluidState>
             void
-            computeWellFlux(const int& w, const double& Tw, const intensiveQuants& intQuants,
+            computeWellFlux(const int& w, const double& Tw, const FluidState& fs, const std::vector<EvalWell>& mob_perfcells_dense,
                             const EvalWell& bhp, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const;
 
             template <typename Simulator>
