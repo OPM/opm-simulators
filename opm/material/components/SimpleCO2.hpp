@@ -159,12 +159,12 @@ public:
         mu_r4 *= mu_r4;
 
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
-        Scalar Tstar = 1.2593 * temperature/Tc;
-        Scalar Omega_v =
-            1.16145*std::pow(Tstar, -0.14874) +
-            0.52487*std::exp(- 0.77320*Tstar) +
-            2.16178*std::exp(- 2.43787*Tstar);
-        Scalar mu = 40.785*Fc*std::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
+        Evaluation Tstar = 1.2593 * temperature/Tc;
+        Evaluation Omega_v =
+            1.16145*Opm::pow(Tstar, -0.14874) +
+            0.52487*Opm::exp(- 0.77320*Tstar) +
+            2.16178*Opm::exp(- 2.43787*Tstar);
+        Evaluation mu = 40.785*Fc*Opm::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
 
         // convertion from micro poise to Pa s
         return mu/1e6 / 10;
