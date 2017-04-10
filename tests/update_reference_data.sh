@@ -35,7 +35,7 @@ for test_name in ${tests}; do
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_sequential+spe1/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_sequential \
       SPE1CASE1 \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
