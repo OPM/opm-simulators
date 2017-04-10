@@ -1,5 +1,22 @@
-Changes in opm-material 2016.04
+Changes in opm-material 2017.04
 ===============================
+
+- Proper support for ECL oil-water saturation functions.
+- In the black oil fluid system, convenience methods to calculate the
+  bubble-point pressure of oil and the dew-point pressure of gas have
+  been added. These quantities were already available using the
+  "saturationPressure()" method, but the new names make the calling
+  code more explicit.
+- The numerical stability of the saturationPressure() methods for live
+  oil and wet gas has been considerably improved.
+- Direct use of the Opm::Deck class provided by the opm-parser
+  module has been reduced in favor of Opm::EclipseState.
+- Support for checkpointing and restart has been added to the
+  code that deals with ECL saturation functions.
+- Various random fixes.
+
+Changes in opm-material 2016.04 and 2016.10
+===========================================
 
 - Improvements to the ECL/Black-Oil related functionality:
  - Support for Leverett-like capillary pressure scaling. (The "JFUNC"
