@@ -463,7 +463,6 @@ typedef Eigen::Array<double,
         : rq(num_phases)
         , rsSat(ADB::null())
         , rvSat(ADB::null())
-        , soMax()
         , fip()
     {
     }
@@ -663,7 +662,6 @@ typedef Eigen::Array<double,
                     } else {
                         state.rv = sd_.rvSat;
                     }
-                    sd_.soMax = fluid_.satOilMax();
                 }
             }
             else {

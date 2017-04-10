@@ -82,7 +82,6 @@ namespace Opm {
                 : rq(num_phases)
                 , rsSat(ADB::null())
                 , rvSat(ADB::null())
-                , soMax()
                 , fip()
             {
             }
@@ -93,7 +92,6 @@ namespace Opm {
             std::vector<ReservoirResidualQuant> rq;
             ADB rsSat;
             ADB rvSat;
-            std::vector<double> soMax;
             std::array<V, fipValues> fip;
         };
 
