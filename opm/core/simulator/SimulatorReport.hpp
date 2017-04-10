@@ -53,7 +53,7 @@ namespace Opm
         /// Print a report to the given stream.
         void report(std::ostream& os);
         /// Print a report, leaving out the transport time.
-        void reportFullyImplicit(std::ostream& os);
+        void reportFullyImplicit(std::ostream& os, const SimulatorReport* failedReport = nullptr);
         void reportParam(std::ostream& os);
     private:
         // Whether to print statistics to std::cout
