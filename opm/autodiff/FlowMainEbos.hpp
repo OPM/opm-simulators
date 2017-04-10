@@ -643,12 +643,13 @@ namespace Opm
                     OpmLog::info(msg);
                 }
 
-                SimulatorReport fullReport = simulator_->run(simtimer, *state_);
+                SimulatorReport successReport = simulator_->run(simtimer, *state_);
+                SimulatorReport failureReport = simulator_->failureReport();
 
                 if (output_cout_) {
                     std::ostringstream ss;
                     ss << "\n\n================    End of simulation     ===============\n\n";
-                    fullReport.reportFullyImplicit(ss);
+                    successReport.reportFullyImplicit(ss, &failureReport);
                     OpmLog::info(ss.str());
                     if (param_.anyUnused()) {
                         // This allows a user to catch typos and misunderstandings in the
@@ -662,7 +663,7 @@ namespace Opm
                 if (output_to_files_) {
                     std::string filename = output_dir_ + "/walltime.txt";
                     std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
-                    fullReport.reportParam(tot_os);
+                    successReport.reportParam(tot_os);
                 }
             } else {
                 if (output_cout_) {

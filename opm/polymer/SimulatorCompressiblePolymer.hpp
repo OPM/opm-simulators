@@ -20,6 +20,7 @@
 #ifndef OPM_SIMULATORCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 #define OPM_SIMULATORCOMPRESSIBLEPOLYMER_HEADER_INCLUDED
 
+#include <opm/core/simulator/SimulatorReport.hpp>
 #include <boost/shared_ptr.hpp>
 #include <vector>
 
@@ -91,8 +92,18 @@ namespace Opm
                             PolymerBlackoilState& state,
                             WellState& well_state);
 
+        /// return the statistics if the nonlinearIteration() method failed.
+        ///
+        /// NOTE: for the flow_legacy simulator family this method is a stub, i.e. the
+        /// failure report object will *not* contain any meaningful data.
+        const SimulatorReport& failureReport() const
+        { return failureReport_; }
+
     private:
         class Impl;
+
+        SimulatorReport failureReport_;
+
         // Using shared_ptr instead of scoped_ptr since scoped_ptr requires complete type for Impl.
         boost::shared_ptr<Impl> pimpl_;
     };

@@ -30,6 +30,7 @@
 #include <opm/polymer/PolymerProperties.hpp>
 #include <opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp>
 #include <opm/polymer/fullyimplicit/PolymerPropsAd.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
@@ -175,6 +176,13 @@ namespace Opm {
         computeFluidInPlace(const PolymerBlackoilState& x,
                             const std::vector<int>& fipnum);
 
+        /// return the statistics if the nonlinearIteration() method failed.
+        ///
+        /// NOTE: for the flow_legacy simulator family this method is a stub, i.e. the
+        /// failure report object will *not* contain any meaningful data.
+        const SimulatorReport& failureReport() const
+        { return failureReport_; }
+
     private:
 
         struct SolutionState {
@@ -197,6 +205,7 @@ namespace Opm {
                Oil   = Opm::Oil  };
 
         // Member data
+        SimulatorReport failureReport_;
         const UnstructuredGrid&         grid_;
         const BlackoilPropsAdFromDeck& fluid_;
         const DerivedGeology&           geo_;

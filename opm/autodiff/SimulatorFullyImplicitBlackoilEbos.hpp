@@ -147,6 +147,9 @@ public:
         WellState prev_well_state;
 
         ExtraData extra;
+
+        failureReport_ = SimulatorReport();
+
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
             output_writer_.initFromRestartFile(props_.phaseUsage(), grid(), state, prev_well_state, extra);
@@ -319,11 +322,13 @@ public:
                 stepReport = adaptiveTimeStepping->step( timer, *solver, state, well_state, event, output_writer_,
                                                          output_writer_.requireFIPNUM() ? &fipnum : nullptr );
                 report += stepReport;
+                failureReport_ += adaptiveTimeStepping->failureReport();
             }
             else {
                 // solve for complete report step
                 stepReport = solver->step(timer, state, well_state);
                 report += stepReport;
+                failureReport_ += solver->failureReport();
 
                 if( terminal_output_ )
                 {
@@ -406,6 +411,10 @@ public:
         report.converged = true;
         return report;
     }
+
+    /** \brief Returns the simulator report for the failed substeps of the simulation.
+     */
+    const SimulatorReport& failureReport() const { return failureReport_; };
 
     const Grid& grid() const
     { return ebosSimulator_.gridManager().grid(); }
@@ -829,6 +838,8 @@ protected:
     std::vector<int> legacyCellPvtRegionIdx_;
     typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
     typedef typename Solver::SolverParameters SolverParameters;
+
+    SimulatorReport failureReport_;
 
     const parameter::ParameterGroup param_;
     ModelParameters model_param_;
