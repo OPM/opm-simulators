@@ -27,10 +27,12 @@
 #ifndef OPM_PENG_ROBINSON_PARAMS_MIXTURE_HPP
 #define OPM_PENG_ROBINSON_PARAMS_MIXTURE_HPP
 
-#include <algorithm>
+#include "PengRobinsonParams.hpp"
+
+#include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/Constants.hpp>
 
-#include "PengRobinsonParams.hpp"
+#include <algorithm>
 
 namespace Opm
 {

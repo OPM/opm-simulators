@@ -27,6 +27,8 @@
 #ifndef OPM_ECL_STONE2_MATERIAL_PARAMS_HPP
 #define OPM_ECL_STONE2_MATERIAL_PARAMS_HPP
 
+#include <opm/material/common/EnsureFinalized.hpp>
+
 #include <type_traits>
 #include <cassert>
 #include <memory>

@@ -27,6 +27,7 @@
 #ifndef OPM_DUMMY_HEATCONDUCTION_LAW_HPP
 #define OPM_DUMMY_HEATCONDUCTION_LAW_HPP
 
+#include <opm/common/Unused.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
