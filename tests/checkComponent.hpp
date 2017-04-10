@@ -65,6 +65,16 @@ void checkComponent()
         { Evaluation pv OPM_UNUSED = Component::vaporPressure(T); }
         { Evaluation rho OPM_UNUSED = Component::gasDensity(T, p); }
         { Evaluation rho OPM_UNUSED = Component::liquidDensity(T, p); }
+        { Evaluation h OPM_UNUSED = Component::gasEnthalpy(T, p); }
+        { Evaluation h OPM_UNUSED = Component::liquidEnthalpy(T, p); }
+        { Evaluation u OPM_UNUSED = Component::gasInternalEnergy(T, p); }
+        { Evaluation u OPM_UNUSED = Component::liquidInternalEnergy(T, p); }
+        { Evaluation mu OPM_UNUSED = Component::gasViscosity(T, p); }
+        { Evaluation mu OPM_UNUSED = Component::liquidViscosity(T, p); }
+        { Evaluation lambda OPM_UNUSED = Component::gasThermalConductivity(T, p); }
+        { Evaluation lambda OPM_UNUSED = Component::liquidThermalConductivity(T, p); }
+        { Evaluation cp OPM_UNUSED = Component::gasHeatCapacity(T, p); }
+        { Evaluation cp OPM_UNUSED = Component::liquidHeatCapacity(T, p); }
     }
     std::cout << "----------------------------------\n";
 }
