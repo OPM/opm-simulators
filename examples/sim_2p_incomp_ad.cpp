@@ -49,6 +49,7 @@
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/simulators/ensureDirectoryExists.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -212,13 +213,7 @@ try
     if (output) {
         output_dir =
             param.getDefault("output_dir", std::string("output"));
-        boost::filesystem::path fpath(output_dir);
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
+        ensureDirectoryExists(output_dir);
         std::string filename = output_dir + "/epoch_timing.param";
         epoch_os.open(filename.c_str(), std::fstream::trunc | std::fstream::out);
         // open file to clean it. The file is appended to in SimulatorTwophase

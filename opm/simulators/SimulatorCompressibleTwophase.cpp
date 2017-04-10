@@ -49,6 +49,8 @@
 #include <opm/core/simulator/WellState.hpp>
 #include <opm/core/transport/reorder/TransportSolverCompressibleTwophaseReorder.hpp>
 
+#include <opm/simulators/ensureDirectoryExists.hpp>
+
 #include <boost/filesystem.hpp>
 #include <memory>
 #include <boost/lexical_cast.hpp>
@@ -147,13 +149,7 @@ namespace Opm
         // Write data in VTK format.
         std::ostringstream vtkfilename;
         vtkfilename << output_dir << "/vtk_files";
-        boost::filesystem::path fpath(vtkfilename.str());
-        try {
-          create_directories(fpath);
-        }
-        catch (...) {
-          OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
+        ensureDirectoryExists(vtkfilename.str());
         vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         if (!vtkfile) {
@@ -188,13 +184,7 @@ namespace Opm
         for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
             std::ostringstream fname;
             fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-              create_directories(fpath);
-            }
-            catch (...) {
-              OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
+            ensureDirectoryExists(fname.str());
             fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
             std::ofstream file(fname.str().c_str());
             if (!file) {
@@ -268,13 +258,7 @@ namespace Opm
             output_vtk_ = param.getDefault("output_vtk", true);
             output_dir_ = param.getDefault("output_dir", std::string("output"));
             // Ensure that output dir exists
-            boost::filesystem::path fpath(output_dir_);
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-            }
+            ensureDirectoryExists(output_dir_);
             output_interval_ = param.getDefault("output_interval", 1);
         }
 

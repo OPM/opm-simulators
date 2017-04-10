@@ -66,13 +66,7 @@ namespace Opm
         // Write data in VTK format.
         std::ostringstream vtkfilename;
         vtkfilename << output_dir << "/vtk_files";
-        boost::filesystem::path fpath(vtkfilename.str());
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
+        ensureDirectoryExists(vtkfilename.str());
         vtkfilename << "/output-" << std::setw(3) << std::setfill('0') << step << ".vtu";
         std::ofstream vtkfile(vtkfilename.str().c_str());
         if (!vtkfile) {
@@ -106,13 +100,7 @@ namespace Opm
         for (Opm::DataMap::const_iterator it = dm.begin(); it != dm.end(); ++it) {
             std::ostringstream fname;
             fname << output_dir << "/" << it->first;
-            boost::filesystem::path fpath = fname.str();
-            try {
-                create_directories(fpath);
-            }
-            catch (...) {
-                OPM_THROW(std::runtime_error,"Creating directories failed: " << fpath);
-            }
+            ensureDirectoryExists(fname.str());
             fname << "/" << std::setw(3) << std::setfill('0') << step << ".txt";
             std::ofstream file(fname.str().c_str());
             if (!file) {
@@ -161,13 +149,7 @@ namespace Opm
         std::ostringstream vtkpath;
         vtkpath << output_dir << "/vtk_files";
         vtkpath << "/output-" << std::setw(3) << std::setfill('0') << step;
-        boost::filesystem::path fpath(vtkpath.str());
-        try {
-            create_directories(fpath);
-        }
-        catch (...) {
-            OPM_THROW(std::runtime_error, "Creating directories failed: " << fpath);
-        }
+        ensureDirectoryExists(vtkpath.str());
         vtkfilename << "output-" << std::setw(3) << std::setfill('0') << step;
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 3)
         Dune::VTKWriter<Dune::CpGrid::LeafGridView> writer(grid.leafGridView(), Dune::VTK::nonconforming);
