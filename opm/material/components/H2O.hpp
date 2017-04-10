@@ -350,7 +350,7 @@ public:
 
 
         // regularization
-        Scalar pv = vaporPressure(temperature);
+        Scalar pv = vaporPressure<Scalar>(Opm::scalarValue(temperature));
         if (pressure < pv) {
             // the pressure is too low, in this case we use the slope
             // of the internal energy at the vapor pressure to
@@ -374,9 +374,9 @@ public:
             // differences to calculate the partial derivative to the
             // pressure at the vapor pressure
             Scalar eps = 1e-7;
-            Scalar uv = internalEnergyRegion1_(temperature, pv);
-            Scalar uvPEps = internalEnergyRegion1_(temperature, pv + eps);
-            Scalar du_dp = (uvPEps - uv)/eps;
+            const Evaluation& uv = internalEnergyRegion1_(temperature, Evaluation(pv));
+            const Evaluation& uvPEps = internalEnergyRegion1_(temperature, Evaluation(pv + eps));
+            const Evaluation& du_dp = (uvPEps - uv)/eps;
             return uv + du_dp*(pressure - pv);
         };
 
@@ -416,11 +416,11 @@ public:
             // subtract the work required to change the volume for an
             // ideal gas.
             return
-                enthalpyRegion2_(temperature, triplePressure() - 100)
+                enthalpyRegion2_(temperature, Evaluation(triplePressure() - 100.0))
                 -
                 Rs*temperature; // = p*v   for an ideal gas!
         }
-        Scalar pv = vaporPressure(temperature);
+        Scalar pv = vaporPressure(Opm::scalarValue(temperature));
         if (pressure > pv) {
             // the pressure is too high, in this case we use the slope
             // of the internal energy at the vapor pressure to
@@ -448,9 +448,9 @@ public:
             // differences to calculate the partial derivative to the
             // pressure at the vapor pressure
             Scalar eps = 1e-7;
-            Scalar uv = internalEnergyRegion2_(temperature, pv);
-            Scalar uvMEps = internalEnergyRegion2_(temperature, pv - eps);
-            Scalar du_dp = (uv - uvMEps)/eps;
+            const Evaluation& uv = internalEnergyRegion2_(temperature, Evaluation(pv));
+            const Evaluation& uvMEps = internalEnergyRegion2_(temperature, Evaluation(pv - eps));
+            const Evaluation& du_dp = (uv - uvMEps)/eps;
             return uv + du_dp*(pressure - pv);
         };
 

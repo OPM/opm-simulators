@@ -171,15 +171,15 @@ public:
             (3.6710e4*temperature
              + (6.2770e1/2)*temperature*temperature
              - (6.6670e-2/3)*temperature*temperature*temperature
-             + (2.8000e-5/4)*std::pow(temperature,4))/58.44e3
+             + (2.8000e-5/4)*Opm::pow(temperature, 4.0))/58.44e3
             - 2.045698e+02; // [kJ/kg]
 
-        Scalar m = S/(1-S)/58.44e-3;
+        const Evaluation& m = S/(1-S)/58.44e-3;
 
         Evaluation d_h = 0;
         for (int i = 0; i<=3; ++i) {
             for (int j = 0; j <= 2; ++j) {
-                d_h += a[i][j] * Toolbox::pow(theta, i) * std::pow(m, j);
+                d_h += a[i][j] * Toolbox::pow(theta, i) * Toolbox::pow(m, j);
             }
         }
 
@@ -198,7 +198,7 @@ public:
     static Evaluation liquidHeatCapacity(const Evaluation& temperature,
                                          const Evaluation& pressure)
     {
-        Scalar eps = temperature*1e-8;
+        Scalar eps = Opm::scalarValue(temperature)*1e-8;
         return (liquidEnthalpy(temperature + eps, pressure) - liquidEnthalpy(temperature, pressure))/eps;
     }
 
