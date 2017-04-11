@@ -2850,7 +2850,7 @@ namespace Opm {
                 }
             }
 
-            // there should be always some avaible bhp/thp constraints there
+            // there should be always some available bhp/thp constraints there
             if (std::isinf(bhp) || std::isnan(bhp)) {
                 OPM_THROW(std::runtime_error, "Unvalid bhp value obtained during the potential calculation for well " << wells().name[well_index]);
             }
@@ -2858,6 +2858,13 @@ namespace Opm {
             converged = std::abs(old_bhp - bhp) < bhp_tolerance;
 
             computeWellRatesWithBhp(ebosSimulator, bhp, well_index, potentials);
+
+            // checking whether the potentials have valid values
+            for (const double value : potentials) {
+                if (std::isinf(value) || std::isnan(value)) {
+                    OPM_THROW(std::runtime_error, "Unvalid potential value obtained during the potential calculation for well " << wells().name[well_index]);
+                }
+            }
 
             if (!converged) {
                 old_bhp = bhp;
