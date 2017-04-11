@@ -70,41 +70,38 @@ class EclMultiplexerMaterialParams : public Traits, public EnsureFinalized
     typedef typename DefaultMaterial::Params DefaultParams;
     typedef typename TwoPhaseMaterial::Params TwoPhaseParams;
 
+    template <class ParamT>
+    struct Deleter
+    {
+        inline void operator () ( void* ptr )
+        {
+            delete static_cast< ParamT* > (ptr);
+        }
+    };
+
+    typedef std::shared_ptr< void > ParamPointerType;
+
 public:
     using EnsureFinalized :: finalize;
 
     /*!
      * \brief The multiplexer constructor.
      */
-    EclMultiplexerMaterialParams()
+    EclMultiplexerMaterialParams() : realParams_()
     {
-        realParams_ = 0;
     }
 
-    EclMultiplexerMaterialParams(const EclMultiplexerMaterialParams& /*other*/)
+    EclMultiplexerMaterialParams(const EclMultiplexerMaterialParams& other)
+        : realParams_()
     {
-        realParams_ = 0;
+        setApproach( other.approach() );
     }
 
-    ~EclMultiplexerMaterialParams()
+    EclMultiplexerMaterialParams& operator= ( const EclMultiplexerMaterialParams& other )
     {
-        switch (approach()) {
-        case EclStone1Approach:
-            delete static_cast<Stone1Params*>(realParams_);
-            break;
-
-        case EclStone2Approach:
-            delete static_cast<Stone2Params*>(realParams_);
-            break;
-
-        case EclDefaultApproach:
-            delete static_cast<DefaultParams*>(realParams_);
-            break;
-
-        case EclTwoPhaseApproach:
-            delete static_cast<TwoPhaseParams*>(realParams_);
-            break;
-        }
+        realParams_.reset();
+        setApproach( other.approach() );
+        return *this;
     }
 
     void setApproach(EclMultiplexerApproach newApproach)
@@ -114,19 +111,19 @@ public:
 
         switch (approach()) {
         case EclStone1Approach:
-            realParams_ = new Stone1Params;
+            realParams_ = ParamPointerType(new Stone1Params, Deleter< Stone1Params > () );
             break;
 
         case EclStone2Approach:
-            realParams_ = new Stone2Params;
+            realParams_ = ParamPointerType(new Stone2Params, Deleter< Stone2Params > () );
             break;
 
         case EclDefaultApproach:
-            realParams_ = new DefaultParams;
+            realParams_ = ParamPointerType(new DefaultParams, Deleter< DefaultParams > () );
             break;
 
         case EclTwoPhaseApproach:
-            realParams_ = new TwoPhaseParams;
+            realParams_ = ParamPointerType(new TwoPhaseParams, Deleter< TwoPhaseParams > () );
             break;
         }
     }
@@ -140,7 +137,7 @@ public:
     getRealParams()
     {
         assert(approach() == approachV);
-        return *static_cast<Stone1Params*>(realParams_);
+        return this->template castTo<Stone1Params>();
     }
 
     template <EclMultiplexerApproach approachV>
@@ -148,7 +145,7 @@ public:
     getRealParams() const
     {
         assert(approach() == approachV);
-        return *static_cast<const Stone1Params*>(realParams_);
+        return this->template castTo<Stone1Params>();
     }
 
     // get the parameter object for the Stone2 case
@@ -157,7 +154,7 @@ public:
     getRealParams()
     {
         assert(approach() == approachV);
-        return *static_cast<Stone2Params*>(realParams_);
+        return this->template castTo<Stone2Params>();
     }
 
     template <EclMultiplexerApproach approachV>
@@ -165,7 +162,7 @@ public:
     getRealParams() const
     {
         assert(approach() == approachV);
-        return *static_cast<const Stone2Params*>(realParams_);
+        return this->template castTo<Stone2Params>();
     }
 
     // get the parameter object for the default case
@@ -174,7 +171,7 @@ public:
     getRealParams()
     {
         assert(approach() == approachV);
-        return *static_cast<DefaultParams*>(realParams_);
+        return this->template castTo<DefaultParams>();
     }
 
     template <EclMultiplexerApproach approachV>
@@ -182,7 +179,7 @@ public:
     getRealParams() const
     {
         assert(approach() == approachV);
-        return *static_cast<const DefaultParams*>(realParams_);
+        return this->template castTo<DefaultParams>();
     }
 
     // get the parameter object for the twophase case
@@ -191,7 +188,7 @@ public:
     getRealParams()
     {
         assert(approach() == approachV);
-        return *static_cast<TwoPhaseParams*>(realParams_);
+        return this->template castTo<TwoPhaseParams>();
     }
 
     template <EclMultiplexerApproach approachV>
@@ -199,12 +196,24 @@ public:
     getRealParams() const
     {
         assert(approach() == approachV);
-        return *static_cast<const TwoPhaseParams*>(realParams_);
+        return this->template castTo<TwoPhaseParams>();
     }
 
 private:
+    template <class ParamT>
+    ParamT& castTo()
+    {
+        return *(static_cast<ParamT *> (realParams_.operator->()));
+    }
+
+    template <class ParamT>
+    const ParamT& castTo() const
+    {
+        return *(static_cast<const ParamT *> (realParams_.operator->()));
+    }
+
     EclMultiplexerApproach approach_;
-    void* realParams_;
+    ParamPointerType realParams_;
 };
 } // namespace Opm
 
