@@ -134,13 +134,11 @@ namespace Opm {
             prepareTimeStep(ebosSimulator, well_state);
         }
 
-
         SimulatorReport report;
         if ( ! localWellsActive() ) {
             return report;
         }
 
-        // resetWellControlFromState(well_state);
         updateWellControls(well_state);
         // Set the primary variables for the wells
         setWellVariables(well_state);
@@ -1744,11 +1742,11 @@ namespace Opm {
             const double bhp = mostStrictBhpFromBhpLimits(w);
 
             // does the well have a THP related constraint?
-            bool is_thp_determined = wellHasTHPConstraints(w);
+            const bool has_thp_control = wellHasTHPConstraints(w);
 
             std::vector<double> potentials(np);
 
-            if (!is_thp_determined) {
+            if ( !has_thp_control ) {
 
                 assert(std::abs(bhp) != std::numeric_limits<double>::max());
 
@@ -1768,7 +1766,8 @@ namespace Opm {
                     for (double& value : potentials) {
                         // make the value a little safer in case the BHP limits are default ones
                         // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
-                        value *= 0.00001;
+                        const double rate_safety_scaling_factor = 0.00001;
+                        value *= rate_safety_scaling_factor;
                     }
                 }
 
@@ -1798,15 +1797,7 @@ namespace Opm {
             // after restarting, the well_controls can be modified while
             // the well_state still uses the old control index
             // we need to synchronize these two.
-            {
-                const int ctrl_index = well_state.currentControls()[w];
-                WellControls* wc = wells().ctrls[w];
-                const int ctrl_index_2 = well_controls_get_current(wc);
-                if (ctrl_index_2 != ctrl_index) {
-                    // using the ctrl_index from WellState for this case
-                    well_controls_set_current(wc, ctrl_index);
-                }
-            }
+            resetWellControlFromState(well_state);
 
             if (wellCollection()->groupControlActive()) {
                 WellControls* wc = wells().ctrls[w];
@@ -2513,7 +2504,7 @@ namespace Opm {
             break;
         }
 
-        case RESERVOIR_RATE:
+        case RESERVOIR_RATE: // intentional fall-through
         case SURFACE_RATE:
             // checking the number of the phases under control
             int numPhasesWithTargetsUnderThisControl = 0;
@@ -2542,28 +2533,28 @@ namespace Opm {
                 // update the rates of phases under control based on the target,
                 // and also update rates of phases not under control to keep the rate ratio,
                 // assuming the mobility ratio does not change for the production wells
-                double orignal_rates_under_phase_control = 0.0;
+                double original_rates_under_phase_control = 0.0;
                 for (int phase = 0; phase < np; ++phase) {
                     if (distr[phase] > 0.0) {
-                        orignal_rates_under_phase_control += xw.wellRates()[np * well_index + phase] * distr[phase];
+                        original_rates_under_phase_control += xw.wellRates()[np * well_index + phase] * distr[phase];
                     }
                 }
 
-                if (orignal_rates_under_phase_control != 0.0 ) {
-                    double scaling_factor = target / orignal_rates_under_phase_control;
+                if (original_rates_under_phase_control != 0.0 ) {
+                    double scaling_factor = target / original_rates_under_phase_control;
 
                     for (int phase = 0; phase < np; ++phase) {
                         xw.wellRates()[np * well_index + phase] *= scaling_factor;
                     }
-                } else { // scaling factor is not well defied when orignal_rates_under_phase_control is zero
+                } else { // scaling factor is not well defied when original_rates_under_phase_control is zero
                     // separating targets equally between phases under control
-                    const double target_rate_devided = target / numPhasesWithTargetsUnderThisControl;
+                    const double target_rate_divided = target / numPhasesWithTargetsUnderThisControl;
                     for (int phase = 0; phase < np; ++phase) {
                         if (distr[phase] > 0.0) {
-                            xw.wellRates()[np * well_index + phase] = target_rate_devided / distr[phase];
+                            xw.wellRates()[np * well_index + phase] = target_rate_divided / distr[phase];
                         } else {
                             // this only happens for SURFACE_RATE control
-                            xw.wellRates()[np * well_index + phase] = target_rate_devided;
+                            xw.wellRates()[np * well_index + phase] = target_rate_divided;
                         }
                     }
                 }
@@ -2796,6 +2787,10 @@ namespace Opm {
         int iteration = 0;
 
         while ( !converged && iteration < max_iteration ) {
+            // for each iteration, we calculate the bhp based on the rates/potentials with thp constraints
+            // with considering the bhp value from the bhp limits. At the beginning of each iteration,
+            // we initialize the bhp to be the bhp value from the bhp limits. Then based on the bhp values calculated
+            // from the thp constraints, we decide the effective bhp value for well potential calculation.
             bhp = initial_bhp;
 
             // the well controls
@@ -2822,10 +2817,11 @@ namespace Opm {
                     }
 
                     const int vfp        = well_controls_iget_vfp(well_control, ctrl_index);
-                    const double& thp    = well_controls_iget_target(well_control, ctrl_index);
-                    const double& alq    = well_controls_iget_alq(well_control, ctrl_index);
+                    const double thp    = well_controls_iget_target(well_control, ctrl_index);
+                    const double alq    = well_controls_iget_alq(well_control, ctrl_index);
 
                     // Calculating the BHP value based on THP
+                    // TODO: check whether it is always correct to do calculation based on the depth of the first perforation.
                     const int first_perf = wells().well_connpos[well_index]; //first perforation
 
                     const WellType& well_type = wells().type[well_index];
@@ -2868,7 +2864,8 @@ namespace Opm {
                 for (int p = 0; p < np; ++p) {
                     // TODO: improve the interpolation, will it always be valid with the way below?
                     // TODO: finding better paramters, better iteration strategy for better convergence rate.
-                    potentials[p] = 0.001 * potentials[p] + 0.999 * old_potentials[p];
+                    const double potential_update_damping_factor = 0.001;
+                    potentials[p] = potential_update_damping_factor * potentials[p] + (1.0 - potential_update_damping_factor) * old_potentials[p];
                     old_potentials[p] = potentials[p];
                 }
             }

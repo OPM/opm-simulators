@@ -271,7 +271,7 @@ namespace Opm
 
         // marking whether the well is just added
         // for newly added well, the current initialized rates from WellState
-        // will have very wrong compsitions for productions wells, will mostly cause
+        // will have very wrong compositions for production wells, will mostly cause
         // problem with VFP interpolation
         std::vector<bool> is_new_well_;
     };

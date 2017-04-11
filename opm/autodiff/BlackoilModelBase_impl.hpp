@@ -2585,14 +2585,14 @@ typedef Eigen::Array<double,
 
             for (int phase = 0; phase < np; ++phase) {
                 if (active_[phase]) {
-                const std::vector<int>& well_cells = asImpl().wellModel().wellOps().well_cells;
-                const ADB mu = asImpl().fluidViscosity(canph_[phase], state.canonical_phase_pressures[canph_[phase]],
+                    const std::vector<int>& well_cells = asImpl().wellModel().wellOps().well_cells;
+                    const ADB mu = asImpl().fluidViscosity(canph_[phase], state.canonical_phase_pressures[canph_[phase]],
                                                        temp, rs, rv, cond);
-                mob[phase] = tr_mult * kr[canph_[phase]] / mu;
-                mob_perfcells[phase] = subset(mob[phase], well_cells);
+                    mob[phase] = tr_mult * kr[canph_[phase]] / mu;
+                    mob_perfcells[phase] = subset(mob[phase], well_cells);
 
-                b[phase] = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
-                b_perfcells[phase] = subset(b[phase], well_cells);
+                    b[phase] = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
+                    b_perfcells[phase] = subset(b[phase], well_cells);
                 }
             }
 
