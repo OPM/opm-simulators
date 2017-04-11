@@ -1768,7 +1768,7 @@ namespace Opm {
                     for (double& value : potentials) {
                         // make the value a little safer in case the BHP limits are default ones
                         // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
-                        value *= 0.001;
+                        value *= 0.00001;
                     }
                 }
 
@@ -2866,8 +2866,9 @@ namespace Opm {
             if (!converged) {
                 old_bhp = bhp;
                 for (int p = 0; p < np; ++p) {
-                    // TODO: improve the interpolation, will it always be valid with the way below
-                    potentials[p] = 0.01 * potentials[p] + 0.99 * old_potentials[p];
+                    // TODO: improve the interpolation, will it always be valid with the way below?
+                    // TODO: finding better paramters, better iteration strategy for better convergence rate.
+                    potentials[p] = 0.001 * potentials[p] + 0.999 * old_potentials[p];
                     old_potentials[p] = potentials[p];
                 }
             }
