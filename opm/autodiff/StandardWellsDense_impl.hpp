@@ -2458,33 +2458,60 @@ namespace Opm {
             // surface condition.  In this case, use existing
             // flow rates as initial conditions as reservoir
             // rate acts only in aggregate.
-            break;
+            // break;
 
         case SURFACE_RATE:
-            // assign target value as initial guess for injectors and
-            // single phase producers (orat, grat, wrat)
+            // checking the number of the phases under control
+            int numPhasesWithTargetsUnderThisControl = 0;
+            for (int phase = 0; phase < np; ++phase) {
+                if (distr[phase] > 0.0) {
+                    numPhasesWithTargetsUnderThisControl += 1;
+                }
+            }
+
+            assert(numPhasesWithTargetsUnderThisControl > 0);
+
             const WellType& well_type = wells().type[well_index];
             if (well_type == INJECTOR) {
+                // assign target value as initial guess for injectors
+                // only handles single phase control at the moment
+                assert(numPhasesWithTargetsUnderThisControl == 1);
+
                 for (int phase = 0; phase < np; ++phase) {
-                    const double& compi = wells().comp_frac[np * well_index + phase];
-                    // TODO: it was commented out from the master branch already.
-                    //if (compi > 0.0) {
-                    xw.wellRates()[np*well_index + phase] = target * compi;
-                    //}
-                }
-            } else if (well_type == PRODUCER) {
-                // only set target as initial rates for single phase
-                // producers. (orat, grat and wrat, and not lrat)
-                // lrat will result in numPhasesWithTargetsUnderThisControl == 2
-                int numPhasesWithTargetsUnderThisControl = 0;
-                for (int phase = 0; phase < np; ++phase) {
-                    if (distr[phase] > 0.0) {
-                        numPhasesWithTargetsUnderThisControl += 1;
+                    if (distr[phase] > 0.) {
+                        xw.wellRates()[np*well_index + phase] = target / distr[phase];
+                    } else {
+                        xw.wellRates()[np * well_index + phase] = 0.;
                     }
                 }
+            } else if (well_type == PRODUCER) {
+
+                // update the rates of phases under control based on the target,
+                // and also update rates of phases not under control to keep the rate ratio,
+                // assuming the mobility ratio does not change for the production wells
+                double orignal_rates_under_phase_control = 0.0;
                 for (int phase = 0; phase < np; ++phase) {
-                    if (distr[phase] > 0.0 && numPhasesWithTargetsUnderThisControl < 2 ) {
-                        xw.wellRates()[np*well_index + phase] = target * distr[phase];
+                    if (distr[phase] > 0.0) {
+                        orignal_rates_under_phase_control += xw.wellRates()[np * well_index + phase] * distr[phase];
+                    }
+                }
+
+                if (orignal_rates_under_phase_control != 0.0 ) {
+                    double scaling_factor = target / orignal_rates_under_phase_control;
+
+                    for (int phase = 0; phase < np; ++phase) {
+                        xw.wellRates()[np * well_index + phase] *= scaling_factor;
+                    }
+                } else { // scaling factor is not well defied when orignal_rates_under_phase_control is zero
+                    // separating targets equally between phases under control
+                    const double target_rate_devided = target / numPhasesWithTargetsUnderThisControl;
+                    for (int phase = 0; phase < np; ++phase) {
+                        if (distr[phase] > 0.0) {
+                            xw.wellRates()[np * well_index + phase] = target_rate_devided / distr[phase];
+                        } else {
+                            // this only happens for SURFACE_RATE control
+                            xw.wellRates()[np * well_index + phase] = target_rate_devided;
+                        }
                     }
                 }
             } else {
@@ -2539,12 +2566,37 @@ namespace Opm {
                 xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
             }
         } else {
-            if (active_[ Water ]) {
-                xw.wellSolutions()[WFrac*nw + well_index] =  wells().comp_frac[np*well_index + Water];
-            }
+            const WellType& well_type = wells().type[well_index];
+            if (well_type == INJECTOR) {
+                // only single phase injection handled
+                if (active_[Water]) {
+                    if (distr[Water] > 0.0) {
+                        xw.wellSolutions()[WFrac * nw + well_index] = 1.0;
+                    } else {
+                        xw.wellSolutions()[WFrac * nw + well_index] = 0.0;
+                    }
+                }
 
-            if (active_[ Gas ]) {
-                xw.wellSolutions()[GFrac*nw + well_index] =  wells().comp_frac[np*well_index + Gas];
+                if (active_[Gas]) {
+                    if (distr[Gas] > 0.0) {
+                        xw.wellSolutions()[GFrac * nw + well_index] = 1.0;
+                    } else {
+                        xw.wellSolutions()[GFrac * nw + well_index] = 0.0;
+                    }
+                }
+
+                // TODO: it is possible to leave injector as a oil well,
+                // when F_w and F_g both equals to zero, not sure under what kind of circumstance
+                // this will happen.
+            } else if (well_type == PRODUCER) { // producers
+                if (active_[Water]) {
+                    xw.wellSolutions()[WFrac * nw + well_index] = 1.0 / np;
+                }
+                if (active_[Gas]) {
+                    xw.wellSolutions()[GFrac * nw + well_index] = 1.0 / np;
+                }
+            } else {
+                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
             }
         }
 
