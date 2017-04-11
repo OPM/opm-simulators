@@ -99,6 +99,9 @@ namespace Opm {
              ReservoirState& reservoir_state,
              WellState& well_state);
 
+        /// return the statistics if the step() method failed
+        const SimulatorReport& failureReport() const
+        { return failureReport_; }
 
         /// Number of linearizations used in all calls to step().
         int linearizations() const;
@@ -173,6 +176,7 @@ namespace Opm {
 
     private:
         // ---------  Data members  ---------
+        SimulatorReport failureReport_;
         SolverParameters param_;
         std::unique_ptr<PhysicalModel> model_;
         int linearizations_;

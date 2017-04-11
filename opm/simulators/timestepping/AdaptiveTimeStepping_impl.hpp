@@ -211,6 +211,9 @@ namespace Opm {
         State  last_state( state );
         WState last_well_state( well_state );
 
+        // reset the statistics for the failed substeps
+        failureReport_ = SimulatorReport();
+
         // counter for solver restarts
         int restarts = 0;
 
@@ -238,18 +241,26 @@ namespace Opm {
                 }
             }
             catch (const Opm::NumericalProblem& e) {
+                substepReport += solver.failureReport();
+
                 detail::logException(e, solver_verbose_);
                 // since linearIterations is < 0 this will restart the solver
             }
             catch (const std::runtime_error& e) {
+                substepReport += solver.failureReport();
+
                 detail::logException(e, solver_verbose_);
                 // also catch linear solver not converged
             }
             catch (const Dune::ISTLError& e) {
+                substepReport += solver.failureReport();
+
                 detail::logException(e, solver_verbose_);
                 // also catch errors in ISTL AMG that occur when time step is too large
             }
             catch (const Dune::MatrixBlockError& e) {
+                substepReport += solver.failureReport();
+
                 detail::logException(e, solver_verbose_);
                 // this can be thrown by ISTL's ILU0 in block mode, yet is not an ISTLError
             }
@@ -323,8 +334,10 @@ namespace Opm {
             }
             else // in case of no convergence (linearIterations < 0)
             {
-                report.converged = false;
                 substepTimer.setLastStepFailed(true);
+
+                failureReport_ += substepReport;
+
                 // increase restart counter
                 if( restarts >= solver_restart_max_ ) {
                     const auto msg = std::string("Solver failed to converge after cutting timestep ")

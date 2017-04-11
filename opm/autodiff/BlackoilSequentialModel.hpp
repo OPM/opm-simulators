@@ -282,10 +282,18 @@ namespace Opm {
             return transport_solver_.model().getFIPData();
         }
 
+        /// return the statistics if the nonlinearIteration() method failed.
+        ///
+        /// NOTE: for the flow_legacy simulator family this method is a stub, i.e. the
+        /// failure report object will *not* contain any meaningful data.
+        const SimulatorReport& failureReport() const
+        { return failureReport_; }
 
     protected:
         typedef NonlinearSolver<PressureModel> PressureSolver;
         typedef NonlinearSolver<TransportModel> TransportSolver;
+
+        SimulatorReport failureReport_;
 
         std::unique_ptr<PressureModel> pressure_model_;
         std::unique_ptr<TransportModel> transport_model_;

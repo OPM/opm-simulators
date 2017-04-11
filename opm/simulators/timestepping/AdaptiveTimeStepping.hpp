@@ -88,6 +88,11 @@ namespace Opm {
                               Output& outputWriter,
                               const std::vector<int>* fipnum = nullptr);
 
+        /** \brief Returns the simulator report for the failed substeps of the last
+         *         report step.
+         */
+        const SimulatorReport& failureReport() const { return failureReport_; };
+
         double suggestedNextStep() const { return suggested_next_timestep_; }
 
         void setSuggestedNextStep(const double x) { suggested_next_timestep_ = x; }
@@ -104,6 +109,7 @@ namespace Opm {
 
         typedef std::unique_ptr< TimeStepControlInterface > TimeStepControlType;
 
+        SimulatorReport failureReport_;       //!< statistics for the failed substeps of the last timestep
         TimeStepControlType timeStepControl_; //!< time step control object
         const double restart_factor_;         //!< factor to multiply time step with when solver fails to converge
         const double growth_factor_;          //!< factor to multiply time step when solver recovered from failed convergence

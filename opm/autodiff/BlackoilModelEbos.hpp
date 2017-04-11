@@ -54,7 +54,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 #include <opm/core/well_controls.h>
-#include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -236,6 +235,7 @@ namespace Opm {
                                            WellState& well_state)
         {
             SimulatorReport report;
+            failureReport_ = SimulatorReport();
             Dune::Timer perfTimer;
 
             perfTimer.start();
@@ -255,6 +255,7 @@ namespace Opm {
             }
             catch (...) {
                 report.assemble_time += perfTimer.stop();
+                failureReport_ += report;
                 // todo (?): make the report an attribute of the class
                 throw; // continue throwing the stick
             }
@@ -294,7 +295,8 @@ namespace Opm {
                 catch (...) {
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
-                    // todo (?): make the report an attribute of the class
+
+                    failureReport_ += report;
                     throw; // re-throw up
                 }
 
@@ -1429,6 +1431,10 @@ namespace Opm {
         const Simulator& ebosSimulator() const
         { return ebosSimulator_; }
 
+        /// return the statistics if the nonlinearIteration() method failed
+        const SimulatorReport& failureReport() const
+        { return failureReport_; }
+
     protected:
         const ISTLSolverType& istlSolver() const
         {
@@ -1452,6 +1458,7 @@ namespace Opm {
         const bool has_vapoil_;
 
         ModelParameters                 param_;
+        SimulatorReport failureReport_;
 
         // Well Model
         StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw> well_model_;

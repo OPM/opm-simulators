@@ -124,6 +124,7 @@ namespace Opm
     {
         SimulatorReport iterReport;
         SimulatorReport report;
+        failureReport_ = SimulatorReport();
 
         // Do model-specific once-per-step calculations.
         model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
@@ -137,19 +138,30 @@ namespace Opm
 
         // ----------  Main nonlinear solver loop  ----------
         do {
-            // Do the nonlinear step. If we are in a converged state, the
-            // model will usually do an early return without an expensive
-            // solve, unless the minIter() count has not been reached yet.
-            iterReport = model_->nonlinearIteration(iteration, timer, *this, reservoir_state, well_state);
+            try {
+                // Do the nonlinear step. If we are in a converged state, the
+                // model will usually do an early return without an expensive
+                // solve, unless the minIter() count has not been reached yet.
+                iterReport = model_->nonlinearIteration(iteration, timer, *this, reservoir_state, well_state);
 
-            report += iterReport;
-            report.converged = iterReport.converged;
+                report += iterReport;
+                report.converged = iterReport.converged;
 
-            converged = report.converged;
-            iteration += 1;
+                converged = report.converged;
+                iteration += 1;
+            }
+            catch (...) {
+                // if an iteration fails during a time step, all previous iterations
+                // count as a failure as well
+                failureReport_ += report;
+                failureReport_ += model_->failureReport();
+                throw;
+            }
         } while ( (!converged && (iteration <= maxIter())) || (iteration <= minIter()));
 
         if (!converged) {
+            failureReport_ += report;
+
             std::string msg = "Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
             if (model_->terminalOutputEnabled()) {
                 OpmLog::problem(msg);
