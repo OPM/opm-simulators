@@ -1376,7 +1376,7 @@ namespace Opm {
                     errlog << ", ...";
                 }
                 errlog << "]";
-                OpmLog::problem("pb numerical problem", errlog.str());
+                OpmLog::problem("Bubble point numerical problem", errlog.str());
             }
             if (failed_cells_pd.size() > 0) {
                 std::stringstream errlog;
@@ -1390,7 +1390,7 @@ namespace Opm {
                     errlog << ", ...";
                 }
                 errlog << "]";
-                OpmLog::warning("pd numerical problem", errlog.str());
+                OpmLog::warning("Dew point numerical problem", errlog.str());
             }
 
             return simData;
