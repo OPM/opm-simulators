@@ -93,9 +93,12 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 
+add_test_compareECLFiles(spe1 SPE1CASE2 flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe1 SPE1CASE2 flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe3 SPE3CASE1 flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe3 SPE3CASE1 flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(msw_2d_h 2D_H__ flow_multisegment ${abs_tol} ${rel_tol} compareECLFiles "")
 
