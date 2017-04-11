@@ -876,6 +876,58 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         satprops_->updateSatHyst(n, cells.data(), saturation.data());
     }
 
+    /// Set gas-oil hysteresis parameters
+    /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void BlackoilPropsAdFromDeck::setGasOilHystParams(const std::vector<double>& pcswmdc,
+                             const std::vector<double>& krnswdc,
+                             const std::vector<int>& cells)
+    {
+        const int n = cells.size();
+        assert(pcswmdc.size() == n);
+        assert(krnswdc.size() == n);
+        satprops_->setGasOilHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
+    }
+
+    /// Get gas-oil hysteresis parameters
+    /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void BlackoilPropsAdFromDeck::getGasOilHystParams(std::vector<double>& pcswmdc,
+                             std::vector<double>& krnswdc,
+                             const std::vector<int>& cells) const
+    {
+        const int n = cells.size();
+        pcswmdc.resize(n);
+        krnswdc.resize(n);
+        satprops_->getGasOilHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
+    }
+
+    /// Set oil-water hysteresis parameters
+    /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void BlackoilPropsAdFromDeck::setOilWaterHystParams(const std::vector<double>& pcswmdc,
+                               const std::vector<double>& krnswdc,
+                               const std::vector<int>& cells)
+    {
+        const int n = cells.size();
+        assert(pcswmdc.size() == n);
+        assert(krnswdc.size() == n);
+        satprops_->setOilWaterHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
+    }
+
+    /// Get oil-water hysteresis parameters
+    /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+    /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+    void BlackoilPropsAdFromDeck::getOilWaterHystParams(std::vector<double>& pcswmdc,
+                               std::vector<double>& krnswdc,
+                               const std::vector<int>& cells) const
+    {
+        const int n = cells.size();
+        pcswmdc.resize(n);
+        krnswdc.resize(n);
+        satprops_->getOilWaterHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
+    }
+
     /// Update for max oil saturation.
     void BlackoilPropsAdFromDeck::updateSatOilMax(const std::vector<double>& saturation)
     {
@@ -893,6 +945,11 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
     const std::vector<double>& BlackoilPropsAdFromDeck::satOilMax() const
     {
         return satOilMax_;
+    }
+
+    void BlackoilPropsAdFromDeck::setSatOilMax(const std::vector<double>& max_sat) {
+        assert(satOilMax_.size() == max_sat.size());
+        satOilMax_ = max_sat;
     }
 
     /// Set capillary pressure scaling according to pressure diff. and initial water saturation.

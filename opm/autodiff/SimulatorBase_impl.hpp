@@ -94,6 +94,7 @@ namespace Opm
             // This is a restart, populate WellState and ReservoirState state objects from restart file
             output_writer_.initFromRestartFile(props_.phaseUsage(), grid_, state, prev_well_state, extra);
             initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid_), has_disgas_, has_vapoil_);
+            initHysteresisParams(state);
         }
 
         // Create timers and file for writing timing info.
@@ -843,5 +844,26 @@ namespace Opm
         solver->model().wellModel().updateListEconLimited(schedule, current_step, wells,
                                                           well_state, list_econ_limited);
     }
+
+    template <class Implementation>
+    void
+    SimulatorBase<Implementation>::
+    initHysteresisParams(ReservoirState& state)
+    {
+        typedef std::vector<double> VectorType;
+
+        const VectorType& somax = state.getCellData( "SOMAX" );
+
+        VectorType& pcSwMdc_ow = state.getCellData( "PCSWMDC_OW" );
+        VectorType& krnSwMdc_ow = state.getCellData( "KRNSWMDC_OW" );
+
+        VectorType& pcSwMdc_go = state.getCellData( "PCSWMDC_GO" );
+        VectorType& krnSwMdc_go = state.getCellData( "KRNSWMDC_GO" );
+
+        props_.setSatOilMax(somax);
+        props_.setOilWaterHystParams(pcSwMdc_ow, krnSwMdc_ow, allcells_);
+        props_.setGasOilHystParams(pcSwMdc_go, krnSwMdc_go, allcells_);
+    }
+
 
 } // namespace Opm

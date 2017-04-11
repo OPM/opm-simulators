@@ -59,7 +59,9 @@ namespace Opm {
 
     /// Copies the following fields from sol into state (all conditionally):
     ///   PRESSURE, TEMP, SWAT, SGAS, RS, RV, SSOL
+    /// Also handles extra data such as hysteresis parameters, SOMAX, etc.
     void solutionToSim( const data::Solution& sol,
+                        const std::map<std::string,std::vector<double> >& extra,
                         PhaseUsage phases,
                         SimulationDataContainer& state );
 

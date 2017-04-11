@@ -412,9 +412,15 @@ namespace Opm
                                                                   {"SGAS" , UnitSystem::measure::identity},
                                                                   {"TEMP" , UnitSystem::measure::temperature},
                                                                   {"RS" , UnitSystem::measure::gas_oil_ratio},
-                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio},
-                                                                  {"SOMAX", UnitSystem::measure::identity}};
-        std::map<std::string, bool> extra_keys {{"OPMEXTRA" , false}};
+                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio}};
+        std::map<std::string, bool> extra_keys {
+            {"OPMEXTRA" , false},
+            {"SOMAX", false},
+            {"PCSWM_OW", false},
+            {"KRNSW_OW", false},
+            {"PCSWM_GO", false},
+            {"KRNSW_GO", false}
+        };
 
         if (restart_double_si_) {
             // Avoid any unit conversions, treat restart input as SI units.
@@ -446,7 +452,7 @@ namespace Opm
         wellstate.resize(wells, simulatorstate, phaseUsage ); //Resize for restart step
         auto restart_values = eclIO_->loadRestart(solution_keys, extra_keys);
 
-        solutionToSim( restart_values.solution, phaseUsage, simulatorstate );
+        solutionToSim( restart_values.solution, restart_values.extra, phaseUsage, simulatorstate );
         wellsToState( restart_values.wells, phaseUsage, wellstate );
 
         const auto opmextra_iter = restart_values.extra.find("OPMEXTRA");
@@ -540,6 +546,10 @@ namespace Opm
             addToSimData( simData, "RVSAT", sd.rvSat );
 
             addToSimData( simData, "SOMAX", sd.soMax );
+            addToSimData( simData, "PCSWMDC_OW", sd.pcswmdc_ow);
+            addToSimData( simData, "KRNSWMDC_OW", sd.krnswdc_ow);
+            addToSimData( simData, "PCSWMDC_GO", sd.pcswmdc_go);
+            addToSimData( simData, "KRNSWMDC_GO", sd.krnswdc_go);
 
             return simData;
         }
@@ -769,6 +779,32 @@ namespace Opm
                 output.insert("SOMAX",
                         Opm::UnitSystem::measure::identity,
                         std::move( sd.getCellData("SOMAX") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+
+            if (sd.hasCellData("PCSWMDC_OW")) {
+                output.insert("PCSWM_OW", //FIXME: Eight-long variable name
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("PCSWMDC_OW") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+            if (sd.hasCellData("KRNSWMDC_OW")) {
+                output.insert("KRNSW_OW",
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("KRNSWMDC_OW") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+
+            if (sd.hasCellData("PCSWMDC_GO")) {
+                output.insert("PCSWM_GO", //FIXME: Eight-long variable name
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("PCSWMDC_GO") ),
+                        data::TargetType::RESTART_AUXILIARY);
+            }
+            if (sd.hasCellData("KRNSWMDC_GO")) {
+                output.insert("KRNSW_GO",
+                        Opm::UnitSystem::measure::identity,
+                        std::move( sd.getCellData("KRNSWMDC_GO") ),
                         data::TargetType::RESTART_AUXILIARY);
             }
 

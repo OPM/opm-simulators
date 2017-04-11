@@ -186,6 +186,7 @@ namespace Opm
                                    const WellState& well_state,
                                    DynamicListEconLimited& list_econ_limited) const;
 
+        void initHysteresisParams(ReservoirState& state);
 
         // Data.
         typedef RateConverter::

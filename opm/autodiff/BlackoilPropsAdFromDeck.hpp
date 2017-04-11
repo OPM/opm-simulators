@@ -359,11 +359,44 @@ namespace Opm
         void updateSatHyst(const std::vector<double>& saturation,
                            const std::vector<int>& cells);
 
+        /// Set gas-oil hysteresis parameters
+        /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void setGasOilHystParams(const std::vector<double>& pcswmdc,
+                                 const std::vector<double>& krnswdc,
+                                 const std::vector<int>& cells);
+
+        /// Get gas-oil hysteresis parameters
+        /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void getGasOilHystParams(std::vector<double>& pcswmdc,
+                                 std::vector<double>& krnswdc,
+                                 const std::vector<int>& cells) const;
+
+        /// Set oil-water hysteresis parameters
+        /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void setOilWaterHystParams(const std::vector<double>& pcswmdc,
+                                   const std::vector<double>& krnswdc,
+                                   const std::vector<int>& cells);
+
+        /// Set oil-water hysteresis parameters
+        /// \param[in]  pcswmdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::pcSwMdc(...))
+        /// \param[in]  krnswdc  Vector of hysteresis parameters (@see EclHysteresisTwoPhaseLawParams::krnSwMdc(...))
+        void getOilWaterHystParams(std::vector<double>& pcswmdc,
+                                   std::vector<double>& krnswdc,
+                                   const std::vector<int>& cells) const;
+
         /// Update for max oil saturation.                  
+        /// \param[in] saturation Saturations for all phases
         void updateSatOilMax(const std::vector<double>& saturation);
 
         /// Returns the max oil saturation
         const std::vector<double>& satOilMax() const;
+
+        /// Set max oil saturation (for restarting)
+        /// \param[in] max_sat Max oil saturations. Note that this is *only* oil saturations
+        void setSatOilMax(const std::vector<double>& max_sat);
 
         /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
         /// \param[in]  saturation Array of n*numPhases saturation values.
