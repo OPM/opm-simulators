@@ -557,7 +557,7 @@ public:
         errlog << "Finding saturation pressure did not converge:"
                << " pSat = " << pSat
                << ", Rs = " << Rs;
-        OpmLog::problem("liveoil psat", errlog.str());
+        OpmLog::warning("Live oil saturation pressure", errlog.str());
         OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
 
