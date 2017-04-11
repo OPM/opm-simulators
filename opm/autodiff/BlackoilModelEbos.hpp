@@ -1376,7 +1376,7 @@ namespace Opm {
                     errlog << ", ...";
                 }
                 errlog << "]";
-                OpmLog::problem("Bubble point numerical problem", errlog.str());
+                OpmLog::warning("Bubble point numerical problem", errlog.str());
             }
             if (failed_cells_pd.size() > 0) {
                 std::stringstream errlog;
