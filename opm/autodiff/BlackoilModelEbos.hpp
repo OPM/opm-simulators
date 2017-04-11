@@ -1392,7 +1392,7 @@ namespace Opm {
             const size_t max_num_cells_faillog = 20;
             if (failed_cells_pb.size() > 0) {
                 std::stringstream errlog;
-                errlog << "Finding the dew point pressure failed for " << failed_cells_pb.size() << " cells [";
+                errlog << "Finding the bubble point pressure failed for " << failed_cells_pb.size() << " cells [";
                 errlog << failed_cells_pb[0];
                 const int max_elems = std::min(max_num_cells_faillog, failed_cells_pb.size());
                 for (int i = 1; i < max_elems; ++i) {
@@ -1402,7 +1402,7 @@ namespace Opm {
                     errlog << ", ...";
                 }
                 errlog << "]";
-                OpmLog::problem("pb numerical problem", errlog.str());
+                OpmLog::warning("Bubble point numerical problem", errlog.str());
             }
             if (failed_cells_pd.size() > 0) {
                 std::stringstream errlog;
@@ -1416,7 +1416,7 @@ namespace Opm {
                     errlog << ", ...";
                 }
                 errlog << "]";
-                OpmLog::problem("pd numerical problem", errlog.str());
+                OpmLog::warning("Dew point numerical problem", errlog.str());
             }
 
             return simData;

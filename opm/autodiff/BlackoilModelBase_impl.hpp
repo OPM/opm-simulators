@@ -1821,7 +1821,7 @@ typedef Eigen::Array<double,
                 || (idx < np && std::isnan(well_flux_residual[idx]))) {
                 const auto msg = std::string("NaN residual for phase ") +  materialName(idx);
                 if (terminal_output_) {
-                    OpmLog::problem(msg);
+                    OpmLog::bug(msg);
                 }
                 OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
             }
@@ -1900,7 +1900,7 @@ typedef Eigen::Array<double,
             if (std::isnan(well_flux_residual[idx])) {
                 const auto msg = std::string("NaN residual for phase ") +  materialName(idx);
                 if (terminal_output_) {
-                    OpmLog::problem(msg);
+                    OpmLog::bug(msg);
                 }
                 OPM_THROW_NOLOG(Opm::NumericalProblem, msg);
             }
