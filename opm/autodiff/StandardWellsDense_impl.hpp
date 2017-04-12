@@ -815,10 +815,6 @@ namespace Opm {
             }
 
             if (active_[Oil] && active_[Gas]) {
-                EvalWell well_temperature = extendEval(fs.temperature(FluidSystem::oilPhaseIdx));
-                EvalWell rsSatEval = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), well_temperature, well_pressure);
-                EvalWell rvSatEval = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), well_temperature, well_pressure);
-
                 const int oilpos = pu.phase_pos[Oil];
                 const int gaspos = pu.phase_pos[Gas];
 
