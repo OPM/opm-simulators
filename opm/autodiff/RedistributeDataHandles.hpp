@@ -93,6 +93,7 @@ public:
     void scatter(Buffer& buffer, std::size_t i, std::size_t s)
     {
         assert(s==size(i));
+        static_cast<void>(s);
 
         for(auto index = i*size(i), end = (i+1)*size(i);
             index < end; ++index)

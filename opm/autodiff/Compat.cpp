@@ -123,7 +123,7 @@ data::Solution simToSolution( const SimulationDataContainer& reservoir,
 
 
 void solutionToSim( const data::Solution& sol,
-                    const std::map<std::string,std::vector<double> >& extra,
+                    const std::map<std::string,std::vector<double> >& /* extra */,
                     PhaseUsage phases,
                     SimulationDataContainer& state ) {
 
