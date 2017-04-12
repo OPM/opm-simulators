@@ -803,24 +803,12 @@ namespace Opm {
             // computation
             for ( int idx = 0; idx < np; ++idx )
             {
-                B_avg[idx] = accumulateMaskedValues(B[ idx ], mask) / double(ncGlobal);
-                R_sum[idx] = accumulateMaskedValues(R[ idx ], mask);
+                B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(),
+                                              0.0 ) / double(ncGlobal);
+                R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(),
+                                              0.0 );
 
-                if(comm.size()>1)
-                {
-                    auto mi = mask->begin();
-                    for(auto elem = tempV[idx].begin(), end = tempV[idx].end(); elem != end; ++elem, ++mi)
-                    {
-                        if ( *mi )
-                        {
-                            maxCoeff[idx] = std::max( maxCoeff[idx], *elem);
-                        }
-                    }
-                }
-                else
-                {
-                    maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
-                }
+                maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
 
                 assert(np >= np);
                 if (idx < np) {
