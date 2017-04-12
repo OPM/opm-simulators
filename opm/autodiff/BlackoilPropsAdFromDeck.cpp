@@ -883,7 +883,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                              const std::vector<double>& krnswdc,
                              const std::vector<int>& cells)
     {
-        const int n = cells.size();
+        const size_t n = cells.size();
         assert(pcswmdc.size() == n);
         assert(krnswdc.size() == n);
         satprops_->setGasOilHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
@@ -896,7 +896,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                              std::vector<double>& krnswdc,
                              const std::vector<int>& cells) const
     {
-        const int n = cells.size();
+        const size_t n = cells.size();
         pcswmdc.resize(n);
         krnswdc.resize(n);
         satprops_->getGasOilHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
@@ -909,7 +909,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                const std::vector<double>& krnswdc,
                                const std::vector<int>& cells)
     {
-        const int n = cells.size();
+        const size_t n = cells.size();
         assert(pcswmdc.size() == n);
         assert(krnswdc.size() == n);
         satprops_->setOilWaterHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
@@ -922,7 +922,7 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
                                std::vector<double>& krnswdc,
                                const std::vector<int>& cells) const
     {
-        const int n = cells.size();
+        const size_t n = cells.size();
         pcswmdc.resize(n);
         krnswdc.resize(n);
         satprops_->getOilWaterHystParams(n, cells.data(), pcswmdc.data(), krnswdc.data());
