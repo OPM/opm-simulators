@@ -135,7 +135,7 @@ namespace Opm {
         }
 
         SimulatorReport report;
-        if ( ! localWellsActive() ) {
+        if ( ! wellsActive() ) {
             return report;
         }
 
@@ -891,6 +891,12 @@ namespace Opm {
                 invDuneD_.mv(resWell_, dx_well);
 
                 updateWellState(dx_well, well_state);
+            }
+            // updateWellControls uses communication
+            // Therefore the following is executed if there
+            // are active wells anywhere in the global domain.
+            if( wellsActive() )
+            {
                 updateWellControls(well_state);
                 setWellVariables(well_state);
             }
@@ -1483,7 +1489,11 @@ namespace Opm {
     StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>::
     updateWellControls(WellState& xw) const
     {
-        if( !localWellsActive() ) return ;
+        // Even if there no wells active locally, we cannot
+        // return as the Destructor of the WellSwitchingLogger
+        // uses global communication. For no well active globally
+        // we simply return.
+        if( !wellsActive() ) return ;
 
         const int np = wells().number_of_phases;
         const int nw = wells().number_of_wells;
