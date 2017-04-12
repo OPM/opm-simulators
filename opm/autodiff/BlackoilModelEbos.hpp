@@ -901,18 +901,22 @@ namespace Opm {
             Vector maxCoeff(np);
             Vector maxNormWell(np);
 
-            std::vector< Vector > B( np, Vector( nc ) );
-            std::vector< Vector > R( np, Vector( nc ) );
-            std::vector< Vector > R2( np, Vector( nc ) );
-            std::vector< Vector > tempV( np, Vector( nc ) );
+            // As we will not initialize values in the following arrays
+            // for the non-interior elements, we have to make sure
+            // (at least for tempV) that the values there do not influence
+            // our reduction.
+            std::vector< Vector > B( np, Vector( nc, 0.0) );
+            //std::vector< Vector > R( np, Vector( nc, 0.0) ) );
+            std::vector< Vector > R2( np, Vector( nc, 0.0 ) );
+            std::vector< Vector > tempV( np, Vector( nc, std::numeric_limits<double>::lowest() ) );
 
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             ElementContext elemCtx(ebosSimulator_);
             const auto& gridView = ebosSimulator().gridView();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
 
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
+            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
               elemIt != elemEndIt;
               ++elemIt)
             {
