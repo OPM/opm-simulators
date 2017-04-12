@@ -429,7 +429,6 @@ inline void testAll()
 
                     Scalar pcSwMdc_out[2];
                     Scalar krnSwMdc_out[2];
-                    Scalar deltaSwImbKrn_out[2];
                     hysterMaterialLawManager.oilWaterHysteresisParams(
                             pcSwMdc_out[0],
                             krnSwMdc_out[0],
