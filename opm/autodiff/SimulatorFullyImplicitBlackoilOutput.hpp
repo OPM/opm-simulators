@@ -407,19 +407,20 @@ namespace Opm
                          WellState& wellstate,
                          ExtraData& extra )
     {
-        std::map<std::string, UnitSystem::measure> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
-                                                                  {"SWAT" , UnitSystem::measure::identity},
-                                                                  {"SGAS" , UnitSystem::measure::identity},
-                                                                  {"TEMP" , UnitSystem::measure::temperature},
-                                                                  {"RS" , UnitSystem::measure::gas_oil_ratio},
-                                                                  {"RV" , UnitSystem::measure::oil_gas_ratio}};
+        std::map<std::string, RestartKey> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
+                                                         {"SWAT" , UnitSystem::measure::identity},
+                                                         {"SGAS" , UnitSystem::measure::identity},
+                                                         {"TEMP" , UnitSystem::measure::temperature},
+                                                         {"RS" , UnitSystem::measure::gas_oil_ratio},
+                                                         {"RV" , UnitSystem::measure::oil_gas_ratio},
+                                                         {"SOMAX", {UnitSystem::measure::identity, false}},
+                                                         {"PCSWM_OW", {UnitSystem::measure::identity, false}},
+                                                         {"KRNSW_OW", {UnitSystem::measure::identity, false}},
+                                                         {"PCSWM_GO", {UnitSystem::measure::identity, false}},
+                                                         {"KRNSW_GO", {UnitSystem::measure::identity, false}}};
+
         std::map<std::string, bool> extra_keys {
-            {"OPMEXTRA" , false},
-            {"SOMAX", false},
-            {"PCSWM_OW", false},
-            {"KRNSW_OW", false},
-            {"PCSWM_GO", false},
-            {"KRNSW_GO", false}
+            {"OPMEXTRA" , false}
         };
 
         if (restart_double_si_) {
