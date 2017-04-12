@@ -1002,8 +1002,9 @@ namespace Opm
     void
     StandardWells::computeWellPotentials(const std::vector<ADB>& mob_perfcells,
                                          const std::vector<ADB>& b_perfcells,
+                                         const WellState& well_state,
                                          SolutionState& state0,
-                                         WellState& well_state)
+                                         std::vector<double>& well_potentials) const
     {
         const int nw = wells().number_of_wells;
         const int np = wells().number_of_phases;
@@ -1079,17 +1080,18 @@ namespace Opm
 
         // compute well potentials
         Vector aliveWells;
-        std::vector<ADB> well_potentials;
-        computeWellFlux(state0, mob_perfcells,  b_perfcells, aliveWells, well_potentials);
+        std::vector<ADB> perf_potentials;
+        computeWellFlux(state0, mob_perfcells,  b_perfcells, aliveWells, perf_potentials);
 
-        // store well potentials in the well state
-        // transform to a single vector instead of separate vectors pr phase
-        const int nperf = wells().well_connpos[nw];
-        Vector cq = superset(well_potentials[0].value(), Span(nperf, np, 0), nperf*np);
-        for (int phase = 1; phase < np; ++phase) {
-            cq += superset(well_potentials[phase].value(), Span(nperf, np, phase), nperf*np);
+        well_potentials.resize(nw * np, 0.0);
+
+        for (int p = 0; p < np; ++p) {
+            for (int w = 0; w < nw; ++w) {
+                for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w + 1]; ++perf) {
+                    well_potentials[w * np + p] += perf_potentials[p].value()[perf];
+                }
+            }
         }
-        well_state.wellPotentials().assign(cq.data(), cq.data() + nperf*np);
     }
 
 

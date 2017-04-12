@@ -103,8 +103,7 @@ namespace Opm
                 current_controls_[w] = well_controls_get_current(wells->ctrls[w]);
             }
 
-            well_potentials_.clear();
-            well_potentials_.resize(nperf * np, 0.0);
+            is_new_well_.resize(nw, true);
 
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
@@ -117,11 +116,17 @@ namespace Opm
                     const_iterator it = prevState.wellMap().find( name );
                     if( it != end )
                     {
+                        // this is not a new added well
+                        is_new_well_[w] = false;
+
                         const int oldIndex = (*it).second[ 0 ];
                         const int newIndex = w;
 
                         // bhp
                         bhp()[ newIndex ] = prevState.bhp()[ oldIndex ];
+
+                        // thp
+                        thp()[ newIndex ] = prevState.thp()[ oldIndex ];
 
                         // wellrates
                         for( int i=0, idx=newIndex*np, oldidx=oldIndex*np; i<np; ++i, ++idx, ++oldidx )
@@ -158,17 +163,6 @@ namespace Opm
                             {
                                 perfPress()[ perf ] = prevState.perfPress()[ oldPerf_idx ];
                             }
-                        }
-
-                        // currentControls
-                        const int old_control_index = prevState.currentControls()[ oldIndex ];
-                        if (old_control_index < well_controls_get_num(wells->ctrls[w])) {
-                            // If the set of controls have changed, this may not be identical
-                            // to the last control, but it must be a valid control.
-                            currentControls()[ newIndex ] = old_control_index;
-                        } else {
-                            assert(well_controls_get_num(wells->ctrls[w]) > 0);
-                            currentControls()[ newIndex ] = 0;
                         }
                     }
 
@@ -209,10 +203,6 @@ namespace Opm
         /// One current control per well.
         std::vector<int>& currentControls() { return current_controls_; }
         const std::vector<int>& currentControls() const { return current_controls_; }
-
-        /// One rate per phase and well connection.
-        std::vector<double>& wellPotentials() { return well_potentials_; }
-        const std::vector<double>& wellPotentials() const { return well_potentials_; }
 
         data::Wells report(const PhaseUsage &pu) const override {
             data::Wells res = WellState::report(pu);
@@ -265,10 +255,25 @@ namespace Opm
             return res;
         }
 
+
+        bool isNewWell(const int w) const {
+            return is_new_well_[w];
+        }
+
+
+        void setNewWell(const int w, const bool is_new_well) {
+            is_new_well_[w] = is_new_well;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
-        std::vector<double> well_potentials_;
+
+        // marking whether the well is just added
+        // for newly added well, the current initialized rates from WellState
+        // will have very wrong compositions for production wells, will mostly cause
+        // problem with VFP interpolation
+        std::vector<bool> is_new_well_;
     };
 
 } // namespace Opm

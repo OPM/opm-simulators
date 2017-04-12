@@ -764,6 +764,11 @@ typedef Eigen::Array<double,
             asImpl().wellModel().computeWellConnectionPressures(state0, well_state);
         }
 
+        // set up the guide rate and group control
+        if (asImpl().wellModel().wellCollection()->groupControlActive() && initial_assembly) {
+            setupGroupControl(reservoir_state, well_state);
+        }
+
         // Possibly switch well controls and updating well state to
         // get reasonable initial conditions for the wells
         asImpl().wellModel().updateWellControls(well_state);
@@ -819,12 +824,6 @@ typedef Eigen::Array<double,
         asImpl().wellModel().addWellFluxEq(cq_s, state, residual_);
         asImpl().addWellContributionToMassBalanceEq(cq_s, state, well_state);
         asImpl().wellModel().addWellControlEq(state, well_state, aliveWells, residual_);
-
-        if (param_.compute_well_potentials_) {
-            SolutionState state0 = state;
-            asImpl().makeConstantState(state0);
-            asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, state0, well_state);
-        }
 
         return report;
     }
@@ -2549,6 +2548,78 @@ typedef Eigen::Array<double,
                 }
             }
         }
+    }
+
+
+
+
+
+    template <class Grid, class WellModel, class Implementation>
+    void
+    BlackoilModelBase<Grid, WellModel, Implementation>::
+    setupGroupControl(const ReservoirState& reservoir_state,
+                      WellState& well_state)
+    {
+        if (asImpl().wellModel().wellCollection()->requireWellPotentials()) {
+            SolutionState state = asImpl().variableState(reservoir_state, well_state);
+            asImpl().makeConstantState(state);
+            asImpl().wellModel().computeWellConnectionPressures(state, well_state);
+
+            const int np = numPhases();
+            std::vector<ADB> b(np, ADB::null());
+            std::vector<ADB> mob(np, ADB::null());
+
+            const ADB&              press = state.pressure;
+            const ADB&              temp  = state.temperature;
+            const ADB&              rs    = state.rs;
+            const ADB&              rv    = state.rv;
+
+            const std::vector<PhasePresence> cond = phaseCondition();
+
+            const ADB pv_mult = poroMult(press);
+            const ADB tr_mult = transMult(press);
+            const std::vector<ADB> kr = asImpl().computeRelPerm(state);
+
+            std::vector<ADB> mob_perfcells(np, ADB::null());
+            std::vector<ADB> b_perfcells(np, ADB::null());
+
+            for (int phase = 0; phase < np; ++phase) {
+                if (active_[phase]) {
+                    const std::vector<int>& well_cells = asImpl().wellModel().wellOps().well_cells;
+                    const ADB mu = asImpl().fluidViscosity(canph_[phase], state.canonical_phase_pressures[canph_[phase]],
+                                                       temp, rs, rv, cond);
+                    mob[phase] = tr_mult * kr[canph_[phase]] / mu;
+                    mob_perfcells[phase] = subset(mob[phase], well_cells);
+
+                    b[phase] = asImpl().fluidReciprocFVF(phase, state.canonical_phase_pressures[phase], temp, rs, rv, cond);
+                    b_perfcells[phase] = subset(b[phase], well_cells);
+                }
+            }
+
+            // well potentials for each well
+            std::vector<double> well_potentials;
+            asImpl().wellModel().computeWellPotentials(mob_perfcells, b_perfcells, well_state, state, well_potentials);
+            asImpl().wellModel().wellCollection()->setGuideRatesWithPotentials(asImpl().wellModel().wellsPointer(),
+                                                                               fluid_.phaseUsage(), well_potentials);
+        } // end of if
+
+        applyVREPGroupControl(reservoir_state, well_state);
+
+        if (asImpl().wellModel().wellCollection()->groupControlApplied()) {
+            asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+        } else {
+            asImpl().wellModel().wellCollection()->applyGroupControls();
+
+            // the well collections do not have access to Well State, so the currentControls() of Well State need to
+            // be updated based on the group control setup
+            const int nw = wells().number_of_wells;
+            for (int w = 0; w < nw; ++w) {
+                const WellNode& well_node = asImpl().wellModel().wellCollection()->findWellNode(wells().name[w]);
+                if (!well_node.individualControl()) {
+                    well_state.currentControls()[w] = well_node.groupControlIndex();
+                }
+            }
+        } // end of else
     }
 
 } // namespace Opm

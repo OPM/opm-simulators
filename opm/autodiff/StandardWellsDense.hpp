@@ -155,7 +155,7 @@ enum WellVariablePositions {
 
             int numCells() const;
 
-            void resetWellControlFromState(WellState xw) const;
+            void resetWellControlFromState(const WellState& xw) const;
 
             const Wells& wells() const;
 
@@ -243,13 +243,19 @@ enum WellVariablePositions {
                                                         const double grav);
 
 
-            // TODO: Later we might want to change the function to only handle one well,
-            // the requirement for well potential calculation can be based on individual wells.
-            // getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
+            // Calculating well potentials for each well
+            // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
             template<typename Simulator>
             void
             computeWellPotentials(const Simulator& ebosSimulator,
-                                  WellState& well_state)  const;
+                                  const WellState& well_state,
+                                  std::vector<double>& well_potentials) const;
+
+            // TODO: some preparation work, mostly related to group control and RESV,
+            // at the beginning of each time step (Not report step)
+            template<typename Simulator>
+            void prepareTimeStep(const Simulator& ebos_simulator,
+                                 WellState& well_state);
 
             WellCollection* wellCollection() const;
 
@@ -357,6 +363,26 @@ enum WellVariablePositions {
                                            const int well_index,
                                            WellState& xw) const;
 
+            bool wellHasTHPConstraints(const int well_index) const;
+
+            // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
+            // calculation of the derivatives
+            template<typename Simulator>
+            void
+            computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                                    const EvalWell& bhp,
+                                    const int well_index,
+                                    std::vector<double>& well_flux) const;
+
+            double mostStrictBhpFromBhpLimits(const int well_index) const;
+
+            // TODO: maybe it should be improved to be calculate general rates for THP control later
+            template<typename Simulator>
+            std::vector<double>
+            computeWellPotentialWithTHP(const Simulator& ebosSimulator,
+                                        const int well_index,
+                                        const double initial_bhp, // bhp from BHP constraints
+                                        const std::vector<double>& initial_potential) const;
         };
 
 

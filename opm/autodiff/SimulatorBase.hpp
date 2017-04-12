@@ -175,9 +175,6 @@ namespace Opm
         void
         outputFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg);
 
-        void computeWellPotentials(const Wells*                    wells,
-                                   const WellState& xw,
-                                   std::vector<double>& well_potentials);
 
         void updateListEconLimited(const std::unique_ptr<Solver>& solver,
                                    const Schedule& schedule,

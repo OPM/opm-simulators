@@ -152,8 +152,9 @@ namespace Opm {
             void
             computeWellPotentials(const std::vector<ADB>& mob_perfcells,
                                   const std::vector<ADB>& b_perfcells,
+                                  const WellState& well_state,
                                   SolutionState& state0,
-                                  WellState& well_state);
+                                  std::vector<double>& well_potentials) const;
 
             template <class SolutionState>
             void

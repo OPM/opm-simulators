@@ -150,10 +150,13 @@ namespace Opm {
         // get reasonable initial conditions for the wells
         wellModel().updateWellControls(well_state);
 
-        // enforce VREP control when necessary.
-        Base::applyVREPGroupControl(reservoir_state, well_state);
+        // TODO: I do not think the multi_segment well can handle group control yet
+        if (asImpl().wellModel().wellCollection()->groupControlActive()) {
+            // enforce VREP control when necessary.
+            Base::applyVREPGroupControl(reservoir_state, well_state);
 
-        asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+            asImpl().wellModel().wellCollection()->updateWellTargets(well_state.wellRates());
+        }
 
         // Create the primary variables.
         SolutionState state = asImpl().variableState(reservoir_state, well_state);

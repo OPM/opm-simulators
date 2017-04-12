@@ -57,7 +57,6 @@ namespace Opm
         using BaseType :: numPhases;
         using BaseType :: perfPhaseRates;
         using BaseType :: currentControls;
-        using BaseType :: wellPotentials;
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
@@ -68,50 +67,14 @@ namespace Opm
             // call init on base class
             BaseType :: init(wells, state, prevState);
 
+            // TODO: the reason to keep this is to avoid getting defaulted value BHP
+            // some facilities needed from opm-parser or opm-core
+            // It is a little tricky, since sometimes before applying group control, the only
+            // available constraints in the well_controls is the defaulted BHP value, and it
+            // is really not desirable to use this value to enter the Newton iterations.
             setWellSolutions(pu);
-            setWellSolutionsFromPrevState(prevState);
         }
 
-
-        template <class PrevState>
-        void setWellSolutionsFromPrevState(const PrevState& prevState)
-        {
-            // Set nw and np, or return if no wells.
-            if (wells_.get() == nullptr) {
-                return;
-            }
-            const int nw = wells_->number_of_wells;
-            if (nw == 0) {
-                return;
-            }
-            const int np = wells_->number_of_phases;
-
-            // intialize wells that have been there before
-            // order may change so the mapping is based on the well name
-            // if there are no well, do nothing in init
-            if( ! prevState.wellMap().empty() )
-            {
-                typedef typename WellMapType :: const_iterator const_iterator;
-                const_iterator end = prevState.wellMap().end();
-                int nw_old = prevState.bhp().size();
-                for (int w = 0; w < nw; ++w) {
-                    std::string name( wells_->name[ w ] );
-                    const_iterator it = prevState.wellMap().find( name );
-                    if( it != end )
-                    {
-                        const int oldIndex = (*it).second[ 0 ];
-                        const int newIndex = w;
-
-                        // wellSolutions
-                        for( int i = 0;  i < np; ++i)
-                        {
-                            wellSolutions()[ i*nw + newIndex ] = prevState.wellSolutions()[i * nw_old + oldIndex ];
-                        }
-
-                    }
-                }
-            }
-        }
 
 
         /// Set wellSolutions() based on the base class members.
