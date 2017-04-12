@@ -365,8 +365,8 @@ public:
         size_t nRv = 20;
         size_t nP = samplePoints.size()*2;
 
-        TabulatedOneDFunction mug;
-        mug.setContainerOfTuples(samplePoints);
+        TabulatedOneDFunction mugTable;
+        mugTable.setContainerOfTuples(samplePoints);
 
         // calculate a table of estimated densities depending on pressure and gas mass
         // fraction
@@ -377,7 +377,7 @@ public:
 
             for (size_t pIdx = 0; pIdx < nP; ++pIdx) {
                 Scalar pg = poMin + (poMax - poMin)*pIdx/nP;
-                Scalar mug = mug.eval(pg, /*extrapolate=*/true);
+                Scalar mug = mugTable.eval(pg, /*extrapolate=*/true);
 
                 gasMu_[regionIdx].appendSamplePoint(RvIdx, pg, mug);
             }
