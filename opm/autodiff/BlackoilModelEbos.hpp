@@ -791,6 +791,8 @@ namespace Opm {
 #if HAVE_MPI
             if ( comm.size() > 1 )
             {
+                // Initialize maxCoeff with minimum.
+                std::fill(maxCoeff.begin(), maxCoeff.end(), std::numeric_limits<Scalar>::lowest());
                 // mask[c] is 1 if we need to compute something in parallel
                 const auto & pinfo =
                         boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation());
@@ -803,7 +805,22 @@ namespace Opm {
             {
                 B_avg[idx] = accumulateMaskedValues(B[ idx ], mask) / double(ncGlobal);
                 R_sum[idx] = accumulateMaskedValues(R[ idx ], mask);
-                maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
+
+                if(comm.size()>1)
+                {
+                    auto mi = mask->begin();
+                    for(auto elem = tempV[idx].begin(), end = tempV[idx].end(); elem != end; ++elem, ++mi)
+                    {
+                        if ( *mi )
+                        {
+                            maxCoeff[idx] = std::max( maxCoeff[idx], *elem);
+                        }
+                    }
+                }
+                else
+                {
+                    maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
+                }
 
                 assert(np >= np);
                 if (idx < np) {
