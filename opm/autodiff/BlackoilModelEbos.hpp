@@ -791,6 +791,8 @@ namespace Opm {
 #if HAVE_MPI
             if ( comm.size() > 1 )
             {
+                // Initialize maxCoeff with minimum.
+                std::fill(maxCoeff.begin(), maxCoeff.end(), std::numeric_limits<Scalar>::lowest());
                 // mask[c] is 1 if we need to compute something in parallel
                 const auto & pinfo =
                         boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation());
@@ -801,8 +803,11 @@ namespace Opm {
             // computation
             for ( int idx = 0; idx < np; ++idx )
             {
-                B_avg[idx] = accumulateMaskedValues(B[ idx ], mask) / double(ncGlobal);
-                R_sum[idx] = accumulateMaskedValues(R[ idx ], mask);
+                B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(),
+                                              0.0 ) / double(ncGlobal);
+                R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(),
+                                              0.0 );
+
                 maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
 
                 assert(np >= np);
@@ -884,18 +889,22 @@ namespace Opm {
             Vector maxCoeff(np);
             Vector maxNormWell(np);
 
-            std::vector< Vector > B( np, Vector( nc ) );
-            std::vector< Vector > R( np, Vector( nc ) );
-            std::vector< Vector > R2( np, Vector( nc ) );
-            std::vector< Vector > tempV( np, Vector( nc ) );
+            // As we will not initialize values in the following arrays
+            // for the non-interior elements, we have to make sure
+            // (at least for tempV) that the values there do not influence
+            // our reduction.
+            std::vector< Vector > B( np, Vector( nc, 0.0) );
+            //std::vector< Vector > R( np, Vector( nc, 0.0) ) );
+            std::vector< Vector > R2( np, Vector( nc, 0.0 ) );
+            std::vector< Vector > tempV( np, Vector( nc, std::numeric_limits<double>::lowest() ) );
 
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             ElementContext elemCtx(ebosSimulator_);
             const auto& gridView = ebosSimulator().gridView();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
 
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
+            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
               elemIt != elemEndIt;
               ++elemIt)
             {
