@@ -1318,16 +1318,16 @@ private:
         if (!materialLawManager_->enableHysteresis())
             return false;
 
+        // we need to update the hysteresis data for _all_ elements (i.e., not just the
+        // interior ones) to avoid desynchronization of the processes in the parallel case!
         ElementContext elemCtx(this->simulator());
         const auto& gridManager = this->simulator().gridManager();
         auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-                continue;
 
-            elemCtx.updateStencil(elem);
+            elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
