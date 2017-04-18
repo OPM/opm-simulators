@@ -771,12 +771,20 @@ namespace Opm
                                   std::move( sd.getCellData("PBUB") ),
                                   data::TargetType::RESTART_AUXILIARY);
                 }
+                else if (log) {
+                    Opm::OpmLog::warning("Output of bubble point pressure requested but not available in this simulator. Ignoring.");
+                }
+
                 if (sd.hasCellData("PDEW")) {
                     output.insert("PDEW",
                                   Opm::UnitSystem::measure::pressure,
                                   std::move( sd.getCellData("PDEW") ),
                                   data::TargetType::RESTART_AUXILIARY);
                 }
+                else if (log) {
+                    Opm::OpmLog::warning("Output of dew point pressure requested but not available in this simulator. Ignoring.");
+                }
+
             }
 
             if (sd.hasCellData("SOMAX")) {
