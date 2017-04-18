@@ -699,15 +699,20 @@ namespace Opm
         std::vector<double> so(nc);
         std::vector<double> sg(nc);
         std::vector<double> hydrocarbon(nc);
-        const auto& soCol = s.col(BlackoilPhases::Liquid);
-        const auto& sgCol = s.col(BlackoilPhases::Vapour);
+        // Using dummy indices if phase not used, the columns will not be accessed below if unused.
+        const int oilpos = pu.phase_used[BlackoilPhases::Liquid] ? pu.phase_pos[BlackoilPhases::Liquid] : 0;
+        const int gaspos = pu.phase_used[BlackoilPhases::Vapour] ? pu.phase_pos[BlackoilPhases::Vapour] : 0;
+        const auto& soCol = s.col(oilpos);
+        const auto& sgCol = s.col(gaspos);
         for (unsigned c = 0; c < so.size(); ++ c) {
             double mySo = 0.0;
-            if (pu.phase_used[BlackoilPhases::Liquid])
+            if (pu.phase_used[BlackoilPhases::Liquid]) {
                 mySo = soCol[c];
+            }
             double mySg = 0.0;
-            if (pu.phase_used[BlackoilPhases::Vapour])
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
                 mySg = sgCol[c];
+            }
             so[c] = mySo;
             sg[c] = mySg;
             hydrocarbon[c] = mySo + mySg;
