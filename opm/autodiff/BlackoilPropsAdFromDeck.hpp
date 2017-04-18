@@ -387,16 +387,29 @@ namespace Opm
                                    std::vector<double>& krnswdc,
                                    const std::vector<int>& cells) const;
 
-        /// Update for max oil saturation.                  
+        /// Update for max oil saturation.
         /// \param[in] saturation Saturations for all phases
         void updateSatOilMax(const std::vector<double>& saturation);
 
-        /// Returns the max oil saturation
+        /// Returns the max oil saturation vector
         const std::vector<double>& satOilMax() const;
 
-        /// Set max oil saturation (for restarting)
-        /// \param[in] max_sat Max oil saturations. Note that this is *only* oil saturations
+        /// Force set max oil saturation (used for restarting)
+        /// \param[in] max_sat Max oil saturations.
+        /// Note that this is a vector of *only* oil saturations (no other phases)
+        /// @see The similar function updateSatOilMax(const std::vector<double>& saturation)
+        /// @see satOilMax()
         void setSatOilMax(const std::vector<double>& max_sat);
+
+        /// Returns the bubble point pressures
+        std::vector<double> bubblePointPressure(const Cells& cells,
+                const V& T,
+                const V& rs) const;
+
+        /// Returns the dew point pressures
+        std::vector<double> dewPointPressure(const Cells& cells,
+                const V& T,
+                const V& rv) const;
 
         /// Set capillary pressure scaling according to pressure diff. and initial water saturation.
         /// \param[in]  saturation Array of n*numPhases saturation values.

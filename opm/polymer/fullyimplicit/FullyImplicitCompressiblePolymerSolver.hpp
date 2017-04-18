@@ -84,6 +84,8 @@ namespace Opm {
                 , rsSat(ADB::null())
                 , rvSat(ADB::null())
                 , soMax() // FIXME: Not handled properly
+                , Pb() //FIXME: Not handled properly
+                , Pd() //FIXME: Not handled properly
                 , krnswdc_ow() // FIXME: Not handled properly
                 , krnswdc_go() // FIXME: Not handled properly
                 , pcswmdc_ow() // FIXME: Not handled properly
@@ -99,6 +101,8 @@ namespace Opm {
             ADB rsSat;
             ADB rvSat;
             std::vector<double> soMax;
+            std::vector<double> Pb;
+            std::vector<double> Pd;
             std::vector<double> krnswdc_ow;
             std::vector<double> krnswdc_go;
             std::vector<double> pcswmdc_ow;
