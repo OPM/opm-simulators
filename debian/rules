@@ -21,10 +21,7 @@ override_dh_auto_build:
 
 # consider using -DUSE_VERSIONED_DIR=ON if backporting
 override_dh_auto_configure:
-	mkdir build-eigen
-	cd build-eigen && cmake $(CURDIR)/eigen3-master -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/tmp/install-eigen3
-	cd build-eigen && make install
-	dh_auto_configure --buildsystem=cmake -- -DCMAKE_BUILD_TYPE=Release -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_INSTALL_DOCDIR=share/doc/libopm-simulators1 -DWHOLE_PROG_OPTIM=OFF -DUSE_RUNPATH=OFF -DCMAKE_PREFIX_PATH=/tmp/install-eigen3
+	dh_auto_configure --buildsystem=cmake -- -DCMAKE_BUILD_TYPE=Release -DUSE_MPI=1 -DBUILD_SHARED_LIBS=1 -DCMAKE_INSTALL_DOCDIR=share/doc/libopm-simulators1 -DWHOLE_PROG_OPTIM=OFF -DUSE_RUNPATH=OFF
 
 override_dh_auto_install:
 	dh_auto_install -- install-html
