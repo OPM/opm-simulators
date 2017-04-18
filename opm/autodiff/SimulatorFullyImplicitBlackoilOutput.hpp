@@ -63,6 +63,7 @@ namespace Opm
 
     class SimulationDataContainer;
     class BlackoilState;
+    class BlackoilModelEbos;
 
     void outputStateVtk(const UnstructuredGrid& grid,
                         const Opm::SimulationDataContainer& state,
@@ -577,7 +578,8 @@ namespace Opm
                             const Model& /* physicalModel */,
                             const RestartConfig& restartConfig,
                             const int reportStepNum,
-                            const bool log)
+                            const bool log,
+                            const bool supports_bubble_point)
         {
             //Get the value of each of the keys for the restart keywords
             std::map<std::string, int> rstKeywords = restartConfig.getRestartKeywords(reportStepNum);
@@ -765,9 +767,24 @@ namespace Opm
              */
             if (vapour_active && liquid_active && rstKeywords["PBPD"] > 0) {
                 rstKeywords["PBPD"] = 0;
-                Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
-                                     "Writing bubble points and dew points (PBPD) to file is unsupported, "
-                                     "as the simulator does not use these internally.");
+                if ( supports_bubble_point )
+                {
+                    output.insert("PBUB",
+                                  Opm::UnitSystem::measure::pressure,
+                                  std::move( sd.getCellData("PBUB") ),
+                                  data::TargetType::RESTART_AUXILIARY);
+                    output.insert("PDEW",
+                                  Opm::UnitSystem::measure::pressure,
+                                  std::move( sd.getCellData("PDEW") ),
+                                  data::TargetType::RESTART_AUXILIARY);
+                }
+                else
+                {
+                    Opm::OpmLog::warning("Bubble/dew point pressure output unsupported",
+                                         "Writing bubble points and dew points (PBPD) to file is unsupported, "
+                                         "as the simulator does not use these internally.");
+                }
+                
             }
 
             if (sd.hasCellData("SOMAX")) {
@@ -985,7 +1002,8 @@ namespace Opm
                 localCellData = simToSolution( sd, restart_double_si_, phaseUsage_); // Get "normal" data (SWAT, PRESSURE, ...);
 
                 detail::getRestartData( localCellData, std::move(sd), phaseUsage_, physicalModel,
-                                        restartConfig, reportStepNum, logMessages );
+                                        restartConfig, reportStepNum, logMessages,
+                                        std::is_same<Model,Opm::BlackoilModelEbos>::value);
                 // sd will be invalid after getRestartData has been called
             }
             detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig );
