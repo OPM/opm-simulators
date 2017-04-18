@@ -105,6 +105,9 @@ namespace Opm {
 
             std::vector<double> soMax; // Maximum oil saturation
 
+            std::vector<double> Pb; // Bubble point pressure
+            std::vector<double> Pd; // Dew point pressure
+
             //Hysteresis parameters
             std::vector<double> krnswdc_ow;
             std::vector<double> krnswdc_go;
