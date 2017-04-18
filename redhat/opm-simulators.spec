@@ -15,7 +15,7 @@ Source0:        https://github.com/OPM/%{name}/archive/release/%{version}/%{tag}
 BuildRequires:  blas-devel lapack-devel dune-common-devel opm-output-devel
 BuildRequires:  git suitesparse-devel doxygen bc
 BuildRequires:  opm-parser-devel opm-core-devel opm-grid-devel
-BuildRequires:  tinyxml-devel dune-istl-devel eigen3-devel ert.ecl-devel
+BuildRequires:  tinyxml-devel dune-istl-devel eigen3-devel ert.ecl-devel ewoms-devel
 %{?el6:BuildRequires: cmake28 devtoolset-3-toolchain boost148-devel}
 %{!?el6:BuildRequires: cmake gcc gcc-c++ boost-devel}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
