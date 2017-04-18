@@ -784,7 +784,6 @@ namespace Opm
                                          "Writing bubble points and dew points (PBPD) to file is unsupported, "
                                          "as the simulator does not use these internally.");
                 }
-                
             }
 
             if (sd.hasCellData("SOMAX")) {
