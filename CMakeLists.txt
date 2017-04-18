@@ -131,7 +131,8 @@ if (HAVE_OPM_DATA)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
 
- # create a symbolic link from flow to flow_legacy
+# create a symbolic link from flow to flow_legacy
 ADD_CUSTOM_TARGET(flow ALL
-	                COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_ebos" "${CMAKE_BINARY_DIR}/bin/flow")
+                  DEPENDS flow_ebos
+                  COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_ebos" "${CMAKE_BINARY_DIR}/bin/flow")
 
