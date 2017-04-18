@@ -1134,8 +1134,9 @@ private:
         const auto& eclState = gridManager.eclState();
 
         // since the values specified in the deck do not need to be consistent, we use an
-        // initial condition that conserves the total mass specified by these values.
-        useMassConservativeInitialCondition_ = true;
+        // initial condition that conserves the total mass specified by these values, but
+        // for this to work all three phases must be active.
+        useMassConservativeInitialCondition_ = (FluidSystem::numActivePhases() == 3);
 
         // make sure all required quantities are enables
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && !deck.hasKeyword("SWAT"))
