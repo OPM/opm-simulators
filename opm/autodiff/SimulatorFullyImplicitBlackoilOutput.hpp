@@ -478,6 +478,10 @@ namespace Opm
                            const std::string& name,
                            const V& vec )
         {
+            if (vec.size() == 0) {
+                return;
+            }
+
             typedef std::vector< double > OutputVectorType;
 
             // get data map
