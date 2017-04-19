@@ -133,5 +133,6 @@ endif()
 
  # create a symbolic link from flow to flow_legacy
 ADD_CUSTOM_TARGET(flow ALL
-	                COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_ebos" "${CMAKE_BINARY_DIR}/bin/flow")
-
+                  DEPENDS flow_ebos
+                  COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_ebos" "${CMAKE_BINARY_DIR}/bin/flow")
+install(FILES ${CMAKE_BINARY_DIR}/bin/flow DESTINATION bin)
