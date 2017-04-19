@@ -135,4 +135,4 @@ endif()
 ADD_CUSTOM_TARGET(flow ALL
                   DEPENDS flow_ebos
                   COMMAND ${CMAKE_COMMAND} -E create_symlink "flow_ebos" "${CMAKE_BINARY_DIR}/bin/flow")
-
+install(FILES ${CMAKE_BINARY_DIR}/bin/flow DESTINATION bin)
