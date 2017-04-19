@@ -43,6 +43,12 @@ for test_name in ${tests}; do
   if grep -q "spe12" <<< $test_name
   then
     copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow_ebos+spe1/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_ebos \
+      SPE1CASE2 \
+      EGRID INIT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe1/ \
       $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_legacy \
       SPE1CASE2 \
@@ -61,6 +67,12 @@ for test_name in ${tests}; do
   if grep -q "spe3" <<< $test_name
   then
     copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow_ebos+spe3/ \
+      $OPM_DATA_ROOT/spe3/opm-simulation-reference/flow_ebos \
+      SPE3CASE1 \
+      EGRID INIT PRT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe3/ \
       $OPM_DATA_ROOT/spe3/opm-simulation-reference/flow_legacy \
       SPE3CASE1 \
@@ -70,6 +82,12 @@ for test_name in ${tests}; do
   if grep -q "spe9" <<< $test_name
   then
     copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow_ebos+spe9/ \
+      $OPM_DATA_ROOT/spe9/opm-simulation-reference/flow_ebos \
+      SPE9_CP_SHORT \
+      EGRID INIT PRT SMSPEC UNRST UNSMRY
+
+      copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe9/ \
       $OPM_DATA_ROOT/spe9/opm-simulation-reference/flow_legacy \
       SPE9_CP_SHORT \
@@ -79,6 +97,12 @@ for test_name in ${tests}; do
   if grep -q "norne_init" <<< $test_name
   then
     copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/init/flow_ebos+norne/ \
+      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_ebos \
+      NORNE_ATW2013 \
+      EGRID INIT
+
+    copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/init/flow_legacy+norne/ \
       $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_legacy \
       NORNE_ATW2013 \
@@ -87,6 +111,12 @@ for test_name in ${tests}; do
 
   if grep -q "norne_full" <<< $test_name
   then
+    copyToReferenceDir \
+      deps/opm-data/norne/flow_ebos/ \
+      $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_ebos \
+      NORNE_ATW2013 \
+      UNSMRY
+
     copyToReferenceDir \
       deps/opm-data/norne/flow_legacy/ \
       $OPM_DATA_ROOT/norne/opm-simulation-reference/flow_legacy \
