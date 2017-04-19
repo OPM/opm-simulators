@@ -942,14 +942,64 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
         }
     }
 
+    // Get max oil saturation vector
     const std::vector<double>& BlackoilPropsAdFromDeck::satOilMax() const
     {
         return satOilMax_;
     }
 
+    // Set max oil saturation vector
     void BlackoilPropsAdFromDeck::setSatOilMax(const std::vector<double>& max_sat) {
         assert(satOilMax_.size() == max_sat.size());
         satOilMax_ = max_sat;
+    }
+
+    /// Bubble point pressures
+    std::vector<double> BlackoilPropsAdFromDeck::bubblePointPressure(const Cells& cells,
+            const V& T,
+            const V& rs) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call bubblePointPressure(): gas phase not active.");
+        }
+        const int n = cells.size();
+        std::vector<double> Pb(n, 0.0);
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            try {
+                Pb[i] = FluidSystem::oilPvt().saturationPressure(pvtRegionIdx, T[i], rs[i]);
+            }
+            catch (const NumericalProblem&) {
+                // Ignore
+            }
+        }
+
+        return Pb;
+    }
+
+    /// Dew point pressures
+    std::vector<double> BlackoilPropsAdFromDeck::dewPointPressure(const Cells& cells,
+            const V& T,
+            const V& rv) const
+    {
+        if (!phase_usage_.phase_used[Gas]) {
+            OPM_THROW(std::runtime_error, "Cannot call dewPointPressure(): gas phase not active.");
+        }
+        const int n = cells.size();
+        std::vector<double> Pd(n, 0.0);
+
+        for (int i = 0; i < n; ++i) {
+            unsigned pvtRegionIdx = cellPvtRegionIdx_[cells[i]];
+            try {
+                Pd[i] = FluidSystem::gasPvt().saturationPressure(pvtRegionIdx, T[i], rv[i]);
+            }
+            catch (const NumericalProblem&) {
+                // Ignore
+            }
+        }
+
+        return Pd;
     }
 
     /// Set capillary pressure scaling according to pressure diff. and initial water saturation.

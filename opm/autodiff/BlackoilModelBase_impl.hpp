@@ -464,6 +464,8 @@ typedef Eigen::Array<double,
         , rsSat(ADB::null())
         , rvSat(ADB::null())
         , soMax()
+        , Pb()
+        , Pd()
         , krnswdc_ow()
         , krnswdc_go()
         , pcswmdc_ow()
@@ -670,6 +672,13 @@ typedef Eigen::Array<double,
                     sd_.soMax = fluid_.satOilMax();
                     fluid_.getGasOilHystParams(sd_.krnswdc_go, sd_.pcswmdc_go, cells_);
                     fluid_.getOilWaterHystParams(sd_.krnswdc_ow, sd_.pcswmdc_ow, cells_);
+
+                    sd_.Pb = fluid_.bubblePointPressure(cells_,
+                            state.temperature.value(),
+                            state.rs.value());
+                    sd_.Pd = fluid_.dewPointPressure(cells_,
+                            state.temperature.value(),
+                            state.rv.value());
                 }
             }
             else {
