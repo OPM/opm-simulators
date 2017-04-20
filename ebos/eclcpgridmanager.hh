@@ -248,6 +248,8 @@ protected:
         // equilGrid_being a shallow copy only the global view.
         equilGrid_ = new Dune::CpGrid(*grid_);
         equilCartesianIndexMapper_ = new CartesianIndexMapper(*equilGrid_);
+
+        globalTrans_ = nullptr;
     }
 
     Grid* grid_;
