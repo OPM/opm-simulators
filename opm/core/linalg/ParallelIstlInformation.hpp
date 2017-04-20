@@ -27,6 +27,12 @@
 #include <boost/any.hpp>
 #include <exception>
 
+#include <algorithm>
+#include <functional>
+#include <limits>
+#include <numeric>
+#include <type_traits>
+
 #if HAVE_MPI && HAVE_DUNE_ISTL
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
@@ -36,12 +42,6 @@
 #include <dune/common/parallel/communicator.hh>
 #include <dune/common/enumset.hh>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
-
-#include <algorithm>
-#include <functional>
-#include <limits>
-#include <numeric>
-#include <type_traits>
 
 namespace Opm
 {
