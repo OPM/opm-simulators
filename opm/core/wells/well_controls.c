@@ -127,6 +127,8 @@ well_controls_destroy(struct WellControls *ctrl)
         free             (ctrl->distr);
         free             (ctrl->target);
         free             (ctrl->type);
+        free             (ctrl->alq);
+        free             (ctrl->vfp);
     }
 
     free(ctrl);
