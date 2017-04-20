@@ -34,6 +34,8 @@ namespace Opm
         /// Return type for linearSolve(). A simple, non-ad vector type.
         typedef LinearisedBlackoilResidual::ADB::V SolutionVector;
 
+        virtual ~NewtonIterationBlackoilInterface() {}
+
         /// Solve the linear system Ax = b, with A being the
         /// combined derivative matrix of the residual and b
         /// being the residual itself.
