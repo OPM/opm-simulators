@@ -1,8 +1,8 @@
 #
-# spec file for package opm-autodiff
+# spec file for package opm-simulators
 #
 
-%define tag rc1
+%define tag rc2
 
 Name:           opm-simulators
 Version:        2017.04
