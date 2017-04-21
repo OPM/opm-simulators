@@ -303,14 +303,15 @@ namespace Opm {
                 // Compute and store mobilities.
                 const int canonical_phase_idx = canph_[ phase_idx ];
                 const ADB& phase_pressure = state.canonical_phase_pressures[canonical_phase_idx];
-                const ADB mu = asImpl().fluidViscosity(canonical_phase_idx, phase_pressure, state.temperature, state.rs, state.rv, cond);
+                sd_.rq[phase_idx].mu = asImpl().fluidViscosity(canonical_phase_idx, phase_pressure, state.temperature, state.rs, state.rv, cond);
+                sd_.rq[phase_idx].kr = kr[canonical_phase_idx];
                 // Note that the pressure-dependent transmissibility multipliers are considered
                 // part of the mobility here.
-                sd_.rq[ phase_idx ].mob = tr_mult * kr[phase_idx] / mu;
+                sd_.rq[ phase_idx ].mob = tr_mult * sd_.rq[phase_idx].kr / sd_.rq[phase_idx].mu;
 
                 // Compute head differentials. Gravity potential is done using the face average as in eclipse and MRST.
-                const ADB rho = asImpl().fluidDensity(canonical_phase_idx, sd_.rq[phase_idx].b, state.rs, state.rv);
-                const ADB rhoavg = ops_.caver * rho;
+                sd_.rq[phase_idx].rho = asImpl().fluidDensity(canonical_phase_idx, sd_.rq[phase_idx].b, state.rs, state.rv);
+                const ADB rhoavg = ops_.caver * sd_.rq[phase_idx].rho;
                 sd_.rq[ phase_idx ].dh = ops_.grad * phase_pressure -  rhoavg * gdz;
 
                 if (is_first_iter_) {
