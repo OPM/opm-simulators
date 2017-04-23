@@ -53,8 +53,11 @@ namespace Opm {
         typedef BlackoilSequentialModelParameters ModelParameters;
         typedef DefaultBlackoilSolutionState SolutionState;
 
-        typedef BlackoilPressureModel<Grid, WellModel> PressureModel;
-        typedef BlackoilTransportModel<Grid, WellModel> TransportModel;
+        typedef PressureModelT<Grid, WellModel> PressureModel;
+        typedef TransportModelT<Grid, WellModel> TransportModel;
+        typedef NonlinearSolver<PressureModel> PressureSolver;
+        typedef NonlinearSolver<TransportModel> TransportSolver;
+
         typedef typename TransportModel::SimulatorData SimulatorData;
         typedef typename TransportModel::FIPDataType   FIPDataType;
 
@@ -297,11 +300,6 @@ namespace Opm {
         { return failureReport_; }
 
     protected:
-        typedef PressureModelT<Grid, WellModel> PressureModel;
-        typedef TransportModelT<Grid, WellModel> TransportModel;
-        typedef NonlinearSolver<PressureModel> PressureSolver;
-        typedef NonlinearSolver<TransportModel> TransportSolver;
-
         SimulatorReport failureReport_;
 
         std::unique_ptr<PressureModel> pressure_model_;
