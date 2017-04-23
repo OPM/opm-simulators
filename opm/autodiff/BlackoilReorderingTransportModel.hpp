@@ -227,12 +227,12 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilReorderingTransportModel(const typename Base::ModelParameters&   param,
                                          const Grid&                             grid,
-                                         const BlackoilPropsAdInterface&         fluid,
+                                         const BlackoilPropsAdFromDeck&          fluid,
                                          const DerivedGeology&                   geo,
                                          const RockCompressibility*              rock_comp_props,
                                          const StandardWells&                    std_wells,
                                          const NewtonIterationBlackoilInterface& linsolver,
-                                         Opm::EclipseStateConstPtr               eclState,
+                                         std::shared_ptr<const EclipseState>     eclState,
                                          const bool                              has_disgas,
                                          const bool                              has_vapoil,
                                          const bool                              terminal_output)
@@ -289,12 +289,9 @@ namespace Opm {
 
 
         template <class NonlinearSolverType>
-        IterationReport nonlinearIteration(const int iteration,
+        SimulatorReport nonlinearIteration(const int iteration,
                                            const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& nonlinear_solver,
-        // IterationReport nonlinearIteration(const int /* iteration */,
-        //                                    const SimulatorTimerInterface& /* timer */,
-        //                                    NonlinearSolverType& /* nonlinear_solver */,
                                            ReservoirState& reservoir_state,
                                            const WellState& well_state)
         {
@@ -331,11 +328,9 @@ namespace Opm {
             }
 
             // Create report and exit.
-            const bool failed = false;
-            const bool converged = true;
-            const int linear_iterations = 0;
-            const int well_iterations = std::numeric_limits<int>::min();
-            return IterationReport{failed, converged, linear_iterations, well_iterations};
+            SimulatorReport report;
+            report.converged = true;
+            return report;
         }
 
 
@@ -404,19 +399,19 @@ namespace Opm {
             CellState<T> flatten() const
             {
                 return CellState<T>{
-                    { s[0].value, s[1].value, s[2].value },
-                    rs.value,
-                    rv.value,
-                    { p[0].value, p[1].value, p[2].value },
-                    { kr[0].value, kr[1].value, kr[2].value },
-                    { pc[0].value, pc[1].value, pc[2].value },
-                    temperature.value,
-                    { mu[0].value, mu[1].value, mu[2].value },
-                    { b[0].value, b[1].value, b[2].value },
-                    { lambda[0].value, lambda[1].value, lambda[2].value },
-                    { rho[0].value, rho[1].value, rho[2].value },
-                    rssat.value,
-                    rvsat.value
+                    { s[0].value(), s[1].value(), s[2].value() },
+                    rs.value(),
+                    rv.value(),
+                    { p[0].value(), p[1].value(), p[2].value() },
+                    { kr[0].value(), kr[1].value(), kr[2].value() },
+                    { pc[0].value(), pc[1].value(), pc[2].value() },
+                    temperature.value(),
+                    { mu[0].value(), mu[1].value(), mu[2].value() },
+                    { b[0].value(), b[1].value(), b[2].value() },
+                    { lambda[0].value(), lambda[1].value(), lambda[2].value() },
+                    { rho[0].value(), rho[1].value(), rho[2].value() },
+                    rssat.value(),
+                    rvsat.value()
                 };
             }
         };
@@ -710,10 +705,10 @@ namespace Opm {
         void applyThresholdPressure(const int connection, Eval& dp)
         {
             const double thres_press = Base::threshold_pressures_by_connection_[connection];
-            if (std::fabs(dp.value) < thres_press) {
-                dp.value = 0.0;
+            if (std::fabs(dp.value()) < thres_press) {
+                dp.setValue(0.0);
             } else {
-                dp.value -= dp.value > 0.0 ? thres_press : -thres_press;
+                dp -= dp.value() > 0.0 ? thres_press : -thres_press;
             }
         }
 
@@ -770,8 +765,8 @@ namespace Opm {
                 const double tran = trans_all_[conn.index]; // TODO: include tr_mult effect.
                 const auto& m1 = st.lambda;
                 const auto& m2 = cstate_[other].lambda;
-                const auto upw = connectionMultiPhaseUpwind({{ dh_sat[Water].value, dh_sat[Oil].value, dh_sat[Gas].value }},
-                                                            {{ m1[Water].value, m1[Oil].value, m1[Gas].value }},
+                const auto upw = connectionMultiPhaseUpwind({{ dh_sat[Water].value(), dh_sat[Oil].value(), dh_sat[Gas].value() }},
+                                                            {{ m1[Water].value(), m1[Oil].value(), m1[Gas].value() }},
                                                             {{ m2[Water], m2[Oil], m2[Gas] }},
                                                             tran, vt);
                 // if (upw[0] != upw[1] || upw[1] != upw[2]) {
@@ -821,12 +816,12 @@ namespace Opm {
             const Eval oileq = Base::pvdt_[cell]*(ao - ao0) + div_oilflux;
             const Eval gaseq = Base::pvdt_[cell]*(ag - ag0) + div_gasflux;
 
-            res[0] = oileq.value;
-            res[1] = gaseq.value;
-            jac[0][0] = oileq.derivatives[0];
-            jac[0][1] = oileq.derivatives[1];
-            jac[1][0] = gaseq.derivatives[0];
-            jac[1][1] = gaseq.derivatives[1];
+            res[0] = oileq.value();
+            res[1] = gaseq.value();
+            jac[0][0] = oileq.derivative(0);
+            jac[0][1] = oileq.derivative(1);
+            jac[1][0] = gaseq.derivative(0);
+            jac[1][1] = gaseq.derivative(1);
         }
 
 

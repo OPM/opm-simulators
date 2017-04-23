@@ -430,19 +430,19 @@ namespace Opm
         /// Direct access to lower-level water pvt props.
         const WaterPvt& waterProps() const
         {
-            return *waterPvt_;
+            return FluidSystem::waterPvt();
         }
 
         /// Direct access to lower-level oil pvt props.
         const OilPvt& oilProps() const
         {
-            return *oilPvt_;
+            return FluidSystem::oilPvt();
         }
 
         /// Direct access to lower-level gas pvt props.
         const GasPvt& gasProps() const
         {
-            return *gasPvt_;
+            return FluidSystem::gasPvt();
         }
 
         /// Direct access to lower-level saturation functions.
