@@ -1365,7 +1365,7 @@ namespace Opm {
                 // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
                 // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
                 // rs and rv with the values passed by the localState.
-                // Volume factors and densities needs to be recalculated with the updated rs and rv values.
+                // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
                 if (ebosSimulator_.episodeIndex() < 0 && vapour_active && liquid_active ) {
 
                     Rs[cellIdx] = localState.getCellData( BlackoilState::GASOILRATIO )[cellIdx];
@@ -1380,7 +1380,7 @@ namespace Opm {
                     rv_eval.setValue( Rv[cellIdx] );
                     fs_updated.setRv(rv_eval);
 
-                    //re-compute the volume factors and densities.
+                    //re-compute the volume factors, viscosities and densities.
                     rhoOil[cellIdx] = FluidSystem::density(fs_updated,
                                                            FluidSystem::oilPhaseIdx,
                                                            intQuants.pvtRegionIndex()).value();
@@ -1392,6 +1392,13 @@ namespace Opm {
                                                            FluidSystem::oilPhaseIdx,
                                                            intQuants.pvtRegionIndex()).value();
                     bGas[cellIdx] = FluidSystem::inverseFormationVolumeFactor(fs_updated,
+                                                           FluidSystem::gasPhaseIdx,
+                                                           intQuants.pvtRegionIndex()).value();
+
+                    muOil[cellIdx] = FluidSystem::viscosity(fs_updated,
+                                                           FluidSystem::oilPhaseIdx,
+                                                           intQuants.pvtRegionIndex()).value();
+                    muGas[cellIdx] = FluidSystem::viscosity(fs_updated,
                                                            FluidSystem::gasPhaseIdx,
                                                            intQuants.pvtRegionIndex()).value();
 
