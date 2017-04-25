@@ -33,7 +33,7 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL,2,4)
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,4)
 #include <dune/istl/bcrsmatrix.hh>
 #else
 // Include matrix header with hackery to make it possible to inherit.
@@ -80,7 +80,7 @@ namespace Opm
             this->m = cols;
 
             typedef Super::size_type size_type ;
-#if DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2, 4, 1)
+#if DUNE_VERSION_NEWER_REV(DUNE_COMMON, 2, 4, 1)
             size_type& nnz = this->nnz_;
             std::shared_ptr<size_type>& j = this->j_;
 #else
@@ -90,8 +90,8 @@ namespace Opm
 
             nnz = ia[rows];
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
-    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
+    #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 5)
             this->allocationSize_ = nnz;
     #else
             this->allocationSize = nnz;
