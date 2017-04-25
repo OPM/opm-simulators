@@ -428,7 +428,6 @@ namespace Opm
         // Initialise the reservoir state. Updated fluid props for SWATINIT.
         // Writes to:
         //   state_
-        //   threshold_pressures_
         //   fluidprops_ (if SWATINIT is used)
         void setupState()
         {
@@ -498,16 +497,9 @@ namespace Opm
                                           props, deck(), gravity(), *state_);
             }
 
-            // The capillary pressure is scaled in fluidprops_ to match the scaled capillary pressure in props.
-            if (deck().hasKeyword("SWATINIT")) {
-                const int numCells = Opm::UgGridHelpers::numCells(grid);
-                std::vector<int> cells(numCells);
-                for (int c = 0; c < numCells; ++c) { cells[c] = c; }
-                std::vector<double> pc = state_->saturation();
-                props.capPress(numCells, state_->saturation().data(), cells.data(), pc.data(), nullptr);
-                fluidprops_->setSwatInitScaling(state_->saturation(), pc);
-            }
             initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid), deck().hasKeyword("DISGAS"), deck().hasKeyword("VAPOIL"));
+
+            ebosSimulator_->problem().applySwatinit();
         }
 
         // Extract messages from parser.
