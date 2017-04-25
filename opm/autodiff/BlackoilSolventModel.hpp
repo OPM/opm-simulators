@@ -91,6 +91,10 @@ namespace Opm {
         using Base::wellModel;
 
 
+        std::vector<std::vector<double> >
+        computeFluidInPlace(const ReservoirState& x,
+                            const std::vector<int>& fipnum);
+
     protected:
 
         // ---------  Types and enums  ---------
@@ -229,7 +233,6 @@ namespace Opm {
                          const ADB& so,
                          const ADB& sg,
                          const ADB& ss) const;
-
     };
 
 
