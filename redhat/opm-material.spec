@@ -16,7 +16,7 @@ BuildRequires:  blas-devel lapack-devel dune-common-devel
 BuildRequires:  git suitesparse-devel doxygen bc
 BuildRequires:  tinyxml-devel dune-istl-devel ert.ecl-devel
 BuildRequires:  opm-parser-devel opm-common-devel
-%{?el6:BuildRequires:  cmake28 devtoolset-2 boost148-devel}
+%{?el6:BuildRequires:  cmake28 devtoolset-3-toolchain boost148-devel}
 %{?!el6:BuildRequires:  cmake gcc gcc-gfortran gcc-c++ boost-devel}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -43,8 +43,8 @@ This package contains the documentation files for opm-material
 
 # consider using -DUSE_VERSIONED_DIR=ON if backporting
 %build
-%{?el6:scl enable devtoolset-2 bash}
-%{?el6:cmake28} %{?!el6:cmake} -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF %{?el6:-DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-2/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-2/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-2/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=%{_libdir}/boost148 -DBOOST_INCLUDEDIR=%{_includedir}/boost148}
+%{?el6:scl enable devtoolset-3 bash}
+%{?el6:cmake28} %{?!el6:cmake} -DBUILD_SHARED_LIBS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSTRIP_DEBUGGING_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_DOCDIR=share/doc/%{name}-%{version} -DUSE_RUNPATH=OFF -DWITH_NATIVE=OFF %{?el6:-DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-3/root/usr/bin/g++ -DCMAKE_C_COMPILER=/opt/rh/devtoolset-3/root/usr/bin/gcc -DCMAKE_Fortran_COMPILER=/opt/rh/devtoolset-3/root/usr/bin/gfortran -DBOOST_LIBRARYDIR=%{_libdir}/boost148 -DBOOST_INCLUDEDIR=%{_includedir}/boost148}
 make
 
 %install
