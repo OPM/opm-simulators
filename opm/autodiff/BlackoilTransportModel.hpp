@@ -111,6 +111,16 @@ namespace Opm {
             SolutionState state = asImpl().variableState(reservoir_state, well_state);
 
             if (initial_assembly) {
+
+                // HACK
+                const_cast<V&>(total_flux_)
+                    = Eigen::Map<const V>(reservoir_state.faceflux().data(), reservoir_state.faceflux().size());
+                const_cast<V&>(total_wellperf_flux_)
+                    = Eigen::Map<const V>(well_state.perfRates().data(), well_state.perfRates().size());
+                const_cast<DataBlock&>(comp_wellperf_flux_)
+                    = Eigen::Map<const DataBlock>(well_state.perfPhaseRates().data(), well_state.perfRates().size(), numPhases());
+                assert(numPhases() * well_state.perfRates().size() == well_state.perfPhaseRates().size());
+
                 is_first_iter_ = true;
                 // Create the (constant, derivativeless) initial state.
                 SolutionState state0 = state;
@@ -228,15 +238,6 @@ namespace Opm {
         variableState(const ReservoirState& x,
                       const WellState& xw) const
         {
-            // HACK
-            const_cast<V&>(total_flux_)
-                = Eigen::Map<const V>(x.faceflux().data(), x.faceflux().size());
-            const_cast<V&>(total_wellperf_flux_)
-                = Eigen::Map<const V>(xw.perfRates().data(), xw.perfRates().size());
-            const_cast<DataBlock&>(comp_wellperf_flux_)
-                = Eigen::Map<const DataBlock>(xw.perfPhaseRates().data(), xw.perfRates().size(), numPhases());
-            assert(numPhases() * xw.perfRates().size() == xw.perfPhaseRates().size());
-
             // As Base::variableState(), except making Pressure, Qs and Bhp constants.
             std::vector<V> vars0 = asImpl().variableStateInitials(x, xw);
             std::vector<ADB> vars = ADB::variables(vars0);
