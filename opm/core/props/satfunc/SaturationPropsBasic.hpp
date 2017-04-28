@@ -43,7 +43,7 @@ namespace Opm
         /// The following parameters are accepted (defaults):
         ///    - num_phases   (2)        -- Must be 1 or 2.
         ///    - relperm_func ("Linear") -- Must be "Constant", "Linear" or "Quadratic".
-        void init(const parameter::ParameterGroup& param);
+        void init(const ParameterGroup& param);
 
         enum RelPermFunc { Constant, Linear, Quadratic };
 

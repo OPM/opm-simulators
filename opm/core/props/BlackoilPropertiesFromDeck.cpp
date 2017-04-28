@@ -47,7 +47,7 @@ namespace Opm
     BlackoilPropertiesFromDeck::BlackoilPropertiesFromDeck(const Opm::Deck& deck,
                                                            const Opm::EclipseState& eclState,
                                                            const UnstructuredGrid& grid,
-                                                           const parameter::ParameterGroup& param,
+                                                           const ParameterGroup& param,
                                                            bool init_rock)
     {
         std::vector<int> compressedToCartesianIdx
@@ -81,7 +81,7 @@ namespace Opm
                                                            int number_of_cells,
                                                            const int* global_cell,
                                                            const int* cart_dims,
-                                                           const parameter::ParameterGroup& param,
+                                                           const ParameterGroup& param,
                                                            bool init_rock)
     {
         std::vector<int> compressedToCartesianIdx
@@ -106,7 +106,7 @@ namespace Opm
                                                            int number_of_cells,
                                                            const int* global_cell,
                                                            const int* cart_dims,
-                                                           const parameter::ParameterGroup& param,
+                                                           const ParameterGroup& param,
                                                            bool init_rock)
     {
         init(deck,
@@ -151,7 +151,7 @@ namespace Opm
                                                  int number_of_cells,
                                                  const int* global_cell,
                                                  const int* cart_dims,
-                                                 const parameter::ParameterGroup& param,
+                                                 const ParameterGroup& param,
                                                  bool init_rock)
     {
         // retrieve the cell specific PVT table index from the deck

@@ -32,9 +32,9 @@ namespace Opm
 {
 
     class IncompPropertiesInterface;
+    class ParameterGroup;
     class VelocityInterpolationInterface;
     class DGBasisInterface;
-    namespace parameter { class ParameterGroup; }
     template <typename T> class SparseTable;
 
     /// Implements a discontinuous Galerkin solver for
@@ -72,7 +72,7 @@ namespace Opm
         ///             - AsSimultaneousPostProcess  -- Apply to each cell independently, using un-
         ///                                             limited solution in neighbouring cells.
         TofDiscGalReorder(const UnstructuredGrid& grid,
-                          const parameter::ParameterGroup& param);
+                          const ParameterGroup& param);
 
 
         /// Solve for time-of-flight.

@@ -108,7 +108,7 @@ namespace Opm
 
 
     /// Initialize from parameters.
-    void SaturationPropsBasic::init(const parameter::ParameterGroup& param)
+    void SaturationPropsBasic::init(const ParameterGroup& param)
     {
         int num_phases = param.getDefault("num_phases", 2);
         if (num_phases > 2 || num_phases < 1) {

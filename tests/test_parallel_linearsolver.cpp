@@ -42,7 +42,7 @@
 #include <cstdlib>
 #include <string>
 
-void run_test(const Opm::parameter::ParameterGroup& param)
+void run_test(const Opm::ParameterGroup& param)
 {
     int N=100;
     int start, end, istart, iend;
@@ -63,7 +63,7 @@ void run_test(const Opm::parameter::ParameterGroup& param)
 #ifdef HAVE_DUNE_ISTL
 BOOST_AUTO_TEST_CASE(CGAMGTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("1"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(CGAMGTest)
 
 BOOST_AUTO_TEST_CASE(CGILUTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("0"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(CGILUTest)
 
 BOOST_AUTO_TEST_CASE(BiCGILUTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("2"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));

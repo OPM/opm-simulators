@@ -411,7 +411,7 @@ namespace Opm
     template <class State>
     void initStateBasic(const UnstructuredGrid& grid,
                         const IncompPropertiesInterface& props,
-                        const parameter::ParameterGroup& param,
+                        const ParameterGroup& param,
                         const double gravity,
                         State& state)
     {
@@ -432,7 +432,7 @@ namespace Opm
                         CCI begin_cell_centroids,
                         int dimensions,
                         const IncompPropertiesInterface& props,
-                        const parameter::ParameterGroup& param,
+                        const ParameterGroup& param,
                         const double gravity,
                         State& state)
 {
@@ -535,7 +535,7 @@ namespace Opm
     template <class State>
     void initStateBasic(const UnstructuredGrid& grid,
                         const BlackoilPropertiesInterface& props,
-                        const parameter::ParameterGroup& param,
+                        const ParameterGroup& param,
                         const double gravity,
                         State& state)
     {
@@ -555,7 +555,7 @@ namespace Opm
                         CCI begin_cell_centroids,
                         int dimensions,
                         const BlackoilPropertiesInterface& props,
-                        const parameter::ParameterGroup& param,
+                        const ParameterGroup& param,
                         const double gravity,
                         State& state)
     {

@@ -59,7 +59,7 @@ namespace Opm
 
 
 
-    LinearSolverFactory::LinearSolverFactory(const parameter::ParameterGroup& param)
+    LinearSolverFactory::LinearSolverFactory(const ParameterGroup& param)
     {
 #if HAVE_SUITESPARSE_UMFPACK_H
         std::string default_solver = "umfpack";

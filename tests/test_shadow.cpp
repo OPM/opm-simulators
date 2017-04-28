@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(shadowPorosity)
     const double defaultPorosity = 1.0;
     const double newPorosity = 0.5;
 
-    parameter::ParameterGroup param;
+    ParameterGroup param;
     IncompPropertiesBasic basic (param, 2, 1);
     IncompPropertiesShadow shadow (basic);
     BOOST_CHECK_CLOSE (*(shadow.porosity()), defaultPorosity, 0.001);

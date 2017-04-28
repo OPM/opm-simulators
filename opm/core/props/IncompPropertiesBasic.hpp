@@ -51,7 +51,7 @@ namespace Opm
         ///   - \c mu1 \c mu2, \c mu3    (1.0)      -- Viscosity in cP.
         ///   - \c porosity              (1.0)      -- Porosity.
         ///   - \c permeability          (100.0)    -- Permeability in mD.
-        IncompPropertiesBasic(const parameter::ParameterGroup& param,
+        IncompPropertiesBasic(const ParameterGroup& param,
                               const int dim,
                               const int num_cells);
 

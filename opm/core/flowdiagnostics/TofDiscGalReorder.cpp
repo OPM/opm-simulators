@@ -40,7 +40,7 @@ namespace Opm
 
     /// Construct solver.
     TofDiscGalReorder::TofDiscGalReorder(const UnstructuredGrid& grid,
-                                         const parameter::ParameterGroup& param)
+                                         const ParameterGroup& param)
         : grid_(grid),
           use_cvi_(false),
           use_limiter_(false),

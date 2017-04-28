@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE (GwsegStandard)
     
     //std::cout << "==================================== GwsegStandard ====================================" << std::endl;
 
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPSBase)
     
     //std::cout << "==================================== GwsegEPSBase ====================================" << std::endl;
     
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_A)
     
     //std::cout << "==================================== GwsegEPS_A ====================================" << std::endl;
     
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -486,7 +486,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_C)
     
     //std::cout << "==================================== GwsegEPS_C ====================================" << std::endl;
     
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -589,7 +589,7 @@ BOOST_AUTO_TEST_CASE (GwsegEPS_D)
     
     //std::cout << "==================================== GwsegEPS_D ====================================" << std::endl;
 
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     
     Opm::GridManager gm(1, 1, 10, 1.0, 1.0, 5.0);
     const UnstructuredGrid& grid = *(gm.c_grid());

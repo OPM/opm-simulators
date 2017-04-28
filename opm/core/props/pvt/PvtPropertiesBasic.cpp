@@ -33,7 +33,7 @@ namespace Opm
     }
 
 
-    void PvtPropertiesBasic::init(const parameter::ParameterGroup& param)
+    void PvtPropertiesBasic::init(const ParameterGroup& param)
     {
         int num_phases = param.getDefault("num_phases", 2);
         if (num_phases > 3 || num_phases < 1) {

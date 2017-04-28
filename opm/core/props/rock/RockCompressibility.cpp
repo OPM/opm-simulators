@@ -33,7 +33,7 @@
 namespace Opm
 {
 
-    RockCompressibility::RockCompressibility(const parameter::ParameterGroup& param)
+    RockCompressibility::RockCompressibility(const ParameterGroup& param)
         : pref_(0.0),
           rock_comp_(0.0)
     {

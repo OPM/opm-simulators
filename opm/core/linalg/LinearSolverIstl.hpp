@@ -52,7 +52,7 @@ namespace Opm
         /// Construct from parameters
         /// Accepted parameters are, with defaults, listed in the
         /// default constructor.
-        LinearSolverIstl(const parameter::ParameterGroup& param);
+        LinearSolverIstl(const ParameterGroup& param);
 
         /// Destructor.
         virtual ~LinearSolverIstl();

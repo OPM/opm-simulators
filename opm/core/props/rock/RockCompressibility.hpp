@@ -27,7 +27,7 @@
 namespace Opm
 {
 
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
 
     class RockCompressibility
     {
@@ -41,7 +41,7 @@ namespace Opm
         /// Accepts the following parameters (with defaults).
         ///    rock_compressibility_pref (100.0)   [given in bar]
         ///    rock_compressibility      (0.0)     [given in bar^{-1}]
-        RockCompressibility(const parameter::ParameterGroup& param);
+        RockCompressibility(const ParameterGroup& param);
 
         /// Returns true if there are compressibility effects.
         bool isActive() const;

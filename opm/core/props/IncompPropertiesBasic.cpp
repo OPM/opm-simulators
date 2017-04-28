@@ -28,7 +28,7 @@
 namespace Opm
 {
 
-    IncompPropertiesBasic::IncompPropertiesBasic(const parameter::ParameterGroup& param,
+    IncompPropertiesBasic::IncompPropertiesBasic(const ParameterGroup& param,
                                                  const int dim,
                                                  const int num_cells)
     {

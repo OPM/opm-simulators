@@ -111,7 +111,7 @@ namespace Opm
 
 
 
-    LinearSolverIstl::LinearSolverIstl(const parameter::ParameterGroup& param)
+    LinearSolverIstl::LinearSolverIstl(const ParameterGroup& param)
         : linsolver_residual_tolerance_(1e-8),
           linsolver_verbosity_(0),
           linsolver_type_(CG_AMG),

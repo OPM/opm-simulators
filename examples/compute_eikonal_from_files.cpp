@@ -42,7 +42,7 @@
 
 namespace
 {
-    void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
+    void warnIfUnusedParams(const Opm::ParameterGroup& param)
     {
         if (param.anyUnused()) {
             std::cout << "--------------------   Warning: unused parameters:   --------------------\n";
@@ -61,7 +61,7 @@ try
 {
     using namespace Opm;
 
-    parameter::ParameterGroup param(argc, argv);
+    ParameterGroup param(argc, argv);
 
     // Read grid.
     GridManager grid_manager(param.get<std::string>("grid_filename"));

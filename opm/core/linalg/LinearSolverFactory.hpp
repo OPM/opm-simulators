@@ -27,7 +27,7 @@
 namespace Opm
 {
 
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
 
 
     /// Concrete class encapsulating any available linear solver.
@@ -55,7 +55,7 @@ namespace Opm
         /// Any further parameters are passed on to the constructors
         /// of the actual solver used, see LinearSolverUmfpack,
         /// LinearSolverIstl and LinearSolverPetsc for details.
-        LinearSolverFactory(const parameter::ParameterGroup& param);
+        LinearSolverFactory(const ParameterGroup& param);
 
         /// Destructor.
         virtual ~LinearSolverFactory();

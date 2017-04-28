@@ -109,7 +109,7 @@ void createRandomVectors(int NN, std::vector<double>& x, std::vector<double>& b,
     }
 }
 
-void run_test(const Opm::parameter::ParameterGroup& param)
+void run_test(const Opm::ParameterGroup& param)
 {
     int N=4;
     auto mat = createLaplacian(N);
@@ -126,7 +126,7 @@ void run_test(const Opm::parameter::ParameterGroup& param)
 
 BOOST_AUTO_TEST_CASE(DefaultTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
     param.insertParameter(std::string("linsolver_verbosity"), std::string("2"));
     run_test(param);
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(DefaultTest)
 #ifdef HAVE_DUNE_ISTL
 BOOST_AUTO_TEST_CASE(CGAMGTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("1"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(CGAMGTest)
 
 BOOST_AUTO_TEST_CASE(CGILUTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("0"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(CGILUTest)
 
 BOOST_AUTO_TEST_CASE(BiCGILUTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("2"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(BiCGILUTest)
 #if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
 BOOST_AUTO_TEST_CASE(FastAMGTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("3"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE(FastAMGTest)
 
 BOOST_AUTO_TEST_CASE(KAMGTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("istl"));
     param.insertParameter(std::string("linsolver_type"), std::string("4"));
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
@@ -188,7 +188,7 @@ BOOST_AUTO_TEST_CASE(KAMGTest)
 #if HAVE_PETSC
 BOOST_AUTO_TEST_CASE(PETScTest)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     param.insertParameter(std::string("linsolver"), std::string("petsc"));
     param.insertParameter(std::string("ksp_type"), std::string("cg"));
     param.insertParameter(std::string("pc_type"), std::string("jacobi"));

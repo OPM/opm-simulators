@@ -26,7 +26,7 @@
 namespace Opm
 {
 
-    BlackoilPropertiesBasic::BlackoilPropertiesBasic(const parameter::ParameterGroup& param,
+    BlackoilPropertiesBasic::BlackoilPropertiesBasic(const ParameterGroup& param,
                                                      const int dim,
                                                      const int num_cells)
     {
