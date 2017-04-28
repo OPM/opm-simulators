@@ -156,7 +156,7 @@ void checkTransmissibilityValues(const G&                  grid,
 
 BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersLegacyGridInterface)
 {
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     Opm::Parser parser;
     Opm::ParseContext parseContext;
 
@@ -271,7 +271,7 @@ BOOST_AUTO_TEST_CASE(TransmissibilityMultipliersCpGrid)
 
     Dune::MPIHelper::instance(argc, argv);
 
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     Opm::Parser parser;
     Opm::ParseContext parseContext;
 

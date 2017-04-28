@@ -42,7 +42,7 @@ namespace Opm
         ///                    choice of linear solver.
         /// \param[in] parallelInformation In the case of a parallel run
         ///                    with dune-istl the information about the parallelization.
-        NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param,
+        NewtonIterationBlackoilSimple(const ParameterGroup& param,
                                       const boost::any& parallelInformation=boost::any());
 
         /// Solve the system of linear equations Ax = b, with A being the

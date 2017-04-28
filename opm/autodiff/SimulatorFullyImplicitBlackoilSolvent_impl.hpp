@@ -24,7 +24,7 @@ namespace Opm
 {
     template <class GridT>
     SimulatorFullyImplicitBlackoilSolvent<GridT>::
-    SimulatorFullyImplicitBlackoilSolvent(const parameter::ParameterGroup& param,
+    SimulatorFullyImplicitBlackoilSolvent(const ParameterGroup& param,
                                           const GridT& grid,
                                           DerivedGeology& geo,
                                           BlackoilPropsAdFromDeck& props,

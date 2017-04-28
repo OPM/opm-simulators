@@ -47,7 +47,7 @@ namespace Opm
 
         NewtonIterationBlackoilInterleavedParameters() { reset(); }
         // read values from parameter class
-        NewtonIterationBlackoilInterleavedParameters( const parameter::ParameterGroup& param )
+        NewtonIterationBlackoilInterleavedParameters( const ParameterGroup& param )
         {
             // set default parameters
             reset();
@@ -89,7 +89,7 @@ namespace Opm
         /// \param[in] param   parameters controlling the behaviour of the linear solvers
         /// \param[in] parallelInformation In the case of a parallel run
         ///                                with dune-istl the information about the parallelization.
-        NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
+        NewtonIterationBlackoilInterleaved(const ParameterGroup& param,
                                            const boost::any& parallelInformation=boost::any());
 
         /// Solve the system of linear equations Ax = b, with A being the

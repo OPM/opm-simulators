@@ -38,7 +38,7 @@ namespace Opm
     /// Initialize from parameters. Accepts the following:
     ///    num_psteps    (default 1)
     ///    stepsize_days (default 1)
-    void SimulatorTimer::init(const parameter::ParameterGroup& param)
+    void SimulatorTimer::init(const ParameterGroup& param)
     {
         const int num_psteps = param.getDefault("num_psteps", 1);
         const double stepsize_days = param.getDefault("stepsize_days", 1.0);

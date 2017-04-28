@@ -201,7 +201,7 @@ namespace Opm
 
     template <class PhysicalModel>
     NonlinearSolver<PhysicalModel>::SolverParameters::
-    SolverParameters( const parameter::ParameterGroup& param )
+    SolverParameters( const ParameterGroup& param )
     {
         // set default values
         reset();

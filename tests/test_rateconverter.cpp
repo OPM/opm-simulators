@@ -57,7 +57,7 @@ struct SetupSimple {
         param.insertParameter("sat_tab_size"    , "0"     );
     }
 
-    Opm::parameter::ParameterGroup  param;
+    Opm::ParameterGroup  param;
     Opm::Deck                       deck;
     Opm::EclipseState               eclState;
 };

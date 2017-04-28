@@ -203,7 +203,7 @@ namespace Opm
         /// \param[in] param   ParameterGroup controlling the behaviour of the linear solvers
         /// \param[in] parallelInformation In the case of a parallel run
         ///                                with dune-istl the information about the parallelization.
-        ISTLSolver(const parameter::ParameterGroup& param,
+        ISTLSolver(const ParameterGroup& param,
                    const boost::any& parallelInformation_arg=boost::any())
         : iterations_( 0 ),
           parallelInformation_(parallelInformation_arg),

@@ -29,7 +29,7 @@
 namespace Opm
 {
 
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
 
     class SimulatorTimer : public SimulatorTimerInterface
     {
@@ -44,7 +44,7 @@ namespace Opm
         /// Initialize from parameters. Accepts the following:
         ///    num_psteps    (default 1)
         ///    stepsize_days (default 1)
-        void init(const parameter::ParameterGroup& param);
+        void init(const ParameterGroup& param);
 
         /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
         void init(const TimeMap& timeMap, size_t report_step = 0);

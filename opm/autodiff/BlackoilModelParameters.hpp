@@ -25,7 +25,7 @@
 namespace Opm
 {
 
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
 
     /// Solver parameters for the BlackoilModel.
     struct BlackoilModelParameters
@@ -69,7 +69,7 @@ namespace Opm
         std::string deck_file_name_;
 
         /// Construct from user parameters or defaults.
-        explicit BlackoilModelParameters( const parameter::ParameterGroup& param );
+        explicit BlackoilModelParameters( const ParameterGroup& param );
 
         /// Construct with default parameters.
         BlackoilModelParameters();

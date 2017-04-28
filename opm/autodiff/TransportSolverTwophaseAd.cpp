@@ -44,7 +44,7 @@ namespace Opm
                                                          const IncompPropertiesInterface& props,
                                                          const LinearSolverInterface& linsolver,
                                                          const double* gravity,
-                                                         const parameter::ParameterGroup& param)
+                                                         const ParameterGroup& param)
         : grid_(grid),
           props_(props),
           linsolver_(linsolver),

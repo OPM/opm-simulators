@@ -32,7 +32,7 @@ namespace Opm
     /// \param[in] linsolver   linear solver to use
     /// \param[in] parallelInformation In the case of a parallel run
     ///  with dune-istl the information about the parallelization.
-    NewtonIterationBlackoilSimple::NewtonIterationBlackoilSimple(const parameter::ParameterGroup& param,
+    NewtonIterationBlackoilSimple::NewtonIterationBlackoilSimple(const ParameterGroup& param,
                                                                  const boost::any& parallelInformation_arg)
         : iterations_( 0 ), parallelInformation_(parallelInformation_arg)
     {

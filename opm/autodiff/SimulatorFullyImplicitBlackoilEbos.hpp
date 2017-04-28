@@ -94,7 +94,7 @@ public:
     /// \param[in] output_writer
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
-                                       const parameter::ParameterGroup& param,
+                                       const ParameterGroup& param,
                                        DerivedGeology& geo,
                                        BlackoilPropsAdFromDeck& props,
                                        NewtonIterationBlackoilInterface& linsolver,
@@ -816,7 +816,7 @@ protected:
 
     SimulatorReport failureReport_;
 
-    const parameter::ParameterGroup param_;
+    const ParameterGroup param_;
     ModelParameters model_param_;
     SolverParameters solver_param_;
 

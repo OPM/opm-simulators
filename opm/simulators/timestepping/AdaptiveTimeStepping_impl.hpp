@@ -76,7 +76,7 @@ namespace Opm {
 
     AdaptiveTimeStepping::AdaptiveTimeStepping( const Tuning& tuning,
                                                 size_t time_step,
-                                                const parameter::ParameterGroup& param,
+                                                const ParameterGroup& param,
                                                 const bool terminal_output )
         : timeStepControl_()
         , restart_factor_( tuning.getTSFCNV(time_step) )
@@ -96,7 +96,7 @@ namespace Opm {
 
     }
 
-    AdaptiveTimeStepping::AdaptiveTimeStepping( const parameter::ParameterGroup& param,
+    AdaptiveTimeStepping::AdaptiveTimeStepping( const ParameterGroup& param,
                                                 const bool terminal_output )
         : timeStepControl_()
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.33) ) )
@@ -116,7 +116,7 @@ namespace Opm {
     }
 
     void AdaptiveTimeStepping::
-    init(const parameter::ParameterGroup& param)
+    init(const ParameterGroup& param)
     {
         // valid are "pid" and "pid+iteration"
         std::string control = param.getDefault("timestep.control", std::string("pid") );

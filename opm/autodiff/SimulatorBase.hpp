@@ -121,7 +121,7 @@ namespace Opm
         /// \param[in] eclipse_state the object which represents an internalized ECL deck
         /// \param[in] output_writer
         /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
-        SimulatorBase(const parameter::ParameterGroup& param,
+        SimulatorBase(const ParameterGroup& param,
                       const Grid& grid,
                       DerivedGeology& geo,
                       BlackoilPropsAdFromDeck& props,
@@ -193,7 +193,7 @@ namespace Opm
         typedef typename Model::ModelParameters ModelParameters;
         typedef typename Solver::SolverParameters SolverParameters;
 
-        const parameter::ParameterGroup param_;
+        const ParameterGroup param_;
         ModelParameters model_param_;
         SolverParameters solver_param_;
 

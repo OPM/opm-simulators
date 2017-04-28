@@ -51,7 +51,7 @@ class SimulatorFullyImplicitBlackoil
     typedef SimulatorBase<SimulatorFullyImplicitBlackoil<GridT> > Base;
 public:
     // forward the constructor to the base class
-    SimulatorFullyImplicitBlackoil(const parameter::ParameterGroup& param,
+    SimulatorFullyImplicitBlackoil(const ParameterGroup& param,
                                    const typename Base::Grid& grid,
                                    DerivedGeology& geo,
                                    BlackoilPropsAdFromDeck& props,

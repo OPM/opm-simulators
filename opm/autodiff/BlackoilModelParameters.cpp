@@ -34,7 +34,7 @@ namespace Opm
 
 
 
-    BlackoilModelParameters::BlackoilModelParameters( const parameter::ParameterGroup& param )
+    BlackoilModelParameters::BlackoilModelParameters( const ParameterGroup& param )
     {
         // set default values
         reset();

@@ -92,7 +92,7 @@ SET_BOOL_PROP(EclFlowProblem, EnableSwatinit, false);
 namespace Opm {
 
 
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
     class DerivedGeology;
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;

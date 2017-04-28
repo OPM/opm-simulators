@@ -65,7 +65,7 @@ try
     using namespace Opm;
 
     // std::cout << "\n================    Test program for single-cell solves with polymer    ===============\n\n";
-    parameter::ParameterGroup param(argc, argv, false);
+    ParameterGroup param(argc, argv, false);
     param.disableOutput();
     // std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 

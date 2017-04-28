@@ -91,7 +91,7 @@ namespace Opm
     class SimulatorCompressiblePolymer::Impl
     {
     public:
-        Impl(const parameter::ParameterGroup& param,
+        Impl(const ParameterGroup& param,
              const UnstructuredGrid& grid,
              const BlackoilPropertiesInterface& props,
              const PolymerProperties& poly_props,
@@ -140,7 +140,7 @@ namespace Opm
 
 
 
-    SimulatorCompressiblePolymer::SimulatorCompressiblePolymer(const parameter::ParameterGroup& param,
+    SimulatorCompressiblePolymer::SimulatorCompressiblePolymer(const ParameterGroup& param,
                                                                const UnstructuredGrid& grid,
                                                                const BlackoilPropertiesInterface& props,
                                                                const PolymerProperties& poly_props,
@@ -169,7 +169,7 @@ namespace Opm
 
 
 
-    SimulatorCompressiblePolymer::Impl::Impl(const parameter::ParameterGroup& param,
+    SimulatorCompressiblePolymer::Impl::Impl(const ParameterGroup& param,
                                              const UnstructuredGrid& grid,
                                              const BlackoilPropertiesInterface& props,
                                              const PolymerProperties& poly_props,

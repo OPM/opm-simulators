@@ -85,7 +85,7 @@ namespace Opm
         /// Dummy class, this Solver does not use a Model.
         struct Model
         {
-            typedef parameter::ParameterGroup ModelParameters;
+            typedef ParameterGroup ModelParameters;
         };
     };
 
@@ -101,7 +101,7 @@ namespace Opm
 
     public:
         /// Initialise from parameters and objects to observe.
-        SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
+        SimulatorFullyImplicitCompressiblePolymer(const ParameterGroup& param,
                                                   const GridT& grid,
                                                   DerivedGeology& geo,
                                                   BlackoilPropsAdFromDeck& props,

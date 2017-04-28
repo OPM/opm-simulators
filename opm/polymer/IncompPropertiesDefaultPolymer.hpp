@@ -40,7 +40,7 @@ namespace Opm
 	///    mu1 [mu2, mu3]     (1.0)       Viscosity in cP
 	///    porosity           (1.0)       Porosity
 	///    permeability       (100.0)     Permeability in mD
-        IncompPropertiesDefaultPolymer(const Opm::parameter::ParameterGroup& param, int dim, int num_cells)
+        IncompPropertiesDefaultPolymer(const Opm::ParameterGroup& param, int dim, int num_cells)
             : Opm::IncompPropertiesBasic(param, dim, num_cells)
         {
             assert(numPhases() == 2);

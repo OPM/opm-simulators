@@ -29,7 +29,7 @@
 namespace Opm
 {
 
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
 
     /// Interface class for SimulatorTimer objects, to be improved.
     class SimulatorTimerInterface

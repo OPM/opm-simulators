@@ -42,7 +42,7 @@ namespace Opm {
         //! \param param The parameter object
         //! \param pinfo The information about the data distribution
         //!              and communication for a parallel run.
-        AdaptiveTimeStepping( const parameter::ParameterGroup& param,
+        AdaptiveTimeStepping( const ParameterGroup& param,
                               const bool terminal_output = true );
 
         //! \brief contructor taking parameter object
@@ -53,7 +53,7 @@ namespace Opm {
         //!              and communication for a parallel run.
         AdaptiveTimeStepping( const Tuning& tuning,
                               size_t time_step,
-                              const parameter::ParameterGroup& param,
+                              const ParameterGroup& param,
                               const bool terminal_output = true );
 
         /** \brief  step method that acts like the solver::step method
@@ -105,7 +105,7 @@ namespace Opm {
                                   Output* outputWriter,
                                   const std::vector<int>* fipnum);
 
-        void init(const parameter::ParameterGroup& param);
+        void init(const ParameterGroup& param);
 
         typedef std::unique_ptr< TimeStepControlInterface > TimeStepControlType;
 

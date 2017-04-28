@@ -26,7 +26,7 @@ namespace Opm
 /// Class collecting all necessary components for a two-phase simulation.
 template <class GridT>
 SimulatorFullyImplicitCompressiblePolymer<GridT>::
-SimulatorFullyImplicitCompressiblePolymer(const parameter::ParameterGroup& param,
+SimulatorFullyImplicitCompressiblePolymer(const ParameterGroup& param,
                                           const GridT& grid,
                                           DerivedGeology& geo,
                                           BlackoilPropsAdFromDeck& props,

@@ -68,7 +68,7 @@ namespace Opm
     class SimulatorIncompTwophaseAd::Impl
     {
     public:
-        Impl(const parameter::ParameterGroup& param,
+        Impl(const ParameterGroup& param,
              const UnstructuredGrid& grid,
              const IncompPropertiesInterface& props,
              const RockCompressibility* rock_comp_props,
@@ -114,7 +114,7 @@ namespace Opm
 
 
 
-    SimulatorIncompTwophaseAd::SimulatorIncompTwophaseAd(const parameter::ParameterGroup& param,
+    SimulatorIncompTwophaseAd::SimulatorIncompTwophaseAd(const ParameterGroup& param,
                                                      const UnstructuredGrid& grid,
                                                      const IncompPropertiesInterface& props,
                                                      const RockCompressibility* rock_comp_props,
@@ -297,7 +297,7 @@ namespace Opm
 
 
 
-    SimulatorIncompTwophaseAd::Impl::Impl(const parameter::ParameterGroup& param,
+    SimulatorIncompTwophaseAd::Impl::Impl(const ParameterGroup& param,
                                         const UnstructuredGrid& grid,
                                         const IncompPropertiesInterface& props,
                                         const RockCompressibility* rock_comp_props,

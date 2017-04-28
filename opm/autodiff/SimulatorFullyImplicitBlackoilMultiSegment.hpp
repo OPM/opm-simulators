@@ -62,7 +62,7 @@ public:
     typedef typename Traits::WellModel WellModel;
 
     // forward the constructor to the base class
-    SimulatorFullyImplicitBlackoilMultiSegment(const parameter::ParameterGroup& param,
+    SimulatorFullyImplicitBlackoilMultiSegment(const ParameterGroup& param,
                                    const GridT& grid,
                                    DerivedGeology& geo,
                                    BlackoilPropsAdFromDeck& props,

@@ -26,7 +26,6 @@
 int main(int argc, char** argv)
 try
 {
-    using namespace Opm::parameter;
     using namespace Opm;
     ParameterGroup parameters(argc, argv, false);
     std::string file_name = parameters.getDefault<std::string > ("inputdeck", "data.data");

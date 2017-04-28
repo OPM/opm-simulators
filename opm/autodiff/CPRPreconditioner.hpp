@@ -324,7 +324,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
 
         CPRParameter() { reset(); }
 
-        CPRParameter( const parameter::ParameterGroup& param)
+        CPRParameter( const ParameterGroup& param)
         {
             // reset values to default
             reset();
