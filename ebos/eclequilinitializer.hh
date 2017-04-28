@@ -123,7 +123,7 @@ public:
         equilMaterialLawManager->initFromDeck(deck, eclState, compressedToCartesianEquilElemIdx);
 
         // create the data structures which are used by initStateEquil()
-        Opm::parameter::ParameterGroup tmpParam;
+        Opm::ParameterGroup tmpParam;
         Opm::BlackoilPropertiesFromDeck opmBlackoilProps(
             gridManager.deck(),
             gridManager.eclState(),
