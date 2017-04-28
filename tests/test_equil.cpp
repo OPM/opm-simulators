@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
     std::shared_ptr<UnstructuredGrid>
         G(create_grid_cart3d(10, 1, 10), destroy_grid);
 
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     {
         using Opm::unit::kilogram;
         using Opm::unit::meter;
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE (CellSubset)
     std::shared_ptr<UnstructuredGrid>
         G(create_grid_cart3d(10, 1, 10), destroy_grid);
 
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     {
         using Opm::unit::kilogram;
         using Opm::unit::meter;
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE (RegMapping)
     std::shared_ptr<UnstructuredGrid>
         G(create_grid_cart3d(10, 1, 10), destroy_grid);
 
-    Opm::parameter::ParameterGroup param;
+    Opm::ParameterGroup param;
     {
         using Opm::unit::kilogram;
         using Opm::unit::meter;
