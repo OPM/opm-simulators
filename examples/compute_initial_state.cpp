@@ -40,7 +40,7 @@
 
 namespace
 {
-    void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
+    void warnIfUnusedParams(const Opm::ParameterGroup& param)
     {
         if (param.anyUnused()) {
             std::cout << "--------------------   Unused parameters:   --------------------\n";
@@ -84,7 +84,7 @@ try
     using namespace Opm;
 
     // Setup.
-    parameter::ParameterGroup param(argc, argv);
+    ParameterGroup param(argc, argv);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
     const std::string deck_filename = param.get<std::string>("deck_filename");
     Opm::ParseContext parseContext;
