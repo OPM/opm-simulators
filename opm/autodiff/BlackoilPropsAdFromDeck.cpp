@@ -1061,9 +1061,16 @@ BlackoilPropsAdFromDeck::BlackoilPropsAdFromDeck(const BlackoilPropsAdFromDeck& 
             for (int i=0; i<n; ++i) {
                 if (satOilMax_[cells[i]] > vap_satmax_guard_ && so.value()[i] < satOilMax_[cells[i]]) {
                     // guard against too small saturation values.
-                    const double so_i= std::max(so.value()[i],eps_sqrt);
-                    factor[i] = std::pow(so_i/satOilMax_[cells[i]], vap);
-                    dfactor_dso[i] = vap*std::pow(so_i/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
+                    if (so.value()[i] > eps_sqrt) {
+                        double so_i = so.value()[i];
+                        factor[i] = std::pow(so_i/satOilMax_[cells[i]], vap);
+                        dfactor_dso[i] = vap*std::pow(so_i/satOilMax_[cells[i]], vap-1.0)/satOilMax_[cells[i]];
+                    }
+                    else {
+                        double so_i = eps_sqrt;
+                        factor[i] = std::pow(so_i/satOilMax_[cells[i]], vap);
+                        dfactor_dso[i] = 0.0;
+                    }
                 }
             }
             ADB::M dfactor_dso_diag(dfactor_dso.matrix().asDiagonal());
