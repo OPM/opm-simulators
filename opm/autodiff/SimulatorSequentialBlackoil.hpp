@@ -52,7 +52,7 @@ class SimulatorSequentialBlackoil
     typedef SimulatorBase<SimulatorSequentialBlackoil<GridT> > Base;
 public:
     // forward the constructor to the base class
-    SimulatorSequentialBlackoil(const parameter::ParameterGroup& param,
+    SimulatorSequentialBlackoil(const ParameterGroup& param,
                                 const typename Base::Grid& grid,
                                 DerivedGeology& geo,
                                 BlackoilPropsAdFromDeck& props,

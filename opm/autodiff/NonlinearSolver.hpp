@@ -50,7 +50,7 @@ namespace Opm {
             int            max_iter_; // max nonlinear iterations
             int            min_iter_; // min nonlinear iterations
 
-            explicit SolverParameters( const parameter::ParameterGroup& param );
+            explicit SolverParameters( const ParameterGroup& param );
             SolverParameters();
 
             void reset();

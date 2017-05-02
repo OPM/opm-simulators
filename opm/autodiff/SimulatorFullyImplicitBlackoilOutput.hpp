@@ -209,7 +209,7 @@ namespace Opm
         // constructor creating different sub writers
         template <class Grid>
         BlackoilOutputWriter(const Grid& grid,
-                             const parameter::ParameterGroup& param,
+                             const ParameterGroup& param,
                              const Opm::EclipseState& eclipseState,
                              std::unique_ptr<EclipseIO>&& eclIO,
                              const Opm::PhaseUsage &phaseUsage);
@@ -329,7 +329,7 @@ namespace Opm
     inline
     BlackoilOutputWriter::
     BlackoilOutputWriter(const Grid& grid,
-                         const parameter::ParameterGroup& param,
+                         const ParameterGroup& param,
                          const Opm::EclipseState& eclipseState,
                          std::unique_ptr<EclipseIO>&& eclIO,
                          const Opm::PhaseUsage &phaseUsage)

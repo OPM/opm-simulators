@@ -297,7 +297,7 @@ namespace Opm
 
 
     /// Construct a system solver.
-    NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const parameter::ParameterGroup& param,
+    NewtonIterationBlackoilInterleaved::NewtonIterationBlackoilInterleaved(const ParameterGroup& param,
                                                                            const boost::any& parallelInformation_arg)
       : newtonIncrementDoublePrecision_(),
         newtonIncrementSinglePrecision_(),

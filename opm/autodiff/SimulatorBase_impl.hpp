@@ -33,7 +33,7 @@ namespace Opm
 {
 
     template <class Implementation>
-    SimulatorBase<Implementation>::SimulatorBase(const parameter::ParameterGroup& param,
+    SimulatorBase<Implementation>::SimulatorBase(const ParameterGroup& param,
                                                  const Grid& grid,
                                                  DerivedGeology& geo,
                                                  BlackoilPropsAdFromDeck& props,

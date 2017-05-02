@@ -64,7 +64,7 @@
 
 namespace
 {
-    void warnIfUnusedParams(const Opm::parameter::ParameterGroup& param)
+    void warnIfUnusedParams(const Opm::ParameterGroup& param)
     {
         if (param.anyUnused()) {
             std::cout << "--------------------   Unused parameters:   --------------------\n";
@@ -84,7 +84,7 @@ try
     using namespace Opm;
 
     std::cout << "\n================    Test program for weakly compressible two-phase flow with polymer    ===============\n\n";
-    parameter::ParameterGroup param(argc, argv, false);
+    ParameterGroup param(argc, argv, false);
     std::cout << "---------------    Reading parameters     ---------------" << std::endl;
 
     // If we have a "deck_filename", grid and props will be read from that.

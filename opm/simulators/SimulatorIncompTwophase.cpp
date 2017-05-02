@@ -67,7 +67,7 @@ namespace Opm
 
     struct SimulatorIncompTwophase::Impl
     {
-        Impl(const parameter::ParameterGroup& param,
+        Impl(const ParameterGroup& param,
              const UnstructuredGrid& grid,
              const IncompPropertiesInterface& props,
              const RockCompressibility* rock_comp_props,
@@ -116,7 +116,7 @@ namespace Opm
 
 
 
-    SimulatorIncompTwophase::SimulatorIncompTwophase(const parameter::ParameterGroup& param,
+    SimulatorIncompTwophase::SimulatorIncompTwophase(const ParameterGroup& param,
                                                      const UnstructuredGrid& grid,
                                                      const IncompPropertiesInterface& props,
                                                      const RockCompressibility* rock_comp_props,
@@ -312,7 +312,7 @@ namespace Opm
 
 
 
-    SimulatorIncompTwophase::Impl::Impl(const parameter::ParameterGroup& param,
+    SimulatorIncompTwophase::Impl::Impl(const ParameterGroup& param,
                                         const UnstructuredGrid& grid,
                                         const IncompPropertiesInterface& props,
                                         const RockCompressibility* rock_comp_props,

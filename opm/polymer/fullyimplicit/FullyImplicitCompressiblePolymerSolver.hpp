@@ -152,7 +152,7 @@ namespace Opm {
         int wellIterations() const;
 
         /// Not used by this class except to satisfy interface requirements.
-        typedef parameter::ParameterGroup SolverParameters;
+        typedef ParameterGroup SolverParameters;
 
         /// There is no separate model class for this solver, return itself.
         const FullyImplicitCompressiblePolymerSolver& model() const;

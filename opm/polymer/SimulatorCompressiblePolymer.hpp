@@ -30,7 +30,7 @@ struct FlowBoundaryConditions;
 
 namespace Opm
 {
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
     class BlackoilPropertiesInterface;
     class PolymerProperties;
     class RockCompressibility;
@@ -70,7 +70,7 @@ namespace Opm
         /// \param[in] polymer_inflow   polymer inflow controls
         /// \param[in] linsolver        linear solver
         /// \param[in] gravity          if non-null, gravity vector
-        SimulatorCompressiblePolymer(const parameter::ParameterGroup& param,
+        SimulatorCompressiblePolymer(const ParameterGroup& param,
                                      const UnstructuredGrid& grid,
                                      const BlackoilPropertiesInterface& props,
                                      const PolymerProperties& poly_props,

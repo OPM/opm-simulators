@@ -32,7 +32,7 @@ namespace Opm
 
     class IncompPropertiesInterface;
     class LinearSolverInterface;
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
 
     /// Implements an implicit transport solver for incompressible two-phase flow,
     /// using automatic differentiation.
@@ -49,7 +49,7 @@ namespace Opm
                                   const IncompPropertiesInterface& props,
                                   const LinearSolverInterface& linsolver,
                                   const double* gravity,
-                                  const parameter::ParameterGroup& param);
+                                  const ParameterGroup& param);
 
         // Virtual destructor.
         virtual ~TransportSolverTwophaseAd();

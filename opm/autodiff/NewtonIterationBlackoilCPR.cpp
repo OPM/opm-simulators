@@ -53,7 +53,7 @@ namespace Opm
 
 
     /// Construct a system solver.
-    NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const parameter::ParameterGroup& param,
+    NewtonIterationBlackoilCPR::NewtonIterationBlackoilCPR(const ParameterGroup& param,
                                                            const boost::any& parallelInformation_arg)
       : cpr_param_( param ),
         iterations_( 0 ),

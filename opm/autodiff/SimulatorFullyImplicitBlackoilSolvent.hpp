@@ -108,7 +108,7 @@ namespace Opm
         typedef typename Traits::WellModel WellModel;
 
     public:
-        SimulatorFullyImplicitBlackoilSolvent(const parameter::ParameterGroup& param,
+        SimulatorFullyImplicitBlackoilSolvent(const ParameterGroup& param,
                                               const GridT& grid,
                                               DerivedGeology& geo,
                                               BlackoilPropsAdFromDeck& props,

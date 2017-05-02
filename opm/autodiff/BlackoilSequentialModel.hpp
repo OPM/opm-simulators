@@ -35,7 +35,7 @@ namespace Opm {
     struct BlackoilSequentialModelParameters : public BlackoilModelParameters
     {
         bool iterate_to_fully_implicit;
-        explicit BlackoilSequentialModelParameters( const parameter::ParameterGroup& param )
+        explicit BlackoilSequentialModelParameters( const ParameterGroup& param )
             : BlackoilModelParameters(param),
               iterate_to_fully_implicit(param.getDefault("iterate_to_fully_implicit", false))
         {

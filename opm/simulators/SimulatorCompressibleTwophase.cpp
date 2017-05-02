@@ -66,7 +66,7 @@ namespace Opm
     class SimulatorCompressibleTwophase::Impl
     {
     public:
-        Impl(const parameter::ParameterGroup& param,
+        Impl(const ParameterGroup& param,
              const UnstructuredGrid& grid,
              const BlackoilPropertiesInterface& props,
              const RockCompressibility* rock_comp_props,
@@ -115,7 +115,7 @@ namespace Opm
 
 
 
-    SimulatorCompressibleTwophase::SimulatorCompressibleTwophase(const parameter::ParameterGroup& param,
+    SimulatorCompressibleTwophase::SimulatorCompressibleTwophase(const ParameterGroup& param,
                                                                  const UnstructuredGrid& grid,
                                                                  const BlackoilPropertiesInterface& props,
                                                                  const RockCompressibility* rock_comp_props,
@@ -226,7 +226,7 @@ namespace Opm
 
 
     // \TODO: make CompressibleTpfa take src and bcs.
-    SimulatorCompressibleTwophase::Impl::Impl(const parameter::ParameterGroup& param,
+    SimulatorCompressibleTwophase::Impl::Impl(const ParameterGroup& param,
                                               const UnstructuredGrid& grid,
                                               const BlackoilPropertiesInterface& props,
                                               const RockCompressibility* rock_comp_props,

@@ -29,7 +29,7 @@ struct FlowBoundaryConditions;
 
 namespace Opm
 {
-    namespace parameter { class ParameterGroup; }
+    class ParameterGroup;
     class BlackoilPropertiesInterface;
     class RockCompressibility;
     class WellsManager;
@@ -67,7 +67,7 @@ namespace Opm
         /// \param[in] bcs           boundary conditions, treat as all noflow if null
         /// \param[in] linsolver     linear solver
         /// \param[in] gravity       if non-null, gravity vector
-       SimulatorCompressibleTwophase(const parameter::ParameterGroup& param,
+       SimulatorCompressibleTwophase(const ParameterGroup& param,
                                      const UnstructuredGrid& grid,
                                      const BlackoilPropertiesInterface& props,
                                      const RockCompressibility* rock_comp_props,

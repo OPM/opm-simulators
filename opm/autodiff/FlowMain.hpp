@@ -213,7 +213,7 @@ namespace Opm
         bool output_cout_ = false;
         bool must_distribute_ = false;
         // setupParameters()
-        parameter::ParameterGroup param_;
+        ParameterGroup param_;
         // setupOutput()
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
@@ -330,7 +330,7 @@ namespace Opm
         // Returns true if ok, false if not.
         bool setupParameters(int argc, char** argv)
         {
-            param_ = parameter::ParameterGroup(argc, argv, false, output_cout_);
+            param_ = ParameterGroup(argc, argv, false, output_cout_);
 
             // See if a deck was specified on the command line.
             if (!param_.unhandledArguments().empty()) {
