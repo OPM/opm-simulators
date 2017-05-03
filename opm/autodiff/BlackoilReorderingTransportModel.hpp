@@ -324,7 +324,7 @@ namespace Opm {
             {
                 auto rs = reservoir_state;
                 auto ws = well_state;
-                tr_model_.nonlinearIteration(iteration, timer, nonlinear_solver, rs, ws);
+                tr_model_.nonlinearIteration(/*iteration*/ 0, timer, nonlinear_solver, rs, ws);
             }
 
             // Create report and exit.
@@ -830,7 +830,7 @@ namespace Opm {
 
         bool getConvergence(const int cell, const Vec2& res)
         {
-            const double tol = 1e-5;
+            const double tol = 1e-7;
             // Compute scaled residuals (scaled like saturations).
             double sres[] = { res[0] / (cstate_[cell].b[Oil] * Base::pvdt_[cell]),
                               res[1] / (cstate_[cell].b[Gas] * Base::pvdt_[cell]) };
