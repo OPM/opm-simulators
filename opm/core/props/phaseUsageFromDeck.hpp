@@ -66,6 +66,12 @@ namespace Opm
             OPM_THROW(std::runtime_error, "Cannot handle cases with no OIL, i.e. water-gas systems.");
         }
 
+        // Add solvent info
+        pu.has_solvent = false;
+        if (phase.active(Phase::SOLVENT)) {
+            pu.has_solvent = true;
+        }
+
         return pu;
     }
 
@@ -110,6 +116,12 @@ namespace Opm
         // water-gas systems.
         if (!pu.phase_used[BlackoilPhases::Liquid]) {
             OPM_THROW(std::runtime_error, "Cannot handle cases with no OIL, i.e. water-gas systems.");
+        }
+
+        // Add solvent info
+        pu.has_solvent = false;
+        if (phase.active(Phase::SOLVENT)) {
+            pu.has_solvent = true;
         }
 
         return pu;
