@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(TestPressureDeltas)
 
     std::vector<double> cd =
             WellDensitySegmented::computeConnectionDensities(
-                    *wells, wellstate, pu,
+                    *wells, pu, rates,
                     b_perf, rsmax_perf, rvmax_perf, surf_dens);
     std::vector<double> dp =
             WellDensitySegmented::computeConnectionPressureDelta(

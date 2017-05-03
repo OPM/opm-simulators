@@ -118,7 +118,7 @@ namespace Opm {
         typedef BlackoilModelParameters ModelParameters;
 
         typedef typename TTAG(EclFlowProblem) TypeTag;
-        typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator ;
+        typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
         typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
         typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
@@ -129,9 +129,9 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
         typedef double Scalar;
-        static const int blocksize = 3;
-        typedef Dune::FieldVector<Scalar, blocksize    >        VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, blocksize, blocksize >        MatrixBlockType;
+        static const int numEq = BlackoilIndices::numEq;
+        typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
@@ -162,7 +162,7 @@ namespace Opm {
                           const ModelParameters&          param,
                           const BlackoilPropsAdFromDeck& fluid,
                           const DerivedGeology&           geo  ,
-                          const StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>& well_model,
+                          const StandardWellsDense<TypeTag>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
@@ -443,7 +443,7 @@ namespace Opm {
         {
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
             const int nw = numWells();
-            return numPhases() * (nc + nw);
+            return numComponents() * (nc + nw);
         }
 
         /// Number of linear iterations used in last call to solveJacobianSystem().
@@ -766,7 +766,7 @@ namespace Opm {
         template <class CollectiveCommunication>
         double convergenceReduction(const CollectiveCommunication& comm,
                                     const long int ncGlobal,
-                                    const int np,
+                                    const int numComp,
                                     const std::vector< std::vector< Scalar > >& B,
                                     const std::vector< std::vector< Scalar > >& tempV,
                                     const std::vector< std::vector< Scalar > >& R,
@@ -777,14 +777,14 @@ namespace Opm {
                                     std::vector< Scalar >& B_avg,
                                     std::vector< Scalar >& maxNormWell )
         {
-            const int nw = residual_well.size() / np;
-            assert(nw * np == int(residual_well.size()));
+            const int nw = residual_well.size() / numComp;
+            assert(nw * numComp == int(residual_well.size()));
 
             // Do the global reductions
-            B_avg.resize(np);
-            maxCoeff.resize(np);
-            R_sum.resize(np);
-            maxNormWell.resize(np);
+            B_avg.resize(numComp);
+            maxCoeff.resize(numComp);
+            R_sum.resize(numComp);
+            maxNormWell.resize(numComp);
 
             const std::vector<double>* mask = nullptr;
 
@@ -801,20 +801,20 @@ namespace Opm {
 #endif
 
             // computation
-            for ( int idx = 0; idx < np; ++idx )
+            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
-                B_avg[idx] = std::accumulate( B[ idx ].begin(), B[ idx ].end(),
+                B_avg[compIdx] = std::accumulate( B[ compIdx ].begin(), B[ compIdx ].end(),
                                               0.0 ) / double(ncGlobal);
-                R_sum[idx] = std::accumulate( R[ idx ].begin(), R[ idx ].end(),
+                R_sum[compIdx] = std::accumulate( R[ compIdx ].begin(), R[ compIdx ].end(),
                                               0.0 );
 
-                maxCoeff[idx] = *(std::max_element( tempV[ idx ].begin(), tempV[ idx ].end() ));
+                maxCoeff[compIdx] = *(std::max_element( tempV[ compIdx ].begin(), tempV[ compIdx ].end() ));
 
-                assert(np >= np);
-                if (idx < np) {
-                    maxNormWell[idx] = 0.0;
+                assert(numComp >= numComp);
+                if (compIdx < numComp) {
+                    maxNormWell[compIdx] = 0.0;
                     for ( int w = 0; w < nw; ++w ) {
-                        maxNormWell[idx] = std::max(maxNormWell[idx], std::abs(residual_well[nw*idx + w]));
+                        maxNormWell[compIdx] = std::max(maxNormWell[compIdx], std::abs(residual_well[nw*compIdx + w]));
                     }
                 }
             }
@@ -829,12 +829,12 @@ namespace Opm {
                 std::vector< Scalar > maxBuffer;
                 sumBuffer.reserve( B_avg.size() + R_sum.size() + 1 );
                 maxBuffer.reserve( maxCoeff.size() + maxNormWell.size() );
-                for( int idx = 0; idx < np; ++idx )
+                for( int compIdx = 0; compIdx < numComp; ++compIdx )
                 {
-                    sumBuffer.push_back( B_avg[ idx ] );
-                    sumBuffer.push_back( R_sum[ idx ] );
-                    maxBuffer.push_back( maxCoeff[ idx ] );
-                    maxBuffer.push_back( maxNormWell[ idx ] );
+                    sumBuffer.push_back( B_avg[ compIdx ] );
+                    sumBuffer.push_back( R_sum[ compIdx ] );
+                    maxBuffer.push_back( maxCoeff[ compIdx ] );
+                    maxBuffer.push_back( maxNormWell[ compIdx ] );
                 }
 
                 // Compute total pore volume
@@ -847,14 +847,14 @@ namespace Opm {
                 comm.max( maxBuffer.data(), maxBuffer.size() );
 
                 // restore values to local variables
-                for( int idx = 0, buffIdx = 0; idx < np; ++idx, ++buffIdx )
+                for( int compIdx = 0, buffIdx = 0; compIdx < numComp; ++compIdx, ++buffIdx )
                 {
-                    B_avg[ idx ]    = sumBuffer[ buffIdx ];
-                    maxCoeff[ idx ] = maxBuffer[ buffIdx ];
+                    B_avg[ compIdx ]    = sumBuffer[ buffIdx ];
+                    maxCoeff[ compIdx ] = maxBuffer[ buffIdx ];
                     ++buffIdx;
 
-                    R_sum[ idx ]       = sumBuffer[ buffIdx ];
-                    maxNormWell[ idx ] = maxBuffer[ buffIdx ];
+                    R_sum[ compIdx ]       = sumBuffer[ buffIdx ];
+                    maxNormWell[ compIdx ] = maxBuffer[ buffIdx ];
                 }
 
                 // restore global pore volume
@@ -880,23 +880,23 @@ namespace Opm {
             const double tol_wells = param_.tolerance_wells_;
 
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            const int np = numPhases();
 
             const auto& pv = geo_.poreVolume();
 
-            Vector R_sum(np);
-            Vector B_avg(np);
-            Vector maxCoeff(np);
-            Vector maxNormWell(np);
+            const int numComp = numComponents();
+            Vector R_sum(numComp);
+            Vector B_avg(numComp);
+            Vector maxCoeff(numComp);
+            Vector maxNormWell(numComp);
 
             // As we will not initialize values in the following arrays
             // for the non-interior elements, we have to make sure
             // (at least for tempV) that the values there do not influence
             // our reduction.
-            std::vector< Vector > B( np, Vector( nc, 0.0) );
-            //std::vector< Vector > R( np, Vector( nc, 0.0) ) );
-            std::vector< Vector > R2( np, Vector( nc, 0.0 ) );
-            std::vector< Vector > tempV( np, Vector( nc, std::numeric_limits<double>::lowest() ) );
+            std::vector< Vector > B( numComp, Vector( nc, 0.0) );
+            //std::vector< Vector > R( numComp, Vector( nc, 0.0) ) );
+            std::vector< Vector > R2( numComp, Vector( nc, 0.0 ) );
+            std::vector< Vector > tempV( numComp, Vector( nc, std::numeric_limits<double>::lowest() ) );
 
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
@@ -915,23 +915,23 @@ namespace Opm {
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                for ( int idx = 0; idx < np; ++idx )
+                for ( int compIdx = 0; compIdx < numComp; ++compIdx )
                 {
-                    Vector& R2_idx = R2[ idx ];
-                    Vector& B_idx  = B[ idx ];
-                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(idx);
-                    const int ebosCompIdx = flowPhaseToEbosCompIdx(idx);
+                    Vector& R2_idx = R2[ compIdx ];
+                    Vector& B_idx  = B[ compIdx ];
+                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(compIdx);
+                    const int ebosCompIdx = flowPhaseToEbosCompIdx(compIdx);
 
                     B_idx [cell_idx] = 1.0 / fs.invB(ebosPhaseIdx).value();
                     R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
                 }
             }
 
-            for ( int idx = 0; idx < np; ++idx )
+            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
-                //tempV.col(idx)   = R2.col(idx).abs()/pv;
-                Vector& tempV_idx = tempV[ idx ];
-                Vector& R2_idx    = R2[ idx ];
+                //tempV.col(compIdx)   = R2.col(compIdx).abs()/pv;
+                Vector& tempV_idx = tempV[ compIdx ];
+                Vector& R2_idx    = R2[ compIdx ];
                 for( int cell_idx = 0; cell_idx < nc; ++cell_idx )
                 {
                     tempV_idx[ cell_idx ] = std::abs( R2_idx[ cell_idx ] ) / pv[ cell_idx ];
@@ -941,32 +941,30 @@ namespace Opm {
             Vector pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             Vector wellResidual =  wellModel().residual();
 
-            const double pvSum = convergenceReduction(grid_.comm(), global_nc_, np,
+            const double pvSum = convergenceReduction(grid_.comm(), global_nc_, numComp,
                                                       B, tempV, R2, pv_vector, wellResidual,
                                                       R_sum, maxCoeff, B_avg, maxNormWell );
 
-            Vector CNV(np);
-            Vector mass_balance_residual(np);
-            Vector well_flux_residual(np);
+            Vector CNV(numComp);
+            Vector mass_balance_residual(numComp);
+            Vector well_flux_residual(numComp);
 
             bool converged_MB = true;
             bool converged_CNV = true;
             bool converged_Well = true;
             // Finish computation
-            for ( int idx = 0; idx < np; ++idx )
+            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
-                CNV[idx]                    = B_avg[idx] * dt * maxCoeff[idx];
-                mass_balance_residual[idx]  = std::abs(B_avg[idx]*R_sum[idx]) * dt / pvSum;
-                converged_MB                = converged_MB && (mass_balance_residual[idx] < tol_mb);
-                converged_CNV               = converged_CNV && (CNV[idx] < tol_cnv);
+                CNV[compIdx]                    = B_avg[compIdx] * dt * maxCoeff[compIdx];
+                mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
+                converged_MB                = converged_MB && (mass_balance_residual[compIdx] < tol_mb);
+                converged_CNV               = converged_CNV && (CNV[compIdx] < tol_cnv);
                 // Well flux convergence is only for fluid phases, not other materials
                 // in our current implementation.
-                assert(np >= np);
-                if (idx < np) {
-                    well_flux_residual[idx] = B_avg[idx] * maxNormWell[idx];
-                    converged_Well = converged_Well && (well_flux_residual[idx] < tol_wells);
-                }
-                residual_norms.push_back(CNV[idx]);
+                well_flux_residual[compIdx] = B_avg[compIdx] * maxNormWell[compIdx];
+                converged_Well = converged_Well && (well_flux_residual[compIdx] < tol_wells);
+
+                residual_norms.push_back(CNV[compIdx]);
             }
 
             const bool converged = converged_MB && converged_CNV && converged_Well;
@@ -977,20 +975,20 @@ namespace Opm {
                 if (iteration == 0) {
                     std::string msg = "Iter";
 
-                    std::vector< std::string > key( np );
-                    for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                    std::vector< std::string > key( numComp );
+                    for (int phaseIdx = 0; phaseIdx < numPhases(); ++phaseIdx) {
                         const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
                         key[ phaseIdx ] = std::toupper( phaseName.front() );
                     }
 
-                    for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        msg += "    MB(" + key[ phaseIdx ] + ")  ";
+                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                        msg += "    MB(" + key[ compIdx ] + ")  ";
                     }
-                    for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        msg += "    CNV(" + key[ phaseIdx ] + ") ";
+                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                        msg += "    CNV(" + key[ compIdx ] + ") ";
                     }
-                    for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                        msg += "  W-FLUX(" + key[ phaseIdx ] + ")";
+                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                        msg += "  W-FLUX(" + key[ compIdx ] + ")";
                     }
                     OpmLog::note(msg);
                 }
@@ -998,31 +996,31 @@ namespace Opm {
                 const std::streamsize oprec = ss.precision(3);
                 const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
                 ss << std::setw(4) << iteration;
-                for (int idx = 0; idx < np; ++idx) {
-                    ss << std::setw(11) << mass_balance_residual[idx];
+                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                    ss << std::setw(11) << mass_balance_residual[compIdx];
                 }
-                for (int idx = 0; idx < np; ++idx) {
-                    ss << std::setw(11) << CNV[idx];
+                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                    ss << std::setw(11) << CNV[compIdx];
                 }
-                for (int idx = 0; idx < np; ++idx) {
-                    ss << std::setw(11) << well_flux_residual[idx];
+                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                    ss << std::setw(11) << well_flux_residual[compIdx];
                 }
                 ss.precision(oprec);
                 ss.flags(oflags);
                 OpmLog::note(ss.str());
             }
 
-            for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+            for (int phaseIdx = 0; phaseIdx < numPhases(); ++phaseIdx) {
                 const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
 
                 if (std::isnan(mass_balance_residual[phaseIdx])
                     || std::isnan(CNV[phaseIdx])
-                    || (phaseIdx < np && std::isnan(well_flux_residual[phaseIdx]))) {
+                    || (phaseIdx < numPhases() && std::isnan(well_flux_residual[phaseIdx]))) {
                     OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
                 }
                 if (mass_balance_residual[phaseIdx] > maxResidualAllowed()
                     || CNV[phaseIdx] > maxResidualAllowed()
-                    || (phaseIdx < np && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
+                    || (phaseIdx < numPhases() && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }
@@ -1035,6 +1033,14 @@ namespace Opm {
         int numPhases() const
         {
             return fluid_.numPhases();
+        }
+
+        int numComponents() const
+        {
+            if (numPhases() == 2) {
+                return 2;
+            }
+            return FluidSystem::numComponents;
         }
 
         /// Wrapper required due to not following generic API
@@ -1403,12 +1409,7 @@ namespace Opm {
                                                            intQuants.pvtRegionIndex()).value();
 
                 }
-
-
             }
-
-
-
 
             const size_t max_num_cells_faillog = 20;
             if (failed_cells_pb.size() > 0) {
@@ -1480,7 +1481,7 @@ namespace Opm {
         SimulatorReport failureReport_;
 
         // Well Model
-        StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw> well_model_;
+        StandardWellsDense<TypeTag> well_model_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1498,9 +1499,9 @@ namespace Opm {
     public:
 
         /// return the StandardWells object
-        StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>&
+        StandardWellsDense<TypeTag>&
         wellModel() { return well_model_; }
-        const StandardWellsDense<FluidSystem, BlackoilIndices, ElementContext, MaterialLaw>&
+        const StandardWellsDense<TypeTag>&
         wellModel() const { return well_model_; }
 
         /// return the Well struct in the StandardWells
@@ -1603,12 +1604,14 @@ namespace Opm {
     public:
         int ebosCompToFlowPhaseIdx( const int compIdx ) const
         {
+            assert(compIdx < 3);
             const int compToPhase[ 3 ] = { Oil, Water, Gas };
             return compToPhase[ compIdx ];
         }
 
         int flowToEbosPvIdx( const int flowPv ) const
         {
+            assert(flowPv < 3);
             const int flowToEbos[ 3 ] = {
                                           BlackoilIndices::pressureSwitchIdx,
                                           BlackoilIndices::waterSaturationIdx,
@@ -1619,6 +1622,7 @@ namespace Opm {
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const
         {
+            assert(phaseIdx < 3);
             const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
             return phaseToComp[ phaseIdx ];
         }
@@ -1671,7 +1675,7 @@ namespace Opm {
                         const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
                         const int ebosCompIdx = flowPhaseToEbosCompIdx(canonicalFlowPhaseIdx);
                         const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, pvtRegionIdx);
-                        for( int pvIdx=0; pvIdx<numFlowPhases; ++pvIdx )
+                        for( int pvIdx = 0; pvIdx < numEq; ++pvIdx )
                         {
                             (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
                             (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;

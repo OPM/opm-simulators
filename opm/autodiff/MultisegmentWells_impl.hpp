@@ -1040,7 +1040,7 @@ namespace Opm
         // 2. Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        wells(), xw, fluid_->phaseUsage(),
+                        wells(), fluid_->phaseUsage(), xw.perfPhaseRates(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // 3. Compute pressure deltas
