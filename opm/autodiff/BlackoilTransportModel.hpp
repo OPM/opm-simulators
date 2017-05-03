@@ -74,15 +74,24 @@ namespace Opm {
         {
         }
 
+
+
+
+
         void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& reservoir_state,
                          const WellState& well_state)
         {
             Base::prepareStep(timer, reservoir_state, well_state);
             Base::param_.solve_welleq_initially_ = false;
-            state0_ = variableState(reservoir_state, well_state);
-            asImpl().makeConstantState(state0_);
+            SolutionState state0 = variableState(reservoir_state, well_state);
+            asImpl().makeConstantState(state0);
+            asImpl().computeAccum(state0, 0);
         }
+
+
+
+
 
         SimulatorReport
         assemble(const ReservoirState& reservoir_state,
@@ -107,11 +116,7 @@ namespace Opm {
             // get reasonable initial conditions for the wells
             asImpl().wellModel().updateWellControls(well_state);
 
-            // Create the primary variables.
-            SolutionState state = asImpl().variableState(reservoir_state, well_state);
-
             if (initial_assembly) {
-
                 // HACK
                 const_cast<V&>(total_flux_)
                     = Eigen::Map<const V>(reservoir_state.faceflux().data(), reservoir_state.faceflux().size());
@@ -120,18 +125,18 @@ namespace Opm {
                 const_cast<DataBlock&>(comp_wellperf_flux_)
                     = Eigen::Map<const DataBlock>(well_state.perfPhaseRates().data(), well_state.perfRates().size(), numPhases());
                 assert(numPhases() * well_state.perfRates().size() == well_state.perfPhaseRates().size());
+                asImpl().updatePhaseCondFromPrimalVariable(reservoir_state);
+            }
 
-                is_first_iter_ = true;
-                // Create the (constant, derivativeless) initial state.
+            // Create the primary variables.
+            SolutionState state = asImpl().variableState(reservoir_state, well_state);
+
+            if (initial_assembly) {
                 SolutionState state0 = state;
                 asImpl().makeConstantState(state0);
-                // Compute initial accumulation contributions
-                // and well connection pressures.
-                asImpl().computeAccum(state0, 0);
                 asImpl().wellModel().computeWellConnectionPressures(state0, well_state);
-            } else {
-                is_first_iter_ = false;
             }
+
 
             // -------- Mass balance equations --------
             asImpl().assembleMassBalanceEq(state);
@@ -229,9 +234,10 @@ namespace Opm {
         V total_flux_; // HACK, should be part of a revised (transport-specific) SolutionState.
         V total_wellperf_flux_;
         DataBlock comp_wellperf_flux_;
-        SolutionState state0_ = SolutionState(3);
-        bool is_first_iter_ = false;
         Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> upwind_flags_;
+
+
+
 
 
         SolutionState
@@ -247,26 +253,6 @@ namespace Opm {
             vars[indices[Bhp]] = ADB::constant(vars[indices[Bhp]].value());
             return asImpl().variableStateExtractVars(x, indices, vars);
         }
-
-
-
-
-
-        void computeAccum(const SolutionState& state,
-                          const int            aix  )
-        {
-            if (aix == 0) {
-                // The pressure passed in state is from after
-                // the pressure solver, but we need to use the original
-                // b factors etc. to get the initial accumulation term
-                // correct.
-                Base::computeAccum(state0_, aix);
-            } else {
-                Base::computeAccum(state, aix);
-            }
-        }
-
-
 
 
 
@@ -293,10 +279,6 @@ namespace Opm {
             const ADB tr_mult = asImpl().transMult(state.pressure);
             const V gdz = geo_.gravity()[2] * (ops_.grad * geo_.z().matrix());
 
-            if (is_first_iter_) {
-                upwind_flags_.resize(gdz.size(), numPhases());
-            }
-
             // Compute mobilities and heads
             const std::vector<PhasePresence>& cond = asImpl().phaseCondition();
             const std::vector<ADB> kr = asImpl().computeRelPerm(state);
@@ -315,10 +297,6 @@ namespace Opm {
                 sd_.rq[phase_idx].rho = asImpl().fluidDensity(canonical_phase_idx, sd_.rq[phase_idx].b, state.rs, state.rv);
                 const ADB rhoavg = ops_.caver * sd_.rq[phase_idx].rho;
                 sd_.rq[ phase_idx ].dh = ops_.grad * phase_pressure -  rhoavg * gdz;
-
-                if (is_first_iter_) {
-                    upwind_flags_.col(phase_idx) = -sd_.rq[phase_idx].dh.value();
-                }
 
                 if (use_threshold_pressure_) {
                     asImpl().applyThresholdPressures(sd_.rq[ phase_idx ].dh);
