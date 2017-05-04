@@ -26,7 +26,7 @@
  * \brief This file contains the flux module which is used for ECL problems
  *
  * This approach to fluxes is very specific to two-point flux approximation and applies
- * what the Eclipse Technical Description calls the "NEWTRAN" tramsmissibilty approach.
+ * what the Eclipse Technical Description calls the "NEWTRAN" transmissibility approach.
  */
 #ifndef EWOMS_ECL_FLUX_MODULE_HH
 #define EWOMS_ECL_FLUX_MODULE_HH
@@ -316,7 +316,7 @@ protected:
 
             // apply the threshold pressure for the intersection. note that the concept
             // of threshold pressure is a quite big hack that only makes sense for ECL
-            // datasets. (and even there its physical justification is quite
+            // datasets. (and even there, its physical justification is quite
             // questionable IMO.)
             if (std::abs(Toolbox::value(pressureDifference_[phaseIdx])) > thpres_) {
                 if (pressureDifference_[phaseIdx] < 0.0)
