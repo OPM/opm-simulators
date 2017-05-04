@@ -19,7 +19,7 @@ copyToReferenceDir () {
 }
 
 tests=${@:2}
-test -z "$tests" && tests="spe11 spe12 spe3 spe9 norne_init msw_2d_h"
+test -z "$tests" && tests="spe11 spe12 spe12p spe3 spe9 norne_init msw_2d_h"
 if grep -q -i "norne " <<< $ghprbCommentBody
 then
   if test -d $WORKSPACE/deps/opm-data/norne/flow
@@ -52,6 +52,21 @@ for test_name in ${tests}; do
       $configuration/build-opm-simulators/tests/results/flow_legacy+spe1/ \
       $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_legacy \
       SPE1CASE2 \
+      EGRID INIT SMSPEC UNRST UNSMRY
+  fi
+
+  if grep -q "spe12p" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow_ebos+spe1_2p/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_ebos \
+      SPE1CASE2_2P \
+      EGRID INIT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow_legacy+spe1_2p/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_legacy \
+      SPE1CASE2_2P \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
@@ -133,6 +148,7 @@ then
   git status | grep "SPE1CASE1" && tests="spe11"
   git status | grep "SPE1CASE2" && tests="$tests spe12"
   git status | grep "SPE3CASE1" && tests="$tests spe3"
+  git status | grep "SPE1CASE2_2P" && tests="$tests spe1-2p"
   git status | grep "SPE9_CP" && tests="$tests spe9"
   git status | grep "2D_H__" && tests="$tests msw_2d_h"
   git status | grep "NORNE_ATW2013.INIT" && tests="$tests norne_init"
