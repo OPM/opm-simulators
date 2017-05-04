@@ -54,6 +54,10 @@ class FluidStateExplicitCompositionModule
 public:
     FluidStateExplicitCompositionModule()
     {
+        for (int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+            for (int compIdx = 0; compIdx < numComponents; ++compIdx)
+                moleFraction_[phaseIdx][compIdx] = 0.0;
+
         Valgrind::SetDefined(moleFraction_);
         Valgrind::SetUndefined(averageMolarMass_);
         Valgrind::SetUndefined(sumMoleFractions_);
