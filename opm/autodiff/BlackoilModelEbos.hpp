@@ -248,6 +248,8 @@ namespace Opm {
                 residual_norms_history_.clear();
                 current_relaxation_ = 1.0;
                 dx_old_ = 0.0;
+                convertInput( iteration, reservoir_state, ebosSimulator_ );
+                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
 
             report.total_linearizations = 1;
