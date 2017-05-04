@@ -119,12 +119,6 @@ class EclTransExtensiveQuantities
 
 public:
     /*!
-     * \brief Returns transmissibility for a given sub-control volume face.
-     */
-    Scalar transmissibility() const
-    { return trans_; }
-
-    /*!
      * \brief Return the intrinsic permeability tensor at a face [m^2]
      */
     const DimMatrix& intrinsicPermeability() const
@@ -224,9 +218,10 @@ protected:
 
         unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
         unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
-        trans_ = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
-        faceArea_ = scvf.area();
-        thpres_ = problem.thresholdPressure(I, J);
+
+        Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
+        Scalar faceArea = scvf.area();
+        Scalar thpres = problem.thresholdPressure(I, J);
 
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
@@ -318,11 +313,11 @@ protected:
             // of threshold pressure is a quite big hack that only makes sense for ECL
             // datasets. (and even there, its physical justification is quite
             // questionable IMO.)
-            if (std::abs(Toolbox::value(pressureDifference_[phaseIdx])) > thpres_) {
+            if (std::abs(Toolbox::value(pressureDifference_[phaseIdx])) > thpres) {
                 if (pressureDifference_[phaseIdx] < 0.0)
-                    pressureDifference_[phaseIdx] += thpres_;
+                    pressureDifference_[phaseIdx] += thpres;
                 else
-                    pressureDifference_[phaseIdx] -= thpres_;
+                    pressureDifference_[phaseIdx] -= thpres;
             }
             else {
                 pressureDifference_[phaseIdx] = 0.0;
@@ -337,11 +332,10 @@ protected:
             const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
             if (upstreamIdx == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans_/faceArea_);
+                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-trans/faceArea);
             else
                 volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans_/faceArea_));
-
+                    pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*(-trans/faceArea));
         }
     }
 
@@ -350,15 +344,6 @@ protected:
      */
     void calculateFluxes_(const ElementContext& elemCtx OPM_UNUSED, unsigned scvfIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
     { }
-
-    // transmissibility [m^3 s]
-    Scalar trans_;
-
-    // the area of the face between the DOFs [m^2]
-    Scalar faceArea_;
-
-    // threshold pressure [Pa]
-    Scalar thpres_;
 
     // the volumetric flux of all phases [m^3/s]
     Evaluation volumeFlux_[numPhases];
