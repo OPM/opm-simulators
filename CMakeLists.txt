@@ -106,6 +106,38 @@ macro (files_hook)
 endmacro (files_hook)
 
 macro (tests_hook)
+  if(RUN_INTERNAL_TESTS)
+    if(ERT_PYTHON_PATH)
+      include (ExternalProject)
+      # Pull down the opm-data repository
+      externalproject_add(opm-data
+                          PREFIX tests/opm-data
+                          GIT_REPOSITORY git@github.com:OPM/opm-data
+                          GIT_TAG origin/master
+                          CONFIGURE_COMMAND ""
+                          BUILD_COMMAND ""
+                          INSTALL_COMMAND "")
+      set_target_properties(opm-data PROPERTIES EXCLUDE_FROM_ALL 1)
+
+      set(INPUT_DATA_PATH ${CMAKE_BINARY_DIR}/tests/opm-data/src/opm-data)
+
+      # Add SPE1 test
+      opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/runtest.sh "")
+      opm_add_test(SPE1 NO_COMPILE
+                   EXE_NAME ${CMAKE_BINARY_DIR}/bin/flow
+                   DRIVER_ARGS ${PYTHON_EXECUTABLE}
+                               ${ERT_PYTHON_PATH}
+                               ${INPUT_DATA_PATH}/output_comparator/src/compare_eclipse.py
+                               ${INPUT_DATA_PATH}/spe1/eclipse-simulation/
+                               ${INPUT_DATA_PATH}/spe1/opm-simulation/
+                               SPE1DECK 0.0006 0.004
+                   TEST_ARGS ${INPUT_DATA_PATH}/spe1 spe1deck.xml)
+
+      add_dependencies(check opm-data flow)
+    else()
+      message(WARNING "Internal tests cannot be enabled if ERT is built without Python support.")
+    endif()
+  endif()
 endmacro (tests_hook)
 
 # all setup common to the OPM library modules is done here
