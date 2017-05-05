@@ -32,6 +32,7 @@
 #define EWOMS_ECL_FLUX_MODULE_HH
 
 #include <ewoms/disc/common/fvbaseproperties.hh>
+#include <ewoms/models/blackoil/blackoilproperties.hh>
 #include <ewoms/common/signum.hh>
 
 #include <opm/common/Valgrind.hpp>
@@ -102,6 +103,8 @@ protected:
 template <class TypeTag>
 class EclTransExtensiveQuantities
 {
+    typedef typename GET_PROP_TYPE(TypeTag, ExtensiveQuantities) Implementation;
+
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
     typedef typename GET_PROP_TYPE(TypeTag, ElementContext) ElementContext;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -110,7 +113,9 @@ class EclTransExtensiveQuantities
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
     enum { dimWorld = GridView::dimensionworld };
-    enum { numPhases = GET_PROP_VALUE(TypeTag, NumPhases) };
+    enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
+    enum { numPhases = FluidSystem::numPhases };
+    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
@@ -200,6 +205,9 @@ protected:
 
         return dnIdx_[phaseIdx];
     }
+
+    void updateSolvent(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    { asImp_().updateVolumeFluxTrans(elemCtx, scvfIdx, timeIdx); }
 
     /*!
      * \brief Update the required gradients for interior faces
@@ -346,6 +354,13 @@ protected:
      */
     void calculateFluxes_(const ElementContext& elemCtx OPM_UNUSED, unsigned scvfIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
     { }
+
+private:
+    Implementation& asImp_()
+    { return *static_cast<Implementation*>(this); }
+
+    const Implementation& asImp_() const
+    { return *static_cast<const Implementation*>(this); }
 
     // the volumetric flux of all phases [m^3/s]
     Evaluation volumeFlux_[numPhases];

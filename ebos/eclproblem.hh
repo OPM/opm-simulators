@@ -248,6 +248,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { numEq = GET_PROP_VALUE(TypeTag, NumEq) };
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
+    enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -267,6 +268,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
 
+    typedef BlackOilSolventModule<TypeTag> SolventModule;
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem> ScalarFluidState;
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Ewoms::EclSummaryWriter<TypeTag> EclSummaryWriter;
@@ -315,6 +317,10 @@ public:
     {
         // add the output module for the Ecl binary output
         simulator.model().addOutputModule(new Ewoms::EclOutputBlackOilModule<TypeTag>(simulator));
+
+        // Tell the solvent module to initialize its internal data structures
+        const auto& gridManager = simulator.gridManager();
+        SolventModule::initFromDeck(gridManager.deck(), gridManager.eclState());
     }
 
     /*!
@@ -755,6 +761,24 @@ public:
     }
 
     /*!
+     * \brief Returns the index of the relevant region for thermodynmic properties
+     */
+    template <class Context>
+    unsigned satnumRegionIndex(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    { return satnumRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
+
+    /*!
+     * \brief Returns the index the relevant saturation function region given a cell index
+     */
+    unsigned satnumRegionIndex(unsigned elemIdx) const
+    {
+        if (satnum_.empty())
+            return 0;
+
+        return satnum_[elemIdx];
+    }
+
+    /*!
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
@@ -803,6 +827,9 @@ public:
         }
         else
             values.assignNaive(initialFluidStates_[globalDofIdx]);
+
+        //if (enableSolvent)
+        //    values[Indices::solventSaturationIdx] = whatever;
     }
 
     /*!
@@ -1004,8 +1031,9 @@ private:
         const auto& deck = gridManager.deck();
         const auto& eclState = gridManager.eclState();
 
-        // the PVT region number
+        // the PVT and saturation region numbers
         updatePvtnum_();
+        updateSatnum_();
 
         ////////////////////////////////
         // porosity
@@ -1357,6 +1385,25 @@ private:
         }
     }
 
+    void updateSatnum_()
+    {
+        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclProps = eclState.get3DProperties();
+
+        if (!eclProps.hasDeckIntGridProperty("SATNUM"))
+            return;
+
+        const auto& satnumData = eclProps.getIntGridProperty("SATNUM").getData();
+        const auto& gridManager = this->simulator().gridManager();
+
+        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        satnum_.resize(numElems);
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            satnum_[elemIdx] = satnumData[cartElemIdx] - 1;
+        }
+    }
+
     struct PffDofData_
     {
         Scalar transmissibility;
@@ -1401,6 +1448,7 @@ private:
     EclThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<unsigned short> pvtnum_;
+    std::vector<unsigned short> satnum_;
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 

@@ -28,6 +28,7 @@
 #ifndef EWOMS_ECL_PEACEMAN_WELL_HH
 #define EWOMS_ECL_PEACEMAN_WELL_HH
 
+#include <ewoms/models/blackoil/blackoilproperties.hh>
 #include <ewoms/aux/baseauxiliarymodule.hh>
 #include <ewoms/common/propertysystem.hh>
 #include <ewoms/common/alignedallocator.hh>
@@ -46,17 +47,6 @@
 #include <map>
 
 namespace Ewoms {
-namespace Properties {
-NEW_PROP_TAG(Scalar);
-NEW_PROP_TAG(Discretization);
-NEW_PROP_TAG(FluidSystem);
-NEW_PROP_TAG(Simulator);
-NEW_PROP_TAG(ElementContext);
-NEW_PROP_TAG(RateVector);
-NEW_PROP_TAG(GridView);
-NEW_PROP_TAG(NumPhases);
-NEW_PROP_TAG(NumComponents);
-}
 
 template <class TypeTag>
 class EcfvDiscretization;
@@ -124,6 +114,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     static const unsigned gasCompIdx = FluidSystem::gasCompIdx;
 
     static const unsigned numModelEq = GET_PROP_VALUE(TypeTag, NumEq);
+    static const unsigned conti0EqIdx = GET_PROP_TYPE(TypeTag, Indices)::conti0EqIdx;
 
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem, /*storeEnthalpy=*/false> FluidState;
     typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
@@ -446,10 +437,9 @@ public:
 
             // now we put this derivative into the right place in the Jacobian
             // matrix. This is a bit hacky because it assumes that the model uses a mass
-            // rate for each component as its first conservation equations, but we
-            // require the black-oil model for now anyway, so this should not be too much
-            // of a problem...
-            assert(numModelEq == numComponents);
+            // rate for each component as its first conservation equation, but we require
+            // the black-oil model for now anyway, so this should not be too much of a
+            // problem...
             Opm::Valgrind::CheckDefined(q);
             auto& matrixEntry = matrix[gridDofIdx][wellGlobalDofIdx];
             matrixEntry = 0.0;
@@ -1127,8 +1117,8 @@ public:
                 continue;
 
             modelRate.setVolumetricRate(intQuants.fluidState(), phaseIdx, volumetricRates[phaseIdx]);
-            for (unsigned eqIdx = 0; eqIdx < q.size(); ++eqIdx)
-                q[eqIdx] += modelRate[eqIdx];
+            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+                q[conti0EqIdx + compIdx] += modelRate[conti0EqIdx + compIdx];
         }
 
         Opm::Valgrind::CheckDefined(q);
