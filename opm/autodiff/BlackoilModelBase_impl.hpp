@@ -1609,16 +1609,14 @@ typedef Eigen::Array<double,
         }
 
         // compute || u^n - u^n+1 ||
-        const double stateOld  = detail::euclidianNormSquared( p0.begin(),   p0.end(), 1, linsolver_.parallelInformation() ) +
+        const double stateOld  = detail::euclidianNormSquared( p0.begin(),   p0.end(), AutoDiffGrid::communicator(grid_) ) +
                                  detail::euclidianNormSquared( sat0.begin(), sat0.end(),
-                                                               current.numPhases(),
-                                                               linsolver_.parallelInformation() );
+                                                               AutoDiffGrid::communicator(grid_));
 
         // compute || u^n+1 ||
-        const double stateNew  = detail::euclidianNormSquared( current.pressure().begin(),   current.pressure().end(), 1, linsolver_.parallelInformation() ) +
+        const double stateNew  = detail::euclidianNormSquared( current.pressure().begin(),   current.pressure().end(), AutoDiffGrid::communicator(grid_) ) +
                                  detail::euclidianNormSquared( current.saturation().begin(), current.saturation().end(),
-                                                               current.numPhases(),
-                                                               linsolver_.parallelInformation() );
+                                                               AutoDiffGrid::communicator(grid_) );
 
         if( stateNew > 0.0 ) {
             return stateOld / stateNew ;

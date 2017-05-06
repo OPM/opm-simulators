@@ -158,6 +158,16 @@ struct ADFaceCellTraits< Dune::PolyhedralGrid< dim, dimworld > >
 ADFaceCellTraits<UnstructuredGrid>::Type
 faceCellsToEigen(const UnstructuredGrid& grid);
 
+inline
+Dune::CollectiveCommunication<Dune::No_Comm>
+communicator(const UnstructuredGrid& grid)
+{ return Dune::CollectiveCommunication<Dune::No_Comm>(); }
+
+template <class Grid>
+auto communicator(const Grid& grid)
+    -> decltype(grid.comm())
+{ return grid.comm(); }
+
 } // end namespace AutoDiffGrid
 } //end namespace OPM
 

@@ -92,68 +92,20 @@ namespace detail {
 
 
         /// \brief Compute the Euclidian norm of a vector
-        /// \warning In the case that num_components is greater than 1
-        ///          an interleaved ordering is assumed. E.g. for each cell
-        ///          all phases of that cell are stored consecutively. First
-        ///          the ones for cell 0, then the ones for cell 1, ... .
         /// \param it              begin iterator for the given vector
         /// \param end             end iterator for the given vector
-        /// \param num_components  number of components (i.e. phases) in the vector
         /// \param pinfo           In a parallel this holds the information about the data distribution.
-        template <class Iterator>
+        template <class Iterator, class Communicator>
         inline
-        double euclidianNormSquared( Iterator it, const Iterator end, int num_components, const boost::any& pinfo = boost::any() )
+        double euclidianNormSquared(Iterator it,
+                                    const Iterator end,
+                                    const Communicator& comm)
         {
-            static_cast<void>(num_components); // Suppress warning in the serial case.
-            static_cast<void>(pinfo); // Suppress warning in non-MPI case.
-#if HAVE_MPI
-            if ( pinfo.type() == typeid(ParallelISTLInformation) )
-            {
-                const ParallelISTLInformation& info =
-                    boost::any_cast<const ParallelISTLInformation&>(pinfo);
-                typedef typename Iterator::value_type Scalar;
-                Scalar product = 0.0;
-                int size_per_component = (end - it);
-                size_per_component /= num_components; // two lines to supresse unused warning.
-                assert((end - it) == num_components * size_per_component);
-
-                if( num_components == 1 )
-                {
-                    auto component_container =
-                        boost::make_iterator_range(it, end);
-                    info.computeReduction(component_container,
-                                           Opm::Reduction::makeInnerProductFunctor<double>(),
-                                           product);
-                }
-                else
-                {
-                    auto& maskContainer = info.getOwnerMask();
-                    auto mask = maskContainer.begin();
-                    assert(static_cast<int>(maskContainer.size()) == size_per_component);
-
-                    for(int cell = 0; cell < size_per_component; ++cell, ++mask)
-                    {
-                        Scalar cell_product = (*it) * (*it);
-                        ++it;
-                        for(int component=1; component < num_components;
-                            ++component, ++it)
-                        {
-                            cell_product += (*it) * (*it);
-                        }
-                        product += cell_product * (*mask);
-                    }
-                }
-                return info.communicator().sum(product);
+            double product = 0.0 ;
+            for( ; it != end; ++it ) {
+                product += ( *it * *it );
             }
-            else
-#endif
-            {
-                double product = 0.0 ;
-                for( ; it != end; ++it ) {
-                    product += ( *it * *it );
-                }
-                return product;
-            }
+            return comm.sum(product);
         }
         /// \brief Get the number of local interior cells in a grid.
         /// \tparam The type of the DUNE grid.
