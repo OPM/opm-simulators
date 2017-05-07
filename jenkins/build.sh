@@ -5,7 +5,7 @@
 
 declare -a upstreams
 upstreams=(opm-common
-           ert
+           libecl
            opm-parser
            opm-output
            opm-material
@@ -15,7 +15,7 @@ upstreams=(opm-common
 
 declare -A upstreamRev
 upstreamRev[opm-common]=master
-upstreamRev[ert]=master
+upstreamRev[libecl]=master
 upstreamRev[opm-parser]=master
 upstreamRev[opm-material]=master
 upstreamRev[opm-core]=master
