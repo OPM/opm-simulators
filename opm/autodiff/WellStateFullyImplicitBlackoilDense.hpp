@@ -89,7 +89,6 @@ namespace Opm
                 return;
             }
             const int np = wells_->number_of_phases;
-
             well_solutions_.clear();
             well_solutions_.resize(nw * np, 0.0);
             std::vector<double> g = {1.0,1.0,0.01};
@@ -130,7 +129,7 @@ namespace Opm
                 const int waterpos = pu.phase_pos[Water];
                 const int gaspos = pu.phase_pos[Gas];
 
-                assert(np == 3 || (np == 2 && !pu.phase_used[Gas]));
+                assert(np > 2 || (np == 2 && !pu.phase_used[Gas]));
                 // assumes the gas fractions are stored after water fractions
                 if(std::abs(total_rates) > 0) {
                     if( pu.phase_used[Water] ) {
@@ -139,6 +138,8 @@ namespace Opm
                     if( pu.phase_used[Gas] ) {
                         wellSolutions()[2*nw + w] = g[Gas] * wellRates()[np*w + gaspos] / total_rates ;
                     }
+
+
                 } else {
                     if( pu.phase_used[Water] ) {
                         wellSolutions()[nw + w] = wells_->comp_frac[np*w + waterpos];

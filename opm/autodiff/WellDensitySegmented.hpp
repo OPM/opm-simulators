@@ -41,17 +41,17 @@ namespace Opm
     {
     public:
         /// Compute well segment densities
-        /// Notation: N = number of perforations, P = number of phases.
+        /// Notation: N = number of perforations, C = number of components.
         /// \param[in] wells        struct with static well info
-        /// \param[in] wstate       dynamic well solution information, only perfRates() is used
+        /// \param[in] well_rates   well rates for actiev components, size NC, P values per perforation
         /// \param[in] phase_usage  specifies which phases are active and not
-        /// \param[in] b_perf       inverse ('little b') formation volume factor, size NP, P values per perforation
+        /// \param[in] b_perf       inverse ('little b') formation volume factor, size NC, P values per perforation
         /// \param[in] rsmax_perf   saturation point for rs (gas in oil) at each perforation, size N
         /// \param[in] rvmax_perf   saturation point for rv (oil in gas) at each perforation, size N
-        /// \param[in] surf_dens    surface densities for active components, size NP, P values per perforation
+        /// \param[in] surf_dens    surface densities for active components, size NC, C values per perforation
         static std::vector<double> computeConnectionDensities(const Wells& wells,
-                                                              const WellStateFullyImplicitBlackoil& wstate,
                                                               const PhaseUsage& phase_usage,
+                                                              const std::vector<double>& perfComponentRates,
                                                               const std::vector<double>& b_perf,
                                                               const std::vector<double>& rsmax_perf,
                                                               const std::vector<double>& rvmax_perf,
@@ -80,7 +80,7 @@ namespace Opm
 
 
         /// Compute pressure deltas.
-        /// Notation: N = number of perforations, P = number of phases.
+        /// Notation: N = number of perforations
         /// \param[in] wells        struct with static well info
         /// \param[in] z_perf       depth values for each perforation, size N
         /// \param[in] dens_perf    densities for each perforation, size N (typically computed using computeConnectionDensities)

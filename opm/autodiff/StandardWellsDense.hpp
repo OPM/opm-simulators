@@ -2,7 +2,7 @@
   Copyright 2016 SINTEF ICT, Applied Mathematics.
   Copyright 2016 - 2017 Statoil ASA.
   Copyright 2017 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2016 IRIS AS
+  Copyright 2016 - 2017 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -67,20 +67,33 @@ enum WellVariablePositions {
 
 
         /// Class for handling the standard well model.
-        template<typename FluidSystem, typename BlackoilIndices, typename  ElementContext, typename MaterialLaw>
+        template<typename TypeTag>
         class StandardWellsDense {
         public:
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoilDense WellState;
             typedef BlackoilModelParameters ModelParameters;
 
+            typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
+            typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
+            typedef typename GET_PROP_TYPE(TypeTag, Indices)             BlackoilIndices;
+            typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)    PrimaryVariables;
+            typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)         MaterialLaw;
+            typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
+            typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
+
             typedef double Scalar;
-            static const int blocksize = 3;
-            typedef Dune::FieldVector<Scalar, blocksize    > VectorBlockType;
-            typedef Dune::FieldMatrix<Scalar, blocksize, blocksize > MatrixBlockType;
+            static const int numEq = BlackoilIndices::numEq;
+            static const int numWellEq = numEq; //number of wellEq is the same as numEq in the model
+            typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
+            typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
             typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
             typedef Dune::BlockVector<VectorBlockType> BVector;
-            typedef DenseAd::Evaluation<double, /*size=*/blocksize*2> EvalWell;
+            typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
+            typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+
+
+
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
@@ -102,27 +115,33 @@ enum WellVariablePositions {
                       long int global_nc);
 
 
-            template <typename Simulator>
+            /// The number of components in the model.
+            int numComponents() const
+            {
+                if (phase_usage_.num_phases == 2) {
+                    return 2;
+                }
+                return FluidSystem::numComponents;
+            }
+
+
             SimulatorReport assemble(Simulator& ebosSimulator,
                                      const int iterationIdx,
                                      const double dt,
                                      WellState& well_state);
 
-            template <typename Simulator>
             void assembleWellEq(Simulator& ebosSimulator,
                                 const double dt,
                                 WellState& well_state,
                                 bool only_wells);
 
-            template <typename Simulator>
             void
             getMobility(const Simulator& ebosSimulator,
                         const int perf,
                         const int cell_idx,
                         std::vector<EvalWell>& mob) const;
 
-            template <typename Simulator>
-            bool allow_cross_flow(const int w, Simulator& ebosSimulator) const;
+            bool allow_cross_flow(const int w, const Simulator& ebosSimulator) const;
 
             void localInvert(Mat& istlA) const;
 
@@ -177,8 +196,6 @@ enum WellVariablePositions {
             /// Diff to bhp for each well perforation.
             const std::vector<double>& wellPerforationPressureDiffs() const;
 
-            typedef DenseAd::Evaluation<double, /*size=*/blocksize> Eval;
-
             EvalWell extendEval(Eval in) const;
 
             void setWellVariables(const WellState& xw);
@@ -187,12 +204,9 @@ enum WellVariablePositions {
 
             void computeAccumWells();
 
-            template<typename FluidState>
-            void
-            computeWellFlux(const int& w, const double& Tw, const FluidState& fs, const std::vector<EvalWell>& mob_perfcells_dense,
-                            const EvalWell& bhp, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const;
+            void computeWellFlux(const int& w, const double& Tw, const IntensiveQuantities& intQuants, const std::vector<EvalWell>& mob_perfcells_dense,
+                                 const EvalWell& bhp, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const;
 
-            template <typename Simulator>
             SimulatorReport solveWellEq(Simulator& ebosSimulator,
                                         const double dt,
                                         WellState& well_state);
@@ -201,23 +215,18 @@ enum WellVariablePositions {
 
             std::vector<double> residual() const;
 
-            template <typename Simulator>
             bool getWellConvergence(Simulator& ebosSimulator,
                                     const int iteration) const;
 
-            template<typename Simulator>
-            void
-            computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                           const WellState& xw);
+            void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                const WellState& xw);
 
-            template<typename Simulator>
-            void
-            computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
-                                                        const WellState& xw,
-                                                        std::vector<double>& b_perf,
-                                                        std::vector<double>& rsmax_perf,
-                                                        std::vector<double>& rvmax_perf,
-                                                        std::vector<double>& surf_dens_perf) const;
+            void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
+                                                             const WellState& xw,
+                                                             std::vector<double>& b_perf,
+                                                             std::vector<double>& rsmax_perf,
+                                                             std::vector<double>& rvmax_perf,
+                                                             std::vector<double>& surf_dens_perf) const;
 
             void updateWellState(const BVector& dwells,
                                  WellState& well_state) const;
@@ -227,12 +236,11 @@ enum WellVariablePositions {
             void updateWellControls(WellState& xw) const;
 
             /// upate the dynamic lists related to economic limits
-            void
-            updateListEconLimited(const Schedule& schedule,
-                                  const int current_step,
-                                  const Wells* wells_struct,
-                                  const WellState& well_state,
-                                  DynamicListEconLimited& list_econ_limited) const;
+            void updateListEconLimited(const Schedule& schedule,
+                                       const int current_step,
+                                       const Wells* wells_struct,
+                                       const WellState& well_state,
+                                       DynamicListEconLimited& list_econ_limited) const;
 
             void computeWellConnectionDensitesPressures(const WellState& xw,
                                                         const std::vector<double>& b_perf,
@@ -245,15 +253,12 @@ enum WellVariablePositions {
 
             // Calculating well potentials for each well
             // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
-            template<typename Simulator>
-            void
-            computeWellPotentials(const Simulator& ebosSimulator,
-                                  const WellState& well_state,
-                                  std::vector<double>& well_potentials) const;
+            void computeWellPotentials(const Simulator& ebosSimulator,
+                                       const WellState& well_state,
+                                       std::vector<double>& well_potentials) const;
 
             // TODO: some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            template<typename Simulator>
             void prepareTimeStep(const Simulator& ebos_simulator,
                                  WellState& well_state);
 
@@ -320,14 +325,14 @@ enum WellVariablePositions {
             // protected methods
             EvalWell getBhp(const int wellIdx) const;
 
-            EvalWell getQs(const int wellIdx, const int phaseIdx) const;
+            EvalWell getQs(const int wellIdx, const int compIdx) const;
 
-            EvalWell wellVolumeFraction(const int wellIdx, const int phaseIdx) const;
+            EvalWell wellVolumeFraction(const int wellIdx, const int compIdx) const;
 
-            EvalWell wellVolumeFractionScaled(const int wellIdx, const int phaseIdx) const;
+            EvalWell wellVolumeFractionScaled(const int wellIdx, const int compIdx) const;
 
             // Q_p / (Q_w + Q_g + Q_o) for three phase cases.
-            EvalWell wellSurfaceVolumeFraction(const int well_index, const int phase) const;
+            EvalWell wellSurfaceVolumeFraction(const int well_index, const int compIdx) const;
 
             bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                      const WellState& well_state,
@@ -367,17 +372,14 @@ enum WellVariablePositions {
 
             // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
             // calculation of the derivatives
-            template<typename Simulator>
-            void
-            computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                    const EvalWell& bhp,
-                                    const int well_index,
-                                    std::vector<double>& well_flux) const;
+            void computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                                         const EvalWell& bhp,
+                                         const int well_index,
+                                         std::vector<double>& well_flux) const;
 
             double mostStrictBhpFromBhpLimits(const int well_index) const;
 
             // TODO: maybe it should be improved to be calculate general rates for THP control later
-            template<typename Simulator>
             std::vector<double>
             computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                         const int well_index,

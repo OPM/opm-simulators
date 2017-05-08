@@ -28,12 +28,10 @@
 
 
 
-
-
 std::vector<double>
 Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
-                                                      const WellStateFullyImplicitBlackoil& wstate,
                                                       const PhaseUsage& phase_usage,
+                                                      const std::vector<double>& perfComponentRates,
                                                       const std::vector<double>& b_perf,
                                                       const std::vector<double>& rsmax_perf,
                                                       const std::vector<double>& rvmax_perf,
@@ -43,16 +41,17 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
     const int np = wells.number_of_phases;
     const int nw = wells.number_of_wells;
     const int nperf = wells.well_connpos[nw];
+    const int numComponents = perfComponentRates.size() / nperf;
     if (wells.number_of_phases != phase_usage.num_phases) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. phase_usage.");
     }
-    if (nperf*np != int(surf_dens_perf.size())) {
+    if (nperf*numComponents != int(surf_dens_perf.size())) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. surf_dens.");
     }
-    if (nperf*np != int(wstate.perfPhaseRates().size())) {
+    if (nperf*numComponents != int(perfComponentRates.size())) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. wstate.");
     }
-    if (nperf*np != int(b_perf.size())) {
+    if (nperf*numComponents != int(b_perf.size())) {
         OPM_THROW(std::logic_error, "Inconsistent input: wells vs. b_perf.");
     }
     if ((!rsmax_perf.empty()) || (!rvmax_perf.empty())) {
@@ -69,20 +68,20 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
     //    component) exiting up the wellbore from each perforation,
     //    taking into account flow from lower in the well, and
     //    in/out-flow at each perforation.
-    std::vector<double> q_out_perf(nperf*np);
+    std::vector<double> q_out_perf(nperf*numComponents);
     for (int w = 0; w < nw; ++w) {
         // Iterate over well perforations from bottom to top.
         for (int perf = wells.well_connpos[w+1] - 1; perf >= wells.well_connpos[w]; --perf) {
-            for (int phase = 0; phase < np; ++phase) {
+            for (int component = 0; component < numComponents; ++component) {
                 if (perf == wells.well_connpos[w+1] - 1) {
                     // This is the bottom perforation. No flow from below.
-                    q_out_perf[perf*np + phase] = 0.0;
+                    q_out_perf[perf*numComponents + component] = 0.0;
                 } else {
                     // Set equal to flow from below.
-                    q_out_perf[perf*np + phase] = q_out_perf[(perf+1)*np + phase];
+                    q_out_perf[perf*numComponents + component] = q_out_perf[(perf+1)*numComponents + component];
                 }
                 // Subtract outflow through perforation.
-                q_out_perf[perf*np + phase] -= wstate.perfPhaseRates()[perf*np + phase];
+                q_out_perf[perf*numComponents + component] -= perfComponentRates[perf*numComponents + component];
             }
         }
     }
@@ -93,22 +92,25 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
     //    Finally compute densities for the segments associated with each perforation.
     const int gaspos = phase_usage.phase_pos[BlackoilPhases::Vapour];
     const int oilpos = phase_usage.phase_pos[BlackoilPhases::Liquid];
-    std::vector<double> mix(np);
-    std::vector<double> x(np);
-    std::vector<double> surf_dens(np);
+    std::vector<double> mix(numComponents,0.0);
+    std::vector<double> x(numComponents);
+    std::vector<double> surf_dens(numComponents);
     std::vector<double> dens(nperf);
     for (int w = 0; w < nw; ++w) {
         for (int perf = wells.well_connpos[w]; perf < wells.well_connpos[w+1]; ++perf) {
             // Find component mix.
-            const double tot_surf_rate = std::accumulate(q_out_perf.begin() + np*perf,
-                                                         q_out_perf.begin() + np*(perf+1), 0.0);
+            const double tot_surf_rate = std::accumulate(q_out_perf.begin() + numComponents*perf,
+                                                         q_out_perf.begin() + numComponents*(perf+1), 0.0);
             if (tot_surf_rate != 0.0) {
-                for (int phase = 0; phase < np; ++phase) {
-                    mix[phase] = std::fabs(q_out_perf[perf*np + phase]/tot_surf_rate);
+                for (int component = 0; component < numComponents; ++component) {
+                    mix[component] = std::fabs(q_out_perf[perf*numComponents + component]/tot_surf_rate);
                 }
             } else {
                 // No flow => use well specified fractions for mix.
-                std::copy(wells.comp_frac + w*np, wells.comp_frac + (w+1)*np, mix.begin());
+                for (int phase = 0; phase < np; ++phase) {
+                    mix[phase] = wells.comp_frac[w*np + phase];
+                }
+                // intialize 0.0 for comIdx >= np;
             }
             // Compute volume ratio.
             x = mix;
@@ -129,11 +131,11 @@ Opm::WellDensitySegmented::computeConnectionDensities(const Wells& wells,
                 x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/(1.0 - rs*rv);;
             }
             double volrat = 0.0;
-            for (int phase = 0; phase < np; ++phase) {
-                volrat += x[phase] / b_perf[perf*np + phase];
+            for (int component = 0; component < numComponents; ++component) {
+                volrat += x[component] / b_perf[perf*numComponents + component];
             }
-            for (int phase = 0; phase < np; ++phase) {
-                surf_dens[phase] = surf_dens_perf[perf*np + phase];
+            for (int component = 0; component < numComponents; ++component) {
+                surf_dens[component] = surf_dens_perf[perf*numComponents + component];
             }
 
             // Compute segment density.

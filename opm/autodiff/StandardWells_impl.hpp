@@ -315,7 +315,7 @@ namespace Opm
         // Compute densities
         std::vector<double> cd =
                 WellDensitySegmented::computeConnectionDensities(
-                        wells(), xw, fluid_->phaseUsage(),
+                        wells(), fluid_->phaseUsage(), xw.perfPhaseRates(),
                         b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         const int nperf = wells().well_connpos[wells().number_of_wells];
