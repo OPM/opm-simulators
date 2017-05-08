@@ -1095,7 +1095,7 @@ namespace Opm {
     computeFluidInPlace(const ReservoirState& x,
                         const std::vector<int>& fipnum)
     {
-        if (b_eff_[0].size() == 0) {
+        if (has_solvent_ && is_miscible_ && b_eff_[0].size() == 0) {
             // A hack to avoid trouble for initial fluid in place, due to usage of b_eff_.
             WellState xw, xwdummy;
             xw.init(&wells(), x, xwdummy);
