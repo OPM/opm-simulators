@@ -221,7 +221,6 @@ namespace Opm
         // Writes to:
         //   param_
         // Returns true if ok, false if not.
-        
         bool setupParameters(int argc, char** argv)
         {
             param_ = ParameterGroup(argc, argv, false, output_cout_);
@@ -321,9 +320,7 @@ namespace Opm
                                                    {Log::MessageType::Warning, msgLimits.getWarningPrintLimit(0)},
                                                    {Log::MessageType::Error, msgLimits.getErrorPrintLimit(0)},
                                                    {Log::MessageType::Problem, msgLimits.getProblemPrintLimit(0)},
-                                                   {Log::MessageType::Bug, msgLimits.getBugPrintLimit(0)},
-                                                   {Log::MessageType::Probleminfo, msgLimits.getProbleminfoPrintLimit(0)},
-                                                   {Log::MessageType::Warninginfo, msgLimits.getWarninginfoPrintLimit(0)}};
+                                                   {Log::MessageType::Bug, msgLimits.getBugPrintLimit(0)}};
             prtLog->setMessageLimiter(std::make_shared<MessageLimiter>());
             prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10, limits));
@@ -800,10 +797,6 @@ namespace Opm
                 return Log::MessageType::Bug;
             case Message::type::Note:
                 return Log::MessageType::Note;
-            case Message::type::Probleminfo:
-                return Log::MessageType::Probleminfo;
-            case Message::type::Warninginfo:
-                return Log::MessageType::Warninginfo;
             }
             throw std::logic_error("Invalid messages type!\n");
         }
@@ -851,4 +844,3 @@ namespace Opm
 } // namespace Opm
 
 #endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
-
