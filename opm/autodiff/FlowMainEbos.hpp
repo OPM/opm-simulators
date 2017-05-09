@@ -23,6 +23,13 @@
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
+#include <sys/utsname.h>
+#include <unistd.h>
+#include <ctime>
+#include <sys/statvfs.h>
+#include <sys/sysinfo.h>
+#include<stdio.h>
+
 #include <opm/simulators/ParallelFileMerger.hpp>
 #include <opm/simulators/ensureDirectoryExists.hpp>
 
@@ -116,6 +123,7 @@ namespace Opm
                 setupEbosSimulator();
                 setupOutput();
                 setupLogging();
+                printPRTHeader();
                 extractMessages();
                 setupGridAndProps();
                 runDiagnostics();
@@ -189,7 +197,8 @@ namespace Opm
 
         // Print startup message if on output rank.
         void printStartupMessage()
-        {
+        {   
+	    
             if (output_cout_) {
                 const int lineLen = 70;
                 const std::string version = moduleVersionName();
@@ -213,6 +222,7 @@ namespace Opm
         // Writes to:
         //   param_
         // Returns true if ok, false if not.
+        
         bool setupParameters(int argc, char** argv)
         {
             param_ = ParameterGroup(argc, argv, false, output_cout_);
@@ -312,19 +322,64 @@ namespace Opm
                                                    {Log::MessageType::Warning, msgLimits.getWarningPrintLimit(0)},
                                                    {Log::MessageType::Error, msgLimits.getErrorPrintLimit(0)},
                                                    {Log::MessageType::Problem, msgLimits.getProblemPrintLimit(0)},
-                                                   {Log::MessageType::Bug, msgLimits.getBugPrintLimit(0)}};
+                                                   {Log::MessageType::Bug, msgLimits.getBugPrintLimit(0)},
+                                                   {Log::MessageType::Probleminfo, msgLimits.getProbleminfoPrintLimit(0)},
+                                                   {Log::MessageType::Warninginfo, msgLimits.getWarninginfoPrintLimit(0)}};
             prtLog->setMessageLimiter(std::make_shared<MessageLimiter>());
             prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10, limits));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
 
-            // Read parameters.
             if ( output_cout_ )
-            {
-                OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
+            { 
+            // Read Parameters.
+            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
             }
         }
-
+        
+        void printPRTHeader()
+        {
+            if ( output_cout_ )
+            { 
+            // Print header for PRT file.      
+            const std::string version = moduleVersionName();
+            const double megabyte = 1024 * 1024;
+            unsigned num_cpu = std::thread::hardware_concurrency();    
+            struct utsname arch;
+            char userName[64] = {0};
+            int getUser = getlogin_r(userName, sizeof(userName)-1); 
+            time_t now = std::time(0);
+            struct tm  tstruct;
+            char      tmstr[80];
+            tstruct = *localtime(&now);
+            strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
+            struct sysinfo info;
+            sysinfo( &info );
+            const double mem_size = (size_t)info.totalram * (size_t)info.mem_unit / megabyte;   
+            std::ostringstream ss;
+            ss << "\n\n\n ########  #          ######   #           #\n";  
+            ss << " #         #         #      #   #         # \n";
+            ss << " #####     #         #      #    #   #   #  \n";
+            ss << " #         #         #      #     # # # #   \n";
+            ss << " #         #######    ######       #   #    \n\n";
+            ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
+            ss << " and is part of OPM.\nFor more information visit: http://opm-project.org \n\n";
+            ss << "Flow Version  =  " + version + "\n";
+            if (uname(&arch) == 0) {
+                ss << "System        =  " << arch.nodename << " (Number of cores: " << num_cpu;
+                ss << ", RAM: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
+                ss << "Architecture  =  " << arch.sysname << " " << arch.machine << " (Release: " << arch.release;
+                ss << ", Version: " << arch.version << " )\n";
+            }
+            if (getUser == 0) {
+                char * userLogin = getlogin();
+                ss << "User          =  " << userLogin << std::endl;
+            }
+            ss << "Simulation started on " << tmstr << " hrs\n";                            
+            OpmLog::note(ss.str());
+            }
+        }
+        
         void mergeParallelLogFiles()
         {
             // force closing of all log files.
@@ -746,6 +801,10 @@ namespace Opm
                 return Log::MessageType::Bug;
             case Message::type::Note:
                 return Log::MessageType::Note;
+            case Message::type::Probleminfo:
+                return Log::MessageType::Probleminfo;
+            case Message::type::Warninginfo:
+                return Log::MessageType::Warninginfo;
             }
             throw std::logic_error("Invalid messages type!\n");
         }
@@ -793,3 +852,4 @@ namespace Opm
 } // namespace Opm
 
 #endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
+
