@@ -28,7 +28,6 @@
 #include <ctime>
 #include <sys/statvfs.h>
 #include <sys/sysinfo.h>
-#include<stdio.h>
 
 #include <opm/simulators/ParallelFileMerger.hpp>
 #include <opm/simulators/ensureDirectoryExists.hpp>
