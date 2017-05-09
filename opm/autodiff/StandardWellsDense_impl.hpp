@@ -7,13 +7,18 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     StandardWellsDense(const Wells* wells_arg,
                        WellCollection* well_collection,
+                       const std::vector< const Well* >& wells_ecl,
                        const ModelParameters& param,
-                       const bool terminal_output)
+                       const bool terminal_output,
+                       const int current_timeIdx)
        : wells_active_(wells_arg!=nullptr)
        , wells_(wells_arg)
+       , wells_ecl_(wells_ecl)
        , well_collection_(well_collection)
        , param_(param)
        , terminal_output_(terminal_output)
+       , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
+       , current_timeIdx_(current_timeIdx)
        , well_perforation_efficiency_factors_((wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0), 1.0)
        , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
        , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
@@ -168,6 +173,7 @@ namespace Opm {
     {
         const int nw = wells().number_of_wells;
         const int numComp = numComponents();
+        const int np = numPhases();
 
         // clear all entries
         duneB_ = 0.0;
@@ -223,7 +229,11 @@ namespace Opm {
                     }
 
                     // Store the perforation phase flux for later usage.
-                    well_state.perfPhaseRates()[perf*numComp + componentIdx] = cq_s[componentIdx].value();
+                    if (componentIdx == solventCompIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
+                        well_state.perfRateSolvent()[perf] = cq_s[componentIdx].value();
+                    } else {
+                        well_state.perfPhaseRates()[perf*np + componentIdx] = cq_s[componentIdx].value();
+                    }
                 }
 
                 // Store the perforation pressure for later usage.
@@ -267,6 +277,9 @@ namespace Opm {
                 int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
                 mob[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
             }
+            if (has_solvent_) {
+                mob[solventCompIdx] = extendEval(intQuants.solventMobility());
+            }
         } else {
 
             const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
@@ -280,6 +293,11 @@ namespace Opm {
             for (int phase = 0; phase < np; ++phase) {
                 int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
                 mob[phase] = extendEval(relativePerms[ebosPhaseIdx] / intQuants.fluidState().viscosity(ebosPhaseIdx));
+            }
+
+            // this may not work if viscosity and relperms has been modified?
+            if (has_solvent_) {
+                OPM_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent");
             }
         }
     }
@@ -443,8 +461,7 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
-        assert(phaseIdx < 3);
-        const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
+        const int phaseToComp[ 4 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx, solventCompIdx };
         return phaseToComp[ phaseIdx ];
     }
 
@@ -457,11 +474,11 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     flowToEbosPvIdx( const int flowPv ) const
     {
-        assert(flowPv < 3);
-        const int flowToEbos[ 3 ] = {
+        const int flowToEbos[ 4 ] = {
                                      BlackoilIndices::pressureSwitchIdx,
                                      BlackoilIndices::waterSaturationIdx,
-                                     BlackoilIndices::compositionSwitchIdx
+                                     BlackoilIndices::compositionSwitchIdx,
+                                     BlackoilIndices::solventSaturationIdx
                                     };
         return flowToEbos[ flowPv ];
     }
@@ -754,6 +771,9 @@ namespace Opm {
             int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
             b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
         }
+        if (has_solvent_) {
+            b_perfcells_dense[solventCompIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
+        }
 
         // Pressure drawdown (also used to determine direction of flow)
         EvalWell well_pressure = bhp + cdp;
@@ -801,6 +821,10 @@ namespace Opm {
             if (active_[Water]) {
                 const int watpos = pu.phase_pos[Water];
                 volumeRatio += cmix_s[watpos] / b_perfcells_dense[watpos];
+            }
+
+            if (has_solvent_) {
+                volumeRatio += cmix_s[solventCompIdx] / b_perfcells_dense[solventCompIdx];
             }
 
             if (active_[Oil] && active_[Gas]) {
@@ -988,6 +1012,10 @@ namespace Opm {
                 const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phaseIdx);
 
                 B += 1 / fs.invB(ebosPhaseIdx).value();
+            }
+            if (has_solvent_) {
+                auto& B  = B_avg[ solventCompIdx ];
+                B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
         }
 
@@ -1181,6 +1209,12 @@ namespace Opm {
                 for (int p = 0; p < pu.num_phases; ++p) {
                     surf_dens_perf[numComp*perf + p] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( p ), fs.pvtRegionIndex());
                 }
+
+                #warning HACK use cell values for solvent injector
+                if (has_solvent_) {
+                    b_perf[numComp*perf + solventCompIdx] = intQuants.solventInverseFormationVolumeFactor().value();
+                    surf_dens_perf[numComp*perf + solventCompIdx] = intQuants.solventRefDensity();
+                }
             }
         }
     }
@@ -1220,6 +1254,12 @@ namespace Opm {
                 well_state.wellSolutions()[GFrac*nw + w] = xvar_well_old[GFrac*nw + w] - dx3_limited;
             }
 
+            if (has_solvent_) {
+                const int sign4 = dwells[w][flowPhaseToEbosCompIdx(SFrac)] > 0 ? 1: -1;
+                const double dx4_limited = sign4 * std::min(std::abs(dwells[w][flowPhaseToEbosCompIdx(SFrac)]),dFLimit);
+                well_state.wellSolutions()[SFrac*nw + w] = xvar_well_old[SFrac*nw + w] - dx4_limited;
+            }
+
             assert(active_[ Oil ]);
             F[Oil] = 1.0;
             if (active_[ Water ]) {
@@ -1232,10 +1272,19 @@ namespace Opm {
                 F[Oil] -= F[Gas];
             }
 
+            double F_solvent = 0.0;
+            if (has_solvent_) {
+                F_solvent = well_state.wellSolutions()[SFrac*nw + w];
+                F[Oil] -= F_solvent;
+            }
+
             if (active_[ Water ]) {
                 if (F[Water] < 0.0) {
                     if (active_[ Gas ]) {
                         F[Gas] /= (1.0 - F[Water]);
+                    }
+                    if (has_solvent_) {
+                        F_solvent /= (1.0 - F[Water]);
                     }
                     F[Oil] /= (1.0 - F[Water]);
                     F[Water] = 0.0;
@@ -1245,6 +1294,9 @@ namespace Opm {
                 if (F[Gas] < 0.0) {
                     if (active_[ Water ]) {
                         F[Water] /= (1.0 - F[Gas]);
+                    }
+                    if (has_solvent_) {
+                        F_solvent /= (1.0 - F[Gas]);
                     }
                     F[Oil] /= (1.0 - F[Gas]);
                     F[Gas] = 0.0;
@@ -1257,6 +1309,9 @@ namespace Opm {
                 if (active_[ Gas ]) {
                     F[Gas] /= (1.0 - F[Oil]);
                 }
+                if (has_solvent_) {
+                    F_solvent /= (1.0 - F[Oil]);
+                }
                 F[Oil] = 0.0;
             }
 
@@ -1265,6 +1320,14 @@ namespace Opm {
             }
             if (active_[ Gas ]) {
                 well_state.wellSolutions()[GFrac*nw + w] = F[Gas];
+            }
+            if(has_solvent_) {
+                well_state.wellSolutions()[SFrac*nw + w] = F_solvent;
+            }
+
+            # warning F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent. More testing is needed to make sure this is correct for output, wellControls, well groups, THP etc.
+            if (has_solvent_){
+                F[Gas] += F_solvent;
             }
 
             // The interpretation of the first well variable depends on the well control
@@ -1699,9 +1762,21 @@ namespace Opm {
                                            const double grav)
     {
         // Compute densities
+        const int nperf = depth_perf.size();
+        const int numComponent = b_perf.size() / nperf;
+        const int np = wells().number_of_phases;
+        std::vector<double> perfRates(b_perf.size(),0.0);
+        for (int perf = 0; perf < nperf; ++perf) {
+            for (int phase = 0; phase < np; ++phase) {
+                perfRates[perf*numComponent + phase] =  xw.perfPhaseRates()[perf*np + phase];
+            }
+            if(has_solvent_) {
+                perfRates[perf*numComponent + solventCompIdx] =  xw.perfRateSolvent()[perf];
+            }
+        }
         well_perforation_densities_ =
                   WellDensitySegmented::computeConnectionDensities(
-                          wells(), phase_usage_, xw.perfPhaseRates(),
+                          wells(), phase_usage_, perfRates,
                           b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
 
         // Compute pressure deltas
@@ -2065,13 +2140,27 @@ namespace Opm {
         EvalWell qs = 0.0;
         const WellControls* wc = wells().ctrls[wellIdx];
         const int np = wells().number_of_phases;
-        assert(compIdx < np);
+        assert(compIdx < numComponents());
         const int nw = wells().number_of_wells;
+        const auto pu = phase_usage_;
         const double target_rate = well_controls_get_current_target(wc);
 
         // TODO: the formulation for the injectors decides it only work with single phase
         // surface rate injection control. Improvement will be required.
         if (wells().type[wellIdx] == INJECTOR) {
+            if (has_solvent_ ) {
+                if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
+                    OPM_THROW(std::runtime_error,"BHP controlled solvent injector is unsupported. Check well "
+                              << wells().name [wellIdx] );
+                }
+                if (compIdx == pu.phase_pos[ Gas ]) { //gas
+                    qs.setValue(target_rate * (1.0 - wsolvent(wellIdx)));
+                    return qs;
+                } else if (compIdx == solventCompIdx) { // solvent
+                    qs.setValue(wsolvent(wellIdx) * target_rate);
+                    return qs;
+                }
+            }
             const double comp_frac = wells().comp_frac[np*wellIdx + compIdx];
             if (comp_frac == 0.0) {
                 return qs;
@@ -2175,6 +2264,10 @@ namespace Opm {
             return wellVariables_[GFrac * nw + wellIdx];
         }
 
+        if (compIdx == solventCompIdx) {
+            return wellVariables_[SFrac * nw + wellIdx];
+        }
+
         // Oil fraction
         EvalWell well_fraction = 1.0;
         if (active_[Water]) {
@@ -2183,6 +2276,9 @@ namespace Opm {
 
         if (active_[Gas]) {
             well_fraction -= wellVariables_[GFrac * nw + wellIdx];
+        }
+        if (has_solvent_) {
+            well_fraction -= wellVariables_[SFrac * nw + wellIdx];
         }
         return well_fraction;
     }
@@ -2208,8 +2304,7 @@ namespace Opm {
                 return wellVolumeFraction(wellIdx, compIdx);
             }
         }
-        assert(compIdx < 3);
-        std::vector<double> g = {1,1,0.01};
+        std::vector<double> g = {1,1,0.01,0.01};
         return (wellVolumeFraction(wellIdx, compIdx) / g[compIdx]);
     }
 
@@ -2601,7 +2696,10 @@ namespace Opm {
                 xw.wellSolutions()[WFrac*nw + well_index] = g[Water] * xw.wellRates()[np*well_index + Water] / tot_well_rate;
             }
             if (active_[ Gas ]) {
-                xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
+                xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * (1.0 - wsolvent(well_index)) * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
+            }
+            if (has_solvent_) {
+                xw.wellSolutions()[SFrac*nw + well_index] = g[Gas] * wsolvent(well_index) * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
             }
         } else {
             const WellType& well_type = wells().type[well_index];
@@ -2617,7 +2715,10 @@ namespace Opm {
 
                 if (active_[Gas]) {
                     if (distr[Gas] > 0.0) {
-                        xw.wellSolutions()[GFrac * nw + well_index] = 1.0;
+                        xw.wellSolutions()[GFrac * nw + well_index] = 1.0 - wsolvent(well_index);
+                        if (has_solvent_) {
+                            xw.wellSolutions()[SFrac * nw + well_index] = wsolvent(well_index);
+                        }
                     } else {
                         xw.wellSolutions()[GFrac * nw + well_index] = 0.0;
                     }
@@ -2878,5 +2979,39 @@ namespace Opm {
 
         return potentials;
     }
+
+    template<typename TypeTag>
+    double
+    StandardWellsDense<TypeTag>::
+    wsolvent(const int well_index) const {
+
+        if (!has_solvent_) {
+            return 0.0;
+        }
+
+        // loop over all wells until we find the well with the matching name
+        for (const auto&  well : wells_ecl_) {
+            if (well->getStatus( current_timeIdx_ ) == WellCommon::SHUT) {
+                continue;
+            }
+
+            WellInjectionProperties injection = well->getInjectionProperties(current_timeIdx_);
+            if (injection.injectorType == WellInjector::GAS) {
+
+                double solventFraction = well->getSolventFraction(current_timeIdx_);
+
+                // Look until we find the correct well
+                if (well->name() == wells().name[well_index]) {
+                    return solventFraction;
+                }
+            }
+        }
+        // we didn't find it return 0;
+        // or should we throw?
+        return 0.0;
+    }
+
+
+
 
 } // namespace Opm

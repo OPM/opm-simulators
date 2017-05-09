@@ -62,7 +62,8 @@ namespace Opm {
 enum WellVariablePositions {
     XvarWell = 0,
     WFrac = 1,
-    GFrac = 2
+    GFrac = 2,
+    SFrac = 3
 };
 
 
@@ -85,6 +86,7 @@ enum WellVariablePositions {
             typedef double Scalar;
             static const int numEq = BlackoilIndices::numEq;
             static const int numWellEq = numEq; //number of wellEq is the same as numEq in the model
+            static const int solventCompIdx = 3; //TODO get this from ebos
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
             typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
@@ -102,8 +104,10 @@ enum WellVariablePositions {
             // ---------  Public methods  ---------
             StandardWellsDense(const Wells* wells_arg,
                                WellCollection* well_collection,
+                               const std::vector< const Well* >& wells_ecl,
                                const ModelParameters& param,
-                               const bool terminal_output);
+                               const bool terminal_output,
+                               const int current_index);
 
             void init(const PhaseUsage phase_usage_arg,
                       const std::vector<bool>& active_arg,
@@ -118,10 +122,14 @@ enum WellVariablePositions {
             /// The number of components in the model.
             int numComponents() const
             {
-                if (phase_usage_.num_phases == 2) {
+                if (numPhases() == 2) {
                     return 2;
                 }
-                return FluidSystem::numComponents;
+                int numComp = FluidSystem::numComponents;
+                if (has_solvent_)
+                    numComp ++;
+
+                return numComp;
             }
 
 
@@ -279,12 +287,15 @@ enum WellVariablePositions {
         protected:
             bool wells_active_;
             const Wells*   wells_;
+            const std::vector< const Well* > wells_ecl_;
 
             // Well collection is used to enforce the group control
             WellCollection* well_collection_;
 
             ModelParameters param_;
             bool terminal_output_;
+            bool has_solvent_;
+            int current_timeIdx_;
 
             PhaseUsage phase_usage_;
             std::vector<bool>  active_;
@@ -385,6 +396,8 @@ enum WellVariablePositions {
                                         const int well_index,
                                         const double initial_bhp, // bhp from BHP constraints
                                         const std::vector<double>& initial_potential) const;
+
+            double wsolvent(const int well_index) const;
         };
 
 
