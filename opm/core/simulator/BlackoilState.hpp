@@ -43,6 +43,7 @@ namespace Opm
         static const std::string GASOILRATIO;
         static const std::string RV;
         static const std::string SURFACEVOL;
+        static const std::string SSOL;
 
         /// Main constructor setting the sizes for the contained data
         /// types.
