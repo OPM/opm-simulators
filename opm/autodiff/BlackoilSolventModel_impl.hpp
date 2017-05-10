@@ -135,7 +135,7 @@ namespace Opm {
 
         // Initial solvent concentration.
         if (has_solvent_) {
-            const auto& solvent_saturation = x.getCellData( BlackoilSolventState::SSOL );
+            const auto& solvent_saturation = x.getCellData( BlackoilState::SSOL );
             const int nc = solvent_saturation.size();
             const V ss = Eigen::Map<const V>(solvent_saturation.data() , nc);
 

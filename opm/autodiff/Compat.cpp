@@ -29,7 +29,6 @@
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
-#include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
@@ -111,7 +110,7 @@ data::Solution simToSolution( const SimulationDataContainer& reservoir,
     }
 
     if (phases.has_solvent) {
-        sol.insert( "SSOL", UnitSystem::measure::identity, reservoir.getCellData( BlackoilSolventState::SSOL ) , data::TargetType::RESTART_SOLUTION );
+        sol.insert( "SSOL", UnitSystem::measure::identity, reservoir.getCellData( BlackoilState::SSOL ) , data::TargetType::RESTART_SOLUTION );
     }
 
     return sol;

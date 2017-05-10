@@ -62,7 +62,7 @@ namespace Opm
 {
 
     class SimulationDataContainer;
-    class BlackoilSolventState;
+    class BlackoilState;
 
     void outputStateVtk(const UnstructuredGrid& grid,
                         const Opm::SimulationDataContainer& state,

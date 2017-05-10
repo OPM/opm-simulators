@@ -22,7 +22,6 @@
 
 #include <opm/autodiff/SimulatorBase.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
-#include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/autodiff/BlackoilSolventModel.hpp>
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
@@ -85,7 +84,7 @@ namespace Opm
     struct SimulatorTraits<SimulatorFullyImplicitBlackoilSolvent<GridT> >
     {
         typedef WellStateFullyImplicitBlackoilSolvent WellState;
-        typedef BlackoilSolventState ReservoirState;
+        typedef BlackoilState ReservoirState;
         typedef BlackoilOutputWriter OutputWriter;
         typedef GridT Grid;
         typedef BlackoilSolventModel<Grid> Model;

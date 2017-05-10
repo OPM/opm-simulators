@@ -22,7 +22,6 @@
 
 #include <opm/autodiff/BlackoilModelBase.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/BlackoilSolventState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp>
 #include <opm/autodiff/SolventPropsAdFromDeck.hpp>
 #include <opm/autodiff/StandardWellsSolvent.hpp>
@@ -255,7 +254,7 @@ namespace Opm {
     template <class Grid>
     struct ModelTraits< BlackoilSolventModel<Grid> >
     {
-        typedef BlackoilSolventState ReservoirState;
+        typedef BlackoilState ReservoirState;
         typedef WellStateFullyImplicitBlackoilSolvent WellState;
         typedef BlackoilModelParameters ModelParameters;
         typedef BlackoilSolventSolutionState SolutionState;
