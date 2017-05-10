@@ -2,12 +2,12 @@
 
 declare -a upstreams
 upstreams=(opm-common
-           ert
+           libecl
            opm-parser)
 
 declare -A upstreamRev
 upstreamRev[opm-common]=master
-upstreamRev[ert]=master
+upstreamRev[libecl]=master
 upstreamRev[opm-parser]=master
 
 if grep -q "opm-common=" <<< $ghprbCommentBody
