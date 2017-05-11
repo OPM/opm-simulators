@@ -762,31 +762,37 @@ namespace Opm
             data::CellData trany = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
             data::CellData tranz = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
 
+            for (size_t i = 0; i < tranx.data.size(); ++i) {
+                tranx.data[0] = 0.0;
+                trany.data[0] = 0.0;
+                tranz.data[0] = 0.0;
+            }
+
             const auto& eclTrans = ebosSimulator_->problem().eclTransmissibilities();
             const auto& globalCell = grid().globalCell();
             size_t num_faces = grid().numFaces();
             auto fc = UgGridHelpers::faceCells(grid());
             for (size_t i = 0; i < num_faces; ++i) {
-                auto c1 = std::min(fc(i,0), fc(i,1));
-                auto c2 = std::max(fc(i,0), fc(i,1));
+                auto c1 = fc(i,0);
+                auto c2 = fc(i,1);
 
                 if (c1 == -1 || c2 == -1)
                     // boundary
                     continue;
 
-                int gc1 = globalCell.size()?globalCell[c1]:c1;
-                int gc2 = globalCell.size()?globalCell[c2]:c2;
+                int gc1 = std::min(globalCell[c1], globalCell[c2]);
+                int gc2 = std::max(globalCell[c1], globalCell[c2]);
 
                 if (gc2 - gc1 == 1) {
-                    tranx.data[c1] = eclTrans.transmissibility(c1, c2);
+                    tranx.data[gc1] = eclTrans.transmissibility(c1, c2);
                 }
 
                 if (gc2 - gc1 == dims[0]) {
-                    trany.data[c1] = eclTrans.transmissibility(c1, c2);
+                    trany.data[gc1] = eclTrans.transmissibility(c1, c2);
                 }
 
                 if (gc2 - gc1 == dims[0]*dims[1]) {
-                    tranz.data[c1] = eclTrans.transmissibility(c1, c2);
+                    tranz.data[gc1] = eclTrans.transmissibility(c1, c2);
                 }
             }
             return
@@ -857,7 +863,7 @@ namespace Opm
                         std::abs(cc1 - cc2) != nx &&
                         std::abs(cc1 - cc2) != nx*ny)
                     {
-                        nnc_.addNNC(c1, c2, eclTrans->transmissibility(c1, c2));
+                        nnc_.addNNC(cc1, cc2, eclTrans->transmissibility(c1, c2));
                     }
                 }
             }
