@@ -26,6 +26,7 @@
 
 #include <opm/common/utility/platform_dependent/disable_warnings.h>
 
+
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
 #include <dune/common/parallel/mpihelper.hh>
