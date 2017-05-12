@@ -824,49 +824,29 @@ namespace Opm
                 // sequential version here.)
                 eclTrans = &ebosSimulator_->problem().eclTransmissibilities();
             }
+            size_t num_faces = grid.numFaces();
+            auto fc = UgGridHelpers::faceCells(grid);
+            const auto& globalCell = grid.globalCell();
+            for (size_t i = 0; i < num_faces; ++i) {
+                auto c1 = fc(i,0);
+                auto c2 = fc(i,1);
 
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++ elemIt) {
-                const auto& elem = *elemIt;
+                if (c1 == -1 || c2 == -1)
+                    // boundary
+                    continue;
 
-                auto isIt = gridView.ibegin(elem);
-                const auto& isEndIt = gridView.iend(elem);
-                for (; isIt != isEndIt; ++ isIt) {
-                    const auto& is = *isIt;
+                int cc1 = globalCell[c1];
+                int cc2 = globalCell[c2];
 
-                    if (!is.neighbor())
-                    {
-                        continue; // intersection is on the domain boundary
-                    }
-
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                    unsigned c1 = elemMapper.index(is.inside());
-                    unsigned c2 = elemMapper.index(is.outside());
-#else
-                    unsigned c1 = elemMapper.map(is.inside());
-                    unsigned c2 = elemMapper.map(is.outside());
-#endif
-
-                    if (c1 > c2)
-                    {
-                        continue; // we only need to handle each connection once, thank you.
-                    }
-
-                    // TODO (?): use the cartesian index mapper to make this code work
-                    // with grids other than Dune::CpGrid. The problem is that we need
-                    // the a mapper for the sequential grid, not for the distributed one.
-                    int cc1 = grid.globalCell()[c1];
-                    int cc2 = grid.globalCell()[c2];
-
-                    if (std::abs(cc1 - cc2) != 1 &&
+                if (std::abs(cc1 - cc2) != 1 &&
                         std::abs(cc1 - cc2) != nx &&
                         std::abs(cc1 - cc2) != nx*ny)
-                    {
-                        nnc_.addNNC(cc1, cc2, eclTrans->transmissibility(c1, c2));
-                    }
+                {
+                    nnc_.addNNC(cc1, cc2, eclTrans->transmissibility(c1, c2));
                 }
+
             }
+
         }
 
         std::unique_ptr<EbosSimulator> ebosSimulator_;
