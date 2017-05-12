@@ -21,16 +21,21 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 # Details:
 #   - This test class compares output from a simulation to reference files.
 macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol prefix dirprefix)
+  if(${ARGC} GREATER 7)
+    set(DIR ${ARGN})
+  else()
+    set(DIR ${casename})
+  endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${dirprefix}/${simulator}+${casename})
   opm_add_test(${prefix}_${simulator}+${filename} NO_COMPILE
                EXE_NAME ${simulator}
-               DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
+               DRIVER_ARGS ${OPM_DATA_ROOT}/${DIR} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
                            ${filename}
                            ${abs_tol} ${rel_tol}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
-               TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename}.DATA )
+               TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${filename}.DATA )
 endmacro (add_test_compareECLFiles)
 
 ###########################################################################
@@ -94,7 +99,9 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 
 add_test_compareECLFiles(spe1 SPE1CASE2 flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
 add_test_compareECLFiles(spe1 SPE1CASE2 flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
 add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe3 SPE3CASE1 flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe3 SPE3CASE1 flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
