@@ -54,30 +54,6 @@
 
 namespace Opm
 {
-
-    /// \brief Gather cell data to global random access iterator
-    /// \tparam ConstIter The type of constant iterator.
-    /// \tparam Iter The type of the mutable iterator.
-    /// \param grid The distributed CpGrid where loadbalance has been run.
-    /// \param local The local container from which the data should be sent.
-    /// \param global The global container to gather to.
-    /// \warning The global container has to have the correct size!
-    template<class ConstIter, class Iter>
-    void gatherCellDataToGlobalIterator(const Dune::CpGrid& grid,
-                                         const ConstIter& local_begin,
-                                         const Iter& global_begin)
-    {
-#if HAVE_MPI
-        FixedSizeIterCopyHandle<ConstIter,Iter> handle(local_begin,
-                                                   global_begin);
-        const auto& gatherScatterInf = grid.cellScatterGatherInterface();
-        Dune::VariableSizeCommunicator<> comm(grid.comm(),
-                                              gatherScatterInf);
-        comm.backward(handle);
-#endif
-    }
-
-
     // The FlowMain class is the ebos based black-oil simulator.
     class FlowMainEbos
     {
@@ -554,36 +530,13 @@ namespace Opm
         {
             bool output      = param_.getDefault("output", true);
             bool output_ecl  = param_.getDefault("output_ecl", true);
-            if( output && output_ecl )
+            if( output && output_ecl && grid().comm().rank() == 0 )
             {
-                const Grid& grid = this->globalGrid();
+                exportNncStructure_();
 
                 const EclipseGrid& inputGrid = eclState().getInputGrid();
-                eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
-                exportNncStructure_();
+                eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( this->globalGrid() , inputGrid )));
                 eclIO_->writeInitial(computeLegacySimProps_(), nnc_);
-                data::Solution globaltrans;
-
-                if ( must_distribute_ )
-                {
-                    // Gather the global simProps
-                    data::Solution localtrans = computeLegacySimProps_();
-                    for( const auto& localkeyval: localtrans)
-                    {
-                        auto& globalval = globaltrans[localkeyval.first].data;
-                        const auto& localval  = localkeyval.second.data;
-
-                        globalval.resize(grid.size(0));
-                        gatherCellDataToGlobalIterator(this->grid(), localval.begin(),
-                                                       globalval.begin());
-                    }
-                }
-                else
-                {
-                    globaltrans = computeLegacySimProps_();
-                }
-
-                eclIO_->writeInitial(globaltrans, nnc_);
             }
         }
 
@@ -768,70 +721,29 @@ namespace Opm
                 tranz.data[0] = 0.0;
             }
 
-            const auto& eclTrans = ebosSimulator_->problem().eclTransmissibilities();
-            const auto& globalCell = grid().globalCell();
-            size_t num_faces = grid().numFaces();
-            auto fc = UgGridHelpers::faceCells(grid());
-            for (size_t i = 0; i < num_faces; ++i) {
-                auto c1 = fc(i,0);
-                auto c2 = fc(i,1);
+            const Grid& globalGrid = this->globalGrid();
+            const auto& globalGridView = globalGrid.leafGridView();
+            ElementMapper globalElemMapper(globalGridView);
+            const auto& cartesianCellIdx = globalGrid.globalCell();
 
-                if (c1 == -1 || c2 == -1)
-                    // boundary
-                    continue;
-
-                int gc1 = std::min(globalCell[c1], globalCell[c2]);
-                int gc2 = std::max(globalCell[c1], globalCell[c2]);
-
-                if (gc2 - gc1 == 1) {
-                    tranx.data[gc1] = eclTrans.transmissibility(c1, c2);
-                }
-
-                if (gc2 - gc1 == dims[0]) {
-                    trany.data[gc1] = eclTrans.transmissibility(c1, c2);
-                }
-
-                if (gc2 - gc1 == dims[0]*dims[1]) {
-                    tranz.data[gc1] = eclTrans.transmissibility(c1, c2);
-                }
-            }
-            return
-              { {"TRANX" , tranx},
-                {"TRANY" , trany} ,
-                {"TRANZ" , tranz } };
-        }
-
-        void exportNncStructure_()
-        {
-            nnc_ = eclState().getInputNNC();
-
-            int nx = eclState().getInputGrid().getNX();
-            int ny = eclState().getInputGrid().getNY();
-            //int nz = eclState().getInputGrid().getNZ()
-
-            Grid grid = ebosSimulator_->gridManager().grid();
-            grid.switchToGlobalView();
-            const auto& gridView = grid.leafGridView();
-            ElementMapper elemMapper(gridView);
-
-            const auto* eclTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
-            if (grid.comm().size() < 2) {
+            const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
+            if (grid().comm().size() < 2) {
                 // in the sequential case we must use the transmissibilites defined by
                 // the problem. (because in the sequential case, the grid manager does
                 // not compute "global" transmissibilities for performance reasons. in
                 // the parallel case, the problem's transmissibilities can't be used
                 // because this object refers to the distributed grid and we need the
                 // sequential version here.)
-                eclTrans = &ebosSimulator_->problem().eclTransmissibilities();
+                globalTrans = &ebosSimulator_->problem().eclTransmissibilities();
             }
 
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            auto elemIt = globalGridView.template begin</*codim=*/0>();
+            const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++ elemIt) {
                 const auto& elem = *elemIt;
 
-                auto isIt = gridView.ibegin(elem);
-                const auto& isEndIt = gridView.iend(elem);
+                auto isIt = globalGridView.ibegin(elem);
+                const auto& isEndIt = globalGridView.iend(elem);
                 for (; isIt != isEndIt; ++ isIt) {
                     const auto& is = *isIt;
 
@@ -841,11 +753,83 @@ namespace Opm
                     }
 
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                    unsigned c1 = elemMapper.index(is.inside());
-                    unsigned c2 = elemMapper.index(is.outside());
+                    unsigned c1 = globalElemMapper.index(is.inside());
+                    unsigned c2 = globalElemMapper.index(is.outside());
 #else
-                    unsigned c1 = elemMapper.map(is.inside());
-                    unsigned c2 = elemMapper.map(is.outside());
+                    unsigned c1 = globalElemMapper.map(is.inside());
+                    unsigned c2 = globalElemMapper.map(is.outside());
+#endif
+
+                    if (c1 > c2)
+                    {
+                        continue; // we only need to handle each connection once, thank you.
+                    }
+
+
+                    int gc1 = std::min(cartesianCellIdx[c1], cartesianCellIdx[c2]);
+                    int gc2 = std::max(cartesianCellIdx[c1], cartesianCellIdx[c2]);
+                    if (gc2 - gc1 == 1) {
+                        tranx.data[gc1] = globalTrans->transmissibility(c1, c2);
+                    }
+
+                    if (gc2 - gc1 == dims[0]) {
+                        trany.data[gc1] = globalTrans->transmissibility(c1, c2);
+                    }
+
+                    if (gc2 - gc1 == dims[0]*dims[1]) {
+                        tranz.data[gc1] = globalTrans->transmissibility(c1, c2);
+                    }
+                }
+            }
+
+            return {{"TRANX" , tranx},
+                    {"TRANY" , trany} ,
+                    {"TRANZ" , tranz}};
+        }
+
+        void exportNncStructure_()
+        {
+            nnc_ = eclState().getInputNNC();
+            int nx = eclState().getInputGrid().getNX();
+            int ny = eclState().getInputGrid().getNY();
+            //int nz = eclState().getInputGrid().getNZ()
+
+            const Grid& globalGrid = this->globalGrid();
+            const auto& globalGridView = globalGrid.leafGridView();
+            ElementMapper globalElemMapper(globalGridView);
+
+            const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
+            if (grid().comm().size() < 2) {
+                // in the sequential case we must use the transmissibilites defined by
+                // the problem. (because in the sequential case, the grid manager does
+                // not compute "global" transmissibilities for performance reasons. in
+                // the parallel case, the problem's transmissibilities can't be used
+                // because this object refers to the distributed grid and we need the
+                // sequential version here.)
+                globalTrans = &ebosSimulator_->problem().eclTransmissibilities();
+            }
+
+            auto elemIt = globalGridView.template begin</*codim=*/0>();
+            const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
+            for (; elemIt != elemEndIt; ++ elemIt) {
+                const auto& elem = *elemIt;
+
+                auto isIt = globalGridView.ibegin(elem);
+                const auto& isEndIt = globalGridView.iend(elem);
+                for (; isIt != isEndIt; ++ isIt) {
+                    const auto& is = *isIt;
+
+                    if (!is.neighbor())
+                    {
+                        continue; // intersection is on the domain boundary
+                    }
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+                    unsigned c1 = globalElemMapper.index(is.inside());
+                    unsigned c2 = globalElemMapper.index(is.outside());
+#else
+                    unsigned c1 = globalElemMapper.map(is.inside());
+                    unsigned c2 = globalElemMapper.map(is.outside());
 #endif
 
                     if (c1 > c2)
@@ -856,14 +840,14 @@ namespace Opm
                     // TODO (?): use the cartesian index mapper to make this code work
                     // with grids other than Dune::CpGrid. The problem is that we need
                     // the a mapper for the sequential grid, not for the distributed one.
-                    int cc1 = grid.globalCell()[c1];
-                    int cc2 = grid.globalCell()[c2];
+                    int cc1 = globalGrid.globalCell()[c1];
+                    int cc2 = globalGrid.globalCell()[c2];
 
                     if (std::abs(cc1 - cc2) != 1 &&
                         std::abs(cc1 - cc2) != nx &&
                         std::abs(cc1 - cc2) != nx*ny)
                     {
-                        nnc_.addNNC(cc1, cc2, eclTrans->transmissibility(c1, c2));
+                        nnc_.addNNC(cc1, cc2, globalTrans->transmissibility(c1, c2));
                     }
                 }
             }
