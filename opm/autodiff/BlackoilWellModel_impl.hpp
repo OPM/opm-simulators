@@ -295,8 +295,16 @@ namespace Opm {
     }
 
 
-
-
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addWellContributions(Mat& mat) const
+    {
+        for(const auto& well: well_container_)
+        {
+            well->addWellContributions(mat);
+        }
+    }
 
     // applying the well residual to reservoir residuals
     // r = r - duneC_^T * invDuneD_ * resWell_

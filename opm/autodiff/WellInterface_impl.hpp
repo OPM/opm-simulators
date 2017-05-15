@@ -844,6 +844,13 @@ namespace Opm
         return 1.0;
     }
 
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::addWellContributions(Mat& mat) const
+    {
+        OPM_THROW(NotImplemented, "This well class does not support adding well contributions"
+                  << "to the matrix");     
+    }
 
 
 

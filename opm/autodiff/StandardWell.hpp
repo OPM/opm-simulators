@@ -157,6 +157,7 @@ namespace Opm
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state); // should be const?
+        virtual void  addWellContributions(Mat& mat) const;
     protected:
 
         // protected functions from the Base class

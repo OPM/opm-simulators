@@ -358,8 +358,7 @@ namespace Opm {
             {
                 // This might be dangerous?!
                 ebosSimulator_.model().clearAuxiliaryModules();
-                const auto* wells = wellModel().wellsPointer();
-                auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(wells);
+                auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >( wellModel().wells() );
                 ebosSimulator_.model().addAuxiliaryModule(auxMod);
             }
 
@@ -498,14 +497,17 @@ namespace Opm {
             if( isParallel() )
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-                Operator opA(ebosJac, wellModel(), istlSolver().parallelInformation() );
+                Operator opA(ebosJac, wellModel(),
+                             param_.matrix_add_well_contributions_,
+                             istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, wellModel());
+                Operator opA(ebosJac, wellModel(),
+                             param_.matrix_add_well_contributions_ );
                 istlSolver().solve( opA, x, ebosResid );
             }
         }
@@ -552,8 +554,11 @@ namespace Opm {
 #endif
 
           //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
-              : A_( A ), wellMod_( wellMod ), comm_()
+          WellModelMatrixAdapter (const M& A, const WellModel& wellMod,
+                                  bool matrix_add_well_contributions,
+                                   const boost::any& parallelInformation = boost::any() )
+              : A_( A ), wellMod_( wellMod ), comm_(),
+                matrix_add_well_contributions_(matrix_add_well_contributions)
           {
 #if HAVE_MPI
             if( parallelInformation.type() == typeid(ParallelISTLInformation) )
@@ -568,8 +573,12 @@ namespace Opm {
           virtual void apply( const X& x, Y& y ) const
           {
             A_.mv( x, y );
-            // add well model modification to y
-            wellMod_.apply(x, y );
+
+            if ( ! matrix_add_well_contributions_ )
+            {
+              // add well model modification to y
+              wellMod_.apply(x, y );
+            }
 
 #if HAVE_MPI
             if( comm_ )
@@ -581,8 +590,12 @@ namespace Opm {
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
           {
             A_.usmv(alpha,x,y);
-            // add scaled well model modification to y
-            wellMod_.applyScaleAdd( alpha, x, y );
+
+            if ( ! matrix_add_well_contributions_ )
+            {
+              // add scaled well model modification to y
+              wellMod_.applyScaleAdd( alpha, x, y );
+            }
 
 #if HAVE_MPI
             if( comm_ )
@@ -601,6 +614,7 @@ namespace Opm {
           const matrix_type& A_ ;
           const WellModel& wellMod_;
           std::unique_ptr< communication_type > comm_;
+          bool matrix_add_well_contributions_;
         };
 
         /// Apply an update to the primary variables, chopped if appropriate.

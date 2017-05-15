@@ -82,7 +82,13 @@ namespace Opm
         typedef double Scalar;
 
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
+#if  DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
+        // 3x3 matrix block inversion was unstable from at least 2.3 until and
+        // including 2.5.0
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+#else
+        typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+#endif
         typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
@@ -201,6 +207,8 @@ namespace Opm
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state) = 0; // should be const?
+
+        virtual void addWellContributions(Mat& mat) const;
 
         // updating the voidage rates in well_state when requested
         void calculateReservoirRates(WellState& well_state) const;

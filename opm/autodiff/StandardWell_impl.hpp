@@ -22,6 +22,28 @@
 
 namespace Opm
 {
+namespace Detail
+{
+    //! calculates ret = A^T * B
+    template< class K, int m, int n, int p >
+    static inline void multMatrixTransposed ( const Dune::FieldMatrix< K, n, m > &A,
+                                              const Dune::FieldMatrix< K, n, p > &B,
+                                              Dune::FieldMatrix< K, m, p > &ret )
+    {
+        typedef typename Dune::FieldMatrix< K, m, p > :: size_type size_type;
+
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                ret[ i ][ j ] = K( 0 );
+                for( size_type k = 0; k < n; ++k )
+                    ret[ i ][ j ] += A[ k ][ i ] * B[ k ][ j ];
+            }
+        }
+    }
+}
+
     template<typename TypeTag>
     StandardWell<TypeTag>::
     StandardWell(const Well* well, const int time_step, const Wells* wells,
@@ -667,6 +689,11 @@ namespace Opm
 
         // do the local inversion of D.
         invDuneD_[0][0].invert();
+
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            addWellContributions( ebosJac );
+        }
     }
 
 
@@ -2071,6 +2098,32 @@ namespace Opm
                                                                 water_velocity);
              // modify the mobility with the shear factor.
             mob[waterCompIdx] /= shear_factor;
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::addWellContributions(Mat& mat) const
+    {
+        auto colC = duneC_[0].begin();
+        for(int perf1 = 0; perf1 < number_of_perforations_; ++perf1, ++colC) {
+            const auto row_index = well_cells_[perf1];
+            auto& row = mat[row_index];
+            auto colB = duneB_[0].begin();
+            assert(colC.index() ==  row_index);
+            
+            for(int perf2 = 0 ; perf2 < number_of_perforations_; ++perf2, ++colB) {
+                const auto col_index = well_cells_[perf2];
+                auto col = row.find(col_index);
+                assert(col != row.end());
+                assert(colB.index() ==  col_index);
+
+                Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;
+                typename Mat::block_type tmp1;
+                Dune::FMatrixHelp::multMatrix(invDuneD_[0][0],  (*colB), tmp);
+                Detail::multMatrixTransposed((*colC), tmp, tmp1);
+                (*col) -= tmp1;
+            }
         }
     }
 }

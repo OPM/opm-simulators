@@ -61,9 +61,14 @@
 
 namespace Opm {
 
+        template<typename TypeTag>
+        class BlackoilModelEbos;
+
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilWellModel {
+            // Needs acces to wells_ecl_
+            friend class BlackoilModelEbos<TypeTag>;
         public:
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoil WellState;
@@ -83,6 +88,15 @@ namespace Opm {
             // or there is some other strategy, like TypeTag
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::BlockVector<VectorBlockType> BVector;
+
+#if  DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
+            // 3x3 matrix block inversion was unstable from at least 2.3 until and
+            // including 2.5.0
+            typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+#else
+            typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+#endif
+            typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
 
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -142,6 +156,13 @@ namespace Opm {
             void endReportStep();
 
             const SimulatorReport& lastReport() const;
+
+            /// \! brief Modifies matrix to include influences of the well perforations.
+            ///
+            /// \param mat The linear system with the assembled mass balance
+            ///            equations
+            void addWellContributions(Mat& mat) const;
+
 
         protected:
 
