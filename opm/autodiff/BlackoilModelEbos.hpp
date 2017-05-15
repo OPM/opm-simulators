@@ -29,6 +29,7 @@
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
+#include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 
@@ -353,6 +354,16 @@ namespace Opm {
         SimulatorReport assemble(const SimulatorTimerInterface& timer,
                                  const int iterationIdx)
         {
+            if ( param_.matrix_add_well_contributions_ )
+            {
+                // This might be dangerous?!
+                ebosSimulator_.model().clearAuxiliaryModules();
+                const auto* wells = wellModel().wellsPointer();
+                auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(wells);
+                ebosSimulator_.model().addAuxiliaryModule(auxMod);
+            }
+
+
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
@@ -1066,6 +1077,7 @@ namespace Opm {
         }
 
     private:
+
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
