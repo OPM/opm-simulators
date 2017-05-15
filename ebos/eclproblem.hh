@@ -779,6 +779,26 @@ public:
     }
 
     /*!
+     * \brief Returns the index of the relevant region for thermodynmic properties
+     */
+    template <class Context>
+    unsigned miscnumRegionIndex(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    { return miscnumRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
+
+    /*!
+     * \brief Returns the index the relevant MISC region given a cell index
+     */
+    unsigned miscnumRegionIndex(unsigned elemIdx) const
+    {
+        if (miscnum_.empty())
+            return 0;
+
+        return miscnum_[elemIdx];
+    }
+
+
+
+    /*!
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
@@ -1404,6 +1424,25 @@ private:
         }
     }
 
+    void updateMiscnum_()
+    {
+        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclProps = eclState.get3DProperties();
+
+        if (!eclProps.hasDeckIntGridProperty("MISCNUM"))
+            return;
+
+        const auto& miscnumData = eclProps.getIntGridProperty("MISCNUM").getData();
+        const auto& gridManager = this->simulator().gridManager();
+
+        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        miscnum_.resize(numElems);
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            miscnum_[elemIdx] = miscnumData[cartElemIdx] - 1;
+        }
+    }
+
     struct PffDofData_
     {
         Scalar transmissibility;
@@ -1449,6 +1488,7 @@ private:
 
     std::vector<unsigned short> pvtnum_;
     std::vector<unsigned short> satnum_;
+    std::vector<unsigned short> miscnum_;
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 
