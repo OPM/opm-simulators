@@ -105,12 +105,9 @@ public:
         auto& transMult = eclState.getTransMult();
         ElementMapper elemMapper(gridView);
 
-        const std::vector<double>& ntg =
-            eclState.get3DProperties().getDoubleGridProperty("NTG").getData();
-
-        // modify the ntg values for the cells merged with minpv
-        std::vector<double> ntg_mod (ntg);
-        minPvFillNtg_(ntg_mod);
+        // get the ntg values, the ntg values are modified for the cells merged with minpv
+        std::vector<double> ntg;
+        minPvFillNtg_(ntg);
 
         unsigned numElements = elemMapper.size();
 
@@ -213,8 +210,8 @@ public:
                                                   axisCentroids),
                                   permeability_[outsideElemIdx]);
 
-                applyNtg_(halfTrans1, insideFaceIdx, insideCartElemIdx, ntg_mod);
-                applyNtg_(halfTrans2, outsideFaceIdx, outsideCartElemIdx, ntg_mod);
+                applyNtg_(halfTrans1, insideFaceIdx, insideCartElemIdx, ntg);
+                applyNtg_(halfTrans2, outsideFaceIdx, outsideCartElemIdx, ntg);
 
                 // convert half transmissibilities to full face
                 // transmissibilities using the harmonic mean
@@ -402,7 +399,7 @@ private:
         }
     }
 
-    void minPvFillNtg_(std::vector<double>& ntg) const {
+    void minPvFillNtg_(std::vector<double>& averageNtg) const {
 
         // compute volume weighted arithmetic average of NTG for
         // cells merged as an result of minpv.
@@ -410,18 +407,38 @@ private:
         const auto& eclGrid = eclState.getInputGrid();
         const auto& porv = eclState.get3DProperties().getDoubleGridProperty("PORV").getData();
         const auto& actnum = eclState.get3DProperties().getIntGridProperty("ACTNUM").getData();
+        const std::vector<double>& ntg =
+            eclState.get3DProperties().getDoubleGridProperty("NTG").getData();
+
         const auto& cartMapper = gridManager_.cartesianIndexMapper();
         const auto& cartDims = cartMapper.cartesianDimensions();
         assert(dimWorld > 1);
         const size_t nxny = cartDims[0] * cartDims[1];
 
+        averageNtg.clear();
+        averageNtg.resize(ntg.size(),1.0);
+
         for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx) {
-            const double cellVolume = eclGrid.getCellVolume(cartesianCellIdx);
-            ntg[cartesianCellIdx] *= cellVolume;
-            double totalCellVolume = cellVolume;
+
+            // use the original ntg values for the inactive cells
+            if( ! actnum[cartesianCellIdx]) {
+                averageNtg[cartesianCellIdx] = ntg[cartesianCellIdx];
+                continue;
+            }
+
+
+            // use the original ntg values if the cell above has porv > minPVvalue.
+            int cartesianCellIdxAbove = cartesianCellIdx - nxny;
+            if (porv[cartesianCellIdxAbove] > eclGrid.getMinpvValue() ){
+                averageNtg[cartesianCellIdx] = ntg[cartesianCellIdx];
+                continue;
+            }
+
             // Average properties as long as there exist cells above
             // that has pore volume less than the MINPV threshold
-            int cartesianCellIdxAbove = cartesianCellIdx - nxny;
+            const double cellVolume = eclGrid.getCellVolume(cartesianCellIdx);
+            double ntgCellVolume = ntg[cartesianCellIdx] * cellVolume;
+            double totalCellVolume = cellVolume;
             while ( cartesianCellIdxAbove >= 0 &&
                  actnum[cartesianCellIdxAbove] > 0 &&
                  porv[cartesianCellIdxAbove] < eclGrid.getMinpvValue() ) {
@@ -429,10 +446,10 @@ private:
                 // Volume weighted arithmetic average of NTG
                 const double cellAboveVolume = eclGrid.getCellVolume(cartesianCellIdxAbove);
                 totalCellVolume += cellAboveVolume;
-                ntg[cartesianCellIdx] += ntg[cartesianCellIdxAbove]*cellAboveVolume;
+                ntgCellVolume += ntg[cartesianCellIdxAbove]*cellAboveVolume;
                 cartesianCellIdxAbove -= nxny;
             }
-            ntg[cartesianCellIdx] /= totalCellVolume;
+            averageNtg[cartesianCellIdx] = ntgCellVolume / totalCellVolume;
         }
 
     }
