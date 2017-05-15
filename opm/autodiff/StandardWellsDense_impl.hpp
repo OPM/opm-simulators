@@ -116,6 +116,36 @@ namespace Opm {
     }
 
 
+    template<class TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    addWellContributions(Mat& mat) const
+    {
+        const int nw = wells().number_of_wells;
+
+        for(int w = 0; w < nw; ++w)
+        {
+            for(int perf1 = wells().well_connpos[w] ; perf1 < wells().well_connpos[w+1]; ++perf1) {
+                const auto pi = wells().well_cells[perf1];
+                auto& row = mat[pi];
+
+                for(int perf2 = wells().well_connpos[w] ; perf2 < wells().well_connpos[w+1]; ++perf2) {
+                    const auto pj = wells().well_cells[perf2];
+                    auto col = row.find(pj);
+                    assert(col != row.end());
+                    auto colC = duneC_[w].find(pj);
+                    assert(colC !=  duneC_[w].end());
+                    auto colB = duneB_[w].find(pi);
+                    assert(colB !=  duneB_[w].end());
+
+                    typename Mat::block_type tmp, tmp1;
+                    Dune::FMatrixHelp::multMatrix(invDuneD_[w][w],  (*colC), tmp);
+                    Detail::multMatrixTransposed((*colB), tmp, tmp1);
+                    (*col) -= tmp1;
+                }
+            }
+        }
+    }
 
     template<typename TypeTag>
     SimulatorReport
@@ -243,6 +273,11 @@ namespace Opm {
 
         // do the local inversion of D.
         localInvert( invDuneD_ );
+
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            addWellContributions( ebosJac );
+        }
     }
 
 

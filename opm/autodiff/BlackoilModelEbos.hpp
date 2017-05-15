@@ -479,14 +479,17 @@ namespace Opm {
             if( isParallel() )
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, true > Operator;
-                Operator opA(ebosJac, const_cast< ThisType& > (*this), istlSolver().parallelInformation() );
+                Operator opA(ebosJac, const_cast< ThisType& > (*this),
+                             param_.matrix_add_well_contributions_,
+                             istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, false > Operator;
-                Operator opA(ebosJac, const_cast< ThisType& > (*this) );
+                Operator opA(ebosJac, const_cast< ThisType& > (*this),
+                             param_.matrix_add_well_contributions_ );
                 istlSolver().solve( opA, x, ebosResid );
             }
 
@@ -532,8 +535,11 @@ namespace Opm {
           };
 
           //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
-              : A_( A ), wellMod_( wellMod ), comm_()
+          WellModelMatrixAdapter (const M& A, WellModel& wellMod,
+                                  bool matrix_add_well_contributions,
+                                  const boost::any& parallelInformation = boost::any() )
+              : A_( A ), wellMod_( wellMod ), comm_(),
+                matrix_add_well_contributions_(matrix_add_well_contributions)
           {
 #if HAVE_MPI
             if( parallelInformation.type() == typeid(ParallelISTLInformation) )
@@ -548,22 +554,29 @@ namespace Opm {
           virtual void apply( const X& x, Y& y ) const
           {
             A_.mv( x, y );
-            // add well model modification to y
-            wellMod_.applyWellModelAdd(x, y );
+
+            if ( ! matrix_add_well_contributions_ )
+            {
+              // add well model modification to y
+              wellMod_.applyWellModelAdd(x, y );
 
 #if HAVE_MPI
-            if( comm_ )
-              comm_->project( y );
+              if( comm_ )
+                comm_->project( y );
 #endif
+            }
           }
 
           // y += \alpha * A * x
           virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const
           {
             A_.usmv(alpha,x,y);
-            // add scaled well model modification to y
-            wellMod_.applyWellModelScaleAdd( alpha, x, y );
 
+            if ( ! matrix_add_well_contributions_ )
+            {
+                // add scaled well model modification to y
+                wellMod_.applyWellModelScaleAdd( alpha, x, y );
+            }
 #if HAVE_MPI
             if( comm_ )
               comm_->project( y );
@@ -581,6 +594,7 @@ namespace Opm {
           const matrix_type& A_ ;
           WellModel& wellMod_;
           std::unique_ptr< communication_type > comm_;
+          bool matrix_add_well_contributions_;
         };
 
         /// Apply an update to the primary variables, chopped if appropriate.
