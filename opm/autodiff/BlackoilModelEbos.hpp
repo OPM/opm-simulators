@@ -29,6 +29,7 @@
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/StandardWellsDense.hpp>
+#include <opm/autodiff/WellConnectionAuxiliaryModule.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
@@ -1767,6 +1768,15 @@ namespace Opm {
             if ( (timer.lastStepFailed() || timer.reportStepNum()==0) && iterationIdx == 0  ) {
                 convertInput( iterationIdx, reservoirState, ebosSimulator_ );
                 ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            }
+
+            if ( param_.matrix_add_well_contributions_ )
+            {
+                // This might be dangerous?!
+                ebosSimulator_.model().clearAuxiliaryModules();
+                const auto* wells = wellModel().wellsPointer();
+                auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(wells);
+                ebosSimulator_.model().addAuxiliaryModule(auxMod);
             }
 
             ebosSimulator_.problem().beginIteration();
