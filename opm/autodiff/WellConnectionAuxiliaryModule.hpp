@@ -23,7 +23,11 @@
 
 #include <ewoms/aux/baseauxiliarymodule.hh>
 
+#include <dune/grid/CpGrid.hpp>
+
 #include <opm/core/wells.h>
+
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
 namespace Opm
 {
@@ -39,9 +43,56 @@ public:
     using NeighborSet = typename
         Ewoms::BaseAuxiliaryModule<TypeTag>::NeighborSet;
 
-    WellConnectionAuxiliaryModule(const Wells* wells)
-        : wells_(wells)
+    WellConnectionAuxiliaryModule(const Schedule& schedule,
+                                  const Dune::CpGrid& grid)
     {
+        // Create cartesian to compressed mapping
+        const auto& globalCell = grid.globalCell();
+        const auto& cartesianSize = grid.logicalCartesianSize();
+
+        auto size = cartesianSize[0]*cartesianSize[1]*cartesianSize[2];
+
+        std::vector<int> cartesianToCompressed(size, -1);
+        auto begin = globalCell.begin();
+
+        for(auto cell = begin, end= globalCell.end(); cell != end; ++cell)
+        {
+            cartesianToCompressed[ *cell ] = cell - begin;
+        }
+
+        int last_time_step = schedule.getTimeMap().size()-1;
+        const auto& schedule_wells = schedule.getWells();
+        wells_.reserve(schedule_wells.size());
+
+        // initialize the additional cell connections introduced by wells.
+        for (const auto well : schedule_wells) {
+            std::vector<int> compressed_well_perforations;
+            // All possible completions of the well
+            const auto& completionSet = well->getCompletions(last_time_step);
+            compressed_well_perforations.reserve(completionSet.size());
+
+            for (size_t c=0; c<completionSet.size(); c++) {
+                const auto& completion = completionSet.get(c);
+                int i = completion.getI();
+                int j = completion.getJ();
+                int k = completion.getK();
+                int cart_grid_idx = i + cartesianSize[0]*(j + cartesianSize[1]*k);
+                int compressed_idx = cartesianToCompressed[cart_grid_idx];
+
+                if ( compressed_idx >= 0 ) // Ignore completions in inactive/remote cells.
+                {
+                    compressed_well_perforations.push_back(compressed_idx);
+                }
+            }
+
+            if( ! compressed_well_perforations.empty() )
+            {
+                std::sort(compressed_well_perforations.begin(),
+                          compressed_well_perforations.end());
+
+                wells_.push_back(compressed_well_perforations);
+            }
+        }
     }
 
     unsigned numDofs() const
@@ -52,20 +103,11 @@ public:
 
     void addNeighbors(std::vector<NeighborSet>& neighbors) const
     {
-        const int nw = wells().number_of_wells;
-
-        for (int w = 0; w < nw; ++w)
+        for(const auto well_perforations : wells_)
         {
-            const int nperfs = wells().well_connpos[w+1];
-            for (int perf = wells().well_connpos[w] ; perf < nperfs; ++perf) {
-                const auto cell1_idx = wells().well_cells[perf];
-                for(int perf1 = perf; perf1 < nperfs; ++perf1)
-                {
-                    const auto cell2_idx = wells().well_cells[perf1];
-                    neighbors[cell1_idx].insert(cell2_idx);
-                    neighbors[cell2_idx].insert(cell1_idx);
-                }
-            }
+            for(const auto& perforation : well_perforations)
+                neighbors[perforation].insert(well_perforations.begin(),
+                                              well_perforations.end());
         }
     }
 
@@ -79,12 +121,7 @@ public:
 
     private:
 
-    const Wells& wells() const
-    {
-        return *wells_;
-    }
-
-    const Wells* wells_;
+    std::vector<std::vector<int> > wells_;
 };
 
 } // end namespace OPM
