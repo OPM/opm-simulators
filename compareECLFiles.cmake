@@ -22,9 +22,14 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 #   - This test class compares output from a simulation to reference files.
 macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol prefix dirprefix)
   if(${ARGC} GREATER 7)
-    set(DIR ${ARGN})
+    set(DIR ${ARGV7})
   else()
     set(DIR ${casename})
+  endif()
+  if(${ARGC} GREATER 8)
+    set(TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${ARGV1} deckfilename=${OPM_DATA_ROOT}/${DIR}/${filename})
+  else()
+    set(TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${filename})
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${dirprefix}/${simulator}+${casename})
   opm_add_test(${prefix}_${simulator}+${filename} NO_COMPILE
@@ -35,7 +40,7 @@ macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol pref
                            ${abs_tol} ${rel_tol}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
-               TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${filename}.DATA )
+               TEST_ARGS ${TEST_ARGS})
 endmacro (add_test_compareECLFiles)
 
 ###########################################################################
@@ -108,6 +113,7 @@ add_test_compareECLFiles(spe3 SPE3CASE1 flow_legacy ${abs_tol} ${rel_tol} compar
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(msw_2d_h 2D_H__ flow_multisegment ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(polymer_simple2D 2D_THREEPHASE_POLY_HETER flow_polymer ${abs_tol} ${rel_tol} compareECLFiles "" polymer_simple2D run.param)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
