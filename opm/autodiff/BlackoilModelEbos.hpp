@@ -200,16 +200,6 @@ namespace Opm {
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
             }
-
-            if ( param_.matrix_add_well_contributions_ )
-            {
-                // This might be dangerous?!
-                ebosSimulator_.model().clearAuxiliaryModules();
-                const auto* wells = wellModel().wellsPointer();
-                auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(wells);
-                ebosSimulator_.model().addAuxiliaryModule(auxMod);
-            }
-
         }
 
         bool isParallel() const
