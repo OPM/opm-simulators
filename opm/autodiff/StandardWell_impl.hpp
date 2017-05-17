@@ -2105,18 +2105,23 @@ namespace Detail
     void
     StandardWell<TypeTag>::addWellContributions(Mat& mat) const
     {
-        auto colC = duneC_[0].begin();
-        for(int perf1 = 0; perf1 < number_of_perforations_; ++perf1, ++colC) {
-            const auto row_index = well_cells_[perf1];
+        // We need to change matrx A as follows
+        // A -= C^T D^-1 B
+        // D is diagonal
+        // B and C have 1 row, nc colums and nonzero
+        // at (i,j) only if well i has perforation at cell j.
+
+        for(auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
+            const auto row_index = colC.index();
             auto& row = mat[row_index];
             auto colB = duneB_[0].begin();
-            assert(colC.index() ==  row_index);
+            auto col = row.begin();
             
-            for(int perf2 = 0 ; perf2 < number_of_perforations_; ++perf2, ++colB) {
-                const auto col_index = well_cells_[perf2];
-                auto col = row.find(col_index);
-                assert(col != row.end());
-                assert(colB.index() ==  col_index);
+            for(auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB) {
+                const auto col_index = colB.index();
+                // Move col to index pj
+                while(col != row.end() && col.index() < col_index) ++col;
+                assert(col != row.end() && col.index() == col_index);
 
                 Dune::FieldMatrix<Scalar, numWellEq, numEq> tmp;
                 typename Mat::block_type tmp1;
