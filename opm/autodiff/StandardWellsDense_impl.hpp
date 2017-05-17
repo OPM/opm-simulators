@@ -121,25 +121,31 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     addWellContributions(Mat& mat) const
     {
+        // We need to change matrx A as follows
+        // A -= B^T D^-1 C
+        // D is diagonal
+        // B and C have nw rows, nc colums and nonzero
+        // at (i,j) only if well i has perforation at cell j.
         const int nw = wells().number_of_wells;
-
         for(int w = 0; w < nw; ++w)
         {
-            for(int perf1 = wells().well_connpos[w] ; perf1 < wells().well_connpos[w+1]; ++perf1) {
-                const auto pi = wells().well_cells[perf1];
+            for(auto colB = duneB_[w].begin(), endB =  duneB_[w].end();
+                colB != endB; ++colB) {
+                auto pi = colB.index();
                 auto& row = mat[pi];
+                assert(colB.index() ==  pi);
+                auto col = row.begin();
 
-                for(int perf2 = wells().well_connpos[w] ; perf2 < wells().well_connpos[w+1]; ++perf2) {
-                    const auto pj = wells().well_cells[perf2];
-                    auto col = row.find(pj);
-                    assert(col != row.end());
-                    auto colC = duneC_[w].find(pj);
-                    assert(colC !=  duneC_[w].end());
-                    auto colB = duneB_[w].find(pi);
-                    assert(colB !=  duneB_[w].end());
+                for(auto colC = duneC_[w].begin(), endC=duneC_[w].end();
+                    colC != endC; ++colC) {
+                    auto pj = colC.index();
+                    // Move to col index pj
+                    while(col.index()<pj) ++col;
+                    assert(col.index() == pj);
 
                     typename Mat::block_type tmp, tmp1;
-                    Dune::FMatrixHelp::multMatrix(invDuneD_[w][w],  (*colC), tmp);
+                    Dune::FMatrixHelp::multMatrix(*invDuneD_[w].begin(),  (*colC),
+                                                  tmp);
                     Detail::multMatrixTransposed((*colB), tmp, tmp1);
                     (*col) -= tmp1;
                 }
