@@ -24,10 +24,6 @@
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
 #include <sys/utsname.h>
-#include <unistd.h>
-#include <ctime>
-#include <sys/statvfs.h>
-#include <sys/sysinfo.h>
 
 #include <opm/simulators/ParallelFileMerger.hpp>
 #include <opm/simulators/ensureDirectoryExists.hpp>
@@ -197,7 +193,7 @@ namespace Opm
         // Print startup message if on output rank.
         void printStartupMessage()
         {   
-	    
+ 
             if (output_cout_) {
                 const int lineLen = 70;
                 const std::string version = moduleVersionName();
@@ -329,50 +325,45 @@ namespace Opm
             if ( output_cout_ )
             { 
             // Read Parameters.
-            OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
+                OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
             }
         }
         
         void printPRTHeader()
         {
-            if ( output_cout_ )
-            { 
-            // Print header for PRT file.      
-            const std::string version = moduleVersionName();
-            const double megabyte = 1024 * 1024;
-            unsigned num_cpu = std::thread::hardware_concurrency();    
-            struct utsname arch;
-            char userName[64] = {0};
-            int getUser = getlogin_r(userName, sizeof(userName)-1); 
-            time_t now = std::time(0);
-            struct tm  tstruct;
-            char      tmstr[80];
-            tstruct = *localtime(&now);
-            strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
-            struct sysinfo info;
-            sysinfo( &info );
-            const double mem_size = (size_t)info.totalram * (size_t)info.mem_unit / megabyte;   
-            std::ostringstream ss;
-            ss << "\n\n\n ########  #          ######   #           #\n";  
-            ss << " #         #         #      #   #         # \n";
-            ss << " #####     #         #      #    #   #   #  \n";
-            ss << " #         #         #      #     # # # #   \n";
-            ss << " #         #######    ######       #   #    \n\n";
-            ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
-            ss << " and is part of OPM.\nFor more information visit: http://opm-project.org \n\n";
-            ss << "Flow Version  =  " + version + "\n";
-            if (uname(&arch) == 0) {
-                ss << "System        =  " << arch.nodename << " (Number of cores: " << num_cpu;
-                ss << ", RAM: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
-                ss << "Architecture  =  " << arch.sysname << " " << arch.machine << " (Release: " << arch.release;
-                ss << ", Version: " << arch.version << " )\n";
-            }
-            if (getUser == 0) {
-                char * userLogin = getlogin();
-                ss << "User          =  " << userLogin << std::endl;
-            }
-            ss << "Simulation started on " << tmstr << " hrs\n";                            
-            OpmLog::note(ss.str());
+          // Print header for PRT file.            
+          if ( output_cout_ ) {
+              const std::string version = moduleVersionName();
+              const double megabyte = 1024 * 1024;
+              unsigned num_cpu = std::thread::hardware_concurrency();    
+              struct utsname arch;
+              const char* user = getlogin(); 
+              time_t now = std::time(0);
+              struct tm  tstruct;
+              char      tmstr[80];
+              tstruct = *localtime(&now);
+              strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
+              const double mem_size = getTotalSystemMemory() / megabyte;   
+              std::ostringstream ss;
+              ss << "\n\n\n ########  #          ######   #           #\n";  
+              ss << " #         #         #      #   #         # \n";
+              ss << " #####     #         #      #    #   #   #  \n";
+              ss << " #         #         #      #     # # # #   \n";
+              ss << " #         #######    ######       #   #    \n\n";
+              ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
+              ss << " and is part of OPM.\nFor more information visit: http://opm-project.org \n\n";
+              ss << "Flow Version  =  " + version + "\n";
+              if (uname(&arch) == 0) {
+                 ss << "System        =  " << arch.nodename << " (Number of cores: " << num_cpu;
+                 ss << ", RAM: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
+                 ss << "Architecture  =  " << arch.sysname << " " << arch.machine << " (Release: " << arch.release;
+                 ss << ", Version: " << arch.version << " )\n";
+                 }
+              if (user) {
+                 ss << "User          =  " << user << std::endl;
+                 }
+              ss << "Simulation started on " << tmstr << " hrs\n";                            
+              OpmLog::note(ss.str());
             }
         }
         
@@ -778,7 +769,13 @@ namespace Opm
 
             throw std::invalid_argument( "Cannot find input case " + casename );
         }
-
+        
+        unsigned long long getTotalSystemMemory()
+        {
+            long pages = sysconf(_SC_PHYS_PAGES);
+            long page_size = sysconf(_SC_PAGE_SIZE);
+            return pages * page_size;
+        }
 
         int64_t convertMessageType(const Message::type& mtype)
         {
@@ -843,4 +840,4 @@ namespace Opm
     };
 } // namespace Opm
 
-#endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
+#endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED 
