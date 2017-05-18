@@ -8,6 +8,7 @@ addons:
     sources:
       - boost-latest
       - ubuntu-toolchain-r-test
+      - george-edison55-precise-backports
     packages:
       - libboost1.55-all-dev
       - gcc-4.8
@@ -18,6 +19,8 @@ addons:
       - libsuitesparse-dev
       - libeigen3-dev
       - bc
+      - cmake
+      - cmake-data
 
 before_script:
     - export CXX="g++-4.8" CC="gcc-4.8" FC="gfortran-4.8"
