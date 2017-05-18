@@ -81,15 +81,25 @@ namespace Opm
       template<class M, class CRS, class InvVector>
       void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv )
       {
-        if( A.nonzeroes() == 0 ) {
-            DUNE_THROW(Dune::ISTLError,"convertToCRS: ILU for matrix with zero entries");
+        typedef typename M :: size_type size_type;
+
+        // count non-zeros in case 0 is returned
+        // this is due to a bug in dune-istl < 2.5
+        size_type nonZeros = A.nonzeroes();
+        if( nonZeros == 0 )
+        {
+            // count non-zeros
+            const auto end = A.end();
+            for( auto row = A.begin(); row != end; ++row )
+            {
+                nonZeros += (*row).size();
+            }
         }
 
-        lower.resize( A.N(), A.nonzeroes() );
-        upper.resize( A.N(), A.nonzeroes() );
+        lower.resize( A.N(), nonZeros );
+        upper.resize( A.N(), nonZeros );
         inv.resize( A.N() );
 
-        typedef typename M :: size_type size_type;
         // implement left looking variant with stored inverse
         const auto endi = A.end();
         size_type row = 0;
@@ -296,7 +306,6 @@ public:
         typedef typename Domain::block_type  vblock;
 
         const size_type iEnd = lower_.rows();
-        std::cout << "Rows = " << iEnd << std::endl;
         const size_type lastRow = iEnd - 1;
         if( iEnd != upper_.rows() )
         {

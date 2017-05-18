@@ -289,7 +289,6 @@ namespace Opm
             }
         }
 
-        //typedef Dune::SeqILU0<Matrix, Vector, Vector> SeqPreconditioner;
         typedef ParallelOverlappingILU0<Matrix,Vector,Vector> SeqPreconditioner;
 
         template <class Operator>
