@@ -295,8 +295,9 @@ namespace Opm
         template <class Operator>
         std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
         {
-            const double relax = 0.9;
-            std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), relax));
+            const double relax  = parameters_.ilu_relaxation_;
+            const int iteration = parameters_.ilu_iteration_;
+            std::unique_ptr<SeqPreconditioner> precond(new SeqPreconditioner(opA.getmat(), iteration, relax));
             return precond;
         }
 
@@ -308,7 +309,7 @@ namespace Opm
         constructPrecond(Operator& opA, const Comm& comm) const
         {
             typedef std::unique_ptr<ParPreconditioner> Pointer;
-            const double relax = 0.9;
+            const double relax  = parameters_.ilu_relaxation_;
             return Pointer(new ParPreconditioner(opA.getmat(), comm, relax));
         }
 #endif
