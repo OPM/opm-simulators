@@ -20,13 +20,17 @@
 #ifndef OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
 #define OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
 
+#include <opm/common/Exceptions.hpp>
+
 #include <dune/istl/preconditioner.hh>
 #include <dune/istl/paamg/smoother.hh>
 
 namespace Opm
 {
 
-template<class M, class X, class Y, class C>
+//template<class M, class X, class Y, class C>
+//class ParallelOverlappingILU0;
+template<class Matrix, class Domain, class Range, class ParallelInfo = int>
 class ParallelOverlappingILU0;
 
 } // end namespace Opm
@@ -65,10 +69,81 @@ struct ConstructionTraits<Opm::ParallelOverlappingILU0<Matrix,Domain,Range,Paral
 
 } // end namespace Amg
 
+
+
 } // end namespace Dune
 
 namespace Opm
 {
+    namespace detail
+    {
+      //! compute ILU decomposition of A. A is overwritten by its decomposition
+      template<class M, class CRS, class InvVector>
+      void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv )
+      {
+        if( A.nonzeroes() == 0 ) {
+            DUNE_THROW(Dune::ISTLError,"convertToCRS: ILU for matrix with zero entries");
+        }
+
+        lower.resize( A.N(), A.nonzeroes() );
+        upper.resize( A.N(), A.nonzeroes() );
+        inv.resize( A.N() );
+
+        typedef typename M :: size_type size_type;
+        // implement left looking variant with stored inverse
+        const auto endi = A.end();
+        size_type row = 0;
+        size_type colcount = 0;
+        lower.rows_[ 0 ] = colcount;
+        for (auto i=A.begin(); i!=endi; ++i, ++row)
+        {
+          const size_type iIndex = i.index();
+
+          // eliminate entries left of diagonal; store L factor
+          for (auto j=(*i).begin(); j.index() < iIndex; ++j )
+          {
+            lower.values_[ colcount ] = (*j);
+            lower.cols_[ colcount ]   = j.index();
+            ++colcount;
+          }
+          lower.rows_[ iIndex+1 ] = colcount;
+        }
+
+        const auto rendi = A.beforeBegin();
+        row = 0;
+        colcount = 0;
+        upper.rows_[ 0 ] = colcount ;
+        for (auto i=A.beforeEnd(); i!=rendi; --i, ++ row )
+        {
+          // coliterator is diagonal after the following loop
+          const auto endij=(*i).end();           // end of row i
+
+          const size_type iIndex = i.index();
+
+          // store in reverse row order
+          // eliminate entries left of diagonal; store L factor
+          for (auto j=(*i).begin(); j != endij; ++j )
+          {
+            const size_type jIndex = j.index();
+            if( j.index() == iIndex )
+            {
+              inv[ row ] = (*j);
+            }
+            else if ( j.index() >= i.index() )
+            {
+              upper.values_[ colcount ] = (*j);
+              upper.cols_[ colcount ]   = jIndex;
+              ++colcount ;
+            }
+          }
+          upper.rows_[ row+1 ] = colcount;
+        }
+
+        // adjust memory
+        upper.shrinkToFit();
+        lower.shrinkToFit();
+    }
+  } // end namespace detail
 
 /// \brief A two-step version of an overlapping Schwarz preconditioner using one step ILU0 as
 ///
@@ -85,9 +160,16 @@ namespace Opm
 /// \tparam Range The type of the Vector representing the range.
 /// \tparam ParallelInfo The type of the parallel information object
 ///         used, e.g. Dune::OwnerOverlapCommunication
-template<class Matrix, class Domain, class Range, class ParallelInfo>
+template<class Matrix, class Domain, class Range, class ParallelInfoT>
 class ParallelOverlappingILU0
-    : public Dune::Preconditioner<Domain,Range> {
+    : public Dune::Preconditioner<Domain,Range>
+{
+    // if ParallelInfoT = int was passed then sequential preconditioner is selected
+    typedef typename std::conditional<
+        std::is_same<ParallelInfoT,int>::value,
+        Dune::OwnerOverlapCopyCommunication<int, int>,
+        ParallelInfoT>::type  ParallelInfo;
+
 public:
     //! \brief The matrix type the preconditioner is for.
     typedef typename Dune::remove_const<Matrix>::type matrix_type;
@@ -98,10 +180,57 @@ public:
     //! \brief The field type of the preconditioner.
     typedef typename Domain::field_type field_type;
 
+    typedef typename matrix_type::block_type  block_type;
+    typedef typename matrix_type::size_type   size_type;
+
+protected:
+    struct CRS
+    {
+      CRS() : nRows_( 0 ) {}
+
+      size_type rows() const { return nRows_; }
+
+      size_type nonZeros() const
+      {
+        assert( rows_[ rows() ] != size_type(-1) );
+        return rows_[ rows() ];
+      }
+
+      void shrinkToFit()
+      {
+        values_.resize( nonZeros() );
+        values_.shrink_to_fit();
+        cols_.resize( nonZeros() );
+        cols_.shrink_to_fit();
+      }
+
+      void resize( const size_type nRows, const size_type nonZeros )
+      {
+          if( nRows_ != nRows )
+          {
+            nRows_ = nRows ;
+            rows_.resize( nRows_+1, size_type(-1) );
+          }
+
+          if( values_.size() != nonZeros )
+          {
+            values_.resize( nonZeros );
+            cols_.resize( nonZeros, size_type(-1) );
+          }
+      }
+
+      std::vector< size_type  > rows_;
+      std::vector< block_type > values_;
+      std::vector< size_type  > cols_;
+      size_type nRows_;
+    };
+
+public:
     // define the category
     enum {
         //! \brief The category the preconditioner is part of.
-        category=Dune::SolverCategory::overlapping
+        category = std::is_same<ParallelInfoT,int>::value ?
+            Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping
     };
 
     /*! \brief Constructor.
@@ -110,30 +239,35 @@ public:
       \param A The matrix to operate on.
       \param w The relaxation factor.
     */
-    ParallelOverlappingILU0 (const Matrix& A, const ParallelInfo& comm,
-                             field_type w)
-        : ilu_(A), comm_(comm), w_(w)
+    ParallelOverlappingILU0 (const Matrix& A, const int iluIteration, const field_type w )
+        : lower_(),
+          upper_(),
+          inv_(),
+          comm_(nullptr), w_(w),
+          relaxation_( std::abs( w - 1.0 ) > 1e-15 )
     {
-        int ilu_setup_successful = 1;
-        std::string message;
-        try
-        {
-            bilu0_decomposition(ilu_);
-        }
-        catch ( Dune::MatrixBlockError error )
-        {
-            message = error.what();
-            std::cerr<<"Exception occured on process " <<
-                comm.communicator().rank() << " during " <<
-                "setup of ILU0 preconditioner with message: " <<
-                message<<std::endl;
-            ilu_setup_successful = 0;
-        }
-        // Check whether there was a problem on some process
-        if ( comm.communicator().min(ilu_setup_successful) == 0 )
-        {
-            throw Dune::MatrixBlockError();
-        }
+        init( A, iluIteration );
+    }
+
+    /*! \brief Constructor.
+
+      Constructor gets all parameters to operate the prec.
+      \param A The matrix to operate on.
+      \param w The relaxation factor.
+    */
+    ParallelOverlappingILU0 (const Matrix& A, const field_type w)
+        : ParallelOverlappingILU0( A, 0, w )
+    {
+    }
+
+    ParallelOverlappingILU0 (const Matrix& A, const ParallelInfo& comm, const field_type w)
+        : lower_(),
+          upper_(),
+          inv_(),
+          comm_(&comm), w_(w),
+          relaxation_( std::abs( w - 1.0 ) > 1e-15 )
+    {
+        init( A, 0 );
     }
 
     /*!
@@ -155,32 +289,67 @@ public:
     virtual void apply (Domain& v, const Range& d)
     {
         Range& md = const_cast<Range&>(d);
-        comm_.copyOwnerToAll(md,md);
-        auto endrow=ilu_.end();
-        for ( auto row = ilu_.begin(); row != endrow; ++row )
+        copyOwnerToAll( md );
+
+        // iterator types
+        typedef typename Range ::block_type  dblock;
+        typedef typename Domain::block_type  vblock;
+
+        const size_type iEnd = lower_.rows();
+        std::cout << "Rows = " << iEnd << std::endl;
+        const size_type lastRow = iEnd - 1;
+        if( iEnd != upper_.rows() )
         {
-            auto rhs(d[row.index()]);
-            for ( auto col = row->begin(); col.index() < row.index(); ++col )
-            {
-                col->mmv(v[col.index()],rhs);
-            }
-            v[row.index()] = rhs;
+            std::abort();
+           // OPM_THROW(std::logic_error,"ILU: lower and upper rows must be the same");
         }
-        comm_.copyOwnerToAll(v, v);
-        auto rendrow = ilu_.beforeBegin();
-        for( auto row = ilu_.beforeEnd(); row != rendrow; --row)
+
+        // lower triangular solve
+        for( size_type i=0; i<iEnd; ++ i )
         {
-            auto rhs(v[row.index()]);
-            auto col = row->beforeEnd();
-            for( ; col.index() > row.index(); --col)
-            {
-                col->mmv(v[col.index()], rhs);
-            }
-            v[row.index()] = 0;
-            col->umv(rhs, v[row.index()]);
+          dblock rhs( d[ i ] );
+          const size_type rowI     = lower_.rows_[ i ];
+          const size_type rowINext = lower_.rows_[ i+1 ];
+
+          for( size_type col = rowI; col < rowINext; ++ col )
+          {
+            lower_.values_[ col ].mmv( v[ lower_.cols_[ col ] ], rhs );
+          }
+
+          v[ i ] = rhs;  // Lii = I
         }
-        comm_.copyOwnerToAll(v, v);
-        v *= w_;
+
+        copyOwnerToAll( v );
+
+        for( size_type i=0; i<iEnd; ++ i )
+        {
+            vblock& vBlock = v[ lastRow - i ];
+            vblock rhs ( vBlock );
+            const size_type rowI     = upper_.rows_[ i ];
+            const size_type rowINext = upper_.rows_[ i+1 ];
+
+            for( size_type col = rowI; col < rowINext; ++ col )
+            {
+                upper_.values_[ col ].mmv( v[ upper_.cols_[ col ] ], rhs );
+            }
+
+            // apply inverse and store result
+            inv_[ i ].mv( rhs, vBlock);
+        }
+
+        copyOwnerToAll( v );
+
+        if( relaxation_ ) {
+            v *= w_;
+        }
+    }
+
+    template <class V>
+    void copyOwnerToAll( V& v ) const
+    {
+        if( comm_ ) {
+            comm_->copyOwnerToAll(v, v);
+        }
     }
 
     /*!
@@ -193,12 +362,57 @@ public:
         DUNE_UNUSED_PARAMETER(x);
     }
 
-private:
+protected:
+    void init( const Matrix& A, const int iluIteration )
+    {
+        int ilu_setup_successful = 1;
+        std::string message;
+        const int rank = ( comm_ ) ? comm_->communicator().rank() : 0;
+
+        std::unique_ptr< Matrix > ILU;
+
+        try
+        {
+            if( iluIteration == 0 ) {
+                // create ILU-0 decomposition
+                ILU.reset( new Matrix( A ) );
+                bilu0_decomposition( *ILU );
+            }
+            else {
+                // create ILU-n decomposition
+                ILU.reset( new Matrix( A.N(), A.M(), Matrix::row_wise) );
+                bilu_decomposition( A, iluIteration, *ILU );
+            }
+        }
+        catch ( Dune::MatrixBlockError error )
+        {
+            message = error.what();
+            std::cerr<<"Exception occured on process " << rank << " during " <<
+                "setup of ILU0 preconditioner with message: " <<
+                message<<std::endl;
+            ilu_setup_successful = 0;
+        }
+
+        // Check whether there was a problem on some process
+        if ( comm_ && comm_->communicator().min(ilu_setup_successful) == 0 )
+        {
+            throw Dune::MatrixBlockError();
+        }
+
+        // store ILU in simple CRS format
+        detail::convertToCRS( *ILU, lower_, upper_, inv_ );
+    }
+
+protected:
     //! \brief The ILU0 decomposition of the matrix.
-    Matrix ilu_;
-    const ParallelInfo& comm_;
+    CRS lower_;
+    CRS upper_;
+    std::vector< block_type > inv_;
+
+    const ParallelInfo* comm_;
     //! \brief The relaxation factor to use.
-    field_type w_;
+    const field_type w_;
+    const bool relaxation_;
 
 };
 

@@ -289,7 +289,8 @@ namespace Opm
             }
         }
 
-        typedef Dune::SeqILU0<Matrix, Vector, Vector> SeqPreconditioner;
+        //typedef Dune::SeqILU0<Matrix, Vector, Vector> SeqPreconditioner;
+        typedef ParallelOverlappingILU0<Matrix,Vector,Vector> SeqPreconditioner;
 
         template <class Operator>
         std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
