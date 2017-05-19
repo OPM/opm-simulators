@@ -110,7 +110,7 @@ data::Solution simToSolution( const SimulationDataContainer& reservoir,
         sol.insert( "RV", rv_unit, reservoir.getCellData( BlackoilState::RV ) , data::TargetType::RESTART_SOLUTION );
     }
 
-    if (reservoir.hasCellData( BlackoilSolventState::SSOL)) {
+    if (phases.has_solvent) {
         sol.insert( "SSOL", UnitSystem::measure::identity, reservoir.getCellData( BlackoilSolventState::SSOL ) , data::TargetType::RESTART_SOLUTION );
     }
 
