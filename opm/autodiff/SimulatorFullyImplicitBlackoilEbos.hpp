@@ -217,6 +217,13 @@ public:
         std::vector<std::vector<double>> originalFluidInPlace;
         std::vector<double> originalFluidInPlaceTotals;
 
+        if ( model_param_.matrix_add_well_contributions_ )
+        {
+            ebosSimulator_.model().clearAuxiliaryModules();
+            auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(eclState(), grid());
+            ebosSimulator_.model().addAuxiliaryModule(auxMod);
+        }
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.

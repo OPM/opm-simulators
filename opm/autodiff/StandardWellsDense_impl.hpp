@@ -116,6 +116,42 @@ namespace Opm {
     }
 
 
+    template<class TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    addWellContributions(Mat& mat) const
+    {
+        // We need to change matrx A as follows
+        // A -= B^T D^-1 C
+        // D is diagonal
+        // B and C have nw rows, nc colums and nonzero
+        // at (i,j) only if well i has perforation at cell j.
+        const int nw = wells().number_of_wells;
+        for(int w = 0; w < nw; ++w)
+        {
+            for(auto colB = duneB_[w].begin(), endB =  duneB_[w].end();
+                colB != endB; ++colB) {
+                auto pi = colB.index();
+                auto& row = mat[pi];
+                assert(colB.index() ==  pi);
+                auto col = row.begin();
+
+                for(auto colC = duneC_[w].begin(), endC=duneC_[w].end();
+                    colC != endC; ++colC) {
+                    auto pj = colC.index();
+                    // Move to col index pj
+                    while(col.index()<pj) ++col;
+                    assert(col.index() == pj);
+
+                    typename Mat::block_type tmp, tmp1;
+                    Dune::FMatrixHelp::multMatrix(*invDuneD_[w].begin(),  (*colC),
+                                                  tmp);
+                    Detail::multMatrixTransposed((*colB), tmp, tmp1);
+                    (*col) -= tmp1;
+                }
+            }
+        }
+    }
 
     template<typename TypeTag>
     SimulatorReport
@@ -243,6 +279,11 @@ namespace Opm {
 
         // do the local inversion of D.
         localInvert( invDuneD_ );
+
+        if ( param_.matrix_add_well_contributions_ )
+        {
+            addWellContributions( ebosJac );
+        }
     }
 
 

@@ -58,6 +58,27 @@
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
 namespace Opm {
+namespace Detail
+{
+    //! calculates ret = A^T * B
+    template< class K, int m, int n, int p >
+    static inline void multMatrixTransposed ( const Dune::FieldMatrix< K, m, n > &A,
+                                              const Dune::FieldMatrix< K, n, p > &B,
+                                              Dune::FieldMatrix< K, m, p > &ret )
+    {
+        typedef typename Dune::FieldMatrix< K, m, p > :: size_type size_type;
+
+        for( size_type i = 0; i < m; ++i )
+        {
+            for( size_type j = 0; j < p; ++j )
+            {
+                ret[ i ][ j ] = K( 0 );
+                for( size_type k = 0; k < n; ++k )
+                    ret[ i ][ j ] += A[ k ][ i ] * B[ k ][ j ];
+            }
+        }
+    }
+}
 
 enum WellVariablePositions {
     XvarWell = 0,
@@ -337,6 +358,12 @@ enum WellVariablePositions {
             bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                      const WellState& well_state,
                                      const int well_number) const;
+
+            /// \! brief Modifies matrix to include influences of the well perforations.
+            ///
+            /// \param mat The linear system with the assembled mass balance
+            ///            equations
+            void addWellContributions(Mat& mat) const;
 
             using WellMapType = typename WellState::WellMapType;
             using WellMapEntryType = typename WellState::mapentry_t;
