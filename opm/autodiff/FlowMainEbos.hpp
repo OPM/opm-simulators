@@ -23,7 +23,11 @@
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
+// Define making clear that the simulator supports AMG
+#define FLOW_SUPPORT_AMG
+
 #include <sys/utsname.h>
+
 
 #include <opm/simulators/ParallelFileMerger.hpp>
 #include <opm/simulators/ensureDirectoryExists.hpp>

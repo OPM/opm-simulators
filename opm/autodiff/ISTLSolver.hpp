@@ -249,7 +249,7 @@ namespace Opm
             // Communicate if parallel.
             parallelInformation_arg.copyOwnerToAll(istlb, istlb);
 
-#if defined(OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED) || ! HAVE_UMFPACK // activate AMG if either flow_ebos is used or UMFPack is not available
+#if FLOW_SUPPORT_AMG // activate AMG if either flow_ebos is used or UMFPack is not available
             if( parameters_.linear_solver_use_amg_ )
             {
                 typedef ISTLUtility::CPRSelector< Matrix, Vector, Vector, POrComm>  CPRSelectorType;
