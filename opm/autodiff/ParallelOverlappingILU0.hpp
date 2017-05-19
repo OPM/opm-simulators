@@ -83,22 +83,11 @@ namespace Opm
       {
         typedef typename M :: size_type size_type;
 
-        // count non-zeros in case 0 is returned
-        // this is due to a bug in dune-istl < 2.5
-        size_type nonZeros = A.nonzeroes();
-        if( nonZeros == 0 )
-        {
-            // count non-zeros
-            const auto end = A.end();
-            for( auto row = A.begin(); row != end; ++row )
-            {
-                nonZeros += (*row).size();
-            }
-        }
-
-        lower.resize( A.N(), nonZeros );
-        upper.resize( A.N(), nonZeros );
+        lower.resize( A.N() );
+        upper.resize( A.N() );
         inv.resize( A.N() );
+
+        lower.reserveAdditional( 2*A.N() );
 
         // implement left looking variant with stored inverse
         const auto endi = A.end();
@@ -107,13 +96,13 @@ namespace Opm
         lower.rows_[ 0 ] = colcount;
         for (auto i=A.begin(); i!=endi; ++i, ++row)
         {
-          const size_type iIndex = i.index();
+          const size_type iIndex  = i.index();
+          lower.reserveAdditional( (*i).size() );
 
           // eliminate entries left of diagonal; store L factor
           for (auto j=(*i).begin(); j.index() < iIndex; ++j )
           {
-            lower.values_[ colcount ] = (*j);
-            lower.cols_[ colcount ]   = j.index();
+            lower.push_back( (*j), j.index() );
             ++colcount;
           }
           lower.rows_[ iIndex+1 ] = colcount;
@@ -123,12 +112,18 @@ namespace Opm
         row = 0;
         colcount = 0;
         upper.rows_[ 0 ] = colcount ;
+
+        upper.reserveAdditional( lower.nonZeros() + A.N() );
+
+        // NOTE: upper and inv store entries in reverse order, reverse here
+        // relative to ILU
         for (auto i=A.beforeEnd(); i!=rendi; --i, ++ row )
         {
           // coliterator is diagonal after the following loop
-          const auto endij=(*i).end();           // end of row i
+          const auto endij=(*i).end();    // end of row i
 
           const size_type iIndex = i.index();
+          upper.reserveAdditional( (*i).size() );
 
           // store in reverse row order
           // eliminate entries left of diagonal; store L factor
@@ -141,19 +136,14 @@ namespace Opm
             }
             else if ( j.index() >= i.index() )
             {
-              upper.values_[ colcount ] = (*j);
-              upper.cols_[ colcount ]   = jIndex;
+              upper.push_back( (*j), jIndex );
               ++colcount ;
             }
           }
           upper.rows_[ row+1 ] = colcount;
         }
-
-        // adjust memory
-        upper.shrinkToFit();
-        lower.shrinkToFit();
-    }
-  } // end namespace detail
+      }
+    } // end namespace detail
 
 /// \brief A two-step version of an overlapping Schwarz preconditioner using one step ILU0 as
 ///
@@ -206,27 +196,30 @@ protected:
         return rows_[ rows() ];
       }
 
-      void shrinkToFit()
-      {
-        values_.resize( nonZeros() );
-        values_.shrink_to_fit();
-        cols_.resize( nonZeros() );
-        cols_.shrink_to_fit();
-      }
-
-      void resize( const size_type nRows, const size_type nonZeros )
+      void resize( const size_type nRows )
       {
           if( nRows_ != nRows )
           {
             nRows_ = nRows ;
             rows_.resize( nRows_+1, size_type(-1) );
           }
+      }
 
-          if( values_.size() != nonZeros )
+      void reserveAdditional( const size_type nonZeros )
+      {
+          const size_type needed = values_.size() + nonZeros ;
+          if( values_.capacity() < needed )
           {
-            values_.resize( nonZeros );
-            cols_.resize( nonZeros, size_type(-1) );
+              const size_type estimate = needed * 1.1;
+              values_.reserve( estimate );
+              cols_.reserve( estimate );
           }
+      }
+
+      void push_back( const block_type& value, const size_type index )
+      {
+          values_.push_back( value );
+          cols_.push_back( index );
       }
 
       std::vector< size_type  > rows_;
@@ -247,16 +240,17 @@ public:
 
       Constructor gets all parameters to operate the prec.
       \param A The matrix to operate on.
+      \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
     */
-    ParallelOverlappingILU0 (const Matrix& A, const int iluIteration, const field_type w )
+    ParallelOverlappingILU0 (const Matrix& A, const int n, const field_type w )
         : lower_(),
           upper_(),
           inv_(),
           comm_(nullptr), w_(w),
           relaxation_( std::abs( w - 1.0 ) > 1e-15 )
     {
-        init( A, iluIteration );
+        init( A, n );
     }
 
     /*! \brief Constructor.
@@ -270,6 +264,13 @@ public:
     {
     }
 
+    /*! \brief Constructor.
+
+      Constructor gets all parameters to operate the prec.
+      \param A      The matrix to operate on.
+      \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
+      \param w      The relaxation factor.
+    */
     ParallelOverlappingILU0 (const Matrix& A, const ParallelInfo& comm, const field_type w)
         : lower_(),
           upper_(),
