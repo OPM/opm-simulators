@@ -86,7 +86,6 @@ public:
     ///     use_segregation_split (false)  solve for gravity segregation (if false,
     ///                                    segregation is ignored).
     ///
-    /// \param[in] geo           derived geological properties
     /// \param[in] props         fluid and rock properties
     /// \param[in] linsolver     linear solver
     /// \param[in] has_disgas    true for dissolved gas option
@@ -96,7 +95,6 @@ public:
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
                                        const ParameterGroup& param,
-                                       DerivedGeology& geo,
                                        BlackoilPropsAdFromDeck& props,
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const bool has_disgas,
@@ -109,7 +107,6 @@ public:
           model_param_(param),
           solver_param_(param),
           props_(props),
-          geo_(geo),
           solver_(linsolver),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
@@ -150,6 +147,8 @@ public:
         ExtraData extra;
 
         failureReport_ = SimulatorReport();
+        extractLegacyPoreVolume_();
+        extractLegacyDepth_();
 
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
@@ -253,8 +252,7 @@ public:
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            const WellModel well_model(wells, &(wells_manager.wellCollection()), model_param_, terminal_output_);
-
+            WellModel well_model(wells, &(wells_manager.wellCollection()), model_param_, terminal_output_);
             auto solver = createSolver(well_model);
 
             std::vector<std::vector<double>> currentFluidInPlace;
@@ -419,12 +417,30 @@ protected:
                                     const Wells* /* wells */)
     { }
 
-    std::unique_ptr<Solver> createSolver(const WellModel& well_model)
+    std::unique_ptr<Solver> createSolver(WellModel& well_model)
     {
+        const auto& gridView = ebosSimulator_.gridView();
+        const PhaseUsage& phaseUsage = props_.phaseUsage();
+        const std::vector<bool> activePhases = detail::activePhases(phaseUsage);
+        const double gravity = ebosSimulator_.problem().gravity()[2];
+
+        // calculate the number of elements of the compressed sequential grid. this needs
+        // to be done in two steps because the dune communicator expects a reference as
+        // argument for sum()
+        int globalNumCells = gridView.size(/*codim=*/0);
+        globalNumCells = gridView.comm().sum(globalNumCells);
+
+        well_model.init(phaseUsage,
+                        activePhases,
+                        /*vfpProperties=*/nullptr,
+                        gravity,
+                        legacyDepth_,
+                        legacyPoreVolume_,
+                        rateConverter_.get(),
+                        globalNumCells);
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       model_param_,
                                                       props_,
-                                                      geo_,
                                                       well_model,
                                                       solver_,
                                                       terminal_output_));
@@ -807,11 +823,40 @@ protected:
         }
     }
 
+    void extractLegacyPoreVolume_()
+    {
+        const auto& grid = ebosSimulator_.gridManager().grid();
+        const unsigned numCells = grid.size(/*codim=*/0);
+        const auto& ebosProblem = ebosSimulator_.problem();
+        const auto& ebosModel = ebosSimulator_.model();
+
+        legacyPoreVolume_.resize(numCells);
+        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            // todo (?): respect rock compressibility
+            legacyPoreVolume_[cellIdx] =
+                ebosModel.dofTotalVolume(cellIdx)
+                *ebosProblem.porosity(cellIdx);
+        }
+    }
+
+    void extractLegacyDepth_()
+    {
+        const auto& grid = ebosSimulator_.gridManager().grid();
+        const unsigned numCells = grid.size(/*codim=*/0);
+
+        legacyDepth_.resize(numCells);
+        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            legacyDepth_[cellIdx] =
+                grid.cellCenterDepth(cellIdx);
+        }
+    }
 
     // Data.
     Simulator& ebosSimulator_;
 
     std::vector<int> legacyCellPvtRegionIdx_;
+    std::vector<double> legacyPoreVolume_;
+    std::vector<double> legacyDepth_;
     typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
     typedef typename Solver::SolverParameters SolverParameters;
 
@@ -823,8 +868,6 @@ protected:
 
     // Observed objects.
     BlackoilPropsAdFromDeck& props_;
-    // Solvers
-    DerivedGeology& geo_;
     NewtonIterationBlackoilInterface& solver_;
     // Misc. data
     const bool has_disgas_;

@@ -90,18 +90,6 @@ SET_BOOL_PROP(EclFlowProblem, EnableSwatinit, false);
 }}
 
 namespace Opm {
-
-
-    class ParameterGroup;
-    class DerivedGeology;
-    class RockCompressibility;
-    class NewtonIterationBlackoilInterface;
-    class VFPProperties;
-    class SimulationDataContainer;
-
-
-
-
     /// A model implementation for three-phase black oil.
     ///
     /// The simulator is capable of handling three-phase problems
@@ -152,16 +140,14 @@ namespace Opm {
         /// \param[in] param            parameters
         /// \param[in] grid             grid data structure
         /// \param[in] fluid            fluid properties
-        /// \param[in] geo              rock properties
         /// \param[in] wells            well structure
         /// \param[in] vfp_properties   Vertical flow performance tables
         /// \param[in] linsolver        linear solver
         /// \param[in] eclState         eclipse state
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
-                          const ModelParameters&          param,
+                          const ModelParameters& param,
                           const BlackoilPropsAdFromDeck& fluid,
-                          const DerivedGeology&           geo  ,
                           const StandardWellsDense<TypeTag>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
@@ -169,7 +155,6 @@ namespace Opm {
         , grid_(ebosSimulator_.gridManager().grid())
         , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
         , fluid_ (fluid)
-        , geo_   (geo)
         , vfp_properties_(
             eclState().getTableManager().getVFPInjTables(),
             eclState().getTableManager().getVFPProdTables())
@@ -184,9 +169,6 @@ namespace Opm {
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
         {
-            const double gravity = detail::getGravity(geo_.gravity(), UgGridHelpers::dimensions(grid_));
-            const std::vector<double> pv(geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
-            const std::vector<double> depth(geo_.z().data(), geo_.z().data() + geo_.z().size());
             // Wells are active if they are active wells on at least
             // one process.
             int wellsActive = localWellsActive() ? 1 : 0;
@@ -194,7 +176,6 @@ namespace Opm {
             wellModel().setWellsActive( wellsActive );
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
-            well_model_.init(fluid_.phaseUsage(), active_, &vfp_properties_, gravity, depth, pv, &rate_converter_, global_nc_);
             if (!istlSolver_)
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
@@ -881,8 +862,6 @@ namespace Opm {
 
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
 
-            const auto& pv = geo_.poreVolume();
-
             const int numComp = numComponents();
             Vector R_sum(numComp);
             Vector B_avg(numComp);
@@ -927,6 +906,16 @@ namespace Opm {
                 }
             }
 
+            Vector pv_vector;
+            pv_vector.resize(nc);
+            const auto& ebosModel = ebosSimulator_.model();
+            const auto& ebosProblem = ebosSimulator_.problem();
+            for (int cellIdx = 0; cellIdx < nc; ++cellIdx) {
+                pv_vector[cellIdx] =
+                    ebosProblem.porosity(cellIdx)*
+                    ebosModel.dofTotalVolume(cellIdx);
+            }
+
             for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
                 //tempV.col(compIdx)   = R2.col(compIdx).abs()/pv;
@@ -934,11 +923,10 @@ namespace Opm {
                 Vector& R2_idx    = R2[ compIdx ];
                 for( int cell_idx = 0; cell_idx < nc; ++cell_idx )
                 {
-                    tempV_idx[ cell_idx ] = std::abs( R2_idx[ cell_idx ] ) / pv[ cell_idx ];
+                    tempV_idx[ cell_idx ] = std::abs( R2_idx[ cell_idx ] ) / pv_vector[ cell_idx ];
                 }
             }
 
-            Vector pv_vector (geo_.poreVolume().data(), geo_.poreVolume().data() + geo_.poreVolume().size());
             Vector wellResidual =  wellModel().residual();
 
             const double pvSum = convergenceReduction(grid_.comm(), global_nc_, numComp,
@@ -1416,8 +1404,8 @@ namespace Opm {
                 std::stringstream errlog;
                 errlog << "Finding the bubble point pressure failed for " << failed_cells_pb.size() << " cells [";
                 errlog << failed_cells_pb[0];
-                const int max_elems = std::min(max_num_cells_faillog, failed_cells_pb.size());
-                for (int i = 1; i < max_elems; ++i) {
+                const size_t max_elems = std::min(max_num_cells_faillog, failed_cells_pb.size());
+                for (size_t i = 1; i < max_elems; ++i) {
                     errlog << ", " << failed_cells_pb[i];
                 }
                 if (failed_cells_pb.size() > max_num_cells_faillog) {
@@ -1430,8 +1418,8 @@ namespace Opm {
                 std::stringstream errlog;
                 errlog << "Finding the dew point pressure failed for " << failed_cells_pd.size() << " cells [";
                 errlog << failed_cells_pd[0];
-                const int max_elems = std::min(max_num_cells_faillog, failed_cells_pd.size());
-                for (int i = 1; i < max_elems; ++i) {
+                const size_t max_elems = std::min(max_num_cells_faillog, failed_cells_pd.size());
+                for (size_t i = 1; i < max_elems; ++i) {
                     errlog << ", " << failed_cells_pd[i];
                 }
                 if (failed_cells_pd.size() > max_num_cells_faillog) {
@@ -1468,7 +1456,6 @@ namespace Opm {
         const Grid&            grid_;
         const ISTLSolverType*  istlSolver_;
         const BlackoilPropsAdFromDeck& fluid_;
-        const DerivedGeology&           geo_;
         VFPProperties                   vfp_properties_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;

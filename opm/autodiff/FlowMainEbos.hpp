@@ -87,6 +87,7 @@ namespace Opm
         typedef TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
+        typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
@@ -446,9 +447,6 @@ namespace Opm
                                                           materialLawManager(),
                                                           grid));
 
-            // Geological properties
-            bool use_local_perm = param_.getDefault("use_local_perm", true);
-            geoprops_.reset(new DerivedGeology(grid, *fluidprops_, eclState(), use_local_perm, &ebosProblem().gravity()[0]));
         }
 
         const Deck& deck() const
@@ -602,47 +600,32 @@ namespace Opm
             {
                 const Grid& grid = this->globalGrid();
 
-                if( output_cout_ ){
-                    const EclipseGrid& inputGrid = eclState().getInputGrid();
-                    eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
-                }
-
-                const NNC* nnc = &geoprops_->nonCartesianConnections();
+                const EclipseGrid& inputGrid = eclState().getInputGrid();
+                eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( grid , inputGrid )));
+                exportNncStructure_();
+                eclIO_->writeInitial(computeLegacySimProps_(), nnc_);
                 data::Solution globaltrans;
 
                 if ( must_distribute_ )
                 {
-                    // dirty and dangerous hack!
-                    // We rely on opmfil in GeoProps being hardcoded to true
-                    // which prevents the pinch processing from running.
-                    // Ergo the nncs are unchanged.
-                    nnc = &eclState().getInputNNC();
-
                     // Gather the global simProps
-                    data::Solution localtrans = geoprops_->simProps(this->grid());
+                    data::Solution localtrans = computeLegacySimProps_();
                     for( const auto& localkeyval: localtrans)
                     {
                         auto& globalval = globaltrans[localkeyval.first].data;
                         const auto& localval  = localkeyval.second.data;
 
-                        if( output_cout_ )
-                        {
-                            globalval.resize( grid.size(0));
-                        }
+                        globalval.resize(grid.size(0));
                         gatherCellDataToGlobalIterator(this->grid(), localval.begin(),
                                                        globalval.begin());
                     }
                 }
                 else
                 {
-                    globaltrans = geoprops_->simProps(grid);
+                    globaltrans = computeLegacySimProps_();
                 }
 
-                if( output_cout_ )
-                {
-                eclIO_->writeInitial(globaltrans,
-                                              *nnc);
-                }
+                eclIO_->writeInitial(globaltrans, nnc_);
             }
         }
 
@@ -732,7 +715,6 @@ namespace Opm
             // Create the simulator instance.
             simulator_.reset(new Simulator(*ebosSimulator_,
                                            param_,
-                                           *geoprops_,
                                            *fluidprops_,
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
@@ -819,6 +801,102 @@ namespace Opm
         std::unordered_set<std::string> defunctWellNames() const
         { return ebosSimulator_->gridManager().defunctWellNames(); }
 
+        data::Solution computeLegacySimProps_()
+        {
+            const int* dims = UgGridHelpers::cartDims(grid());
+            const int globalSize = dims[0]*dims[1]*dims[2];
+
+            data::CellData tranx = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+            data::CellData trany = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+            data::CellData tranz = {UnitSystem::measure::transmissibility, std::vector<double>( globalSize ), data::TargetType::INIT};
+
+            for (size_t i = 0; i < tranx.data.size(); ++i) {
+                tranx.data[0] = 0.0;
+                trany.data[0] = 0.0;
+                tranz.data[0] = 0.0;
+            }
+
+            const auto& eclTrans = ebosSimulator_->problem().eclTransmissibilities();
+            const auto& globalCell = grid().globalCell();
+            size_t num_faces = grid().numFaces();
+            auto fc = UgGridHelpers::faceCells(grid());
+            for (size_t i = 0; i < num_faces; ++i) {
+                auto c1 = fc(i,0);
+                auto c2 = fc(i,1);
+
+                if (c1 == -1 || c2 == -1)
+                    // boundary
+                    continue;
+
+                int gc1 = std::min(globalCell[c1], globalCell[c2]);
+                int gc2 = std::max(globalCell[c1], globalCell[c2]);
+
+                if (gc2 - gc1 == 1) {
+                    tranx.data[gc1] = eclTrans.transmissibility(c1, c2);
+                }
+
+                if (gc2 - gc1 == dims[0]) {
+                    trany.data[gc1] = eclTrans.transmissibility(c1, c2);
+                }
+
+                if (gc2 - gc1 == dims[0]*dims[1]) {
+                    tranz.data[gc1] = eclTrans.transmissibility(c1, c2);
+                }
+            }
+            return
+              { {"TRANX" , tranx},
+                {"TRANY" , trany} ,
+                {"TRANZ" , tranz } };
+        }
+
+        void exportNncStructure_()
+        {
+            nnc_ = eclState().getInputNNC();
+
+            int nx = eclState().getInputGrid().getNX();
+            int ny = eclState().getInputGrid().getNY();
+            //int nz = eclState().getInputGrid().getNZ()
+
+            Grid grid = ebosSimulator_->gridManager().grid();
+            grid.switchToGlobalView();
+            const auto& gridView = grid.leafGridView();
+            ElementMapper elemMapper(gridView);
+
+            const auto* eclTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
+            if (grid.comm().size() < 2) {
+                // in the sequential case we must use the transmissibilites defined by
+                // the problem. (because in the sequential case, the grid manager does
+                // not compute "global" transmissibilities for performance reasons. in
+                // the parallel case, the problem's transmissibilities can't be used
+                // because this object refers to the distributed grid and we need the
+                // sequential version here.)
+                eclTrans = &ebosSimulator_->problem().eclTransmissibilities();
+            }
+            size_t num_faces = grid.numFaces();
+            auto fc = UgGridHelpers::faceCells(grid);
+            const auto& globalCell = grid.globalCell();
+            for (size_t i = 0; i < num_faces; ++i) {
+                auto c1 = fc(i,0);
+                auto c2 = fc(i,1);
+
+                if (c1 == -1 || c2 == -1)
+                    // boundary
+                    continue;
+
+                int cc1 = globalCell[c1];
+                int cc2 = globalCell[c2];
+
+                if (std::abs(cc1 - cc2) != 1 &&
+                        std::abs(cc1 - cc2) != nx &&
+                        std::abs(cc1 - cc2) != nx*ny)
+                {
+                    nnc_.addNNC(cc1, cc2, eclTrans->transmissibility(c1, c2));
+                }
+
+            }
+
+        }
+
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
         bool output_cout_ = false;
@@ -827,8 +905,8 @@ namespace Opm
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
         std::unique_ptr<BlackoilPropsAdFromDeck> fluidprops_;
-        std::unique_ptr<DerivedGeology> geoprops_;
         std::unique_ptr<ReservoirState> state_;
+        NNC nnc_;
         std::unique_ptr<EclipseIO> eclIO_;
         std::unique_ptr<OutputWriter> output_writer_;
         boost::any parallel_information_;
