@@ -118,7 +118,7 @@ if (NOT EIGEN3_FOUND)
 	externalProject_Add (Eigen3
 		GIT_REPOSITORY git://github.com/OPM/eigen3
 		UPDATE_COMMAND git checkout 9e788db99d73f3199ade74bfda8d9f73fdfbbe4c
-		CMAKE_ARGS -DEIGEN_TEST_NO_OPENGL=1 -DEIGEN_BUILD_PKGCONFIG=0 -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/eigen3-installed
+		CMAKE_ARGS -Wno-dev -DEIGEN_TEST_NO_OPENGL=1 -DEIGEN_BUILD_PKGCONFIG=0 -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/eigen3-installed
 		)
 
 	include_directories (${CMAKE_BINARY_DIR}/eigen3-installed/include/eigen3)
