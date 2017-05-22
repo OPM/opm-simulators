@@ -174,7 +174,12 @@ namespace Opm
     /// solving the reduced system (after eliminating well variables)
     /// as a block-structured matrix (one block for all cell variables) for a fixed
     /// number of cell variables np .
-    template < class MatrixBlockType, class VectorBlockType >
+    /// \tparam MatrixBlockType The type of the matrix block used.
+    /// \tparam VectorBlockType The type of the vector block used.
+    /// \tparam pressureIndex The index of the pressure component in the vector
+    ///                       vector block. It is used to guide the AMG coarsening.
+    ///                       Default is zero.
+    template < class MatrixBlockType, class VectorBlockType, int pressureIndex=0 >
     class ISTLSolver : public NewtonIterationBlackoilInterface
     {
         typedef typename MatrixBlockType :: field_type  Scalar;
@@ -311,7 +316,7 @@ namespace Opm
         void
         constructAMGPrecond(LinearOperator& /* linearOperator */, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >& opA, const double relax ) const
         {
-            ISTLUtility::createAMGPreconditionerPointer( *opA, relax, comm, amg );
+            ISTLUtility::createAMGPreconditionerPointer<pressureIndex>( *opA, relax, comm, amg );
         }
 
 
@@ -319,7 +324,7 @@ namespace Opm
         void
         constructAMGPrecond(MatrixOperator& opA, const POrComm& comm, std::unique_ptr< AMG >& amg, std::unique_ptr< MatrixOperator >&, const double relax ) const
         {
-            ISTLUtility::createAMGPreconditionerPointer( opA, relax, comm, amg );
+            ISTLUtility::createAMGPreconditionerPointer<pressureIndex>( opA, relax, comm, amg );
         }
 
         /// \brief Solve the system using the given preconditioner and scalar product.
