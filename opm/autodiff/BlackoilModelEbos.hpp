@@ -124,7 +124,7 @@ namespace Opm {
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
-        typedef ISTLSolver< MatrixBlockType, VectorBlockType >  ISTLSolverType;
+        typedef ISTLSolver< MatrixBlockType, VectorBlockType, BlackoilIndices::pressureSwitchIdx >  ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // For the conversion between the surface volume rate and resrevoir voidage rate

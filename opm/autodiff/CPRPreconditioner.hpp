@@ -276,7 +276,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
 /// \param relax   The relaxation parameter for ILU0.
 /// \param comm    The object describing the parallelization information and communication.
 //  \param amgPtr  The unique_ptr to be filled (return)
-template <class Op, class P, class AMG >
+template <class Op, class P, class AMG, int pressureIndex=0 >
 inline void
 createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr )
 {
@@ -284,7 +284,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
     typedef typename Op::matrix_type  M;
 
     // The coupling metric used in the AMG
-    typedef Dune::Amg::FirstDiagonal CouplingMetric;
+    typedef Dune::Amg::Diagonal<pressureIndex> CouplingMetric;
 
     // The coupling criterion used in the AMG
     typedef Dune::Amg::SymmetricCriterion<M, CouplingMetric> CritBase;
