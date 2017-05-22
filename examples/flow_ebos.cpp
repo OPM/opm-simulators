@@ -24,11 +24,13 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+// Include of opm/autodiff/FlowMainEbos.hpp has to come first
+#include <opm/autodiff/FlowMainEbos.hpp>
+
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/autodiff/DuneMatrix.hpp>
 #include <dune/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/autodiff/FlowMainEbos.hpp>
 
 
 // ----------------- Main program -----------------
