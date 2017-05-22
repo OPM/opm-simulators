@@ -130,10 +130,7 @@ namespace Opm
     ThreadHandle()
       : threadObjectQueue_(),
         thread_( startThread, &threadObjectQueue_ )
-    {
-      // detach thread into nirvana
-      thread_.detach();
-    } // end constructor
+    { }
 
     //! dispatch object to queue of separate thread
     template <class Object>
@@ -148,9 +145,15 @@ namespace Opm
 
     //! destructor terminating the thread
     ~ThreadHandle()
+    { }
+
+    //! send terminal obect to pool and wait until the thread finishes.
+    void signalEndAndJoin()
     {
       // dispatch end object which will terminate the thread
       threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (new EndObject()) ) ;
+      // Wait for thread to end
+      thread_.join();
     }
   };
 
