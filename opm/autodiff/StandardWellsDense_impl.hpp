@@ -1157,14 +1157,14 @@ namespace Opm {
 
                 if (pu.phase_used[BlackoilPhases::Vapour]) {
                     const int gaspos = pu.phase_pos[BlackoilPhases::Vapour] + perf * numComp;
-                    const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * numComp;
+                    const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
 
                     if (pu.phase_used[BlackoilPhases::Liquid]) {
-                        const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * numComp;
+                        const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
                         const double oilrate = std::abs(xw.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                         rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                         if (oilrate > 0) {
-                            const double gasrate = std::abs(xw.wellRates()[gaspos_well]);
+                            const double gasrate = std::abs(xw.wellRates()[gaspos_well]) - xw.solventWellRate(w);
                             double rv = 0.0;
                             if (gasrate > 0) {
                                 rv = oilrate / gasrate;
@@ -1184,11 +1184,11 @@ namespace Opm {
 
                 if (pu.phase_used[BlackoilPhases::Liquid]) {
                     const int oilpos = pu.phase_pos[BlackoilPhases::Liquid] + perf * numComp;
-                    const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * numComp;
+                    const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
                     if (pu.phase_used[BlackoilPhases::Vapour]) {
                         rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * numComp;
-                        const double gasrate = std::abs(xw.wellRates()[gaspos_well]);
+                        const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
+                        const double gasrate = std::abs(xw.wellRates()[gaspos_well]) - xw.solventWellRate(w);
                         if (gasrate > 0) {
                             const double oilrate = std::abs(xw.wellRates()[oilpos_well]);
                             double rs = 0.0;
@@ -2149,17 +2149,24 @@ namespace Opm {
         // surface rate injection control. Improvement will be required.
         if (wells().type[wellIdx] == INJECTOR) {
             if (has_solvent_ ) {
+                double comp_frac = 0.0;
+                if (compIdx == solventCompIdx) { // solvent
+                    comp_frac = wells().comp_frac[np*wellIdx + pu.phase_pos[ Gas ]] * wsolvent(wellIdx);
+                } else if (compIdx == pu.phase_pos[ Gas ]) {
+                    comp_frac = wells().comp_frac[np*wellIdx + compIdx] * (1.0 - wsolvent(wellIdx));
+                } else {
+                    comp_frac = wells().comp_frac[np*wellIdx + compIdx];
+                }
+                if (comp_frac == 0.0) {
+                    return qs; //zero
+                }
+
                 if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
-                    OPM_THROW(std::runtime_error,"BHP controlled solvent injector is unsupported. Check well "
-                              << wells().name [wellIdx] );
+                    return comp_frac * wellVariables_[nw*XvarWell + wellIdx];
                 }
-                if (compIdx == pu.phase_pos[ Gas ]) { //gas
-                    qs.setValue(target_rate * (1.0 - wsolvent(wellIdx)));
-                    return qs;
-                } else if (compIdx == solventCompIdx) { // solvent
-                    qs.setValue(wsolvent(wellIdx) * target_rate);
-                    return qs;
-                }
+
+                qs.setValue(comp_frac * target_rate);
+                return qs;
             }
             const double comp_frac = wells().comp_frac[np*wellIdx + compIdx];
             if (comp_frac == 0.0) {

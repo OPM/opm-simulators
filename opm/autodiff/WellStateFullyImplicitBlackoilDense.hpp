@@ -67,6 +67,48 @@ namespace Opm
             // call init on base class
             BaseType :: init(wells, state, prevState);
 
+
+            const int nw = wells->number_of_wells;
+            if (nw == 0) {
+                return;
+            }
+            const int nperf = wells->well_connpos[nw];
+            perfRateSolvent_.clear();
+            perfRateSolvent_.resize(nperf, 0.0);
+
+            if(pu.has_solvent) {
+
+                // intialize wells that have been there before
+                // order may change so the mapping is based on the well name
+                if( ! prevState.wellMap().empty() )
+                {
+                    typedef typename WellMapType :: const_iterator const_iterator;
+                    const_iterator end = prevState.wellMap().end();
+                    for (int w = 0; w < nw; ++w) {
+                        std::string name( wells->name[ w ] );
+                        const_iterator it = prevState.wellMap().find( name );
+                        if( it != end )
+                        {
+                            const int newIndex = w;
+
+                            // perfSolventRates
+                            int oldPerf_idx = (*it).second[ 1 ];
+                            const int num_perf_old_well = (*it).second[ 2 ];
+                            const int num_perf_this_well = wells->well_connpos[newIndex + 1] - wells->well_connpos[newIndex];
+                            if( num_perf_old_well == num_perf_this_well )
+                            {
+                                for (int perf = wells->well_connpos[ newIndex ];
+                                     perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                                {
+                                    perfRateSolvent()[ perf ] = prevState.perfRateSolvent()[ oldPerf_idx ];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
             // TODO: the reason to keep this is to avoid getting defaulted value BHP
             // some facilities needed from opm-parser or opm-core
             // It is a little tricky, since sometimes before applying group control, the only
@@ -88,9 +130,7 @@ namespace Opm
             if (nw == 0) {
                 return;
             }
-            const int nperf = wells_->well_connpos[nw];
-            perfRateSolvent_.clear();
-            perfRateSolvent_.resize(nperf, 0.0);
+
 
             const int np = wells_->number_of_phases;
             const int numComp = pu.has_solvent? np+1:np;

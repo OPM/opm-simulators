@@ -633,6 +633,8 @@ namespace Opm {
 
                 // Appleyard chop process.
                 maxVal = std::max(std::abs(dsg),maxVal);
+                maxVal = std::max(std::abs(dss),maxVal);
+
                 double step = dsMax()/maxVal;
                 step = std::min(step, 1.0);
 
