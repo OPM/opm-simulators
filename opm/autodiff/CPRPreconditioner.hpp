@@ -276,7 +276,7 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
 /// \param relax   The relaxation parameter for ILU0.
 /// \param comm    The object describing the parallelization information and communication.
 //  \param amgPtr  The unique_ptr to be filled (return)
-template <class Op, class P, class AMG, int pressureIndex=0 >
+template < int pressureIndex=0, class Op, class P, class AMG >
 inline void
 createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr )
 {
