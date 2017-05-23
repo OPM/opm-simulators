@@ -253,7 +253,7 @@ public:
             solver_timer.start();
 
             const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
-            const WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_, terminal_output_, timer.currentStepNum());
+            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_, terminal_output_, timer.currentStepNum());
 
             auto solver = createSolver(well_model);
 
