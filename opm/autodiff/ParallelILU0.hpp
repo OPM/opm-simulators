@@ -87,6 +87,11 @@ public:
         : ProcessLabel(comm.communicator().rank())
     {}
 
+    template<class MPIComm>
+    explicit IdProcessLabel(Dune::CollectiveCommunication<MPIComm> const& comm)
+        : ProcessLabel(comm.rank())
+    {}
+
     virtual int label(int other_proc) const override
     {
         return other_proc;

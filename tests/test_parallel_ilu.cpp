@@ -67,7 +67,7 @@ void testIdMapping()
 #if HAVE_MPI
     Dune::CollectiveCommunication<MPI_Comm>  cc(MPI_COMM_WORLD);
     int rank  = cc.rank();
-    Opm::Detail::IdProcessMap map(cc);
+    Opm::Detail::IdProcessLabel map(cc);
     for( int i = 0 ; i < cc.size(); ++i)
     {
         BOOST_CHECK( (i < rank ) == map.compareWithOtherLabel(i, std::less<int>()));
