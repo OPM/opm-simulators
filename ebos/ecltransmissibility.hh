@@ -429,6 +429,10 @@ private:
 
             // use the original ntg values if the cell above has porv > minPVvalue.
             int cartesianCellIdxAbove = cartesianCellIdx - nxny;
+
+            if (cartesianCellIdxAbove < 0)
+                continue;
+
             if (porv[cartesianCellIdxAbove] > eclGrid.getMinpvValue() ){
                 averageNtg[cartesianCellIdx] = ntg[cartesianCellIdx];
                 continue;
