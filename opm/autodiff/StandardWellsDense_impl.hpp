@@ -2213,17 +2213,27 @@ namespace Opm {
 
                 assert(phase_under_control >= 0);
 
+                EvalWell wellVolumeFractionScaledPhaseUnderControl = wellVolumeFractionScaled(wellIdx, phase_under_control);
+                if (has_solvent_ && phase_under_control == Gas) {
+                    // for GRAT controlled wells solvent is included in the target
+                    wellVolumeFractionScaledPhaseUnderControl += wellVolumeFractionScaled(wellIdx, solventCompIdx);
+                }
+
                 if (compIdx == phase_under_control) {
+                    if (has_solvent_ && phase_under_control == Gas) {
+                        qs.setValue(target_rate * wellVolumeFractionScaled(wellIdx, Gas).value() / wellVolumeFractionScaledPhaseUnderControl.value() );
+                        return qs;
+                    }
                     qs.setValue(target_rate);
                     return qs;
                 }
 
                 // TODO: not sure why the single phase under control will have near zero fraction
                 const double eps = 1e-6;
-                if (wellVolumeFractionScaled(wellIdx, phase_under_control) < eps) {
+                if (wellVolumeFractionScaledPhaseUnderControl < eps) {
                     return qs;
                 }
-                return (target_rate * wellVolumeFractionScaled(wellIdx, compIdx) / wellVolumeFractionScaled(wellIdx, phase_under_control));
+                return (target_rate * wellVolumeFractionScaled(wellIdx, compIdx) / wellVolumeFractionScaledPhaseUnderControl);
             }
 
             // when it is a combined two phase rate limit, such like LRAT
@@ -2301,6 +2311,10 @@ namespace Opm {
     {
         const WellControls* wc = wells().ctrls[wellIdx];
         if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+
+            if (has_solvent_ && compIdx == solventCompIdx) {
+                return wellVolumeFraction(wellIdx, compIdx);
+            }
             const double* distr = well_controls_get_current_distr(wc);
             assert(compIdx < 3);
             if (distr[compIdx] > 0.) {
@@ -2780,6 +2794,7 @@ namespace Opm {
                             std::vector<double>& well_flux) const
     {
         const int np = wells().number_of_phases;
+        const int numComp = numComponents();
         well_flux.resize(np, 0.0);
 
         const bool allow_cf = allow_cross_flow(well_index, ebosSimulator);
@@ -2787,8 +2802,8 @@ namespace Opm {
             const int cell_index = wells().well_cells[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
             // flux for each perforation
-            std::vector<EvalWell> cq_s(np, 0.0);
-            std::vector<EvalWell> mob(np, 0.0);
+            std::vector<EvalWell> cq_s(numComp, 0.0);
+            std::vector<EvalWell> mob(numComp, 0.0);
             getMobility(ebosSimulator, perf, cell_index, mob);
             computeWellFlux(well_index, wells().WI[perf], intQuants, mob, bhp,
                             wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
