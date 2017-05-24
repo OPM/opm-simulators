@@ -415,34 +415,20 @@ private:
         assert(dimWorld > 1);
         const size_t nxny = cartDims[0] * cartDims[1];
 
-        averageNtg.clear();
-        averageNtg.resize(ntg.size(),1.0);
+        averageNtg = ntg;
 
-        for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx) {
-
+        for (size_t cartesianCellIdx = 0; cartesianCellIdx < ntg.size(); ++cartesianCellIdx)
+        {
             // use the original ntg values for the inactive cells
-            if( ! actnum[cartesianCellIdx]) {
-                averageNtg[cartesianCellIdx] = ntg[cartesianCellIdx];
+            if (!actnum[cartesianCellIdx])
                 continue;
-            }
-
-
-            // use the original ntg values if the cell above has porv > minPVvalue.
-            int cartesianCellIdxAbove = cartesianCellIdx - nxny;
-
-            if (cartesianCellIdxAbove < 0)
-                continue;
-
-            if (porv[cartesianCellIdxAbove] > eclGrid.getMinpvValue() ){
-                averageNtg[cartesianCellIdx] = ntg[cartesianCellIdx];
-                continue;
-            }
 
             // Average properties as long as there exist cells above
             // that has pore volume less than the MINPV threshold
             const double cellVolume = eclGrid.getCellVolume(cartesianCellIdx);
             double ntgCellVolume = ntg[cartesianCellIdx] * cellVolume;
             double totalCellVolume = cellVolume;
+            int cartesianCellIdxAbove = cartesianCellIdx - nxny;
             while ( cartesianCellIdxAbove >= 0 &&
                  actnum[cartesianCellIdxAbove] > 0 &&
                  porv[cartesianCellIdxAbove] < eclGrid.getMinpvValue() ) {
