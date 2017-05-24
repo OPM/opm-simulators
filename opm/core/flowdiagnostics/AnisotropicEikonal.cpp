@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
 #include <opm/core/flowdiagnostics/AnisotropicEikonal.hpp>
 #include <opm/core/grid/GridUtilities.hpp>
 #include <opm/core/grid.h>
