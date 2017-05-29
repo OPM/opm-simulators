@@ -53,11 +53,26 @@ namespace Opm
       // no copying
       ThreadHandleQueue( const ThreadHandleQueue& ) = delete;
 
+      // wait duration of 10 milli seconds
+      void wait() const
+      {
+          std::this_thread::sleep_for( std::chrono::milliseconds(10) );
+      }
+
     public:
       //! constructor creating object that is executed by thread
       ThreadHandleQueue()
         : objQueue_(), mutex_()
       {
+      }
+
+      ~ThreadHandleQueue()
+      {
+        // wait until all objects have been written.
+        while( ! objQueue_.empty() )
+        {
+            wait();
+        }
       }
 
       //! insert object into threads queue
@@ -76,7 +91,7 @@ namespace Opm
         while( objQueue_.empty() )
         {
           // sleep one second
-          std::this_thread::sleep_for( std::chrono::seconds(1) );
+          wait();
         }
 
         {
@@ -119,38 +134,53 @@ namespace Opm
     }
 
     ThreadHandleQueue threadObjectQueue_;
-    std::thread thread_;
+    std::unique_ptr< std::thread > thread_;
 
   private:
     // prohibit copying
     ThreadHandle( const ThreadHandle& ) = delete;
 
   public:
-    //! default constructor
-    ThreadHandle()
+    //! constructor creating ThreadHandle
+    //! \param isIORank  if true thread is created
+    ThreadHandle( const bool createThread )
       : threadObjectQueue_(),
-        thread_( startThread, &threadObjectQueue_ )
+        thread_()
     {
-      // detach thread into nirvana
-      thread_.detach();
+        if( createThread )
+        {
+           thread_.reset( new std::thread( startThread, &threadObjectQueue_ ) );
+           // detach thread into nirvana
+           thread_->detach();
+        }
     } // end constructor
 
     //! dispatch object to queue of separate thread
     template <class Object>
     void dispatch( Object&& obj )
     {
-      typedef ObjectWrapper< Object >  ObjectPointer;
-      ObjectInterface* objPtr = new ObjectPointer( std::move(obj) );
+        if( thread_ )
+        {
+            typedef ObjectWrapper< Object >  ObjectPointer;
+            ObjectInterface* objPtr = new ObjectPointer( std::move(obj) );
 
-      // add object to queue of objects
-      threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (objPtr) );
+            // add object to queue of objects
+            threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (objPtr) );
+        }
+        else
+        {
+            OPM_THROW(std::logic_error,"ThreadHandle::dispatch called without thread being initialized (i.e. on non-ioRank)");
+        }
     }
 
     //! destructor terminating the thread
     ~ThreadHandle()
     {
-      // dispatch end object which will terminate the thread
-      threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (new EndObject()) ) ;
+        if( thread_ )
+        {
+            // dispatch end object which will terminate the thread
+            threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (new EndObject()) ) ;
+        }
     }
   };
 
