@@ -585,7 +585,7 @@ public:
         errlog << "Finding saturation pressure did not converge:"
                << " pSat = " << pSat
                << ", Rv = " << Rv;
-        OpmLog::warning("Wet gas saturation pressure", errlog.str());
+        OpmLog::debug("Wet gas saturation pressure", errlog.str());
         OPM_THROW_NOLOG(NumericalProblem, errlog.str());
     }
 
