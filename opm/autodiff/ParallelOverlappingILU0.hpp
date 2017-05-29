@@ -24,13 +24,14 @@
 
 #include <dune/istl/preconditioner.hh>
 #include <dune/istl/paamg/smoother.hh>
+#include <dune/istl/paamg/pinfo.hh>
 
 namespace Opm
 {
 
 //template<class M, class X, class Y, class C>
 //class ParallelOverlappingILU0;
-template<class Matrix, class Domain, class Range, class ParallelInfo = int>
+template<class Matrix, class Domain, class Range, class ParallelInfo = Dune::Amg::SequentialInformation>
 class ParallelOverlappingILU0;
 
 } // end namespace Opm
@@ -164,11 +165,7 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 class ParallelOverlappingILU0
     : public Dune::Preconditioner<Domain,Range>
 {
-    // if ParallelInfoT = int was passed then sequential preconditioner is selected
-    typedef typename std::conditional<
-        std::is_same<ParallelInfoT,int>::value,
-        Dune::OwnerOverlapCopyCommunication<int, int>,
-        ParallelInfoT>::type  ParallelInfo;
+    typedef ParallelInfoT ParallelInfo;
 
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -232,7 +229,7 @@ public:
     // define the category
     enum {
         //! \brief The category the preconditioner is part of.
-        category = std::is_same<ParallelInfoT,int>::value ?
+        category = std::is_same<ParallelInfoT, Dune::Amg::SequentialInformation>::value ?
             Dune::SolverCategory::sequential : Dune::SolverCategory::overlapping
     };
 
