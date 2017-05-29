@@ -354,7 +354,7 @@ namespace Opm {
                 if( solver_verbose_ ) {
                     std::string msg;
                     msg = "Solver convergence failed, cutting timestep to "
-                        + std::to_string(unit::convert::to( newTimeStep, unit::day )) + " days.\n";
+                        + std::to_string(unit::convert::to( substepTimer.currentStepLength(), unit::day )) + " days.\n";
                     OpmLog::problem(msg);
                 }
                 // reset states
