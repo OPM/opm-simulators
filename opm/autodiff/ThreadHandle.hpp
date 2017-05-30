@@ -49,6 +49,9 @@ namespace Opm
     protected:
       std::queue< std::unique_ptr< ObjectInterface > > objQueue_;
       std::mutex  mutex_;
+      int err_;
+      bool deconstructing_;
+      std::string err_msg_;
 
       // no copying
       ThreadHandleQueue( const ThreadHandleQueue& ) = delete;
@@ -62,12 +65,13 @@ namespace Opm
     public:
       //! constructor creating object that is executed by thread
       ThreadHandleQueue()
-        : objQueue_(), mutex_()
+        : objQueue_(), mutex_(), err_(), deconstructing_()
       {
       }
 
       ~ThreadHandleQueue()
       {
+        deconstructing_ = true;
         // wait until all objects have been written.
         while( ! objQueue_.empty() )
         {
@@ -84,6 +88,22 @@ namespace Opm
         mutex_.unlock();
       }
 
+      //! Get the error code message tuple
+      std::tuple<int,std::string> getErrorWithMessage()
+      {
+        return std::make_tuple(err_, err_msg_);
+      }
+
+      //! make the queue empty
+      void emptyQueue()
+      {
+        mutex_.lock();
+        while( ! objQueue_.empty() )
+        {
+            objQueue_.pop();
+        }
+        mutex_.unlock();
+      }
       //! do the work until the queue received an end object
       void run()
       {
@@ -113,9 +133,23 @@ namespace Opm
                 }
                 return;
             }
-
-            // execute object action
-            obj->run();
+            try
+            {
+                // execute object action
+                obj->run();
+            }
+            catch(std::runtime_error& msg)
+            {
+                // signal the error
+                err_ = 1;
+                err_msg_ = msg.what();
+                // When the deconstructor is running, err_ will never be checked
+                // therefore we throw the error.
+                if( deconstructing_ )
+                {
+                    throw msg;
+                }
+            }
         }
 
         // keep thread running
@@ -157,15 +191,26 @@ namespace Opm
 
     //! dispatch object to queue of separate thread
     template <class Object>
-    void dispatch( Object&& obj )
+    std::tuple<int,std::string> dispatch( Object&& obj )
     {
         if( thread_ )
         {
-            typedef ObjectWrapper< Object >  ObjectPointer;
-            ObjectInterface* objPtr = new ObjectPointer( std::move(obj) );
+            auto err_pair = threadObjectQueue_.getErrorWithMessage();
+            using std::get;
 
-            // add object to queue of objects
-            threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (objPtr) );
+            if( get<0>(err_pair) )
+            {
+                threadObjectQueue_.emptyQueue();
+            }
+            else
+            {
+                typedef ObjectWrapper< Object >  ObjectPointer;
+                ObjectInterface* objPtr = new ObjectPointer( std::move(obj) );
+
+                // add object to queue of objects
+                threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (objPtr) );
+            }
+            return err_pair;
         }
         else
         {
