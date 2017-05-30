@@ -133,21 +133,24 @@ namespace Opm
                 }
                 return;
             }
-            try
+            if( err == 0 )
             {
-                // execute object action
-                obj->run();
-            }
-            catch(std::runtime_error& msg)
-            {
-                // signal the error
-                err_ = 1;
-                err_msg_ = msg.what();
-                // When the deconstructor is running, err_ will never be checked
-                // therefore we throw the error.
-                if( deconstructing_ )
+                try
                 {
-                    throw msg;
+                    // execute object action
+                    obj->run();
+                }
+                catch(std::runtime_error& msg)
+                {
+                    // signal the error
+                    err_ = 1;
+                    err_msg_ = msg.what();
+                    // When the deconstructor is running, err_ will never be checked
+                    // therefore we throw the error.
+                    if( deconstructing_ )
+                    {
+                        throw msg;
+                    }
                 }
             }
         }
