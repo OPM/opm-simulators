@@ -934,8 +934,7 @@ namespace Opm {
                     Vector& R2_idx = R2[ solventCompIdx ];
                     Vector& B_idx  = B[ solventCompIdx ];
                     B_idx [cell_idx] = 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
-                    const int ebosCompIdx = flowPhaseToEbosCompIdx(solventCompIdx);
-                    R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
+                    R2_idx[cell_idx] = ebosResid[cell_idx][solventCompIdx];
                 }
 
             }

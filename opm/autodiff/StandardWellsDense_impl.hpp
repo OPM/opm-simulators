@@ -1210,7 +1210,7 @@ namespace Opm {
                     surf_dens_perf[numComp*perf + p] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( p ), fs.pvtRegionIndex());
                 }
 
-                #warning HACK use cell values for solvent injector
+                // We use cell values for solvent injector
                 if (has_solvent_) {
                     b_perf[numComp*perf + solventCompIdx] = intQuants.solventInverseFormationVolumeFactor().value();
                     surf_dens_perf[numComp*perf + solventCompIdx] = intQuants.solventRefDensity();
@@ -1325,7 +1325,8 @@ namespace Opm {
                 well_state.wellSolutions()[SFrac*nw + w] = F_solvent;
             }
 
-            # warning F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent. More testing is needed to make sure this is correct for output, wellControls, well groups, THP etc.
+            // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
+            // More testing is needed to make sure this is correct for well groups and THP.
             if (has_solvent_){
                 F[Gas] += F_solvent;
             }
@@ -3029,7 +3030,7 @@ namespace Opm {
             }
         }
         // we didn't find it return 0;
-        // or should we throw?
+        assert(false);
         return 0.0;
     }
 

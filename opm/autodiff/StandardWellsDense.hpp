@@ -126,8 +126,9 @@ enum WellVariablePositions {
                     return 2;
                 }
                 int numComp = FluidSystem::numComponents;
-                if (has_solvent_)
+                if (has_solvent_) {
                     numComp ++;
+                }
 
                 return numComp;
             }

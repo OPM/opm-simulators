@@ -76,7 +76,7 @@ namespace Opm
             perfRateSolvent_.clear();
             perfRateSolvent_.resize(nperf, 0.0);
 
-            if(pu.has_solvent) {
+            if (pu.has_solvent) {
 
                 // intialize wells that have been there before
                 // order may change so the mapping is based on the well name
@@ -196,7 +196,7 @@ namespace Opm
                     if( pu.phase_used[Gas] ) {
                         wellSolutions()[2*nw + w] = wells_->comp_frac[np*w + gaspos];
                     }
-                    if(pu.has_solvent) {
+                    if (pu.has_solvent) {
                         wellSolutions()[3*nw + w] = 0;
                     }
 
@@ -238,7 +238,7 @@ namespace Opm
             if (nw == 0) {
                 return res;
             }
-            if(pu.has_solvent) {
+            if (pu.has_solvent) {
                 // add solvent component
                 for( int w = 0; w < nw; ++w ) {
                     using rt = data::Rates::opt;
