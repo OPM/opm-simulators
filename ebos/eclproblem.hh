@@ -249,6 +249,7 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     enum { numPhases = FluidSystem::numPhases };
     enum { numComponents = FluidSystem::numComponents };
     enum { enableSolvent = GET_PROP_VALUE(TypeTag, EnableSolvent) };
+    enum { enablePolymer = GET_PROP_VALUE(TypeTag, EnablePolymer) };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -267,8 +268,12 @@ class EclProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
     typedef typename GET_PROP_TYPE(TypeTag, Evaluation) Evaluation;
+    typedef typename GET_PROP_TYPE(TypeTag, Indices) Indices;
+
 
     typedef BlackOilSolventModule<TypeTag> SolventModule;
+    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
+
     typedef Opm::CompositionalFluidState<Scalar, FluidSystem> ScalarFluidState;
     typedef Opm::MathToolbox<Evaluation> Toolbox;
     typedef Ewoms::EclSummaryWriter<TypeTag> EclSummaryWriter;
@@ -321,6 +326,8 @@ public:
         // Tell the solvent module to initialize its internal data structures
         const auto& gridManager = simulator.gridManager();
         SolventModule::initFromDeck(gridManager.deck(), gridManager.eclState());
+        PolymerModule::initFromDeck(gridManager.deck(), gridManager.eclState());
+
     }
 
     /*!
@@ -360,6 +367,15 @@ public:
         simulator.setTimeStepSize(0.0);
 
         updatePffDofData_();
+
+        if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
+            const auto& gridManager = this->simulator().gridManager();
+            const auto& gridView = gridManager.gridView();
+            int numElements = gridView.size(/*codim=*/0);
+            maxPolymerAdsorption_.resize(numElements, 0.0);
+        }
+
+
     }
 
     void prefetch(const Element& elem) const
@@ -453,7 +469,11 @@ public:
 
         if (updateHysteresis_())
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+
         this->model().updateMaxOilSaturations();
+        
+        if (GET_PROP_VALUE(TypeTag, EnablePolymer))
+            updateMaxPolymerAdsorption_();
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
             // set up the wells
@@ -739,6 +759,30 @@ public:
     std::shared_ptr<EclMaterialLawManager> materialLawManager()
     { return materialLawManager_; }
 
+
+
+    /*!
+     * \brief Returns the initial solvent saturation for a given a cell index
+     */
+    Scalar solventSaturation(unsigned elemIdx) const
+    {
+        if (solventSaturation_.empty())
+            return 0;
+
+        return solventSaturation_[elemIdx];
+    }
+
+    /*!
+     * \brief Returns the initial polymer concentration for a given a cell index
+     */
+    Scalar  polymerConcentration(unsigned elemIdx) const
+    {
+        if (polymerConcentration_.empty())
+            return 0;
+
+        return polymerConcentration_[elemIdx];
+    }
+
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
@@ -796,6 +840,24 @@ public:
         return miscnum_[elemIdx];
     }
 
+    /*!
+     * \brief Returns the max polymer adsorption value
+     */
+    template <class Context>
+    Scalar maxPolymerAdsorption(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    { return maxPolymerAdsorption(context.globalSpaceIndex(spaceIdx, timeIdx)); }
+
+    /*!
+     * \brief Returns the max polymer adsorption value
+     */
+    Scalar maxPolymerAdsorption(unsigned elemIdx) const
+    {
+        if (maxPolymerAdsorption_.empty())
+            return 0;
+
+        return maxPolymerAdsorption_[elemIdx];
+    }
+
 
 
     /*!
@@ -848,8 +910,11 @@ public:
         else
             values.assignNaive(initialFluidStates_[globalDofIdx]);
 
-        //if (enableSolvent)
-        //    values[Indices::solventSaturationIdx] = whatever;
+        if (enableSolvent)
+             values[Indices::solventSaturationIdx] = solventSaturation_[globalDofIdx];
+
+        if (enablePolymer)
+             values[Indices::polymerConcentrationIdx] = polymerConcentration_[globalDofIdx];
     }
 
     /*!
@@ -1164,7 +1229,10 @@ private:
             readExplicitInitialCondition_();
         else
             readEquilInitialCondition_();
+
+        readBlackoilExtentionsInitialConditions_();
     }
+
 
     void readEquilInitialCondition_()
     {
@@ -1381,6 +1449,36 @@ private:
             }
         }
     }
+    void readBlackoilExtentionsInitialConditions_()
+    {
+        const auto& gridManager = this->simulator().gridManager();
+        const auto& eclState = gridManager.eclState();
+        size_t numDof = this->model().numGridDof();
+
+        if (enableSolvent) {
+            const std::vector<double>& solventSaturationData = eclState.get3DProperties().getDoubleGridProperty("SSOL").getData();
+            solventSaturation_.resize(numDof,0.0);
+            for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+                size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
+                assert(0 <= cartesianDofIdx);
+                assert(cartesianDofIdx <= solventSaturationData.size());
+                solventSaturation_[dofIdx] = solventSaturationData[cartesianDofIdx];
+            }
+        }
+
+        if (enablePolymer) {
+            const std::vector<double>& polyConcentrationData = eclState.get3DProperties().getDoubleGridProperty("SPOLY").getData();
+            polymerConcentration_.resize(numDof,0.0);
+            for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+                size_t cartesianDofIdx = gridManager.cartesianIndex(dofIdx);
+                assert(0 <= cartesianDofIdx);
+                assert(cartesianDofIdx <= polyConcentrationData.size());
+                polymerConcentration_[dofIdx] = polyConcentrationData[cartesianDofIdx];
+            }
+        }
+    }
+
+
 
     // update the hysteresis parameters of the material laws for the whole grid
     bool updateHysteresis_()
@@ -1405,6 +1503,26 @@ private:
             materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }
         return true;
+    }
+
+    void updateMaxPolymerAdsorption_()
+    {
+        // we need to update the max polymer adsoption data for all elements
+        ElementContext elemCtx(this->simulator());
+        const auto& gridManager = this->simulator().gridManager();
+        auto elemIt = gridManager.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = gridManager.gridView().template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+
+            maxPolymerAdsorption_[compressedDofIdx] = std::max(maxPolymerAdsorption_[compressedDofIdx] , intQuants.polymerAdsorption().value());
+        }
     }
 
     void updatePvtnum_()
@@ -1513,8 +1631,14 @@ private:
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 
+    std::vector<Scalar> maxPolymerAdsorption_;
+
     bool useMassConservativeInitialCondition_;
     std::vector<ScalarFluidState> initialFluidStates_;
+
+    std::vector<Scalar> polymerConcentration_;
+    std::vector<Scalar> solventSaturation_;
+
 
     EclWellManager<TypeTag> wellManager_;
 
