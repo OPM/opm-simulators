@@ -92,6 +92,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_singlecellsolves.cpp
   tests/test_solventprops_ad.cpp
   tests/test_multisegmentwells.cpp
+  tests/test_multiphaseupwind.cpp
   # tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
