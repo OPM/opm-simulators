@@ -46,7 +46,8 @@
 //     |                 |
 //     -------------------
 //
-// The gravity-related head differences are (4, -1, -2) for (w, o, g).
+// The gravity-related head differences gd ~= rho * g * grad z
+// are set to (4, -1, -2) for (w, o, g).
 // The mobilities are all 1 and the transmissibility is 1.
 // The total flux from cell 1 to 2 will vary from case to case.
 
@@ -55,14 +56,14 @@ BOOST_AUTO_TEST_CASE(GravityColumnLowFlux)
     // Case 1: a gravity column with two cells and low total flux.
     // The total flux from cell 1 to 2 is 1.0.
 
-    const std::array<double, 3> head_diff = {{ 4.0, -1.0, -2.0 }};
+    const std::array<double, 3> gd = {{ 4.0, -1.0, -2.0 }};
     const std::array<double, 3> mob1 = {{ 1.0, 1.0, 1.0 }};
     const std::array<double, 3> mob2 = {{ 1.0, 1.0, 1.0 }};
     const double transmissibility = 1.0;
     const double flux = 1.0;
 
     const std::array<double, 3> expected_upw = {{ 1.0, -1.0, -1.0 }};
-    const std::array<double, 3> upw = Opm::connectionMultiPhaseUpwind(head_diff, mob1, mob2, transmissibility, flux);
+    const std::array<double, 3> upw = Opm::connectionMultiPhaseUpwind(gd, mob1, mob2, transmissibility, flux);
     BOOST_CHECK_EQUAL(upw[0], expected_upw[0]);
     BOOST_CHECK_EQUAL(upw[1], expected_upw[1]);
     BOOST_CHECK_EQUAL(upw[2], expected_upw[2]);
@@ -74,14 +75,14 @@ BOOST_AUTO_TEST_CASE(GravityColumnMediumFlux)
     // Case 2: a gravity column with two cells and medium-sized total flux.
     // The total flux from cell 1 to 2 is 5.0.
 
-    const std::array<double, 3> head_diff = {{ 4.0, -1.0, -2.0 }};
+    const std::array<double, 3> gd = {{ 4.0, -1.0, -2.0 }};
     const std::array<double, 3> mob1 = {{ 1.0, 1.0, 1.0 }};
     const std::array<double, 3> mob2 = {{ 1.0, 1.0, 1.0 }};
     const double transmissibility = 1.0;
     const double flux = 5.0;
 
     const std::array<double, 3> expected_upw = {{ 1.0, 1.0, -1.0 }};
-    const std::array<double, 3> upw = Opm::connectionMultiPhaseUpwind(head_diff, mob1, mob2, transmissibility, flux);
+    const std::array<double, 3> upw = Opm::connectionMultiPhaseUpwind(gd, mob1, mob2, transmissibility, flux);
     BOOST_CHECK_EQUAL(upw[0], expected_upw[0]);
     BOOST_CHECK_EQUAL(upw[1], expected_upw[1]);
     BOOST_CHECK_EQUAL(upw[2], expected_upw[2]);
@@ -93,14 +94,14 @@ BOOST_AUTO_TEST_CASE(GravityColumnHighFlux)
     // Case 3: a gravity column with two cell and high total flux.
     // The total flux from cell 1 to 2 is 10.0.
 
-    const std::array<double, 3> head_diff = {{ 4.0, -1.0, -2.0 }};
+    const std::array<double, 3> gd = {{ 4.0, -1.0, -2.0 }};
     const std::array<double, 3> mob1 = {{ 1.0, 1.0, 1.0 }};
     const std::array<double, 3> mob2 = {{ 1.0, 1.0, 1.0 }};
     const double transmissibility = 1.0;
     const double flux = 10.0;
 
     const std::array<double, 3> expected_upw = {{ 1.0, 1.0, 1.0 }};
-    const std::array<double, 3> upw = Opm::connectionMultiPhaseUpwind(head_diff, mob1, mob2, transmissibility, flux);
+    const std::array<double, 3> upw = Opm::connectionMultiPhaseUpwind(gd, mob1, mob2, transmissibility, flux);
     BOOST_CHECK_EQUAL(upw[0], expected_upw[0]);
     BOOST_CHECK_EQUAL(upw[1], expected_upw[1]);
     BOOST_CHECK_EQUAL(upw[2], expected_upw[2]);
