@@ -175,7 +175,7 @@ namespace Opm {
         int minIter() const              { return param_.min_iter_; }
 
         /// Set parameters to override those given at construction time.
-        void setParameters(SolverParameters param) { param_ = param; }
+        void setParameters(const SolverParameters& param) { param_ = param; }
 
     private:
         // ---------  Data members  ---------
