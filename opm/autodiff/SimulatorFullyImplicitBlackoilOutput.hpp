@@ -387,7 +387,7 @@ namespace Opm
 #else
         const bool asyncOutputDefault = false;
 #endif
-        if( param.getDefault("async_output", asyncOutputDefault ) )
+        if( asyncOutput_ && param.getDefault("async_output", asyncOutputDefault ) )
         {
 #if HAVE_PTHREAD
             asyncOutput_.reset( new ThreadHandle( parallelOutput_->isIORank() ) );
