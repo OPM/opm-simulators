@@ -26,6 +26,7 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
+#include <opm/autodiff/multiPhaseUpwind.hpp>
 
 namespace Opm {
 
@@ -401,58 +402,22 @@ namespace Opm {
         Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> multiPhaseUpwind(const std::vector<ADB>& head_diff,
                                                                               const V& transmissibility)
         {
-            // Based on the paper "Upstream Differencing for Multiphase Flow in Reservoir Simulation",
-            // by Yann Brenier and Jérôme Jaffré,
-            // SIAM J. Numer. Anal., 28(3), 685–696.
-            // DOI:10.1137/0728036
-
-            // Using the data members:
-            // total_flux_
-            // sd_.rq[].mob
-
-            // Notation based on paper cited above.
+            assert(numPhases() == 3);
             const int num_connections = head_diff[0].size();
             Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> upwind(num_connections, numPhases());
-            using ValueAndIndex = std::pair<double, int>;
-            const int num_phases = numPhases();
-            std::vector<ValueAndIndex> g(num_phases);
-            std::vector<double> theta(num_phases);
             for (int conn = 0; conn < num_connections; ++conn) {
                 const double q = total_flux_[conn];
                 const double t = transmissibility[conn];
                 const int a = ops_.connection_cells(conn, 0); // first cell of connection
                 const int b = ops_.connection_cells(conn, 1); // second cell of connection
-
-                // Get and sort the g values (also called "weights" in the paper) for this connection.
-                for (int phase_idx = 0; phase_idx < num_phases; ++phase_idx) {
-                    g[phase_idx] = ValueAndIndex(head_diff[phase_idx].value()[conn], phase_idx);
-                }
-                std::sort(g.begin(), g.end());
-
-                // Compute theta and r.
-                // Paper notation: subscript l -> ell (for read/searchability)
-                // Note that since we index phases from 0, r is one less than in the paper.
-                int r = -1;
-                for (int ell = 0; ell < num_phases; ++ell) {
-                    theta[ell] = q;
-                    for (int j = 0; j < num_phases; ++j) {
-                        if (j < ell) {
-                            theta[ell] += t * (g[ell].first - g[j].first) * sd_.rq[g[j].second].mob.value()[b];
-                        }
-                        if (j > ell) {
-                            theta[ell] += t * (g[ell].first - g[j].first) * sd_.rq[g[j].second].mob.value()[a];
-                        }
-                    }
-                    if (theta[ell] <= 0.0) {
-                        r = ell;
-                    } else {
-                        break; // r is correct, no need to continue
-                    }
-                }
-
-                for (int ell = 0; ell < num_phases; ++ell) {
-                    const int phase_idx = g[ell].second;
-                    upwind(conn, phase_idx) = ell > r ? 1.0 : -1.0;
+                auto up = connectionMultiPhaseUpwind(
+                    {{ head_diff[0].value()[conn], head_diff[1].value()[conn], head_diff[2].value()[conn] }},
+                    {{ sd_.rq[0].mob.value()[a], sd_.rq[1].mob.value()[a], sd_.rq[2].mob.value()[a]}},
+                    {{ sd_.rq[0].mob.value()[b], sd_.rq[1].mob.value()[b], sd_.rq[2].mob.value()[b]}},
+                    t,
+                    q);
+                for (int ii = 0; ii < numPhases(); ++ii) {
+                    upwind(conn, ii) = up[ii];
                 }
             }
             return upwind;

@@ -35,6 +35,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/GridHelpers.cpp
   opm/autodiff/ImpesTPFAAD.cpp
   opm/autodiff/moduleVersion.cpp
+  opm/autodiff/multiPhaseUpwind.cpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.cpp
   opm/autodiff/SimulatorIncompTwophaseAd.cpp
   opm/autodiff/TransportSolverTwophaseAd.cpp
@@ -90,6 +91,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_singlecellsolves.cpp
   tests/test_solventprops_ad.cpp
   tests/test_multisegmentwells.cpp
+  tests/test_multiphaseupwind.cpp
   # tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
@@ -186,6 +188,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/ISTLSolver.hpp
   opm/autodiff/IterationReport.hpp
   opm/autodiff/moduleVersion.hpp
+  opm/autodiff/multiPhaseUpwind.hpp
   opm/autodiff/NewtonIterationBlackoilCPR.hpp
   opm/autodiff/NewtonIterationBlackoilInterface.hpp
   opm/autodiff/NewtonIterationBlackoilInterleaved.hpp
