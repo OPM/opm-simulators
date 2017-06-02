@@ -221,7 +221,7 @@ namespace Opm
         const std::vector<double>& perfRateSolvent() const { return perfRateSolvent_; }
 
         /// One rate pr well
-        const double solventWellRate(const int w) const {
+        double solventWellRate(const int w) const {
             double solvent_well_rate = 0.0;
             for (int perf = wells_->well_connpos[w]; perf < wells_->well_connpos[w+1]; ++perf ) {
                 solvent_well_rate += perfRateSolvent_[perf];
