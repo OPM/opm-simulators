@@ -12,6 +12,7 @@ const std::string BlackoilState::GASOILRATIO = "GASOILRATIO";
 const std::string BlackoilState::RV = "RV";
 const std::string BlackoilState::SURFACEVOL = "SURFACEVOL";
 const std::string BlackoilState::SSOL = "SSOL";
+const std::string BlackoilState::POLYMER = "POLYMER";
 
 
 BlackoilState::BlackoilState( size_t num_cells , size_t num_faces , size_t num_phases)
@@ -21,6 +22,7 @@ BlackoilState::BlackoilState( size_t num_cells , size_t num_faces , size_t num_p
     registerCellData( RV, 1 );
     registerCellData( SURFACEVOL, num_phases );
     registerCellData( SSOL , 1 );
+    registerCellData( POLYMER , 1 );
     setBlackoilStateReferencePointers();
 }
 

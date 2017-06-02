@@ -44,6 +44,7 @@ namespace Opm
         static const std::string RV;
         static const std::string SURFACEVOL;
         static const std::string SSOL;
+        static const std::string POLYMER;
 
         /// Main constructor setting the sizes for the contained data
         /// types.
