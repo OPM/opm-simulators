@@ -378,24 +378,24 @@ namespace Opm
                     backupfile_.open( backupfilename.c_str() );
                 }
             }
-        }
 
-        // create output thread if enabled and rank is I/O rank
-        // async output is enabled by default if pthread are enabled
+            // create output thread if enabled and rank is I/O rank
+            // async output is enabled by default if pthread are enabled
 #if HAVE_PTHREAD
-        const bool asyncOutputDefault = true;
+            const bool asyncOutputDefault = true;
 #else
-        const bool asyncOutputDefault = false;
+            const bool asyncOutputDefault = false;
 #endif
-        if( param.getDefault("async_output", asyncOutputDefault ) )
-        {
+            if( param.getDefault("async_output", asyncOutputDefault ) )
+            {
+                const bool isIORank = parallelOutput_ ? parallelOutput_->isIORank() : true;
 #if HAVE_PTHREAD
-            asyncOutput_.reset( new ThreadHandle( parallelOutput_->isIORank() ) );
+                asyncOutput_.reset( new ThreadHandle( isIORank ) );
 #else
-            OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");
+                OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");
 #endif
+            }
         }
-
     }
 
 
