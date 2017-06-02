@@ -20,6 +20,7 @@
 
 
 #include <opm/autodiff/multiPhaseUpwind.hpp>
+#include <algorithm>
 #include <utility>
 
 
