@@ -48,7 +48,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/VFPInjProperties.cpp
   opm/autodiff/WellMultiSegment.cpp
   opm/autodiff/MultisegmentWells.cpp
-  opm/autodiff/BlackoilSolventState.cpp
   opm/autodiff/MissingFeatures.cpp
   opm/polymer/PolymerState.cpp
   opm/polymer/PolymerBlackoilState.cpp
@@ -169,7 +168,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilSequentialModel.hpp
   opm/autodiff/BlackoilSolventModel.hpp
   opm/autodiff/BlackoilSolventModel_impl.hpp
-  opm/autodiff/BlackoilSolventState.hpp
   opm/autodiff/BlackoilMultiSegmentModel.hpp
   opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
   opm/autodiff/BlackoilTransportModel.hpp

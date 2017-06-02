@@ -252,7 +252,9 @@ public:
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            WellModel well_model(wells, &(wells_manager.wellCollection()), model_param_, terminal_output_);
+            const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
+            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_, terminal_output_, timer.currentStepNum());
+
             auto solver = createSolver(well_model);
 
             std::vector<std::vector<double>> currentFluidInPlace;

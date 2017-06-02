@@ -67,6 +67,48 @@ namespace Opm
             // call init on base class
             BaseType :: init(wells, state, prevState);
 
+
+            const int nw = wells->number_of_wells;
+            if (nw == 0) {
+                return;
+            }
+            const int nperf = wells->well_connpos[nw];
+            perfRateSolvent_.clear();
+            perfRateSolvent_.resize(nperf, 0.0);
+
+            if (pu.has_solvent) {
+
+                // intialize wells that have been there before
+                // order may change so the mapping is based on the well name
+                if( ! prevState.wellMap().empty() )
+                {
+                    typedef typename WellMapType :: const_iterator const_iterator;
+                    const_iterator end = prevState.wellMap().end();
+                    for (int w = 0; w < nw; ++w) {
+                        std::string name( wells->name[ w ] );
+                        const_iterator it = prevState.wellMap().find( name );
+                        if( it != end )
+                        {
+                            const int newIndex = w;
+
+                            // perfSolventRates
+                            int oldPerf_idx = (*it).second[ 1 ];
+                            const int num_perf_old_well = (*it).second[ 2 ];
+                            const int num_perf_this_well = wells->well_connpos[newIndex + 1] - wells->well_connpos[newIndex];
+                            if( num_perf_old_well == num_perf_this_well )
+                            {
+                                for (int perf = wells->well_connpos[ newIndex ];
+                                     perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                                {
+                                    perfRateSolvent()[ perf ] = prevState.perfRateSolvent()[ oldPerf_idx ];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+
             // TODO: the reason to keep this is to avoid getting defaulted value BHP
             // some facilities needed from opm-parser or opm-core
             // It is a little tricky, since sometimes before applying group control, the only
@@ -88,9 +130,12 @@ namespace Opm
             if (nw == 0) {
                 return;
             }
+
+
             const int np = wells_->number_of_phases;
+            const int numComp = pu.has_solvent? np+1:np;
             well_solutions_.clear();
-            well_solutions_.resize(nw * np, 0.0);
+            well_solutions_.resize(nw * numComp, 0.0);
             std::vector<double> g = {1.0,1.0,0.01};
             for (int w = 0; w < nw; ++w) {
                 WellControls* wc = wells_->ctrls[w];
@@ -136,8 +181,12 @@ namespace Opm
                         wellSolutions()[nw + w] = g[Water] * wellRates()[np*w + waterpos] / total_rates;
                     }
                     if( pu.phase_used[Gas] ) {
-                        wellSolutions()[2*nw + w] = g[Gas] * wellRates()[np*w + gaspos] / total_rates ;
+                        wellSolutions()[2*nw + w] = g[Gas] * (wellRates()[np*w + gaspos] - solventWellRate(w))  / total_rates ;
                     }
+                    if( pu.has_solvent) {
+                        wellSolutions()[3*nw + w] = g[Gas] * solventWellRate(w) / total_rates;
+                    }
+
 
 
                 } else {
@@ -147,6 +196,10 @@ namespace Opm
                     if( pu.phase_used[Gas] ) {
                         wellSolutions()[2*nw + w] = wells_->comp_frac[np*w + gaspos];
                     }
+                    if (pu.has_solvent) {
+                        wellSolutions()[3*nw + w] = 0;
+                    }
+
                 }
             }
         }
@@ -163,14 +216,44 @@ namespace Opm
         std::vector<double>& wellSolutions() { return well_solutions_; }
         const std::vector<double>& wellSolutions() const { return well_solutions_; }
 
+        /// One rate pr well connection.
+        std::vector<double>& perfRateSolvent() { return perfRateSolvent_; }
+        const std::vector<double>& perfRateSolvent() const { return perfRateSolvent_; }
+
+        /// One rate pr well
+        const double solventWellRate(const int w) const {
+            double solvent_well_rate = 0.0;
+            for (int perf = wells_->well_connpos[w]; perf < wells_->well_connpos[w+1]; ++perf ) {
+                solvent_well_rate += perfRateSolvent_[perf];
+            }
+            return solvent_well_rate;
+        }
+
+
         data::Wells report(const PhaseUsage& pu) const override {
             data::Wells res = BaseType::report(pu);
+            const int nw = WellState::numWells();
+            // If there are now wells numPhases throws a floating point
+            // exception.
+            if (nw == 0) {
+                return res;
+            }
+            if (pu.has_solvent) {
+                // add solvent component
+                for( int w = 0; w < nw; ++w ) {
+                    using rt = data::Rates::opt;
+                    res.at( wells_->name[ w ]).rates.set( rt::solvent, solventWellRate(w) );
+                }
+            }
+
             return res;
         }
 
 
     private:
         std::vector<double> well_solutions_;
+        std::vector<double> perfRateSolvent_;
+
     };
 
 } // namespace Opm

@@ -84,6 +84,7 @@ NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 SET_BOOL_PROP(EclFlowProblem, DisableWells, true);
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 SET_BOOL_PROP(EclFlowProblem, ExportGlobalTransmissibility, true);
+SET_BOOL_PROP(EclFlowProblem, EnableSolvent, false);
 
 // SWATINIT is done by the flow part of flow_ebos. this can be removed once the legacy
 // code for fluid and satfunc handling gets fully retired.
@@ -119,6 +120,7 @@ namespace Opm {
 
         typedef double Scalar;
         static const int numEq = BlackoilIndices::numEq;
+        static const int solventCompIdx = 3; //TODO get this from ebos
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq >        MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType>      Mat;
@@ -162,6 +164,7 @@ namespace Opm {
         , active_(detail::activePhases(fluid.phaseUsage()))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
+        , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
@@ -624,8 +627,14 @@ namespace Opm {
                 }
                 dso -= dsg;
 
+                // solvent
+                const double dss = has_solvent_ ? dx[cell_idx][BlackoilIndices::solventSaturationIdx] : 0.0;
+                dso -= dss;
+
                 // Appleyard chop process.
                 maxVal = std::max(std::abs(dsg),maxVal);
+                maxVal = std::max(std::abs(dss),maxVal);
+
                 double step = dsMax()/maxVal;
                 step = std::min(step, 1.0);
 
@@ -638,6 +647,12 @@ namespace Opm {
                     double& sg = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Gas ]];
                     sg -= step * dsg;
                 }
+
+                if (has_solvent_) {
+                    double& ss = reservoir_state.getCellData( reservoir_state.SSOL )[cell_idx];
+                    ss -= step * dss;
+                }
+
                 double& so = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Oil ]];
                 so -= step * dso;
 
@@ -682,12 +697,20 @@ namespace Opm {
                         if (sg <= 0.0 && has_disgas_) {
                             reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::OilOnly; // sg --> rs
                             sg = 0;
-                            so = 1.0 - sw - sg;
+                            so = 1.0 - sw;
+                            if (has_solvent_) {
+                                double& ss = reservoir_state.getCellData( reservoir_state.SSOL )[cell_idx];
+                                so -= ss;
+                            }
                             rs *= (1-epsilon);
                         } else if (so <= 0.0 && has_vapoil_) {
                             reservoir_state.hydroCarbonState()[cell_idx] = HydroCarbonState::GasOnly; // sg --> rv
                             so = 0;
-                            sg = 1.0 - sw - so;
+                            sg = 1.0 - sw;
+                            if (has_solvent_) {
+                                double& ss = reservoir_state.getCellData( reservoir_state.SSOL )[cell_idx];
+                                sg -= ss;
+                            }
                             rv *= (1-epsilon);
                         }
                         break;
@@ -862,6 +885,7 @@ namespace Opm {
             const double tol_wells = param_.tolerance_wells_;
 
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
+            const int np = numPhases();
 
             const int numComp = numComponents();
             Vector R_sum(numComp);
@@ -895,16 +919,24 @@ namespace Opm {
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                for ( int compIdx = 0; compIdx < numComp; ++compIdx )
+                for ( int phaseIdx = 0; phaseIdx < np; ++phaseIdx )
                 {
-                    Vector& R2_idx = R2[ compIdx ];
-                    Vector& B_idx  = B[ compIdx ];
-                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(compIdx);
-                    const int ebosCompIdx = flowPhaseToEbosCompIdx(compIdx);
+                    Vector& R2_idx = R2[ phaseIdx ];
+                    Vector& B_idx  = B[ phaseIdx ];
+                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phaseIdx);
+                    const int ebosCompIdx = flowPhaseToEbosCompIdx(phaseIdx);
 
                     B_idx [cell_idx] = 1.0 / fs.invB(ebosPhaseIdx).value();
                     R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
                 }
+
+                if (has_solvent_ ) {
+                    Vector& R2_idx = R2[ solventCompIdx ];
+                    Vector& B_idx  = B[ solventCompIdx ];
+                    B_idx [cell_idx] = 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
+                    R2_idx[cell_idx] = ebosResid[cell_idx][solventCompIdx];
+                }
+
             }
 
             Vector pv_vector;
@@ -969,6 +1001,9 @@ namespace Opm {
                         const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
                         key[ phaseIdx ] = std::toupper( phaseName.front() );
                     }
+                    if (has_solvent_) {
+                        key[ solventCompIdx ] = "S";
+                    }
 
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    MB(" + key[ compIdx ] + ")  ";
@@ -1029,7 +1064,11 @@ namespace Opm {
             if (numPhases() == 2) {
                 return 2;
             }
-            return FluidSystem::numComponents;
+            int numComp = FluidSystem::numComponents;
+            if (has_solvent_)
+                numComp ++;
+
+            return numComp;
         }
 
         /// Wrapper required due to not following generic API
@@ -1273,6 +1312,11 @@ namespace Opm {
             VectorType& pcSwMdc_ow = simData.getCellData( "PCSWMDC_OW" );
             VectorType& krnSwMdc_ow = simData.getCellData( "KRNSWMDC_OW" );
 
+            if (has_solvent_) {
+                simData.registerCellData( "SSOL", 1 );
+            }
+            VectorType& ssol  = has_solvent_ ? simData.getCellData( "SSOL" ) : zero;
+
             std::vector<int> failed_cells_pb;
             std::vector<int> failed_cells_pd;
             const auto& gridView = ebosSimulator().gridView();
@@ -1354,6 +1398,11 @@ namespace Opm {
                     rhoOil[cellIdx] = fs.density(FluidSystem::oilPhaseIdx).value();
                     muOil[cellIdx] = fs.viscosity(FluidSystem::oilPhaseIdx).value();
                     krOil[cellIdx] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
+                }
+
+                if (has_solvent_)
+                {
+                    ssol[cellIdx] = intQuants.solventSaturation().value();
                 }
 
                 // hack to make the intial output of rs and rv Ecl compatible.
@@ -1464,6 +1513,7 @@ namespace Opm {
         const std::vector<int>          cells_;  // All grid cells
         const bool has_disgas_;
         const bool has_vapoil_;
+        const bool has_solvent_;
 
         ModelParameters                 param_;
         SimulatorReport failureReport_;
@@ -1523,6 +1573,10 @@ namespace Opm {
                 PrimaryVariables& cellPv = solution[ cellIdx ];
                 // set water saturation
                 cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
+
+                if (has_solvent_) {
+                    cellPv[BlackoilIndices::solventSaturationIdx] = reservoirState.getCellData( reservoirState.SSOL )[cellIdx];
+                }
 
                 // set switching variable and interpretation
                 if (active_[Gas] ) {
@@ -1599,19 +1653,18 @@ namespace Opm {
 
         int flowToEbosPvIdx( const int flowPv ) const
         {
-            assert(flowPv < 3);
-            const int flowToEbos[ 3 ] = {
+            const int flowToEbos[ 4 ] = {
                                           BlackoilIndices::pressureSwitchIdx,
                                           BlackoilIndices::waterSaturationIdx,
-                                          BlackoilIndices::compositionSwitchIdx
+                                          BlackoilIndices::compositionSwitchIdx,
+                                          BlackoilIndices::solventSaturationIdx
                                         };
             return flowToEbos[ flowPv ];
         }
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const
         {
-            assert(phaseIdx < 3);
-            const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx };
+            const int phaseToComp[ 4 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx, solventCompIdx };
             return phaseToComp[ phaseIdx ];
         }
 
@@ -1644,6 +1697,13 @@ namespace Opm {
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] /= refDens;
                     cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] *= cellVolume;
                 }
+                if (has_solvent_) {
+                    // no need to store refDens for all cells?
+                    const auto& intQuants = ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
+                    const auto& refDens = intQuants->solventRefDensity();
+                    cellRes[ solventCompIdx ] /= refDens;
+                    cellRes[ solventCompIdx ] *= cellVolume;
+                }
             }
 
             for( auto row = ebosJac.begin(); row != endrow; ++row )
@@ -1669,13 +1729,24 @@ namespace Opm {
                             (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
                         }
                     }
+                    if (has_solvent_) {
+                        // TODO store refDens pr pvtRegion?
+                        const auto& intQuants = ebosSimulator_.model().cachedIntensiveQuantities(rowIdx, /*timeIdx=*/0);
+                        const auto& refDens = intQuants->solventRefDensity();
+                        for( int pvIdx=0; pvIdx < numEq; ++pvIdx )
+                        {
+                            (*col)[solventCompIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
+                            (*col)[solventCompIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
+                        }
+                    }
                 }
             }
         }
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
         {
-            const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
+            assert(phaseIdx < 3);
+            const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx};
             return flowToEbos[ phaseIdx ];
         }
 
