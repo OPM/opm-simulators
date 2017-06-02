@@ -174,6 +174,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
   opm/autodiff/BlackoilTransportModel.hpp
   opm/autodiff/fastSparseOperations.hpp
+  opm/autodiff/DebugTimeReport.hpp
   opm/autodiff/DuneMatrix.hpp
   opm/autodiff/ExtractParallelGridInformationToISTL.hpp
   opm/autodiff/FlowMain.hpp
