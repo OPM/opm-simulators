@@ -266,8 +266,8 @@ public:
         // use normalized composition for to calculate the density
         // (the relations don't seem to take non-normalized
         // compositions too well...)
-        LhsEval xgBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
-        LhsEval xgCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
+        LhsEval xgBrine = Opm::min(1.0, Opm::max(0.0, Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
+        LhsEval xgCO2 = Opm::min(1.0, Opm::max(0.0,  Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
         LhsEval sumx = xgBrine + xgCO2;
         xgBrine /= sumx;
         xgCO2 /= sumx;

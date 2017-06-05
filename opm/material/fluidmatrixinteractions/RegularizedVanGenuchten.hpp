@@ -306,13 +306,11 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // regularize
         if (Sw <= 0)
-            return Toolbox::createConstant(0);
+            return 0.0;
         else if (Sw >= 1)
-            return Toolbox::createConstant(1);
+            return 1.0;
 
         return VanGenuchten::twoPhaseSatKrw(params, Sw);
     }
@@ -344,13 +342,11 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // regularize
         if (Sw <= 0)
-            return Toolbox::createConstant(1);
+            return 1.0;
         else if (Sw >= 1)
-            return Toolbox::createConstant(0);
+            return 0.0;
 
         return VanGenuchten::twoPhaseSatKrn(params, Sw);
     }
