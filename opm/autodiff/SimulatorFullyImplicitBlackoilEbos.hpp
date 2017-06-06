@@ -389,7 +389,7 @@ public:
             Dune::Timer perfTimer;
             perfTimer.start();
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
-            output_writer_.writeTimeStep( timer, state, well_state, solver->model(), false, nextstep );
+            output_writer_.writeTimeStep( timer, state, well_state, solver->model(), false, nextstep, report);
             report.output_write_time += perfTimer.stop();
 
             prev_well_state = well_state;

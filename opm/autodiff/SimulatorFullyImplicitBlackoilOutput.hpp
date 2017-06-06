@@ -30,6 +30,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
@@ -228,8 +229,9 @@ namespace Opm
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const Model& physicalModel,
-                           bool substep = false,
-                           const double nextstep = -1.0);
+                           const bool substep = false,
+                           const double nextstep = -1.0,
+                           const SimulatorReport& simulatorReport = SimulatorReport());
 
 
         /*!
@@ -989,8 +991,9 @@ namespace Opm
                   const SimulationDataContainer& localState,
                   const WellStateFullyImplicitBlackoil& localWellState,
                   const Model& physicalModel,
-                  bool substep,
-                  const double nextstep)
+                  const bool substep,
+                  const double nextstep,
+                  const SimulatorReport& simulatorReport)
     {
         data::Solution localCellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
@@ -1022,9 +1025,11 @@ namespace Opm
             // Add suggested next timestep to extra data.
             extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
 
-            // @@@ HACK @@@
-            // Add TCPU
-            miscSummaryData["TCPU"] = 100.0;
+            // Add TCPU if simulatorReport is not defaulted.
+            const double totalSolverTime = simulatorReport.solver_time;
+            if (totalSolverTime != 0.0) {
+                miscSummaryData["TCPU"] = totalSolverTime;
+            }
         }
 
         writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep);
