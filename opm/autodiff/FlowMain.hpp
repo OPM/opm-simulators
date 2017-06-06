@@ -427,7 +427,9 @@ namespace Opm
             logFile_ = logFileStream.str();
 
             std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes, false, output_cout_);
-            std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
+            const bool all_to_terminal = param_.getDefault("all_messages_to_terminal", false);
+            const auto terminal_msg_types = all_to_terminal ? Log::DefaultMessageTypes : Log::StdoutMessageTypes;
+            std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, terminal_msg_types);
             OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
             OpmLog::addBackend( "STREAMLOG", streamLog);
             std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
@@ -712,9 +714,9 @@ namespace Opm
                 auto log_type = detail::convertMessageType(msg.mtype);
                 const auto& location = msg.location;
                 if (location) {
-                    OpmLog::addMessage(log_type, Log::fileMessage(location.filename, location.lineno, msg.message));
+                    OpmLog::addTaggedMessage(log_type, "Parser message", Log::fileMessage(location.filename, location.lineno, msg.message));
                 } else {
-                    OpmLog::addMessage(log_type, msg.message);
+                    OpmLog::addTaggedMessage(log_type, "Parser message", msg.message);
                 }
             };
 
