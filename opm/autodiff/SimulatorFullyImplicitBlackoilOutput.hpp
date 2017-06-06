@@ -235,14 +235,15 @@ namespace Opm
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
          *        visualization tools like ResInsight. This function will write all
-         *        CellData in simProps to the file as well as the extraData.
+         *        CellData in simProps to the file as well as the extraRestartData.
          */
         void writeTimeStepWithCellProperties(
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const data::Solution& cellData,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
-                           const std::map<std::string, std::vector<double>>& extraData,
+                           const std::map<std::string, double>& miscSummaryData,
+                           const std::map<std::string, std::vector<double>>& extraRestartData,
                            bool substep = false);
 
         /*!
@@ -254,7 +255,8 @@ namespace Opm
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
-                           const std::map<std::string, std::vector<double>>& extraData,
+                           const std::map<std::string, double>& miscSummaryData,
+                           const std::map<std::string, std::vector<double>>& extraRestartData,
                            bool substep = false);
 
         /*!
@@ -266,7 +268,8 @@ namespace Opm
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
-                                 const std::map<std::string, std::vector<double>>& extraData,
+                                 const std::map<std::string, double>& miscSummaryData,
+                                 const std::map<std::string, std::vector<double>>& extraRestartData,
                                  bool substep);
 
         /** \brief return output directory */
@@ -994,7 +997,8 @@ namespace Opm
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
-        std::map<std::string, std::vector<double>> extraData;
+        std::map<std::string, std::vector<double>> extraRestartData;
+        std::map<std::string, double> miscSummaryData;
 
         if( output_ )
         {
@@ -1016,10 +1020,14 @@ namespace Opm
             assert(!localCellData.empty());
 
             // Add suggested next timestep to extra data.
-            extraData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+            extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+
+            // @@@ HACK @@@
+            // Add TCPU
+            miscSummaryData["TCPU"] = 100.0;
         }
 
-        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, extraData, substep);
+        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep);
     }
 }
 #endif
