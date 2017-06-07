@@ -174,8 +174,6 @@ enum WellVariablePositions {
 
             int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
-            int ebosCompToFlowPhaseIdx( const int compIdx ) const;
-
             std::vector<double>
             extractPerfData(const std::vector<double>& in) const;
 

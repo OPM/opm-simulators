@@ -502,20 +502,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    int
-    StandardWellsDense<TypeTag>::
-    ebosCompToFlowPhaseIdx( const int compIdx ) const
-    {
-        assert(compIdx < 3);
-        const int compToPhase[ 3 ] = { Oil, Water, Gas };
-        return compToPhase[ compIdx ];
-    }
-
-
-
-
-
-    template<typename TypeTag>
     std::vector<double>
     StandardWellsDense<TypeTag>::
     extractPerfData(const std::vector<double>& in) const
