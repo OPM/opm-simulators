@@ -103,7 +103,7 @@ namespace Opm
             ExplicitArraysFluidState fluidState(phaseUsage_);
             fluidState.setSaturationArray(s);
 
-            double relativePerms[BlackoilPhases::MaxNumPhases];
+            double relativePerms[BlackoilPhases::MaxNumPhases] = { 0 };
             for (int i = 0; i < n; ++i) {
                 fluidState.setIndex(i);
                 const auto& params = materialLawManager_->materialLawParams(cells[i]);
@@ -136,7 +136,7 @@ namespace Opm
                                            double* pc,
                                            double* dpcds) const
     {
-        assert(cells != 0);        
+        assert(cells != 0);
         assert(phaseUsage_.phase_used[BlackoilPhases::Liquid]);
 
         const int np = numPhases();
@@ -179,8 +179,8 @@ namespace Opm
             ExplicitArraysFluidState fluidState(phaseUsage_);
             fluidState.setSaturationArray(s);
 
-            double capillaryPressures[BlackoilPhases::MaxNumPhases];
-            for (int i = 0; i < n; ++i) {         
+            double capillaryPressures[BlackoilPhases::MaxNumPhases] = { 0 };
+            for (int i = 0; i < n; ++i) {
                 fluidState.setIndex(i);
                 const auto& params = materialLawManager_->materialLawParams(cells[i]);
                 MaterialLaw::capillaryPressures(capillaryPressures, params, fluidState);
@@ -249,13 +249,13 @@ namespace Opm
         }
     }
 
-    /// Update saturation state for the hysteresis tracking 
-    /// \param[in]  n      Number of data points. 
+    /// Update saturation state for the hysteresis tracking
+    /// \param[in]  n      Number of data points.
     /// \param[in]  s      Array of nP saturation values.
     void SaturationPropsFromDeck::updateSatHyst(const int n,
                                                             const int* cells,
                                                             const double* s)
-    {        
+    {
         assert(cells != 0);
 
         if (materialLawManager_->enableHysteresis()) {
