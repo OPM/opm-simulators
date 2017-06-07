@@ -1,6 +1,6 @@
 /*
   Copyright 2014 IRIS AS
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
