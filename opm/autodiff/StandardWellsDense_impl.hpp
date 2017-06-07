@@ -700,11 +700,18 @@ namespace Opm {
     setWellVariables(const WellState& xw)
     {
         const int nw = wells().number_of_wells;
-        for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
+        // for two-phase numComp < numEq
+        const int numComp = numComponents();
+        for (int eqIdx = 0; eqIdx < numComp; ++eqIdx) {
             for (int w = 0; w < nw; ++w) {
-                wellVariables_[w + nw*eqIdx] = 0.0;
-                wellVariables_[w + nw*eqIdx].setValue(xw.wellSolutions()[w + nw* eqIdx]);
-                wellVariables_[w + nw*eqIdx].setDerivative(numWellEq + eqIdx, 1.0);
+                const unsigned int idx = nw * eqIdx + w;
+                assert( idx < wellVariables_.size() );
+                assert( idx < xw.wellSolutions().size() );
+                EvalWell& eval = wellVariables_[ idx ];
+
+                eval = 0.0;
+                eval.setValue( xw.wellSolutions()[ idx ] );
+                eval.setDerivative(numWellEq + eqIdx, 1.0);
             }
         }
     }
@@ -1025,7 +1032,7 @@ namespace Opm {
         {
             bval/=global_nc_;
         }
-        
+
         auto res = residual();
         const int nw = res.size() / numComp;
 
