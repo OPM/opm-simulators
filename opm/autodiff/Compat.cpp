@@ -23,7 +23,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
+#include <opm/polymer/PolymerBlackoilState.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
@@ -111,6 +113,15 @@ data::Solution simToSolution( const SimulationDataContainer& reservoir,
 
     if (phases.has_solvent) {
         sol.insert( "SSOL", UnitSystem::measure::identity, reservoir.getCellData( BlackoilState::SSOL ) , data::TargetType::RESTART_SOLUTION );
+    }
+
+    if (phases.has_polymer) {
+        if (reservoir.hasCellData( PolymerBlackoilState::CONCENTRATION )) { // compatibility with legacy polymer
+            sol.insert( "POLYMER", UnitSystem::measure::identity, reservoir.getCellData( PolymerBlackoilState::CONCENTRATION ) , data::TargetType::RESTART_SOLUTION );
+        } else {
+            sol.insert( "POLYMER", UnitSystem::measure::identity, reservoir.getCellData( BlackoilState::POLYMER ) , data::TargetType::RESTART_SOLUTION );
+        }
+
     }
 
     return sol;

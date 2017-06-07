@@ -112,6 +112,8 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow_legacy.cpp
   examples/flow_sequential.cpp
   examples/flow_ebos.cpp
+  examples/flow_ebos_solvent.cpp
+  examples/flow_ebos_polymer.cpp
   examples/flow_multisegment.cpp
   examples/flow_solvent.cpp
   examples/sim_2p_incomp.cpp
@@ -132,6 +134,8 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
   examples/flow_ebos.cpp
+  examples/flow_ebos_solvent.cpp
+  examples/flow_ebos_polymer.cpp
   examples/flow_legacy.cpp
   examples/flow_sequential.cpp
   examples/flow_solvent.cpp

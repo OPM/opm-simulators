@@ -57,6 +57,8 @@
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
+#include <math.h>
+
 namespace Opm {
 
 enum WellVariablePositions {
@@ -85,8 +87,11 @@ enum WellVariablePositions {
 
             typedef double Scalar;
             static const int numEq = BlackoilIndices::numEq;
-            static const int numWellEq = numEq; //number of wellEq is the same as numEq in the model
-            static const int solventCompIdx = 3; //TODO get this from ebos
+            static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? 3:numEq; // //numEq; //number of wellEq is only for 3 for polymer
+            static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
+            static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
+            static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
+            static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
             typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
@@ -94,8 +99,7 @@ enum WellVariablePositions {
             typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
             typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
-
-
+            typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
@@ -116,7 +120,8 @@ enum WellVariablePositions {
                       const std::vector<double>& depth_arg,
                       const std::vector<double>& pv_arg,
                       const RateConverterType* rate_converter,
-                      long int global_nc);
+                      long int global_nc,
+                      const auto& grid);
 
 
             /// The number of components in the model.
@@ -294,6 +299,7 @@ enum WellVariablePositions {
             ModelParameters param_;
             bool terminal_output_;
             bool has_solvent_;
+            bool has_polymer_;
             int current_timeIdx_;
 
             PhaseUsage phase_usage_;
@@ -313,6 +319,13 @@ enum WellVariablePositions {
 
             std::vector<double> well_perforation_densities_;
             std::vector<double> well_perforation_pressure_diffs_;
+
+            std::vector<double> wpolymer_;
+            std::vector<double> wsolvent_;
+
+            std::vector<double> wells_rep_radius_;
+            std::vector<double> wells_perf_length_;
+            std::vector<double> wells_bore_diameter_;
 
             std::vector<EvalWell> wellVariables_;
             std::vector<double> F0_;
@@ -397,6 +410,14 @@ enum WellVariablePositions {
                                         const std::vector<double>& initial_potential) const;
 
             double wsolvent(const int well_index) const;
+
+            double wpolymer(const int well_index) const;
+
+            void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
+
+            void computeRepRadiusPerfLength(const auto& grid);
+
+
         };
 
 

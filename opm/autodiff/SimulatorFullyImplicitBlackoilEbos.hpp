@@ -42,14 +42,12 @@
 
 namespace Opm {
 
-class SimulatorFullyImplicitBlackoilEbos;
-//class StandardWellsDense<FluidSystem>;
 
 /// a simulator for the blackoil model
+template<class TypeTag>
 class SimulatorFullyImplicitBlackoilEbos
 {
 public:
-    typedef typename TTAG(EclFlowProblem) TypeTag;
     typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
@@ -58,11 +56,12 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
+    typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
     typedef WellStateFullyImplicitBlackoilDense WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriter OutputWriter;
-    typedef BlackoilModelEbos Model;
+    typedef BlackoilModelEbos<TypeTag> Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
     typedef StandardWellsDense<TypeTag> WellModel;
@@ -255,7 +254,8 @@ public:
             solver_timer.start();
 
             const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
-            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_, terminal_output_, timer.currentStepNum());
+            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_, terminal_output_,
+                                 timer.currentStepNum());
 
             auto solver = createSolver(well_model);
 
@@ -413,11 +413,12 @@ public:
     { return ebosSimulator_.gridManager().grid(); }
 
 protected:
-    void handleAdditionalWellInflow(SimulatorTimer& /* timer */,
+    void handleAdditionalWellInflow(SimulatorTimer& timer,
                                     WellsManager& /* wells_manager */,
                                     WellState& /* well_state */,
                                     const Wells* /* wells */)
-    { }
+    {
+    }
 
     std::unique_ptr<Solver> createSolver(WellModel& well_model)
     {
@@ -439,7 +440,8 @@ protected:
                         legacyDepth_,
                         legacyPoreVolume_,
                         rateConverter_.get(),
-                        globalNumCells);
+                        globalNumCells,
+                        grid());
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       model_param_,
                                                       well_model,
@@ -851,6 +853,10 @@ protected:
                 grid.cellCenterDepth(cellIdx);
         }
     }
+
+
+
+
 
     // Data.
     Simulator& ebosSimulator_;

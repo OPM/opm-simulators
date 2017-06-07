@@ -61,6 +61,7 @@
 namespace Opm
 {
     // The FlowMain class is the ebos based black-oil simulator.
+    template <class TypeTag>
     class FlowMainEbos
     {
         enum FileOutputValue{
@@ -73,7 +74,6 @@ namespace Opm
         };
 
     public:
-        typedef TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
         typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
@@ -82,7 +82,7 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
 
-        typedef Opm::SimulatorFullyImplicitBlackoilEbos Simulator;
+        typedef Opm::SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
         typedef typename Simulator::ReservoirState ReservoirState;
         typedef typename Simulator::OutputWriter OutputWriter;
 
@@ -534,6 +534,27 @@ namespace Opm
             }
 
             initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid), deck().hasKeyword("DISGAS"), deck().hasKeyword("VAPOIL"));
+
+            // Get initial polymer concentration from ebos
+            if (GET_PROP_VALUE(TypeTag, EnablePolymer)) {
+                auto& cpolymer = state_->getCellData( state_->POLYMER );
+                const int numCells = Opm::UgGridHelpers::numCells(grid);
+                for (int c = 0; c < numCells; ++c) {
+                    cpolymer[c] = ebosProblem().polymerConcentration(c);
+                }
+            }
+            // Get initial solvent saturation from ebos
+            if (GET_PROP_VALUE(TypeTag, EnableSolvent)) {
+                auto& solvent = state_->getCellData( state_->SSOL );
+                auto& sat = state_->saturation();
+                const int np = props.numPhases();
+                const int numCells = Opm::UgGridHelpers::numCells(grid);
+                for (int c = 0; c < numCells; ++c) {
+                    solvent[c] = ebosProblem().solventSaturation(c);
+                    sat[c * np + pu.phase_pos[Water]];
+                }
+            }
+
         }
 
         // Extract messages from parser.
@@ -667,7 +688,7 @@ namespace Opm
         //   fis_solver_
         void setupLinearSolver()
         {
-            typedef typename BlackoilModelEbos :: ISTLSolverType ISTLSolverType;
+            typedef typename BlackoilModelEbos<TypeTag> :: ISTLSolverType ISTLSolverType;
 
             extractParallelGridInformationToISTL(grid(), parallel_information_);
             fis_solver_.reset( new ISTLSolverType( param_, parallel_information_ ) );
