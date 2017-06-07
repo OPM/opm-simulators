@@ -64,9 +64,10 @@ namespace Opm {
         {
             if( verbose )
             {
-                std::ostringstream message;
-                message << "Caught Exception: " << exception.what();
-                OpmLog::debug(message.str());
+                std::string message;
+                message = "Caught Exception: ";
+                message += exception.what();
+                OpmLog::debug(message);
             }
         }
     }
@@ -231,6 +232,7 @@ namespace Opm {
             }
 
             SimulatorReport substepReport;
+            std::string cause_of_failure = "";
             try {
                 substepReport = solver.step( substepTimer, state, well_state);
                 report += substepReport;
@@ -242,6 +244,7 @@ namespace Opm {
             }
             catch (const Opm::NumericalProblem& e) {
                 substepReport += solver.failureReport();
+                cause_of_failure = e.what();
 
                 detail::logException(e, solver_verbose_);
                 // since linearIterations is < 0 this will restart the solver
@@ -353,7 +356,7 @@ namespace Opm {
                 substepTimer.provideTimeStepEstimate( newTimeStep );
                 if( solver_verbose_ ) {
                     std::string msg;
-                    msg = "Solver convergence failed, cutting timestep to "
+                    msg = cause_of_failure + "\n         Timestep chopped to "
                         + std::to_string(unit::convert::to( substepTimer.currentStepLength(), unit::day )) + " days.\n";
                     OpmLog::problem(msg);
                 }
