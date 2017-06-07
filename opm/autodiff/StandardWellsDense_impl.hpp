@@ -209,7 +209,7 @@ namespace Opm {
                     }
 
                     // subtract sum of phase fluxes in the well equations.
-                    resWell_[w][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s[componentIdx].value();
+                    resWell_[w][componentIdx] -= cq_s[componentIdx].value();
 
                     // assemble the jacobians
                     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
@@ -217,15 +217,15 @@ namespace Opm {
                             // also need to consider the efficiency factor when manipulating the jacobians.
                             ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
                             duneB_[w][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
-                            duneC_[w][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                            duneC_[w][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
                         }
-                        invDuneD_[w][w][flowPhaseToEbosCompIdx(componentIdx)][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
+                        invDuneD_[w][w][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
                     }
 
                     // add trivial equation for 2p cases (Only support water + oil)
                     if (numComp == 2) {
                         assert(!active_[ Gas ]);
-                        invDuneD_[w][w][flowPhaseToEbosCompIdx(Gas)][Gas] = 1.0;
+                        invDuneD_[w][w][Gas][Gas] = 1.0;
                     }
 
                     // Store the perforation phase flux for later usage.
@@ -245,9 +245,9 @@ namespace Opm {
                 EvalWell resWell_loc = (wellSurfaceVolumeFraction(w, componentIdx) - F0_[w + nw*componentIdx]) * volume / dt;
                 resWell_loc += getQs(w, componentIdx);
                 for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                    invDuneD_[w][w][flowPhaseToEbosCompIdx(componentIdx)][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
+                    invDuneD_[w][w][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
                 }
-                resWell_[w][flowPhaseToEbosCompIdx(componentIdx)] += resWell_loc.value();
+                resWell_[w][componentIdx] += resWell_loc.value();
             }
         }
 
@@ -968,10 +968,9 @@ namespace Opm {
         const int numComp = numComponents();
         std::vector<double> res(numComp*nw);
         for( int compIdx = 0; compIdx < numComp; ++compIdx) {
-            const int ebosCompIdx = flowPhaseToEbosCompIdx(compIdx);
             for (int wellIdx = 0; wellIdx < nw; ++wellIdx) {
                 int idx = wellIdx + nw*compIdx;
-                res[idx] = resWell_[ wellIdx ][ ebosCompIdx ];
+                res[idx] = resWell_[ wellIdx ][ compIdx ];
             }
         }
         return res;
