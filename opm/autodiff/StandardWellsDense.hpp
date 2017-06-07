@@ -160,10 +160,10 @@ enum WellVariablePositions {
             void apply( BVector& r) const;
 
             // subtract B*inv(D)*C * x from A*x
-            void apply(const BVector& x, BVector& Ax);
+            void apply(const BVector& x, BVector& Ax) const;
 
             // apply well model with scaling of alpha
-            void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax);
+            void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
             // xw = inv(D)*(rw - C*x)
             void recoverVariable(const BVector& x, BVector& xw) const;

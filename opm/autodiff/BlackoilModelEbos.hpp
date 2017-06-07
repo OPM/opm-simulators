@@ -100,7 +100,6 @@ namespace Opm {
     /// upwind weighting of mobilities.
     class BlackoilModelEbos
     {
-        typedef BlackoilModelEbos ThisType;
     public:
         // ---------  Types and enums  ---------
         typedef BlackoilState ReservoirState;
@@ -437,18 +436,6 @@ namespace Opm {
             return istlSolver().iterations();
         }
 
-        template <class X, class Y>
-        void applyWellModelAdd(const X& x, Y& y )
-        {
-            wellModel().apply(x, y);
-        }
-
-        template <class X, class Y>
-        void applyWellModelScaleAdd(const Scalar alpha, const X& x, Y& y )
-        {
-            wellModel().applyScaleAdd(alpha, x, y);
-        }
-
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
         void solveJacobianSystem(BVector& x, BVector& xw) const
@@ -462,15 +449,15 @@ namespace Opm {
             // Solve system.
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, true > Operator;
-                Operator opA(ebosJac, const_cast< ThisType& > (*this), istlSolver().parallelInformation() );
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, true > Operator;
+                Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, ThisType, false > Operator;
-                Operator opA(ebosJac, const_cast< ThisType& > (*this) );
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, false > Operator;
+                Operator opA(ebosJac, well_model_);
                 istlSolver().solve( opA, x, ebosResid );
             }
 
@@ -516,7 +503,7 @@ namespace Opm {
           };
 
           //! constructor: just store a reference to a matrix
-          WellModelMatrixAdapter (const M& A, WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
+          WellModelMatrixAdapter (const M& A, const WellModel& wellMod, const boost::any& parallelInformation = boost::any() )
               : A_( A ), wellMod_( wellMod ), comm_()
           {
 #if HAVE_MPI
@@ -533,7 +520,7 @@ namespace Opm {
           {
             A_.mv( x, y );
             // add well model modification to y
-            wellMod_.applyWellModelAdd(x, y );
+            wellMod_.apply(x, y );
 
 #if HAVE_MPI
             if( comm_ )
@@ -546,7 +533,7 @@ namespace Opm {
           {
             A_.usmv(alpha,x,y);
             // add scaled well model modification to y
-            wellMod_.applyWellModelScaleAdd( alpha, x, y );
+            wellMod_.applyScaleAdd( alpha, x, y );
 
 #if HAVE_MPI
             if( comm_ )
@@ -563,7 +550,7 @@ namespace Opm {
 
         protected:
           const matrix_type& A_ ;
-          WellModel& wellMod_;
+          const WellModel& wellMod_;
           std::unique_ptr< communication_type > comm_;
         };
 
