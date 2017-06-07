@@ -24,7 +24,6 @@
 #define OPM_NONLINEARSOLVER_IMPL_HEADER_INCLUDED
 
 #include <opm/autodiff/NonlinearSolver.hpp>
-#include </data/DataExchange/Rohith/opm_dev/opm-common/opm/common/Exceptions.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
