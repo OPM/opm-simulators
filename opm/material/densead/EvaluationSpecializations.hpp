@@ -44,5 +44,4 @@
 #include <opm/material/densead/Evaluation11.hpp>
 #include <opm/material/densead/Evaluation12.hpp>
 
-
 #endif // OPM_DENSEAD_EVALUATION_SPECIALIZATIONS_HPP
