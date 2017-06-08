@@ -282,7 +282,7 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, extraData, substep ) );
+                std::tie(err, emsg) = asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, extraData, substep ) );
             }
             else {
                 // just write the data to disk
