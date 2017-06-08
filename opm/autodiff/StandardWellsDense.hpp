@@ -205,11 +205,11 @@ enum WellVariablePositions {
             /// Diff to bhp for each well perforation.
             const std::vector<double>& wellPerforationPressureDiffs() const;
 
-            EvalWell extendEval(Eval in) const;
+            EvalWell extendEval(const Eval& in) const;
 
             void setWellVariables(const WellState& xw);
 
-            void print(EvalWell in) const;
+            void print(const EvalWell& in) const;
 
             void computeAccumWells();
 
