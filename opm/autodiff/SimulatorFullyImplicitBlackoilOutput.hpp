@@ -30,6 +30,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/wells/DynamicListEconLimited.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/simulator/SimulatorReport.hpp>
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
@@ -228,21 +229,23 @@ namespace Opm
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const Model& physicalModel,
-                           bool substep = false,
-                           const double nextstep = -1.0);
+                           const bool substep = false,
+                           const double nextstep = -1.0,
+                           const SimulatorReport& simulatorReport = SimulatorReport());
 
 
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
          *        visualization tools like ResInsight. This function will write all
-         *        CellData in simProps to the file as well as the extraData.
+         *        CellData in simProps to the file as well as the extraRestartData.
          */
         void writeTimeStepWithCellProperties(
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const data::Solution& cellData,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
-                           const std::map<std::string, std::vector<double>>& extraData,
+                           const std::map<std::string, double>& miscSummaryData,
+                           const std::map<std::string, std::vector<double>>& extraRestartData,
                            bool substep = false);
 
         /*!
@@ -254,7 +257,8 @@ namespace Opm
                            const SimulatorTimerInterface& timer,
                            const SimulationDataContainer& reservoirState,
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
-                           const std::map<std::string, std::vector<double>>& extraData,
+                           const std::map<std::string, double>& miscSummaryData,
+                           const std::map<std::string, std::vector<double>>& extraRestartData,
                            bool substep = false);
 
         /*!
@@ -266,7 +270,8 @@ namespace Opm
                                  const SimulationDataContainer& reservoirState,
                                  const Opm::WellStateFullyImplicitBlackoil& wellState,
                                  const data::Solution& simProps,
-                                 const std::map<std::string, std::vector<double>>& extraData,
+                                 const std::map<std::string, double>& miscSummaryData,
+                                 const std::map<std::string, std::vector<double>>& extraRestartData,
                                  bool substep);
 
         /** \brief return output directory */
@@ -986,15 +991,17 @@ namespace Opm
                   const SimulationDataContainer& localState,
                   const WellStateFullyImplicitBlackoil& localWellState,
                   const Model& physicalModel,
-                  bool substep,
-                  const double nextstep)
+                  const bool substep,
+                  const double nextstep,
+                  const SimulatorReport& simulatorReport)
     {
         data::Solution localCellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
         const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
-        std::map<std::string, std::vector<double>> extraData;
+        std::map<std::string, std::vector<double>> extraRestartData;
+        std::map<std::string, double> miscSummaryData;
 
         if( output_ )
         {
@@ -1016,10 +1023,16 @@ namespace Opm
             assert(!localCellData.empty());
 
             // Add suggested next timestep to extra data.
-            extraData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+            extraRestartData["OPMEXTRA"] = std::vector<double>(1, nextstep);
+
+            // Add TCPU if simulatorReport is not defaulted.
+            const double totalSolverTime = simulatorReport.solver_time;
+            if (totalSolverTime != 0.0) {
+                miscSummaryData["TCPU"] = totalSolverTime;
+            }
         }
 
-        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, extraData, substep);
+        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep);
     }
 }
 #endif
