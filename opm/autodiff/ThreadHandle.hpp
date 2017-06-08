@@ -68,11 +68,7 @@ namespace Opm
 
       ~ThreadHandleQueue()
       {
-        // wait until all objects have been written.
-        while( ! objQueue_.empty() )
-        {
-            wait();
-        }
+          assert( objQueue_.empty() );
       }
 
       //! insert object into threads queue
@@ -120,6 +116,18 @@ namespace Opm
 
         // keep thread running
         run();
+      }
+
+      // make this thread sleep until object queue is empty
+      void finalize()
+      {
+        push_back( std::unique_ptr< ObjectInterface > (new EndObject()) ) ;
+
+        // make sure all objects in queue have been processed
+        while( ! objQueue_.empty() )
+        {
+            wait();
+        }
       }
     }; // end ThreadHandleQueue
 
@@ -178,8 +186,8 @@ namespace Opm
     {
         if( thread_ )
         {
-            // dispatch end object which will terminate the thread
-            threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (new EndObject()) ) ;
+            // dispatch end object at wait until thread is terminated
+            threadObjectQueue_.finalize();
         }
     }
   };
