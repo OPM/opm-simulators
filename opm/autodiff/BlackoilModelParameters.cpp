@@ -52,7 +52,7 @@ namespace Opm
         tolerance_well_control_ = param.getDefault("tolerance_well_control", tolerance_well_control_);
         maxSinglePrecisionTimeStep_ = unit::convert::from(
                 param.getDefault("max_single_precision_days", unit::convert::to( maxSinglePrecisionTimeStep_, unit::day) ), unit::day );
-        max_iter_ = param.getDefault("max_iter",15);
+        max_iter_ = param.getDefault("max_iter",10);
         solve_welleq_initially_ = param.getDefault("solve_welleq_initially",solve_welleq_initially_);
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
         use_update_stabilization_ = param.getDefault("use_update_stabilization", use_update_stabilization_);
