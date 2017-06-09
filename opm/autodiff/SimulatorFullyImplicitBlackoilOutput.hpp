@@ -413,12 +413,12 @@ namespace Opm
                          WellState& wellstate,
                          ExtraData& extra )
     {
-        std::map<std::string, RestartKey> solution_keys {{"PRESSURE" , UnitSystem::measure::pressure},
-                                                         {"SWAT" , UnitSystem::measure::identity},
-                                                         {"SGAS" , UnitSystem::measure::identity},
-                                                         {"TEMP" , UnitSystem::measure::temperature},
-                                                         {"RS" , UnitSystem::measure::gas_oil_ratio},
-                                                         {"RV" , UnitSystem::measure::oil_gas_ratio},
+        std::map<std::string, RestartKey> solution_keys {{"PRESSURE" , RestartKey(UnitSystem::measure::pressure)},
+                                                         {"SWAT" , RestartKey(UnitSystem::measure::identity)},
+                                                         {"SGAS" , RestartKey(UnitSystem::measure::identity)},
+                                                         {"TEMP" , RestartKey(UnitSystem::measure::temperature)},
+                                                         {"RS" , RestartKey(UnitSystem::measure::gas_oil_ratio)},
+                                                         {"RV" , RestartKey(UnitSystem::measure::oil_gas_ratio)},
                                                          {"SOMAX", {UnitSystem::measure::identity, false}},
                                                          {"PCSWM_OW", {UnitSystem::measure::identity, false}},
                                                          {"KRNSW_OW", {UnitSystem::measure::identity, false}},
@@ -432,7 +432,7 @@ namespace Opm
         if (restart_double_si_) {
             // Avoid any unit conversions, treat restart input as SI units.
             for (auto& elem : solution_keys) {
-                elem.second = UnitSystem::measure::identity;
+                elem.second = RestartKey(UnitSystem::measure::identity);
             }
         }
 
