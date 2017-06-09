@@ -25,6 +25,9 @@
 #include <opm/core/grid.h>
 #include <opm/autodiff/SimulatorSequentialBlackoil.hpp>
 #include <opm/autodiff/FlowMainSequential.hpp>
+#include <opm/autodiff/BlackoilPressureModel.hpp>
+#include <opm/autodiff/BlackoilTransportModel.hpp>
+#include <opm/autodiff/StandardWells.hpp>
 
 
 // ----------------- Main program -----------------
@@ -32,7 +35,8 @@ int
 main(int argc, char** argv)
 {
     typedef UnstructuredGrid Grid;
-    typedef Opm::SimulatorSequentialBlackoil<Grid> Simulator;
+    typedef Opm::StandardWells WellModel;
+    typedef Opm::SimulatorSequentialBlackoil<Grid, WellModel, Opm::BlackoilPressureModel, Opm::BlackoilTransportModel> Simulator;
 
     Opm::FlowMainSequential<Grid, Simulator> mainfunc;
     return mainfunc.execute(argc, argv);

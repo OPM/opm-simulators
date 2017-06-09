@@ -23,8 +23,6 @@
 
 
 #include <opm/autodiff/BlackoilModelBase.hpp>
-#include <opm/autodiff/BlackoilPressureModel.hpp>
-#include <opm/autodiff/BlackoilTransportModel.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
@@ -44,7 +42,9 @@ namespace Opm {
 
 
     /// A sequential splitting model implementation for three-phase black oil.
-    template<class Grid, class WellModel>
+    template<class Grid, class WellModel,
+             template <class G, class W> class PressureModelT,
+             template <class G, class W> class TransportModelT>
     class BlackoilSequentialModel
     {
     public:
@@ -53,8 +53,11 @@ namespace Opm {
         typedef BlackoilSequentialModelParameters ModelParameters;
         typedef DefaultBlackoilSolutionState SolutionState;
 
-        typedef BlackoilPressureModel<Grid, WellModel> PressureModel;
-        typedef BlackoilTransportModel<Grid, WellModel> TransportModel;
+        typedef PressureModelT<Grid, WellModel> PressureModel;
+        typedef TransportModelT<Grid, WellModel> TransportModel;
+        typedef NonlinearSolver<PressureModel> PressureSolver;
+        typedef NonlinearSolver<TransportModel> TransportSolver;
+
         typedef typename TransportModel::SimulatorData SimulatorData;
         typedef typename TransportModel::FIPDataType   FIPDataType;
 
@@ -88,11 +91,18 @@ namespace Opm {
                                             linsolver, eclState, has_disgas, has_vapoil, terminal_output)),
           transport_model_(new TransportModel(param, grid, fluid, geo, rock_comp_props, well_model,
                                               linsolver, eclState, has_disgas, has_vapoil, terminal_output)),
+          // TODO: fix solver parameters for pressure and transport solver.
           pressure_solver_(typename PressureSolver::SolverParameters(), std::move(pressure_model_)),
           transport_solver_(typename TransportSolver::SolverParameters(), std::move(transport_model_)),
           initial_reservoir_state_(0, 0, 0), // will be overwritten
           iterate_to_fully_implicit_(param.iterate_to_fully_implicit)
         {
+            typename PressureSolver::SolverParameters pp;
+            pp.min_iter_ = 0;
+            pressure_solver_.setParameters(pp);
+            typename TransportSolver::SolverParameters tp;
+            tp.min_iter_ = 0;
+            transport_solver_.setParameters(tp);
         }
 
 
@@ -174,7 +184,8 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the pressure equation.");
                 }
-                const SimulatorReport& pressure_report = pressure_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+
+                const SimulatorReport pressure_report = pressure_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
                 const int pressure_liniter = pressure_report.total_linear_iterations;
                 if (pressure_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Pressure solver failed to converge.");
@@ -184,14 +195,26 @@ namespace Opm {
                 if (terminalOutputEnabled()) {
                     OpmLog::info("Solving the transport equations.");
                 }
-                const SimulatorReport& transport_report = transport_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
+                const SimulatorReport transport_report = transport_solver_.step(timer, initial_reservoir_state_, initial_well_state_, reservoir_state, well_state);
                 const int transport_liniter = transport_report.total_linear_iterations;
                 if (transport_liniter == -1) {
                     OPM_THROW(std::runtime_error, "Transport solver failed to converge.");
                 }
 
+                // Revisit pressure equation to check if it is still converged.
+                bool done = false;
+                {
+                    auto rstate = reservoir_state;
+                    auto wstate = well_state;
+                    pressure_solver_.model().prepareStep(timer, initial_reservoir_state_, initial_well_state_);
+                    SimulatorReport rep = pressure_solver_.model().nonlinearIteration(0, timer, pressure_solver_, rstate, wstate);
+                    if (rep.converged && rep.total_newton_iterations == 0) {
+                        done = true;
+                    }
+                }
+
                 SimulatorReport report;
-                report.converged = iteration >= 3; // TODO: replace this with a proper convergence check
+                report.converged = done;
                 report.total_linear_iterations = pressure_liniter + transport_liniter;
                 return report;
             }
@@ -290,9 +313,6 @@ namespace Opm {
         { return failureReport_; }
 
     protected:
-        typedef NonlinearSolver<PressureModel> PressureSolver;
-        typedef NonlinearSolver<TransportModel> TransportSolver;
-
         SimulatorReport failureReport_;
 
         std::unique_ptr<PressureModel> pressure_model_;

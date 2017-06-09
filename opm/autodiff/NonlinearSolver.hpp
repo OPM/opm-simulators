@@ -169,10 +169,13 @@ namespace Opm {
         double relaxRelTol() const       { return param_.relax_rel_tol_; }
 
         /// The maximum number of nonlinear iterations allowed.
-        int maxIter() const           { return param_.max_iter_; }
+        int maxIter() const              { return param_.max_iter_; }
 
         /// The minimum number of nonlinear iterations allowed.
-        double minIter() const           { return param_.min_iter_; }
+        int minIter() const              { return param_.min_iter_; }
+
+        /// Set parameters to override those given at construction time.
+        void setParameters(const SolverParameters& param) { param_ = param; }
 
     private:
         // ---------  Data members  ---------
