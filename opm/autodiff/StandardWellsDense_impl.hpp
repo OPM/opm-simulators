@@ -397,7 +397,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    apply(const BVector& x, BVector& Ax)
+    apply(const BVector& x, BVector& Ax) const
     {
         if ( ! localWellsActive() ) {
             return;
@@ -420,7 +420,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax)
+    applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
         if ( ! localWellsActive() ) {
             return;
