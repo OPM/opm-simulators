@@ -258,6 +258,7 @@ namespace Opm {
             }
             catch (const Opm::NumericalProblem& e) {
                 substepReport += solver.failureReport();
+                cause_of_failure = "Solver convergence failure - Numerical problem encountered";
 
                 detail::logException(e, solver_verbose_);
                 // since linearIterations is < 0 this will restart the solver
