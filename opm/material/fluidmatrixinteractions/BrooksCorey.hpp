@@ -114,7 +114,7 @@ public:
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
 
         values[Traits::wettingPhaseIdx] = Sw<FluidState, Evaluation>(params, fs);
-        values[Traits::nonWettingPhaseIdx] = 1 - values[Traits::wettingPhaseIdx];
+        values[Traits::nonWettingPhaseIdx] = 1.0 - values[Traits::wettingPhaseIdx];
     }
 
     /*!
@@ -152,12 +152,10 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
-        assert(0 <= Sw && Sw <= 1);
+        assert(0.0 <= Sw && Sw <= 1.0);
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -165,21 +163,17 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
+        assert(0.0 <= Sw && Sw <= 1.0);
 
-        assert(0 <= Sw && Sw <= 1);
-
-        return params.entryPressure()*Toolbox::pow(Sw, -1/params.lambda());
+        return params.entryPressure()*Opm::pow(Sw, -1/params.lambda());
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnwInv(const Params& params, const Evaluation& pcnw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         assert(pcnw > 0.0);
 
-        return Toolbox::pow(params.entryPressure()/pcnw, -params.lambda());
+        return Opm::pow(params.entryPressure()/pcnw, -params.lambda());
     }
 
     /*!
@@ -197,22 +191,18 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         Evaluation pC =
-            FsToolbox::template decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
-            - FsToolbox::template decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - Opm::decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
         return twoPhaseSatSw(params, pC);
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSw(const Params& params, const Evaluation& pc)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
+        assert(pc > 0.0); // if we don't assume that, std::pow will screw up!
 
-        assert(pc > 0); // if we don't assume that, std::pow will screw up!
-
-        return Toolbox::pow(pc/params.entryPressure(), -params.lambda());
+        return Opm::pow(pc/params.entryPressure(), -params.lambda());
     }
 
     /*!
@@ -221,11 +211,11 @@ public:
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sn(const Params& params, const FluidState& fs)
-    { return 1 - Sw<FluidState, Evaluation>(params, fs); }
+    { return 1.0 - Sw<FluidState, Evaluation>(params, fs); }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSn(const Params& params, const Evaluation& pc)
-    { return 1 - twoPhaseSatSw(params, pc); }
+    { return 1.0 - twoPhaseSatSw(params, pc); }
     /*!
      * \brief The relative permeability for the wetting phase of
      *        the medium implied by the Brooks-Corey
@@ -237,10 +227,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const auto& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -248,19 +236,15 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
+        assert(0.0 <= Sw && Sw <= 1.0);
 
-        assert(0 <= Sw && Sw <= 1);
-
-        return Toolbox::pow(Sw, 2.0/params.lambda() + 3);
+        return Opm::pow(Sw, 2.0/params.lambda() + 3.0);
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrwInv(const Params& params, const Evaluation& krw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::pow(krw, 1.0/(2.0/params.lambda() + 3));
+        return Opm::pow(krw, 1.0/(2.0/params.lambda() + 3.0));
     }
 
     /*!
@@ -274,10 +258,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            1.0 - FsToolbox::template decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            1.0 - Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }
@@ -285,23 +267,19 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrn(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
+        assert(0.0 <= Sw && Sw <= 1.0);
 
-        assert(0 <= Sw && Sw <= 1);
-
-        Scalar exponent = 2.0/params.lambda() + 1;
-        const Evaluation Sn = 1. - Sw;
-        return Sn*Sn*(1. - Toolbox::pow(Sw, exponent));
+        Scalar exponent = 2.0/params.lambda() + 1.0;
+        const Evaluation Sn = 1.0 - Sw;
+        return Sn*Sn*(1. - Opm::pow(Sw, exponent));
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatKrnInv(const Params& params, const Evaluation& krn)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // since inverting the formula for krn is hard to do analytically, we use the
         // Newton-Raphson method
-        Evaluation Sw = Toolbox::createConstant(0.5);
+        Evaluation Sw = 0.5;
         Scalar eps = 1e-10;
         for (int i = 0; i < 20; ++i) {
             Evaluation f = krn - twoPhaseSatKrn(params, Sw);
@@ -311,8 +289,8 @@ public:
             Evaluation delta = f/fPrime;
             Sw -= delta;
             if (Sw < 0)
-                Sw = Toolbox::createConstant(0.0);
-            if (Toolbox::abs(delta) < 1e-10)
+                Sw = 0.0;
+            if (Opm::abs(delta) < 1e-10)
                 return Sw;
         }
 

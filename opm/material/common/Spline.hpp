@@ -799,8 +799,6 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (!extrapolate && !applies(x))
             OPM_THROW(Opm::NumericalProblem,
                       "Tried to evaluate a spline outside of its range");
@@ -820,7 +818,7 @@ public:
             }
         }
 
-        return eval_(x, segmentIdx_(Toolbox::scalarValue(x)));
+        return eval_(x, segmentIdx_(Opm::scalarValue(x)));
     }
 
     /*!
@@ -838,8 +836,6 @@ public:
     template <class Evaluation>
     Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (!extrapolate && !applies(x))
             OPM_THROW(Opm::NumericalProblem,
                       "Tried to evaluate the derivative of a spline outside of its range");
@@ -852,7 +848,7 @@ public:
                 return evalDerivative_(xAt(numSamples() - 1), /*segmentIdx=*/numSamples() - 2);
         }
 
-        return evalDerivative_(x, segmentIdx_(Toolbox::scalarValue(x)));
+        return evalDerivative_(x, segmentIdx_(Opm::scalarValue(x)));
     }
 
     /*!
@@ -870,15 +866,13 @@ public:
     template <class Evaluation>
     Evaluation evalSecondDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (!extrapolate && !applies(x))
             OPM_THROW(Opm::NumericalProblem,
                       "Tried to evaluate the second derivative of a spline outside of its range");
         else if (extrapolate)
             return 0.0;
 
-        return evalDerivative2_(x, segmentIdx_(Toolbox::scalarValue(x)));
+        return evalDerivative2_(x, segmentIdx_(Opm::scalarValue(x)));
     }
 
     /*!
@@ -896,15 +890,13 @@ public:
     template <class Evaluation>
     Evaluation evalThirdDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (!extrapolate && !applies(x))
             OPM_THROW(Opm::NumericalProblem,
                       "Tried to evaluate the third derivative of a spline outside of its range");
         else if (extrapolate)
             return 0.0;
 
-        return evalDerivative3_(x, segmentIdx_(Toolbox::scalarValue(x)));
+        return evalDerivative3_(x, segmentIdx_(Opm::scalarValue(x)));
     }
 
     /*!

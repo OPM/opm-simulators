@@ -315,8 +315,6 @@ protected:
                                        typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar>& flashParamCache)
     {
         typedef typename FlashFluidState::Scalar FlashEval;
-        typedef typename InputFluidState::Scalar Evaluation;
-        typedef MathToolbox<Evaluation> InputToolbox;
 
         // copy the temperature: even though the model which uses the flash solver might
         // be non-isothermal, the flash solver does not consider energy. (it could be
@@ -327,7 +325,7 @@ protected:
 
         // copy the saturations: the first N-1 phases are primary variables, the last one
         // is one minus the sum of the former.
-        FlashEval Slast = InputToolbox::createConstant(1.0);
+        FlashEval Slast = 1.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx) {
             FlashEval S = inputFluidState.saturation(phaseIdx);
             S.setDerivative(S0PvIdx + phaseIdx, 1.0);
@@ -410,7 +408,6 @@ protected:
                             const FlashComponentVector& globalMolarities)
     {
         typedef typename FlashFluidState::Scalar FlashEval;
-        typedef Opm::MathToolbox<FlashEval> FlashToolbox;
 
         unsigned eqIdx = 0;
 
@@ -443,7 +440,7 @@ protected:
 
         // model assumptions (-> non-linear complementarity functions) must be adhered
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            FlashEval oneMinusSumMoleFrac = FlashToolbox::createConstant(1.0);
+            FlashEval oneMinusSumMoleFrac = 1.0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
                 oneMinusSumMoleFrac -= fluidState.moleFraction(phaseIdx, compIdx);
 
@@ -465,13 +462,12 @@ protected:
         // note that it is possible that FlashEval::Scalar is an Evaluation itself
         typedef typename FlashFluidState::Scalar FlashEval;
         typedef typename FlashEval::ValueType InnerEval;
-        typedef Opm::MathToolbox<InnerEval> InnerEvalToolbox;
 
 #ifndef NDEBUG
         // make sure we don't swallow non-finite update vectors
         assert(deltaX.dimension == numEq);
         for (unsigned i = 0; i < numEq; ++i)
-            assert(std::isfinite(InnerEvalToolbox::scalarValue(deltaX[i])));
+            assert(std::isfinite(Opm::scalarValue(deltaX[i])));
 #endif
 
         Scalar relError = 0;
@@ -480,22 +476,22 @@ protected:
             InnerEval delta = deltaX[pvIdx];
 
             relError = std::max(relError,
-                                std::abs(InnerEvalToolbox::scalarValue(delta))
+                                std::abs(Opm::scalarValue(delta))
                                 * quantityWeight_(fluidState, pvIdx));
 
             if (isSaturationIdx_(pvIdx)) {
                 // dampen to at most 25% change in saturation per iteration
-                delta = InnerEvalToolbox::min(0.25, InnerEvalToolbox::max(-0.25, delta));
+                delta = Opm::min(0.25, Opm::max(-0.25, delta));
             }
             else if (isMoleFracIdx_(pvIdx)) {
                 // dampen to at most 20% change in mole fraction per iteration
-                delta = InnerEvalToolbox::min(0.20, InnerEvalToolbox::max(-0.20, delta));
+                delta = Opm::min(0.20, Opm::max(-0.20, delta));
             }
             else if (isPressureIdx_(pvIdx)) {
                 // dampen to at most 50% change in pressure per iteration
-                delta = InnerEvalToolbox::min(0.5*fluidState.pressure(0).value(),
-                                              InnerEvalToolbox::max(-0.5*fluidState.pressure(0).value(),
-                                                                    delta));
+                delta = Opm::min(0.5*fluidState.pressure(0).value(),
+                                 Opm::max(-0.5*fluidState.pressure(0).value(),
+                                          delta));
             }
 
             tmp -= delta;
@@ -515,11 +511,10 @@ protected:
         typedef typename FluidSystem::template ParameterCache<typename FlashFluidState::Scalar> ParamCache;
 
         typedef typename FlashFluidState::Scalar FlashEval;
-        typedef Opm::MathToolbox<FlashEval> FlashToolbox;
 
         // calculate the saturation of the last phase as a function of
         // the other saturations
-        FlashEval sumSat = FlashToolbox::createConstant(0.0);
+        FlashEval sumSat = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases - 1; ++phaseIdx)
             sumSat += flashFluidState.saturation(phaseIdx);
         flashFluidState.setSaturation(/*phaseIdx=*/numPhases - 1, 1.0 - sumSat);

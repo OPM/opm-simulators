@@ -53,11 +53,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation henry(const Evaluation& temperature)
-    {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
-        return 1.0/((0.8942+1.47*Toolbox::exp(-0.04394*(temperature-273.15)))*1.E-10);
-    }
+    { return 1.0/((0.8942+1.47*Opm::exp(-0.04394*(temperature-273.15)))*1e-10); }
 
     /*!
      * \brief Binary diffusion coefficent \f$\mathrm{[m^2/s]}\f$ for molecular water and air
@@ -73,14 +69,12 @@ public:
     template <class Evaluation>
     static Evaluation gasDiffCoeff(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         double Theta=1.8;
         double Daw=2.13e-5;  /* reference value */
         double pg0=1.e5;     /* reference pressure */
         double T0=273.15;    /* reference temperature */
 
-        return Daw*(pg0/pressure)*Toolbox::pow((temperature/T0),Theta);
+        return Daw*(pg0/pressure)*Opm::pow((temperature/T0),Theta);
     }
 
     /*!

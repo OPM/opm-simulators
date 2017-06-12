@@ -249,10 +249,8 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, const Evaluation& y, bool extrapolate=false) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
 #ifndef NDEBUG
-        if (!extrapolate && !applies(Toolbox::scalarValue(x), Toolbox::scalarValue(y))) {
+        if (!extrapolate && !applies(Opm::scalarValue(x), Opm::scalarValue(y))) {
             OPM_THROW(NumericalProblem,
                       "Attempt to get undefined table value (" << x << ", " << y << ")");
         };
@@ -263,7 +261,7 @@ public:
         Evaluation alpha = xToI(x, extrapolate);
         size_t i =
             static_cast<size_t>(std::max(0, std::min(static_cast<int>(numX()) - 2,
-                                                     static_cast<int>(Toolbox::scalarValue(alpha)))));
+                                                     static_cast<int>(Opm::scalarValue(alpha)))));
         alpha -= i;
 
         Evaluation beta1;
@@ -273,9 +271,9 @@ public:
         beta2 = yToJ(i + 1, y, extrapolate);
 
         size_t j1 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i)) - 2,
-                                                             static_cast<int>(Toolbox::scalarValue(beta1)))));
+                                                             static_cast<int>(Opm::scalarValue(beta1)))));
         size_t j2 = static_cast<size_t>(std::max(0, std::min(static_cast<int>(numY(i + 1)) - 2,
-                                                             static_cast<int>(Toolbox::scalarValue(beta2)))));
+                                                             static_cast<int>(Opm::scalarValue(beta2)))));
 
         beta1 -= j1;
         beta2 -= j2;

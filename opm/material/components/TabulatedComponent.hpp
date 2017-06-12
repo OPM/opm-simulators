@@ -257,10 +257,8 @@ public:
     template <class Evaluation>
     static Evaluation vaporPressure(const Evaluation& temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateT_(vaporPressure_, temperature);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::vaporPressure(temperature);
         return result;
     }
@@ -274,12 +272,10 @@ public:
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateGasTP_(gasEnthalpy_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::gasEnthalpy(temperature, pressure);
         return result;
     }
@@ -293,12 +289,10 @@ public:
     template <class Evaluation>
     static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateLiquidTP_(liquidEnthalpy_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::liquidEnthalpy(temperature, pressure);
         return result;
     }
@@ -312,12 +306,10 @@ public:
     template <class Evaluation>
     static Evaluation gasHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateGasTP_(gasHeatCapacity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::gasHeatCapacity(temperature, pressure);
         return result;
     }
@@ -331,12 +323,10 @@ public:
     template <class Evaluation>
     static Evaluation liquidHeatCapacity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateLiquidTP_(liquidHeatCapacity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::liquidHeatCapacity(temperature, pressure);
         return result;
     }
@@ -370,12 +360,10 @@ public:
     template <class Evaluation>
     static Evaluation gasPressure(const Evaluation& temperature, Scalar density)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateGasTRho_(gasPressure_,
                                                        temperature,
                                                        density);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::gasPressure(temperature,
                                              density);
         return result;
@@ -390,12 +378,10 @@ public:
     template <class Evaluation>
     static Evaluation liquidPressure(const Evaluation& temperature, Scalar density)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateLiquidTRho_(liquidPressure_,
                                                           temperature,
                                                           density);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::liquidPressure(temperature,
                                                 density);
         return result;
@@ -430,12 +416,10 @@ public:
     template <class Evaluation>
     static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateGasTP_(gasDensity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::gasDensity(temperature, pressure);
         return result;
     }
@@ -450,12 +434,10 @@ public:
     template <class Evaluation>
     static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateLiquidTP_(liquidDensity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::liquidDensity(temperature, pressure);
         return result;
     }
@@ -469,12 +451,10 @@ public:
     template <class Evaluation>
     static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateGasTP_(gasViscosity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::gasViscosity(temperature, pressure);
         return result;
     }
@@ -488,12 +468,10 @@ public:
     template <class Evaluation>
     static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateLiquidTP_(liquidViscosity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::liquidViscosity(temperature, pressure);
         return result;
     }
@@ -507,12 +485,10 @@ public:
     template <class Evaluation>
     static Evaluation gasThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateGasTP_(gasThermalConductivity_,
                                                      temperature,
                                                      pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::gasThermalConductivity(temperature, pressure);
         return result;
     }
@@ -526,12 +502,10 @@ public:
     template <class Evaluation>
     static Evaluation liquidThermalConductivity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& result = interpolateLiquidTP_(liquidThermalConductivity_,
                                                         temperature,
                                                         pressure);
-        if (std::isnan(Toolbox::scalarValue(result)))
+        if (std::isnan(Opm::scalarValue(result)))
             return RawComponent::liquidThermalConductivity(temperature, pressure);
         return result;
     }
@@ -541,13 +515,11 @@ private:
     template <class Evaluation>
     static Evaluation interpolateT_(const Scalar* values, const Evaluation& T)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         Evaluation alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1)
             return std::numeric_limits<Scalar>::quiet_NaN();
 
-        size_t iT = static_cast<size_t>(Toolbox::scalarValue(alphaT));
+        size_t iT = static_cast<size_t>(Opm::scalarValue(alphaT));
         alphaT -= iT;
 
         return
@@ -560,13 +532,11 @@ private:
     template <class Evaluation>
     static Evaluation interpolateLiquidTP_(const Scalar* values, const Evaluation& T, const Evaluation& p)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Evaluation alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1)
-            return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
+            return std::numeric_limits<Scalar>::quiet_NaN();
 
-        size_t iT = static_cast<size_t>(Toolbox::scalarValue(alphaT));
+        size_t iT = static_cast<size_t>(Opm::scalarValue(alphaT));
         alphaT -= iT;
 
         Evaluation alphaP1 = pressLiquidIdx_(p, iT);
@@ -575,11 +545,11 @@ private:
         size_t iP1 =
             static_cast<size_t>(
                 std::max<int>(0, std::min(static_cast<int>(nPress_) - 2,
-                                          static_cast<int>(Toolbox::scalarValue(alphaP1)))));
+                                          static_cast<int>(Opm::scalarValue(alphaP1)))));
         size_t iP2 =
             static_cast<size_t>(
                 std::max(0, std::min(static_cast<int>(nPress_) - 2,
-                                     static_cast<int>(Toolbox::scalarValue(alphaP2)))));
+                                     static_cast<int>(Opm::scalarValue(alphaP2)))));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 
@@ -595,16 +565,14 @@ private:
     template <class Evaluation>
     static Evaluation interpolateGasTP_(const Scalar* values, const Evaluation& T, const Evaluation& p)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Evaluation alphaT = tempIdx_(T);
         if (alphaT < 0 || alphaT >= nTemp_ - 1)
-            return Toolbox::createConstant(std::numeric_limits<Scalar>::quiet_NaN());
+            return std::numeric_limits<Scalar>::quiet_NaN();
 
         size_t iT =
             static_cast<size_t>(
                 std::max(0, std::min(static_cast<int>(nTemp_) - 2,
-                                     static_cast<int>(Toolbox::scalarValue(alphaT)))));
+                                     static_cast<int>(Opm::scalarValue(alphaT)))));
         alphaT -= iT;
 
         Evaluation alphaP1 = pressGasIdx_(p, iT);
@@ -612,11 +580,11 @@ private:
         size_t iP1 =
             static_cast<size_t>(
                 std::max(0, std::min(static_cast<int>(nPress_) - 2,
-                                     static_cast<int>(Toolbox::scalarValue(alphaP1)))));
+                                     static_cast<int>(Opm::scalarValue(alphaP1)))));
         size_t iP2 =
             static_cast<size_t>(
                 std::max(0, std::min(static_cast<int>(nPress_) - 2,
-                                     static_cast<int>(Toolbox::scalarValue(alphaP2)))));
+                                     static_cast<int>(Opm::scalarValue(alphaP2)))));
         alphaP1 -= iP1;
         alphaP2 -= iP2;
 

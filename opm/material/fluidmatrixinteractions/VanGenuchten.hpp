@@ -168,10 +168,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         assert(0 <= Sw && Sw <= 1);
 
@@ -195,9 +193,7 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::pow(Toolbox::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
+        return Opm::pow(Opm::pow(Sw, -1.0/params.vgM()) - 1, 1.0/params.vgN())/params.vgAlpha();
     }
 
     /*!
@@ -215,22 +211,18 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation Sw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         Evaluation pC =
-            FsToolbox::template decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
-            - FsToolbox::template decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.pressure(Traits::nonWettingPhaseIdx))
+            - Opm::decay<Evaluation>(fs.pressure(Traits::wettingPhaseIdx));
         return twoPhaseSatSw(params, pC);
     }
 
     template <class Evaluation>
     static Evaluation twoPhaseSatSw(const Params& params, const Evaluation& pC)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         assert(pC >= 0);
 
-        return Toolbox::pow(Toolbox::pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
+        return Opm::pow(Opm::pow(params.vgAlpha()*pC, params.vgN()) + 1, -params.vgM());
     }
 
     /*!
@@ -258,10 +250,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -269,12 +259,10 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrw(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         assert(0.0 <= Sw && Sw <= 1.0);
 
-        Evaluation r = 1.0 - Toolbox::pow(1.0 - Toolbox::pow(Sw, 1/params.vgM()), params.vgM());
-        return Toolbox::sqrt(Sw)*r*r;
+        Evaluation r = 1.0 - Opm::pow(1.0 - Opm::pow(Sw, 1/params.vgM()), params.vgM());
+        return Opm::sqrt(Sw)*r*r;
     }
 
     /*!
@@ -289,10 +277,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            1.0 - FsToolbox::template decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
+            1.0 - Opm::decay<Evaluation>(fs.saturation(Traits::nonWettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }
@@ -300,13 +286,11 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatKrn(const Params& params, Evaluation Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         assert(0 <= Sw && Sw <= 1);
 
         return
-            Toolbox::pow(1 - Sw, 1.0/3) *
-            Toolbox::pow(1 - Toolbox::pow(Sw, 1/params.vgM()), 2*params.vgM());
+            Opm::pow(1 - Sw, 1.0/3) *
+            Opm::pow(1 - Opm::pow(Sw, 1/params.vgM()), 2*params.vgM());
     }
 };
 } // namespace Opm

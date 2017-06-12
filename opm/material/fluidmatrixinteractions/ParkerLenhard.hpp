@@ -302,9 +302,7 @@ public:
     template <class FluidState>
     static void update(Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        Scalar Sw = FsToolbox::scalarValue(fs.saturation(Traits::wettingPhaseIdx));
+        Scalar Sw = Opm::scalarValue(fs.saturation(Traits::wettingPhaseIdx));
 
         if (Sw > 1 - 1e-5) {
             // if the absolute saturation is almost 1,
@@ -378,10 +376,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -389,10 +385,8 @@ public:
     template <class Evaluation>
     static Evaluation twoPhaseSatPcnw(const Params& params, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // calculate the current apparent saturation
-        ScanningCurve* sc = findScanningCurve_(params, Toolbox::scalarValue(Sw));
+        ScanningCurve* sc = findScanningCurve_(params, Opm::scalarValue(Sw));
 
         // calculate the apparant saturation
         const Evaluation& Sw_app = absoluteToApparentSw_(params, Sw);
@@ -453,10 +447,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -477,10 +469,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }

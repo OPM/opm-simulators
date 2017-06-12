@@ -112,8 +112,6 @@ public:
                       bool setViscosity,
                       bool setEnthalpy)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         // compute the density and enthalpy of the
         // reference phase
         paramCache.updatePhase(fluidState, refPhaseIdx);
@@ -152,7 +150,7 @@ public:
             ComponentVector fugVec;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 const auto& fug = fluidState.fugacity(refPhaseIdx, compIdx);
-                fugVec[compIdx] = FsToolbox::template decay<Evaluation>(fug);
+                fugVec[compIdx] = Opm::decay<Evaluation>(fug);
             }
 
             CompositionFromFugacities::solve(fluidState, paramCache, phaseIdx, fugVec);

@@ -53,10 +53,8 @@ template <class FluidSystem, class LhsEval, class FluidState>
 LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
                unsigned regionIdx)
 {
-    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
     const auto& XoG =
-        FsToolbox::template decay<LhsEval>(fluidState.massFraction(FluidSystem::oilPhaseIdx,
+        Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::oilPhaseIdx,
                                                                    FluidSystem::gasCompIdx));
     return FluidSystem::convertXoGToRs(XoG, regionIdx);
 }
@@ -67,18 +65,15 @@ auto getRs_(typename std::enable_if<HasMember_Rs<FluidState>::value, const Fluid
     -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
                 ::template decay<LhsEval>(fluidState.Rs()))
 {
-    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-    return FsToolbox::template decay<LhsEval>(fluidState.Rs());
+    return Opm::decay<LhsEval>(fluidState.Rs());
 }
 
 template <class FluidSystem, class LhsEval, class FluidState>
 LhsEval getRv_(typename std::enable_if<!HasMember_Rv<FluidState>::value, const FluidState&>::type fluidState,
                unsigned regionIdx)
 {
-    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
     const auto& XgO =
-        FsToolbox::template decay<LhsEval>(fluidState.massFraction(FluidSystem::gasPhaseIdx,
+        Opm::decay<LhsEval>(fluidState.massFraction(FluidSystem::gasPhaseIdx,
                                                                    FluidSystem::oilCompIdx));
     return FluidSystem::convertXgOToRv(XgO, regionIdx);
 }
@@ -89,8 +84,7 @@ auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const Fluid
     -> decltype(Opm::MathToolbox<typename FluidState::Scalar>
                 ::template decay<LhsEval>(fluidState.Rv()))
 {
-    typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-    return FsToolbox::template decay<LhsEval>(fluidState.Rv());
+    return Opm::decay<LhsEval>(fluidState.Rv());
 }
 }
 
@@ -135,9 +129,8 @@ public:
         template <class OtherCache>
         void assignPersistentData(const OtherCache& other)
         {
-            typedef Opm::MathToolbox<typename OtherCache::Evaluation> OtherToolbox;
             regionIdx_ = other.regionIndex();
-            maxOilSat_ = OtherToolbox::value(other.maxOilSat());
+            maxOilSat_ = other.maxOilSat();
         }
 
         /*!
@@ -645,10 +638,8 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
@@ -659,7 +650,7 @@ public:
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
                         const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
-                        const auto& alpha = FsToolbox::template decay<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
+                        const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
                         const auto& bSat = oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                         const auto& bUndersat = oilPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rs);
                         return alpha*bSat + (1.0 - alpha)*bUndersat;
@@ -683,7 +674,7 @@ public:
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
                         const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
-                        const auto& alpha = FsToolbox::template decay<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
+                        const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
                         const auto& bSat = gasPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
                         const auto& bUndersat = gasPvt_->inverseFormationVolumeFactor(regionIdx, T, p, Rv);
                         return alpha*bSat + (1.0 - alpha)*bUndersat;
@@ -720,10 +711,8 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
         case oilPhaseIdx: return oilPvt_->saturatedInverseFormationVolumeFactor(regionIdx, T, p);
@@ -744,10 +733,8 @@ public:
         assert(0 <= compIdx && compIdx <= numComponents);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         // for the fugacity coefficient of the oil component in the oil phase, we use
         // some pseudo-realistic value for the vapor pressure to ease physical
@@ -786,8 +773,8 @@ public:
                 const auto& x_oGSat = convertXoGToxoG(X_oGSat, regionIdx);
                 const auto& x_oOSat = 1.0 - x_oGSat;
 
-                const auto& p_o = FsToolbox::template decay<LhsEval>(fluidState.pressure(oilPhaseIdx));
-                const auto& p_g = FsToolbox::template decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
+                const auto& p_o = Opm::decay<LhsEval>(fluidState.pressure(oilPhaseIdx));
+                const auto& p_g = Opm::decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
 
                 return phi_oO*p_o*x_oOSat / (p_g*x_gOSat);
             }
@@ -823,8 +810,8 @@ public:
                 const auto& X_oGSat = convertRsToXoG(R_sSat, regionIdx);
                 const auto& x_oGSat = convertXoGToxoG(X_oGSat, regionIdx);
 
-                const auto& p_o = FsToolbox::template decay<LhsEval>(fluidState.pressure(oilPhaseIdx));
-                const auto& p_g = FsToolbox::template decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
+                const auto& p_o = Opm::decay<LhsEval>(fluidState.pressure(oilPhaseIdx));
+                const auto& p_g = Opm::decay<LhsEval>(fluidState.pressure(gasPhaseIdx));
 
                 return phi_gG*p_g*x_gGSat / (p_o*x_oGSat);
             }
@@ -870,10 +857,8 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
         case oilPhaseIdx: {
@@ -884,7 +869,7 @@ public:
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
                         const auto& Rs = Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
-                        const auto& alpha = FsToolbox::template decay<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
+                        const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(gasPhaseIdx))/1e-4;
                         const auto& muSat = oilPvt_->saturatedViscosity(regionIdx, T, p);
                         const auto& muUndersat = oilPvt_->viscosity(regionIdx, T, p, Rs);
                         return alpha*muSat + (1.0 - alpha)*muUndersat;
@@ -909,7 +894,7 @@ public:
                         // interpolate between the saturated and undersaturated quantities to
                         // avoid a discontinuity
                         const auto& Rv = Opm::BlackOil::template getRv_<ThisType, LhsEval, FluidState>(fluidState, regionIdx);
-                        const auto& alpha = FsToolbox::template decay<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
+                        const auto& alpha = Opm::decay<LhsEval>(fluidState.saturation(oilPhaseIdx))/1e-4;
                         const auto& muSat = gasPvt_->saturatedViscosity(regionIdx, T, p);
                         const auto& muUndersat = gasPvt_->viscosity(regionIdx, T, p, Rv);
                         return alpha*muSat + (1.0 - alpha)*muUndersat;
@@ -950,11 +935,9 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& So = FsToolbox::template decay<LhsEval>(fluidState.saturation(oilPhaseIdx));
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& So = Opm::decay<LhsEval>(fluidState.saturation(oilPhaseIdx));
 
         switch (phaseIdx) {
         case oilPhaseIdx: return oilPvt_->saturatedGasDissolutionFactor(regionIdx, T, p, So, maxOilSaturation);
@@ -980,10 +963,8 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& p = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
-        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
         case oilPhaseIdx: return oilPvt_->saturatedGasDissolutionFactor(regionIdx, T, p);
@@ -1032,9 +1013,7 @@ public:
         assert(0 <= phaseIdx && phaseIdx <= numPhases);
         assert(0 <= regionIdx && regionIdx <= numRegions());
 
-        typedef Opm::MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& T = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
 
         switch (phaseIdx) {
         case oilPhaseIdx: return oilPvt_->saturationPressure(regionIdx, T, Opm::BlackOil::template getRs_<ThisType, LhsEval, FluidState>(fluidState, regionIdx));

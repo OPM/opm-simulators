@@ -90,8 +90,6 @@ public:
                       unsigned phaseIdx,
                       const ComponentVector& targetFug)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // use a much more efficient method in case the phase is an
         // ideal mixture
         if (FluidSystem::isIdealMixture(phaseIdx)) {
@@ -140,7 +138,7 @@ public:
             */
 
             // Solve J*x = b
-            x = Toolbox::createConstant(0.0);
+            x = 0.0;
             try { J.solve(x, b); }
             catch (Dune::FMatrixError e)
             { throw Opm::NumericalProblem(e.what()); }
@@ -224,8 +222,6 @@ protected:
                              unsigned phaseIdx,
                              const ComponentVector& targetFug)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // reset jacobian
         J = 0;
 
@@ -241,7 +237,7 @@ protected:
             fluidState.setFugacityCoefficient(phaseIdx, i, phi);
 
             defect[i] = targetFug[i] - f;
-            absError = std::max(absError, std::abs(Toolbox::scalarValue(defect[i])));
+            absError = std::max(absError, std::abs(Opm::scalarValue(defect[i])));
         }
 
         // assemble jacobian matrix of the constraints for the composition
@@ -298,19 +294,17 @@ protected:
                           unsigned phaseIdx,
                           const Dune::FieldVector<Evaluation, numComponents>& targetFug)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // store original composition and calculate relative error
         Dune::FieldVector<Evaluation, numComponents> origComp;
         Scalar relError = 0;
-        Evaluation sumDelta = Toolbox::createConstant(0.0);
-        Evaluation sumx = Toolbox::createConstant(0.0);
+        Evaluation sumDelta = 0.0;
+        Evaluation sumx = 0.0;
         for (unsigned i = 0; i < numComponents; ++i) {
             origComp[i] = fluidState.moleFraction(phaseIdx, i);
-            relError = std::max(relError, std::abs(Toolbox::scalarValue(x[i])));
+            relError = std::max(relError, std::abs(Opm::scalarValue(x[i])));
 
-            sumx += Toolbox::abs(fluidState.moleFraction(phaseIdx, i));
-            sumDelta += Toolbox::abs(x[i]);
+            sumx += Opm::abs(fluidState.moleFraction(phaseIdx, i));
+            sumDelta += Opm::abs(x[i]);
         }
 
         // chop update to at most 20% change in composition
@@ -323,10 +317,10 @@ protected:
             Evaluation newx = origComp[i] - x[i];
             // only allow negative mole fractions if the target fugacity is negative
             if (targetFug[i] > 0)
-                newx = Toolbox::max(0.0, newx);
+                newx = Opm::max(0.0, newx);
             // only allow positive mole fractions if the target fugacity is positive
             else if (targetFug[i] < 0)
-                newx = Toolbox::min(0.0, newx);
+                newx = Opm::min(0.0, newx);
             // if the target fugacity is zero, the mole fraction must also be zero
             else
                 newx = 0;

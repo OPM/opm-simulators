@@ -93,8 +93,6 @@ public:
                                               unsigned phaseIdx,
                                               unsigned compIdx)
     {
-        typedef MathToolbox<LhsEval> LhsToolbox;
-
         // note that we normalize the component mole fractions, so
         // that their sum is 100%. This increases numerical stability
         // considerably if the fluid state is not physical.
@@ -116,13 +114,13 @@ public:
         LhsEval sumMoleFractions = 0.0;
         for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx)
             sumMoleFractions += fs.moleFraction(phaseIdx, compJIdx);
-        LhsEval deltai = 2*LhsToolbox::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
+        LhsEval deltai = 2*Opm::sqrt(params.aPure(phaseIdx, compIdx))/params.a(phaseIdx);
         LhsEval tmp = 0;
         for (unsigned compJIdx = 0; compJIdx < numComponents; ++compJIdx) {
             tmp +=
                 fs.moleFraction(phaseIdx, compJIdx)
                 / sumMoleFractions
-                * LhsToolbox::sqrt(params.aPure(phaseIdx, compJIdx))
+                * Opm::sqrt(params.aPure(phaseIdx, compJIdx))
                 * (1.0 - StaticParameters::interactionCoefficient(compIdx, compJIdx));
         };
         deltai *= tmp;
@@ -133,8 +131,8 @@ public:
         LhsEval expo =  Astar/(Bstar*std::sqrt(u*u - 4*w))*(bi_b - deltai);
 
         LhsEval fugCoeff =
-            LhsToolbox::exp(bi_b*(Z - 1))/LhsToolbox::max(1e-9, Z - Bstar) *
-            LhsToolbox::pow(base, expo);
+            Opm::exp(bi_b*(Z - 1))/Opm::max(1e-9, Z - Bstar) *
+            Opm::pow(base, expo);
 
         ////////
         // limit the fugacity coefficient to a reasonable range:
@@ -142,12 +140,12 @@ public:
         // on one side, we want the mole fraction to be at
         // least 10^-3 if the fugacity is at the current pressure
         //
-        fugCoeff = LhsToolbox::min(1e10, fugCoeff);
+        fugCoeff = Opm::min(1e10, fugCoeff);
         //
         // on the other hand, if the mole fraction of the component is 100%, we want the
         // fugacity to be at least 10^-3 Pa
         //
-        fugCoeff = LhsToolbox::max(1e-10, fugCoeff);
+        fugCoeff = Opm::max(1e-10, fugCoeff);
         ///////////
 
         return fugCoeff;

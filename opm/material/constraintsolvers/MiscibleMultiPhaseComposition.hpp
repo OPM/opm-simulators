@@ -170,7 +170,6 @@ public:
                       bool setViscosity,
                       bool setInternalEnergy)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         static_assert(std::is_same<typename FluidState::Scalar, Evaluation>::value,
                       "The scalar type of the fluid state must be 'Evaluation'");
 
@@ -192,7 +191,7 @@ public:
             // coefficients of the components cannot depend on
             // composition, i.e. the parameters in the cache are valid
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                Evaluation fugCoeff = FsToolbox::template decay<Evaluation>(
+                Evaluation fugCoeff = Opm::decay<Evaluation>(
                     FluidSystem::fugacityCoefficient(fluidState, paramCache, phaseIdx, compIdx));
                 fluidState.setFugacityCoefficient(phaseIdx, compIdx, fugCoeff);
             }
@@ -201,9 +200,9 @@ public:
         // create the linear system of equations which defines the
         // mole fractions
         static const int numEq = numComponents*numPhases;
-        Dune::FieldMatrix<Evaluation, numEq, numEq> M(Toolbox::createConstant(0.0));
-        Dune::FieldVector<Evaluation, numEq> x(Toolbox::createConstant(0.0));
-        Dune::FieldVector<Evaluation, numEq> b(Toolbox::createConstant(0.0));
+        Dune::FieldMatrix<Evaluation, numEq, numEq> M(0.0);
+        Dune::FieldVector<Evaluation, numEq> x(0.0);
+        Dune::FieldVector<Evaluation, numEq> b(0.0);
 
         // assemble the equations expressing the fact that the
         // fugacities of each component are equal in all phases
@@ -237,11 +236,11 @@ public:
             unsigned rowIdx = numComponents*(numPhases - 1) + presentPhases;
             presentPhases += 1;
 
-            b[rowIdx] = Toolbox::createConstant(1.0);
+            b[rowIdx] = 1.0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 unsigned colIdx = phaseIdx*numComponents + compIdx;
 
-                M[rowIdx][colIdx] = Toolbox::createConstant(1.0);
+                M[rowIdx][colIdx] = 1.0;
             }
         }
 

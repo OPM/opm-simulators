@@ -98,15 +98,13 @@ public:
     template <class Evaluation>
     static Evaluation vaporPressure(const Evaluation& temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Scalar A = 7.07638;
         const Scalar B = 1571.005;
         const Scalar C = 209.728;
 
         const Evaluation& T = temperature - 273.15;
 
-        return 100 * 1.334 * Toolbox::pow(10.0, A - (B / (T + C)));
+        return 100 * 1.334 * Opm::pow(10.0, A - (B / (T + C)));
     }
 
 
@@ -145,10 +143,8 @@ public:
     template <class Evaluation>
     static Evaluation heatVap(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        Evaluation T = Toolbox::min(temperature, criticalTemperature()); // regularization
-        T = Toolbox::max(T, 0.0); // regularization
+        Evaluation T = Opm::min(temperature, criticalTemperature()); // regularization
+        T = Opm::max(T, 0.0); // regularization
 
         const Scalar T_crit = criticalTemperature();
         const Scalar Tr1 = boilingTemperature()/criticalTemperature();
@@ -163,7 +159,7 @@ public:
         /* Variation with temp according to Watson relation eq 7-12.1*/
         const Evaluation& Tr2 = T/criticalTemperature();
         const Scalar n = 0.375;
-        const Evaluation& DH_vap = DH_v_boil * Toolbox::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
+        const Evaluation& DH_vap = DH_v_boil * Opm::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
 
         return (DH_vap/molarMass());          // we need [J/kg]
     }
@@ -232,10 +228,8 @@ public:
     template <class Evaluation>
     static Evaluation gasViscosity(Evaluation temperature, const Evaluation& /*pressure*/, bool /*regularize*/=true)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        temperature = Toolbox::min(temperature, 500.0); // regularization
-        temperature = Toolbox::max(temperature, 250.0);
+        temperature = Opm::min(temperature, 500.0); // regularization
+        temperature = Opm::max(temperature, 250.0);
 
         // reduced temperature
         const Evaluation& Tr = temperature/criticalTemperature();
@@ -243,9 +237,9 @@ public:
         Scalar Fp0 = 1.0;
         Scalar xi = 0.00474;
         const Evaluation& eta_xi =
-            Fp0*(0.807*Toolbox::pow(Tr,0.618)
-                 - 0.357*Toolbox::exp(-0.449*Tr)
-                 + 0.34*Toolbox::exp(-4.058*Tr)
+            Fp0*(0.807*Opm::pow(Tr,0.618)
+                 - 0.357*Opm::exp(-0.449*Tr)
+                 + 0.34*Opm::exp(-4.058*Tr)
                  + 0.018);
 
         return eta_xi/xi/1e7; // [Pa s]
@@ -260,15 +254,13 @@ public:
     template <class Evaluation>
     static Evaluation liquidViscosity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        temperature = Toolbox::min(temperature, 500.0); // regularization
-        temperature = Toolbox::max(temperature, 250.0);
+        temperature = Opm::min(temperature, 500.0); // regularization
+        temperature = Opm::max(temperature, 250.0);
 
         const Scalar A = -6.749;
         const Scalar B = 2010.0;
 
-        return Toolbox::exp(A + B/temperature)*1e-3; // [Pa s]
+        return Opm::exp(A + B/temperature)*1e-3; // [Pa s]
     }
 
     /*!
@@ -328,14 +320,12 @@ protected:
     template <class Evaluation>
     static Evaluation molarLiquidDensity_(Evaluation temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        temperature = Toolbox::min(temperature, 500.0); // regularization
-        temperature = Toolbox::max(temperature, 250.0);
+        temperature = Opm::min(temperature, 500.0); // regularization
+        temperature = Opm::max(temperature, 250.0);
 
         const Scalar Z_RA = 0.2556; // from equation
-        const Evaluation& expo = 1.0 + Toolbox::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
-        const Evaluation& V = Consts::R*criticalTemperature()/criticalPressure()*Toolbox::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
+        const Evaluation& expo = 1.0 + Opm::pow(1.0 - temperature/criticalTemperature(), 2.0/7.0);
+        const Evaluation& V = Consts::R*criticalTemperature()/criticalPressure()*Opm::pow(Z_RA, expo); // liquid molar volume [cm^3/mol]
 
         return 1.0/V; // molar density [mol/m^3]
     }

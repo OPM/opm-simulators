@@ -153,8 +153,6 @@ public:
     template <class Evaluation>
     static Evaluation fugacityCoefficientCO2(const Evaluation& temperature, const Evaluation& pg)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Valgrind::CheckDefined(temperature);
         Valgrind::CheckDefined(pg);
 
@@ -165,20 +163,20 @@ public:
         Scalar R = IdealGas::R * 10.; // ideal gas constant with unit bar cm^3 /(K mol)
         Evaluation lnPhiCO2;
 
-        lnPhiCO2 = Toolbox::log(V / (V - b_CO2));
+        lnPhiCO2 = Opm::log(V / (V - b_CO2));
         lnPhiCO2 += b_CO2 / (V - b_CO2);
-        lnPhiCO2 -= 2 * a_CO2 / (R * Toolbox::pow(temperature, 1.5) * b_CO2) * log((V + b_CO2) / V);
+        lnPhiCO2 -= 2 * a_CO2 / (R * Opm::pow(temperature, 1.5) * b_CO2) * log((V + b_CO2) / V);
         lnPhiCO2 +=
             a_CO2 * b_CO2
             / (R
-               * Toolbox::pow(temperature, 1.5)
+               * Opm::pow(temperature, 1.5)
                * b_CO2
                * b_CO2)
-            * (Toolbox::log((V + b_CO2) / V)
+            * (Opm::log((V + b_CO2) / V)
                - b_CO2 / (V + b_CO2));
-        lnPhiCO2 -= Toolbox::log(pg_bar * V / (R * temperature));
+        lnPhiCO2 -= Opm::log(pg_bar * V / (R * temperature));
 
-        return Toolbox::exp(lnPhiCO2); // fugacity coefficient of CO2
+        return Opm::exp(lnPhiCO2); // fugacity coefficient of CO2
     }
 
     /*!
@@ -192,8 +190,6 @@ public:
     template <class Evaluation>
     static Evaluation fugacityCoefficientH2O(const Evaluation& temperature, const Evaluation& pg)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& V = 1 / (CO2::gasDensity(temperature, pg) / CO2::molarMass()) * 1.e6; // molar volume in cm^3/mol
         const Evaluation& pg_bar = pg / 1.e5; // gas phase pressure in bar
         const Evaluation& a_CO2 = (7.54e7 - 4.13e4 * temperature);// mixture parameter of  Redlich-Kwong equation
@@ -204,13 +200,13 @@ public:
         Evaluation lnPhiH2O;
 
         lnPhiH2O =
-            Toolbox::log(V/(V - b_CO2))
+            Opm::log(V/(V - b_CO2))
             + b_H2O/(V - b_CO2) - 2*a_CO2_H2O
-            / (R*Toolbox::pow(temperature, 1.5)*b_CO2)*Toolbox::log((V + b_CO2)/V)
-            + a_CO2*b_H2O/(R*Toolbox::pow(temperature, 1.5)*b_CO2*b_CO2)
-            *(Toolbox::log((V + b_CO2)/V) - b_CO2/(V + b_CO2))
-            - Toolbox::log(pg_bar*V/(R*temperature));
-        return Toolbox::exp(lnPhiH2O); // fugacity coefficient of H2O
+            / (R*Opm::pow(temperature, 1.5)*b_CO2)*Opm::log((V + b_CO2)/V)
+            + a_CO2*b_H2O/(R*Opm::pow(temperature, 1.5)*b_CO2*b_CO2)
+            *(Opm::log((V + b_CO2)/V) - b_CO2/(V + b_CO2))
+            - Opm::log(pg_bar*V/(R*temperature));
+        return Opm::exp(lnPhiH2O); // fugacity coefficient of H2O
     }
 
 private:
@@ -272,13 +268,11 @@ private:
                                            const Evaluation& pg,
                                            Scalar molalityNaCl)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& lambda = computeLambda_(temperature, pg); // lambda_{CO2-Na+}
         const Evaluation& xi = computeXi_(temperature, pg); // Xi_{CO2-Na+-Cl-}
         const Evaluation& lnGammaStar =
             2*molalityNaCl*lambda + xi*molalityNaCl*molalityNaCl;
-        return Toolbox::exp(lnGammaStar);
+        return Opm::exp(lnGammaStar);
     }
 
     /*!
@@ -292,15 +286,13 @@ private:
     template <class Evaluation>
     static Evaluation computeA_(const Evaluation& temperature, const Evaluation& pg)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& deltaP = pg / 1e5 - 1; // pressure range [bar] from p0 = 1bar to pg[bar]
         Scalar v_av_H2O = 18.1; // average partial molar volume of H2O [cm^3/mol]
         Scalar R = IdealGas::R * 10;
         const Evaluation& k0_H2O = equilibriumConstantH2O_(temperature); // equilibrium constant for H2O at 1 bar
         const Evaluation& phi_H2O = fugacityCoefficientH2O(temperature, pg); // fugacity coefficient of H2O for the water-CO2 system
         const Evaluation& pg_bar = pg / 1.e5;
-        return k0_H2O/(phi_H2O*pg_bar)*Toolbox::exp(deltaP*v_av_H2O/(R*temperature));
+        return k0_H2O/(phi_H2O*pg_bar)*Opm::exp(deltaP*v_av_H2O/(R*temperature));
     }
 
     /*!
@@ -314,15 +306,13 @@ private:
     template <class Evaluation>
     static Evaluation computeB_(const Evaluation& temperature, const Evaluation& pg)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& deltaP = pg / 1e5 - 1; // pressure range [bar] from p0 = 1bar to pg[bar]
         const Scalar v_av_CO2 = 32.6; // average partial molar volume of CO2 [cm^3/mol]
         const Scalar R = IdealGas::R * 10;
         const Evaluation& k0_CO2 = equilibriumConstantCO2_(temperature); // equilibrium constant for CO2 at 1 bar
         const Evaluation& phi_CO2 = fugacityCoefficientCO2(temperature, pg); // fugacity coefficient of CO2 for the water-CO2 system
         const Evaluation& pg_bar = pg / 1.e5;
-        return phi_CO2*pg_bar/(55.508*k0_CO2)*Toolbox::exp(-(deltaP*v_av_CO2)/(R*temperature));
+        return phi_CO2*pg_bar/(55.508*k0_CO2)*Opm::exp(-(deltaP*v_av_CO2)/(R*temperature));
     }
 
     /*!
@@ -335,8 +325,6 @@ private:
     template <class Evaluation>
     static Evaluation computeLambda_(const Evaluation& temperature, const Evaluation& pg)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         static const Scalar c[6] =
             { -0.411370585, 6.07632013E-4, 97.5347708, -0.0237622469, 0.0170656236, 1.41335834E-5 };
 
@@ -347,7 +335,7 @@ private:
             + c[2]/temperature
             + c[3]*pg_bar/temperature
             + c[4]*pg_bar/(630.0 - temperature)
-            + c[5]*temperature*Toolbox::log(pg_bar);
+            + c[5]*temperature*Opm::log(pg_bar);
     }
 
     /*!
@@ -376,12 +364,10 @@ private:
     template <class Evaluation>
     static Evaluation equilibriumConstantCO2_(const Evaluation& temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Evaluation temperatureCelcius = temperature - 273.15;
         static const Scalar c[3] = { 1.189, 1.304e-2, -5.446e-5 };
         Evaluation logk0_CO2 = c[0] + temperatureCelcius*(c[1] + temperatureCelcius*c[2]);
-        Evaluation k0_CO2 = Toolbox::pow(10.0, logk0_CO2);
+        Evaluation k0_CO2 = Opm::pow(10.0, logk0_CO2);
         return k0_CO2;
     }
 
@@ -394,13 +380,11 @@ private:
     template <class Evaluation>
     static Evaluation equilibriumConstantH2O_(const Evaluation& temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Evaluation temperatureCelcius = temperature - 273.15;
         static const Scalar c[4] = { -2.209, 3.097e-2, -1.098e-4, 2.048e-7 };
         Evaluation logk0_H2O =
             c[0] + temperatureCelcius*(c[1] + temperatureCelcius*(c[2] + temperatureCelcius*c[3]));
-        return Toolbox::pow(10.0, logk0_H2O);
+        return Opm::pow(10.0, logk0_H2O);
     }
 
 };

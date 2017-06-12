@@ -487,7 +487,6 @@ public:
                                              const Evaluation& oilSaturation,
                                              Scalar maxOilSaturation) const
     {
-        typedef typename Opm::MathToolbox<Evaluation> Toolbox;
         Evaluation tmp =
             saturatedGasDissolutionFactorTable_[regionIdx].eval(pressure, /*extrapolate=*/true);
 
@@ -495,8 +494,8 @@ public:
         // keyword)
         if (vapPar2_ > 0.0 && maxOilSaturation > 0.01 && oilSaturation < maxOilSaturation) {
             static const Scalar sqrtEps = std::sqrt(std::numeric_limits<Scalar>::epsilon());
-            const Evaluation& So = Toolbox::max(oilSaturation, sqrtEps);
-            tmp *= Toolbox::pow(So/maxOilSaturation, vapPar2_);
+            const Evaluation& So = Opm::max(oilSaturation, sqrtEps);
+            tmp *= Opm::pow(So/maxOilSaturation, vapPar2_);
         }
 
         return tmp;
@@ -531,7 +530,7 @@ public:
 
             // If the derivative is "zero" Newton will not converge,
             // so simply return our initial guess.
-            if (std::abs(Toolbox::scalarValue(fPrime)) < 1.0e-30) {
+            if (std::abs(Opm::scalarValue(fPrime)) < 1.0e-30) {
                 return pSat;
             }
 
@@ -549,7 +548,7 @@ public:
                 pSat = 0.0;
             }
 
-            if (std::abs(Toolbox::scalarValue(delta)) < std::abs(Toolbox::scalarValue(pSat))*eps)
+            if (std::abs(Opm::scalarValue(delta)) < std::abs(Opm::scalarValue(pSat))*eps)
                 return pSat;
         }
 

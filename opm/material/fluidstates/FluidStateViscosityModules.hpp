@@ -69,10 +69,8 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        typedef typename FluidState::Scalar FsScalar;
-        typedef Opm::MathToolbox<FsScalar> FsToolbox;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            viscosity_[phaseIdx] = FsToolbox::template decay<Scalar>(fs.viscosity(phaseIdx));
+            viscosity_[phaseIdx] = Opm::decay<Scalar>(fs.viscosity(phaseIdx));
         }
     }
 

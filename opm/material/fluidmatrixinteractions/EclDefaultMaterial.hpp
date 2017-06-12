@@ -223,9 +223,7 @@ public:
     static Evaluation pcgn(const Params& params,
                            const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& Sw = 1.0 - FsToolbox::template decay<Evaluation>(fs.saturation(gasPhaseIdx));
+        const auto& Sw = 1.0 - Opm::decay<Evaluation>(fs.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), Sw);
     }
 
@@ -242,9 +240,7 @@ public:
     static Evaluation pcnw(const Params& params,
                            const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const auto& Sw = FsToolbox::template decay<Evaluation>(fs.saturation(waterPhaseIdx));
+        const auto& Sw = Opm::decay<Evaluation>(fs.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
     }
 
@@ -323,9 +319,7 @@ public:
     static Evaluation krg(const Params& params,
                           const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const Evaluation& Sw = 1 - FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation& Sw = 1 - Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
         return GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
     }
 
@@ -336,9 +330,7 @@ public:
     static Evaluation krw(const Params& params,
                           const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const Evaluation& Sw = FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+        const Evaluation& Sw = Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
         return OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
     }
 
@@ -349,15 +341,12 @@ public:
     static Evaluation krn(const Params& params,
                           const FluidState& fluidState)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         Scalar Swco = params.Swl();
 
         Evaluation Sw =
-            Toolbox::max(Evaluation(Swco),
-                         FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
-        Evaluation Sg = FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+            Opm::max(Evaluation(Swco),
+                         Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx)));
+        Evaluation Sg = Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
 
         Evaluation Sw_ow = Sg + Sw;
         Evaluation So_go = 1.0 - Sw_ow;
@@ -368,9 +357,9 @@ public:
         // < epsilon/2 and interpolate between the oridinary and the regularized kro between
         // epsilon and epsilon/2
         const Scalar epsilon = 1e-5;
-        if (Toolbox::scalarValue(Sw_ow) - Swco < epsilon) {
+        if (Opm::scalarValue(Sw_ow) - Swco < epsilon) {
             Evaluation kro2 = (kro_ow + kro_go)/2;;
-            if (Toolbox::scalarValue(Sw_ow) - Swco > epsilon/2) {
+            if (Opm::scalarValue(Sw_ow) - Swco > epsilon/2) {
                 Evaluation kro1 = (Sg*kro_go + (Sw - Swco)*kro_ow)/(Sw_ow - Swco);
                 Evaluation alpha = (epsilon - (Sw_ow - Swco))/(epsilon/2);
                 return kro2*alpha + kro1*(1 - alpha);
@@ -392,11 +381,9 @@ public:
     template <class FluidState>
     static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        Scalar Sw = FsToolbox::scalarValue(fluidState.saturation(waterPhaseIdx));
-        Scalar So = FsToolbox::scalarValue(fluidState.saturation(oilPhaseIdx));
-        Scalar Sg = FsToolbox::scalarValue(fluidState.saturation(gasPhaseIdx));
+        Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
+        Scalar So = Opm::scalarValue(fluidState.saturation(oilPhaseIdx));
+        Scalar Sg = Opm::scalarValue(fluidState.saturation(gasPhaseIdx));
 
         if (params.inconsistentHysteresisUpdate()) {
             Sg = std::min(Scalar(1.0), std::max(Scalar(0.0), Sg));

@@ -128,12 +128,11 @@ public:
                                    const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         switch (params.approach()) {
         case EclTwoPhaseGasOil: {
             const Evaluation& So =
-                FsToolbox::template decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
+                Opm::decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
             values[oilPhaseIdx] = 0.0;
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatPcnw(params.gasOilParams(), So);
@@ -142,7 +141,7 @@ public:
 
         case EclTwoPhaseOilWater: {
             const Evaluation& Sw =
-                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = 0.0;
             values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatPcnw(params.oilWaterParams(), Sw);
@@ -151,7 +150,7 @@ public:
 
         case EclTwoPhaseGasWater: {
             const Evaluation& Sw =
-                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = 0.0;
             values[gasPhaseIdx] =
@@ -319,12 +318,11 @@ public:
                                        const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
 
         switch (params.approach()) {
         case EclTwoPhaseGasOil: {
             const Evaluation& So =
-                FsToolbox::template decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
+                Opm::decay<Evaluation>(fluidState.saturation(oilPhaseIdx));
 
             values[oilPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrw(params.gasOilParams(), So);
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), So);
@@ -333,7 +331,7 @@ public:
 
         case EclTwoPhaseOilWater: {
             const Evaluation& Sw =
-                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
             values[oilPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrn(params.oilWaterParams(), Sw);
@@ -342,7 +340,7 @@ public:
 
         case EclTwoPhaseGasWater: {
             const Evaluation& Sw =
-                FsToolbox::template decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
+                Opm::decay<Evaluation>(fluidState.saturation(waterPhaseIdx));
 
             values[waterPhaseIdx] = OilWaterMaterialLaw::twoPhaseSatKrw(params.oilWaterParams(), Sw);
             values[gasPhaseIdx] = GasOilMaterialLaw::twoPhaseSatKrn(params.gasOilParams(), Sw);
@@ -392,25 +390,23 @@ public:
     template <class FluidState>
     static void updateHysteresis(Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         switch (params.approach()) {
         case EclTwoPhaseGasOil: {
-            Scalar So = FsToolbox::scalarValue(fluidState.saturation(oilPhaseIdx));
+            Scalar So = Opm::scalarValue(fluidState.saturation(oilPhaseIdx));
 
             params.gasOilParams().update(/*pcSw=*/So, /*krwSw=*/So, /*krnSw=*/So);
             break;
         }
 
         case EclTwoPhaseOilWater: {
-            Scalar Sw = FsToolbox::scalarValue(fluidState.saturation(waterPhaseIdx));
+            Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
 
             params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/Sw);
             break;
         }
 
         case EclTwoPhaseGasWater: {
-            Scalar Sw = FsToolbox::scalarValue(fluidState.saturation(waterPhaseIdx));
+            Scalar Sw = Opm::scalarValue(fluidState.saturation(waterPhaseIdx));
 
             params.oilWaterParams().update(/*pcSw=*/Sw, /*krwSw=*/Sw, /*krnSw=*/0);
             params.gasOilParams().update(/*pcSw=*/1.0, /*krwSw=*/0.0, /*krnSw=*/Sw);

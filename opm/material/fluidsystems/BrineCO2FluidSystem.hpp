@@ -234,20 +234,17 @@ public:
                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<LhsEval> LhsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // use normalized composition for to calculate the density
             // (the relations don't seem to take non-normalized
             // compositions too well...)
-            LhsEval xlBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, BrineIdx))));
-            LhsEval xlCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, CO2Idx))));
+            LhsEval xlBrine = Opm::min(1.0, Opm::max(0.0, Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, BrineIdx))));
+            LhsEval xlCO2 = Opm::min(1.0, Opm::max(0.0,  Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, CO2Idx))));
             LhsEval sumx = xlBrine + xlCO2;
             xlBrine /= sumx;
             xlCO2 /= sumx;
@@ -266,8 +263,8 @@ public:
         // use normalized composition for to calculate the density
         // (the relations don't seem to take non-normalized
         // compositions too well...)
-        LhsEval xgBrine = LhsToolbox::min(1.0, LhsToolbox::max(0.0, FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
-        LhsEval xgCO2 = LhsToolbox::min(1.0, LhsToolbox::max(0.0,  FsToolbox::template decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
+        LhsEval xgBrine = Opm::min(1.0, Opm::max(0.0, Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, BrineIdx))));
+        LhsEval xgCO2 = Opm::min(1.0, Opm::max(0.0,  Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, CO2Idx))));
         LhsEval sumx = xgBrine + xgCO2;
         xgBrine /= sumx;
         xgCO2 /= sumx;
@@ -288,12 +285,10 @@ public:
                              const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
             // assume pure brine for the liquid phase. TODO: viscosity
@@ -318,9 +313,6 @@ public:
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<LhsEval> LhsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         assert(0 <= compIdx && compIdx < numComponents);
 
@@ -328,10 +320,10 @@ public:
             // use the fugacity coefficients of an ideal gas. the
             // actual value of the fugacity is not relevant, as long
             // as the relative fluid compositions are observed,
-            return LhsToolbox::createConstant(1.0);
+            return 1.0;
 
-        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         assert(temperature > 0);
         assert(pressure > 0);
 
@@ -348,8 +340,8 @@ public:
                                                     xgH2O);
 
         // normalize the phase compositions
-        xlCO2 = LhsToolbox::max(0.0, LhsToolbox::min(1.0, xlCO2));
-        xgH2O = LhsToolbox::max(0.0, LhsToolbox::min(1.0, xgH2O));
+        xlCO2 = Opm::max(0.0, Opm::min(1.0, xlCO2));
+        xgH2O = Opm::max(0.0, Opm::min(1.0, xgH2O));
 
         xlH2O = 1.0 - xlCO2;
         xgCO2 = 1.0 - xgH2O;
@@ -375,10 +367,8 @@ public:
                                         unsigned phaseIdx,
                                         unsigned /*compIdx*/)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
-        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == liquidPhaseIdx)
             return BinaryCoeffBrineCO2::liquidDiffCoeff(temperature, pressure);
 
@@ -394,16 +384,13 @@ public:
                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<LhsEval> LhsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if (phaseIdx == liquidPhaseIdx) {
-            const LhsEval& XlCO2 = FsToolbox::template decay<LhsEval>(fluidState.massFraction(phaseIdx, CO2Idx));
+            const LhsEval& XlCO2 = Opm::decay<LhsEval>(fluidState.massFraction(phaseIdx, CO2Idx));
             const LhsEval& result = liquidEnthalpyBrineCO2_(temperature,
                                                             pressure,
                                                             Brine_IAPWS::salinity,
@@ -412,10 +399,10 @@ public:
             return result;
         }
         else {
-            const LhsEval& XCO2 = FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, CO2Idx));
-            const LhsEval& XBrine = FsToolbox::template decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, BrineIdx));
+            const LhsEval& XCO2 = Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, CO2Idx));
+            const LhsEval& XBrine = Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, BrineIdx));
 
-            LhsEval result = LhsToolbox::createConstant(0);
+            LhsEval result = 0;
             result += XBrine * Brine::gasEnthalpy(temperature, pressure);
             result += XCO2 * CO2::gasEnthalpy(temperature, pressure);
             Valgrind::CheckDefined(result);
@@ -431,14 +418,12 @@ public:
                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx)
     {
-        typedef MathToolbox<LhsEval> LhsToolbox;
-
         // TODO way too simple!
         if (phaseIdx == liquidPhaseIdx)
-            return  LhsToolbox::createConstant(0.6); // conductivity of water[W / (m K ) ]
+            return  0.6; // conductivity of water[W / (m K ) ]
 
         // gas phase
-        return LhsToolbox::createConstant(0.025); // conductivity of air [W / (m K ) ]
+        return 0.025; // conductivity of air [W / (m K ) ]
     }
 
     /*!
@@ -458,12 +443,10 @@ public:
                                 const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                 unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const LhsEval& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const LhsEval& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const LhsEval& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const LhsEval& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
 
         if(phaseIdx == liquidPhaseIdx)
             return H2O::liquidHeatCapacity(temperature, pressure);
@@ -552,8 +535,6 @@ private:
                                            Scalar S, // salinity
                                            const LhsEval& X_CO2_w)
     {
-        typedef MathToolbox<LhsEval> LhsToolbox;
-
         /* X_CO2_w : mass fraction of CO2 in brine */
 
         /* same function as enthalpy_brine, only extended by CO2 content */
@@ -579,7 +560,7 @@ private:
         theta = T - 273.15;
 
         // Regularization
-        Scalar scalarTheta = LhsToolbox::scalarValue(theta);
+        Scalar scalarTheta = Opm::scalarValue(theta);
         Scalar S_lSAT = f[0] + scalarTheta*(f[1] + scalarTheta*(f[2] + scalarTheta*f[3]));
         if (S > S_lSAT)
             S = S_lSAT;
@@ -597,7 +578,7 @@ private:
 
         for (i = 0; i<=3; i++) {
             for (j=0; j<=2; j++) {
-                d_h = d_h + a[i][j] * LhsToolbox::pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
+                d_h = d_h + a[i][j] * Opm::pow(theta, static_cast<Scalar>(i)) * std::pow(m, j);
             }
         }
         /* heat of dissolution for halite according to Michaelides 1971 */
