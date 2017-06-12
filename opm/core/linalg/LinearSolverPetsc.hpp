@@ -42,7 +42,7 @@ namespace Opm
         /// Construct from parameters
         /// Accepted parameters are, with defaults, listed in the
         /// default constructor.
-        LinearSolverPetsc(const parameter::ParameterGroup& param);
+        LinearSolverPetsc(const ParameterGroup& param);
 
         /// Destructor.
         virtual ~LinearSolverPetsc();

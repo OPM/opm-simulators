@@ -228,7 +228,7 @@ namespace{
 
 } // anonymous namespace.
 
-    LinearSolverPetsc::LinearSolverPetsc(const parameter::ParameterGroup& param)
+    LinearSolverPetsc::LinearSolverPetsc(const ParameterGroup& param)
         : ksp_type_( param.getDefault( std::string( "ksp_type" ), std::string( "gmres" ) ) )
         , pc_type_( param.getDefault( std::string( "pc_type" ), std::string( "sor" ) ) )
         , ksp_view_( param.getDefault( std::string( "ksp_view" ), int( false ) ) )
