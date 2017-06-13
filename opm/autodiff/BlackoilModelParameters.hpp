@@ -56,8 +56,8 @@ namespace Opm
         /// for solving for the Jacobian
         double maxSinglePrecisionTimeStep_;
 
-        /// Maximum number of Newton iterations before we give up
-        int max_iter_;
+        /// Maximum number of Newton iterations before we give up on the CNV convergence criterion
+        int max_strict_iter_;
 
         /// Solve well equation initially
         bool solve_welleq_initially_;
