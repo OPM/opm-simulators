@@ -24,7 +24,7 @@ do
     for line in $alines
     do
       abs_new=`echo $line| awk -F ' ' '{print $5}'`
-      abs_new=`echo ${abs_new: : -1} | awk '{printf sprintf("%.16f", $1); }'`
+      abs_new=`echo ${abs_new} | sed -e 's/\.$//g' | awk '{printf sprintf("%.16f", $1); }'`
       if [ `bc <<< "$abs_new>$abs"` -eq 1 ]
       then
         abs=$abs_new
@@ -35,7 +35,7 @@ do
     for line in $rlines
     do
       rel_new=`echo $line| awk -F ' ' '{print $5}'`
-      rel_new=`echo ${rel_new: : -1} | awk '{printf sprintf("%.16f", $1); }'`
+      rel_new=`echo ${rel_new} | sed -e 's/\.$//g' | awk '{printf sprintf("%.16f", $1); }'`
       if [ `bc <<< "$rel_new>$rel"` -eq 1 ]
       then
         rel=$rel_new

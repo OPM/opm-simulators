@@ -33,8 +33,8 @@ analyzeSummaryFailure() {
       rel_line=$(($ln+3))
       abs_new=`sed "${abs_line}q;d" $TMPFILE | awk -F ' ' '{print $5}'`
       rel_new=`sed "${rel_line}q;d" $TMPFILE | awk -F ' ' '{print $5}'`
-      abs_new=`echo ${abs_new: : -1} | awk '{printf sprintf("%.16f", $1); }'`
-      rel_new=`echo ${rel_new: : -1} | awk '{printf sprintf("%.16f", $1); }'`
+      abs_new=`echo ${abs_new} | sed -e 's/\.$//g' | awk '{printf sprintf("%.16f", $1); }'`
+      rel_new=`echo ${rel_new} | sed -e 's/\.$//g' | awk '{printf sprintf("%.16f", $1); }'`
       if [ `bc <<< "$abs_new>$abs"` -eq 1 ]
       then
         abs=$abs_new
