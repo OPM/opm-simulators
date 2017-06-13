@@ -1178,8 +1178,8 @@ private:
     void readExplicitInitialCondition_()
     {
         const auto& gridManager = this->simulator().gridManager();
-        const auto& deck = gridManager.deck();
         const auto& eclState = gridManager.eclState();
+        const auto& eclProps = eclState.get3DProperties();
 
         // since the values specified in the deck do not need to be consistent, we use an
         // initial condition that conserves the total mass specified by these values, but
@@ -1187,24 +1187,24 @@ private:
         useMassConservativeInitialCondition_ = (FluidSystem::numActivePhases() == 3);
 
         // make sure all required quantities are enables
-        if (FluidSystem::phaseIsActive(waterPhaseIdx) && !deck.hasKeyword("SWAT"))
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && !eclProps.hasDeckDoubleGridProperty("SWAT"))
             OPM_THROW(std::runtime_error,
                       "The ECL input file requires the presence of the SWAT keyword if "
                       "the water phase is active");
-        if (FluidSystem::phaseIsActive(gasPhaseIdx) && !deck.hasKeyword("SGAS"))
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) && !eclProps.hasDeckDoubleGridProperty("SGAS"))
             OPM_THROW(std::runtime_error,
                       "The ECL input file requires the presence of the SGAS keyword if "
                       "the gas phase is active");
 
-        if (!deck.hasKeyword("PRESSURE"))
+        if (!eclProps.hasDeckDoubleGridProperty("PRESSURE"))
              OPM_THROW(std::runtime_error,
                       "The ECL input file requires the presence of the PRESSURE "
                       "keyword if the model is initialized explicitly");
-        if (FluidSystem::enableDissolvedGas() && !deck.hasKeyword("RS"))
+        if (FluidSystem::enableDissolvedGas() && !eclProps.hasDeckDoubleGridProperty("RS"))
             OPM_THROW(std::runtime_error,
                       "The ECL input file requires the RS keyword to be present if"
                       " dissolved gas is enabled");
-        if (FluidSystem::enableVaporizedOil() && !deck.hasKeyword("RV"))
+        if (FluidSystem::enableVaporizedOil() && !eclProps.hasDeckDoubleGridProperty("RV"))
             OPM_THROW(std::runtime_error,
                       "The ECL input file requires the RV keyword to be present if"
                       " vaporized oil is enabled");
@@ -1218,24 +1218,24 @@ private:
 
         std::vector<double> waterSaturationData;
         if (FluidSystem::phaseIsActive(waterPhaseIdx))
-            waterSaturationData = deck.getKeyword("SWAT").getSIDoubleData();
+            waterSaturationData = eclProps.getDeckDoubleGridProperty("SWAT").getData();
         else
             waterSaturationData.resize(numCartesianCells, 0.0);
 
         std::vector<double> gasSaturationData;
         if (FluidSystem::phaseIsActive(gasPhaseIdx))
-            gasSaturationData = deck.getKeyword("SGAS").getSIDoubleData();
+            gasSaturationData = eclProps.getDeckDoubleGridProperty("SGAS").getData();
         else
             gasSaturationData.resize(numCartesianCells, 0.0);
 
         const std::vector<double>& pressureData =
-            deck.getKeyword("PRESSURE").getSIDoubleData();
+            gasSaturationData = eclProps.getDeckDoubleGridProperty("PRESSURE").getData();
         const std::vector<double> *rsData = 0;
         if (FluidSystem::enableDissolvedGas())
-            rsData = &deck.getKeyword("RS").getSIDoubleData();
+            rsData = eclProps.getDeckDoubleGridProperty("RS").getData();
         const std::vector<double> *rvData = 0;
         if (FluidSystem::enableVaporizedOil())
-            rvData = &deck.getKeyword("RV").getSIDoubleData();
+            rvData = eclProps.getDeckDoubleGridProperty("RV").getData();
         // initial reservoir temperature
         const std::vector<double>& tempiData =
             eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
