@@ -187,7 +187,7 @@ namespace Opm {
         const double volume = 0.002831684659200; // 0.1 cu ft;
         for (int w = 0; w < nw; ++w) {
             bool allow_cf = allow_cross_flow(w, ebosSimulator);
-            const EvalWell bhp = getBhp(w);
+            const EvalWell& bhp = getBhp(w);
             for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
 
                 const int cell_idx = wells().well_cells[perf];
@@ -283,7 +283,7 @@ namespace Opm {
         } else {
 
             const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            Eval relativePerms[3];
+            Eval relativePerms[3] = { 0.0, 0.0, 0.0 };
             MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
 
             // reset the satnumvalue back to original
@@ -681,7 +681,7 @@ namespace Opm {
     template<typename TypeTag>
     typename StandardWellsDense<TypeTag>::EvalWell
     StandardWellsDense<TypeTag>::
-    extendEval(Eval in) const {
+    extendEval(const Eval& in) const {
         EvalWell out = 0.0;
         out.setValue(in.value());
         for(int eqIdx = 0; eqIdx < numEq;++eqIdx) {
@@ -723,7 +723,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    print(EvalWell in) const
+    print(const EvalWell& in) const
     {
         std::cout << in.value() << std::endl;
         for (int i = 0; i < in.size; ++i) {
