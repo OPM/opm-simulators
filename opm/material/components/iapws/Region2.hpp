@@ -143,7 +143,7 @@ public:
         Evaluation result;
 
         // ideal gas part
-        result = Toolbox::ln(pi_);
+        result = Opm::log(pi_);
         for (int i = 0; i < 9; ++i)
             result += n_g(i)*Toolbox::pow(tau_, J_g(i));
 
