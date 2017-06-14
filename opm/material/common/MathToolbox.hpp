@@ -217,8 +217,8 @@ struct ReturnEval_
     typedef typename std::remove_const< typename std::remove_reference<Eval1>::type >::type T;
     typedef typename std::remove_const< typename std::remove_reference<Eval2>::type >::type U;
 
-    static_assert(std::is_constructible<T, U>::value || std::is_constructible<U, T>::value,
-                  "One of the argument types must be constructible to the other");
+    //static_assert(std::is_constructible<T, U>::value || std::is_constructible<U, T>::value,
+    //              "One of the argument types must be constructible to the other");
 
     typedef typename std::conditional<std::is_constructible<T, U>::value,
                                       T,
