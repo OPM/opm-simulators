@@ -1218,24 +1218,24 @@ private:
 
         std::vector<double> waterSaturationData;
         if (FluidSystem::phaseIsActive(waterPhaseIdx))
-            waterSaturationData = eclProps.getDeckDoubleGridProperty("SWAT").getData();
+            waterSaturationData = eclProps.getDoubleGridProperty("SWAT").getData();
         else
             waterSaturationData.resize(numCartesianCells, 0.0);
 
         std::vector<double> gasSaturationData;
         if (FluidSystem::phaseIsActive(gasPhaseIdx))
-            gasSaturationData = eclProps.getDeckDoubleGridProperty("SGAS").getData();
+            gasSaturationData = eclProps.getDoubleGridProperty("SGAS").getData();
         else
             gasSaturationData.resize(numCartesianCells, 0.0);
 
         const std::vector<double>& pressureData =
-            gasSaturationData = eclProps.getDeckDoubleGridProperty("PRESSURE").getData();
-        const std::vector<double> *rsData = 0;
+            gasSaturationData = eclProps.getDoubleGridProperty("PRESSURE").getData();
+        std::vector<double> rsData;
         if (FluidSystem::enableDissolvedGas())
-            rsData = eclProps.getDeckDoubleGridProperty("RS").getData();
-        const std::vector<double> *rvData = 0;
+            rsData = eclProps.getDoubleGridProperty("RS").getData();
+        std::vector<double> rvData;
         if (FluidSystem::enableVaporizedOil())
-            rvData = eclProps.getDeckDoubleGridProperty("RV").getData();
+            rvData = eclProps.getDoubleGridProperty("RV").getData();
         // initial reservoir temperature
         const std::vector<double>& tempiData =
             eclState.get3DProperties().getDoubleGridProperty("TEMPI").getData();
@@ -1246,9 +1246,9 @@ private:
         assert(gasSaturationData.size() == numCartesianCells);
         assert(pressureData.size() == numCartesianCells);
         if (FluidSystem::enableDissolvedGas())
-            assert(rsData->size() == numCartesianCells);
+            assert(rsData.size() == numCartesianCells);
         if (FluidSystem::enableVaporizedOil())
-            assert(rvData->size() == numCartesianCells);
+            assert(rvData.size() == numCartesianCells);
 #endif
 
         // calculate the initial fluid states
@@ -1311,7 +1311,7 @@ private:
 
             if (FluidSystem::enableDissolvedGas()) {
                 Scalar RsSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, oilPhaseIdx, pvtRegionIdx);
-                Scalar RsReal = (*rsData)[cartesianDofIdx];
+                Scalar RsReal = rsData[cartesianDofIdx];
 
                 if (RsReal > RsSat) {
                     std::array<int, 3> ijk;
@@ -1336,7 +1336,7 @@ private:
 
             if (FluidSystem::enableVaporizedOil()) {
                 Scalar RvSat = FluidSystem::saturatedDissolutionFactor(dofFluidState, gasPhaseIdx, pvtRegionIdx);
-                Scalar RvReal = (*rvData)[cartesianDofIdx];
+                Scalar RvReal = rvData[cartesianDofIdx];
 
                 if (RvReal > RvSat) {
                     std::array<int, 3> ijk;
