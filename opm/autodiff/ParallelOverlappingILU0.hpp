@@ -120,20 +120,18 @@ namespace Opm
         // relative to ILU
         for (auto i=A.beforeEnd(); i!=rendi; --i, ++ row )
         {
-          // coliterator is diagonal after the following loop
-          const auto endij=(*i).end();    // end of row i
-
           const size_type iIndex = i.index();
           upper.reserveAdditional( (*i).size() );
 
           // store in reverse row order
           // eliminate entries left of diagonal; store L factor
-          for (auto j=(*i).begin(); j != endij; ++j )
+          for (auto j=(*i).beforeEnd(); j.index()>=iIndex; --j )
           {
             const size_type jIndex = j.index();
             if( j.index() == iIndex )
             {
               inv[ row ] = (*j);
+	      break;
             }
             else if ( j.index() >= i.index() )
             {
