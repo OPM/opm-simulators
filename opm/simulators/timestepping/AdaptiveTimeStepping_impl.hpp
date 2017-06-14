@@ -242,9 +242,23 @@ namespace Opm {
                     OpmLog::note("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));
                 }
             }
+            catch (const Opm::TooManyIterations& e) {
+                substepReport += solver.failureReport();
+                cause_of_failure = "Solver convergence failure - Iteration limit reached";
+
+                detail::logException(e, solver_verbose_);
+                // since linearIterations is < 0 this will restart the solver
+            }
+            catch (const Opm::LinearSolverProblem& e) {
+                substepReport += solver.failureReport();
+                cause_of_failure = "Linear Solver convergence failure";
+
+                detail::logException(e, solver_verbose_);
+                // since linearIterations is < 0 this will restart the solver
+            }
             catch (const Opm::NumericalProblem& e) {
                 substepReport += solver.failureReport();
-                cause_of_failure = e.what();
+                cause_of_failure = "Solver convergence failure - Numerical problem encountered";
 
                 detail::logException(e, solver_verbose_);
                 // since linearIterations is < 0 this will restart the solver
@@ -357,7 +371,7 @@ namespace Opm {
                 if( solver_verbose_ ) {
                     std::string msg;
                     msg = cause_of_failure + "\n         Timestep chopped to "
-                        + std::to_string(unit::convert::to( substepTimer.currentStepLength(), unit::day )) + " days.\n";
+                        + std::to_string(unit::convert::to( substepTimer.currentStepLength(), unit::day )) + " days\n";
                     OpmLog::problem(msg);
                 }
                 // reset states
