@@ -37,9 +37,11 @@ namespace Opm
     struct NewtonIterationBlackoilInterleavedParameters
     {
         double linear_solver_reduction_;
+        double ilu_relaxation_;
         int    linear_solver_maxiter_;
         int    linear_solver_restart_;
         int    linear_solver_verbosity_;
+        int    ilu_fillin_level_;
         bool   newton_use_gmres_;
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
@@ -61,6 +63,8 @@ namespace Opm
             require_full_sparsity_pattern_ = param.getDefault("require_full_sparsity_pattern", require_full_sparsity_pattern_);
             ignoreConvergenceFailure_ = param.getDefault("linear_solver_ignoreconvergencefailure", ignoreConvergenceFailure_);
             linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
+            ilu_relaxation_           = param.getDefault("ilu_relaxation", ilu_relaxation_ );
+            ilu_fillin_level_         = param.getDefault("ilu_fillin_level",  ilu_fillin_level_ );
         }
 
         // set default values
@@ -74,6 +78,8 @@ namespace Opm
             require_full_sparsity_pattern_ = false;
             ignoreConvergenceFailure_ = false;
             linear_solver_use_amg_    = false;
+            ilu_fillin_level_         = 0;
+            ilu_relaxation_           = 0.9;
         }
     };
 
