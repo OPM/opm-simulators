@@ -975,7 +975,12 @@ namespace Opm {
                 residual_norms.push_back(CNV[compIdx]);
             }
 
-            const bool converged = converged_MB && converged_CNV && converged_Well;
+            bool converged = converged_MB && converged_Well;
+
+            // do not care about the cell based residual in the last two Newton
+            // iterations
+            if (iteration < param_.max_strict_iter_)
+                converged = converged && converged_CNV;
 
             if ( terminal_output_ )
             {

@@ -27,7 +27,7 @@ macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol pref
     set(DIR ${casename})
   endif()
   if(${ARGC} GREATER 8)
-    set(TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${ARGV1} deckfilename=${OPM_DATA_ROOT}/${DIR}/${filename})
+    set(TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${ARGV8} deck_filename=${OPM_DATA_ROOT}/${DIR}/${filename}.DATA)
   else()
     set(TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${filename})
   endif()
@@ -113,8 +113,8 @@ add_test_compareECLFiles(spe3 SPE3CASE1 flow_legacy ${abs_tol} ${rel_tol} compar
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(msw_2d_h 2D_H__ flow_multisegment ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(polymer_simple2D 2D_THREEPHASE_POLY_HETER flow_polymer ${abs_tol} ${rel_tol} compareECLFiles "" polymer_simple2D run.param)
-add_test_compareECLFiles(spe5 SPE5CASE1 flow_solvent ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(polymer_simple2D 2D_THREEPHASE_POLY_HETER flow_polymer ${abs_tol} ${rel_tol} compareECLFiles "")
+add_test_compareECLFiles(spe5 SPE5CASE1 flow_solvent ${abs_tol} ${rel_tol} compareECLFiles "" spe5 run.param)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
