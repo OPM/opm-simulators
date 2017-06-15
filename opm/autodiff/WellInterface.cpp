@@ -29,7 +29,7 @@ namespace Opm
 
 
     WellInterface::
-    WellInterface(const Well* well, const size_t time_step, const Wells* wells)
+    WellInterface(const Well* well, const int time_step, const Wells* wells)
     {
 
         // TODO: trying to use wells struct as little as possible here, be prepared to

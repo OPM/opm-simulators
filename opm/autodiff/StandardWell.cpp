@@ -27,11 +27,11 @@
 namespace Opm
 {
     StandardWell::
-    StandardWell(const Well* well, const size_t time_step, const Wells* wells)
+    StandardWell(const Well* well, const int time_step, const Wells* wells)
     : WellInterface(well, time_step, wells)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
-    , well_variables_(blocksize) // the number of the primary variables
+    , well_variables_(numWellEq) // the number of the primary variables
     {
         dune_B_.setBuildMode( Mat::row_wise );
         dune_C_.setBuildMode( Mat::row_wise );
@@ -111,7 +111,7 @@ namespace Opm
         for (int phase = 0; phase < np; ++phase) {
             well_variables_[phase] = 0.0;
             well_variables_[phase].setValue(well_state.wellSolutions()[index_of_well_ + nw * phase]);
-            well_variables_[phase].setDerivative(blocksize + phase, 1.0);
+            well_variables_[phase].setDerivative(numEq + phase, 1.0);
         }
     }
 
@@ -182,7 +182,9 @@ namespace Opm
     {
         EvalWell qs = 0.0;
 
-        const WellControls* wc = well_controls_;
+        return qs; // temporary
+
+        /* const WellControls* wc = well_controls_;
         const int np = number_of_phases_;
 
         // the target from the well controls
@@ -199,7 +201,7 @@ namespace Opm
             }
 
             if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
-                return wellVariables_[XvarWell];
+                return well_variables_[XvarWell];
             }
 
             // rate control
@@ -211,8 +213,8 @@ namespace Opm
 
         // Producers
         if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP ) {
-            return wellVariables_[XvarWell] * wellVolumeFractionScaled(phase);
-        }
+            return well_variables_[XvarWell] * wellVolumeFractionScaled(phase);
+        } */
 
     }
 
@@ -251,21 +253,21 @@ namespace Opm
     wellVolumeFraction(const int phase) const
     {
         if (phase == Water) {
-            return wellVariables_[WFrac];
+            return well_variables_[WFrac];
         }
 
         if (phase == Gas) {
-            return wellVariables_[GFrac];
+            return well_variables_[GFrac];
         }
 
         // Oil fraction
         EvalWell well_fraction = 1.0;
-        if (active_[Water]) {
-            well_fraction -= wellVariables_[WFrac];
+        if (active()[Water]) {
+            well_fraction -= well_variables_[WFrac];
         }
 
-        if (active_[Gas]) {
-            well_fraction -= wellVariables_[GFrac];
+        if (active()[Gas]) {
+            well_fraction -= well_variables_[GFrac];
         }
         return well_fraction;
     }
@@ -287,6 +289,6 @@ namespace Opm
         assert(sum_volume_fraction_scaled.value() != 0.);
 
         return wellVolumeFractionScaled(phase) / sum_volume_fraction_scaled;
-    }
+     }
 
 }

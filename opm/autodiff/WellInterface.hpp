@@ -54,7 +54,7 @@ namespace Opm
         using WellState = WellStateFullyImplicitBlackoilDense;
 
         /// Constructor
-        WellInterface(const Well* well, const size_t time_step, const Wells* wells);
+        WellInterface(const Well* well, const int time_step, const Wells* wells);
 
         /// Well name.
         const std::string& name() const;

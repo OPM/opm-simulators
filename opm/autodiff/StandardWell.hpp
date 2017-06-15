@@ -53,6 +53,19 @@ namespace Opm
             GFrac = 2
         };
 
+
+        typedef double Scalar;
+        // static const int numEq = BlackoilIndices::numEq;
+        static const int numEq = 3;
+        static const int numWellEq = numEq; //number of wellEq is the same as numEq in the model
+        static const int solventCompIdx = 3; //TODO get this from ebos
+        typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+        typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+        typedef Dune::BlockVector<VectorBlockType> BVector;
+        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
+        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+
         // for now, using the matrix and block version in StandardWellsDense.
         // TODO: for bettern generality, it should contain blocksize_field and blocksize_well.
         // They are allowed to be different and it will create four types of matrix blocks and two types of
@@ -71,7 +84,7 @@ namespace Opm
         using WellInterface::MatrixBlockType;
         using WellInterface::VectorBlockType; */
 
-        StandardWell(const Well* well, const size_t time_step, const Wells* wells);
+        StandardWell(const Well* well, const int time_step, const Wells* wells);
 
         /// the densities of the fluid  in each perforation
         virtual const std::vector<double>& perfDensities() const;

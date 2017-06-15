@@ -1,4 +1,5 @@
 
+#include <opm/autodiff/StandardWell.hpp>
 
 
 namespace Opm {
@@ -15,6 +16,7 @@ namespace Opm {
        : wells_active_(wells_arg!=nullptr)
        , wells_(wells_arg)
        , wells_ecl_(wells_ecl)
+       , well_container_(createWellContainer(wells_ecl, wells_arg, current_timeIdx) )
        , well_collection_(well_collection)
        , param_(param)
        , terminal_output_(terminal_output)
@@ -138,6 +140,63 @@ namespace Opm {
     setVFPProperties(const VFPProperties*  vfp_properties_arg)
     {
         vfp_properties_ = vfp_properties_arg;
+    }
+
+
+
+
+
+
+    template<typename TypeTag>
+    std::vector<std::shared_ptr<WellInterface> >
+    StandardWellsDense<TypeTag>::
+    createWellContainer(const std::vector<const Well*>& wells_ecl,
+                        const Wells* wells_arg,
+                        const int time_step)
+    {
+        std::vector<std::shared_ptr<WellInterface> > wells_container;
+
+        // There might be no wells in the process
+        if (localWellsActive()) {
+            const int nw = wells_arg->number_of_wells;
+
+            wells_container.reserve(nw);
+
+            // With the following way, it will have the same order with wells struct
+            // Hopefully, it can generate the same residual history with master branch
+            for (int w = 0; w < nw; ++w) {
+                const std::string well_name = std::string(wells_arg->name[w]);
+
+                // finding the location of the well in wells_ecl
+                const int nw_wells_ecl = wells_ecl.size();
+                int index_well = 0;
+                for (; index_well < nw_wells_ecl; ++index_well) {
+                    if (well_name == wells_ecl[index_well]->name()) {
+                        break;
+                    }
+                }
+
+                // It should be able to find in wells_ecl.
+                if (index_well == nw_wells_ecl) {
+                    OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
+                }
+
+                const Well* well_ecl = wells_ecl[index_well];
+                if (well_ecl->getStatus(time_step) == WellCommon::SHUT) {
+                    continue;
+                }
+
+                if (well_ecl->isMultiSegment(time_step)) {
+                    OPM_THROW(Opm::NumericalProblem, "Not handling Multisegment Wells for now");
+                }
+
+                // Basically, we are handling all the wells as StandardWell for the moment
+                // TODO: to be changed when we begin introducing MultisegmentWell
+                wells_container.push_back(std::make_shared<StandardWell>(well_ecl, time_step, wells_arg) );
+            }
+        }
+
+        return wells_container;
     }
 
 

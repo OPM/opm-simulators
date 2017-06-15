@@ -49,6 +49,7 @@
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include <opm/autodiff/RateConverter.hpp>
+#include <opm/autodiff/WellInterface.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
@@ -59,6 +60,7 @@
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
 #include <math.h>
+
 
 namespace Opm {
 
@@ -295,6 +297,18 @@ enum WellVariablePositions {
             bool wells_active_;
             const Wells*   wells_;
             const std::vector< const Well* > wells_ecl_;
+
+            // a vector of all the wells.
+            // eventually, the wells_ above should be gone.
+            // the name is just temporary
+            // later, might make share_ptr const later.
+            // TODO: forget why make it share_ptr instead of unique_ptr
+            std::vector<std::shared_ptr<WellInterface> > well_container_;
+
+            std::vector<std::shared_ptr<WellInterface> >
+            createWellContainer(const std::vector<const Well*>& wells_ecl,
+                                const Wells* wells_arg,
+                                const int time_step);
 
             // Well collection is used to enforce the group control
             WellCollection* well_collection_;
