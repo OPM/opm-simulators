@@ -94,13 +94,11 @@ public:
     template <class Evaluation>
     static Evaluation vaporPressure(const Evaluation& temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Scalar A = 7.00909;;
         const Scalar B = 1462.266;;
         const Scalar C = 215.110;;
 
-        return 100*1.334*Toolbox::pow(10.0, (A - (B/(temperature - 273.15 + C))));
+        return 100*1.334*Opm::pow(10.0, (A - (B/(temperature - 273.15 + C))));
     }
 
     /*!
@@ -183,10 +181,8 @@ public:
     static Evaluation heatVap(Evaluation temperature,
                               const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        temperature = Toolbox::min(temperature, criticalTemperature()); // regularization
-        temperature = Toolbox::max(temperature, 0.0); // regularization
+        temperature = Opm::min(temperature, criticalTemperature()); // regularization
+        temperature = Opm::max(temperature, 0.0); // regularization
 
         const Scalar T_crit = criticalTemperature();
         const Scalar Tr1 = boilingTemperature()/criticalTemperature();
@@ -200,7 +196,7 @@ public:
         /* Variation with temperature according to Watson relation eq 7-12.1*/
         const Evaluation& Tr2 = temperature/criticalTemperature();
         const Scalar n = 0.375;
-        const Evaluation& DH_vap = DH_v_boil * Toolbox::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
+        const Evaluation& DH_vap = DH_v_boil * Opm::pow(((1.0 - Tr2)/(1.0 - Tr1)), n);
 
         return (DH_vap/molarMass());          // we need [J/kg]
     }
@@ -250,18 +246,16 @@ public:
     template <class Evaluation>
     static Evaluation molarLiquidDensity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // saturated molar volume according to Lide, CRC Handbook of
         // Thermophysical and Thermochemical Data, CRC Press, 1994
         // valid for 245 < Temperature < 600
-        temperature = Toolbox::min(temperature, 500.0); // regularization
-        temperature = Toolbox::max(temperature, 250.0); // regularization
+        temperature = Opm::min(temperature, 500.0); // regularization
+        temperature = Opm::max(temperature, 250.0); // regularization
 
         const Scalar A1 = 0.25919;           // from table
         const Scalar A2 = 0.0014569;         // from table
-        const Evaluation& expo = 1.0 + Toolbox::pow((1.0 - temperature/criticalTemperature()), (2.0/7.0));
-        return 1.0/(A2*Toolbox::pow(A1, expo));
+        const Evaluation& expo = 1.0 + Opm::pow((1.0 - temperature/criticalTemperature()), (2.0/7.0));
+        return 1.0/(A2*Opm::pow(A1, expo));
     }
 
     /*!
@@ -295,17 +289,15 @@ public:
     template <class Evaluation>
     static Evaluation gasViscosity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
+        temperature = Opm::min(temperature, 500.0); // regularization
+        temperature = Opm::max(temperature, 250.0); // regularization
 
-        temperature = Toolbox::min(temperature, 500.0); // regularization
-        temperature = Toolbox::max(temperature, 250.0); // regularization
-
-        const Evaluation& Tr = Toolbox::max(temperature/criticalTemperature(), 1e-10);
+        const Evaluation& Tr = Opm::max(temperature/criticalTemperature(), 1e-10);
         const Scalar Fp0 = 1.0;
         const Scalar xi = 0.004623;
-        const Evaluation& eta_xi = Fp0*(0.807*Toolbox::pow(Tr, 0.618)
-                                   - 0.357*Toolbox::exp(-0.449*Tr)
-                                   + 0.34*Toolbox::exp(-4.058*Tr)
+        const Evaluation& eta_xi = Fp0*(0.807*Opm::pow(Tr, 0.618)
+                                   - 0.357*Opm::exp(-0.449*Tr)
+                                   + 0.34*Opm::exp(-4.058*Tr)
                                    + 0.018);
         return eta_xi/xi / 1e7; // [Pa s]
     }
@@ -316,17 +308,15 @@ public:
     template <class Evaluation>
     static Evaluation liquidViscosity(Evaluation temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        temperature = Toolbox::min(temperature, 500.0); // regularization
-        temperature = Toolbox::max(temperature, 250.0); // regularization
+        temperature = Opm::min(temperature, 500.0); // regularization
+        temperature = Opm::max(temperature, 250.0); // regularization
 
         const Scalar A = -3.82;
         const Scalar B = 1027.0;
         const Scalar C = -6.38e-4;
         const Scalar D = 4.52e-7;
 
-        return 1e-3*Toolbox::exp(A
+        return 1e-3*Opm::exp(A
                              + B/temperature
                              + C*temperature
                              + D*temperature*temperature); // in [cP]

@@ -122,15 +122,12 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcgn(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Scalar PC_VG_REG = 0.01;
 
         // sum of liquid saturations
         const auto& St =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx))
-            + FsToolbox::template decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx))
+            + Opm::decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
 
         Evaluation Se = (St - params.Swrx())/(1. - params.Swrx());
 
@@ -142,8 +139,8 @@ public:
 
         if (Se>PC_VG_REG && Se<1-PC_VG_REG)
         {
-            const Evaluation& x = Toolbox::pow(Se,-1/params.vgM()) - 1;
-            return Toolbox::pow(x, 1.0 - params.vgM())/params.vgAlpha();
+            const Evaluation& x = Opm::pow(Se,-1/params.vgM()) - 1;
+            return Opm::pow(x, 1.0 - params.vgM())/params.vgAlpha();
         }
 
         // value and derivative at regularization point
@@ -153,9 +150,9 @@ public:
         else
             Se_regu = 1-PC_VG_REG;
         const Evaluation& x = std::pow(Se_regu,-1/params.vgM())-1;
-        const Evaluation& pc = Toolbox::pow(x, 1.0/params.vgN())/params.vgAlpha();
+        const Evaluation& pc = Opm::pow(x, 1.0/params.vgN())/params.vgAlpha();
         const Evaluation& pc_prime =
-            Toolbox::pow(x, 1/params.vgN()-1)
+            Opm::pow(x, 1/params.vgN()-1)
             * std::pow(Se_regu,-1/params.vgM()-1)
             / (-params.vgM())
             / params.vgAlpha()
@@ -178,11 +175,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
         Evaluation Se = (Sw-params.Swr())/(1.-params.Snr());
 
         Scalar PC_VG_REG = 0.01;
@@ -194,8 +188,8 @@ public:
             Se=1.0;
 
         if (Se>PC_VG_REG && Se<1-PC_VG_REG) {
-            Evaluation x = Toolbox::pow(Se,-1/params.vgM()) - 1.0;
-            x = Toolbox::pow(x, 1 - params.vgM());
+            Evaluation x = Opm::pow(Se,-1/params.vgM()) - 1.0;
+            x = Opm::pow(x, 1 - params.vgM());
             return x/params.vgAlpha();
         }
 
@@ -207,9 +201,9 @@ public:
             Se_regu = 1.0 - PC_VG_REG;
 
         const Evaluation& x = std::pow(Se_regu,-1/params.vgM())-1;
-        const Evaluation& pc = Toolbox::pow(x, 1/params.vgN())/params.vgAlpha();
+        const Evaluation& pc = Opm::pow(x, 1/params.vgN())/params.vgAlpha();
         const Evaluation& pc_prime =
-            Toolbox::pow(x,1/params.vgN()-1)
+            Opm::pow(x,1/params.vgN()-1)
             * std::pow(Se_regu, -1.0/params.vgM() - 1)
             / (-params.vgM())
             / params.vgAlpha()
@@ -277,11 +271,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
         // transformation to effective saturation
         const Evaluation& Se = (Sw - params.Swr()) / (1-params.Swr());
 
@@ -289,8 +280,8 @@ public:
         if(Se > 1.0) return 1.;
         if(Se < 0.0) return 0.;
 
-        const Evaluation& r = 1. - Toolbox::pow(1 - Toolbox::pow(Se, 1/params.vgM()), params.vgM());
-        return Toolbox::sqrt(Se)*r*r;
+        const Evaluation& r = 1. - Opm::pow(1 - Opm::pow(Se, 1/params.vgM()), params.vgM());
+        return Opm::sqrt(Se)*r*r;
     }
 
     /*!
@@ -308,15 +299,12 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krn(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& Sn =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(nonWettingPhaseIdx));
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
-        Evaluation Swe = Toolbox::min((Sw - params.Swr()) / (1 - params.Swr()), 1.);
-        Evaluation Ste = Toolbox::min((Sw + Sn - params.Swr()) / (1 - params.Swr()), 1.);
+            Opm::decay<Evaluation>(fluidState.saturation(wettingPhaseIdx));
+        Evaluation Swe = Opm::min((Sw - params.Swr()) / (1 - params.Swr()), 1.);
+        Evaluation Ste = Opm::min((Sw + Sn - params.Swr()) / (1 - params.Swr()), 1.);
 
         // regularization
         if(Swe <= 0.0) Swe = 0.;
@@ -324,8 +312,8 @@ public:
         if(Ste - Swe <= 0.0) return 0.;
 
         Evaluation krn_;
-        krn_ = Toolbox::pow(1 - Toolbox::pow(Swe, 1/params.vgM()), params.vgM());
-        krn_ -= Toolbox::pow(1 - Toolbox::pow(Ste, 1/params.vgM()), params.vgM());
+        krn_ = Opm::pow(1 - Opm::pow(Swe, 1/params.vgM()), params.vgM());
+        krn_ -= Opm::pow(1 - Opm::pow(Ste, 1/params.vgM()), params.vgM());
         krn_ *= krn_;
 
         if (params.krRegardsSnr())
@@ -333,11 +321,11 @@ public:
             // regard Snr in the permeability of the non-wetting
             // phase, see Helmig1997
             const Evaluation& resIncluded =
-                Toolbox::max(Toolbox::min(Sw - params.Snr() / (1-params.Swr()), 1.0), 0.0);
-            krn_ *= Toolbox::sqrt(resIncluded );
+                Opm::max(Opm::min(Sw - params.Snr() / (1-params.Swr()), 1.0), 0.0);
+            krn_ *= Opm::sqrt(resIncluded );
         }
         else
-            krn_ *= Toolbox::sqrt(Sn / (1 - params.Swr()));
+            krn_ *= Opm::sqrt(Sn / (1 - params.Swr()));
 
         return krn_;
     }
@@ -356,12 +344,9 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krg(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& Sg =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
-        const Evaluation& Se = Toolbox::min(((1-Sg) - params.Sgr()) / (1 - params.Sgr()), 1.);
+            Opm::decay<Evaluation>(fluidState.saturation(gasPhaseIdx));
+        const Evaluation& Se = Opm::min(((1-Sg) - params.Sgr()) / (1 - params.Sgr()), 1.);
 
         // regularization
         if(Se > 1.0)
@@ -377,8 +362,8 @@ public:
         }
 
         return scaleFactor
-            * Toolbox::pow(1 - Se, 1.0/3.)
-            * Toolbox::pow(1 - Toolbox::pow(Se, 1/params.vgM()), 2*params.vgM());
+            * Opm::pow(1 - Se, 1.0/3.)
+            * Opm::pow(1 - Opm::pow(Se, 1/params.vgM()), 2*params.vgM());
     }
 };
 } // namespace Opm

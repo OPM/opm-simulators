@@ -90,8 +90,6 @@ public:
     static Evaluation heatConductivity(const Params& params,
                                        const FluidState& fluidState)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         Valgrind::CheckDefined(params.vacuumLambda());
 
         Evaluation lambda = 0;
@@ -99,9 +97,9 @@ public:
             Valgrind::CheckDefined(params.fullySaturatedLambda(phaseIdx));
 
             if (FluidSystem::isLiquid(phaseIdx)) {
-                const auto& sat = Toolbox::template decay<Evaluation>(fluidState.saturation(phaseIdx));
+                const auto& sat = Opm::decay<Evaluation>(fluidState.saturation(phaseIdx));
                 lambda +=
-                    regularizedSqrt_(Toolbox::max(0.0, Toolbox::min(1.0, sat)))
+                    regularizedSqrt_(Opm::max(0.0, Opm::min(1.0, sat)))
                     * (params.fullySaturatedLambda(phaseIdx) - params.vacuumLambda());
             }
             else { // gas phase
@@ -118,19 +116,18 @@ protected:
     template <class Evaluation>
     static Evaluation regularizedSqrt_(const Evaluation& x)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
+        typedef Opm::Spline<Scalar> Spline;
 
         static const Scalar xMin = 1e-2;
         static const Scalar sqrtXMin = std::sqrt(xMin);
         static const Scalar fPrimeXMin = 1.0/(2*std::sqrt(xMin));
         static const Scalar fPrime0 = 2*fPrimeXMin;
-        typedef Opm::Spline<Scalar> Spline;
         static const Spline sqrtRegSpline(0, xMin, // x0, x1
                                           0, sqrtXMin, // y0, y1
                                           fPrime0, fPrimeXMin); // m0, m1
 
         if (x > xMin)
-            return Toolbox::sqrt(x);
+            return Opm::sqrt(x);
         else if (x <= 0)
             return fPrime0 * x;
         else

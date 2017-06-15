@@ -177,8 +177,6 @@ public:
     static Evaluation gasEnthalpy(const Evaluation& temperature,
                                   const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalProblem,
@@ -194,7 +192,7 @@ public:
             // dependence on pressure, so we can just return the
             // specific enthalpy at the point of regularization, i.e.
             // the triple pressure - 100Pa
-            return enthalpyRegion2_(temperature, Toolbox::createConstant(triplePressure() - 100));
+            return enthalpyRegion2_<Evaluation>(temperature, triplePressure() - 100);
         }
         Evaluation pv = vaporPressure(temperature);
         if (pressure > pv) {
@@ -554,8 +552,6 @@ public:
     template <class Evaluation>
     static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (!Region2::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalProblem,
@@ -588,7 +584,7 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = Toolbox::scalarValue(pv)*1e-8;
+            Scalar eps = Opm::scalarValue(pv)*1e-8;
             Evaluation v0 = volumeRegion2_(temperature, pv);
             Evaluation v1 = volumeRegion2_(temperature, pv + eps);
             Evaluation dv_dp = (v1 - v0)/eps;
@@ -637,8 +633,6 @@ public:
     template <class Evaluation>
     static Evaluation gasPressure(const Evaluation& temperature, Scalar density)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Valgrind::CheckDefined(temperature);
         Valgrind::CheckDefined(density);
 
@@ -650,7 +644,7 @@ public:
         Evaluation deltaP = pressure*2;
         Valgrind::CheckDefined(pressure);
         Valgrind::CheckDefined(deltaP);
-        for (int i = 0; i < 5 && std::abs(Toolbox::scalarValue(pressure)*1e-9) < std::abs(Toolbox::scalarValue(deltaP)); ++i) {
+        for (int i = 0; i < 5 && std::abs(Opm::scalarValue(pressure)*1e-9) < std::abs(Opm::scalarValue(deltaP)); ++i) {
             Evaluation f = gasDensity(temperature, pressure) - density;
 
             Evaluation df_dp;
@@ -683,8 +677,6 @@ public:
     template <class Evaluation>
     static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (!Region1::isValid(temperature, pressure))
         {
             OPM_THROW(NumericalProblem,
@@ -700,7 +692,7 @@ public:
 
             // calculate the partial derivative of the specific volume
             // to the pressure at the vapor pressure.
-            Scalar eps = Toolbox::scalarValue(pv)*1e-8;
+            Scalar eps = Opm::scalarValue(pv)*1e-8;
             Evaluation v0 = volumeRegion1_(temperature, pv);
             Evaluation v1 = volumeRegion1_(temperature, pv + eps);
             Evaluation dv_dp = (v1 - v0)/eps;
@@ -746,16 +738,14 @@ public:
     template <class Evaluation>
     static Evaluation liquidPressure(const Evaluation& temperature, Scalar density)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // We use the Newton method for this. For the initial value we
         // assume the pressure to be 10% higher than the vapor
         // pressure
         Evaluation pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = Toolbox::scalarValue(pressure)*1e-7;
+        Scalar eps = Opm::scalarValue(pressure)*1e-7;
 
         Evaluation deltaP = pressure*2;
-        for (int i = 0; i < 5 && std::abs(Toolbox::scalarValue(pressure)*1e-9) < std::abs(Toolbox::scalarValue(deltaP)); ++i) {
+        for (int i = 0; i < 5 && std::abs(Opm::scalarValue(pressure)*1e-9) < std::abs(Opm::scalarValue(deltaP)); ++i) {
             Evaluation f = liquidDensity(temperature, pressure) - density;
 
             Evaluation df_dp;
@@ -879,9 +869,8 @@ private:
     template <class Evaluation>
     static Evaluation heatCap_p_Region1_(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
         return
-            - Toolbox::pow(Region1::tau(temperature), 2.0) *
+            - Opm::pow(Region1::tau(temperature), 2.0) *
             Region1::ddgamma_ddtau(temperature, pressure) *
             Rs;
     }
@@ -944,10 +933,8 @@ private:
     template <class Evaluation>
     static Evaluation heatCap_p_Region2_(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         return
-            - Toolbox::pow(Region2::tau(temperature), 2 ) *
+            - Opm::pow(Region2::tau(temperature), 2 ) *
             Region2::ddgamma_ddtau(temperature, pressure) *
             Rs;
     }

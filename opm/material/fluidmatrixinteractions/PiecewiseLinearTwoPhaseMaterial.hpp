@@ -131,9 +131,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const auto& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -179,9 +178,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const auto& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -201,9 +199,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krn(const Params& params, const FluidState& fs)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
         const auto& Sw =
-            FsToolbox::template decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fs.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrn(params, Sw);
     }
@@ -232,14 +229,12 @@ private:
                                      const ValueVector& yValues,
                                      const Evaluation& x)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (x <= xValues.front())
             return yValues.front();
         if (x >= xValues.back())
             return yValues.back();
 
-        size_t segIdx = findSegmentIndex_(xValues, Toolbox::scalarValue(x));
+        size_t segIdx = findSegmentIndex_(xValues, Opm::scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -257,14 +252,12 @@ private:
                                       const ValueVector& yValues,
                                       const Evaluation& x)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (x >= xValues.front())
             return yValues.front();
         if (x <= xValues.back())
             return yValues.back();
 
-        size_t segIdx = findSegmentIndexDescending_(xValues, Toolbox::scalarValue(x));
+        size_t segIdx = findSegmentIndexDescending_(xValues, Opm::scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -282,14 +275,12 @@ private:
                                  const ValueVector& yValues,
                                  const Evaluation& x)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
+        if (x <= xValues.front())
+            return 0.0;
+        if (x >= xValues.back())
+            return 0.0;
 
-        if (Toolbox::scalarValue(x) <= xValues.front())
-            return Toolbox::createConstant(0.0);
-        if (Toolbox::scalarValue(x) >= xValues.back())
-            return Toolbox::createConstant(0.0);
-
-        size_t segIdx = findSegmentIndex_(xValues, Toolbox::scalarValue(x));
+        size_t segIdx = findSegmentIndex_(xValues, Opm::scalarValue(x));
 
         Scalar x0 = xValues[segIdx];
         Scalar x1 = xValues[segIdx + 1];
@@ -297,7 +288,7 @@ private:
         Scalar y0 = yValues[segIdx];
         Scalar y1 = yValues[segIdx + 1];
 
-        return Toolbox::createConstant((y1 - y0)/(x1 - x0));
+        return (y1 - y0)/(x1 - x0);
     }
 
     static size_t findSegmentIndex_(const ValueVector& xValues, Scalar x)

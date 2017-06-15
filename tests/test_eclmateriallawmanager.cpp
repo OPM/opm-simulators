@@ -385,8 +385,8 @@ inline void testAll()
                     fs.setSaturation(oilPhaseIdx, So);
                     fs.setSaturation(gasPhaseIdx, Sg);
 
-                    Scalar pcFam1[numPhases];
-                    Scalar pcFam2[numPhases];
+                    Scalar pcFam1[numPhases]  = { 0.0, 0.0 };
+                    Scalar pcFam2[numPhases]  = { 0.0, 0.0 };
                     MaterialLaw::capillaryPressures(pcFam1,
                                                     materialLawManager.materialLawParams(elemIdx),
                                                     fs);
@@ -394,8 +394,8 @@ inline void testAll()
                                                     fam2MaterialLawManager.materialLawParams(elemIdx),
                                                     fs);
 
-                    Scalar krFam1[numPhases];
-                    Scalar krFam2[numPhases];
+                    Scalar krFam1[numPhases] = { 0.0, 0.0 };
+                    Scalar krFam2[numPhases] = { 0.0, 0.0 };
                     MaterialLaw::relativePermeabilities(krFam1,
                                                         materialLawManager.materialLawParams(elemIdx),
                                                         fs);
@@ -427,8 +427,8 @@ inline void testAll()
                             krnSwMdc_in[1],
                             elemIdx);
 
-                    Scalar pcSwMdc_out[2];
-                    Scalar krnSwMdc_out[2];
+                    Scalar pcSwMdc_out[2] = { 0.0, 0.0 };
+                    Scalar krnSwMdc_out[2] = { 0.0, 0.0 };
                     hysterMaterialLawManager.oilWaterHysteresisParams(
                             pcSwMdc_out[0],
                             krnSwMdc_out[0],

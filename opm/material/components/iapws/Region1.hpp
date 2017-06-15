@@ -60,11 +60,7 @@ public:
     template <class Evaluation>
     static bool isValid(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return
-            Toolbox::scalarValue(temperature) <= 623.15 &&
-            Toolbox::scalarValue(pressure) <= 100e6;
+        return temperature <= 623.15 && pressure <= 100e6;
 
         // actually this is:
         /*
@@ -139,14 +135,12 @@ public:
     template <class Evaluation>
     static Evaluation gamma(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation pi_ = pi(pressure);    /* reduced pressure */
 
         Evaluation result = 0;
         for (int i = 0; i < 34; ++i) {
-            result += n(i)*Toolbox::pow(7.1 - pi_, I(i))*Toolbox::pow(tau_ - 1.222, J(i));
+            result += n(i)*Opm::pow(7.1 - pi_, I(i))*Opm::pow(tau_ - 1.222, J(i));
         }
 
         return result;
@@ -167,17 +161,15 @@ public:
     template <class Evaluation>
     static Evaluation dgamma_dtau(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation pi_ = pi(pressure);    /* reduced pressure */
 
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
         for (int i = 0; i < 34; i++) {
             result +=
                 n(i) *
-                Toolbox::pow(7.1 - pi_, static_cast<Scalar>(I(i))) *
-                Toolbox::pow(tau_ - 1.222,  static_cast<Scalar>(J(i)-1)) *
+                Opm::pow(7.1 - pi_, static_cast<Scalar>(I(i))) *
+                Opm::pow(tau_ - 1.222,  static_cast<Scalar>(J(i)-1)) *
                 J(i);
         }
 
@@ -198,18 +190,16 @@ public:
     template <class Evaluation>
     static Evaluation dgamma_dpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation pi_ = pi(pressure);    /* reduced pressure */
 
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
         for (int i = 0; i < 34; i++) {
             result +=
                 -n(i) *
                 I(i) *
-                Toolbox::pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
-                Toolbox::pow(tau_ - 1.222, static_cast<Scalar>(J(i)));
+                Opm::pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
+                Opm::pow(tau_ - 1.222, static_cast<Scalar>(J(i)));
         }
 
         return result;
@@ -230,19 +220,17 @@ public:
     template <class Evaluation>
     static Evaluation ddgamma_dtaudpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation pi_ = pi(pressure);    /* reduced pressure */
 
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
         for (int i = 0; i < 34; i++) {
             result +=
                 -n(i) *
                 I(i) *
                 J(i) *
-                Toolbox::pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
-                Toolbox::pow(tau_ - 1.222, static_cast<Scalar>(J(i) - 1));
+                Opm::pow(7.1 - pi_, static_cast<Scalar>(I(i) - 1)) *
+                Opm::pow(tau_ - 1.222, static_cast<Scalar>(J(i) - 1));
         }
 
         return result;
@@ -263,19 +251,17 @@ public:
     template <class Evaluation>
     static Evaluation ddgamma_ddpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation pi_ = pi(pressure);    /* reduced pressure */
 
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
         for (int i = 0; i < 34; i++) {
             result +=
                 n(i) *
                 I(i) *
                 (I(i) - 1) *
-                Toolbox::pow(7.1 - pi_, I(i) - 2) *
-                Toolbox::pow(tau_ - 1.222, J(i));
+                Opm::pow(7.1 - pi_, I(i) - 2) *
+                Opm::pow(tau_ - 1.222, J(i));
         }
 
         return result;
@@ -295,19 +281,17 @@ public:
     template <class Evaluation>
     static Evaluation ddgamma_ddtau(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation pi_ = pi(pressure);    /* reduced pressure */
 
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
         for (int i = 0; i < 34; i++) {
             result +=
                 n(i) *
-                Toolbox::pow(7.1 - pi_, I(i)) *
+                Opm::pow(7.1 - pi_, I(i)) *
                 J(i) *
                 (J(i) - 1) *
-                Toolbox::pow(tau_ - 1.222,  J(i) - 2);
+                Opm::pow(tau_ - 1.222,  J(i) - 2);
         }
 
         return result;

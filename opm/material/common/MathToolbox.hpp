@@ -214,9 +214,15 @@ public:
 template <class Eval1, class Eval2>
 struct ReturnEval_
 {
-    typedef typename std::conditional<std::is_assignable<Eval1, Eval2>::value,
-                                      Eval1,
-                                      Eval2>::type type;
+    typedef typename std::remove_const< typename std::remove_reference<Eval1>::type >::type T;
+    typedef typename std::remove_const< typename std::remove_reference<Eval2>::type >::type U;
+
+    //static_assert(std::is_constructible<T, U>::value || std::is_constructible<U, T>::value,
+    //              "One of the argument types must be constructible to the other");
+
+    typedef typename std::conditional<std::is_constructible<T, U>::value,
+                                      T,
+                                      U>::type type;
 };
 
 // these are convenience functions for not having to type MathToolbox<Scalar>::foo()

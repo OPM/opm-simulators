@@ -181,8 +181,6 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, const Evaluation& y) const
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
 #ifndef NDEBUG
         if (!applies(x,y))
         {
@@ -201,11 +199,11 @@ public:
         unsigned i =
             static_cast<unsigned>(
                 std::max(0, std::min(static_cast<int>(numX()) - 2,
-                                     static_cast<int>(Toolbox::scalarValue(alpha)))));
+                                     static_cast<int>(Opm::scalarValue(alpha)))));
         unsigned j =
             static_cast<unsigned>(
                 std::max(0, std::min(static_cast<int>(numY()) - 2,
-                                     static_cast<int>(Toolbox::scalarValue(beta)))));
+                                     static_cast<int>(Opm::scalarValue(beta)))));
 
         alpha -= i;
         beta -= j;

@@ -98,8 +98,6 @@ public:
     template <class Evaluation>
     static Evaluation viscosity(const Evaluation& temperature, const Evaluation& rho)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Evaluation rhoBar = rho/322.0;
         Evaluation TBar = temperature/criticalTemperature;
 
@@ -126,10 +124,10 @@ public:
             tmp3 *= 1.0/TBar - 1;
         };
         muBar *= rhoBar;
-        muBar = Toolbox::exp(muBar);
+        muBar = Opm::exp(muBar);
 
         // muBar *= muBar_0
-        muBar  *= 100*Toolbox::sqrt(TBar);
+        muBar  *= 100*Opm::sqrt(TBar);
         const Scalar H[4] = {
             1.67752, 2.20462, 0.6366564, -0.241605
         };
@@ -160,8 +158,6 @@ public:
     template <class Evaluation>
     static Evaluation thermalConductivityIAPWS(const Evaluation& T, const Evaluation& rho)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         static const Scalar thcond_tstar = 647.26 ;
         static const Scalar thcond_rhostar = 317.7 ;
         /*static const Scalar thcond_kstar = 1.0 ;*/
@@ -195,7 +191,7 @@ public:
         Evaluation rhobar = rho / thcond_rhostar;
 
         /* fast implementation... minimised calls to 'pow' routine... */
-        Evaluation Troot = Toolbox::sqrt(Tbar);
+        Evaluation Troot = Opm::sqrt(Tbar);
         Evaluation Tpow = Troot;
         Evaluation lam = 0;
 
@@ -207,10 +203,10 @@ public:
         lam +=
             thcond_b0 + thcond_b1
             * rhobar + thcond_b2
-            * Toolbox::exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
+            * Opm::exp(thcond_B1 * ((rhobar + thcond_B2)*(rhobar + thcond_B2)));
 
-        Evaluation DTbar = Toolbox::abs(Tbar - 1) + thcond_c4;
-        Evaluation DTbarpow = Toolbox::pow(DTbar, 3./5);
+        Evaluation DTbar = Opm::abs(Tbar - 1) + thcond_c4;
+        Evaluation DTbarpow = Opm::pow(DTbar, 3./5);
         Evaluation Q = 2. + thcond_c5 / DTbarpow;
 
         Evaluation S;
@@ -219,16 +215,16 @@ public:
         else
             S = thcond_c6 / DTbarpow;
 
-        Evaluation rhobar18 = Toolbox::pow(rhobar, 1.8);
-        Evaluation rhobarQ = Toolbox::pow(rhobar, Q);
+        Evaluation rhobar18 = Opm::pow(rhobar, 1.8);
+        Evaluation rhobarQ = Opm::pow(rhobar, Q);
 
         lam +=
-            (thcond_d1 / Toolbox::pow(Tbar,10.0) + thcond_d2) * rhobar18 *
-            Toolbox::exp(thcond_c1 * (1 - rhobar * rhobar18))
+            (thcond_d1 / Opm::pow(Tbar,10.0) + thcond_d2) * rhobar18 *
+            Opm::exp(thcond_c1 * (1 - rhobar * rhobar18))
             + thcond_d3 * S * rhobarQ *
-            Toolbox::exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
+            Opm::exp((Q/(1+Q))*(1 - rhobar*rhobarQ))
             + thcond_d4 *
-            Toolbox::exp(thcond_c2 * Toolbox::pow(Troot,3.0) + thcond_c3 / Toolbox::pow(rhobar,5.0));
+            Opm::exp(thcond_c2 * Opm::pow(Troot,3.0) + thcond_c3 / Opm::pow(rhobar,5.0));
         return /*thcond_kstar * */ lam;
     }
 };

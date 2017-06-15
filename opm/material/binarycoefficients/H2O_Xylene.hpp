@@ -65,14 +65,13 @@ public:
     template <class Evaluation>
     static Evaluation gasDiffCoeff(Evaluation temperature, Evaluation pressure)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
         typedef Opm::H2O<double> H2O;
         typedef Opm::Xylene<double> Xylene;
 
-        temperature = Toolbox::max(temperature, 1e-9); // regularization
-        temperature = Toolbox::min(temperature, 500.0); // regularization
-        pressure = Toolbox::max(pressure, 0.0); // regularization
-        pressure = Toolbox::min(pressure, 1e8); // regularization
+        temperature = Opm::max(temperature, 1e-9); // regularization
+        temperature = Opm::min(temperature, 500.0); // regularization
+        pressure = Opm::max(pressure, 0.0); // regularization
+        pressure = Opm::min(pressure, 1e8); // regularization
 
         const double M_x = 1e3*Xylene::molarMass(); // [g/mol] molecular weight of xylene
         const double M_w = 1e3*H2O::molarMass(); // [g/mol] molecular weight of water
@@ -87,14 +86,14 @@ public:
         const double T_scal_x = 1.15*Tb_x;
         const double T_scal_wx = std::sqrt(T_scal_w*T_scal_x);
 
-        const Evaluation& T_star = Toolbox::max(temperature/T_scal_wx, 1e-5);
+        const Evaluation& T_star = Opm::max(temperature/T_scal_wx, 1e-5);
 
-        const Evaluation& Omega = 1.06036/Toolbox::pow(T_star, 0.1561) + 0.193/Toolbox::exp(T_star*0.47635)
-            + 1.03587/Toolbox::exp(T_star*1.52996) + 1.76474/Toolbox::exp(T_star*3.89411);
+        const Evaluation& Omega = 1.06036/Opm::pow(T_star, 0.1561) + 0.193/Opm::exp(T_star*0.47635)
+            + 1.03587/Opm::exp(T_star*1.52996) + 1.76474/Opm::exp(T_star*3.89411);
         const double  B_ = 0.00217 - 0.0005*std::sqrt(1.0/M_w + 1.0/M_x);
         const double Mr = (M_w + M_x)/(M_w*M_x);
         return 1e-4
-            *(B_*Toolbox::pow(temperature,1.6)*std::sqrt(Mr))
+            *(B_*Opm::pow(temperature,1.6)*std::sqrt(Mr))
             /(1e-5*pressure*std::pow(sigma_wx, 2.0)*Omega);
     }
 

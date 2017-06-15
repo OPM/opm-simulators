@@ -137,8 +137,6 @@ public:
     template <class Evaluation>
     static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Scalar Tc = criticalTemperature();
         Scalar Vc = 84.525138; // critical specific volume [cm^3/mol]
         Scalar omega = 0.078; // accentric factor
@@ -152,23 +150,21 @@ public:
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
         Evaluation Tstar = 1.2593 * temperature/Tc;
         Evaluation Omega_v =
-            1.16145*Toolbox::pow(Tstar, -0.14874) +
-            0.52487*Toolbox::exp(- 0.77320*Tstar) +
-            2.16178*Toolbox::exp(- 2.43787*Tstar);
-        return 40.7851e-7*Fc*Toolbox::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
+            1.16145*Opm::pow(Tstar, -0.14874) +
+            0.52487*Opm::exp(- 0.77320*Tstar) +
+            2.16178*Opm::exp(- 2.43787*Tstar);
+        return 40.7851e-7*Fc*Opm::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
     }
 
     // simpler method, from old constrelAir.hh
     template <class Evaluation>
     static Evaluation simpleGasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if(temperature < 273.15 || temperature > 660.) {
             OPM_THROW(NumericalProblem,
                       "Air: Temperature (" << temperature << "K) out of range");
         }
-        return 1.496e-6*Toolbox::pow(temperature, 1.5)/(temperature + 120);
+        return 1.496e-6*Opm::pow(temperature, 1.5)/(temperature + 120);
     }
 
     /*!
@@ -252,26 +248,24 @@ public:
     static Evaluation gasHeatCapacity(const Evaluation& temperature,
                                       const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // scale temperature by reference temp of 100K
         Evaluation phi = temperature/100;
 
         Evaluation c_p =
             0.661738E+01
             -0.105885E+01 * phi
-            +0.201650E+00 * Toolbox::pow(phi,2.)
-            -0.196930E-01 * Toolbox::pow(phi,3.)
-            +0.106460E-02 * Toolbox::pow(phi,4.)
-            -0.303284E-04 * Toolbox::pow(phi,5.)
-            +0.355861E-06 * Toolbox::pow(phi,6.);
+            +0.201650E+00 * Opm::pow(phi,2.)
+            -0.196930E-01 * Opm::pow(phi,3.)
+            +0.106460E-02 * Opm::pow(phi,4.)
+            -0.303284E-04 * Opm::pow(phi,5.)
+            +0.355861E-06 * Opm::pow(phi,6.);
         c_p +=
-            -0.549169E+01 * Toolbox::pow(phi,-1.)
-            +0.585171E+01* Toolbox::pow(phi,-2.)
-            -0.372865E+01* Toolbox::pow(phi,-3.)
-            +0.133981E+01* Toolbox::pow(phi,-4.)
-            -0.233758E+00* Toolbox::pow(phi,-5.)
-            +0.125718E-01* Toolbox::pow(phi,-6.);
+            -0.549169E+01 * Opm::pow(phi,-1.)
+            +0.585171E+01* Opm::pow(phi,-2.)
+            -0.372865E+01* Opm::pow(phi,-3.)
+            +0.133981E+01* Opm::pow(phi,-4.)
+            -0.233758E+00* Opm::pow(phi,-5.)
+            +0.125718E-01* Opm::pow(phi,-6.);
         c_p *= IdealGas::R / (molarMass() * 1000); // in J/mol/K * mol / kg / 1000 = kJ/kg/K
 
         return  c_p;

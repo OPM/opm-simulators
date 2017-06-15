@@ -52,8 +52,7 @@ unsigned invertLinearPolynomial(SolContainer& sol,
                                 Scalar a,
                                 Scalar b)
 {
-    typedef MathToolbox<Scalar> Toolbox;
-    if (std::abs(Toolbox::scalarValue(a)) < 1e-30)
+    if (std::abs(Opm::scalarValue(a)) < 1e-30)
         return 0;
 
     sol[0] = -b/a;
@@ -82,10 +81,8 @@ unsigned invertQuadraticPolynomial(SolContainer& sol,
                                    Scalar b,
                                    Scalar c)
 {
-    typedef MathToolbox<Scalar> Toolbox;
-
     // check for a line
-    if (std::abs(Toolbox::scalarValue(a)) < 1e-30)
+    if (std::abs(Opm::scalarValue(a)) < 1e-30)
         return invertLinearPolynomial(sol, b, c);
 
     // discriminant
@@ -93,7 +90,7 @@ unsigned invertQuadraticPolynomial(SolContainer& sol,
     if (Delta < 0)
         return 0; // no real roots
 
-    Delta = Toolbox::sqrt(Delta);
+    Delta = Opm::sqrt(Delta);
     sol[0] = (- b + Delta)/(2*a);
     sol[1] = (- b - Delta)/(2*a);
 
@@ -112,8 +109,6 @@ void invertCubicPolynomialPostProcess_(SolContainer& sol,
                                        Scalar c,
                                        Scalar d)
 {
-    typedef MathToolbox<Scalar> Toolbox;
-
     // do one Newton iteration on the analytic solution if the
     // precision is increased
     for (int i = 0; i < numSol; ++i) {
@@ -121,12 +116,12 @@ void invertCubicPolynomialPostProcess_(SolContainer& sol,
         Scalar fOld = d + x*(c + x*(b + x*a));
 
         Scalar fPrime = c + x*(2*b + x*3*a);
-        if (std::abs(Toolbox::scalarValue(fPrime)) < 1e-30)
+        if (std::abs(Opm::scalarValue(fPrime)) < 1e-30)
             continue;
         x -= fOld/fPrime;
 
         Scalar fNew = d + x*(c + x*(b + x*a));
-        if (std::abs(Toolbox::scalarValue(fNew)) < std::abs(Toolbox::scalarValue(fOld)))
+        if (std::abs(Opm::scalarValue(fNew)) < std::abs(Opm::scalarValue(fOld)))
             sol[i] = x;
     }
 }
@@ -156,10 +151,8 @@ unsigned invertCubicPolynomial(SolContainer* sol,
                                Scalar c,
                                Scalar d)
 {
-    typedef MathToolbox<Scalar> Toolbox;
-
     // reduces to a quadratic polynomial
-    if (std::abs(Toolbox::scalarValue(a)) < 1e-30)
+    if (std::abs(Opm::scalarValue(a)) < 1e-30)
         return invertQuadraticPolynomial(sol, b, c, d);
 
     // normalize the polynomial
@@ -172,7 +165,7 @@ unsigned invertCubicPolynomial(SolContainer* sol,
     Scalar p = c - b*b/3;
     Scalar q = d + (2*b*b*b - 9*b*c)/27;
 
-    if (std::abs(Toolbox::scalarValue(p)) > 1e-30 && std::abs(Toolbox::scalarValue(q)) > 1e-30) {
+    if (std::abs(Opm::scalarValue(p)) > 1e-30 && std::abs(Opm::scalarValue(q)) > 1e-30) {
         // At this point
         //
         // t^3 + p*t + q = 0
@@ -206,9 +199,9 @@ unsigned invertCubicPolynomial(SolContainer* sol,
         Scalar wDisc = q*q/4 + p*p*p/27;
         if (wDisc >= 0) { // the positive discriminant case:
             // calculate the cube root of - q/2 + sqrt(q^2/4 + p^3/27)
-            Scalar u = - q/2 + Toolbox::sqrt(wDisc);
-            if (u < 0) u = - Toolbox::pow(-u, 1.0/3);
-            else u = Toolbox::pow(u, 1.0/3);
+            Scalar u = - q/2 + Opm::sqrt(wDisc);
+            if (u < 0) u = - Opm::pow(-u, 1.0/3);
+            else u = Opm::pow(u, 1.0/3);
 
             // at this point, u != 0 since p^3 = 0 is necessary in order
             // for u = 0 to hold, so
@@ -221,10 +214,10 @@ unsigned invertCubicPolynomial(SolContainer* sol,
         }
         else { // the negative discriminant case:
             Scalar uCubedRe = - q/2;
-            Scalar uCubedIm = Toolbox::sqrt(-wDisc);
+            Scalar uCubedIm = Opm::sqrt(-wDisc);
             // calculate the cube root of - q/2 + sqrt(q^2/4 + p^3/27)
-            Scalar uAbs  = Toolbox::pow(Toolbox::sqrt(uCubedRe*uCubedRe + uCubedIm*uCubedIm), 1.0/3);
-            Scalar phi = Toolbox::atan2(uCubedIm, uCubedRe)/3;
+            Scalar uAbs  = Opm::pow(Opm::sqrt(uCubedRe*uCubedRe + uCubedIm*uCubedIm), 1.0/3);
+            Scalar phi = Opm::atan2(uCubedIm, uCubedRe)/3;
 
             // calculate the length and the angle of the primitive root
 
@@ -266,7 +259,7 @@ unsigned invertCubicPolynomial(SolContainer* sol,
             // values for phi which differ by 2/3*pi. This allows to
             // calculate the three real roots of the polynomial:
             for (int i = 0; i < 3; ++i) {
-                sol[i] = Toolbox::cos(phi)*(uAbs - p/(3*uAbs)) - b/3;
+                sol[i] = Opm::cos(phi)*(uAbs - p/(3*uAbs)) - b/3;
                 phi += 2*M_PI/3;
             }
 
@@ -282,24 +275,24 @@ unsigned invertCubicPolynomial(SolContainer* sol,
     }
     // Handle some (pretty unlikely) special cases required to avoid
     // divisions by zero in the code above...
-    else if (std::abs(Toolbox::scalarValue(p)) < 1e-30 && std::abs(Toolbox::scalarValue(q)) < 1e-30) {
+    else if (std::abs(Opm::scalarValue(p)) < 1e-30 && std::abs(Opm::scalarValue(q)) < 1e-30) {
         // t^3 = 0, i.e. triple root at t = 0
         sol[0] = sol[1] = sol[2] = 0.0 - b/3;
         return 3;
     }
-    else if (std::abs(Toolbox::scalarValue(p)) < 1e-30 && std::abs(Toolbox::scalarValue(q)) > 1e-30) {
+    else if (std::abs(Opm::scalarValue(p)) < 1e-30 && std::abs(Opm::scalarValue(q)) > 1e-30) {
         // t^3 + q = 0,
         //
         // i. e. single real root at t=curt(q)
         Scalar t;
-        if (-q > 0) t = Toolbox::pow(-q, 1./3);
-        else t = - Toolbox::pow(q, 1./3);
+        if (-q > 0) t = Opm::pow(-q, 1./3);
+        else t = - Opm::pow(q, 1./3);
         sol[0] = t - b/3;
 
         return 1;
     }
 
-    assert(std::abs(Toolbox::scalarValue(p)) > 1e-30 && std::abs(Toolbox::scalarValue(q)) > 1e-30);
+    assert(std::abs(Opm::scalarValue(p)) > 1e-30 && std::abs(Opm::scalarValue(q)) > 1e-30);
 
     // t^3 + p*t = 0 = t*(t^2 + p),
     //
@@ -310,9 +303,9 @@ unsigned invertCubicPolynomial(SolContainer* sol,
     }
 
     // two additional real roots at t = sqrt(-p) and t = -sqrt(-p)
-    sol[0] = -Toolbox::sqrt(-p) - b/3;;
+    sol[0] = -Opm::sqrt(-p) - b/3;;
     sol[1] = 0.0 - b/3;
-    sol[2] = Toolbox::sqrt(-p) - b/3;
+    sol[2] = Opm::sqrt(-p) - b/3;
 
     return 3;
 }

@@ -115,13 +115,11 @@ public:
                                        const FluidState& fluidState)
     {
         typedef typename std::remove_reference<decltype(values[0])>::type Evaluation;
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             const Evaluation& S =
-                FsToolbox::template decay<Evaluation>(fluidState.saturation(phaseIdx));
-            values[phaseIdx] = Toolbox::max(Toolbox::min(S, 1.0), 0.0);
+                Opm::decay<Evaluation>(fluidState.saturation(phaseIdx));
+            values[phaseIdx] = Opm::max(Opm::min(S, 1.0), 0.0);
         }
     }
 
@@ -182,23 +180,16 @@ public:
     static typename std::enable_if<(numPhases > 1), Evaluation>::type
     krw(const Params& /*params*/, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
-        return Toolbox::max(0.0, Toolbox::min(1.0, Sw));
+        return Opm::max(0.0, Opm::min(1.0, Sw));
     }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
     twoPhaseSatKrw(const Params& /*params*/, const Evaluation& Sw)
-    {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::max(0.0, Toolbox::min(1.0, Sw));
-    }
+    { return Opm::max(0.0, Opm::min(1.0, Sw)); }
 
     /*!
      * \brief The relative permability of the liquid non-wetting phase
@@ -207,22 +198,17 @@ public:
     static typename std::enable_if<(numPhases > 1), Evaluation>::type
     krn(const Params& /*params*/, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& Sn =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
 
-        return Toolbox::max(0.0, Toolbox::min(1.0, Sn));
+        return Opm::max(0.0, Opm::min(1.0, Sn));
     }
 
     template <class Evaluation>
     static typename std::enable_if<numPhases == 2, Evaluation>::type
     twoPhaseSatKrn(const Params& /*params*/, const Evaluation& Sw)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
-        return Toolbox::max(0.0, Toolbox::min(1.0, 1.0 - Sw));
+        return Opm::max(0.0, Opm::min(1.0, 1.0 - Opm::decay<Evaluation>(Sw)));
     }
 
     /*!
@@ -234,13 +220,10 @@ public:
     static typename std::enable_if< (numPhases > 2), Evaluation>::type
     krg(const Params& /*params*/, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& Sg =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::gasPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(Traits::gasPhaseIdx));
 
-        return Toolbox::max(0.0, Toolbox::min(1.0, Sg));
+        return Opm::max(0.0, Opm::min(1.0, Sg));
     }
 
     /*!
@@ -251,7 +234,7 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static typename std::enable_if< (Traits::numPhases > 2), Evaluation>::type
     pcgn(const Params& /*params*/, const FluidState& /*fluidState*/)
-    { return 0; }
+    { return 0.0; }
 };
 } // namespace Opm
 

@@ -62,8 +62,6 @@ public:
     template <class Evaluation>
     static Evaluation saturationPressure(const Evaluation& temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         static const Scalar n[10] = {
             0.11670521452767e4, -0.72421316703206e6, -0.17073846940092e2,
             0.12020824702470e5, -0.32325550322333e7, 0.14915108613530e2,
@@ -77,7 +75,7 @@ public:
         const Evaluation& B = (n[2]*sigma + n[3])*sigma + n[4];
         const Evaluation& C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Evaluation tmp = 2*C/(Toolbox::sqrt(B*B - 4*A*C) - B);
+        Evaluation tmp = 2*C/(Opm::sqrt(B*B - 4*A*C) - B);
         tmp *= tmp;
         tmp *= tmp;
 
@@ -95,8 +93,6 @@ public:
     template <class Evaluation>
     static Evaluation vaporTemperature(const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         static const Scalar n[10] = {
             0.11670521452767e4, -0.72421316703206e6, -0.17073846940092e2,
             0.12020824702470e5, -0.32325550322333e7, 0.14915108613530e2,
@@ -109,9 +105,9 @@ public:
         const Evaluation& F = n[0]*beta2 + n[3]*beta + n[6];
         const Evaluation& G = n[1]*beta2 + n[4]*beta + n[7];
 
-        const Evaluation& D = ( 2.*G)/(-F -Toolbox::sqrt(pow(F,2.) - 4.*E*G));
+        const Evaluation& D = ( 2.*G)/(-F -Opm::sqrt(pow(F,2.) - 4.*E*G));
 
-        const Evaluation& temperature = (n[9] + D - Toolbox::sqrt(pow(n[9]+D , 2.) - 4.* (n[8] + n[9]*D)) ) * 0.5;
+        const Evaluation& temperature = (n[9] + D - Opm::sqrt(pow(n[9]+D , 2.) - 4.* (n[8] + n[9]*D)) ) * 0.5;
 
         return temperature;
     }

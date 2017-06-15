@@ -74,13 +74,11 @@ public:
      */
     Scalar massFraction(unsigned phaseIdx, unsigned compIdx) const
     {
-        typedef Opm::MathToolbox<Scalar> Toolbox;
-
         return
-            Toolbox::abs(sumMoleFractions_[phaseIdx])
+            Opm::abs(sumMoleFractions_[phaseIdx])
             *moleFraction_[phaseIdx][compIdx]
             *FluidSystem::molarMass(compIdx)
-            / Toolbox::max(1e-40, Toolbox::abs(averageMolarMass_[phaseIdx]));
+            / Opm::max(1e-40, Opm::abs(averageMolarMass_[phaseIdx]));
     }
 
     /*!
@@ -136,15 +134,12 @@ public:
     template <class FluidState>
     void assign(const FluidState& fs)
     {
-        typedef typename FluidState::Scalar FsScalar;
-        typedef Opm::MathToolbox<FsScalar> FsToolbox;
-
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             averageMolarMass_[phaseIdx] = 0;
             sumMoleFractions_[phaseIdx] = 0;
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 moleFraction_[phaseIdx][compIdx] =
-                    FsToolbox::template decay<Scalar>(fs.moleFraction(phaseIdx, compIdx));
+                    Opm::decay<Scalar>(fs.moleFraction(phaseIdx, compIdx));
 
                 averageMolarMass_[phaseIdx] += moleFraction_[phaseIdx][compIdx]*FluidSystem::molarMass(compIdx);
                 sumMoleFractions_[phaseIdx] += moleFraction_[phaseIdx][compIdx];

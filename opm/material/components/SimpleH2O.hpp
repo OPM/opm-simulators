@@ -127,8 +127,6 @@ public:
     template <class Evaluation>
     static Evaluation vaporPressure(const Evaluation& T)
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (T > criticalTemperature())
             return criticalPressure();
         if (T < tripleTemperature())
@@ -147,7 +145,7 @@ public:
         Evaluation B = (n[2]*sigma + n[3])*sigma + n[4];
         Evaluation C = (n[5]*sigma + n[6])*sigma + n[7];
 
-        Evaluation tmp = 2.0*C/(Toolbox::sqrt(B*B - 4.0*A*C) - B);
+        Evaluation tmp = 2.0*C/(Opm::sqrt(B*B - 4.0*A*C) - B);
         tmp *= tmp;
         tmp *= tmp;
 

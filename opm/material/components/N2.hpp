@@ -103,8 +103,6 @@ public:
     template <class Evaluation>
     static Evaluation vaporPressure(const Evaluation& temperature)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         if (temperature > criticalTemperature())
             return criticalPressure();
         if (temperature < tripleTemperature())
@@ -113,14 +111,14 @@ public:
 
         // note: this is the ancillary equation given on page 1368
         const Evaluation& sigma = 1.0 - temperature/criticalTemperature();
-        const Evaluation& sqrtSigma = Toolbox::sqrt(sigma);
+        const Evaluation& sqrtSigma = Opm::sqrt(sigma);
         const Scalar N1 = -6.12445284;
         const Scalar N2 = 1.26327220;
         const Scalar N3 = -0.765910082;
         const Scalar N4 = -1.77570564;
         return
             criticalPressure() *
-            Toolbox::exp(criticalTemperature()/temperature*
+            Opm::exp(criticalTemperature()/temperature*
                          (sigma*(N1 +
                                  sqrtSigma*N2 +
                                  sigma*(sqrtSigma*N3 +
@@ -267,8 +265,6 @@ public:
     template <class Evaluation>
     static Evaluation gasViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Scalar Tc = criticalTemperature();
         const Scalar Vc = 90.1; // critical specific volume [cm^3/mol]
         const Scalar omega = 0.037; // accentric factor
@@ -282,10 +278,10 @@ public:
         Scalar Fc = 1 - 0.2756*omega + 0.059035*mu_r4;
         const Evaluation& Tstar = 1.2593 * temperature/Tc;
         const Evaluation& Omega_v =
-            1.16145*Toolbox::pow(Tstar, -0.14874) +
-            0.52487*Toolbox::exp(- 0.77320*Tstar) +
-            2.16178*Toolbox::exp(- 2.43787*Tstar);
-        const Evaluation& mu = 40.785*Fc*Toolbox::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
+            1.16145*Opm::pow(Tstar, -0.14874) +
+            0.52487*Opm::exp(- 0.77320*Tstar) +
+            2.16178*Opm::exp(- 2.43787*Tstar);
+        const Evaluation& mu = 40.785*Fc*Opm::sqrt(M*temperature)/(std::pow(Vc, 2./3)*Omega_v);
 
         // convertion from micro poise to Pa s
         return mu/1e6 / 10;

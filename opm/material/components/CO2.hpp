@@ -132,8 +132,6 @@ public:
     template <class Evaluation>
     static Evaluation vaporPressure(const Evaluation& T)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         static const Scalar a[4] =
             { -7.0602087, 1.9391218, -1.6463597, -3.2995634 };
         static const Scalar t[4] =
@@ -143,10 +141,10 @@ public:
         Evaluation exponent = 0;
         Evaluation Tred = T/criticalTemperature();
         for (int i = 0; i < 5; ++i)
-            exponent += a[i]*Toolbox::pow(1 - Tred, t[i]);
+            exponent += a[i]*Opm::pow(1 - Tred, t[i]);
         exponent *= 1.0/Tred;
 
-        return Toolbox::exp(exponent)*criticalPressure();
+        return Opm::exp(exponent)*criticalPressure();
     }
 
 
@@ -203,8 +201,6 @@ public:
     template <class Evaluation>
     static Evaluation gasViscosity(Evaluation temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Scalar a0 = 0.235156;
         const Scalar a1 = -0.491266;
         const Scalar a2 = 5.211155e-2;
@@ -220,14 +216,14 @@ public:
         const Scalar ESP = 251.196;
 
         if(temperature < 275.) // regularization
-            temperature = Toolbox::createConstant(275.0);
+            temperature = 275.0;
         Evaluation TStar = temperature/ESP;
 
         // mu0: viscosity in zero-density limit
-        const Evaluation& logTStar = Toolbox::log(TStar);
-        Evaluation SigmaStar = Toolbox::exp(a0 + logTStar*(a1 + logTStar*(a2 + logTStar*(a3 + logTStar*a4))));
+        const Evaluation& logTStar = Opm::log(TStar);
+        Evaluation SigmaStar = Opm::exp(a0 + logTStar*(a1 + logTStar*(a2 + logTStar*(a3 + logTStar*a4))));
 
-        Evaluation mu0 = 1.00697*Toolbox::sqrt(temperature) / SigmaStar;
+        Evaluation mu0 = 1.00697*Opm::sqrt(temperature) / SigmaStar;
 
         const Evaluation& rho = gasDensity(temperature, pressure); // CO2 mass density [kg/m^3]
 
@@ -235,9 +231,9 @@ public:
         Evaluation dmu =
             d11*rho
             + d21*rho*rho
-            + d64*Toolbox::pow(rho, 6.0)/(TStar*TStar*TStar)
-            + d81*Toolbox::pow(rho, 8.0)
-            + d82*Toolbox::pow(rho, 8.0)/TStar;
+            + d64*Opm::pow(rho, 6.0)/(TStar*TStar*TStar)
+            + d81*Opm::pow(rho, 8.0)
+            + d82*Opm::pow(rho, 8.0)/TStar;
 
         return (mu0 + dmu)/1.0e6; // conversion to [Pa s]
     }

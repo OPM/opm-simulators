@@ -135,24 +135,22 @@ public:
     template <class Evaluation>
     static Evaluation gamma(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& tau_ = tau(temperature); /* reduced temperature */
         const Evaluation& pi_ = pi(pressure);      /* reduced pressure */
 
         Evaluation result;
 
         // ideal gas part
-        result = Toolbox::ln(pi_);
+        result = Opm::log(pi_);
         for (int i = 0; i < 9; ++i)
-            result += n_g(i)*Toolbox::pow(tau_, J_g(i));
+            result += n_g(i)*Opm::pow(tau_, J_g(i));
 
         // residual part
         for (int i = 0; i < 43; ++i)
             result +=
                 n_r(i)*
-                Toolbox::pow(pi_, I_r(i))*
-                Toolbox::pow(tau_ - 0.5, J_r(i));
+                Opm::pow(pi_, I_r(i))*
+                Opm::pow(tau_ - 0.5, J_r(i));
         return result;
     }
 
@@ -171,27 +169,25 @@ public:
     template <class Evaluation>
     static Evaluation dgamma_dtau(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
         for (int i = 0; i < 9; i++) {
             result +=
                 n_g(i) *
                 J_g(i) *
-                Toolbox::pow(tau_, static_cast<Scalar>(J_g(i) - 1));
+                Opm::pow(tau_, static_cast<Scalar>(J_g(i) - 1));
         }
 
         // residual part
         for (int i = 0; i < 43; i++) {
             result +=
                 n_r(i) *
-                Toolbox::pow(pi_,  static_cast<Scalar>(I_r(i))) *
+                Opm::pow(pi_,  static_cast<Scalar>(I_r(i))) *
                 J_r(i) *
-                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
+                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
         }
 
         return result;
@@ -212,8 +208,6 @@ public:
     template <class Evaluation>
     static Evaluation dgamma_dpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
@@ -225,8 +219,8 @@ public:
             result +=
                 n_r(i) *
                 I_r(i) *
-                Toolbox::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
-                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
+                Opm::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
+                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
         }
 
         return result;
@@ -247,13 +241,11 @@ public:
     template <class Evaluation>
     static Evaluation ddgamma_dtaudpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
 
         // residual part
         for (int i = 0; i < 43; i++) {
@@ -261,8 +253,8 @@ public:
                 n_r(i) *
                 I_r(i) *
                 J_r(i) *
-                Toolbox::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
-                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
+                Opm::pow(pi_, static_cast<Scalar>(I_r(i) - 1)) *
+                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 1));
         }
 
         return result;
@@ -283,8 +275,6 @@ public:
     template <class Evaluation>
     static Evaluation ddgamma_ddpi(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
@@ -297,8 +287,8 @@ public:
                 n_r(i) *
                 I_r(i) *
                 (I_r(i) - 1) *
-                Toolbox::pow(pi_, static_cast<Scalar>(I_r(i) - 2)) *
-                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
+                Opm::pow(pi_, static_cast<Scalar>(I_r(i) - 2)) *
+                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i)));
         }
 
         return result;
@@ -319,29 +309,27 @@ public:
     template <class Evaluation>
     static Evaluation ddgamma_ddtau(const Evaluation& temperature, const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         const Evaluation& tau_ = tau(temperature);   /* reduced temperature */
         const Evaluation& pi_ = pi(pressure);    /* reduced pressure */
 
         // ideal gas part
-        Evaluation result = Toolbox::createConstant(0.0);
+        Evaluation result = 0.0;
         for (int i = 0; i < 9; i++) {
             result +=
                 n_g(i) *
                 J_g(i) *
                 (J_g(i) - 1) *
-                Toolbox::pow(tau_, static_cast<Scalar>(J_g(i) - 2));
+                Opm::pow(tau_, static_cast<Scalar>(J_g(i) - 2));
         }
 
         // residual part
         for (int i = 0; i < 43; i++) {
             result +=
                 n_r(i) *
-                Toolbox::pow(pi_,  I_r(i)) *
+                Opm::pow(pi_,  I_r(i)) *
                 J_r(i) *
                 (J_r(i) - 1.) *
-                Toolbox::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 2));
+                Opm::pow(tau_ - 0.5, static_cast<Scalar>(J_r(i) - 2));
         }
 
         return result;

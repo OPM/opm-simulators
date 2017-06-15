@@ -251,8 +251,6 @@ public:
     template <class Evaluation>
     Evaluation eval(const Evaluation& x, bool extrapolate = false) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (!extrapolate && !applies(x))
             OPM_THROW(Opm::NumericalProblem,
                       "Tried to evaluate a tabulated function outside of its range");
@@ -264,7 +262,7 @@ public:
         else if (extrapolate && x > xValues_.back())
             segIdx = numSamples() - 2;
         else
-            segIdx = findSegmentIndex_(Toolbox::scalarValue(x));
+            segIdx = findSegmentIndex_(Opm::scalarValue(x));
 
         Scalar x0 = xValues_[segIdx];
         Scalar x1 = xValues_[segIdx + 1];
@@ -289,15 +287,13 @@ public:
     template <class Evaluation>
     Evaluation evalDerivative(const Evaluation& x, bool extrapolate = false) const
     {
-        typedef Opm::MathToolbox<Evaluation> Toolbox;
-
         if (!extrapolate && !applies(x)) {
             OPM_THROW(Opm::NumericalProblem,
                       "Tried to evaluate a derivative of a tabulated"
                       " function outside of its range");
         }
 
-        unsigned segIdx = findSegmentIndex_(Toolbox::scalarValue(x));
+        unsigned segIdx = findSegmentIndex_(Opm::scalarValue(x));
         return evalDerivative_(x, segIdx);
     }
 

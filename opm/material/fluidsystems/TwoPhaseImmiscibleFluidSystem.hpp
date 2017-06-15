@@ -226,12 +226,10 @@ public:
                            const ParameterCache<ParamCacheEval>& /*paramCache*/,
                            unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::density(temperature, pressure);
         return NonwettingPhase::density(temperature, pressure);
@@ -243,12 +241,10 @@ public:
                              const ParameterCache<ParamCacheEval>& /*paramCache*/,
                              unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::viscosity(temperature, pressure);
         return NonwettingPhase::viscosity(temperature, pressure);
@@ -261,8 +257,6 @@ public:
                                        unsigned phaseIdx,
                                        unsigned compIdx)
     {
-        typedef MathToolbox<LhsEval> LhsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
         assert(0 <= compIdx && compIdx < numComponents);
 
@@ -271,8 +265,8 @@ public:
             // the component in the fluid. Probably that's not worth
             // the effort, since the fugacity coefficient of the other
             // component is infinite anyway...
-            return LhsToolbox::createConstant(1.0);
-        return LhsToolbox::createConstant(std::numeric_limits<Scalar>::infinity());
+            return 1.0;
+        return std::numeric_limits<Scalar>::infinity();
     }
 
     //! \copydoc BaseFluidSystem::enthalpy
@@ -281,12 +275,10 @@ public:
                             const ParameterCache<ParamCacheEval>& /*paramCache*/,
                             unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::enthalpy(temperature, pressure);
         return NonwettingPhase::enthalpy(temperature, pressure);
@@ -298,12 +290,10 @@ public:
                                        const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                        unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::thermalConductivity(temperature, pressure);
         return NonwettingPhase::thermalConductivity(temperature, pressure);
@@ -315,12 +305,10 @@ public:
                                 const ParameterCache<ParamCacheEval>& /*paramCache*/,
                                 unsigned phaseIdx)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         assert(0 <= phaseIdx && phaseIdx < numPhases);
 
-        const auto& temperature = FsToolbox::template decay<LhsEval>(fluidState.temperature(phaseIdx));
-        const auto& pressure = FsToolbox::template decay<LhsEval>(fluidState.pressure(phaseIdx));
+        const auto& temperature = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& pressure = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
         if (phaseIdx == wettingPhaseIdx)
             return WettingPhase::heatCapacity(temperature, pressure);
         return NonwettingPhase::heatCapacity(temperature, pressure);

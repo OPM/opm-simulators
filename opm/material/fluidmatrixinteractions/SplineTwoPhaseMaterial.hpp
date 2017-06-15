@@ -126,10 +126,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation pcnw(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatPcnw(params, Sw);
     }
@@ -197,10 +195,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krw(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sw =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(Traits::wettingPhaseIdx));
 
         return twoPhaseSatKrw(params, Sw);
     }
@@ -238,10 +234,8 @@ public:
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation krn(const Params& params, const FluidState& fluidState)
     {
-        typedef MathToolbox<typename FluidState::Scalar> FsToolbox;
-
         const Evaluation& Sn =
-            FsToolbox::template decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
+            Opm::decay<Evaluation>(fluidState.saturation(Traits::nonWettingPhaseIdx));
 
         return twoPhaseSatKrn(params, 1.0 - Sn);
     }

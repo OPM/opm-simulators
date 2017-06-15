@@ -136,8 +136,6 @@ public:
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
                                      const Evaluation& pressure)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // Numerical coefficents from Palliser and McKibbin
         static const Scalar f[] = {
             2.63500e-1, 7.48368e-6, 1.44611e-6, -3.80860e-10
@@ -157,8 +155,8 @@ public:
         const Evaluation& S_lSAT =
             f[0]
             + f[1]*theta
-            + f[2]*Toolbox::pow(theta, 2)
-            + f[3]*Toolbox::pow(theta, 3);
+            + f[2]*Opm::pow(theta, 2)
+            + f[3]*Opm::pow(theta, 3);
 
         // Regularization
         if (S > S_lSAT)
@@ -179,7 +177,7 @@ public:
         Evaluation d_h = 0;
         for (int i = 0; i<=3; ++i) {
             for (int j = 0; j <= 2; ++j) {
-                d_h += a[i][j] * Toolbox::pow(theta, i) * Toolbox::pow(m, j);
+                d_h += a[i][j] * Opm::pow(theta, i) * Opm::pow(m, j);
             }
         }
 
@@ -284,18 +282,16 @@ public:
     template <class Evaluation>
     static Evaluation liquidPressure(const Evaluation& temperature, const Evaluation& density)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         // We use the newton method for this. For the initial value we
         // assume the pressure to be 10% higher than the vapor
         // pressure
         Evaluation pressure = 1.1*vaporPressure(temperature);
-        Scalar eps = Toolbox::scalarValue(pressure)*1e-7;
+        Scalar eps = Opm::scalarValue(pressure)*1e-7;
 
         Evaluation deltaP = pressure*2;
         for (int i = 0;
              i < 5
-                 && std::abs(Toolbox::scalarValue(pressure)*1e-9) < std::abs(Toolbox::scalarValue(deltaP));
+                 && std::abs(Opm::scalarValue(pressure)*1e-9) < std::abs(Opm::scalarValue(deltaP));
              ++i)
         {
             const Evaluation& f = liquidDensity(temperature, pressure) - density;
@@ -330,14 +326,12 @@ public:
     template <class Evaluation>
     static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
-        typedef MathToolbox<Evaluation> Toolbox;
-
         Evaluation T_C = temperature - 273.15;
         if(temperature <= 275.) // regularization
-            T_C = Toolbox::createConstant(275.0);
+            T_C = 275.0;
 
-        Evaluation A = (0.42*std::pow((std::pow(salinity, 0.8)-0.17), 2) + 0.045)*Toolbox::pow(T_C, 0.8);
-        Evaluation mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*Toolbox::exp(-A);
+        Evaluation A = (0.42*std::pow((std::pow(salinity, 0.8)-0.17), 2) + 0.045)*Opm::pow(T_C, 0.8);
+        Evaluation mu_brine = 0.1 + 0.333*salinity + (1.65+91.9*salinity*salinity*salinity)*Opm::exp(-A);
 
         return mu_brine/1000.0; // convert to [Pa s] (todo: check if correct cP->Pa s is times 10...)
     }
