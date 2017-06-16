@@ -1028,20 +1028,41 @@ private:
                 rockRecord.getItem("COMPRESSIBILITY").getSIDouble(0);
         }
 
-        // PVTNUM has not been specified, so everything is in the first region and we
-        // don't need to care...
-        if (!eclState.get3DProperties().hasDeckIntGridProperty("PVTNUM"))
+        // check the kind of region which is supposed to be used by checking the ROCKOPTS
+        // keyword. note that for some funny reason, the ROCK keyword uses PVTNUM by
+        // default, *not* ROCKNUM!
+        std::string propName = "PVTNUM";
+        if (deck.hasKeyword("ROCKOPTS")) {
+            const auto& rockoptsKeyword = deck.getKeyword("ROCKOPTS");
+            std::string rockTableType =
+                rockoptsKeyword.getRecord(0).getItem("TABLE_TYPE").getTrimmedString(0);
+            if (rockTableType == "PVTNUM")
+                propName = "PVTNUM";
+            else if (rockTableType == "SATNUM")
+                propName = "SATNUM";
+            else if (rockTableType == "ROCKNUM")
+                propName = "SATNUM";
+            else {
+                OPM_THROW(std::runtime_error,
+                          "Unknown table type '" << rockTableType
+                          << " for the ROCKOPTS keyword given");
+            }
+        }
+
+        // the deck does not specify the selected keyword, so everything uses the first
+        // record of ROCK.
+        if (!eclState.get3DProperties().hasDeckIntGridProperty(propName))
             return;
 
-        const std::vector<int>& pvtnumData =
-            eclState.get3DProperties().getIntGridProperty("PVTNUM").getData();
+        const std::vector<int>& tablenumData =
+            eclState.get3DProperties().getIntGridProperty(propName).getData();
         unsigned numElem = gridManager.gridView().size(0);
         rockTableIdx_.resize(numElem);
         for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
             unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
 
             // reminder: Eclipse uses FORTRAN-style indices
-            rockTableIdx_[elemIdx] = pvtnumData[cartElemIdx] - 1;
+            rockTableIdx_[elemIdx] = tablenumData[cartElemIdx] - 1;
         }
     }
 
