@@ -72,6 +72,12 @@ namespace Opm
             pu.has_solvent = true;
         }
 
+        // Add polyme info
+        pu.has_polymer = false;
+        if (phase.active(Phase::POLYMER)) {
+            pu.has_polymer = true;
+        }
+
         return pu;
     }
 
@@ -122,6 +128,12 @@ namespace Opm
         pu.has_solvent = false;
         if (phase.active(Phase::SOLVENT)) {
             pu.has_solvent = true;
+        }
+
+        // Add polyme info
+        pu.has_polymer = false;
+        if (phase.active(Phase::POLYMER)) {
+            pu.has_polymer = true;
         }
 
         return pu;

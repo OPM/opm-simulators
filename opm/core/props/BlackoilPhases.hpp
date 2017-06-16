@@ -39,6 +39,7 @@ namespace Opm
         int phase_used[MaxNumPhases];
         int phase_pos[MaxNumPhases];
         bool has_solvent;
+        bool has_polymer;
     };
 
     /// Check or assign presence of a formed, free phase.  Limited to

@@ -1481,6 +1481,8 @@ namespace Opm
                 case Phase::WATER: return InjectionSpecification::WATER;
                 case Phase::GAS:   return InjectionSpecification::GAS;
                 case Phase::SOLVENT: OPM_THROW(std::invalid_argument, "Solvent injector is not supported.");
+                case Phase::POLYMER: OPM_THROW(std::invalid_argument, "Polymer injector is not supported.");
+
             }
             OPM_THROW(std::logic_error, "Invalid state." );
         }
