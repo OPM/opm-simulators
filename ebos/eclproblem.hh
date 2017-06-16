@@ -760,6 +760,9 @@ public:
         return pvtnum_[elemIdx];
     }
 
+    const std::vector<int>& pvtRegionArray() const
+    { return pvtnum_; }
+
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
@@ -1507,7 +1510,7 @@ private:
 
     EclThresholdPressure<TypeTag> thresholdPressures_;
 
-    std::vector<unsigned short> pvtnum_;
+    std::vector<int> pvtnum_;
     std::vector<unsigned short> satnum_;
     std::vector<unsigned short> miscnum_;
     std::vector<unsigned short> rockTableIdx_;
