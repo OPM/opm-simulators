@@ -21,8 +21,6 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
-//#include <opm/autodiff/SimulatorBase.hpp>
-//#include <opm/autodiff/SimulatorFullyImplicitBlackoilOutputEbos.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp>
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/NonlinearSolver.hpp>
@@ -95,7 +93,6 @@ public:
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
     SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator,
                                        const ParameterGroup& param,
-                                       BlackoilPropsAdFromDeck& props,
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const bool has_disgas,
                                        const bool has_vapoil,
@@ -106,8 +103,8 @@ public:
           param_(param),
           model_param_(param),
           solver_param_(param),
-          props_(props),
           solver_(linsolver),
+          phaseUsage_(phaseUsageFromDeck(eclState())),
           has_disgas_(has_disgas),
           has_vapoil_(has_vapoil),
           terminal_output_(param.getDefault("output_terminal", true)),
@@ -116,7 +113,7 @@ public:
           is_parallel_run_( false )
     {
         extractLegacyCellPvtRegionIndex_();
-        rateConverter_.reset(new RateConverterType(props.phaseUsage(),
+        rateConverter_.reset(new RateConverterType(phaseUsage_,
                                                    legacyCellPvtRegionIdx_.data(),
                                                    AutoDiffGrid::numCells(grid()),
                                                    std::vector<int>(AutoDiffGrid::numCells(grid()), 0)));
@@ -152,8 +149,8 @@ public:
 
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
-            output_writer_.initFromRestartFile(props_.phaseUsage(), grid(), state, prev_well_state, extra);
-            initHydroCarbonState(state, props_.phaseUsage(), Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
+            output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
+            initHydroCarbonState(state, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
             initHysteresisParams(state);
         }
 
@@ -241,7 +238,7 @@ public:
                                        defunct_well_names_ );
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
-            well_state.init(wells, state, prev_well_state, props_.phaseUsage());
+            well_state.init(wells, state, prev_well_state, phaseUsage_);
 
             // give the polymer and surfactant simulators the chance to do their stuff
             handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
@@ -422,7 +419,7 @@ protected:
     std::unique_ptr<Solver> createSolver(WellModel& well_model)
     {
         const auto& gridView = ebosSimulator_.gridView();
-        const PhaseUsage& phaseUsage = props_.phaseUsage();
+        const PhaseUsage& phaseUsage = phaseUsage_;
         const std::vector<bool> activePhases = detail::activePhases(phaseUsage);
         const double gravity = ebosSimulator_.problem().gravity()[2];
 
@@ -442,7 +439,6 @@ protected:
                         globalNumCells);
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       model_param_,
-                                                      props_,
                                                       well_model,
                                                       solver_,
                                                       terminal_output_));
@@ -489,8 +485,8 @@ protected:
         }
 
         if (! resv_wells.empty()) {
-            const PhaseUsage&                    pu = props_.phaseUsage();
-            const std::vector<double>::size_type np = props_.numPhases();
+            const PhaseUsage&                    pu = phaseUsage_;
+            const std::vector<double>::size_type np = phaseUsage_.num_phases;
 
             std::vector<double> distr (np);
             std::vector<double> hrates(np);
@@ -869,8 +865,8 @@ protected:
     SolverParameters solver_param_;
 
     // Observed objects.
-    BlackoilPropsAdFromDeck& props_;
     NewtonIterationBlackoilInterface& solver_;
+    PhaseUsage phaseUsage_;
     // Misc. data
     const bool has_disgas_;
     const bool has_vapoil_;

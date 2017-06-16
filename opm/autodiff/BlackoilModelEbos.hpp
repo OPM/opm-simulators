@@ -33,7 +33,6 @@
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
@@ -48,7 +47,7 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
-#include <opm/core/props/rock/RockCompressibility.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -141,7 +140,6 @@ namespace Opm {
         /// remain in scope for the lifetime of the solver.
         /// \param[in] param            parameters
         /// \param[in] grid             grid data structure
-        /// \param[in] fluid            fluid properties
         /// \param[in] wells            well structure
         /// \param[in] vfp_properties   Vertical flow performance tables
         /// \param[in] linsolver        linear solver
@@ -149,25 +147,24 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
-                          const BlackoilPropsAdFromDeck& fluid,
                           const StandardWellsDense<TypeTag>& well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.gridManager().grid())
         , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
-        , fluid_ (fluid)
+        , phaseUsage_(phaseUsageFromDeck(eclState()))
         , vfp_properties_(
             eclState().getTableManager().getVFPInjTables(),
             eclState().getTableManager().getVFPProdTables())
-        , active_(detail::activePhases(fluid.phaseUsage()))
+        , active_(detail::activePhases(phaseUsage_))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
-        , rate_converter_(fluid_.phaseUsage(), fluid_.cellPvtRegionIndex(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
+        , rate_converter_(phaseUsage_, ebosSimulator_.problem().pvtRegionArray().empty()?nullptr:ebosSimulator_.problem().pvtRegionArray().data(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
@@ -562,7 +559,7 @@ namespace Opm {
                          ReservoirState& reservoir_state)
         {
             using namespace Opm::AutoDiffGrid;
-            const int np = fluid_.numPhases();
+            const int np = phaseUsage_.num_phases;
 
             ElementContext elemCtx( ebosSimulator_ );
             const auto& gridView = ebosSimulator_.gridView();
@@ -625,7 +622,7 @@ namespace Opm {
                 double step = dsMax()/maxVal;
                 step = std::min(step, 1.0);
 
-                const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+                const Opm::PhaseUsage& pu = phaseUsage_;
                 if (active_[Water]) {
                     double& sw = reservoir_state.saturation()[cell_idx*np + pu.phase_pos[ Water ]];
                     sw -= step * dsw;
@@ -1048,7 +1045,7 @@ namespace Opm {
         /// The number of active fluid phases in the model.
         int numPhases() const
         {
-            return fluid_.numPhases();
+            return phaseUsage_.num_phases;
         }
 
         int numComponents() const
@@ -1209,7 +1206,7 @@ namespace Opm {
             typedef std::vector<double> VectorType;
 
             const auto& ebosModel = ebosSimulator().model();
-            const auto& phaseUsage = fluid_.phaseUsage();
+            const auto& phaseUsage = phaseUsage_;
 
             // extract everything which can possibly be written to disk
             const int numCells   = ebosModel.numGridDof();
@@ -1497,7 +1494,7 @@ namespace Opm {
         Simulator& ebosSimulator_;
         const Grid&            grid_;
         const ISTLSolverType*  istlSolver_;
-        const BlackoilPropsAdFromDeck& fluid_;
+        const PhaseUsage phaseUsage_;
         VFPProperties                   vfp_properties_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
@@ -1527,7 +1524,6 @@ namespace Opm {
         mutable FIPDataType fip_;
 
     public:
-
         /// return the StandardWells object
         StandardWellsDense<TypeTag>&
         wellModel() { return well_model_; }
@@ -1551,10 +1547,10 @@ namespace Opm {
                            Simulator& simulator ) const
         {
             SolutionVector& solution = simulator.model().solution( 0 /* timeIdx */ );
-            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const Opm::PhaseUsage pu = phaseUsage_;
 
             const int numCells = reservoirState.numCells();
-            const int numPhases = fluid_.numPhases();
+            const int numPhases = phaseUsage_.num_phases;
             const auto& oilPressure = reservoirState.pressure();
             const auto& saturations = reservoirState.saturation();
             const auto& rs          = reservoirState.gasoilratio();
@@ -1666,7 +1662,7 @@ namespace Opm {
     private:
         void convertResults(BVector& ebosResid, Mat& ebosJac) const
         {
-            const Opm::PhaseUsage pu = fluid_.phaseUsage();
+            const Opm::PhaseUsage pu = phaseUsage_;
             const int numFlowPhases = pu.num_phases;
             const int numCells = ebosJac.N();
             assert( numCells == static_cast<int>(ebosJac.M()) );

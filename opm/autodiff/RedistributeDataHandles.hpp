@@ -90,7 +90,7 @@ public:
     }
 
     template<class Buffer>
-    void scatter(Buffer& buffer, std::size_t i, std::size_t s)
+    void scatter(Buffer& buffer, std::size_t i, std::size_t s OPM_OPTIM_UNUSED)
     {
         assert(s==size(i));
         static_cast<void>(s);
