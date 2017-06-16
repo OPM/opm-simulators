@@ -1229,7 +1229,7 @@ private:
             gasSaturationData.resize(numCartesianCells, 0.0);
 
         const std::vector<double>& pressureData =
-            gasSaturationData = eclProps.getDoubleGridProperty("PRESSURE").getData();
+            eclProps.getDoubleGridProperty("PRESSURE").getData();
         std::vector<double> rsData;
         if (FluidSystem::enableDissolvedGas())
             rsData = eclProps.getDoubleGridProperty("RS").getData();
