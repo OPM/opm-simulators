@@ -390,4 +390,21 @@ namespace Opm
         return wellVolumeFractionScaled(phase) / sum_volume_fraction_scaled;
      }
 
+
+
+
+
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
+    extendEval(const Eval& in) const
+    {
+        EvalWell out = 0.0;
+        out.setValue(in.value());
+        for(int eqIdx = 0; eqIdx < numEq;++eqIdx) {
+            out.setDerivative(eqIdx, in.derivative(flowToEbosPvIdx(eqIdx)));
+        }
+        return out;
+    }
+
 }

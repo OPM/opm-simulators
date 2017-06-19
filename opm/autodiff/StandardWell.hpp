@@ -109,6 +109,8 @@ namespace Opm
 
         EvalWell wellSurfaceVolumeFraction(const int phase) const;
 
+        EvalWell extendEval(const Eval& in) const;
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
@@ -119,6 +121,7 @@ namespace Opm
         using WellInterface<TypeTag>::compFrac;
         using WellInterface<TypeTag>::numberOfPhases;
         using WellInterface<TypeTag>::perfDepth;
+        using WellInterface<TypeTag>::flowToEbosPvIdx;
 
     protected:
 
