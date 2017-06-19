@@ -104,16 +104,16 @@ namespace Opm
     void StandardWell<TypeTag>::
     setWellVariables(const WellState& well_state)
     {
-        const int np = numberOfPhases();
         const int nw = well_state.bhp().size();
-        // TODO: it should be the number of primary variables
-        // TODO: this is from the old version of StandardWellsDense, it is a coincidence, 3 phases and 3 primary variables
-        // TODO: it needs to be careful.
-        // TODO: the following code has to be rewritten later for correctness purpose.
-        for (int phase = 0; phase < np; ++phase) {
-            well_variables_[phase] = 0.0;
-            well_variables_[phase].setValue(well_state.wellSolutions()[indexOfWell() + nw * phase]);
-            well_variables_[phase].setDerivative(numEq + phase, 1.0);
+        const int numComp = numComponents();
+        for (int eqIdx = 0; eqIdx < numComp; ++eqIdx) {
+            const unsigned int idx = nw * eqIdx + indexOfWell();
+            assert( eqIdx < well_variables_.size() );
+            assert( idx < well_state.wellSolutions().size() );
+
+            well_variables_[eqIdx] = 0.0;
+            well_variables_[eqIdx].setValue(well_state.wellSolutions()[idx]);
+            well_variables_[eqIdx].setDerivative(numEq + eqIdx, 1.0);
         }
     }
 
@@ -405,6 +405,24 @@ namespace Opm
             out.setDerivative(eqIdx, in.derivative(flowToEbosPvIdx(eqIdx)));
         }
         return out;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computePerfRate(const IntensiveQuantities& intQuants,
+                    const std::vector<EvalWell>& mob_perfcells_dense,
+                    const EvalWell& bhp, const double& cdp,
+                    const bool& allow_cf, std::vector<EvalWell>& cq_s) const
+    {
+
+
+
+
     }
 
 }

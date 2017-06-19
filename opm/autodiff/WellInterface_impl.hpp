@@ -296,4 +296,37 @@ namespace Opm
         return flowToEbos[ phaseIdx ];
     }
 
+
+
+
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    numPhases() const
+    {
+        return number_of_phases_;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    numComponents() const
+    {
+        if (numPhases() == 2) {
+                return 2;
+        }
+
+        int numComp = FluidSystem::numComponents;
+
+        if (has_solvent) {
+                    numComp ++;
+        }
+        return numComp;
+    }
+
 }

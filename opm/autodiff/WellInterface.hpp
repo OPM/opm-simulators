@@ -55,8 +55,10 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
         typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+        typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
 
         static const int solventCompIdx = 3; //TODO get this from ebos
+        static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
 
         /// Constructor
         WellInterface(const Well* well, const int time_step, const Wells* wells);
@@ -127,7 +129,12 @@ namespace Opm
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
+        int numPhases() const;
+
+        int numComponents() const;
+
     protected:
+        // TODO: some variables shared by all the wells should be made static
         // well name
         std::string name_;
 
