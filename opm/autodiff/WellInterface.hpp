@@ -50,9 +50,13 @@ namespace Opm
     {
     public:
 
-        // TODO: Simulator will probably enter template parameter through TypeTag later
-        using Simulator = SimulatorFullyImplicitBlackoilEbos;
         using WellState = WellStateFullyImplicitBlackoilDense;
+
+        typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+        typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+
+        static const int solventCompIdx = 3; //TODO get this from ebos
 
         /// Constructor
         WellInterface(const Well* well, const int time_step, const Wells* wells);
@@ -116,6 +120,12 @@ namespace Opm
         const std::vector<bool>& active() const;
 
         const PhaseUsage& phaseUsage() const;
+
+        int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
+
+        int flowToEbosPvIdx( const int flowPv ) const;
+
+        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
     protected:
         // well name

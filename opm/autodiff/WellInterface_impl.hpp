@@ -252,4 +252,48 @@ namespace Opm
     }
 
 
+
+
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    flowPhaseToEbosCompIdx( const int phaseIdx ) const
+    {
+        const int phaseToComp[ 4 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx, solventCompIdx };
+        return phaseToComp[ phaseIdx ];
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    flowToEbosPvIdx( const int flowPv ) const
+    {
+        const int flowToEbos[ 4 ] = {
+                                     BlackoilIndices::pressureSwitchIdx,
+                                     BlackoilIndices::waterSaturationIdx,
+                                     BlackoilIndices::compositionSwitchIdx,
+                                     BlackoilIndices::solventSaturationIdx
+                                    };
+        return flowToEbos[ flowPv ];
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    int
+    WellInterface<TypeTag>::
+    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
+    {
+        assert(phaseIdx < 3);
+        const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
+        return flowToEbos[ phaseIdx ];
+    }
+
 }
