@@ -58,9 +58,7 @@ namespace Opm
         }
 
         setCurrentStepNum(report_step);
-
-        boost::posix_time::ptime start_time = timeMap.getStartTime(0);
-        start_date_ = start_time.date();
+        start_date_ = boost::posix_time::from_time_t( timeMap.getStartTime(0)).date();
     }
 
     /// Whether the current step is the first step.
