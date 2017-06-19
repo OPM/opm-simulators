@@ -148,13 +148,13 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::vector<std::shared_ptr<WellInterface> >
+    std::vector<std::shared_ptr<WellInterface<TypeTag> > >
     StandardWellsDense<TypeTag>::
     createWellContainer(const std::vector<const Well*>& wells_ecl,
                         const Wells* wells_arg,
                         const int time_step)
     {
-        std::vector<std::shared_ptr<WellInterface> > wells_container;
+        std::vector<std::shared_ptr<WellInterface<TypeTag> > > wells_container;
 
         // There might be no wells in the process
         if (localWellsActive()) {
@@ -192,7 +192,7 @@ namespace Opm {
 
                 // Basically, we are handling all the wells as StandardWell for the moment
                 // TODO: to be changed when we begin introducing MultisegmentWell
-                wells_container.push_back(std::make_shared<StandardWell>(well_ecl, time_step, wells_arg) );
+                wells_container.push_back(std::make_shared<StandardWell<TypeTag> >(well_ecl, time_step, wells_arg) );
             }
         }
 
@@ -2228,7 +2228,8 @@ namespace Opm {
     typename StandardWellsDense<TypeTag>::EvalWell
     StandardWellsDense<TypeTag>::
     getBhp(const int wellIdx) const {
-        return well_container_(wellIdx)->getBhp();
+        // return well_container_(wellIdx)->getBhp();
+        return 0.0; // TODO: for debugging
     }
 
 

@@ -18,17 +18,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "config.h"
-
-
-#include <opm/autodiff/WellInterface.hpp>
-
 
 namespace Opm
 {
 
 
-    WellInterface::
+    template<typename TypeTag>
+    WellInterface<TypeTag>::
     WellInterface(const Well* well, const int time_step, const Wells* wells)
     {
 
@@ -94,8 +90,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     void
-    WellInterface::
+    WellInterface<TypeTag>::
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<bool>* active_arg,
          const VFPProperties* vfp_properties_arg,
@@ -111,8 +108,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::string&
-    WellInterface::
+    WellInterface<TypeTag>::
     name() const
     {
         return name_;
@@ -122,8 +120,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     int
-    WellInterface::
+    WellInterface<TypeTag>::
     indexOfWell() const
     {
         return index_of_well_;
@@ -133,8 +132,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     WellType
-    WellInterface::
+    WellInterface<TypeTag>::
     wellType() const
     {
         return well_type_;
@@ -144,8 +144,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     int
-    WellInterface::
+    WellInterface<TypeTag>::
     numberOfPhases() const
     {
         return number_of_phases_;
@@ -154,8 +155,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::vector<double>&
-    WellInterface::
+    WellInterface<TypeTag>::
     compFrac() const
     {
         return comp_frac_;
@@ -165,8 +167,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     WellControls*
-    WellInterface::
+    WellInterface<TypeTag>::
     wellControls() const
     {
         return well_controls_;
@@ -176,8 +179,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     int
-    WellInterface::
+    WellInterface<TypeTag>::
     numberOfPerforations() const
     {
         return number_of_perforations_;
@@ -187,8 +191,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::vector<double>&
-    WellInterface::
+    WellInterface<TypeTag>::
     wellIndex() const
     {
         return well_index_;
@@ -198,8 +203,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::vector<double>&
-    WellInterface::
+    WellInterface<TypeTag>::
     perfDepth() const
     {
         return perf_depth_;
@@ -209,8 +215,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::vector<int>&
-    WellInterface::
+    WellInterface<TypeTag>::
     wellCells() const
     {
         return well_cell_;
@@ -220,8 +227,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::vector<bool>&
-    WellInterface::
+    WellInterface<TypeTag>::
     active() const
     {
         assert(active_);
@@ -233,8 +241,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const PhaseUsage&
-    WellInterface::
+    WellInterface<TypeTag>::
     phaseUsage() const
     {
         assert(phase_usage_);

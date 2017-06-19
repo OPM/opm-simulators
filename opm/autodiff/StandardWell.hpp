@@ -37,13 +37,15 @@
 namespace Opm
 {
 
-    class StandardWell: public WellInterface
+    template<typename TypeTag>
+    class StandardWell: public WellInterface<TypeTag>
     {
 
     public:
-        using WellInterface::Simulator;
-        using WellInterface::WellState;
-
+        // using WellInterface<TypeTag>::Simulator;
+        // using WellInterface<TypeTag>::WellState;
+        typedef typename WellInterface<TypeTag>::Simulator Simulator;
+        typedef typename WellInterface<TypeTag>::WellState WellState;
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
         // the first one can be total rate (G_t) or bhp, based on the control
@@ -107,7 +109,22 @@ namespace Opm
 
         EvalWell wellSurfaceVolumeFraction(const int phase) const;
 
+        using WellInterface<TypeTag>::phaseUsage;
+        using WellInterface<TypeTag>::active;
+        using WellInterface<TypeTag>::numberOfPerforations;
+        using WellInterface<TypeTag>::indexOfWell;
+        using WellInterface<TypeTag>::name;
+        using WellInterface<TypeTag>::wellType;
+        using WellInterface<TypeTag>::wellControls;
+        using WellInterface<TypeTag>::compFrac;
+        using WellInterface<TypeTag>::numberOfPhases;
+        using WellInterface<TypeTag>::perfDepth;
+
     protected:
+
+        using WellInterface<TypeTag>::vfp_properties_;
+        using WellInterface<TypeTag>::gravity_;
+
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
         // pressure drop between different perforations
@@ -135,5 +152,7 @@ namespace Opm
     };
 
 }
+
+#include "StandardWell_impl.hpp"
 
 #endif // OPM_STANDARDWELL_HEADER_INCLUDED

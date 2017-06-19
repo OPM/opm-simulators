@@ -49,8 +49,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/VFPInjProperties.cpp
   opm/autodiff/WellMultiSegment.cpp
   opm/autodiff/MultisegmentWells.cpp
-	opm/autodiff/WellInterface.cpp
-	opm/autodiff/StandardWell.cpp
   opm/autodiff/MissingFeatures.cpp
   opm/polymer/PolymerState.cpp
   opm/polymer/PolymerBlackoilState.cpp

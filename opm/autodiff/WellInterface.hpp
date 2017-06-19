@@ -45,6 +45,7 @@ namespace Opm
 
     class SimulatorFullyImplicitBlackoilEbos;
 
+    template<typename TypeTag>
     class WellInterface
     {
     public:
@@ -160,5 +161,7 @@ namespace Opm
     };
 
 }
+
+#include "WellInterface_impl.hpp"
 
 #endif // OPM_WELLINTERFACE_HEADER_INCLUDED

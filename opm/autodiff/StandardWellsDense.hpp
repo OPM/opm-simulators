@@ -303,9 +303,10 @@ enum WellVariablePositions {
             // the name is just temporary
             // later, might make share_ptr const later.
             // TODO: forget why make it share_ptr instead of unique_ptr
-            std::vector<std::shared_ptr<WellInterface> > well_container_;
+            std::vector<std::shared_ptr<WellInterface<TypeTag> > > well_container_;
 
-            std::vector<std::shared_ptr<WellInterface> >
+            // TODO: forgot why returning a vector here
+            std::vector<std::shared_ptr<WellInterface<TypeTag> > >
             createWellContainer(const std::vector<const Well*>& wells_ecl,
                                 const Wells* wells_arg,
                                 const int time_step);

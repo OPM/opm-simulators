@@ -18,19 +18,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "config.h"
-
-#include <opm/autodiff/StandardWell.hpp>
-
-
 
 namespace Opm
 {
-    StandardWell::
+    template<typename TypeTag>
+    StandardWell<TypeTag>::
     StandardWell(const Well* well, const int time_step, const Wells* wells)
-    : WellInterface(well, time_step, wells)
-    , perf_densities_(number_of_perforations_)
-    , perf_pressure_diffs_(number_of_perforations_)
+    : WellInterface<TypeTag>(well, time_step, wells)
+    , perf_densities_(numberOfPerforations())
+    , perf_pressure_diffs_(numberOfPerforations())
     , well_variables_(numWellEq) // the number of the primary variables
     {
         dune_B_.setBuildMode( Mat::row_wise );
@@ -42,8 +38,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::vector<double>&
-    StandardWell::
+    StandardWell<TypeTag>::
     perfDensities() const
     {
         return perf_densities_;
@@ -53,8 +50,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     std::vector<double>&
-    StandardWell::
+    StandardWell<TypeTag>::
     perfDensities()
     {
         return perf_densities_;
@@ -64,8 +62,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     const std::vector<double>&
-    StandardWell::
+    StandardWell<TypeTag>::
     perfPressureDiffs() const
     {
         return perf_pressure_diffs_;
@@ -75,8 +74,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     std::vector<double>&
-    StandardWell::
+    StandardWell<TypeTag>::
     perfPressureDiffs()
     {
         return perf_pressure_diffs_;
@@ -86,8 +86,9 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
     void
-    StandardWell::
+    StandardWell<TypeTag>::
     assembleWellEq(Simulator& ebos_simulator,
                    const double dt,
                    WellState& well_state,
@@ -99,10 +100,11 @@ namespace Opm
 
 
 
-    void StandardWell::
+    template<typename TypeTag>
+    void StandardWell<TypeTag>::
     setWellVariables(const WellState& well_state)
     {
-        const int np = number_of_phases_;
+        const int np = numberOfPhases();
         const int nw = well_state.bhp().size();
         // TODO: it should be the number of primary variables
         // TODO: this is from the old version of StandardWellsDense, it is a coincidence, 3 phases and 3 primary variables
@@ -110,7 +112,7 @@ namespace Opm
         // TODO: the following code has to be rewritten later for correctness purpose.
         for (int phase = 0; phase < np; ++phase) {
             well_variables_[phase] = 0.0;
-            well_variables_[phase].setValue(well_state.wellSolutions()[index_of_well_ + nw * phase]);
+            well_variables_[phase].setValue(well_state.wellSolutions()[indexOfWell() + nw * phase]);
             well_variables_[phase].setDerivative(numEq + phase, 1.0);
         }
     }
@@ -119,11 +121,12 @@ namespace Opm
 
 
 
-    StandardWell::EvalWell
-    StandardWell::
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
     getBhp() const
     {
-        const WellControls* wc = well_controls_;
+        const WellControls* wc = wellControls();
         if (well_controls_get_current_type(wc) == BHP) {
             EvalWell bhp = 0.0;
             const double target_rate = well_controls_get_current_target(wc);
@@ -162,7 +165,7 @@ namespace Opm
             // pick the density in the top layer
             const double rho = perf_densities_[0];
             // TODO: not sure whether it is always correct
-            const double well_ref_depth = perf_depth_[0];
+            const double well_ref_depth = perfDepth()[0];
             const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
             bhp -= dp;
             return bhp;
@@ -175,19 +178,20 @@ namespace Opm
 
 
 
-    StandardWell::EvalWell
-    StandardWell::
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
     getQs(const int phase) const
     {
         EvalWell qs = 0.0;
 
-        const WellControls* wc = well_controls_;
-        const int np = number_of_phases_;
+        const WellControls* wc = wellControls();
+        const int np = numberOfPhases();
         const double target_rate = well_controls_get_current_target(wc);
 
         // TODO: we need to introduce numComponents() for StandardWell
         // assert(phase < numComponents());
-        const auto pu = phase_usage_;
+        const auto pu = phaseUsage();
 
         // TODO: the formulation for the injectors decides it only work with single phase
         // surface rate injection control. Improvement will be required.
@@ -315,13 +319,14 @@ namespace Opm
 
 
 
-    StandardWell::EvalWell
-    StandardWell::
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
     wellVolumeFractionScaled(const int phase) const
     {
         // TODO: we should be able to set the g for the well based on the control type
         // instead of using explicit code for g all the times
-        const WellControls* wc = well_controls_;
+        const WellControls* wc = wellControls();
         if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             const double* distr = well_controls_get_current_distr(wc);
             if (distr[phase] > 0.) {
@@ -340,8 +345,9 @@ namespace Opm
 
 
 
-    StandardWell::EvalWell
-    StandardWell::
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
     wellVolumeFraction(const int phase) const
     {
         if (phase == Water) {
@@ -368,12 +374,13 @@ namespace Opm
 
 
 
-    StandardWell::EvalWell
-    StandardWell::
+    template<typename TypeTag>
+    typename StandardWell<TypeTag>::EvalWell
+    StandardWell<TypeTag>::
     wellSurfaceVolumeFraction(const int phase) const
     {
         EvalWell sum_volume_fraction_scaled = 0.;
-        const int np = number_of_phases_;
+        const int np = numberOfPhases();
         for (int p = 0; p < np; ++p) {
             sum_volume_fraction_scaled += wellVolumeFractionScaled(p);
         }
