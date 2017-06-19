@@ -349,10 +349,7 @@ public:
 
         // Set the start time of the simulation
         const auto& timeMap = simulator.gridManager().eclState().getSchedule().getTimeMap();
-        tm curTime = boost::posix_time::to_tm(timeMap.getStartTime(/*timeStepIdx=*/0));
-
-        Scalar startTime = std::mktime(&curTime);
-        simulator.setStartTime(startTime);
+        simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/0) );
 
         // We want the episode index to be the same as the report step index to make
         // things simpler, so we have to set the episode index to -1 because it is
