@@ -341,8 +341,7 @@ namespace Opm
         : output_( [&param](){
                 // If output parameter is true or all, then we do output
                 std::string outputString = param.getDefault("output", std::string("all"));
-                if ( outputString == "all" || outputString == "log" ||
-                     outputString == "true" )
+                if ( outputString == "all" ||  outputString == "true" )
                 {
                     return true;
                 }
