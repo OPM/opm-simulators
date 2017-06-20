@@ -338,7 +338,7 @@ namespace Opm
                          const Opm::EclipseState& eclipseState,
                          std::unique_ptr<EclipseIO>&& eclIO,
                          const Opm::PhaseUsage &phaseUsage)
-        : output_( [&param](){
+        : output_( [ &param ] () -> bool {
                 // If output parameter is true or all, then we do output
                 const std::string outputString = param.getDefault("output", std::string("all"));
                 return ( outputString == "all" ||  outputString == "true" );
