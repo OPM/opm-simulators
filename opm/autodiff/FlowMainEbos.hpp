@@ -66,7 +66,7 @@ namespace Opm
         enum FileOutputValue{
             //! \brief No output to files.
             OUTPUT_NONE = 0,
-            //! \brief Output only to log files not DEBUG.
+            //! \brief Output only to log files, no eclipse output.
             OUTPUT_LOG_ONLY = 1,
             //! \brief Output to all files.
             OUTPUT_ALL = 3
@@ -318,7 +318,7 @@ namespace Opm
                 prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             }
 
-            if( output_ > OUTPUT_LOG_ONLY )
+            if( output_ >= OUTPUT_LOG_ONLY && !param_.getDefault("no_debug_log", false) )
             {
                 std::string debugFile = debugFileStream.str();
                 std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
