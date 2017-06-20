@@ -608,7 +608,7 @@ namespace Opm
 
         void writeInit()
         {
-            bool output      = param_.getDefault("output", true);
+            bool output      = ( output_ > OUTPUT_NONE );
             bool output_ecl  = param_.getDefault("output_ecl", true);
             if( output && output_ecl && grid().comm().rank() == 0 )
             {
