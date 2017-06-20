@@ -1041,7 +1041,7 @@ private:
             else if (rockTableType == "SATNUM")
                 propName = "SATNUM";
             else if (rockTableType == "ROCKNUM")
-                propName = "SATNUM";
+                propName = "ROCKNUM";
             else {
                 OPM_THROW(std::runtime_error,
                           "Unknown table type '" << rockTableType
