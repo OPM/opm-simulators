@@ -63,6 +63,15 @@ namespace Opm
     // The FlowMain class is the ebos based black-oil simulator.
     class FlowMainEbos
     {
+        enum FileOutputValue{
+            //! \brief No output to files.
+            OUTPUT_NONE = 0,
+            //! \brief Output only to log files not DEBUG.
+            OUTPUT_LOG_ONLY = 1,
+            //! \brief Output to all files.
+            OUTPUT_ALL = 3
+        };
+
     public:
         typedef TTAG(EclFlowProblem) TypeTag;
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
@@ -232,7 +241,24 @@ namespace Opm
         // Throws std::runtime_error if failed to create (if requested) output dir.
         void setupOutput()
         {
-            output_to_files_ = output_cout_ && param_.getDefault("output", true);
+            std::string output = param_.getDefault("output", std::string("all"));
+            static std::map<std::string, FileOutputValue> string2OutputEnum =
+                { {"none", OUTPUT_NONE },
+                  {"false", OUTPUT_LOG_ONLY },
+                  {"log", OUTPUT_LOG_ONLY },
+                  {"all" , OUTPUT_ALL },
+                  {"true" , OUTPUT_ALL }};
+            auto converted = string2OutputEnum.find(output);
+            if ( converted != string2OutputEnum.end() )
+            {
+                output_ = string2OutputEnum[output];
+            }
+            else
+            {
+                std::cerr<<"Value "<<output<<" passed to option output was invalid. Using \"all\" instead"<<std::endl;
+            }
+
+            output_to_files_ = output_cout_ && output_ > OUTPUT_NONE;
 
             // Setup output directory.
             auto& ioConfig = eclState().getIOConfig();
@@ -284,7 +310,7 @@ namespace Opm
 
             logFile_ = logFileStream.str();
 
-            if( ! param_.getDefault("no_prt_log", false) )
+            if( output_ > OUTPUT_NONE)
             {
                 std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes, false, output_cout_);
                 OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
@@ -292,7 +318,7 @@ namespace Opm
                 prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             }
 
-            if( ! param_.getDefault("no_debug_log", false) )
+            if( output_ > OUTPUT_LOG_ONLY )
             {
                 std::string debugFile = debugFileStream.str();
                 std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
@@ -916,6 +942,7 @@ namespace Opm
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
         bool output_cout_ = false;
+        FileOutputValue output_ = OUTPUT_ALL;
         bool must_distribute_ = false;
         ParameterGroup param_;
         bool output_to_files_ = false;
