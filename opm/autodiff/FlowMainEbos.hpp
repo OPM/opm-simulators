@@ -101,7 +101,6 @@ namespace Opm
                 setupLogging();
                 printPRTHeader();
                 extractMessages();
-                setupGridAndProps();
                 runDiagnostics();
                 setupState();
                 writeInit();
@@ -414,21 +413,6 @@ namespace Opm
             }
         }
 
-        // Create distributed property objects.
-        // Writes to:
-        //   fluidprops_
-        void setupGridAndProps()
-        {
-            Dune::CpGrid& grid = ebosSimulator_->gridManager().grid();
-
-            // create the legacy properties objects
-            fluidprops_.reset(new BlackoilPropsAdFromDeck(deck(),
-                                                          eclState(),
-                                                          materialLawManager(),
-                                                          grid));
-
-        }
-
         const Deck& deck() const
         { return ebosSimulator_->gridManager().deck(); }
 
@@ -445,7 +429,6 @@ namespace Opm
         // Writes to:
         //   state_
         //   threshold_pressures_
-        //   fluidprops_ (if SWATINIT is used)
         void setupState()
         {
             const PhaseUsage pu = Opm::phaseUsageFromDeck(deck());
@@ -514,15 +497,6 @@ namespace Opm
                                           props, deck(), gravity(), *state_);
             }
 
-            // The capillary pressure is scaled in fluidprops_ to match the scaled capillary pressure in props.
-            if (deck().hasKeyword("SWATINIT")) {
-                const int numCells = Opm::UgGridHelpers::numCells(grid);
-                std::vector<int> cells(numCells);
-                for (int c = 0; c < numCells; ++c) { cells[c] = c; }
-                std::vector<double> pc = state_->saturation();
-                props.capPress(numCells, state_->saturation().data(), cells.data(), pc.data(), nullptr);
-                fluidprops_->setSwatInitScaling(state_->saturation(), pc);
-            }
             initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid), deck().hasKeyword("DISGAS"), deck().hasKeyword("VAPOIL"));
         }
 
@@ -672,7 +646,6 @@ namespace Opm
             // Create the simulator instance.
             simulator_.reset(new Simulator(*ebosSimulator_,
                                            param_,
-                                           *fluidprops_,
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
@@ -912,7 +885,6 @@ namespace Opm
         ParameterGroup param_;
         bool output_to_files_ = false;
         std::string output_dir_ = std::string(".");
-        std::unique_ptr<BlackoilPropsAdFromDeck> fluidprops_;
         std::unique_ptr<ReservoirState> state_;
         NNC nnc_;
         std::unique_ptr<EclipseIO> eclIO_;
