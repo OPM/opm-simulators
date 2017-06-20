@@ -322,23 +322,29 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
     StandardWell<TypeTag>::
-    wellVolumeFractionScaled(const int phase) const
+    wellVolumeFractionScaled(const int compIdx) const
     {
         // TODO: we should be able to set the g for the well based on the control type
         // instead of using explicit code for g all the times
         const WellControls* wc = wellControls();
         if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+
+            if (has_solvent && compIdx == solventCompIdx) {
+                return wellVolumeFraction(compIdx);
+            }
             const double* distr = well_controls_get_current_distr(wc);
-            if (distr[phase] > 0.) {
-                return wellVolumeFraction(phase) / distr[phase];
+            assert(compIdx < 3);
+            if (distr[compIdx] > 0.) {
+                return wellVolumeFraction(compIdx) / distr[compIdx];
             } else {
                 // TODO: not sure why return EvalWell(0.) causing problem here
                 // Probably due to the wrong Jacobians.
-                return wellVolumeFraction(phase);
+                return wellVolumeFraction(compIdx);
             }
         }
-        std::vector<double> g = {1,1,0.01};
-        return (wellVolumeFraction(phase) / g[phase]);
+
+        std::vector<double> g = {1, 1, 0.01, 0.01};
+        return (wellVolumeFraction(compIdx) / g[compIdx]);
     }
 
 
@@ -348,14 +354,18 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
     StandardWell<TypeTag>::
-    wellVolumeFraction(const int phase) const
+    wellVolumeFraction(const int compIdx) const
     {
-        if (phase == Water) {
+        if (compIdx == Water) {
             return well_variables_[WFrac];
         }
 
-        if (phase == Gas) {
+        if (compIdx == Gas) {
             return well_variables_[GFrac];
+        }
+
+        if (compIdx == solventCompIdx) {
+            return well_variables_[SFrac];
         }
 
         // Oil fraction
@@ -367,6 +377,9 @@ namespace Opm
         if (active()[Gas]) {
             well_fraction -= well_variables_[GFrac];
         }
+        if (has_solvent) {
+            well_fraction -= well_variables_[SFrac];
+        }
         return well_fraction;
     }
 
@@ -377,17 +390,17 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
     StandardWell<TypeTag>::
-    wellSurfaceVolumeFraction(const int phase) const
+    wellSurfaceVolumeFraction(const int compIdx) const
     {
         EvalWell sum_volume_fraction_scaled = 0.;
-        const int np = numberOfPhases();
-        for (int p = 0; p < np; ++p) {
-            sum_volume_fraction_scaled += wellVolumeFractionScaled(p);
+        const int numComp = numComponents();
+        for (int idx = 0; idx < numComp; ++idx) {
+            sum_volume_fraction_scaled += wellVolumeFractionScaled(idx);
         }
 
         assert(sum_volume_fraction_scaled.value() != 0.);
 
-        return wellVolumeFractionScaled(phase) / sum_volume_fraction_scaled;
+        return wellVolumeFractionScaled(compIdx) / sum_volume_fraction_scaled;
      }
 
 
@@ -416,13 +429,120 @@ namespace Opm
     StandardWell<TypeTag>::
     computePerfRate(const IntensiveQuantities& intQuants,
                     const std::vector<EvalWell>& mob_perfcells_dense,
-                    const EvalWell& bhp, const double& cdp,
+                    const double Tw, const EvalWell& bhp, const double& cdp,
                     const bool& allow_cf, std::vector<EvalWell>& cq_s) const
     {
+        const Opm::PhaseUsage& pu = phaseUsage();
+        const int np = numPhases();
+        const int numComp = numComponents();
+        std::vector<EvalWell> cmix_s(numComp,0.0);
+        for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
+            cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
+        }
+        auto& fs = intQuants.fluidState();
 
+        EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+        EvalWell rs = extendEval(fs.Rs());
+        EvalWell rv = extendEval(fs.Rv());
+        std::vector<EvalWell> b_perfcells_dense(numComp, 0.0);
+        for (int phase = 0; phase < np; ++phase) {
+            int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+            b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
+        }
+        if (has_solvent) {
+            b_perfcells_dense[solventCompIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
+        }
 
+        // Pressure drawdown (also used to determine direction of flow)
+        EvalWell well_pressure = bhp + cdp;
+        EvalWell drawdown = pressure - well_pressure;
 
+        // producing perforations
+        if ( drawdown.value() > 0 )  {
+            //Do nothing if crossflow is not allowed
+            if (!allow_cf && wellType() == INJECTOR) {
+                return;
+            }
 
+            // compute component volumetric rates at standard conditions
+            for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
+                const EvalWell cq_p = - Tw * (mob_perfcells_dense[componentIdx] * drawdown);
+                cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
+            }
+
+            if (active()[Oil] && active()[Gas]) {
+                const int oilpos = pu.phase_pos[Oil];
+                const int gaspos = pu.phase_pos[Gas];
+                const EvalWell cq_sOil = cq_s[oilpos];
+                const EvalWell cq_sGas = cq_s[gaspos];
+                cq_s[gaspos] += rs * cq_sOil;
+                cq_s[oilpos] += rv * cq_sGas;
+            }
+
+        } else {
+            //Do nothing if crossflow is not allowed
+            if (!allow_cf && wellType() == PRODUCER) {
+                return;
+            }
+
+            // Using total mobilities
+            EvalWell total_mob_dense = mob_perfcells_dense[0];
+            for (int componentIdx = 1; componentIdx < numComp; ++componentIdx) {
+                total_mob_dense += mob_perfcells_dense[componentIdx];
+            }
+
+            // injection perforations total volume rates
+            const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
+
+            // compute volume ratio between connection at standard conditions
+            EvalWell volumeRatio = 0.0;
+            if (active()[Water]) {
+                const int watpos = pu.phase_pos[Water];
+                volumeRatio += cmix_s[watpos] / b_perfcells_dense[watpos];
+            }
+
+            if (has_solvent) {
+                volumeRatio += cmix_s[solventCompIdx] / b_perfcells_dense[solventCompIdx];
+            }
+
+            if (active()[Oil] && active()[Gas]) {
+                const int oilpos = pu.phase_pos[Oil];
+                const int gaspos = pu.phase_pos[Gas];
+
+                // Incorporate RS/RV factors if both oil and gas active
+                const EvalWell d = 1.0 - rv * rs;
+
+                if (d.value() == 0.0) {
+                    OPM_THROW(Opm::NumericalProblem, "Zero d value obtained for well " << name() << " during flux calcuation"
+                                                  << " with rs " << rs << " and rv " << rv);
+                }
+
+                const EvalWell tmp_oil = (cmix_s[oilpos] - rv * cmix_s[gaspos]) / d;
+                //std::cout << "tmp_oil " <<tmp_oil << std::endl;
+                volumeRatio += tmp_oil / b_perfcells_dense[oilpos];
+
+                const EvalWell tmp_gas = (cmix_s[gaspos] - rs * cmix_s[oilpos]) / d;
+                //std::cout << "tmp_gas " <<tmp_gas << std::endl;
+                volumeRatio += tmp_gas / b_perfcells_dense[gaspos];
+            }
+            else {
+                if (active()[Oil]) {
+                    const int oilpos = pu.phase_pos[Oil];
+                    volumeRatio += cmix_s[oilpos] / b_perfcells_dense[oilpos];
+                }
+                if (active()[Gas]) {
+                    const int gaspos = pu.phase_pos[Gas];
+                    volumeRatio += cmix_s[gaspos] / b_perfcells_dense[gaspos];
+                }
+            }
+
+            // injecting connections total volumerates at standard conditions
+            EvalWell cqt_is = cqt_i/volumeRatio;
+            //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
+            for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
+                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is; // * b_perfcells_dense[phase];
+            }
+        }
     }
 
 }

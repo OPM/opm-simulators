@@ -47,6 +47,7 @@ namespace Opm
         using Simulator = typename WellInterface<TypeTag>::Simulator;
         using WellState = typename WellInterface<TypeTag>::WellState;
         using IntensiveQuantities = typename WellInterface<TypeTag>::IntensiveQuantities;
+        using FluidSystem = typename WellInterface<TypeTag>::FluidSystem;
 
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
@@ -116,7 +117,7 @@ namespace Opm
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
                              const std::vector<EvalWell>& mob_perfcells_dense,
-                             const EvalWell& bhp, const double& cdp,
+                             const double Tw, const EvalWell& bhp, const double& cdp,
                              const bool& allow_cf, std::vector<EvalWell>& cq_s) const;
 
         using WellInterface<TypeTag>::phaseUsage;
@@ -130,7 +131,10 @@ namespace Opm
         using WellInterface<TypeTag>::numberOfPhases;
         using WellInterface<TypeTag>::perfDepth;
         using WellInterface<TypeTag>::flowToEbosPvIdx;
+        using WellInterface<TypeTag>::flowPhaseToEbosPhaseIdx;
         using WellInterface<TypeTag>::numComponents;
+        using WellInterface<TypeTag>::numPhases;
+        using WellInterface<TypeTag>::has_solvent;
 
     protected:
 
