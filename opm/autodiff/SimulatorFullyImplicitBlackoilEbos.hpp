@@ -165,11 +165,9 @@ public:
         std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
         std::ofstream tstep_os;
 
-        if ( output_writer_.output() ) {
-            if ( output_writer_.isIORank() )
-            {
-                tstep_os.open(tstep_filename.c_str());
-            }
+        if ( output_writer_.output() && output_writer_.isIORank() )
+        {
+            tstep_os.open(tstep_filename.c_str());
         }
 
         const auto& schedule = eclState().getSchedule();
@@ -358,7 +356,8 @@ public:
             // update timing.
             report.solver_time += solver_timer.secsSinceStart();
 
-            if ( tstep_os.is_open() ) {
+            if ( output_writer_.output() && output_writer_.isIORank() )
+            {
                 stepReport.reportParam(tstep_os);
             }
 
