@@ -241,7 +241,7 @@ namespace Opm
         // Throws std::runtime_error if failed to create (if requested) output dir.
         void setupOutput()
         {
-            std::string output = param_.getDefault("output", std::string("all"));
+            const std::string output = param_.getDefault("output", std::string("all"));
             static std::map<std::string, FileOutputValue> string2OutputEnum =
                 { {"none", OUTPUT_NONE },
                   {"false", OUTPUT_LOG_ONLY },
@@ -255,7 +255,9 @@ namespace Opm
             }
             else
             {
-                std::cerr<<"Value "<<output<<" passed to option output was invalid. Using \"all\" instead"<<std::endl;
+                std::cerr << "Value " << output <<
+                    " passed to option output was invalid. Using \"all\" instead."
+                          << std::endl;
             }
 
             output_to_files_ = output_cout_ && output_ > OUTPUT_NONE;

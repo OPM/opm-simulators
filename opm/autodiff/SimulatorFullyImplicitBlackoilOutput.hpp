@@ -340,12 +340,9 @@ namespace Opm
                          const Opm::PhaseUsage &phaseUsage)
         : output_( [&param](){
                 // If output parameter is true or all, then we do output
-                std::string outputString = param.getDefault("output", std::string("all"));
-                if ( outputString == "all" ||  outputString == "true" )
-                {
-                    return true;
-                }
-                return false;}()
+                const std::string outputString = param.getDefault("output", std::string("all"));
+                return ( outputString == "all" ||  outputString == "true" );
+            }()
             ),
         parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, phaseUsage ) : 0 ),
         outputDir_( eclipseState.getIOConfig().getOutputDir() ),
