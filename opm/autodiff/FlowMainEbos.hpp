@@ -282,15 +282,25 @@ namespace Opm
             logFileStream << ".PRT";
             debugFileStream << ".DEBUG";
 
-            std::string debugFile = debugFileStream.str();
             logFile_ = logFileStream.str();
 
-            std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes, false, output_cout_);
+            if( ! param_.getDefault("no_prt_log", false) )
+            {
+                std::shared_ptr<EclipsePRTLog> prtLog = std::make_shared<EclipsePRTLog>(logFile_ , Log::NoDebugMessageTypes, false, output_cout_);
+                OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
+                prtLog->setMessageLimiter(std::make_shared<MessageLimiter>());
+                prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
+            }
+
+            if( ! param_.getDefault("no_debug_log", false) )
+            {
+                std::string debugFile = debugFileStream.str();
+                std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
+                OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
+            }
+
             std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
-            OpmLog::addBackend( "ECLIPSEPRTLOG" , prtLog );
             OpmLog::addBackend( "STREAMLOG", streamLog);
-            std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
-            OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
             const auto& msgLimits = eclState().getSchedule().getMessageLimits();
             const std::map<int64_t, int> limits = {{Log::MessageType::Note, msgLimits.getCommentPrintLimit(0)},
                                                    {Log::MessageType::Info, msgLimits.getMessagePrintLimit(0)},
@@ -298,8 +308,6 @@ namespace Opm
                                                    {Log::MessageType::Error, msgLimits.getErrorPrintLimit(0)},
                                                    {Log::MessageType::Problem, msgLimits.getProblemPrintLimit(0)},
                                                    {Log::MessageType::Bug, msgLimits.getBugPrintLimit(0)}};
-            prtLog->setMessageLimiter(std::make_shared<MessageLimiter>());
-            prtLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(false));
             streamLog->setMessageLimiter(std::make_shared<MessageLimiter>(10, limits));
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
 
