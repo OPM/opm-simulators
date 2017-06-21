@@ -113,7 +113,6 @@ public:
           defunct_well_names_( defunct_well_names ),
           is_parallel_run_( false )
     {
-
 #if HAVE_MPI
         if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
         {
@@ -143,11 +142,20 @@ public:
         extractLegacyPoreVolume_();
         extractLegacyDepth_();
 
+        // communicate the initial solution to ebos
+        if (timer.initialStep()) {
+            convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+        }
+
         if (output_writer_.isRestart()) {
             // This is a restart, populate WellState and ReservoirState state objects from restart file
             output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
             initHydroCarbonState(state, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
             initHysteresisParams(state);
+            // communicate the restart solution to ebos
+            convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
         // Create timers and file for writing timing info.
@@ -195,6 +203,11 @@ public:
                                     prev_well_state,
                                     restorefilename,
                                     desiredRestoreStep );
+            initHydroCarbonState(state, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
+            initHysteresisParams(state);
+            // communicate the restart solution to ebos
+            convertInput(0, state, ebosSimulator_);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
         DynamicListEconLimited dynamic_list_econ_limited;
@@ -239,13 +252,40 @@ public:
                                        defunct_well_names_ );
             const Wells* wells = wells_manager.c_wells();
             WellState well_state;
-            well_state.init(wells, state, prev_well_state, phaseUsage_);
+
+            // The well state initialize bhp with the cell pressure in the top cell.
+            // We must therefore provide it with updated cell pressures
+            size_t nc = Opm::UgGridHelpers::numCells(grid());
+            std::vector<double> cellPressures(nc, 0.0);
+            const auto& gridView = ebosSimulator_.gridManager().gridView();
+            ElementContext elemCtx(ebosSimulator_);
+            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            for (auto elemIt = gridView.template begin</*codim=*/0>();
+                 elemIt != elemEndIt;
+                 ++elemIt)
+            {
+                const auto& elem = *elemIt;
+                if (elem.partitionType() != Dune::InteriorEntity) {
+                    continue;
+                }
+
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+
+                const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
+                cellPressures[cellIdx] = p;
+            }
+            well_state.init(wells, cellPressures, prev_well_state, phaseUsage_);
 
             // give the polymer and surfactant simulators the chance to do their stuff
             handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
 
             // Compute reservoir volumes for RESV controls.
-            computeRESV(timer.currentStepNum(), wells, state, well_state);
+            computeRESV(timer.currentStepNum(), wells, well_state);
 
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
@@ -261,11 +301,8 @@ public:
 
             // Compute orignal fluid in place if this has not been done yet
             if (originalFluidInPlace.empty()) {
-                solver->model().convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
-                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-
                 originalFluidInPlace = solver->computeFluidInPlace(fipnum);
-                originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace, state);
+                originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace);
                 FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
                 FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
 
@@ -355,12 +392,19 @@ public:
                 stepReport.reportParam(tstep_os);
             }
 
+            // We don't need the reservoir state anymore. It is just passed around to avoid
+            // code duplication. Pass empty state instead.
+            if (timer.initialStep()) {
+                ReservoirState stateTrivial(0,0,0);
+                state = stateTrivial;
+            }
+
             // Increment timer, remember well state.
             ++timer;
 
             // Compute current fluid in place.
             currentFluidInPlace = solver->computeFluidInPlace(fipnum);
-            currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
+            currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace);
 
             const std::string version = moduleVersionName();
 
@@ -449,7 +493,6 @@ protected:
 
     void computeRESV(const std::size_t step,
                      const Wells* wells,
-                     const BlackoilState& x,
                      WellState& xw)
     {
         typedef SimFIBODetails::WellMap WellMap;
@@ -473,7 +516,7 @@ protected:
                 // to calculate averages over regions that might cross process
                 // borders. This needs to be done by all processes and therefore
                 // outside of the next if statement.
-                rateConverter_.defineState(x, boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()));
+                rateConverter_->template defineState<ElementContext>(ebosSimulator_);
             }
         }
         else
@@ -481,7 +524,7 @@ protected:
         {
             if ( global_number_resv_wells )
             {
-                rateConverter_.defineState(x);
+                rateConverter_->template defineState<ElementContext>(ebosSimulator_);
             }
         }
 
@@ -655,7 +698,7 @@ protected:
     }
 
 
-    std::vector<double> FIPTotals(const std::vector<std::vector<double>>& fip, const ReservoirState& /* state */)
+    std::vector<double> FIPTotals(const std::vector<std::vector<double>>& fip)
     {
         std::vector<double> totals(7,0.0);
         for (int i = 0; i < 5; ++i) {
@@ -847,6 +890,105 @@ protected:
         for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
             legacyDepth_[cellIdx] =
                 grid.cellCenterDepth(cellIdx);
+        }
+    }
+
+    // Used to convert initial Reservoirstate to primary variables in the SolutionVector
+    void convertInput( const int iterationIdx,
+                       const ReservoirState& reservoirState,
+                       Simulator& simulator ) const
+    {
+        SolutionVector& solution = simulator.model().solution( 0 /* timeIdx */ );
+        const Opm::PhaseUsage pu = phaseUsage_;
+
+        const std::vector<bool> active = detail::activePhases(pu);
+        bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
+        bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
+
+        const int numCells = reservoirState.numCells();
+        const int numPhases = phaseUsage_.num_phases;
+        const auto& oilPressure = reservoirState.pressure();
+        const auto& saturations = reservoirState.saturation();
+        const auto& rs          = reservoirState.gasoilratio();
+        const auto& rv          = reservoirState.rv();
+        for( int cellIdx = 0; cellIdx<numCells; ++cellIdx )
+        {
+            // set non-switching primary variables
+            PrimaryVariables& cellPv = solution[ cellIdx ];
+            // set water saturation
+            cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
+
+            if (has_solvent) {
+                cellPv[BlackoilIndices::solventSaturationIdx] = reservoirState.getCellData( reservoirState.SSOL )[cellIdx];
+            }
+
+            if (has_polymer) {
+                cellPv[BlackoilIndices::polymerConcentrationIdx] = reservoirState.getCellData( reservoirState.POLYMER )[cellIdx];
+            }
+
+
+            // set switching variable and interpretation
+            if ( active[Gas] ) {
+                if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::OilOnly && has_disgas_ )
+                {
+                    cellPv[BlackoilIndices::compositionSwitchIdx] = rs[cellIdx];
+                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
+                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Rs );
+                }
+                else if( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasOnly && has_vapoil_ )
+                {
+                    // this case (-> gas only with vaporized oil in the gas) is
+                    // relatively expensive as it requires to compute the capillary
+                    // pressure in order to get the gas phase pressure. (the reason why
+                    // ebos uses the gas pressure here is that it makes the common case
+                    // of the primary variable switching code fast because to determine
+                    // whether the oil phase appears one needs to compute the Rv value
+                    // for the saturated gas phase and if this is not available as a
+                    // primary variable, it needs to be computed.) luckily for here, the
+                    // gas-only case is not too common, so the performance impact of this
+                    // is limited.
+                    typedef Opm::SimpleModularFluidState<double,
+                            /*numPhases=*/3,
+                            /*numComponents=*/3,
+                            FluidSystem,
+                            /*storePressure=*/false,
+                            /*storeTemperature=*/false,
+                            /*storeComposition=*/false,
+                            /*storeFugacity=*/false,
+                            /*storeSaturation=*/true,
+                            /*storeDensity=*/false,
+                            /*storeViscosity=*/false,
+                            /*storeEnthalpy=*/false> SatOnlyFluidState;
+                    SatOnlyFluidState fluidState;
+                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
+                    fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
+                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
+
+                    double pC[/*numPhases=*/3] = { 0.0, 0.0, 0.0 };
+                    const MaterialLawParams& matParams = simulator.problem().materialLawParams(cellIdx);
+                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+                    double pg = oilPressure[cellIdx] + (pC[FluidSystem::gasPhaseIdx] - pC[FluidSystem::oilPhaseIdx]);
+
+                    cellPv[BlackoilIndices::compositionSwitchIdx] = rv[cellIdx];
+                    cellPv[BlackoilIndices::pressureSwitchIdx] = pg;
+                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_pg_Rv );
+                }
+                else
+                {
+                    assert( reservoirState.hydroCarbonState()[cellIdx] == HydroCarbonState::GasAndOil);
+                    cellPv[BlackoilIndices::compositionSwitchIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Gas]];
+                    cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[ cellIdx ];
+                    cellPv.setPrimaryVarsMeaning( PrimaryVariables::Sw_po_Sg );
+                }
+            } else {
+                // for oil-water case oil pressure should be used as primary variable
+                cellPv[BlackoilIndices::pressureSwitchIdx] = oilPressure[cellIdx];
+            }
+        }
+
+        if( iterationIdx == 0 )
+        {
+            simulator.model().solution( 1 /* timeIdx */ ) = solution;
         }
     }
 
