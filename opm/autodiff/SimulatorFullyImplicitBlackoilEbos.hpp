@@ -217,17 +217,13 @@ public:
         }
         std::vector<std::vector<double>> originalFluidInPlace;
         std::vector<double> originalFluidInPlaceTotals;
-
+        std::vector<std::vector<double>> wellReportVariable;
+        std::vector<double> welltotals;
+        const std::string version = moduleVersionName();
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
             step_timer.start();
-            if ( terminal_output_ )
-            {
-                std::ostringstream ss;
-                timer.report(ss);
-                OpmLog::note(ss.str());
-            }
 
             // Create wells and well state.
             WellsManager wells_manager(eclState(),
@@ -250,6 +246,14 @@ public:
 
             // Compute reservoir volumes for RESV controls.
             computeRESV(timer.currentStepNum(), wells, state, well_state);
+        
+            wellReportVariable = getWellReport(eclState().getUnits(),  phaseUsage_, wells, well_state);
+            welltotals = wellTotals(wellReportVariable, wells);
+        
+            if (!timer.initialStep()) {
+                outputTimestamp(timer, version, "Wells");
+                outputWellReport(wellReportVariable, welltotals, wells, well_state, eclState().getUnits());
+            }
 
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
@@ -297,6 +301,10 @@ public:
 
             if( terminal_output_ )
             {
+                std::ostringstream ss;
+                timer.report(ss);
+                OpmLog::note(ss.str());
+            
                 std::ostringstream step_msg;
                 boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
                 step_msg.imbue(std::locale(std::locale::classic(), facet));
@@ -365,14 +373,12 @@ public:
             currentFluidInPlace = solver->computeFluidInPlace(fipnum);
             currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace, state);
 
-            const std::string version = moduleVersionName();
-
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
             FIPUnitConvert(eclState().getUnits(), currentFluidInPlaceTotals);
 
             if (terminal_output_ )
             {
-                outputTimestampFIP(timer, version);
+                outputTimestamp(timer, version, "Balance");
                 outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
                 for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
                     outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
@@ -613,8 +619,190 @@ protected:
             }
         }
     }
+    
+    //Fetch variables required for the well report
+    std::vector< std::vector<double>> getWellReport(const UnitSystem& units,
+                                   const Opm::PhaseUsage& pu,
+                                   const Wells* wells,
+                                   WellState& xw)
+    {
+        const int np = wells->number_of_phases;
+        int nw = wells->number_of_wells;
+        std::vector< std::vector<double>> wr ( 8 , std::vector<double> ( nw, 0.0 ) );
+        enum { Water = BlackoilPhases::Aqua, Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour };
+        
+        for (int w = 0; w < nw; ++w) {
+            double wellRate = 0.0;
+            const bool is_producer = wells->type[w] == PRODUCER;       
+            if( pu.phase_used[Water]) {
+                //Water phase rate per well
+                wr[0][w] = abs(xw.wellRates()[np*w + pu.phase_pos[Water]]);
+            }              
+            if( pu.phase_used[Oil]) {
+                //Oil phase rate per well
+                wr[1][w] = abs(xw.wellRates()[np*w + pu.phase_pos[Oil]]);
+            }         
+            if( pu.phase_used[Gas]) {
+                //Gas phase rate per well
+                wr[2][w] = abs(xw.wellRates()[np*w + pu.phase_pos[Gas]]);
+            }
+            //Unit conversion
+            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) { 
+                wr[0][w] = unit::convert::to(wr[0][w],unit::stb/unit::day);
+                wr[1][w] = unit::convert::to(wr[1][w],unit::stb/unit::day);
+                wr[2][w] = unit::convert::to(wr[2][w],1000*unit::cubic(unit::feet)/unit::day);
+                //BHP
+                wr[3][w] = unit::convert::to(xw.bhp()[w], unit::psia);
+                //THP
+                wr[4][w] = unit::convert::to(xw.thp()[w], unit::psia);
+            }
+            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) { 
+                //BHP
+                wr[3][w] = unit::convert::to(xw.bhp()[w], unit::barsa);
+                //THP
+                wr[4][w] = unit::convert::to(xw.thp()[w], unit::barsa);
+            }       
+            for (int n = 0; n < 3; n++){
+                if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) { 
+                    wr[n][w] = unit::convert::to(wr[n][w],unit::cubic(unit::meter)/unit::day);
+                } 
+                wellRate += wr[n][w];
+            }
 
-
+            if (is_producer) {
+                if (pu.phase_used[Water] && pu.phase_used[Oil]) {
+                    if (wellRate > 0.0001){
+                        //Watercut
+                        wr[5][w] = wr[0][w]/wellRate;
+                    }
+                }
+                if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+                    //Gos-OilRatio (GOR)
+                    wr[6][w] = wr[2][w]/wr[1][w];
+                }
+                if (pu.phase_used[Water] && pu.phase_used[Gas]) {
+                    //Water-Gas Ratio (WGR)       
+                    wr[7][w] = wr[0][w]/wr[2][w];
+                }
+            }
+        }
+        return wr;
+    }
+   
+   //Compute and return produced and injected totals from wells per phase
+   std::vector<double> wellTotals(std::vector<std::vector<double>> wr,
+                                  const Wells* wells)
+   {
+        int nw = wells->number_of_wells;
+        std::vector<double> wtotals (9,0.0);        
+        for (int w = 0; w < nw; ++w) { 
+           const bool is_producer = wells->type[w] == PRODUCER;
+           const bool is_injector = wells->type[w] == INJECTOR;
+           if (is_producer) {
+               //Field Oil produced
+               wtotals[0] += wr[1][w];
+               //Field Water produced
+               wtotals[1] += wr[0][w];
+               //Field Gas produced
+               wtotals[2] += wr[2][w];
+               //Field Watercut
+               wtotals[3] += wr[5][w];
+               //Field Gas-Oil Ratio
+               wtotals[4] += wr[6][w];
+               //Field Water-Gas Ratio
+               wtotals[5] += wr[7][w];
+           }
+           if (is_injector){
+               //Field Oil injected
+               wtotals[6] += wr[1][w];
+               //Field Water injected
+               wtotals[7] += wr[0][w];
+               //Field Gas injected
+               wtotals[8] += wr[2][w];
+           }
+        }
+        return wtotals;
+   }
+   
+   //Output well report to the .PRT file
+   void outputWellReport(std::vector<std::vector<double>> wr,
+             std::vector<double> wtotals,
+             const Wells* wells,
+             WellState& xw,
+             const UnitSystem& units)
+    {           
+        int nw = wells->number_of_wells;
+        const std::string mode[4] = { "BHP", "THP", "RESERVOIR_RATE", "SURFACE_RATE" };
+        std::ostringstream pr;
+        pr << "\n                                                       PRODUCTION REPORT \n"
+           << "                                                       ................. \n\n"
+           << "---------------------------------------------------------------------------------------------------------------------------- \n"
+           << ":       WELL       :     CTRL    :     OIL     :    WATER    :     GAS     : WATER : GAS/OIL: WAT/GAS:  BHP OR  :  THP OR  : \n"
+           << ":       NAME       :     MODE    :     RATE    :    RATE     :     RATE    :  CUT  :  RATIO :  RATIO :  CON.PR. :  BLK.PR. : \n";
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+           pr << ":      OR GRID     :             :    SM3/DAY  :    SM3/DAY  :    SM3/DAY  :       : SM3/SM3: SM3/SM3:   BARSA  :   BARSA  : \n";
+        }
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+           pr << ":      OR GRID     :             :    STB/DAY  :    STB/DAY  :   MSCF/DAY  :       :MSCF/STB:STB/MSCF:   PSIA   :   PSIA   : \n";
+        }
+           pr << "============================================================================================================================ \n"
+              << ":                  :             :             :             :             :       :        :        :          :          :\n"
+              << ":Field             :             :" << std::fixed << std::setprecision(1) << std::setw(13) << wtotals[0] << ":" << std::setw(13) 
+              << wtotals[1] << ":" << std::setw(13) << wtotals[2] << ":" << std::fixed << std::setprecision(4) << std::setw(7) << wtotals[3] 
+              << ":" << std::setw(8) << wtotals[4] << ":" << std::setw(8) << wtotals[5] << ":          :          : \n"
+              << "============================================================================================================================ \n";
+           
+        for (int w = 0; w < nw; ++w) {
+            const bool is_producer = wells->type[w] == PRODUCER;
+            int current = xw.currentControls()[w];
+            WellControls* ctrl = wells->ctrls[w];
+            if (is_producer){
+                pr << ":                  :             :             :             :             :       :        :"        
+                   << "        :          :          :\n"
+                   << ":" << std::left << std::setw(18) << wells->name[w] << ":" << std::setw(13) 
+                   << mode[well_controls_iget_type(ctrl, current)] << ":" << std::right << std::fixed << std::setprecision(1) 
+                   << std::setw(13) << wr[1][w] << ":" << std::setw(13) << wr[0][w] << ":" << std::setw(13) << wr[2][w] << ":" 
+                   << std::fixed << std::setprecision(4) << std::setw(7) << wr[5][w] << ":" << std::setw(8) << wr[6][w] << ":" 
+                   << std::setw(8) << wr[7][w] << ":" << std::fixed << std::setprecision(1) << std::setw(10) << wr[3][w] <<":" 
+                   << std::setw(10) << wr[4][w] << ":\n";
+            }
+        }
+        pr <<  "============================================================================================================================ \n";
+        OpmLog::note(pr.str()); 
+        
+        std::ostringstream ir;
+        ir << "\n                                                       INJECTION REPORT \n"
+           << "                                                       ................. \n\n"
+           << "            -------------------------------------------------------------------------------------------------- \n"
+           << "            :       WELL       :     CTRL    :     OIL     :    WATER    :     GAS     :  BHP OR  :  THP OR  : \n"
+           << "            :       NAME       :     MODE    :     RATE    :    RATE     :     RATE    :  CON.PR. :  BLK.PR. : \n";
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+           ir << "            :      OR GRID     :             :    SM3/DAY  :    SM3/DAY  :    SM3/DAY  :   BARSA  :   BARSA  : \n";
+        }
+        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+           ir << "            :      OR GRID     :             :    STB/DAY  :    STB/DAY  :   MSCF/DAY  :   PSIA   :   PSIA   : \n";
+        }
+        ir << "            ================================================================================================== \n"
+           << "            :                  :             :             :             :             :          :          :\n"
+           << "            :Field             :             :" << std::fixed << std::setprecision(1) << std::setw(13) << wtotals[6] << ":" 
+           << std::setw(13) << wtotals[7] << ":" << std::setw(13) << wtotals[8] << ":          :          : \n"
+           << "            ================================================================================================== \n";
+           
+        for (int w = 0; w < nw; ++w) {
+            const bool is_injector = wells->type[w] == INJECTOR;
+            int current = xw.currentControls()[w];
+            WellControls* ctrl = wells->ctrls[w];
+            if (is_injector){
+               ir << "            :                  :             :             :             :             :          :          :\n"
+                  << "            :" << std::left << std::setw(18) << wells->name[w] << ":" << std::setw(13) 
+                  << mode[well_controls_iget_type(ctrl, current)] << ":" << std::right << std::fixed << std::setprecision(1) 
+                  << std::setw(13) << wr[1][w] << ":" << std::setw(13) << wr[0][w] << ":" << std::setw(13) << wr[2][w] << ":" 
+                  << std::fixed << std::setprecision(1) << std::setw(10) << wr[3][w] <<":" << std::setw(10) << wr[4][w] << ":\n";
+            }
+        }
+        ir  << "            ================================================================================================== \n";
+        OpmLog::note(ir.str());  
+    }
 
     void updateListEconLimited(const std::unique_ptr<Solver>& solver,
                                const Schedule& schedule,
@@ -717,15 +905,16 @@ protected:
     }
 
     
-    void outputTimestampFIP(SimulatorTimer& timer, const std::string version)
+    void outputTimestamp(SimulatorTimer& timer, const std::string version, const std::string& input)
     {   
         std::ostringstream ss;
         boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
         ss.imbue(std::locale(std::locale::classic(), facet));
         ss << "\n                              **************************************************************************\n"
-        << "  Balance  at" << std::setw(10) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day) << "  Days"
-        << " *" << std::setw(30) << eclState().getTitle() << "                                          *\n"
-        << "  Report " << std::setw(4) << timer.reportStepNum() << "    " << timer.currentDateTime()
+        << "  " << std::left << std::setw(8) << input << "  at    " 
+    << std::right << std::setw(5) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day) << "  Days"
+        << " *  " << std::left << std::setw(70) << eclState().getTitle() << "*\n"
+        << "  Report  " << std::right << std::setw(4) << timer.reportStepNum() << "   " << timer.currentDateTime()
         << "  *                                             Flow  version " << std::setw(11) << version << "  *\n"
         << "                              **************************************************************************\n";
         OpmLog::note(ss.str());
