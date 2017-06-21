@@ -841,6 +841,24 @@ public:
     }
 
     /*!
+     * \brief Returns the index of the relevant region for thermodynmic properties
+     */
+    template <class Context>
+    unsigned plmixnumRegionIndex(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    { return plmixnumRegionIndex(context.globalSpaceIndex(spaceIdx, timeIdx)); }
+
+    /*!
+     * \brief Returns the index the relevant PLMIXNUM ( for polymer module) region given a cell index
+     */
+    unsigned plmixnumRegionIndex(unsigned elemIdx) const
+    {
+        if (plmixnum_.empty())
+            return 0;
+
+        return plmixnum_[elemIdx];
+    }
+
+    /*!
      * \brief Returns the max polymer adsorption value
      */
     template <class Context>
@@ -1140,6 +1158,11 @@ private:
         // the PVT and saturation region numbers
         updatePvtnum_();
         updateSatnum_();
+
+        // the MISC region numbers (solvent model)
+        updateMiscnum_();
+        // the PLMIX region numbers (polymer model)
+        updatePlmixnum_();
 
         ////////////////////////////////
         // porosity
@@ -1582,6 +1605,25 @@ private:
         }
     }
 
+    void updatePlmixnum_()
+    {
+        const auto& eclState = this->simulator().gridManager().eclState();
+        const auto& eclProps = eclState.get3DProperties();
+
+        if (!eclProps.hasDeckIntGridProperty("PLMIXNUM"))
+            return;
+
+        const auto& plmixnumData = eclProps.getIntGridProperty("PLMIXNUM").getData();
+        const auto& gridManager = this->simulator().gridManager();
+
+        unsigned numElems = gridManager.gridView().size(/*codim=*/0);
+        plmixnum_.resize(numElems);
+        for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            unsigned cartElemIdx = gridManager.cartesianIndex(elemIdx);
+            plmixnum_[elemIdx] = plmixnumData[cartElemIdx] - 1;
+        }
+    }
+
     struct PffDofData_
     {
         Scalar transmissibility;
@@ -1628,6 +1670,8 @@ private:
     std::vector<int> pvtnum_;
     std::vector<unsigned short> satnum_;
     std::vector<unsigned short> miscnum_;
+    std::vector<unsigned short> plmixnum_;
+
     std::vector<unsigned short> rockTableIdx_;
     std::vector<RockParams> rockParams_;
 
