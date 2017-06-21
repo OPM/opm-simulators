@@ -668,7 +668,6 @@ protected:
                 } 
                 wellRate += wr[n][w];
             }
-
             if (is_producer) {
                 if (pu.phase_used[Water] && pu.phase_used[Oil]) {
                     if (wellRate > 0.0001){
@@ -912,7 +911,7 @@ protected:
         ss.imbue(std::locale(std::locale::classic(), facet));
         ss << "\n                              **************************************************************************\n"
         << "  " << std::left << std::setw(8) << input << "  at    " 
-    << std::right << std::setw(5) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day) << "  Days"
+        << std::right << std::setw(5) << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day) << "  Days"
         << " *  " << std::left << std::setw(70) << eclState().getTitle() << "*\n"
         << "  Report  " << std::right << std::setw(4) << timer.reportStepNum() << "   " << timer.currentDateTime()
         << "  *                                             Flow  version " << std::setw(11) << version << "  *\n"
