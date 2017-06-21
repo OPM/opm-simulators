@@ -29,9 +29,62 @@ namespace Opm
     , perf_pressure_diffs_(numberOfPerforations())
     , well_variables_(numWellEq) // the number of the primary variables
     {
-        dune_B_.setBuildMode( Mat::row_wise );
-        dune_C_.setBuildMode( Mat::row_wise );
-        inv_dune_D_.setBuildMode( Mat::row_wise );
+        duneB_.setBuildMode( Mat::row_wise );
+        duneC_.setBuildMode( Mat::row_wise );
+        invDuneD_.setBuildMode( Mat::row_wise );
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    init(const PhaseUsage* phase_usage_arg,
+         const std::vector<bool>* active_arg,
+         const VFPProperties* vfp_properties_arg,
+         const double gravity_arg,
+         const int num_cells)
+    {
+        WellInterface<TypeTag>(phase_usage_arg, active_arg,
+                               vfp_properties_arg, gravity_arg, num_cells);
+
+        // setup sparsity pattern for the matrices
+        // TODO: C and B are opposite compared with the notations used in the paper.
+        //[A B^T    [x    =  [ res
+        // C D] x_well]      res_well]
+        // set the size of the matrices
+        invDuneD_.setSize(1, 1, 1);
+        duneC_.setSize(1, num_cells, numberOfPerforations());
+        duneB_.setSize(1, num_cells, numberOfPerforations());
+
+        for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
+            // Add nonzeros for diagonal
+            row.insert(row.index());
+        }
+
+        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
+            // Add nonzeros for diagonal
+            for (int perf = 0 ; perf < numberOfPerforations(); ++perf) {
+                const int cell_idx = wellCells()[perf];
+                row.insert(cell_idx);
+            }
+        }
+
+        // make the B^T matrix
+        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
+            for (int perf = 0; perf < numberOfPerforations(); ++perf) {
+                const int cell_idx = wellCells()[perf];
+                row.insert(cell_idx);
+            }
+        }
+
+        resWell_.resize(1);
+
+        // resize temporary class variables
+        Cx_.resize( duneC_.N() );
+        invDrw_.resize( invDuneD_.N() );
     }
 
 
@@ -80,20 +133,6 @@ namespace Opm
     perfPressureDiffs()
     {
         return perf_pressure_diffs_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    assembleWellEq(Simulator& ebos_simulator,
-                   const double dt,
-                   WellState& well_state,
-                   bool only_wells)
-    {
     }
 
 
@@ -541,6 +580,213 @@ namespace Opm
             //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
             for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
                 cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is; // * b_perfcells_dense[phase];
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    assembleWellEq(Simulator& ebosSimulator,
+                   const double dt,
+                   WellState& well_state,
+                   bool only_wells)
+    {
+        // TODO: accessing well_state information is the only place to use nw at the moment
+        const int nw = well_state.bhp().size();
+        const int numComp = numComponents();
+        const int np = numPhases();
+
+        // clear all entries
+        duneB_ = 0.0;
+        duneC_ = 0.0;
+        invDuneD_ = 0.0;
+        resWell_ = 0.0;
+
+        auto& ebosJac = ebosSimulator.model().linearizer().matrix();
+        auto& ebosResid = ebosSimulator.model().linearizer().residual();
+
+        // TODO: it probably can be static member for StandardWell
+        const double volume = 0.002831684659200; // 0.1 cu ft;
+
+        const bool allow_cf = allow_cross_flow(ebosSimulator);
+
+        const EvalWell& bhp = getBhp();
+
+        for (int perf = 0; perf < numberOfPerforations(); ++perf) {
+
+            const int cell_idx = wellCells()[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            std::vector<EvalWell> cq_s(numComp,0.0);
+            std::vector<EvalWell> mob(numComp, 0.0);
+            getMobility(ebosSimulator, perf, mob);
+            computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perfPressureDiffs()[perf], allow_cf, cq_s);
+
+                for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
+                    // the cq_s entering mass balance equations need to consider the efficiency factors.
+                    const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
+
+                    if (!only_wells) {
+                        // subtract sum of component fluxes in the reservoir equation.
+                        // need to consider the efficiency factor
+                        ebosResid[cell_idx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.value();
+                    }
+
+                    // subtract sum of phase fluxes in the well equations.
+                    resWell_[0][componentIdx] -= cq_s[componentIdx].value();
+
+                    // assemble the jacobians
+                    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+                        if (!only_wells) {
+                            // also need to consider the efficiency factor when manipulating the jacobians.
+                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                            duneB_[0][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
+                            duneC_[0][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                        }
+                        invDuneD_[0][0][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
+                    }
+
+                    // add trivial equation for 2p cases (Only support water + oil)
+                    if (numComp == 2) {
+                        assert(!active()[ Gas ]);
+                        invDuneD_[0][0][Gas][Gas] = 1.0;
+                    }
+
+                    // Store the perforation phase flux for later usage.
+                    if (componentIdx == solventCompIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
+                        well_state.perfRateSolvent()[perf] = cq_s[componentIdx].value();
+                    } else {
+                        well_state.perfPhaseRates()[perf*np + componentIdx] = cq_s[componentIdx].value();
+                    }
+                }
+
+                // Store the perforation pressure for later usage.
+                well_state.perfPress()[perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
+            }
+
+            // add vol * dF/dt + Q to the well equations;
+            for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
+                // TODO: the F0_ here is not initialized yet here, which should happen in the first iteration, so it should happen in the assemble function
+                EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
+                resWell_loc += getQs(componentIdx);
+                for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+                    invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
+                }
+                resWell_[0][componentIdx] += resWell_loc.value();
+            }
+
+        // do the local inversion of D.
+        localInvert( invDuneD_ );
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    allow_cross_flow(const Simulator& ebosSimulator) const
+    {
+        if (allowCrossFlow()) {
+            return true;
+        }
+
+        // TODO: investigate the justification of the following situation
+
+        // check for special case where all perforations have cross flow
+        // then the wells must allow for cross flow
+        for (int perf = 0; perf < numberOfPerforations(); ++perf) {
+            const int cell_idx = wellCells()[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& fs = intQuants.fluidState();
+            EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+            EvalWell bhp = getBhp();
+
+            // Pressure drawdown (also used to determine direction of flow)
+            EvalWell well_pressure = bhp + perfPressureDiffs()[perf];
+            EvalWell drawdown = pressure - well_pressure;
+
+            if (drawdown.value() < 0 && wellType() == INJECTOR)  {
+                return false;
+            }
+
+            if (drawdown.value() > 0 && wellType() == PRODUCER)  {
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    getMobility(const Simulator& ebosSimulator,
+                const int perf,
+                std::vector<EvalWell>& mob) const
+    {
+        const int np = numberOfPhases();
+        const int cell_idx = wellCells()[perf];
+        assert (int(mob.size()) == numComponents());
+        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
+
+        // either use mobility of the perforation cell or calcualte its own
+        // based on passing the saturation table index
+        const int satid = saturationTableNumber()[perf] - 1;
+        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
+        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
+
+            for (int phase = 0; phase < np; ++phase) {
+                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+                mob[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
+            }
+            if (has_solvent) {
+                mob[solventCompIdx] = extendEval(intQuants.solventMobility());
+            }
+        } else {
+
+            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
+            Eval relativePerms[3] = { 0.0, 0.0, 0.0 };
+            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
+
+            // reset the satnumvalue back to original
+            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
+
+            // compute the mobility
+            for (int phase = 0; phase < np; ++phase) {
+                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+                mob[phase] = extendEval(relativePerms[ebosPhaseIdx] / intQuants.fluidState().viscosity(ebosPhaseIdx));
+            }
+
+            // this may not work if viscosity and relperms has been modified?
+            if (has_solvent) {
+                OPM_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent");
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    localInvert(Mat& istlA) const
+    {
+        for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
+            for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
+                //std::cout << (*col) << std::endl;
+                (*col).invert();
             }
         }
     }

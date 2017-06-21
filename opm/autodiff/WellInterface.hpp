@@ -58,6 +58,7 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
         typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
         typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
+        typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
         static const int solventCompIdx = 3; //TODO get this from ebos
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
@@ -107,16 +108,12 @@ namespace Opm
         virtual const std::vector<double>& perfPressureDiffs() const = 0;
         virtual std::vector<double>& perfPressureDiffs() = 0;
 
-
-        virtual void assembleWellEq(Simulator& ebos_simulator,
-                                    const double dt,
-                                    WellState& well_state,
-                                    bool only_wells) = 0;
-
+        // TODO: the parameters need to be optimized/adjusted
         void init(const PhaseUsage* phase_usage_arg,
                   const std::vector<bool>* active_arg,
                   const VFPProperties* vfp_properties_arg,
-                  const double gravity_arg);
+                  const double gravity_arg,
+                  const int num_cells);
 
         // TODO: temporary
         virtual void setWellVariables(const WellState& well_state) = 0;
@@ -135,6 +132,11 @@ namespace Opm
 
         int numComponents() const;
 
+        bool allowCrossFlow() const;
+
+        // TODO: for this kind of function, maybe can make a function with parameter perf
+        const std::vector<int>& saturationTableNumber() const;
+
     protected:
         // TODO: some variables shared by all the wells should be made static
         // well name
@@ -146,6 +148,9 @@ namespace Opm
         // well type
         // INJECTOR or PRODUCER
         enum WellType well_type_;
+
+        // whether the well allows crossflow
+        bool allow_cf_;
 
         // number of phases
         int number_of_phases_;
@@ -167,8 +172,13 @@ namespace Opm
         // depth for each perforation
         std::vector<double> perf_depth_;
 
+        double well_efficiency_factor_;
+
         // cell index for each well perforation
         std::vector<int> well_cell_;
+
+        // saturation table nubmer for each well perforation
+        std::vector<int> saturation_table_number_;
 
         const PhaseUsage* phase_usage_;
 

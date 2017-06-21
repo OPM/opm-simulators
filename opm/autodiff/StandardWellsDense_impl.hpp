@@ -128,6 +128,14 @@ namespace Opm {
             }
         }
 
+        // do the initialization work
+
+        // do the initialization for all the wells
+        // TODO: to see whether we can postpone of the intialization of the well containers to
+        // optimize the usage of the following several member variables
+        for (auto& well : well_container_) {
+            well->init(&phase_usage_, &active_, vfp_properties_, gravity_, nc);
+        }
     }
 
 

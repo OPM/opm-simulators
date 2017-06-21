@@ -47,6 +47,7 @@ namespace Opm
         name_ = well_name;
         index_of_well_ = index_well;
         well_type_ = wells->type[index_well];
+        allow_cf_ = wells->allow_cf[index_well];
         number_of_phases_ = wells->number_of_phases;
 
         // copying the comp_frac
@@ -75,6 +76,12 @@ namespace Opm
                       wells->WI + perf_index_end,
                       well_index_.begin() );
 
+            saturation_table_number_.resize(number_of_perforations_);
+            std::copy(wells->sat_table_id + perf_index_begin,
+                      wells->sat_table_id + perf_index_end,
+                      saturation_table_number_.begin() );
+
+
             // TODO: not sure about the processing of depth for perforations here
             // Will revisit here later. There are different ways and the definition for different wells
             // can be different, it is possible that we need to remove this from the WellInterface
@@ -84,6 +91,9 @@ namespace Opm
                 perf_depth_[i] = completion_set.get(i).getCenterDepth();
             }
         }
+
+        well_efficiency_factor_ = 1.0;
+        // TODO: need to calculate based on wellCollections, or it should happen in the Well Model side.
     }
 
 
@@ -96,7 +106,8 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<bool>* active_arg,
          const VFPProperties* vfp_properties_arg,
-         const double gravity_arg)
+         const double gravity_arg,
+         const int /* num_cells */)
     {
         phase_usage_ = phase_usage_arg;
         active_ = active_arg;
@@ -173,6 +184,18 @@ namespace Opm
     wellControls() const
     {
         return well_controls_;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    const std::vector<int>&
+    WellInterface<TypeTag>::
+    saturationTableNumber() const
+    {
+        return saturation_table_number_;
     }
 
 

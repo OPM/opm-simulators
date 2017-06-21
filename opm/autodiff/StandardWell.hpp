@@ -48,6 +48,7 @@ namespace Opm
         using WellState = typename WellInterface<TypeTag>::WellState;
         using IntensiveQuantities = typename WellInterface<TypeTag>::IntensiveQuantities;
         using FluidSystem = typename WellInterface<TypeTag>::FluidSystem;
+        using MaterialLaw = typename WellInterface<TypeTag>::MaterialLaw;
 
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
@@ -99,11 +100,6 @@ namespace Opm
         virtual const std::vector<double>& perfPressureDiffs() const;
         virtual std::vector<double>& perfPressureDiffs();
 
-        virtual void assembleWellEq(Simulator& ebos_simulator,
-                                    const double dt,
-                                    WellState& well_state,
-                                    bool only_wells);
-
         virtual void setWellVariables(const WellState& well_state);
 
         EvalWell wellVolumeFractionScaled(const int phase) const;
@@ -120,26 +116,52 @@ namespace Opm
                              const double Tw, const EvalWell& bhp, const double& cdp,
                              const bool& allow_cf, std::vector<EvalWell>& cq_s) const;
 
+        void assembleWellEq(Simulator& ebosSimulator,
+                            const double dt,
+                            WellState& well_state,
+                            bool only_wells);
+
+        bool allow_cross_flow(const Simulator& ebosSimulator) const;
+
+        void getMobility(const Simulator& ebosSimulator,
+                         const int perf,
+                         std::vector<EvalWell>& mob) const;
+
+        // TODO: the parameters need to be optimized/adjusted
+        void init(const PhaseUsage* phase_usage_arg,
+                  const std::vector<bool>* active_arg,
+                  const VFPProperties* vfp_properties_arg,
+                  const double gravity_arg,
+                  const int num_cells);
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
+        using WellInterface<TypeTag>::wellCells;
+        using WellInterface<TypeTag>::saturationTableNumber;
         using WellInterface<TypeTag>::indexOfWell;
         using WellInterface<TypeTag>::name;
         using WellInterface<TypeTag>::wellType;
+        using WellInterface<TypeTag>::allowCrossFlow;
         using WellInterface<TypeTag>::wellControls;
         using WellInterface<TypeTag>::compFrac;
         using WellInterface<TypeTag>::numberOfPhases;
         using WellInterface<TypeTag>::perfDepth;
         using WellInterface<TypeTag>::flowToEbosPvIdx;
         using WellInterface<TypeTag>::flowPhaseToEbosPhaseIdx;
+        using WellInterface<TypeTag>::flowPhaseToEbosCompIdx;
         using WellInterface<TypeTag>::numComponents;
         using WellInterface<TypeTag>::numPhases;
         using WellInterface<TypeTag>::has_solvent;
+        using WellInterface<TypeTag>::wellIndex;
 
     protected:
 
+        void localInvert(Mat& istlA) const;
+
         using WellInterface<TypeTag>::vfp_properties_;
         using WellInterface<TypeTag>::gravity_;
+        using WellInterface<TypeTag>::well_efficiency_factor_;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
@@ -149,14 +171,20 @@ namespace Opm
         // TODO: probably, they should be moved to the WellInterface, when
         // we decide the template paramters.
         // two off-diagonal matrices
-        Mat dune_B_;
-        Mat dune_C_;
+        Mat duneB_;
+        Mat duneC_;
         // diagonal matrix for the well
-        Mat inv_dune_D_;
+        Mat invDuneD_;
 
-        BVector res_well_;
+        // several vector used in the matrix calculation
+        mutable BVector Cx_;
+        mutable BVector invDrw_;
+        mutable BVector scaleAddRes_;
+
+        BVector resWell_;
 
         std::vector<EvalWell> well_variables_;
+        std::vector<double> F0_;
 
         // TODO: this function should be moved to the base class.
         // while it faces chanllenges for MSWell later, since the calculation of bhp
