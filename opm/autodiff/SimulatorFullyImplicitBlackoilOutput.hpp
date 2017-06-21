@@ -338,7 +338,12 @@ namespace Opm
                          const Opm::EclipseState& eclipseState,
                          std::unique_ptr<EclipseIO>&& eclIO,
                          const Opm::PhaseUsage &phaseUsage)
-      : output_( param.getDefault("output", true) ),
+        : output_( [ &param ] () -> bool {
+                // If output parameter is true or all, then we do output
+                const std::string outputString = param.getDefault("output", std::string("all"));
+                return ( outputString == "all" ||  outputString == "true" );
+            }()
+            ),
         parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, phaseUsage ) : 0 ),
         outputDir_( eclipseState.getIOConfig().getOutputDir() ),
         restart_double_si_( output_ ? param.getDefault("restart_double_si", false) : false ),
