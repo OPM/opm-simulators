@@ -248,7 +248,7 @@ public:
             computeRESV(timer.currentStepNum(), wells, state, well_state);
         
             wellReportVariable = getWellReport(eclState().getUnits(),  phaseUsage_, wells, well_state);
-            welltotals = wellTotals(wellReportVariable, wells);
+            welltotals = wellTotals(wellReportVariable, wells, phaseUsage_);
         
             if (!timer.initialStep()) {
                 outputTimestamp(timer, version, "Wells");
@@ -656,21 +656,25 @@ protected:
                 //THP
                 wr[4][w] = unit::convert::to(xw.thp()[w], unit::psia);
             }
-            if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) { 
+            else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) { 
+                wr[0][w] = unit::convert::to(wr[0][w],unit::cubic(unit::meter)/unit::day);
+                wr[1][w] = unit::convert::to(wr[1][w],unit::cubic(unit::meter)/unit::day);
+                wr[2][w] = unit::convert::to(wr[2][w],unit::cubic(unit::meter)/unit::day);
                 //BHP
                 wr[3][w] = unit::convert::to(xw.bhp()[w], unit::barsa);
                 //THP
                 wr[4][w] = unit::convert::to(xw.thp()[w], unit::barsa);
-            }       
+            }
+            else {
+                OPM_THROW(std::runtime_error, "Only 'FIELD' and 'METRIC' unit systems supported for well reporting");
+            }
+            
             for (int n = 0; n < 3; n++){
-                if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) { 
-                    wr[n][w] = unit::convert::to(wr[n][w],unit::cubic(unit::meter)/unit::day);
-                } 
                 wellRate += wr[n][w];
             }
             if (is_producer) {
                 if (pu.phase_used[Water] && pu.phase_used[Oil]) {
-                    if (wellRate > 0.0001){
+                    if (wellRate > 0.00001){
                         //Watercut
                         wr[5][w] = wr[0][w]/wellRate;
                     }
@@ -690,7 +694,8 @@ protected:
    
    //Compute and return produced and injected totals from wells per phase
    std::vector<double> wellTotals(std::vector<std::vector<double>> wr,
-                                  const Wells* wells)
+                                  const Wells* wells,
+                                  const Opm::PhaseUsage& pu)
    {
         int nw = wells->number_of_wells;
         std::vector<double> wtotals (9,0.0);        
@@ -704,12 +709,6 @@ protected:
                wtotals[1] += wr[0][w];
                //Field Gas produced
                wtotals[2] += wr[2][w];
-               //Field Watercut
-               wtotals[3] += wr[5][w];
-               //Field Gas-Oil Ratio
-               wtotals[4] += wr[6][w];
-               //Field Water-Gas Ratio
-               wtotals[5] += wr[7][w];
            }
            if (is_injector){
                //Field Oil injected
@@ -719,6 +718,23 @@ protected:
                //Field Gas injected
                wtotals[8] += wr[2][w];
            }
+        }
+        for (int w = 0; w < nw; ++w) {
+           const bool is_producer = wells->type[w] == PRODUCER;
+           if (is_producer) {
+               if (pu.phase_used[Water] && pu.phase_used[Oil]) {
+                   //Field Watercut
+                   wtotals[3] = wtotals[1]/(wtotals[0] + wtotals[1] + wtotals[2]);
+               }
+               if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+                   //Field GOR
+                   wtotals[4] = wtotals[2]/wtotals[0];
+               }
+               if (pu.phase_used[Water] && pu.phase_used[Gas]) {
+                   //Field WGR       
+                   wtotals[5] = wtotals[1]/wtotals[2];
+               }
+	   }
         }
         return wtotals;
    }
@@ -735,30 +751,30 @@ protected:
         std::ostringstream pr;
         pr << "\n                                                       PRODUCTION REPORT \n"
            << "                                                       ................. \n\n"
-           << "---------------------------------------------------------------------------------------------------------------------------- \n"
-           << ":       WELL       :     CTRL    :     OIL     :    WATER    :     GAS     : WATER : GAS/OIL: WAT/GAS:  BHP OR  :  THP OR  : \n"
-           << ":       NAME       :     MODE    :     RATE    :    RATE     :     RATE    :  CUT  :  RATIO :  RATIO :  CON.PR. :  BLK.PR. : \n";
+           << "----------------------------------------------------------------------------------------------------------------------------- \n"
+           << ":       WELL       :     CTRL     :     OIL     :    WATER    :     GAS     : WATER : GAS/OIL: WAT/GAS:  BHP OR  :  THP OR  : \n"
+           << ":       NAME       :     MODE     :     RATE    :    RATE     :     RATE    :  CUT  :  RATIO :  RATIO :  CON.PR. :  BLK.PR. : \n";
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-           pr << ":      OR GRID     :             :    SM3/DAY  :    SM3/DAY  :    SM3/DAY  :       : SM3/SM3: SM3/SM3:   BARSA  :   BARSA  : \n";
+           pr << ":      OR GRID     :              :    SM3/DAY  :    SM3/DAY  :    SM3/DAY  :       : SM3/SM3: SM3/SM3:   BARSA  :   BARSA  : \n";
         }
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-           pr << ":      OR GRID     :             :    STB/DAY  :    STB/DAY  :   MSCF/DAY  :       :MSCF/STB:STB/MSCF:   PSIA   :   PSIA   : \n";
+           pr << ":      OR GRID     :              :    STB/DAY  :    STB/DAY  :   MSCF/DAY  :       :MSCF/STB:STB/MSCF:   PSIA   :   PSIA   : \n";
         }
-           pr << "============================================================================================================================ \n"
-              << ":                  :             :             :             :             :       :        :        :          :          :\n"
-              << ":Field             :             :" << std::fixed << std::setprecision(1) << std::setw(13) << wtotals[0] << ":" << std::setw(13) 
+           pr << "============================================================================================================================= \n"
+              << ":                  :              :             :             :             :       :        :        :          :          :\n"
+              << ":Field             :              :" << std::fixed << std::setprecision(1) << std::setw(13) << wtotals[0] << ":" << std::setw(13) 
               << wtotals[1] << ":" << std::setw(13) << wtotals[2] << ":" << std::fixed << std::setprecision(4) << std::setw(7) << wtotals[3] 
               << ":" << std::setw(8) << wtotals[4] << ":" << std::setw(8) << wtotals[5] << ":          :          : \n"
-              << "============================================================================================================================ \n";
+              << "============================================================================================================================= \n";
            
         for (int w = 0; w < nw; ++w) {
             const bool is_producer = wells->type[w] == PRODUCER;
             int current = xw.currentControls()[w];
             WellControls* ctrl = wells->ctrls[w];
             if (is_producer){
-                pr << ":                  :             :             :             :             :       :        :"        
+                pr << ":                  :              :             :             :             :       :        :"        
                    << "        :          :          :\n"
-                   << ":" << std::left << std::setw(18) << wells->name[w] << ":" << std::setw(13) 
+                   << ":" << std::left << std::setw(18) << wells->name[w] << ":" << std::setw(14) 
                    << mode[well_controls_iget_type(ctrl, current)] << ":" << std::right << std::fixed << std::setprecision(1) 
                    << std::setw(13) << wr[1][w] << ":" << std::setw(13) << wr[0][w] << ":" << std::setw(13) << wr[2][w] << ":" 
                    << std::fixed << std::setprecision(4) << std::setw(7) << wr[5][w] << ":" << std::setw(8) << wr[6][w] << ":" 
@@ -766,40 +782,40 @@ protected:
                    << std::setw(10) << wr[4][w] << ":\n";
             }
         }
-        pr <<  "============================================================================================================================ \n";
+        pr <<  "============================================================================================================================= \n";
         OpmLog::note(pr.str()); 
         
         std::ostringstream ir;
         ir << "\n                                                       INJECTION REPORT \n"
-           << "                                                       ................. \n\n"
-           << "            -------------------------------------------------------------------------------------------------- \n"
-           << "            :       WELL       :     CTRL    :     OIL     :    WATER    :     GAS     :  BHP OR  :  THP OR  : \n"
-           << "            :       NAME       :     MODE    :     RATE    :    RATE     :     RATE    :  CON.PR. :  BLK.PR. : \n";
+           << "                                                       ................ \n\n"
+           << "            --------------------------------------------------------------------------------------------------- \n"
+           << "            :       WELL       :     CTRL     :     OIL     :    WATER    :     GAS     :  BHP OR  :  THP OR  : \n"
+           << "            :       NAME       :     MODE     :     RATE    :    RATE     :     RATE    :  CON.PR. :  BLK.PR. : \n";
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-           ir << "            :      OR GRID     :             :    SM3/DAY  :    SM3/DAY  :    SM3/DAY  :   BARSA  :   BARSA  : \n";
+           ir << "            :      OR GRID     :              :    SM3/DAY  :    SM3/DAY  :    SM3/DAY  :   BARSA  :   BARSA  : \n";
         }
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-           ir << "            :      OR GRID     :             :    STB/DAY  :    STB/DAY  :   MSCF/DAY  :   PSIA   :   PSIA   : \n";
+           ir << "            :      OR GRID     :              :    STB/DAY  :    STB/DAY  :   MSCF/DAY  :   PSIA   :   PSIA   : \n";
         }
-        ir << "            ================================================================================================== \n"
-           << "            :                  :             :             :             :             :          :          :\n"
-           << "            :Field             :             :" << std::fixed << std::setprecision(1) << std::setw(13) << wtotals[6] << ":" 
+        ir << "            =================================================================================================== \n"
+           << "            :                  :              :             :             :             :          :          :\n"
+           << "            :Field             :              :" << std::fixed << std::setprecision(1) << std::setw(13) << wtotals[6] << ":" 
            << std::setw(13) << wtotals[7] << ":" << std::setw(13) << wtotals[8] << ":          :          : \n"
-           << "            ================================================================================================== \n";
+           << "            =================================================================================================== \n";
            
         for (int w = 0; w < nw; ++w) {
             const bool is_injector = wells->type[w] == INJECTOR;
             int current = xw.currentControls()[w];
             WellControls* ctrl = wells->ctrls[w];
             if (is_injector){
-               ir << "            :                  :             :             :             :             :          :          :\n"
-                  << "            :" << std::left << std::setw(18) << wells->name[w] << ":" << std::setw(13) 
+               ir << "            :                  :              :             :             :             :          :          :\n"
+                  << "            :" << std::left << std::setw(18) << wells->name[w] << ":" << std::setw(14) 
                   << mode[well_controls_iget_type(ctrl, current)] << ":" << std::right << std::fixed << std::setprecision(1) 
                   << std::setw(13) << wr[1][w] << ":" << std::setw(13) << wr[0][w] << ":" << std::setw(13) << wr[2][w] << ":" 
                   << std::fixed << std::setprecision(1) << std::setw(10) << wr[3][w] <<":" << std::setw(10) << wr[4][w] << ":\n";
             }
         }
-        ir  << "            ================================================================================================== \n";
+        ir  << "            =================================================================================================== \n";
         OpmLog::note(ir.str());  
     }
 
