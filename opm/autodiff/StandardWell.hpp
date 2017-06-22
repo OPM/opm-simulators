@@ -23,8 +23,6 @@
 #define OPM_STANDARDWELL_HEADER_INCLUDED
 
 
-#include "config.h"
-
 #include <opm/autodiff/WellInterface.hpp>
 
 #include<dune/common/fmatrix.hh>
@@ -134,6 +132,11 @@ namespace Opm
                   const double gravity_arg,
                   const int num_cells);
 
+        // Update the well_state based on solution
+        void updateWellState(const BVector& dwells,
+                             const BlackoilModelParameters& param,
+                             WellState& well_state) const;
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
@@ -157,6 +160,7 @@ namespace Opm
 
     protected:
 
+        // TODO: maybe this function can go to some helper file.
         void localInvert(Mat& istlA) const;
 
         using WellInterface<TypeTag>::vfp_properties_;

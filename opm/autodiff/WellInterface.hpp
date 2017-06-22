@@ -35,6 +35,7 @@
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
+#include <opm/autodiff/BlackoilModelParameters.hpp>
 
 #include <string>
 #include <memory>
