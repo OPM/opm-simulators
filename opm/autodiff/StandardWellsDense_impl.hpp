@@ -205,6 +205,16 @@ namespace Opm {
                 std::vector<EvalWell> cq_s(numComp,0.0);
                 std::vector<EvalWell> mob(numComp, 0.0);
                 getMobility(ebosSimulator, perf, cell_idx, mob);
+
+                if (has_polymer_) {
+                    // assume fully mixture for wells.
+                    EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
+
+                    if (wells().type[w] == INJECTOR) {
+                        const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(intQuants.pvtRegionIndex());
+                        mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
+                    }
+                }
                 computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
                 if (has_polymer_) {
@@ -220,7 +230,6 @@ namespace Opm {
                         // guard against zero porosity and no water
                         const EvalWell denom = Opm::max( (area * poro * (Sw - Swcr)), 1e-12);
                         EvalWell waterVelocity = cq_s[ Water ] / denom * extendEval(intQuants.fluidState().invB(flowPhaseToEbosPhaseIdx(Water)));
-                        EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
 
                         if (PolymerModule::hasShrate()) {
                             // TODO Use the same conversion as for the reservoar equations.
@@ -228,6 +237,7 @@ namespace Opm {
                             // For now use the same formula as in legacy.
                             waterVelocity *= PolymerModule::shrate( intQuants.pvtRegionIndex() ) / wells_bore_diameter_[perf];
                         }
+                        EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
                         EvalWell shearFactor = PolymerModule::computeShearFactor(polymerConcentration,
                                                                                  intQuants.pvtRegionIndex(),
                                                                                  waterVelocity);
