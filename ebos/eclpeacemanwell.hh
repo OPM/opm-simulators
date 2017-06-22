@@ -92,7 +92,12 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
+
+#if ! DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
     typedef typename GridView::template Codim<0>::EntityPointer ElementPointer;
+#else
+    typedef typename GridView::template Codim<0>::Entity        Element;
+#endif
 
     // the dimension of the simulator's world
     static const int dimWorld = GridView::dimensionworld;
@@ -198,7 +203,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         // the composition of the gas phase at the DOF
         std::array<Evaluation, numComponents> gasMassFraction;
 
-        std::shared_ptr<ElementPointer> elementPtr;
+        std::shared_ptr<Element> element;
         unsigned pvtRegionIdx;
         unsigned localDofIdx;
     };
@@ -366,10 +371,11 @@ public:
             /////////////
             // influence of grid on well
             auto& curBlock = matrix[wellGlobalDofIdx][gridDofIdx];
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-            elemCtx.updateStencil(*dofVars.elementPtr);
+
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
+            elemCtx.updateStencil(*dofVars.element);
 #else
-            elemCtx.updateStencil(*(*dofVars.elementPtr));
+            elemCtx.updateStencil(*(*dofVars.element));
 #endif
             curBlock = 0.0;
             for (unsigned priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
@@ -602,7 +608,7 @@ public:
         DofVariables& dofVars = *dofVariables_[globalDofIdx];
         wellTotalVolume_ += context.model().dofTotalVolume(globalDofIdx);
 
-        dofVars.elementPtr.reset(new ElementPointer(context.element()));
+        dofVars.element.reset( new Element(context.element()) );
         dofVars.localDofIdx = dofIdx;
         dofVars.pvtRegionIdx = context.problem().pvtRegionIndex(context, dofIdx, /*timeIdx=*/0);
         assert(dofVars.pvtRegionIdx == 0);
@@ -610,7 +616,7 @@ public:
         // determine the size of the element
         dofVars.effectiveSize.fill(0.0);
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 4)
         // we assume all elements to be hexahedrons!
         assert(context.element().subEntities(/*codim=*/dimWorld) == 8);
 #else
