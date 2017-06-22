@@ -28,6 +28,7 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
+
 #include <ewoms/common/propertysystem.hh>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
@@ -40,6 +41,8 @@
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+
+#include <dune/grid/CpGrid.hpp>
 
 #include <array>
 #include <vector>
@@ -62,6 +65,7 @@ NEW_PROP_TAG(ElementMapper);
 template <class TypeTag>
 class EclTransmissibility
 {
+    typedef typename GET_PROP_TYPE(TypeTag, Grid)     Grid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
@@ -95,6 +99,7 @@ public:
      */
     void finishInit()
     { update(); }
+
 
     void update()
     {
@@ -185,10 +190,14 @@ public:
                 unsigned insideFaceIdx  = intersection.indexInInside();
                 unsigned outsideFaceIdx = intersection.indexInOutside();
 
-                int faceIdx = intersection.id();
-                DimVector faceCenterInside = gridManager_.grid().faceCenterEcl(insideElemIdx,insideFaceIdx);
-                DimVector faceCenterOutside = gridManager_.grid().faceCenterEcl(outsideElemIdx,outsideFaceIdx);
-                DimVector faceAreaNormal = gridManager_.grid().faceAreaNormalEcl(faceIdx);
+                DimVector faceCenterInside;
+                DimVector faceCenterOutside;
+                DimVector faceAreaNormal;
+
+                typename std::is_same< Grid, Dune::CpGrid> :: type isCpGrid;
+                computeFaceProperties( intersection, insideElemIdx, insideFaceIdx, outsideElemIdx, outsideFaceIdx,
+                                       faceCenterInside, faceCenterOutside, faceAreaNormal,
+                                       isCpGrid );
 
                 Scalar halfTrans1;
                 Scalar halfTrans2;
@@ -266,6 +275,43 @@ public:
     { return trans_.at(isId_(elemIdx1, elemIdx2)); }
 
 private:
+    template <class Intersection>
+    void computeFaceProperties( const Intersection& intersection,
+                                const int insideElemIdx,
+                                const int insideFaceIdx,
+                                const int outsideElemIdx,
+                                const int outsideFaceIdx,
+                                DimVector& faceCenterInside,
+                                DimVector& faceCenterOutside,
+                                DimVector& faceAreaNormal,
+                                std::false_type ) const
+    {
+        // default implementation for DUNE grids
+        const auto& geometry = intersection.geometry();
+        faceCenterInside = geometry.center();
+        faceCenterOutside = faceCenterInside;
+
+        faceAreaNormal = intersection.centerUnitOuterNormal();
+        faceAreaNormal *= geometry.volume();
+    }
+
+    template <class Intersection>
+    void computeFaceProperties( const Intersection& intersection,
+                                const int insideElemIdx,
+                                const int insideFaceIdx,
+                                const int outsideElemIdx,
+                                const int outsideFaceIdx,
+                                DimVector& faceCenterInside,
+                                DimVector& faceCenterOutside,
+                                DimVector& faceAreaNormal,
+                                std::true_type ) const
+    {
+        int faceIdx = intersection.id();
+        faceCenterInside = gridManager_.grid().faceCenterEcl(insideElemIdx,insideFaceIdx);
+        faceCenterOutside = gridManager_.grid().faceCenterEcl(outsideElemIdx,outsideFaceIdx);
+        faceAreaNormal = gridManager_.grid().faceAreaNormalEcl(faceIdx);
+    }
+
     void extractPermeability_()
     {
         const auto& props = gridManager_.eclState().get3DProperties();

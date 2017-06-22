@@ -161,7 +161,7 @@ public:
 protected:
     void createGrids_()
     {
-        const auto& gridProps = this->eclState()->get3DProperties();
+        const auto& gridProps = this->eclState().get3DProperties();
         const std::vector<double>& porv = gridProps.getDoubleGridProperty("PORV").getData();
 
         // we use separate grid objects: one for the calculation of the initial condition
@@ -173,7 +173,7 @@ protected:
         // create the EQUIL grid
         /////
         equilGrid_ = new EquilGrid();
-        equilGrid_->processEclipseFormat(*this->eclState()->getInputGrid(),
+        equilGrid_->processEclipseFormat(this->eclState().getInputGrid(),
                                          /*isPeriodic=*/false,
                                          /*flipNormals=*/false,
                                          /*clipZ=*/false,

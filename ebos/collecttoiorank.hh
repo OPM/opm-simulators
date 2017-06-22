@@ -184,17 +184,21 @@ namespace Ewoms
                 // no need to collect anything.
                 return;
             }
-            typedef typename GridManager::GridView GridView;
-            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>
-                ElementMapper;
-
             const CollectiveCommunication& comm = gridManager.grid().comm();
-            ElementMapper elemMapper(gridManager.gridView());
+
             {
                 std::set< int > send, recv;
                 // the I/O rank receives from all other ranks
                 if( isIORank() )
                 {
+                    typedef typename GridManager::EquilGrid::LeafGridView EquilGridView;
+                    const EquilGridView equilGridView = gridManager.equilGrid().leafGridView() ;
+
+                    typedef Dune::MultipleCodimMultipleGeomTypeMapper< EquilGridView, Dune::MCMGElementLayout>
+                        EquilElementMapper;
+
+                    EquilElementMapper equilElemMapper( equilGridView );
+
                     // the I/O rank needs a picture of the global grid, here we
                     // use equilGrid which represents a view on the global grid
                     const size_t globalSize = gridManager.equilGrid().leafGridView().size( 0 );
@@ -206,9 +210,9 @@ namespace Ewoms
                     const auto& elemEndIt = gridManager.equilGrid().leafGridView().template end<0>();
                     for (; elemIt != elemEndIt; ++elemIt) {
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
-                        int elemIdx = elemMapper.index(*elemIt );
+                        int elemIdx = equilElemMapper.index(*elemIt );
 #else
-                        int elemIdx = elemMapper.map(*elemIt );
+                        int elemIdx = equilElemMapper.map(*elemIt );
 #endif
                         int cartElemIdx = gridManager.equilCartesianIndexMapper().cartesianIndex(elemIdx);
                         globalCartesianIndex_[elemIdx] = cartElemIdx;
@@ -235,9 +239,16 @@ namespace Ewoms
                 IndexMapType distributedCartesianIndex;
                 distributedCartesianIndex.resize(gridSize, -1);
 
-                auto localView = gridManager.grid().leafGridView();
-                for( auto it = localView.template begin< 0 >(),
-                     end = localView.template end< 0 >(); it != end; ++it )
+                typedef typename GridManager::GridView LocalGridView;
+                const LocalGridView localGridView = gridManager.gridView() ;
+
+                typedef Dune::MultipleCodimMultipleGeomTypeMapper< LocalGridView, Dune::MCMGElementLayout>
+                    ElementMapper;
+
+                ElementMapper elemMapper( localGridView );
+
+                for( auto it = localGridView.template begin< 0, Dune::Interior_Partition >(),
+                     end = localGridView.template end< 0, Dune::Interior_Partition >(); it != end; ++it )
                 {
                     const auto element = *it ;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
