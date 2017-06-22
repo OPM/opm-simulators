@@ -754,70 +754,23 @@ namespace Opm {
 
         template <class CollectiveCommunication>
         double convergenceReduction(const CollectiveCommunication& comm,
-                                    const long int ncGlobal,
-                                    const int numComp,
-                                    const std::vector< std::vector< Scalar > >& B,
-                                    const std::vector< std::vector< Scalar > >& tempV,
-                                    const std::vector< std::vector< Scalar > >& R,
-                                    const std::vector< Scalar >& pv,
-                                    const std::vector< Scalar >& residual_well,
+                                    const double pvSumLocal,
                                     std::vector< Scalar >& R_sum,
                                     std::vector< Scalar >& maxCoeff,
                                     std::vector< Scalar >& B_avg,
                                     std::vector< Scalar >& maxNormWell )
         {
-            const int nw = residual_well.size() / numComp;
-            assert(nw * numComp == int(residual_well.size()));
-
-            // Do the global reductions
-            B_avg.resize(numComp);
-            maxCoeff.resize(numComp);
-            R_sum.resize(numComp);
-            maxNormWell.resize(numComp);
-
-            const std::vector<double>* mask = nullptr;
-
-#if HAVE_MPI
-            if ( comm.size() > 1 )
-            {
-                // Initialize maxCoeff with minimum.
-                std::fill(maxCoeff.begin(), maxCoeff.end(), std::numeric_limits<Scalar>::lowest());
-                // mask[c] is 1 if we need to compute something in parallel
-                const auto & pinfo =
-                        boost::any_cast<const ParallelISTLInformation&>(istlSolver().parallelInformation());
-                mask = &pinfo.updateOwnerMask( B[ 0 ] );
-            }
-#endif
-
-            // computation
-            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
-            {
-                B_avg[compIdx] = std::accumulate( B[ compIdx ].begin(), B[ compIdx ].end(),
-                                              0.0 ) / double(ncGlobal);
-                R_sum[compIdx] = std::accumulate( R[ compIdx ].begin(), R[ compIdx ].end(),
-                                              0.0 );
-
-                maxCoeff[compIdx] = *(std::max_element( tempV[ compIdx ].begin(), tempV[ compIdx ].end() ));
-
-                assert(numComp >= numComp);
-                if (compIdx < numComp) {
-                    maxNormWell[compIdx] = 0.0;
-                    for ( int w = 0; w < nw; ++w ) {
-                        maxNormWell[compIdx] = std::max(maxNormWell[compIdx], std::abs(residual_well[nw*compIdx + w]));
-                    }
-                }
-            }
-
             // Compute total pore volume (use only owned entries)
-            double pvSum = accumulateMaskedValues(pv, mask);
+            double pvSum = pvSumLocal;
 
             if( comm.size() > 1 )
             {
                 // global reduction
                 std::vector< Scalar > sumBuffer;
                 std::vector< Scalar > maxBuffer;
-                sumBuffer.reserve( B_avg.size() + R_sum.size() + 1 );
-                maxBuffer.reserve( maxCoeff.size() + maxNormWell.size() );
+                const int numComp = B_avg.size();
+                sumBuffer.reserve( 2*numComp + 1 ); // +1 for pvSum
+                maxBuffer.reserve( 2*numComp );
                 for( int compIdx = 0; compIdx < numComp; ++compIdx )
                 {
                     sumBuffer.push_back( B_avg[ compIdx ] );
@@ -861,7 +814,7 @@ namespace Opm {
         /// \param[in]   iteration   current iteration number
         bool getConvergence(const SimulatorTimerInterface& timer, const int iteration, std::vector<double>& residual_norms)
         {
-            typedef std::vector< double > Vector;
+            typedef std::vector< Scalar > Vector;
 
             const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
@@ -870,21 +823,15 @@ namespace Opm {
 
             const int nc = Opm::AutoDiffGrid::numCells(grid_);
             const int np = numPhases();
-
             const int numComp = numComponents();
-            Vector R_sum(numComp);
-            Vector B_avg(numComp);
-            Vector maxCoeff(numComp);
-            Vector maxNormWell(numComp);
 
-            // As we will not initialize values in the following arrays
-            // for the non-interior elements, we have to make sure
-            // (at least for tempV) that the values there do not influence
-            // our reduction.
-            std::vector< Vector > B( numComp, Vector( nc, 0.0) );
-            //std::vector< Vector > R( numComp, Vector( nc, 0.0) ) );
-            std::vector< Vector > R2( numComp, Vector( nc, 0.0 ) );
-            std::vector< Vector > tempV( numComp, Vector( nc, std::numeric_limits<double>::lowest() ) );
+            Vector R_sum(numComp, 0.0 );
+            Vector B_avg(numComp, 0.0 );
+            Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
+            Vector maxNormWell(numComp, 0.0 );
+
+            const auto& ebosModel = ebosSimulator_.model();
+            const auto& ebosProblem = ebosSimulator_.problem();
 
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
@@ -892,9 +839,10 @@ namespace Opm {
             const auto& gridView = ebosSimulator().gridView();
             const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
 
+            double pvSumLocal = 0.0;
             for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-              elemIt != elemEndIt;
-              ++elemIt)
+                 elemIt != elemEndIt;
+                 ++elemIt)
             {
                 const auto& elem = *elemIt;
                 elemCtx.updatePrimaryStencil(elem);
@@ -903,51 +851,50 @@ namespace Opm {
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
+                const double pvValue = ebosProblem.porosity(cell_idx) * ebosModel.dofTotalVolume( cell_idx );
+                pvSumLocal += pvValue;
+
                 for ( int phaseIdx = 0; phaseIdx < np; ++phaseIdx )
                 {
-                    Vector& R2_idx = R2[ phaseIdx ];
-                    Vector& B_idx  = B[ phaseIdx ];
                     const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phaseIdx);
                     const int ebosCompIdx = flowPhaseToEbosCompIdx(phaseIdx);
 
-                    B_idx [cell_idx] = 1.0 / fs.invB(ebosPhaseIdx).value();
-                    R2_idx[cell_idx] = ebosResid[cell_idx][ebosCompIdx];
+                    B_avg[ phaseIdx ] += 1.0 / fs.invB(ebosPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][ebosCompIdx];
+
+                    R_sum[ phaseIdx ] += R2;
+                    maxCoeff[ phaseIdx ] = std::max( maxCoeff[ phaseIdx ], std::abs( R2 ) / pvValue );
                 }
 
-                if (has_solvent_ ) {
-                    Vector& R2_idx = R2[ solventCompIdx ];
-                    Vector& B_idx  = B[ solventCompIdx ];
-                    B_idx [cell_idx] = 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
-                    R2_idx[cell_idx] = ebosResid[cell_idx][solventCompIdx];
+                if ( has_solvent_ ) {
+                    B_avg[ solventCompIdx ] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
+                    const auto R2 = ebosResid[cell_idx][solventCompIdx];
+                    R_sum[ solventCompIdx ] += R2;
+                    maxCoeff[ solventCompIdx ] = std::max( maxCoeff[ solventCompIdx ], std::abs( R2 ) / pvValue );
                 }
 
             }
 
-            Vector pv_vector;
-            pv_vector.resize(nc);
-            const auto& ebosModel = ebosSimulator_.model();
-            const auto& ebosProblem = ebosSimulator_.problem();
-            for (int cellIdx = 0; cellIdx < nc; ++cellIdx) {
-                pv_vector[cellIdx] =
-                    ebosProblem.porosity(cellIdx)*
-                    ebosModel.dofTotalVolume(cellIdx);
-            }
-
-            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
+            // compute local average in terms of global number of elements
+            const int bSize = B_avg.size();
+            for ( int i = 0; i<bSize; ++i )
             {
-                //tempV.col(compIdx)   = R2.col(compIdx).abs()/pv;
-                Vector& tempV_idx = tempV[ compIdx ];
-                Vector& R2_idx    = R2[ compIdx ];
-                for( int cell_idx = 0; cell_idx < nc; ++cell_idx )
-                {
-                    tempV_idx[ cell_idx ] = std::abs( R2_idx[ cell_idx ] ) / pv_vector[ cell_idx ];
+                B_avg[ i ] /= Scalar( global_nc_ );
+            }
+
+            // compute maximum of local well residuals
+            const Vector& wellResidual = wellModel().residual();
+            const int nw = wellResidual.size() / numComp;
+            assert(nw * numComp == int(wellResidual.size()));
+            for( int compIdx = 0; compIdx < numComp; ++compIdx )
+            {
+                for ( int w = 0; w < nw; ++w ) {
+                    maxNormWell[compIdx] = std::max(maxNormWell[compIdx], std::abs(wellResidual[nw*compIdx + w]));
                 }
             }
 
-            Vector wellResidual =  wellModel().residual();
-
-            const double pvSum = convergenceReduction(grid_.comm(), global_nc_, numComp,
-                                                      B, tempV, R2, pv_vector, wellResidual,
+            // compute global sum and max of quantities
+            const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
                                                       R_sum, maxCoeff, B_avg, maxNormWell );
 
             Vector CNV(numComp);
