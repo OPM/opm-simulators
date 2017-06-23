@@ -179,13 +179,10 @@ namespace Ewoms
               isIORank_( gridManager.grid().comm().rank() == ioRank ),
               isParallel_( gridManager.grid().comm().size() > 1 )
         {
-            if ( !isParallel_ )
-            {
-                // no need to collect anything.
-                return;
-            }
             const CollectiveCommunication& comm = gridManager.grid().comm();
 
+            // create global and local index maps
+            // this is needed even in serial run for possible remapping of data
             {
                 std::set< int > send, recv;
                 // the I/O rank receives from all other ranks
@@ -259,10 +256,9 @@ namespace Ewoms
                     distributedCartesianIndex[elemIdx] = gridManager.cartesianIndex( elemIdx );
 
                     // only store interior element for collection
-                    if( element.partitionType() == Dune :: InteriorEntity )
-                    {
-                        localIndexMap_.push_back( elemIdx );
-                    }
+                    assert( element.partitionType() == Dune :: InteriorEntity );
+
+                    localIndexMap_.push_back( elemIdx );
                 }
 
                 // insert send and recv linkage to communicator
@@ -308,9 +304,9 @@ namespace Ewoms
                     {
                       it->second->resize( globalSize );
                     }
+
                     // the last index map is the local one
                     doUnpack( indexMaps.back(), buffer );
-
                 }
             }
 
@@ -319,7 +315,7 @@ namespace Ewoms
             {
                 // we should only get one link
                 if( link != 0 ) {
-                    OPM_THROW(std::logic_error,"link in method pack is not 0 as execpted");
+                    OPM_THROW(std::logic_error,"link in method pack is not 0 as expected");
                 }
 
                 size_t buffers = bufferList_.size();
@@ -399,11 +395,7 @@ namespace Ewoms
         template <class BufferList>
         void collect( BufferList& bufferList ) const
         {
-            if ( !isParallel_ )
-            {
-                // no need to collect anything.
-                return;
-            }
+            // this also packs and unpacks the local buffers one ioRank
             PackUnPackOutputBuffers< BufferList >
                 packUnpack( bufferList,
                             localIndexMap_,
@@ -411,8 +403,15 @@ namespace Ewoms
                             numCells(),
                             isIORank() );
 
+            if ( !isParallel_ )
+            {
+                // no need to collect anything.
+                return;
+            }
+
             //toIORankComm_.exchangeCached( packUnpack );
             toIORankComm_.exchange( packUnpack );
+
 #ifndef NDEBUG
             // mkae sure every process is on the same page
             toIORankComm_.barrier();
