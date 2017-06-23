@@ -219,6 +219,14 @@ namespace Opm
                                                          std::vector<double>& rsmax_perf,
                                                          std::vector<double>& rvmax_perf,
                                                          std::vector<double>& surf_dens_perf) const;
+
+        // TODO: not total sure whether it is a good idea to put here
+        // the major reason to put here is to avoid the usage of Wells struct
+        void computeConnectionDensities(const std::vector<double>& perfComponentRates,
+                                        const std::vector<double>& b_perf,
+                                        const std::vector<double>& rsmax_perf,
+                                        const std::vector<double>& rvmax_perf,
+                                        const std::vector<double>& surf_dens_perf);
     };
 
 }

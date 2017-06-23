@@ -1524,4 +1524,102 @@ namespace Opm
         }
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeConnectionDensities(const std::vector<double>& perfComponentRates,
+                               const std::vector<double>& b_perf,
+                               const std::vector<double>& rsmax_perf,
+                               const std::vector<double>& rvmax_perf,
+                               const std::vector<double>& surf_dens_perf)
+    {
+        // Verify that we have consistent input.
+        const int np = numberOfPhases();
+        const int nperf = numberOfPerforations();
+        const int num_comp = numComponents();
+        const PhaseUsage* phase_usage = phase_usage_;
+
+        // 1. Compute the flow (in surface volume units for each
+        //    component) exiting up the wellbore from each perforation,
+        //    taking into account flow from lower in the well, and
+        //    in/out-flow at each perforation.
+        std::vector<double> q_out_perf(nperf*num_comp);
+
+        // TODO: investigate whether we should use the following techniques to calcuate the composition of flows in the wellbore
+        // Iterate over well perforations from bottom to top.
+        for (int perf = nperf - 1; perf >= 0; --perf) {
+            for (int component = 0; component < num_comp; ++component) {
+                if (perf == nperf - 1) {
+                    // This is the bottom perforation. No flow from below.
+                    q_out_perf[perf*num_comp+ component] = 0.0;
+                } else {
+                    // Set equal to flow from below.
+                    q_out_perf[perf*num_comp + component] = q_out_perf[(perf+1)*num_comp + component];
+                }
+                // Subtract outflow through perforation.
+                q_out_perf[perf*num_comp + component] -= perfComponentRates[perf*num_comp + component];
+            }
+        }
+
+        // 2. Compute the component mix at each perforation as the
+        //    absolute values of the surface rates divided by their sum.
+        //    Then compute volume ratios (formation factors) for each perforation.
+        //    Finally compute densities for the segments associated with each perforation.
+        const int gaspos = phase_usage->phase_pos[BlackoilPhases::Vapour];
+        const int oilpos = phase_usage->phase_pos[BlackoilPhases::Liquid];
+        std::vector<double> mix(num_comp,0.0);
+        std::vector<double> x(num_comp);
+        std::vector<double> surf_dens(num_comp);
+        std::vector<double> dens(nperf);
+
+        for (int perf = 0; perf < nperf; ++perf) {
+            // Find component mix.
+            const double tot_surf_rate = std::accumulate(q_out_perf.begin() + num_comp*perf,
+                                                         q_out_perf.begin() + num_comp*(perf+1), 0.0);
+            if (tot_surf_rate != 0.0) {
+                for (int component = 0; component < num_comp; ++component) {
+                    mix[component] = std::fabs(q_out_perf[perf*num_comp + component]/tot_surf_rate);
+                }
+            } else {
+                // No flow => use well specified fractions for mix.
+                for (int phase = 0; phase < np; ++phase) {
+                    mix[phase] = compFrac()[phase];
+                }
+                // intialize 0.0 for comIdx >= np;
+            }
+            // Compute volume ratio.
+            x = mix;
+            double rs = 0.0;
+            double rv = 0.0;
+            if (!rsmax_perf.empty() && mix[oilpos] > 0.0) {
+                rs = std::min(mix[gaspos]/mix[oilpos], rsmax_perf[perf]);
+            }
+            if (!rvmax_perf.empty() && mix[gaspos] > 0.0) {
+                rv = std::min(mix[oilpos]/mix[gaspos], rvmax_perf[perf]);
+            }
+            if (rs != 0.0) {
+                // Subtract gas in oil from gas mixture
+                x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/(1.0 - rs*rv);
+            }
+            if (rv != 0.0) {
+                // Subtract oil in gas from oil mixture
+                x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/(1.0 - rs*rv);;
+            }
+            double volrat = 0.0;
+            for (int component = 0; component < num_comp; ++component) {
+                volrat += x[component] / b_perf[perf*num_comp+ component];
+            }
+            for (int component = 0; component < num_comp; ++component) {
+                surf_dens[component] = surf_dens_perf[perf*num_comp+ component];
+            }
+
+            // Compute segment density.
+            perf_densities_[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
+        }
+    }
+
 }
