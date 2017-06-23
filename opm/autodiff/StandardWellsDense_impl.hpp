@@ -1141,10 +1141,12 @@ namespace Opm {
         const int np = numPhases();
         const int numComp = numComponents();
 
+        std::vector< Scalar > B_avg( numComp, Scalar() );
+        computeAverageFormationFactor(ebosSimulator, B_avg);
+
         const double tol_wells = param_.tolerance_wells_;
         const double maxResidualAllowed = param_.max_residual_allowed_;
 
-        std::vector< Scalar > B_avg( numComp, Scalar() );
         std::vector< Scalar > maxNormWell(numComp, Scalar() );
 
         auto& grid = ebosSimulator.gridManager().grid();
@@ -1191,6 +1193,7 @@ namespace Opm {
             }
         }
 
+        const auto& grid = ebosSimulator.gridManager().grid();
         grid.comm().max(maxNormWell.data(), maxNormWell.size());
 
         Vector well_flux_residual(numComp);
@@ -3186,6 +3189,54 @@ namespace Opm {
                  }
             }
             well_index++;
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    computeAverageFormationFactor(Simulator& ebosSimulator,
+                                  std::vector<double>& B_avg) const
+    {
+        const int np = numPhases();
+        const int numComp = numComponents();
+
+        const auto& grid = ebosSimulator.gridManager().grid();
+        const auto& gridView = grid.leafGridView();
+        ElementContext elemCtx(ebosSimulator);
+        const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+
+        for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
+             elemIt != elemEndIt; ++elemIt)
+        {
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+
+            for ( int phaseIdx = 0; phaseIdx < np; ++phaseIdx )
+            {
+                auto& B  = B_avg[ phaseIdx ];
+                const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phaseIdx);
+
+                B += 1 / fs.invB(ebosPhaseIdx).value();
+            }
+            if (has_solvent_) {
+                auto& B  = B_avg[ solventCompIdx ];
+                B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
+            }
+        }
+
+        // compute global average
+        grid.comm().sum(B_avg.data(), B_avg.size());
+        for(auto& bval: B_avg)
+        {
+            bval/=global_nc_;
         }
     }
 

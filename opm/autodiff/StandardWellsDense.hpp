@@ -436,6 +436,8 @@ enum WellVariablePositions {
             void computeRepRadiusPerfLength(const Grid& grid);
 
 
+            void computeAverageFormationFactor(Simulator& ebosSimulator,
+                                               std::vector<double>& B_avg) const;
         };
 
 
