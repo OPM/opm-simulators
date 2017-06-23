@@ -114,7 +114,7 @@ add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_ebos ${abs_tol} ${rel_tol} comp
 add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(msw_2d_h 2D_H__ flow_multisegment ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(polymer_simple2D 2D_THREEPHASE_POLY_HETER flow_polymer ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe5 SPE5CASE1 flow_solvent ${abs_tol} ${rel_tol} compareECLFiles "" spe5 run.param)
+add_test_compareECLFiles(spe5 SPE5CASE1 flow_solvent ${abs_tol} 5e-4 compareECLFiles "" spe5 run.param)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
