@@ -93,10 +93,11 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
 
     typedef Opm::MathToolbox<Evaluation> Toolbox;
 
-#if ! DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
-    typedef typename GridView::template Codim<0>::EntityPointer ElementPointer;
-#else
     typedef typename GridView::template Codim<0>::Entity        Element;
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
+    typedef Element  ElementStorage;
+#else
+    typedef typename GridView::template Codim<0>::EntityPointer ElementStorage;
 #endif
 
     // the dimension of the simulator's world
@@ -203,7 +204,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
         // the composition of the gas phase at the DOF
         std::array<Evaluation, numComponents> gasMassFraction;
 
-        std::shared_ptr<Element> element;
+        ElementStorage element;
         unsigned pvtRegionIdx;
         unsigned localDofIdx;
     };
@@ -373,9 +374,9 @@ public:
             auto& curBlock = matrix[wellGlobalDofIdx][gridDofIdx];
 
 #if DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
-            elemCtx.updateStencil(*dofVars.element);
+            elemCtx.updateStencil( dofVars.element );
 #else
-            elemCtx.updateStencil(*(*dofVars.element));
+            elemCtx.updateStencil( *dofVars.element );
 #endif
             curBlock = 0.0;
             for (unsigned priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
@@ -608,7 +609,12 @@ public:
         DofVariables& dofVars = *dofVariables_[globalDofIdx];
         wellTotalVolume_ += context.model().dofTotalVolume(globalDofIdx);
 
-        dofVars.element.reset( new Element(context.element()) );
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
+        dofVars.element = context.element();
+#else
+        dofVars.element = ElementStorage( context.element() );
+#endif
+
         dofVars.localDofIdx = dofIdx;
         dofVars.pvtRegionIdx = context.problem().pvtRegionIndex(context, dofIdx, /*timeIdx=*/0);
         assert(dofVars.pvtRegionIdx == 0);
