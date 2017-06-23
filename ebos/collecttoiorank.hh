@@ -174,15 +174,22 @@ namespace Ewoms
 
         enum { ioRank = 0 };
 
+        static const bool needsReordering = ! std::is_same<
+            typename GridManager::Grid, typename GridManager::EquilGrid > :: value ;
+
         CollectDataToIORank( const GridManager& gridManager )
             : toIORankComm_( ),
               isIORank_( gridManager.grid().comm().rank() == ioRank ),
               isParallel_( gridManager.grid().comm().size() > 1 )
         {
+            // index maps only have to be build when reordering is needed
+            if( ! needsReordering && ! isParallel_ )
+            {
+                return ;
+            }
+
             const CollectiveCommunication& comm = gridManager.grid().comm();
 
-            // create global and local index maps
-            // this is needed even in serial run for possible remapping of data
             {
                 std::set< int > send, recv;
                 // the I/O rank receives from all other ranks
@@ -395,6 +402,12 @@ namespace Ewoms
         template <class BufferList>
         void collect( BufferList& bufferList ) const
         {
+            // index maps only have to be build when reordering is needed
+            if( ! needsReordering && ! isParallel_ )
+            {
+                return ;
+            }
+
             // this also packs and unpacks the local buffers one ioRank
             PackUnPackOutputBuffers< BufferList >
                 packUnpack( bufferList,
@@ -403,7 +416,7 @@ namespace Ewoms
                             numCells(),
                             isIORank() );
 
-            if ( !isParallel_ )
+            if ( ! isParallel_ )
             {
                 // no need to collect anything.
                 return;
