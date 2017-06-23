@@ -352,4 +352,19 @@ namespace Opm
         return numComp;
     }
 
+
+
+
+    template<typename TypeTag>
+    const double
+    WellInterface<TypeTag>::
+    wsolvent() const
+    {
+        // TODO: not handling it for the moment
+        // TODO: it needs information from the well_ecl
+        // TODO: will decide on well_ecl role later.
+        // It can be just one member variable and no need to deal with well_ecl at all
+        return 0.0;
+    }
+
 }

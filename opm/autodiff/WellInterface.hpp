@@ -138,6 +138,8 @@ namespace Opm
         // TODO: for this kind of function, maybe can make a function with parameter perf
         const std::vector<int>& saturationTableNumber() const;
 
+        const double wsolvent() const;
+
     protected:
         // TODO: some variables shared by all the wells should be made static
         // well name

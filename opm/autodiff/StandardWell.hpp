@@ -137,6 +137,10 @@ namespace Opm
                              const BlackoilModelParameters& param,
                              WellState& well_state) const;
 
+        // TODO: later will check wheter we need current
+        void updateWellStateWithTarget(const int current,
+                                       WellState& xw) const;
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
@@ -157,15 +161,19 @@ namespace Opm
         using WellInterface<TypeTag>::numPhases;
         using WellInterface<TypeTag>::has_solvent;
         using WellInterface<TypeTag>::wellIndex;
+        using WellInterface<TypeTag>::wsolvent;
 
     protected:
 
         // TODO: maybe this function can go to some helper file.
         void localInvert(Mat& istlA) const;
 
+        // TODO: decide wether to use member function to refer to private member later
         using WellInterface<TypeTag>::vfp_properties_;
         using WellInterface<TypeTag>::gravity_;
         using WellInterface<TypeTag>::well_efficiency_factor_;
+        using WellInterface<TypeTag>::active_;
+        using WellInterface<TypeTag>::phase_usage_;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
