@@ -543,7 +543,7 @@ public:
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
         const auto& RvTable = saturatedOilVaporizationFactorTable_[regionIdx];
-        static constexpr Scalar eps = std::numeric_limits<typename Toolbox::Scalar>::epsilon()*1e6;
+        const Scalar eps = std::numeric_limits<typename Toolbox::Scalar>::epsilon()*1e6;
 
         // use the tabulated saturation pressure function to get a pretty good initial value
         Evaluation pSat = saturationPressure_[regionIdx].eval(Rv, /*extrapolate=*/true);
@@ -597,12 +597,12 @@ private:
         // create the taublated function representing saturation pressure depending of
         // Rv
         size_t n = oilVaporizationFac.numSamples();
-        Scalar delta = (oilVaporizationFac.xMax() - oilVaporizationFac.xMin())/(n + 1);
+        Scalar delta = (oilVaporizationFac.xMax() - oilVaporizationFac.xMin())/Scalar(n + 1);
 
         SamplingPoints pSatSamplePoints;
         Scalar Rv = 0;
         for (size_t i = 0; i <= n; ++ i) {
-            Scalar pSat = oilVaporizationFac.xMin() + i*delta;
+            Scalar pSat = oilVaporizationFac.xMin() + Scalar(i)*delta;
             Rv = saturatedOilVaporizationFactor(regionIdx, /*temperature=*/Scalar(1e30), pSat);
 
             Pair val(Rv, pSat);

@@ -515,7 +515,7 @@ public:
         typedef Opm::MathToolbox<Evaluation> Toolbox;
 
         const auto& RsTable = saturatedGasDissolutionFactorTable_[regionIdx];
-        static constexpr Scalar eps = std::numeric_limits<typename Toolbox::Scalar>::epsilon()*1e6;
+        const Scalar eps = std::numeric_limits<typename Toolbox::Scalar>::epsilon()*1e6;
 
         // use the saturation pressure function to get a pretty good initial value
         Evaluation pSat = saturationPressure_[regionIdx].eval(Rs, /*extrapolate=*/true);
@@ -569,12 +569,12 @@ private:
         // create the function representing saturation pressure depending of the mass
         // fraction in gas
         size_t n = gasDissolutionFac.numSamples();
-        Scalar delta = (gasDissolutionFac.xMax() - gasDissolutionFac.xMin())/(n + 1);
+        Scalar delta = (gasDissolutionFac.xMax() - gasDissolutionFac.xMin())/Scalar(n + 1);
 
         SamplingPoints pSatSamplePoints;
         Scalar Rs = 0;
         for (size_t i=0; i <= n; ++ i) {
-            Scalar pSat = gasDissolutionFac.xMin() + i*delta;
+            Scalar pSat = gasDissolutionFac.xMin() + Scalar(i)*delta;
             Rs = saturatedGasDissolutionFactor(regionIdx,
                                                /*temperature=*/Scalar(1e30),
                                                pSat);
