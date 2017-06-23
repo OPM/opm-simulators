@@ -1622,4 +1622,44 @@ namespace Opm
         }
     }
 
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeConnectionPressureDelta()
+    {
+        // Algorithm:
+
+        // We'll assume the perforations are given in order from top to
+        // bottom for each well.  By top and bottom we do not necessarily
+        // mean in a geometric sense (depth), but in a topological sense:
+        // the 'top' perforation is nearest to the surface topologically.
+        // Our goal is to compute a pressure delta for each perforation.
+
+        // 1. Compute pressure differences between perforations.
+        //    dp_perf will contain the pressure difference between a
+        //    perforation and the one above it, except for the first
+        //    perforation for each well, for which it will be the
+        //    difference to the reference (bhp) depth.
+
+        const int nperf = numberOfPerforations();
+        perf_pressure_diffs_.resize(nperf, 0.0);
+
+        for (int perf = 0; perf < nperf; ++perf) {
+            const double z_above = perf == 0 ? ref_depth_ : perf_depth_[perf - 1];
+            const double dz = perf_depth_[perf] - z_above;
+            perf_pressure_diffs_[perf] = dz * perf_densities_[perf] * gravity_;
+        }
+
+        // 2. Compute pressure differences to the reference point (bhp) by
+        //    accumulating the already computed adjacent pressure
+        //    differences, storing the result in dp_perf.
+        //    This accumulation must be done per well.
+        const auto beg = perf_pressure_diffs_.begin();
+        const auto end = perf_pressure_diffs_.end();
+        std::partial_sum(beg, end, beg);
+    }
+
 }

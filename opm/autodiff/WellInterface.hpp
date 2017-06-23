@@ -180,6 +180,9 @@ namespace Opm
         // depth for each perforation
         std::vector<double> perf_depth_;
 
+        // reference depth for the BHP
+        int ref_depth_;
+
         double well_efficiency_factor_;
 
         // cell index for each well perforation

@@ -60,6 +60,8 @@ namespace Opm
 
         well_controls_ = wells->ctrls[index_well];
 
+        ref_depth_ = wells->depth_ref[index_well];
+
         // perforations related
         {
             const int perf_index_begin = wells->well_connpos[index_well];

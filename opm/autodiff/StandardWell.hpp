@@ -179,6 +179,8 @@ namespace Opm
         using WellInterface<TypeTag>::active_;
         using WellInterface<TypeTag>::phase_usage_;
         using WellInterface<TypeTag>::first_perf_;
+        using WellInterface<TypeTag>::ref_depth_;
+        using WellInterface<TypeTag>::perf_depth_;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
@@ -227,6 +229,8 @@ namespace Opm
                                         const std::vector<double>& rsmax_perf,
                                         const std::vector<double>& rvmax_perf,
                                         const std::vector<double>& surf_dens_perf);
+
+        void computeConnectionPressureDelta();
     };
 
 }
