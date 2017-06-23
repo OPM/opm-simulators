@@ -151,6 +151,7 @@ enum WellVariablePositions {
 
             void
             getMobility(const Simulator& ebosSimulator,
+                        const int w,
                         const int perf,
                         const int cell_idx,
                         std::vector<EvalWell>& mob) const;

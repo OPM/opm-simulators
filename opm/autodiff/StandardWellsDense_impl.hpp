@@ -204,49 +204,8 @@ namespace Opm {
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                 std::vector<EvalWell> cq_s(numComp,0.0);
                 std::vector<EvalWell> mob(numComp, 0.0);
-                getMobility(ebosSimulator, perf, cell_idx, mob);
-
-                if (has_polymer_) {
-                    // assume fully mixture for wells.
-                    EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
-
-                    if (wells().type[w] == INJECTOR) {
-                        const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(intQuants.pvtRegionIndex());
-                        mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
-                    }
-                }
+                getMobility(ebosSimulator, w, perf, cell_idx, mob);
                 computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
-
-                if (has_polymer_) {
-                    if (PolymerModule::hasPlyshlog()) {
-                        // compute the well water velocity based on the perforation rates.
-                        double area = 2 * M_PI * wells_rep_radius_[perf] * wells_perf_length_[perf];
-                        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
-                        const auto& scaledDrainageInfo =
-                                materialLawManager->oilWaterScaledEpsInfoDrainage(cell_idx);
-                        const Scalar& Swcr = scaledDrainageInfo.Swcr;
-                        const EvalWell poro = extendEval(intQuants.porosity());
-                        const EvalWell Sw = extendEval(intQuants.fluidState().saturation(flowPhaseToEbosPhaseIdx(Water)));
-                        // guard against zero porosity and no water
-                        const EvalWell denom = Opm::max( (area * poro * (Sw - Swcr)), 1e-12);
-                        EvalWell waterVelocity = cq_s[ Water ] / denom * extendEval(intQuants.fluidState().invB(flowPhaseToEbosPhaseIdx(Water)));
-
-                        if (PolymerModule::hasShrate()) {
-                            // TODO Use the same conversion as for the reservoar equations.
-                            // Need the "permeability" of the well?
-                            // For now use the same formula as in legacy.
-                            waterVelocity *= PolymerModule::shrate( intQuants.pvtRegionIndex() ) / wells_bore_diameter_[perf];
-                        }
-                        EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
-                        EvalWell shearFactor = PolymerModule::computeShearFactor(polymerConcentration,
-                                                                                 intQuants.pvtRegionIndex(),
-                                                                                 waterVelocity);
-
-                        // modify the mobility with the shear factor and recompute the well fluxes.
-                        mob[ Water ] /= shearFactor;
-                        computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
-                    }
-                }
 
                 for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
 
@@ -309,7 +268,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag >::
-    getMobility(const Simulator& ebosSimulator, const int perf, const int cell_idx, std::vector<EvalWell>& mob) const
+    getMobility(const Simulator& ebosSimulator, const int w, const int perf, const int cell_idx, std::vector<EvalWell>& mob) const
     {
 
         const int np = wells().number_of_phases;
@@ -350,6 +309,51 @@ namespace Opm {
                 OPM_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent");
             }
         }
+
+        // modify the water mobility if polymer is present
+        if (has_polymer_) {
+            // assume fully mixture for wells.
+            EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
+
+            if (wells().type[w] == INJECTOR) {
+                const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(intQuants.pvtRegionIndex());
+                mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
+            }
+
+            if (PolymerModule::hasPlyshlog()) {
+                // compute the well water velocity with out shear effects.
+                const int numComp = numComponents();
+                bool allow_cf = allow_cross_flow(w, ebosSimulator);
+                const EvalWell& bhp = getBhp(w);
+                std::vector<EvalWell> cq_s(numComp,0.0);
+                computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
+                double area = 2 * M_PI * wells_rep_radius_[perf] * wells_perf_length_[perf];
+                const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
+                const auto& scaledDrainageInfo =
+                        materialLawManager->oilWaterScaledEpsInfoDrainage(cell_idx);
+                const Scalar& Swcr = scaledDrainageInfo.Swcr;
+                const EvalWell poro = extendEval(intQuants.porosity());
+                const EvalWell Sw = extendEval(intQuants.fluidState().saturation(flowPhaseToEbosPhaseIdx(Water)));
+                // guard against zero porosity and no water
+                const EvalWell denom = Opm::max( (area * poro * (Sw - Swcr)), 1e-12);
+                EvalWell waterVelocity = cq_s[ Water ] / denom * extendEval(intQuants.fluidState().invB(flowPhaseToEbosPhaseIdx(Water)));
+
+                if (PolymerModule::hasShrate()) {
+                    // TODO Use the same conversion as for the reservoar equations.
+                    // Need the "permeability" of the well?
+                    // For now use the same formula as in legacy.
+                    waterVelocity *= PolymerModule::shrate( intQuants.pvtRegionIndex() ) / wells_bore_diameter_[perf];
+                }
+                EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
+                EvalWell shearFactor = PolymerModule::computeShearFactor(polymerConcentration,
+                                                                         intQuants.pvtRegionIndex(),
+                                                                         waterVelocity);
+
+                // modify the mobility with the shear factor and recompute the well fluxes.
+                mob[ Water ] /= shearFactor;
+            }
+        }
+
     }
 
 
@@ -2844,7 +2848,7 @@ namespace Opm {
             // flux for each perforation
             std::vector<EvalWell> cq_s(numComp, 0.0);
             std::vector<EvalWell> mob(numComp, 0.0);
-            getMobility(ebosSimulator, perf, cell_index, mob);
+            getMobility(ebosSimulator, well_index, perf, cell_index, mob);
             computeWellFlux(well_index, wells().WI[perf], intQuants, mob, bhp,
                             wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
