@@ -887,7 +887,7 @@ namespace Opm {
                     maxCoeff[ contiSolventEqIdx ] = std::max( maxCoeff[ contiSolventEqIdx ], std::abs( R2 ) / pvValue );
                 }
                 if (has_polymer_ ) {
-                     B_avg[ contiPolymerEqIdx ] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
+                    B_avg[ contiPolymerEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
                     const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
                     R_sum[ contiPolymerEqIdx ] += R2;
                     maxCoeff[ contiPolymerEqIdx ] = std::max( maxCoeff[ contiPolymerEqIdx ], std::abs( R2 ) / pvValue );
@@ -1280,6 +1280,11 @@ namespace Opm {
             }
             VectorType& ssol  = has_solvent_ ? simData.getCellData( "SSOL" ) : zero;
 
+            if (has_polymer_) {
+                simData.registerCellData( "POLYMER", 1 );
+            }
+            VectorType& cpolymer  = has_polymer_ ? simData.getCellData( "POLYMER" ) : zero;
+
             std::vector<int> failed_cells_pb;
             std::vector<int> failed_cells_pd;
             const auto& gridView = ebosSimulator().gridView();
@@ -1366,6 +1371,11 @@ namespace Opm {
                 if (has_solvent_)
                 {
                     ssol[cellIdx] = intQuants.solventSaturation().value();
+                }
+
+                if (has_polymer_)
+                {
+                    cpolymer[cellIdx] = intQuants.polymerConcentration().value();
                 }
 
                 // hack to make the intial output of rs and rv Ecl compatible.
