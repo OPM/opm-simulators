@@ -9,7 +9,10 @@ also contains a small library for automatic differentiation
 built on the Eigen linear algebra package which is used by many of the
 simulators to handle the building of Jacobians. The most important parts are:
 
-* flow.cpp (a fully implicit black-oil simulator)
+* flow_ebos.cpp (a fully implicit black-oil simulator built using
+  the local AD class Evaluation)
+* flow_legacy.cpp (a fully implicit black-oil simulator built using
+  the vectorized AD class AutoDiffBlock)
 * AutoDiffBlock.hpp (class for AD on vectorized data with sparse jacobians)
 
 LICENSE
