@@ -1326,4 +1326,94 @@ namespace Opm
     }
 
 
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateWellControl(WellState& xw) const
+    {
+        const int np = numberOfPhases();
+        const int nw = xw.bhp().size();
+        const int w = indexOfWell();
+
+        const int old_control_index = xw.currentControls()[w];
+
+        // Find, for each well, if any constraints are broken. If so,
+        // switch control to first broken constraint.
+        WellControls* wc = wellControls();
+
+        // Loop over all controls except the current one, and also
+        // skip any RESERVOIR_RATE controls, since we cannot
+        // handle those.
+        const int nwc = well_controls_get_num(wc);
+        // the current control index
+        int current = xw.currentControls()[w];
+        int ctrl_index = 0;
+        for (; ctrl_index < nwc; ++ctrl_index) {
+            if (ctrl_index == current) {
+                // This is the currently used control, so it is
+                // used as an equation. So this is not used as an
+                // inequality constraint, and therefore skipped.
+                continue;
+            }
+            if (wellhelpers::constraintBroken(
+                    xw.bhp(), xw.thp(), xw.wellRates(),
+                    w, np, wellType(), wc, ctrl_index)) {
+                // ctrl_index will be the index of the broken constraint after the loop.
+                break;
+            }
+        }
+
+        if (ctrl_index != nwc) {
+            // Constraint number ctrl_index was broken, switch to it.
+            xw.currentControls()[w] = ctrl_index;
+            current = xw.currentControls()[w];
+            well_controls_set_current( wc, current);
+        }
+
+        // update whether well is under group control
+        /* if (wellCollection()->groupControlActive()) {
+            // get well node in the well collection
+            WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+
+            // update whehter the well is under group control or individual control
+            if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
+                // under group control
+                well_node.setIndividualControl(false);
+            } else {
+                // individual control
+                well_node.setIndividualControl(true);
+            }
+        } */
+
+        // the new well control indices after all the related updates,
+        const int updated_control_index = xw.currentControls()[w];
+
+        // checking whether control changed
+        wellhelpers::WellSwitchingLogger logger;
+        if (updated_control_index != old_control_index) {
+            logger.wellSwitched(name(),
+                                well_controls_iget_type(wc, old_control_index),
+                                well_controls_iget_type(wc, updated_control_index));
+        }
+
+        if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
+            updateWellStateWithTarget(updated_control_index, xw);
+        }
+
+        // upate the well targets following group controls
+        // it will not change the control mode, only update the targets
+        /* if (wellCollection()->groupControlActive()) {
+            applyVREPGroupControl(xw);
+            wellCollection()->updateWellTargets(xw.wellRates());
+            for (int w = 0; w < nw; ++w) {
+                const WellControls* wc = wells().ctrls[w];
+                updateWellStateWithTarget(wc, updated_control_index[w], w, xw);
+            }
+        } */
+    }
+
+
 }

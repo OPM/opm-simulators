@@ -141,6 +141,10 @@ namespace Opm
         void updateWellStateWithTarget(const int current,
                                        WellState& xw) const;
 
+        // TODO: this should go to the WellInterface, while updateWellStateWithTarget
+        // will need touch different types of well_state, we will see.
+        void updateWellControl(WellState& xw) const;
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
