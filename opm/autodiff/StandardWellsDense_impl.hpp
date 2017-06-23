@@ -257,7 +257,7 @@ namespace Opm {
                     if (wells().type[w] == INJECTOR) {
                         cq_s_poly *= wpolymer(w);
                     } else {
-                        cq_s_poly *= extendEval(intQuants.polymerConcentration());
+                        cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
                     }
                     if (!only_wells) {
                         for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {

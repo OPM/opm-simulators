@@ -835,7 +835,6 @@ namespace Opm {
             const double tol_cnv   = param_.tolerance_cnv_;
             const double tol_wells = param_.tolerance_wells_;
 
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
             const int np = numPhases();
             const int numComp = numComponents();
 
