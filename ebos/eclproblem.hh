@@ -1057,7 +1057,7 @@ private:
     Scalar cellCenterDepth( const Element& element ) const
     {
         typedef typename Element :: Geometry Geometry;
-        static constexpr int zCoord = Geometry ::dimension - 1;
+        static constexpr int zCoord = Element :: dimension - 1;
         Scalar zz = 0.0;
 
         const Geometry geometry = element.geometry();
