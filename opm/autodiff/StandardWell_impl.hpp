@@ -1662,4 +1662,40 @@ namespace Opm
         std::partial_sum(beg, end, beg);
     }
 
+
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeWellConnectionDensitesPressures(const WellState& xw,
+                                           const std::vector<double>& b_perf,
+                                           const std::vector<double>& rsmax_perf,
+                                           const std::vector<double>& rvmax_perf,
+                                           const std::vector<double>& surf_dens_perf)
+    {
+        // Compute densities
+        const int nperf = numberOfPerforations();
+        const int numComponent = numComponents();
+        const int np = numberOfPhases();
+        std::vector<double> perfRates(b_perf.size(),0.0);
+
+        for (int perf = 0; perf < nperf; ++perf) {
+            for (int phase = 0; phase < np; ++phase) {
+                perfRates[perf*numComponent + phase] =  xw.perfPhaseRates()[(first_perf_ + perf) * np + phase];
+            }
+            if(has_solvent) {
+                perfRates[perf*numComponent + solventCompIdx] =  xw.perfRateSolvent()[perf + first_perf_];
+            }
+        }
+
+        computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+
+        computeConnectionPressureDelta();
+
+    }
+
 }

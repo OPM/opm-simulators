@@ -231,6 +231,12 @@ namespace Opm
                                         const std::vector<double>& surf_dens_perf);
 
         void computeConnectionPressureDelta();
+
+        void computeWellConnectionDensitesPressures(const WellState& xw,
+                                                    const std::vector<double>& b_perf,
+                                                    const std::vector<double>& rsmax_perf,
+                                                    const std::vector<double>& rvmax_perf,
+                                                    const std::vector<double>& surf_dens_perf);
     };
 
 }
