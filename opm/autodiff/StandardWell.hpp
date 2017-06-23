@@ -178,6 +178,7 @@ namespace Opm
         using WellInterface<TypeTag>::well_efficiency_factor_;
         using WellInterface<TypeTag>::active_;
         using WellInterface<TypeTag>::phase_usage_;
+        using WellInterface<TypeTag>::first_perf_;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
@@ -209,6 +210,15 @@ namespace Opm
 
         // TODO: it is also possible to be moved to the base class.
         EvalWell getQs(const int phase) const;
+
+        // calculate the properties for the well connections
+        // to calulate the pressure difference between well connections.
+        void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
+                                                         const WellState& xw,
+                                                         std::vector<double>& b_perf,
+                                                         std::vector<double>& rsmax_perf,
+                                                         std::vector<double>& rvmax_perf,
+                                                         std::vector<double>& surf_dens_perf) const;
     };
 
 }

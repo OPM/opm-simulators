@@ -169,6 +169,11 @@ namespace Opm
         // number of the perforations for this well
         int number_of_perforations_;
 
+        // record the index of the first perforation
+        // TODO: it might not be needed if we refactor WellState to be a vector
+        // of states of individual well.
+        int first_perf_;
+
         // well index for each perforation
         std::vector<double> well_index_;
 

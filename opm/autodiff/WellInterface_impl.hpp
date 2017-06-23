@@ -65,6 +65,7 @@ namespace Opm
             const int perf_index_begin = wells->well_connpos[index_well];
             const int perf_index_end = wells->well_connpos[index_well + 1];
             number_of_perforations_ = perf_index_end - perf_index_begin;
+            first_perf_ = perf_index_begin;
 
             well_cell_.resize(number_of_perforations_);
             std::copy(wells->well_cells + perf_index_begin,
