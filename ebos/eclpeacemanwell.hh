@@ -1352,6 +1352,9 @@ protected:
             computeVolumetricDofRates_<Scalar, Scalar>(volumetricReservoirRates, bottomHolePressure, *tmp);
 
             std::array<Scalar, numPhases> volumetricSurfaceRates;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                volumetricSurfaceRates[ phaseIdx ] = 0;
+            }
             computeSurfaceRates_(volumetricSurfaceRates, volumetricReservoirRates, *tmp);
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
