@@ -400,21 +400,24 @@ private:
         Sogu = 1.0 - sgofTable.getSgColumn().front();
 
         // critical gas saturation
-        for (unsigned rowIdx = 0; rowIdx < sgofTable.numRows(); ++ rowIdx) {
-            if (sgofTable.getKrgColumn()[rowIdx] > 0) {
-                assert(rowIdx > 0);
-                Sgcr = sgofTable.getSgColumn()[rowIdx - 1];
+        Sgcr = 0.0;
+        for (size_t rowIdx = 0; rowIdx < sgofTable.numRows(); ++ rowIdx) {
+            if (sgofTable.getKrgColumn()[rowIdx] > 0.0)
                 break;
-            };
+
+            Sgcr = sgofTable.getSgColumn()[rowIdx];
         }
 
         // critical oil saturation of gas-oil system
-        for (int rowIdx = static_cast<int>(sgofTable.numRows()) - 1; rowIdx >= 0; -- rowIdx) {
-            if (sgofTable.getKrogColumn()[static_cast<size_t>(rowIdx)] > 0) {
-                assert(rowIdx < static_cast<int>(sgofTable.numRows()) - 1);
-                Sogcr = 1.0 - sgofTable.getSgColumn()[static_cast<unsigned>(rowIdx) + 1];
+        Sogcr = 0.0;
+        for (int rowIdx = static_cast<int>(sgofTable.numRows() - 1);
+             rowIdx >= 0;
+             -- rowIdx)
+        {
+            if (sgofTable.getKrogColumn()[static_cast<size_t>(rowIdx)] > 0.0)
                 break;
-            };
+
+            Sogcr = 1.0 - sgofTable.getSgColumn()[static_cast<size_t>(rowIdx)];
         }
 
         // maximum gas-oil capillary pressure
@@ -436,21 +439,24 @@ private:
         Sogu = slgofTable.getSlColumn().back();
 
         // critical gas saturation
-        for (int rowIdx = static_cast<int>(slgofTable.numRows()) - 1; rowIdx >= 0; -- rowIdx) {
-            if (slgofTable.getKrgColumn()[static_cast<size_t>(rowIdx)] > 0) {
-                assert(rowIdx < static_cast<int>(slgofTable.numRows()) - 1);
-                Sgcr = 1 - slgofTable.getSlColumn()[static_cast<unsigned>(rowIdx) + 1];
+        Sgcr = 0.0;
+        for (int rowIdx = static_cast<int>(slgofTable.numRows()) - 1;
+             rowIdx >= 0;
+             -- rowIdx)
+        {
+            if (slgofTable.getKrgColumn()[static_cast<size_t>(rowIdx)] > 0.0)
                 break;
-            };
+
+            Sgcr = 1 - slgofTable.getSlColumn()[static_cast<size_t>(rowIdx)];
         }
 
         // critical oil saturation of gas-oil system
+        Sogcr = 0.0;
         for (size_t rowIdx = 0; rowIdx < slgofTable.numRows(); ++ rowIdx) {
-            if (slgofTable.getKrogColumn()[rowIdx] > 0) {
-                assert(rowIdx > 0);
-                Sogcr = slgofTable.getSlColumn()[rowIdx - 1];
+            if (slgofTable.getKrogColumn()[rowIdx] > 0.0)
                 break;
-            };
+
+            Sogcr = slgofTable.getSlColumn()[rowIdx];
         }
 
         // maximum gas-oil capillary pressure
@@ -472,20 +478,24 @@ private:
         Sowu = 1.0 - swofTable.getSwColumn().front();
 
         // critical water saturation
+        Swcr = 0.0;
         for (size_t rowIdx = 0; rowIdx < swofTable.numRows(); ++ rowIdx) {
-            if (swofTable.getKrwColumn()[rowIdx] > 0) {
-                Swcr = swofTable.getSwColumn()[rowIdx - 1];
+            if (swofTable.getKrwColumn()[rowIdx] > 0.0)
                 break;
-            };
+
+            Swcr = swofTable.getSwColumn()[rowIdx];
         }
 
         // critical oil saturation of oil-water system
-        for (int rowIdx = static_cast<int>(swofTable.numRows()) - 1; rowIdx >= 0; -- rowIdx) {
-            if (swofTable.getKrowColumn()[static_cast<size_t>(rowIdx)] > 0) {
-                assert(rowIdx < static_cast<int>(swofTable.numRows()) - 1);
-                Sowcr = 1.0 - swofTable.getSwColumn()[static_cast<unsigned>(rowIdx) + 1];
+        Sowcr = 0.0;
+        for (int rowIdx = static_cast<int>(swofTable.numRows()) - 1;
+             rowIdx >= 0;
+             -- rowIdx)
+        {
+            if (swofTable.getKrowColumn()[static_cast<size_t>(rowIdx)] > 0.0)
                 break;
-            };
+
+            Sowcr = 1.0 - swofTable.getSwColumn()[static_cast<size_t>(rowIdx)];
         }
 
         // maximum oil-water capillary pressures
@@ -505,12 +515,12 @@ private:
         Swu = swfnTable.getSwColumn().back();
 
         // critical water saturation
-        for (unsigned rowIdx = 0; rowIdx < swfnTable.numRows(); ++ rowIdx) {
-            if (swfnTable.getKrwColumn()[rowIdx] > 0) {
-                assert(rowIdx > 0);
-                Swcr = swfnTable.getSwColumn()[rowIdx - 1];
+        Swcr = 0.0;
+        for (size_t rowIdx = 0; rowIdx < swfnTable.numRows(); ++ rowIdx) {
+            if (swfnTable.getKrwColumn()[rowIdx] > 0)
                 break;
-            };
+
+            Swcr = swfnTable.getSwColumn()[rowIdx];
         }
 
         // maximum oil-water capillary pressure
@@ -530,12 +540,12 @@ private:
         Sogu = 1 - sgfnTable.getSgColumn().front();
 
         // critical gas saturation
-        for (unsigned rowIdx = 0; rowIdx < sgfnTable.numRows(); ++ rowIdx) {
-            if (sgfnTable.getKrgColumn()[rowIdx] > 0) {
-                assert(rowIdx > 0);
-                Sgcr = sgfnTable.getSgColumn()[rowIdx - 1];
+        Sgcr = 0.0;
+        for (size_t rowIdx = 0; rowIdx < sgfnTable.numRows(); ++ rowIdx) {
+            if (sgfnTable.getKrgColumn()[rowIdx] > 0)
                 break;
-            };
+
+            Sgcr = sgfnTable.getSgColumn()[rowIdx];
         }
 
         // maximum capillary pressure
@@ -555,21 +565,22 @@ private:
         Sowu = sof3Table.getSoColumn().back();
 
         // critical oil saturation of oil-water system
+        Sowcr = 0.0;
         for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
             if (sof3Table.getKrowColumn()[rowIdx] > 0) {
-                assert(rowIdx > 0);
-                Sowcr = sof3Table.getSoColumn()[rowIdx - 1];
                 break;
             };
+
+            Sowcr = sof3Table.getSoColumn()[rowIdx];
         }
 
         // critical oil saturation of gas-oil system
+        Sogcr = 0.0;
         for (size_t rowIdx = 0 ; rowIdx < sof3Table.numRows(); ++ rowIdx) {
-            if (sof3Table.getKrogColumn()[rowIdx] > 0) {
-                assert(rowIdx > 0);
-                Sogcr = sof3Table.getSoColumn()[rowIdx - 1];
+            if (sof3Table.getKrogColumn()[rowIdx] > 0)
                 break;
-            };
+
+            Sogcr = sof3Table.getSoColumn()[rowIdx];
         }
 
         // maximum relative oil permeabilities
