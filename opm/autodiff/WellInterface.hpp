@@ -46,8 +46,6 @@ namespace Opm
 {
 
 
-    class SimulatorFullyImplicitBlackoilEbos;
-
     template<typename TypeTag>
     class WellInterface
     {
@@ -55,6 +53,7 @@ namespace Opm
 
         using WellState = WellStateFullyImplicitBlackoilDense;
 
+        typedef BlackoilModelParameters ModelParameters;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
         typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
@@ -139,6 +138,10 @@ namespace Opm
         const std::vector<int>& saturationTableNumber() const;
 
         const double wsolvent() const;
+
+        virtual bool getWellConvergence(Simulator& ebosSimulator,
+                                        std::vector<double>& B_avg,
+                                        const ModelParameters& param) const = 0;
 
     protected:
         // TODO: some variables shared by all the wells should be made static

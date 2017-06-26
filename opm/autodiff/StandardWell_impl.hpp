@@ -1666,6 +1666,82 @@ namespace Opm
 
 
 
+    template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    getWellConvergence(Simulator& ebosSimulator,
+                       std::vector<double>& B_avg,
+                       const ModelParameters& param) const
+    {
+        typedef double Scalar;
+        typedef std::vector< Scalar > Vector;
+
+        const int np = numberOfPhases();
+        const int numComp = numComponents();
+
+        assert(int(B_avg.size()) == numComp);
+
+        const double tol_wells = param.tolerance_wells_;
+        const double maxResidualAllowed = param.max_residual_allowed_;
+
+        std::vector<Scalar> res(numComp);
+        for (int comp = 0; comp < numWellEq; ++comp) {
+            res[comp] = resWell_[0][comp];
+        }
+
+        Vector well_flux_residual(numComp);
+        bool converged_Well = true;
+
+        // Finish computation
+        for ( int compIdx = 0; compIdx < numComp; ++compIdx )
+        {
+            well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
+            converged_Well = converged_Well && (well_flux_residual[compIdx] < tol_wells);
+        }
+
+        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
+        // TODO: not understand why phase here while component in other places.
+        for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+            const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
+
+            if (std::isnan(well_flux_residual[phaseIdx])) {
+                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName << " for well " << name());
+            }
+
+            if (well_flux_residual[phaseIdx] > maxResidualAllowed) {
+                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName << " for well " << name());
+            }
+        }
+
+        /* if ( terminal_output_ )
+        {
+            // Only rank 0 does print to std::cout
+            if (iteration == 0) {
+                std::string msg;
+                msg = "Iter";
+                for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
+                    const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
+                    msg += "  W-FLUX(" + phaseName + ")";
+                }
+                OpmLog::note(msg);
+            }
+
+            std::ostringstream ss;
+            const std::streamsize oprec = ss.precision(3);
+            const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
+            ss << std::setw(4) << iteration;
+            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                ss << std::setw(11) << well_flux_residual[compIdx];
+            }
+            ss.precision(oprec);
+            ss.flags(oflags);
+            OpmLog::note(ss.str());
+        } */
+        return converged_Well;
+    }
+
+
+
 
 
     template<typename TypeTag>

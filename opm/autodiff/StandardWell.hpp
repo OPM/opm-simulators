@@ -47,6 +47,7 @@ namespace Opm
         using IntensiveQuantities = typename WellInterface<TypeTag>::IntensiveQuantities;
         using FluidSystem = typename WellInterface<TypeTag>::FluidSystem;
         using MaterialLaw = typename WellInterface<TypeTag>::MaterialLaw;
+        using ModelParameters = typename WellInterface<TypeTag>::ModelParameters;
 
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
@@ -144,6 +145,10 @@ namespace Opm
         // TODO: this should go to the WellInterface, while updateWellStateWithTarget
         // will need touch different types of well_state, we will see.
         void updateWellControl(WellState& xw) const;
+
+        virtual bool getWellConvergence(Simulator& ebosSimulator,
+                                        std::vector<double>& B_avg,
+                                        const ModelParameters& param) const;
 
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
