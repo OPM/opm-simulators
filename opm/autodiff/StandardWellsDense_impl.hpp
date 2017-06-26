@@ -765,9 +765,9 @@ namespace Opm {
     setWellVariables(const WellState& xw)
     {
         const int nw = wells().number_of_wells;
-        // for two-phase numComp < numEq
-        //const int numComp = numComponents();
-        for (int eqIdx = 0; eqIdx < numWellEq;  ++eqIdx) {
+        // for two-phase numComp < numWellEq
+        const int numComp = numComponents();
+        for (int eqIdx = 0; eqIdx < numComp;  ++eqIdx) {
             for (int w = 0; w < nw; ++w) {
                 const unsigned int idx = nw * eqIdx + w;
                 assert( idx < wellVariables_.size() );
