@@ -370,7 +370,7 @@ namespace Opm {
                 substepTimer.provideTimeStepEstimate( newTimeStep );
                 if( solver_verbose_ ) {
                     std::string msg;
-                    msg = cause_of_failure + "\n         Timestep chopped to "
+                    msg = cause_of_failure + "\nTimestep chopped to "
                         + std::to_string(unit::convert::to( substepTimer.currentStepLength(), unit::day )) + " days\n";
                     OpmLog::problem(msg);
                 }

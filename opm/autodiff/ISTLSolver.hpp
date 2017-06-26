@@ -446,9 +446,6 @@ namespace Opm
             // Check for failure of linear solver.
             if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
                 const std::string msg("Convergence failure for linear solver.");
-                if (isIORank_) {
-                    OpmLog::problem(msg);
-                }
                 OPM_THROW_NOLOG(LinearSolverProblem, msg);
             }
         }
