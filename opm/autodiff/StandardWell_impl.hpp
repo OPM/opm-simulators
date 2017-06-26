@@ -1136,15 +1136,15 @@ namespace Opm
             double liquid = 0.0;
             double vapour = 0.0;
 
-            const Opm::PhaseUsage& pu = phase_usage_;
+            const Opm::PhaseUsage& pu = *phase_usage_;
 
-            if (active_[ Water ]) {
+            if (active()[ Water ]) {
                 aqua = xw.wellRates()[well_index*np + pu.phase_pos[ Water ] ];
             }
-            if (active_[ Oil ]) {
+            if (active()[ Oil ]) {
                  liquid = xw.wellRates()[well_index*np + pu.phase_pos[ Oil ] ];
             }
-            if (active_[ Gas ]) {
+            if (active()[ Gas ]) {
                 vapour = xw.wellRates()[well_index*np + pu.phase_pos[ Gas ] ];
             }
 
@@ -1277,10 +1277,10 @@ namespace Opm
             tot_well_rate += g[p] * xw.wellRates()[np*well_index + p];
         }
         if(std::abs(tot_well_rate) > 0) {
-            if (active_[ Water ]) {
+            if (active()[ Water ]) {
                 xw.wellSolutions()[WFrac*nw + well_index] = g[Water] * xw.wellRates()[np*well_index + Water] / tot_well_rate;
             }
-            if (active_[ Gas ]) {
+            if (active()[ Gas ]) {
                 xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * (1.0 - wsolvent()) * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
             }
             if (has_solvent) {
@@ -1289,7 +1289,7 @@ namespace Opm
         } else { // tot_well_rate == 0
             if (wellType() == INJECTOR) {
                 // only single phase injection handled
-                if (active_[Water]) {
+                if (active()[Water]) {
                     if (distr[Water] > 0.0) {
                         xw.wellSolutions()[WFrac * nw + well_index] = 1.0;
                     } else {
@@ -1297,7 +1297,7 @@ namespace Opm
                     }
                 }
 
-                if (active_[Gas]) {
+                if (active()[Gas]) {
                     if (distr[Gas] > 0.0) {
                         xw.wellSolutions()[GFrac * nw + well_index] = 1.0 - wsolvent();
                         if (has_solvent) {
@@ -1313,10 +1313,10 @@ namespace Opm
                 // this will happen.
             } else if (wellType() == PRODUCER) { // producers
                 // TODO: the following are not addressed for the solvent case yet
-                if (active_[Water]) {
+                if (active()[Water]) {
                     xw.wellSolutions()[WFrac * nw + well_index] = 1.0 / np;
                 }
-                if (active_[Gas]) {
+                if (active()[Gas]) {
                     xw.wellSolutions()[GFrac * nw + well_index] = 1.0 / np;
                 }
             } else {
@@ -1670,7 +1670,7 @@ namespace Opm
     bool
     StandardWell<TypeTag>::
     getWellConvergence(Simulator& ebosSimulator,
-                       std::vector<double>& B_avg,
+                       const std::vector<double>& B_avg,
                        const ModelParameters& param) const
     {
         typedef double Scalar;
@@ -1772,6 +1772,31 @@ namespace Opm
 
         computeConnectionPressureDelta();
 
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    wellEqIteration(Simulator& ebosSimulator,
+                    const ModelParameters& param,
+                    WellState& well_state)
+    {
+        // We assemble the well equations, then we check the convergence,
+        // which is why we do not put the assembleWellEq here.
+        BVector dx_well(1);
+        invDuneD_.mv(resWell_, dx_well);
+
+        updateWellState(dx_well, param, well_state);
+
+        // updateWellControls uses communication
+        // Therefore the following is executed if there
+        // are active wells anywhere in the global domain.
+        updateWellControl(well_state);
+        setWellVariables(well_state);
     }
 
 }

@@ -147,7 +147,7 @@ namespace Opm
         void updateWellControl(WellState& xw) const;
 
         virtual bool getWellConvergence(Simulator& ebosSimulator,
-                                        std::vector<double>& B_avg,
+                                        const std::vector<double>& B_avg,
                                         const ModelParameters& param) const;
 
         using WellInterface<TypeTag>::phaseUsage;
@@ -181,7 +181,6 @@ namespace Opm
         using WellInterface<TypeTag>::vfp_properties_;
         using WellInterface<TypeTag>::gravity_;
         using WellInterface<TypeTag>::well_efficiency_factor_;
-        using WellInterface<TypeTag>::active_;
         using WellInterface<TypeTag>::phase_usage_;
         using WellInterface<TypeTag>::first_perf_;
         using WellInterface<TypeTag>::ref_depth_;
@@ -242,6 +241,10 @@ namespace Opm
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
                                                     const std::vector<double>& surf_dens_perf);
+
+        virtual void wellEqIteration(Simulator& ebosSimulator,
+                                     const ModelParameters& param,
+                                     WellState& well_state);
     };
 
 }

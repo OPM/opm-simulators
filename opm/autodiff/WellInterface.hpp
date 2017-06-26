@@ -140,8 +140,12 @@ namespace Opm
         const double wsolvent() const;
 
         virtual bool getWellConvergence(Simulator& ebosSimulator,
-                                        std::vector<double>& B_avg,
+                                        const std::vector<double>& B_avg,
                                         const ModelParameters& param) const = 0;
+
+        virtual void wellEqIteration(Simulator& ebosSimulator,
+                                     const ModelParameters& param,
+                                     WellState& well_state) = 0;
 
     protected:
         // TODO: some variables shared by all the wells should be made static
