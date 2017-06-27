@@ -64,6 +64,7 @@ namespace Opm
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
 
         /// Constructor
+        //  TODO: Wel can be reference.
         WellInterface(const Well* well, const int time_step, const Wells* wells);
 
         /// Well name.
@@ -146,6 +147,11 @@ namespace Opm
         virtual void wellEqIteration(Simulator& ebosSimulator,
                                      const ModelParameters& param,
                                      WellState& well_state) = 0;
+
+        virtual void assembleWellEq(Simulator& ebosSimulator,
+                                    const double dt,
+                                    WellState& well_state,
+                                    bool only_wells) = 0;
 
     protected:
         // TODO: some variables shared by all the wells should be made static

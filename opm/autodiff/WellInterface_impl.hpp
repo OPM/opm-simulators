@@ -268,6 +268,18 @@ namespace Opm
 
 
     template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    allowCrossFlow() const
+    {
+        return allow_cf_;
+    }
+
+
+
+
+
+    template<typename TypeTag>
     const PhaseUsage&
     WellInterface<TypeTag>::
     phaseUsage() const

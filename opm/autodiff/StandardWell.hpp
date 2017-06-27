@@ -115,10 +115,10 @@ namespace Opm
                              const double Tw, const EvalWell& bhp, const double& cdp,
                              const bool& allow_cf, std::vector<EvalWell>& cq_s) const;
 
-        void assembleWellEq(Simulator& ebosSimulator,
-                            const double dt,
-                            WellState& well_state,
-                            bool only_wells);
+        virtual void assembleWellEq(Simulator& ebosSimulator,
+                                    const double dt,
+                                    WellState& well_state,
+                                    bool only_wells);
 
         bool allow_cross_flow(const Simulator& ebosSimulator) const;
 

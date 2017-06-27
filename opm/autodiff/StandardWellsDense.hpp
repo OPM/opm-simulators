@@ -298,6 +298,10 @@ enum WellVariablePositions {
             const Wells*   wells_;
             const std::vector< const Well* > wells_ecl_;
 
+            // the number of wells in this process
+            // trying to not use things from Wells struct
+            const int number_of_wells_;
+
             // a vector of all the wells.
             // eventually, the wells_ above should be gone.
             // the name is just temporary
