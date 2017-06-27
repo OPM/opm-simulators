@@ -107,7 +107,7 @@ namespace Opm
                                     WellState& well_state,
                                     bool only_wells);
 
-        bool allow_cross_flow(const Simulator& ebosSimulator) const;
+        bool crossFlowAllowed(const Simulator& ebosSimulator) const;
 
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,

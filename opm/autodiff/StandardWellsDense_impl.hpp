@@ -260,11 +260,13 @@ namespace Opm {
                    WellState& well_state,
                    bool only_wells)
     {
-     // TODO: incoporate the new change to StandardWell
         for (int w = 0; w < number_of_wells_; ++w) {
             well_container_[w]->assembleWellEq(ebosSimulator, dt, well_state, only_wells);
         }
     }
+
+
+
 
 
     template<typename TypeTag>

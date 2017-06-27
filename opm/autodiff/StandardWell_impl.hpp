@@ -614,7 +614,7 @@ namespace Opm
         // TODO: it probably can be static member for StandardWell
         const double volume = 0.002831684659200; // 0.1 cu ft;
 
-        const bool allow_cf = allow_cross_flow(ebosSimulator);
+        const bool allow_cf = crossFlowAllowed(ebosSimulator);
 
         const EvalWell& bhp = getBhp();
 
@@ -721,7 +721,7 @@ namespace Opm
     template<typename TypeTag>
     bool
     StandardWell<TypeTag>::
-    allow_cross_flow(const Simulator& ebosSimulator) const
+    crossFlowAllowed(const Simulator& ebosSimulator) const
     {
         if (allowCrossFlow()) {
             return true;
