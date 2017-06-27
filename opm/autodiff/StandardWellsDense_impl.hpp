@@ -1044,7 +1044,7 @@ namespace Opm {
 
         std::vector< Scalar > maxNormWell(numComp, Scalar() );
 
-        auto& grid = ebosSimulator.gridManager().grid();
+        const auto& grid = ebosSimulator.gridManager().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator);
         const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
@@ -1088,7 +1088,6 @@ namespace Opm {
             }
         }
 
-        const auto& grid = ebosSimulator.gridManager().grid();
         grid.comm().max(maxNormWell.data(), maxNormWell.size());
 
         Vector well_flux_residual(numComp);
@@ -3122,7 +3121,7 @@ namespace Opm {
                 B += 1 / fs.invB(ebosPhaseIdx).value();
             }
             if (has_solvent_) {
-                auto& B  = B_avg[ solventCompIdx ];
+                auto& B  = B_avg[solventSaturationIdx];
                 B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
         }

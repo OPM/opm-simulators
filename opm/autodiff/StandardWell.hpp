@@ -48,6 +48,7 @@ namespace Opm
         using FluidSystem = typename WellInterface<TypeTag>::FluidSystem;
         using MaterialLaw = typename WellInterface<TypeTag>::MaterialLaw;
         using ModelParameters = typename WellInterface<TypeTag>::ModelParameters;
+        using BlackoilIndices = typename WellInterface<TypeTag>::BlackoilIndices;
 
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
@@ -61,33 +62,17 @@ namespace Opm
 
         typedef double Scalar;
         // static const int numEq = BlackoilIndices::numEq;
-        static const int numEq = 3;
-        static const int numWellEq = numEq; //number of wellEq is the same as numEq in the model
-        static const int solventCompIdx = 3; //TODO get this from ebos
+        static const int numEq = BlackoilIndices::numEq;
+        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? 3:numEq; // //numEq; //number of wellEq is only for 3 for polymer
+        static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
+        static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
+
         typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
         typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
         typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
-
-        // for now, using the matrix and block version in StandardWellsDense.
-        // TODO: for bettern generality, it should contain blocksize_field and blocksize_well.
-        // They are allowed to be different and it will create four types of matrix blocks and two types of
-        // vector blocks.
-
-        /* const static int blocksize = 3;
-        typedef double Scalar;
-        typedef Dune::FieldVector<Scalar, blocksize    > VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, blocksize, blocksize > MatrixBlockType;
-        typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
-        typedef Dune::BlockVector<VectorBlockType> BVector;
-        typedef DenseAd::Evaluation<double, blocksize + blocksize> EvalWell; */
-        /* using WellInterface::EvalWell;
-        using WellInterface::BVector;
-        using WellInterface::Mat;
-        using WellInterface::MatrixBlockType;
-        using WellInterface::VectorBlockType; */
 
         StandardWell(const Well* well, const int time_step, const Wells* wells);
 

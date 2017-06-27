@@ -239,7 +239,7 @@ namespace Opm
             /* if (has_solvent_ ) {
                 // TODO: investigate whether the use of the comp_frac is justified.
                 double comp_frac = 0.0;
-                if (compIdx == solventCompIdx) { // solvent
+                if (compIdx == contiSolventEqIdx) { // solvent
                     comp_frac = wells().comp_frac[np*wellIdx + pu.phase_pos[ Gas ]] * wsolvent(wellIdx);
                 } else if (compIdx == pu.phase_pos[ Gas ]) {
                     comp_frac = wells().comp_frac[np*wellIdx + compIdx] * (1.0 - wsolvent(wellIdx));
@@ -306,7 +306,7 @@ namespace Opm
                 // TODO: handling solvent related later
                 /* if (has_solvent_ && phase_under_control == Gas) {
                     // for GRAT controlled wells solvent is included in the target
-                    wellVolumeFractionScaledPhaseUnderControl += wellVolumeFractionScaled(solventCompIdx);
+                    wellVolumeFractionScaledPhaseUnderControl += wellVolumeFractionScaled(contiSolventEqIdx);
                 } */
 
                 if (phase == phase_under_control) {
@@ -368,7 +368,7 @@ namespace Opm
         const WellControls* wc = wellControls();
         if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
 
-            if (has_solvent && compIdx == solventCompIdx) {
+            if (has_solvent && compIdx == contiSolventEqIdx) {
                 return wellVolumeFraction(compIdx);
             }
             const double* distr = well_controls_get_current_distr(wc);
@@ -403,7 +403,7 @@ namespace Opm
             return well_variables_[GFrac];
         }
 
-        if (compIdx == solventCompIdx) {
+        if (compIdx == contiSolventEqIdx) {
             return well_variables_[SFrac];
         }
 
@@ -489,7 +489,7 @@ namespace Opm
             b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
         }
         if (has_solvent) {
-            b_perfcells_dense[solventCompIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
+            b_perfcells_dense[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
         // Pressure drawdown (also used to determine direction of flow)
@@ -541,7 +541,7 @@ namespace Opm
             }
 
             if (has_solvent) {
-                volumeRatio += cmix_s[solventCompIdx] / b_perfcells_dense[solventCompIdx];
+                volumeRatio += cmix_s[contiSolventEqIdx] / b_perfcells_dense[contiSolventEqIdx];
             }
 
             if (active()[Oil] && active()[Gas]) {
@@ -657,7 +657,7 @@ namespace Opm
                     }
 
                     // Store the perforation phase flux for later usage.
-                    if (componentIdx == solventCompIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
+                    if (componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
                         well_state.perfRateSolvent()[perf] = cq_s[componentIdx].value();
                     } else {
                         well_state.perfPhaseRates()[perf*np + componentIdx] = cq_s[componentIdx].value();
@@ -750,7 +750,7 @@ namespace Opm
                 mob[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
             }
             if (has_solvent) {
-                mob[solventCompIdx] = extendEval(intQuants.solventMobility());
+                mob[contiSolventEqIdx] = extendEval(intQuants.solventMobility());
             }
         } else {
 
@@ -1518,8 +1518,8 @@ namespace Opm
 
             // We use cell values for solvent injector
             if (has_solvent) {
-                b_perf[numComp*perf + solventCompIdx] = intQuants.solventInverseFormationVolumeFactor().value();
-                surf_dens_perf[numComp*perf + solventCompIdx] = intQuants.solventRefDensity();
+                b_perf[numComp*perf + contiSolventEqIdx] = intQuants.solventInverseFormationVolumeFactor().value();
+                surf_dens_perf[numComp*perf + contiSolventEqIdx] = intQuants.solventRefDensity();
             }
         }
     }
@@ -1764,7 +1764,7 @@ namespace Opm
                 perfRates[perf*numComponent + phase] =  xw.perfPhaseRates()[(first_perf_ + perf) * np + phase];
             }
             if(has_solvent) {
-                perfRates[perf*numComponent + solventCompIdx] =  xw.perfRateSolvent()[perf + first_perf_];
+                perfRates[perf*numComponent + contiSolventEqIdx] =  xw.perfRateSolvent()[perf + first_perf_];
             }
         }
 
