@@ -113,6 +113,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow_reorder.cpp
   examples/flow_sequential.cpp
   examples/flow_ebos.cpp
+  examples/flow_ebos_2p.cpp
   examples/flow_ebos_solvent.cpp
   examples/flow_ebos_polymer.cpp
   examples/flow_multisegment.cpp

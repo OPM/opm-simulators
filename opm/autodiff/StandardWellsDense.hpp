@@ -86,21 +86,22 @@ enum WellVariablePositions {
             typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)         MaterialLaw;
             typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
             typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
+            typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
-            typedef double Scalar;
             static const int numEq = BlackoilIndices::numEq;
-            static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? 3:numEq; // //numEq; //number of wellEq is only for 3 for polymer
+            static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
             static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
             static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
             static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
             static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
+
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
             typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
             typedef Dune::BlockVector<VectorBlockType> BVector;
-            typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
-            typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
+            typedef DenseAd::Evaluation<Scalar, /*size=*/numEq + numWellEq> EvalWell;
+            typedef DenseAd::Evaluation<Scalar, /*size=*/numEq> Eval;
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
