@@ -77,6 +77,7 @@ enum WellVariablePositions {
             typedef WellStateFullyImplicitBlackoilDense WellState;
             typedef BlackoilModelParameters ModelParameters;
 
+            typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
             typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
             typedef typename GET_PROP_TYPE(TypeTag, Indices)             BlackoilIndices;
@@ -121,7 +122,7 @@ enum WellVariablePositions {
                       const std::vector<double>& pv_arg,
                       const RateConverterType* rate_converter,
                       long int global_nc,
-                      const auto& grid);
+                      const Grid& grid);
 
 
             /// The number of components in the model.
@@ -416,7 +417,7 @@ enum WellVariablePositions {
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
-            void computeRepRadiusPerfLength(const auto& grid);
+            void computeRepRadiusPerfLength(const Grid& grid);
 
 
         };

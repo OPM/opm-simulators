@@ -49,7 +49,7 @@ namespace Opm {
          const std::vector<double>& pv_arg,
          const RateConverterType* rate_converter,
          long int global_nc,
-         const auto& grid)
+         const Grid& grid)
     {
         // has to be set always for the convergence check!
         global_nc_   = global_nc;
@@ -3161,7 +3161,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    computeRepRadiusPerfLength(const auto& grid)
+    computeRepRadiusPerfLength(const Grid& grid)
     {
 
         // TODO, the function does not work for parallel running
