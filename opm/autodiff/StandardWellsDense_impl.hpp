@@ -18,6 +18,7 @@ namespace Opm {
        , param_(param)
        , terminal_output_(terminal_output)
        , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
+       , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
        , current_timeIdx_(current_timeIdx)
        , well_perforation_efficiency_factors_((wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0), 1.0)
        , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
@@ -47,7 +48,8 @@ namespace Opm {
          const std::vector<double>& depth_arg,
          const std::vector<double>& pv_arg,
          const RateConverterType* rate_converter,
-         long int global_nc)
+         long int global_nc,
+         const auto& grid)
     {
         // has to be set always for the convergence check!
         global_nc_   = global_nc;
@@ -118,6 +120,14 @@ namespace Opm {
         // resize temporary class variables
         Cx_.resize( duneC_.N() );
         invDrw_.resize( invDuneD_.N() );
+
+        if (has_polymer_)
+        {
+            if (PolymerModule::hasPlyshlog()) {
+                computeRepRadiusPerfLength(grid);
+            }
+        }
+
     }
 
 
@@ -194,7 +204,7 @@ namespace Opm {
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                 std::vector<EvalWell> cq_s(numComp,0.0);
                 std::vector<EvalWell> mob(numComp, 0.0);
-                getMobility(ebosSimulator, perf, cell_idx, mob);
+                getMobility(ebosSimulator, w, perf, cell_idx, mob);
                 computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
                 for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
@@ -215,11 +225,17 @@ namespace Opm {
                     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                         if (!only_wells) {
                             // also need to consider the efficiency factor when manipulating the jacobians.
-                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
                             duneB_[w][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
-                            duneC_[w][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
                         }
                         invDuneD_[w][w][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
+                    }
+
+                    for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+                        if (!only_wells) {
+                            // also need to consider the efficiency factor when manipulating the jacobians.
+                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                            duneC_[w][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                        }
                     }
 
                     // add trivial equation for 2p cases (Only support water + oil)
@@ -229,10 +245,25 @@ namespace Opm {
                     }
 
                     // Store the perforation phase flux for later usage.
-                    if (componentIdx == solventCompIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
+                    if (has_solvent_ && componentIdx == solventSaturationIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
                         well_state.perfRateSolvent()[perf] = cq_s[componentIdx].value();
                     } else {
                         well_state.perfPhaseRates()[perf*np + componentIdx] = cq_s[componentIdx].value();
+                    }
+                }
+
+                if (has_polymer_) {
+                    EvalWell cq_s_poly = cq_s[Water];
+                    if (wells().type[w] == INJECTOR) {
+                        cq_s_poly *= wpolymer(w);
+                    } else {
+                        cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
+                    }
+                    if (!only_wells) {
+                        for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+                            ebosJac[cell_idx][cell_idx][contiPolymerEqIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_poly.derivative(pvIdx);
+                        }
+                        ebosResid[cell_idx][contiPolymerEqIdx] -= cq_s_poly.value();
                     }
                 }
 
@@ -249,7 +280,14 @@ namespace Opm {
                 }
                 resWell_[w][componentIdx] += resWell_loc.value();
             }
+
+            // add trivial equation for polymer
+            if (has_polymer_) {
+                invDuneD_[w][w][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0; //
+            }
         }
+
+
 
         // do the local inversion of D.
         localInvert( invDuneD_ );
@@ -259,7 +297,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag >::
-    getMobility(const Simulator& ebosSimulator, const int perf, const int cell_idx, std::vector<EvalWell>& mob) const
+    getMobility(const Simulator& ebosSimulator, const int w, const int perf, const int cell_idx, std::vector<EvalWell>& mob) const
     {
 
         const int np = wells().number_of_phases;
@@ -278,7 +316,7 @@ namespace Opm {
                 mob[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
             }
             if (has_solvent_) {
-                mob[solventCompIdx] = extendEval(intQuants.solventMobility());
+                mob[solventSaturationIdx] = extendEval(intQuants.solventMobility());
             }
         } else {
 
@@ -300,6 +338,51 @@ namespace Opm {
                 OPM_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent");
             }
         }
+
+        // modify the water mobility if polymer is present
+        if (has_polymer_) {
+            // assume fully mixture for wells.
+            EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
+
+            if (wells().type[w] == INJECTOR) {
+                const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(intQuants.pvtRegionIndex());
+                mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
+            }
+
+            if (PolymerModule::hasPlyshlog()) {
+                // compute the well water velocity with out shear effects.
+                const int numComp = numComponents();
+                bool allow_cf = allow_cross_flow(w, ebosSimulator);
+                const EvalWell& bhp = getBhp(w);
+                std::vector<EvalWell> cq_s(numComp,0.0);
+                computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
+                double area = 2 * M_PI * wells_rep_radius_[perf] * wells_perf_length_[perf];
+                const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
+                const auto& scaledDrainageInfo =
+                        materialLawManager->oilWaterScaledEpsInfoDrainage(cell_idx);
+                const Scalar& Swcr = scaledDrainageInfo.Swcr;
+                const EvalWell poro = extendEval(intQuants.porosity());
+                const EvalWell Sw = extendEval(intQuants.fluidState().saturation(flowPhaseToEbosPhaseIdx(Water)));
+                // guard against zero porosity and no water
+                const EvalWell denom = Opm::max( (area * poro * (Sw - Swcr)), 1e-12);
+                EvalWell waterVelocity = cq_s[ Water ] / denom * extendEval(intQuants.fluidState().invB(flowPhaseToEbosPhaseIdx(Water)));
+
+                if (PolymerModule::hasShrate()) {
+                    // TODO Use the same conversion as for the reservoar equations.
+                    // Need the "permeability" of the well?
+                    // For now use the same formula as in legacy.
+                    waterVelocity *= PolymerModule::shrate( intQuants.pvtRegionIndex() ) / wells_bore_diameter_[perf];
+                }
+                EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
+                EvalWell shearFactor = PolymerModule::computeShearFactor(polymerConcentration,
+                                                                         intQuants.pvtRegionIndex(),
+                                                                         waterVelocity);
+
+                // modify the mobility with the shear factor and recompute the well fluxes.
+                mob[ Water ] /= shearFactor;
+            }
+        }
+
     }
 
 
@@ -455,32 +538,32 @@ namespace Opm {
 
 
 
+    template<typename TypeTag>
+    int
+    StandardWellsDense<TypeTag>::
+    flowToEbosPvIdx( const int flowPv ) const
+    {
+        const int flowToEbos[ 3 ] = {
+            BlackoilIndices::pressureSwitchIdx,
+            BlackoilIndices::waterSaturationIdx,
+            BlackoilIndices::compositionSwitchIdx
+        };
+
+        if (flowPv > 2 )
+            return flowPv;
+
+        return flowToEbos[ flowPv ];
+    }
 
     template<typename TypeTag>
     int
     StandardWellsDense<TypeTag>::
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
-        const int phaseToComp[ 4 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx, solventCompIdx };
+        const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx};
+        if (phaseIdx > 2 )
+            return phaseIdx;
         return phaseToComp[ phaseIdx ];
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    StandardWellsDense<TypeTag>::
-    flowToEbosPvIdx( const int flowPv ) const
-    {
-        const int flowToEbos[ 4 ] = {
-                                     BlackoilIndices::pressureSwitchIdx,
-                                     BlackoilIndices::waterSaturationIdx,
-                                     BlackoilIndices::compositionSwitchIdx,
-                                     BlackoilIndices::solventSaturationIdx
-                                    };
-        return flowToEbos[ flowPv ];
     }
 
 
@@ -496,10 +579,6 @@ namespace Opm {
         const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
         return flowToEbos[ phaseIdx ];
     }
-
-
-
-
 
     template<typename TypeTag>
     std::vector<double>
@@ -686,9 +765,9 @@ namespace Opm {
     setWellVariables(const WellState& xw)
     {
         const int nw = wells().number_of_wells;
-        // for two-phase numComp < numEq
+        // for two-phase numComp < numWellEq
         const int numComp = numComponents();
-        for (int eqIdx = 0; eqIdx < numComp; ++eqIdx) {
+        for (int eqIdx = 0; eqIdx < numComp;  ++eqIdx) {
             for (int w = 0; w < nw; ++w) {
                 const unsigned int idx = nw * eqIdx + w;
                 assert( idx < wellVariables_.size() );
@@ -697,7 +776,7 @@ namespace Opm {
 
                 eval = 0.0;
                 eval.setValue( xw.wellSolutions()[ idx ] );
-                eval.setDerivative(numWellEq + eqIdx, 1.0);
+                eval.setDerivative(numEq + eqIdx, 1.0);
             }
         }
     }
@@ -765,7 +844,7 @@ namespace Opm {
             b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
         }
         if (has_solvent_) {
-            b_perfcells_dense[solventCompIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
+            b_perfcells_dense[solventSaturationIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         }
 
         // Pressure drawdown (also used to determine direction of flow)
@@ -817,7 +896,7 @@ namespace Opm {
             }
 
             if (has_solvent_) {
-                volumeRatio += cmix_s[solventCompIdx] / b_perfcells_dense[solventCompIdx];
+                volumeRatio += cmix_s[solventSaturationIdx] / b_perfcells_dense[solventSaturationIdx];
             }
 
             if (active_[Oil] && active_[Gas]) {
@@ -952,8 +1031,9 @@ namespace Opm {
 
         const int nw = wells().number_of_wells;
         const int numComp = numComponents();
-        std::vector<double> res(numComp*nw);
+        std::vector<double> res(numEq*nw, 0.0);
         for( int compIdx = 0; compIdx < numComp; ++compIdx) {
+
             for (int wellIdx = 0; wellIdx < nw; ++wellIdx) {
                 int idx = wellIdx + nw*compIdx;
                 res[idx] = resWell_[ wellIdx ][ compIdx ];
@@ -1006,7 +1086,7 @@ namespace Opm {
                 B += 1 / fs.invB(ebosPhaseIdx).value();
             }
             if (has_solvent_) {
-                auto& B  = B_avg[ solventCompIdx ];
+                auto& B  = B_avg[ solventSaturationIdx ];
                 B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
         }
@@ -1204,8 +1284,8 @@ namespace Opm {
 
                 // We use cell values for solvent injector
                 if (has_solvent_) {
-                    b_perf[numComp*perf + solventCompIdx] = intQuants.solventInverseFormationVolumeFactor().value();
-                    surf_dens_perf[numComp*perf + solventCompIdx] = intQuants.solventRefDensity();
+                    b_perf[numComp*perf + solventSaturationIdx] = intQuants.solventInverseFormationVolumeFactor().value();
+                    surf_dens_perf[numComp*perf + solventSaturationIdx] = intQuants.solventRefDensity();
                 }
             }
         }
@@ -1764,7 +1844,7 @@ namespace Opm {
                 perfRates[perf*numComponent + phase] =  xw.perfPhaseRates()[perf*np + phase];
             }
             if(has_solvent_) {
-                perfRates[perf*numComponent + solventCompIdx] =  xw.perfRateSolvent()[perf];
+                perfRates[perf*numComponent + solventSaturationIdx] =  xw.perfRateSolvent()[perf];
             }
         }
         well_perforation_densities_ =
@@ -2143,7 +2223,7 @@ namespace Opm {
         if (wells().type[wellIdx] == INJECTOR) {
             if (has_solvent_ ) {
                 double comp_frac = 0.0;
-                if (compIdx == solventCompIdx) { // solvent
+                if (has_solvent_ && compIdx == solventSaturationIdx) { // solvent
                     comp_frac = wells().comp_frac[np*wellIdx + pu.phase_pos[ Gas ]] * wsolvent(wellIdx);
                 } else if (compIdx == pu.phase_pos[ Gas ]) {
                     comp_frac = wells().comp_frac[np*wellIdx + compIdx] * (1.0 - wsolvent(wellIdx));
@@ -2209,7 +2289,7 @@ namespace Opm {
                 EvalWell wellVolumeFractionScaledPhaseUnderControl = wellVolumeFractionScaled(wellIdx, phase_under_control);
                 if (has_solvent_ && phase_under_control == Gas) {
                     // for GRAT controlled wells solvent is included in the target
-                    wellVolumeFractionScaledPhaseUnderControl += wellVolumeFractionScaled(wellIdx, solventCompIdx);
+                    wellVolumeFractionScaledPhaseUnderControl += wellVolumeFractionScaled(wellIdx, solventSaturationIdx);
                 }
 
                 if (compIdx == phase_under_control) {
@@ -2274,7 +2354,7 @@ namespace Opm {
             return wellVariables_[GFrac * nw + wellIdx];
         }
 
-        if (compIdx == solventCompIdx) {
+        if (has_solvent_ && compIdx == solventSaturationIdx) {
             return wellVariables_[SFrac * nw + wellIdx];
         }
 
@@ -2305,7 +2385,7 @@ namespace Opm {
         const WellControls* wc = wells().ctrls[wellIdx];
         if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
 
-            if (has_solvent_ && compIdx == solventCompIdx) {
+            if (has_solvent_ && compIdx == solventSaturationIdx) {
                 return wellVolumeFraction(wellIdx, compIdx);
             }
             const double* distr = well_controls_get_current_distr(wc);
@@ -2710,10 +2790,10 @@ namespace Opm {
                 xw.wellSolutions()[WFrac*nw + well_index] = g[Water] * xw.wellRates()[np*well_index + Water] / tot_well_rate;
             }
             if (active_[ Gas ]) {
-                xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * (1.0 - wsolvent(well_index)) * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
+                xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * (xw.wellRates()[np*well_index + Gas] - xw.solventWellRate(well_index)) / tot_well_rate ;
             }
             if (has_solvent_) {
-                xw.wellSolutions()[SFrac*nw + well_index] = g[Gas] * wsolvent(well_index) * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
+                xw.wellSolutions()[SFrac*nw + well_index] = g[Gas] * xw.solventWellRate(well_index) / tot_well_rate ;
             }
         } else {
             const WellType& well_type = wells().type[well_index];
@@ -2797,7 +2877,7 @@ namespace Opm {
             // flux for each perforation
             std::vector<EvalWell> cq_s(numComp, 0.0);
             std::vector<EvalWell> mob(numComp, 0.0);
-            getMobility(ebosSimulator, perf, cell_index, mob);
+            getMobility(ebosSimulator, well_index, perf, cell_index, mob);
             computeWellFlux(well_index, wells().WI[perf], intQuants, mob, bhp,
                             wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
 
@@ -3024,6 +3104,171 @@ namespace Opm {
         // we didn't find it return 0;
         assert(false);
         return 0.0;
+    }
+
+
+    template<typename TypeTag>
+    double
+    StandardWellsDense<TypeTag>::
+    wpolymer(const int well_index) const {
+
+        if (!has_polymer_) {
+            return 0.0;
+        }
+
+        // loop over all wells until we find the well with the matching name
+        for (const auto&  well : wells_ecl_) {
+            if (well->getStatus( current_timeIdx_ ) == WellCommon::SHUT) {
+                continue;
+            }
+
+            WellInjectionProperties injection = well->getInjectionProperties(current_timeIdx_);
+            WellPolymerProperties polymer = well->getPolymerProperties(current_timeIdx_);
+            if (injection.injectorType == WellInjector::WATER) {
+
+                double polymerFraction = polymer.m_polymerConcentration;
+
+                // Look until we find the correct well
+                if (well->name() == wells().name[well_index]) {
+                    return polymerFraction;
+                }
+            }
+        }
+        // we didn't find it return 0;
+        assert(false);
+        return 0.0;
+    }
+
+
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const
+    {
+        if (global_cell) {
+            for (int i = 0; i < number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(global_cell[i], i));
+            }
+        }
+        else {
+            for (int i = 0; i < number_of_cells; ++i) {
+                cartesian_to_compressed.insert(std::make_pair(i, i));
+            }
+        }
+
+    }
+
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    computeRepRadiusPerfLength(const auto& grid)
+    {
+
+        // TODO, the function does not work for parallel running
+        // to be fixed later.
+        int number_of_cells = Opm::UgGridHelpers::numCells(grid);
+        const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
+        const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
+        auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
+        auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
+
+        if (wells_ecl_.size() == 0) {
+            OPM_MESSAGE("No wells specified in Schedule section, "
+                        "initializing no wells");
+            return;
+        }
+
+        const int nw = wells().number_of_wells;
+        const int nperf = wells().well_connpos[nw];
+
+        const size_t timeStep = current_timeIdx_;
+
+        wells_rep_radius_.clear();
+        wells_perf_length_.clear();
+        wells_bore_diameter_.clear();
+
+        wells_rep_radius_.reserve(nperf);
+        wells_perf_length_.reserve(nperf);
+        wells_bore_diameter_.reserve(nperf);
+
+        std::map<int,int> cartesian_to_compressed;
+
+        setupCompressedToCartesian(global_cell, number_of_cells,
+                                    cartesian_to_compressed);
+
+        int well_index = 0;
+
+        for (auto wellIter= wells_ecl_.begin(); wellIter != wells_ecl_.end(); ++wellIter) {
+             const auto* well = (*wellIter);
+
+             if (well->getStatus(timeStep) == WellCommon::SHUT) {
+                 continue;
+             }
+             {   // COMPDAT handling
+                 const auto& completionSet = well->getCompletions(timeStep);
+                 for (size_t c=0; c<completionSet.size(); c++) {
+                     const auto& completion = completionSet.get(c);
+                     if (completion.getState() == WellCompletion::OPEN) {
+                         int i = completion.getI();
+                         int j = completion.getJ();
+                         int k = completion.getK();
+
+                         const int* cpgdim = cart_dims;
+                         int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
+                         std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
+                         if (cgit == cartesian_to_compressed.end()) {
+                             OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
+                                       << k << " not found in grid (well = " << well->name() << ')');
+                         }
+                         int cell = cgit->second;
+
+                         {
+                             double radius = 0.5*completion.getDiameter();
+                             if (radius <= 0.0) {
+                                 radius = 0.5*unit::feet;
+                                 OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
+                             }
+
+                             const std::array<double, 3> cubical =
+                             WellsManagerDetail::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
+
+                             WellCompletion::DirectionEnum direction = completion.getDirection();
+
+                             double re; // area equivalent radius of the grid block
+                             double perf_length; // the length of the well perforation
+
+                             switch (direction) {
+                                 case Opm::WellCompletion::DirectionEnum::X:
+                                     re = std::sqrt(cubical[1] * cubical[2] / M_PI);
+                                     perf_length = cubical[0];
+                                     break;
+                                 case Opm::WellCompletion::DirectionEnum::Y:
+                                     re = std::sqrt(cubical[0] * cubical[2] / M_PI);
+                                     perf_length = cubical[1];
+                                     break;
+                                 case Opm::WellCompletion::DirectionEnum::Z:
+                                     re = std::sqrt(cubical[0] * cubical[1] / M_PI);
+                                     perf_length = cubical[2];
+                                     break;
+                                 default:
+                                     OPM_THROW(std::runtime_error, " Dirtecion of well is not supported ");
+                             }
+
+                             double repR = std::sqrt(re * radius);
+                             wells_rep_radius_.push_back(repR);
+                             wells_perf_length_.push_back(perf_length);
+                             wells_bore_diameter_.push_back(2. * radius);
+                         }
+                     } else {
+                         if (completion.getState() != WellCompletion::SHUT) {
+                             OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.getState() ) << " not handled");
+                         }
+                     }
+
+                 }
+            }
+            well_index++;
+        }
     }
 
 

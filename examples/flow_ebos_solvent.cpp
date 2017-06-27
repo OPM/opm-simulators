@@ -1,7 +1,5 @@
 /*
-  Copyright 2013, 2014, 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2015 IRIS AS
+  Copyright 2017 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -30,10 +28,15 @@
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
 
+namespace Ewoms {
+namespace Properties {
+NEW_TYPE_TAG(EclFlowSolventProblem, INHERITS_FROM(EclFlowProblem));
+SET_BOOL_PROP(EclFlowSolventProblem, EnableSolvent, true);
+}}
 
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
-    Opm::FlowMainEbos<TTAG(EclFlowProblem)> mainfunc;
+    Opm::FlowMainEbos<TTAG(EclFlowSolventProblem)> mainfunc;
     return mainfunc.execute(argc, argv);
 }

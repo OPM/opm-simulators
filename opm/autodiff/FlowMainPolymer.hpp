@@ -89,10 +89,6 @@ namespace Opm
             }
         }
 
-
-
-
-
         // Setup linear solver.
         // Writes to:
         //   fis_solver_
