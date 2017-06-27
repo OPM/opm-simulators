@@ -174,7 +174,7 @@ public:
 
         Scalar x1 = xPos_[segmentIdx];
         Scalar x2 = xPos_[segmentIdx + 1];
-        return segmentIdx + (x - x1)/(x2 - x1);
+        return Scalar(segmentIdx) + (x - x1)/(x2 - x1);
     }
 
     /*!
@@ -214,7 +214,7 @@ public:
         assert(y1 <= y || (extrapolate && lowerIdx == 0));
         assert(y <= y2 || (extrapolate && lowerIdx == colSamplePoints.size() - 2));
 
-        return lowerIdx + (y - y1)/(y2 - y1);
+        return Scalar(lowerIdx) + (y - y1)/(y2 - y1);
     }
 
     /*!
