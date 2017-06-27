@@ -3161,7 +3161,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    computeRepRadiusPerfLength(const auto& grid)
+    computeRepRadiusPerfLength(const Grid& grid)
     {
 
         // TODO, the function does not work for parallel running

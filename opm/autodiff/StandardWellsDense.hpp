@@ -417,7 +417,7 @@ enum WellVariablePositions {
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
-            void computeRepRadiusPerfLength(const auto& grid);
+            void computeRepRadiusPerfLength(const Grid& grid);
 
 
         };
