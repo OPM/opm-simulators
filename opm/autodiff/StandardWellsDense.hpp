@@ -50,6 +50,7 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/WellInterface.hpp>
+#include <opm/autodiff/StandardWell.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>

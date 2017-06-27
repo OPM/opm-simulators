@@ -37,6 +37,8 @@
 #include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 
+#include <opm/simulators/WellSwitchingLogger.hpp>
+
 #include <string>
 #include <memory>
 #include <vector>

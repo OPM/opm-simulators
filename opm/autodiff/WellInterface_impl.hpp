@@ -298,7 +298,9 @@ namespace Opm
     WellInterface<TypeTag>::
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
-        const int phaseToComp[ 4 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx, solventCompIdx };
+        const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx};
+        if (phaseIdx > 2 )
+            return phaseIdx;
         return phaseToComp[ phaseIdx ];
     }
 
@@ -311,12 +313,15 @@ namespace Opm
     WellInterface<TypeTag>::
     flowToEbosPvIdx( const int flowPv ) const
     {
-        const int flowToEbos[ 4 ] = {
-                                     BlackoilIndices::pressureSwitchIdx,
-                                     BlackoilIndices::waterSaturationIdx,
-                                     BlackoilIndices::compositionSwitchIdx,
-                                     BlackoilIndices::solventSaturationIdx
-                                    };
+        const int flowToEbos[ 3 ] = {
+            BlackoilIndices::pressureSwitchIdx,
+            BlackoilIndices::waterSaturationIdx,
+            BlackoilIndices::compositionSwitchIdx
+        };
+
+        if (flowPv > 2 )
+            return flowPv;
+
         return flowToEbos[ flowPv ];
     }
 

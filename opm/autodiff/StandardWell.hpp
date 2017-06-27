@@ -40,8 +40,9 @@ namespace Opm
     {
 
     public:
-        // using WellInterface<TypeTag>::Simulator;
-        // using WellInterface<TypeTag>::WellState;
+        // TODO: several functions related to polymer and PLYSHLOG are not incorprated yet,
+        // like the function wpolymer, setupCompressedToCartesian, computeRepRadiusPerfLength,
+        // They are introduced though PR 1220 and will be included later.
         using Simulator = typename WellInterface<TypeTag>::Simulator;
         using WellState = typename WellInterface<TypeTag>::WellState;
         using IntensiveQuantities = typename WellInterface<TypeTag>::IntensiveQuantities;
@@ -56,7 +57,8 @@ namespace Opm
         enum WellVariablePositions {
             XvarWell = 0,
             WFrac = 1,
-            GFrac = 2
+            GFrac = 2,
+            SFrac = 3
         };
 
 

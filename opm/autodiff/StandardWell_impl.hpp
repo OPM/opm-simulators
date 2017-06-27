@@ -144,6 +144,7 @@ namespace Opm
     setWellVariables(const WellState& well_state)
     {
         const int nw = well_state.bhp().size();
+        // for two-phase numComp < numWellEq
         const int numComp = numComponents();
         for (int eqIdx = 0; eqIdx < numComp; ++eqIdx) {
             const unsigned int idx = nw * eqIdx + indexOfWell();
@@ -239,7 +240,7 @@ namespace Opm
             /* if (has_solvent_ ) {
                 // TODO: investigate whether the use of the comp_frac is justified.
                 double comp_frac = 0.0;
-                if (compIdx == contiSolventEqIdx) { // solvent
+                if (has_solvent && compIdx == contiSolventEqIdx) { // solvent
                     comp_frac = wells().comp_frac[np*wellIdx + pu.phase_pos[ Gas ]] * wsolvent(wellIdx);
                 } else if (compIdx == pu.phase_pos[ Gas ]) {
                     comp_frac = wells().comp_frac[np*wellIdx + compIdx] * (1.0 - wsolvent(wellIdx));
@@ -403,7 +404,7 @@ namespace Opm
             return well_variables_[GFrac];
         }
 
-        if (compIdx == contiSolventEqIdx) {
+        if (has_solvent && compIdx == contiSolventEqIdx) {
             return well_variables_[SFrac];
         }
 
@@ -643,11 +644,17 @@ namespace Opm
                     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                         if (!only_wells) {
                             // also need to consider the efficiency factor when manipulating the jacobians.
-                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
                             duneB_[0][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
-                            duneC_[0][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
                         }
                         invDuneD_[0][0][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
+                    }
+
+                    for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+                        if (!only_wells) {
+                            // also need to consider the efficiency factor when manipulating the jacobians.
+                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                            duneC_[0][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                        }
                     }
 
                     // add trivial equation for 2p cases (Only support water + oil)
@@ -657,12 +664,29 @@ namespace Opm
                     }
 
                     // Store the perforation phase flux for later usage.
-                    if (componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
+                    if (has_solvent && componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
                         well_state.perfRateSolvent()[perf] = cq_s[componentIdx].value();
                     } else {
                         well_state.perfPhaseRates()[perf*np + componentIdx] = cq_s[componentIdx].value();
                     }
                 }
+
+                // TODO: will incoporate the following related to polymer later
+                // which was introduced in PR 1220
+                /* if (has_polymer_) {
+                    EvalWell cq_s_poly = cq_s[Water];
+                    if (wellType() == INJECTOR) {
+                        cq_s_poly *= wpolymer(w);
+                    } else {
+                        cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
+                    }
+                    if (!only_wells) {
+                        for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+                            ebosJac[cell_idx][cell_idx][contiPolymerEqIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_poly.derivative(pvIdx);
+                        }
+                        ebosResid[cell_idx][contiPolymerEqIdx] -= cq_s_poly.value();
+                    }
+                } */
 
                 // Store the perforation pressure for later usage.
                 well_state.perfPress()[perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
@@ -677,6 +701,13 @@ namespace Opm
                     invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
                 }
                 resWell_[0][componentIdx] += resWell_loc.value();
+
+
+                // TODO: to incoporate the following polymer related later, which was introduced in PR 1220
+                /* // add trivial equation for polymer
+                if (has_polymer_) {
+                    invDuneD_[w][w][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0; //
+                } */
             }
 
         // do the local inversion of D.
@@ -733,6 +764,8 @@ namespace Opm
                 const int perf,
                 std::vector<EvalWell>& mob) const
     {
+        // TODO: not incoporating the PLYSHLOG related for now.
+        // which is incoporate from PR 1220 and should be included later.
         const int np = numberOfPhases();
         const int cell_idx = wellCells()[perf];
         assert (int(mob.size()) == numComponents());
@@ -1281,10 +1314,10 @@ namespace Opm
                 xw.wellSolutions()[WFrac*nw + well_index] = g[Water] * xw.wellRates()[np*well_index + Water] / tot_well_rate;
             }
             if (active()[ Gas ]) {
-                xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * (1.0 - wsolvent()) * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
+                xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * (xw.wellRates()[np*well_index + Gas] - xw.solventWellRate(well_index)) / tot_well_rate ;
             }
             if (has_solvent) {
-                xw.wellSolutions()[SFrac*nw + well_index] = g[Gas] * wsolvent() * xw.wellRates()[np*well_index + Gas] / tot_well_rate ;
+                xw.wellSolutions()[SFrac*nw + well_index] = g[Gas] * xw.solventWellRate(well_index) / tot_well_rate ;
             }
         } else { // tot_well_rate == 0
             if (wellType() == INJECTOR) {
