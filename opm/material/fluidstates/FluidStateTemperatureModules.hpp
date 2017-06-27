@@ -128,7 +128,6 @@ public:
         temperature_ = Opm::decay<Scalar>(fs.temperature(/*phaseIdx=*/0));
 
 #ifndef NDEBUG
-        typedef Opm::MathToolbox<Scalar> Toolbox;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             assert(std::abs(Opm::scalarValue(fs.temperature(phaseIdx))
                             - Opm::scalarValue(temperature_)) < 1e-30);
