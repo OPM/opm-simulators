@@ -24,6 +24,8 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+// Define making clear that the simulator supports AMG
+#define FLOW_SUPPORT_AMG !defined(HAVE_UMFPACK)
 
 #include <dune/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoil.hpp>

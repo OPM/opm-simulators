@@ -23,6 +23,9 @@
 
 #include <config.h>
 
+// Define making clear that the simulator supports AMG
+#define FLOW_SUPPORT_AMG !defined(HAVE_UMFPACK)
+
 #include <opm/autodiff/DuneMatrix.hpp>
 #include <opm/autodiff/AdditionalObjectDeleter.hpp>
 #include <opm/autodiff/CPRPreconditioner.hpp>

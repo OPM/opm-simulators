@@ -22,6 +22,7 @@
 #define OPM_PARALLELFILEMERGER_HEADER_INCLUDED
 
 #include <memory>
+#include <iostream>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>

@@ -24,6 +24,9 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+// Define making clear that the simulator supports AMG
+#define FLOW_SUPPORT_AMG 1
+
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/autodiff/DuneMatrix.hpp>
 #include <dune/grid/CpGrid.hpp>

@@ -23,8 +23,6 @@
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG
 
 #include <sys/utsname.h>
 
@@ -40,6 +38,7 @@
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
+#include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
