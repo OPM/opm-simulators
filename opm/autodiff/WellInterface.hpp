@@ -135,7 +135,11 @@ namespace Opm
 
         int numComponents() const;
 
+        // simply returning allow_cf_
+        // TODO: to check whether needed, it causes name problem with the crossFlowAllowed
         bool allowCrossFlow() const;
+
+        virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const = 0;
 
         // TODO: for this kind of function, maybe can make a function with parameter perf
         const std::vector<int>& saturationTableNumber() const;

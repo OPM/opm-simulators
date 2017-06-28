@@ -723,7 +723,7 @@ namespace Opm
     StandardWell<TypeTag>::
     crossFlowAllowed(const Simulator& ebosSimulator) const
     {
-        if (allowCrossFlow()) {
+        if (allow_cf_) {
             return true;
         }
 

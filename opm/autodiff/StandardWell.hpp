@@ -107,7 +107,7 @@ namespace Opm
                                     WellState& well_state,
                                     bool only_wells);
 
-        bool crossFlowAllowed(const Simulator& ebosSimulator) const;
+        virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const;
 
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,
@@ -145,7 +145,6 @@ namespace Opm
         using WellInterface<TypeTag>::indexOfWell;
         using WellInterface<TypeTag>::name;
         using WellInterface<TypeTag>::wellType;
-        using WellInterface<TypeTag>::allowCrossFlow;
         using WellInterface<TypeTag>::wellControls;
         using WellInterface<TypeTag>::compFrac;
         using WellInterface<TypeTag>::numberOfPhases;
@@ -172,6 +171,7 @@ namespace Opm
         using WellInterface<TypeTag>::first_perf_;
         using WellInterface<TypeTag>::ref_depth_;
         using WellInterface<TypeTag>::perf_depth_;
+        using WellInterface<TypeTag>::allow_cf_;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;

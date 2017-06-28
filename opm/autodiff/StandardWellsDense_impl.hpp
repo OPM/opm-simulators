@@ -328,7 +328,7 @@ namespace Opm {
             if (PolymerModule::hasPlyshlog()) {
                 // compute the well water velocity with out shear effects.
                 const int numComp = numComponents();
-                bool allow_cf = allow_cross_flow(w, ebosSimulator);
+                const bool allow_cf = well_container_[w]->crossFlowAllowed(ebosSimulator);
                 const EvalWell& bhp = getBhp(w);
                 std::vector<EvalWell> cq_s(numComp,0.0);
                 computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
@@ -359,42 +359,6 @@ namespace Opm {
             }
         }
 
-    }
-
-
-
-
-    template<typename TypeTag>
-    bool
-    StandardWellsDense<TypeTag>::
-    allow_cross_flow(const int w, const Simulator& ebosSimulator) const
-    {
-        if (wells().allow_cf[w]) {
-            return true;
-        }
-
-        // check for special case where all perforations have cross flow
-        // then the wells must allow for cross flow
-        for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
-            const int cell_idx = wells().well_cells[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-            const auto& fs = intQuants.fluidState();
-            EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-            EvalWell bhp = getBhp(w);
-
-            // Pressure drawdown (also used to determine direction of flow)
-            EvalWell well_pressure = bhp + wellPerforationPressureDiffs()[perf];
-            EvalWell drawdown = pressure - well_pressure;
-
-            if (drawdown.value() < 0 && wells().type[w] == INJECTOR)  {
-                return false;
-            }
-
-            if (drawdown.value() > 0 && wells().type[w] == PRODUCER)  {
-                return false;
-            }
-        }
-        return true;
     }
 
 
@@ -2254,7 +2218,7 @@ namespace Opm {
         const int numComp = numComponents();
         well_flux.resize(np, 0.0);
 
-        const bool allow_cf = allow_cross_flow(well_index, ebosSimulator);
+        const bool allow_cf = well_container_[well_index]->crossFlowAllowed(ebosSimulator);
         for (int perf = wells().well_connpos[well_index]; perf < wells().well_connpos[well_index + 1]; ++perf) {
             const int cell_index = wells().well_cells[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));

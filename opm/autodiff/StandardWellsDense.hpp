@@ -162,8 +162,6 @@ enum WellVariablePositions {
                         const int cell_idx,
                         std::vector<EvalWell>& mob) const;
 
-            bool allow_cross_flow(const int w, const Simulator& ebosSimulator) const;
-
             void localInvert(Mat& istlA) const;
 
             void print(Mat& istlA) const;
