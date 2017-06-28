@@ -294,7 +294,7 @@ namespace Opm {
 
         bool getConvergence(const SimulatorTimerInterface& /* timer */, const int iteration)
         {
-            const double tol_p = 1e-11;
+            const double tol_p = 1e-10;
             const double resmax = residual_.material_balance_eq[0].value().abs().maxCoeff();
             if (Base::terminalOutputEnabled()) {
                 // Only rank 0 does print to std::cout

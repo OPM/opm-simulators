@@ -110,6 +110,7 @@ list (APPEND TEST_DATA_FILES
 list (APPEND EXAMPLE_SOURCE_FILES
   examples/find_zero.cpp
   examples/flow_legacy.cpp
+  examples/flow_reorder.cpp
   examples/flow_sequential.cpp
   examples/flow_ebos.cpp
   examples/flow_ebos_solvent.cpp
@@ -137,6 +138,7 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/flow_ebos_solvent.cpp
   examples/flow_ebos_polymer.cpp
   examples/flow_legacy.cpp
+  examples/flow_reorder.cpp
   examples/flow_sequential.cpp
   examples/flow_solvent.cpp
   examples/opm_init_check.cpp
@@ -173,6 +175,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilSolventModel_impl.hpp
   opm/autodiff/BlackoilMultiSegmentModel.hpp
   opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
+  opm/autodiff/BlackoilReorderingTransportModel.hpp
   opm/autodiff/BlackoilTransportModel.hpp
   opm/autodiff/fastSparseOperations.hpp
   opm/autodiff/DebugTimeReport.hpp
