@@ -312,10 +312,7 @@ enum WellVariablePositions {
             std::vector<std::shared_ptr<WellInterface<TypeTag> > > well_container_;
 
             // TODO: forgot why returning a vector here
-            std::vector<std::shared_ptr<WellInterface<TypeTag> > >
-            createWellContainer(const std::vector<const Well*>& wells_ecl,
-                                const Wells* wells_arg,
-                                const int time_step);
+            void createWellContainer(const Wells* wells_arg);
 
             // Well collection is used to enforce the group control
             WellCollection* well_collection_;
