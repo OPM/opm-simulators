@@ -294,6 +294,8 @@ enum WellVariablePositions {
 
             void applyVREPGroupControl(WellState& well_state) const;
 
+            void updateGroupControls(WellState& well_state) const;
+
         protected:
             bool wells_active_;
             const Wells*   wells_;

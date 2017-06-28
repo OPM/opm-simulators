@@ -1825,12 +1825,6 @@ namespace Opm
         invDuneD_.mv(resWell_, dx_well);
 
         updateWellState(dx_well, param, well_state);
-
-        // updateWellControls uses communication
-        // Therefore the following is executed if there
-        // are active wells anywhere in the global domain.
-        updateWellControl(well_state);
-        setWellVariables(well_state);
     }
 
 }

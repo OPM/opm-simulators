@@ -230,6 +230,7 @@ namespace Opm {
         }
 
         updateWellControls(well_state);
+        updateGroupControls(well_state);
         // Set the primary variables for the wells
         setWellVariables(well_state);
 
@@ -739,22 +740,6 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     setWellVariables(const WellState& xw)
     {
-        const int nw = wells().number_of_wells;
-        // for two-phase numComp < numWellEq
-        const int numComp = numComponents();
-        for (int eqIdx = 0; eqIdx < numComp;  ++eqIdx) {
-            for (int w = 0; w < nw; ++w) {
-                const unsigned int idx = nw * eqIdx + w;
-                assert( idx < wellVariables_.size() );
-                assert( idx < xw.wellSolutions().size() );
-                EvalWell& eval = wellVariables_[ idx ];
-
-                eval = 0.0;
-                eval.setValue( xw.wellSolutions()[ idx ] );
-                eval.setDerivative(numEq + eqIdx, 1.0);
-            }
-        }
-
         for (auto& well_interface : well_container_) {
             well_interface->setWellVariables(xw);
         }
@@ -950,10 +935,9 @@ namespace Opm {
             ++it;
             if( localWellsActive() )
             {
-                BVector dx_well (nw);
-                invDuneD_.mv(resWell_, dx_well);
-
-                updateWellState(dx_well, well_state);
+                for (auto& well : well_container_) {
+                    well->wellEqIteration(ebosSimulator, param_, well_state);
+                }
             }
             // updateWellControls uses communication
             // Therefore the following is executed if there
@@ -961,6 +945,7 @@ namespace Opm {
             if( wellsActive() )
             {
                 updateWellControls(well_state);
+                updateGroupControls(well_state);
                 setWellVariables(well_state);
             }
         } while (it < 15);
@@ -1245,23 +1230,6 @@ namespace Opm {
 
         for (const auto& well : well_container_) {
             well->updateWellControl(xw);
-        }
-
-        // TODO: group control has to be applied in the level of the all wells
-        // upate the well targets following group controls
-        // The following probably can go to a function
-        // it will not change the control mode, only update the targets
-        if (wellCollection()->groupControlActive()) {
-            applyVREPGroupControl(xw);
-            wellCollection()->updateWellTargets(xw.wellRates());
-            for (int w = 0; w < number_of_wells_; ++w) {
-                // TODO: check whether we need current argument in updateWellStateWithTarget
-                // maybe there is some circumstances that the current is different from the one
-                // in the WellState.
-                // while probalby, the current argument can be removed
-                const int current = xw.currentControls()[w];
-                well_container_[w]->updateWellStateWithTarget(current, xw);
-            }
         }
     }
 
@@ -1695,6 +1663,33 @@ namespace Opm {
                     WellControls* wc = wells().ctrls[well_index];
                     well_controls_set_current(wc, well_node->groupControlIndex());
                 }
+            }
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    updateGroupControls(WellState& well_state) const
+    {
+        if (wellCollection()->groupControlActive()) {
+            applyVREPGroupControl(well_state);
+            wellCollection()->updateWellTargets(well_state.wellRates());
+
+            // TODO: group control has to be applied in the level of the all wells
+            // upate the well targets following group controls
+            // it will not change the control mode, only update the targets
+            for (int w = 0; w < number_of_wells_; ++w) {
+                // TODO: check whether we need current argument in updateWellStateWithTarget
+                // maybe there is some circumstances that the current is different from the one
+                // in the WellState.
+                // while probalby, the current argument can be removed
+                const int current = well_state.currentControls()[w];
+                well_container_[w]->updateWellStateWithTarget(current, well_state);
             }
         }
     }
