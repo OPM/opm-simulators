@@ -47,8 +47,9 @@ namespace Opm
          const double gravity_arg,
          const int num_cells)
     {
-        WellInterface<TypeTag>(phase_usage_arg, active_arg,
-                               vfp_properties_arg, gravity_arg, num_cells);
+        WellInterface<TypeTag>::init(phase_usage_arg, active_arg,
+                                     vfp_properties_arg, gravity_arg, num_cells);
+
 
         // setup sparsity pattern for the matrices
         // TODO: C and B are opposite compared with the notations used in the paper.

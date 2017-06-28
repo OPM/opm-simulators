@@ -112,11 +112,11 @@ namespace Opm
         virtual std::vector<double>& perfPressureDiffs() = 0;
 
         // TODO: the parameters need to be optimized/adjusted
-        void init(const PhaseUsage* phase_usage_arg,
-                  const std::vector<bool>* active_arg,
-                  const VFPProperties* vfp_properties_arg,
-                  const double gravity_arg,
-                  const int num_cells);
+        virtual void init(const PhaseUsage* phase_usage_arg,
+                          const std::vector<bool>* active_arg,
+                          const VFPProperties* vfp_properties_arg,
+                          const double gravity_arg,
+                          const int num_cells);
 
         // TODO: temporary
         virtual void setWellVariables(const WellState& well_state) = 0;

@@ -114,11 +114,11 @@ namespace Opm
                          std::vector<EvalWell>& mob) const;
 
         // TODO: the parameters need to be optimized/adjusted
-        void init(const PhaseUsage* phase_usage_arg,
-                  const std::vector<bool>* active_arg,
-                  const VFPProperties* vfp_properties_arg,
-                  const double gravity_arg,
-                  const int num_cells);
+        virtual void init(const PhaseUsage* phase_usage_arg,
+                          const std::vector<bool>* active_arg,
+                          const VFPProperties* vfp_properties_arg,
+                          const double gravity_arg,
+                          const int num_cells);
 
         // Update the well_state based on solution
         void updateWellState(const BVector& dwells,
