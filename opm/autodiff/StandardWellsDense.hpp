@@ -300,7 +300,8 @@ enum WellVariablePositions {
             const std::vector< const Well* > wells_ecl_;
 
             // the number of wells in this process
-            // trying to not use things from Wells struct
+            // trying not to use things from Wells struct
+            // TODO: maybe a better name to emphasize it is local?
             const int number_of_wells_;
 
             // a vector of all the wells.

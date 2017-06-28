@@ -1034,54 +1034,24 @@ namespace Opm {
         typedef double Scalar;
         typedef std::vector< Scalar > Vector;
 
-        const int np = numPhases();
         const int numComp = numComponents();
 
         std::vector< Scalar > B_avg( numComp, Scalar() );
         computeAverageFormationFactor(ebosSimulator, B_avg);
 
-        const double tol_wells = param_.tolerance_wells_;
-        const double maxResidualAllowed = param_.max_residual_allowed_;
+        bool converged_well = true;
 
-        std::vector< Scalar > maxNormWell(numComp, Scalar() );
-
-        auto res = residual();
-        const int nw = res.size() / numComp;
-
-        for ( int compIdx = 0; compIdx < numComp; ++compIdx )
-        {
-            for ( int w = 0; w < nw; ++w ) {
-                maxNormWell[compIdx] = std::max(maxNormWell[compIdx], std::abs(res[nw*compIdx + w]));
+        // TODO: to check the strategy here
+        // currently, if there is any well not converged, we consider the well eqautions do not get converged
+        for (const auto& well : well_container_) {
+            if ( !well->getWellConvergence(ebosSimulator, B_avg, param_) ) {
+                converged_well = false;
             }
+            break;
         }
 
-        const auto& grid = ebosSimulator.gridManager().grid();
-        grid.comm().max(maxNormWell.data(), maxNormWell.size());
-
-        Vector well_flux_residual(numComp);
-        bool converged_Well = true;
-
-        // Finish computation
-        for ( int compIdx = 0; compIdx < numComp; ++compIdx )
-        {
-            well_flux_residual[compIdx] = B_avg[compIdx] * maxNormWell[compIdx];
-            converged_Well = converged_Well && (well_flux_residual[compIdx] < tol_wells);
-        }
-
-        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
-        for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-            const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-
-            if (std::isnan(well_flux_residual[phaseIdx])) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
-            }
-
-            if (well_flux_residual[phaseIdx] > maxResidualAllowed) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
-            }
-        }
-
-        if ( terminal_output_ )
+        // TODO: to think about the output here.
+        /* if ( terminal_output_ )
         {
             // Only rank 0 does print to std::cout
             if (iteration == 0) {
@@ -1104,8 +1074,8 @@ namespace Opm {
             ss.precision(oprec);
             ss.flags(oflags);
             OpmLog::note(ss.str());
-        }
-        return converged_Well;
+        } */
+        return converged_well;
     }
 
 
@@ -1249,306 +1219,13 @@ namespace Opm {
     updateWellState(const BVector& dwells,
                     WellState& well_state) const
     {
+        // TODO: the interface of the function should change.
+        // the current plan is to make different wells have different matrix
+        // and residual system.
         if( !localWellsActive() ) return;
-
-        const int np = wells().number_of_phases;
-        const int nw = wells().number_of_wells;
-
-        double dFLimit = dWellFractionMax();
-        double dBHPLimit = dbhpMaxRel();
-        std::vector<double> xvar_well_old = well_state.wellSolutions();
-
-        for (int w = 0; w < nw; ++w) {
-
-            // update the second and third well variable (The flux fractions)
-            std::vector<double> F(np,0.0);
-            if (active_[ Water ]) {
-                const int sign2 = dwells[w][WFrac] > 0 ? 1: -1;
-                const double dx2_limited = sign2 * std::min(std::abs(dwells[w][WFrac]),dFLimit);
-                well_state.wellSolutions()[WFrac*nw + w] = xvar_well_old[WFrac*nw + w] - dx2_limited;
-            }
-
-            if (active_[ Gas ]) {
-                const int sign3 = dwells[w][GFrac] > 0 ? 1: -1;
-                const double dx3_limited = sign3 * std::min(std::abs(dwells[w][GFrac]),dFLimit);
-                well_state.wellSolutions()[GFrac*nw + w] = xvar_well_old[GFrac*nw + w] - dx3_limited;
-            }
-
-            if (has_solvent_) {
-                const int sign4 = dwells[w][SFrac] > 0 ? 1: -1;
-                const double dx4_limited = sign4 * std::min(std::abs(dwells[w][SFrac]),dFLimit);
-                well_state.wellSolutions()[SFrac*nw + w] = xvar_well_old[SFrac*nw + w] - dx4_limited;
-            }
-
-            assert(active_[ Oil ]);
-            F[Oil] = 1.0;
-            if (active_[ Water ]) {
-                F[Water] = well_state.wellSolutions()[WFrac*nw + w];
-                F[Oil] -= F[Water];
-            }
-
-            if (active_[ Gas ]) {
-                F[Gas] = well_state.wellSolutions()[GFrac*nw + w];
-                F[Oil] -= F[Gas];
-            }
-
-            double F_solvent = 0.0;
-            if (has_solvent_) {
-                F_solvent = well_state.wellSolutions()[SFrac*nw + w];
-                F[Oil] -= F_solvent;
-            }
-
-            if (active_[ Water ]) {
-                if (F[Water] < 0.0) {
-                    if (active_[ Gas ]) {
-                        F[Gas] /= (1.0 - F[Water]);
-                    }
-                    if (has_solvent_) {
-                        F_solvent /= (1.0 - F[Water]);
-                    }
-                    F[Oil] /= (1.0 - F[Water]);
-                    F[Water] = 0.0;
-                }
-            }
-            if (active_[ Gas ]) {
-                if (F[Gas] < 0.0) {
-                    if (active_[ Water ]) {
-                        F[Water] /= (1.0 - F[Gas]);
-                    }
-                    if (has_solvent_) {
-                        F_solvent /= (1.0 - F[Gas]);
-                    }
-                    F[Oil] /= (1.0 - F[Gas]);
-                    F[Gas] = 0.0;
-                }
-            }
-            if (F[Oil] < 0.0) {
-                if (active_[ Water ]) {
-                     F[Water] /= (1.0 - F[Oil]);
-                }
-                if (active_[ Gas ]) {
-                    F[Gas] /= (1.0 - F[Oil]);
-                }
-                if (has_solvent_) {
-                    F_solvent /= (1.0 - F[Oil]);
-                }
-                F[Oil] = 0.0;
-            }
-
-            if (active_[ Water ]) {
-                well_state.wellSolutions()[WFrac*nw + w] = F[Water];
-            }
-            if (active_[ Gas ]) {
-                well_state.wellSolutions()[GFrac*nw + w] = F[Gas];
-            }
-            if(has_solvent_) {
-                well_state.wellSolutions()[SFrac*nw + w] = F_solvent;
-            }
-
-            // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
-            // More testing is needed to make sure this is correct for well groups and THP.
-            if (has_solvent_){
-                F[Gas] += F_solvent;
-            }
-
-            // The interpretation of the first well variable depends on the well control
-            const WellControls* wc = wells().ctrls[w];
-
-            // The current control in the well state overrides
-            // the current control set in the Wells struct, which
-            // is instead treated as a default.
-            const int current = well_state.currentControls()[w];
-            const double target_rate = well_controls_iget_target(wc, current);
-
-            std::vector<double> g = {1,1,0.01};
-            if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
-                const double* distr = well_controls_iget_distr(wc, current);
-                for (int p = 0; p < np; ++p) {
-                    if (distr[p] > 0.) { // For injection wells, there only one non-zero distr value
-                        F[p] /= distr[p];
-                    } else {
-                        F[p] = 0.;
-                    }
-                }
-            } else {
-                for (int p = 0; p < np; ++p) {
-                    F[p] /= g[p];
-                }
-            }
-
-            switch (well_controls_iget_type(wc, current)) {
-                case THP: // The BHP and THP both uses the total rate as first well variable.
-                case BHP:
-                {
-                    well_state.wellSolutions()[nw*XvarWell + w] = xvar_well_old[nw*XvarWell + w] - dwells[w][XvarWell];
-
-                    switch (wells().type[w]) {
-                    case INJECTOR:
-                        for (int p = 0; p < np; ++p) {
-                            const double comp_frac = wells().comp_frac[np*w + p];
-                            well_state.wellRates()[w*np + p] = comp_frac * well_state.wellSolutions()[nw*XvarWell + w];
-                        }
-                        break;
-                    case PRODUCER:
-                        for (int p = 0; p < np; ++p) {
-                            well_state.wellRates()[w*np + p] = well_state.wellSolutions()[nw*XvarWell + w] * F[p];
-                        }
-                        break;
-                    }
-
-                    if (well_controls_iget_type(wc, current) == THP) {
-
-                        // Calculate bhp from thp control and well rates
-                        double aqua = 0.0;
-                        double liquid = 0.0;
-                        double vapour = 0.0;
-
-                        const Opm::PhaseUsage& pu = phase_usage_;
-
-                        if (active_[ Water ]) {
-                            aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
-                        }
-                        if (active_[ Oil ]) {
-                            liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
-                        }
-                        if (active_[ Gas ]) {
-                            vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
-                        }
-
-                        const int vfp        = well_controls_iget_vfp(wc, current);
-                        const double& thp    = well_controls_iget_target(wc, current);
-                        const double& alq    = well_controls_iget_alq(wc, current);
-
-                        //Set *BHP* target by calculating bhp from THP
-                        const WellType& well_type = wells().type[w];
-                        // pick the density in the top layer
-                        const int perf = wells().well_connpos[w];
-                        const double rho = well_perforation_densities_[perf];
-
-                        if (well_type == INJECTOR) {
-                             const double dp = wellhelpers::computeHydrostaticCorrection(
-                                               wells(), w, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
-                                               rho, gravity_);
-
-                             well_state.bhp()[w] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                        }
-                        else if (well_type == PRODUCER) {
-                            const double dp = wellhelpers::computeHydrostaticCorrection(
-                                              wells(), w, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
-                                              rho, gravity_);
-
-                            well_state.bhp()[w] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                        }
-                        else {
-                            OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
-                        }
-                    }
-                }
-                    break;
-                case SURFACE_RATE: // Both rate controls use bhp as first well variable
-                case RESERVOIR_RATE:
-                {
-                    const int sign1 = dwells[w][XvarWell] > 0 ? 1: -1;
-                    const double dx1_limited = sign1 * std::min(std::abs(dwells[w][XvarWell]),std::abs(xvar_well_old[nw*XvarWell + w])*dBHPLimit);
-                    well_state.wellSolutions()[nw*XvarWell + w] = std::max(xvar_well_old[nw*XvarWell + w] - dx1_limited,1e5);
-                    well_state.bhp()[w] = well_state.wellSolutions()[nw*XvarWell + w];
-
-                    if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
-                        if (wells().type[w]==PRODUCER) {
-
-                            const double* distr = well_controls_iget_distr(wc, current);
-
-                            double F_target = 0.0;
-                            for (int p = 0; p < np; ++p) {
-                                F_target += distr[p] * F[p];
-                            }
-                            for (int p = 0; p < np; ++p) {
-                                well_state.wellRates()[np*w + p] = F[p] * target_rate / F_target;
-                            }
-                        } else {
-
-                            for (int p = 0; p < np; ++p) {
-                                well_state.wellRates()[w*np + p] = wells().comp_frac[np*w + p] * target_rate;
-                            }
-                        }
-                    } else { // RESERVOIR_RATE
-                        for (int p = 0; p < np; ++p) {
-                            well_state.wellRates()[np*w + p] = F[p] * target_rate;
-                        }
-                    }
-                }
-                    break;
-            } // end of switch (well_controls_iget_type(wc, current))
-        } // end of for (int w = 0; w < nw; ++w)
-
-
-        // for the wells having a THP constaint, we should update their thp value
-        // If it is under THP control, it will be set to be the target value. Otherwise,
-        // the thp value will be calculated based on the bhp value, assuming the bhp value is correctly calculated.
-        for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wells().ctrls[w];
-            const int nwc = well_controls_get_num(wc);
-            // Looping over all controls until we find a THP constraint
-            int ctrl_index = 0;
-            for ( ; ctrl_index < nwc; ++ctrl_index) {
-                if (well_controls_iget_type(wc, ctrl_index) == THP) {
-                    // the current control
-                    const int current = well_state.currentControls()[w];
-                    // If under THP control at the moment
-                    if (current == ctrl_index) {
-                        const double thp_target = well_controls_iget_target(wc, current);
-                        well_state.thp()[w] = thp_target;
-                    } else { // otherwise we calculate the thp from the bhp value
-                        double aqua = 0.0;
-                        double liquid = 0.0;
-                        double vapour = 0.0;
-
-                        const Opm::PhaseUsage& pu = phase_usage_;
-
-                        if (active_[ Water ]) {
-                            aqua = well_state.wellRates()[w*np + pu.phase_pos[ Water ] ];
-                        }
-                        if (active_[ Oil ]) {
-                            liquid = well_state.wellRates()[w*np + pu.phase_pos[ Oil ] ];
-                        }
-                        if (active_[ Gas ]) {
-                            vapour = well_state.wellRates()[w*np + pu.phase_pos[ Gas ] ];
-                        }
-
-                        const double alq = well_controls_iget_alq(wc, ctrl_index);
-                        const int table_id = well_controls_iget_vfp(wc, ctrl_index);
-
-                        const WellType& well_type = wells().type[w];
-                        const int perf = wells().well_connpos[w]; //first perforation.
-                        if (well_type == INJECTOR) {
-                            const double dp = wellhelpers::computeHydrostaticCorrection(
-                                              wells(), w, vfp_properties_->getInj()->getTable(table_id)->getDatumDepth(),
-                                              wellPerforationDensities()[perf], gravity_);
-
-                            const double bhp = well_state.bhp()[w];
-                            well_state.thp()[w] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
-                        } else if (well_type == PRODUCER) {
-                            const double dp = wellhelpers::computeHydrostaticCorrection(
-                                              wells(), w, vfp_properties_->getProd()->getTable(table_id)->getDatumDepth(),
-                                              wellPerforationDensities()[perf], gravity_);
-
-                            const double bhp = well_state.bhp()[w];
-                            well_state.thp()[w] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
-                        } else {
-                            OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
-                        }
-                    }
-
-                    // the THP control is found, we leave the loop now
-                    break;
-                }
-            }  // end of for loop for seaching THP constraints
-
-            // no THP constraint found
-            if (ctrl_index == nwc) { // not finding a THP contstraints
-                well_state.thp()[w] = 0.0;
-            }
-        } // end of for (int w = 0; w < nw; ++w)
+        /* for (auto& well : well_container_) {
+            well->updateWellState(dwells, param_, well_state);
+        } */
     }
 
 
@@ -1566,95 +1243,24 @@ namespace Opm {
         // we simply return.
         if( !wellsActive() ) return ;
 
-        const int np = wells().number_of_phases;
-        const int nw = wells().number_of_wells;
-
-        // keeping a copy of the current controls, to see whether control changes later.
-        std::vector<int> old_control_index(nw, 0);
-        for (int w = 0; w < nw; ++w) {
-            old_control_index[w] = xw.currentControls()[w];
+        for (const auto& well : well_container_) {
+            well->updateWellControl(xw);
         }
 
-        // Find, for each well, if any constraints are broken. If so,
-        // switch control to first broken constraint.
-#pragma omp parallel for schedule(dynamic)
-        for (int w = 0; w < nw; ++w) {
-            WellControls* wc = wells().ctrls[w];
-            // The current control in the well state overrides
-            // the current control set in the Wells struct, which
-            // is instead treated as a default.
-            int current = xw.currentControls()[w];
-            // Loop over all controls except the current one, and also
-            // skip any RESERVOIR_RATE controls, since we cannot
-            // handle those.
-            const int nwc = well_controls_get_num(wc);
-            int ctrl_index = 0;
-            for (; ctrl_index < nwc; ++ctrl_index) {
-                if (ctrl_index == current) {
-                    // This is the currently used control, so it is
-                    // used as an equation. So this is not used as an
-                    // inequality constraint, and therefore skipped.
-                    continue;
-                }
-                if (wellhelpers::constraintBroken(
-                         xw.bhp(), xw.thp(), xw.wellRates(),
-                         w, np, wells().type[w], wc, ctrl_index)) {
-                    // ctrl_index will be the index of the broken constraint after the loop.
-                    break;
-                }
-            }
-            if (ctrl_index != nwc) {
-                // Constraint number ctrl_index was broken, switch to it.
-                xw.currentControls()[w] = ctrl_index;
-                current = xw.currentControls()[w];
-                well_controls_set_current( wc, current);
-            }
-
-            // update whether well is under group control
-            if (wellCollection()->groupControlActive()) {
-                // get well node in the well collection
-                WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
-
-                // update whehter the well is under group control or individual control
-                if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
-                    // under group control
-                    well_node.setIndividualControl(false);
-                } else {
-                    // individual control
-                    well_node.setIndividualControl(true);
-                }
-            }
-        }
-
-        // the new well control indices after all the related updates,
-        std::vector<int> updated_control_index(nw, 0);
-        for (int w = 0; w < nw; ++w) {
-            updated_control_index[w] = xw.currentControls()[w];
-        }
-
-        // checking whether control changed
-        wellhelpers::WellSwitchingLogger logger;
-        for (int w = 0; w < nw; ++w) {
-            const WellControls* wc = wells().ctrls[w];
-            if (updated_control_index[w] != old_control_index[w]) {
-                logger.wellSwitched(wells().name[w],
-                                    well_controls_iget_type(wc, old_control_index[w]),
-                                    well_controls_iget_type(wc, updated_control_index[w]));
-            }
-
-            if (updated_control_index[w] != old_control_index[w] || well_collection_->groupControlActive()) {
-                updateWellStateWithTarget(wc, updated_control_index[w], w, xw);
-            }
-        }
-
+        // TODO: group control has to be applied in the level of the all wells
         // upate the well targets following group controls
+        // The following probably can go to a function
         // it will not change the control mode, only update the targets
         if (wellCollection()->groupControlActive()) {
             applyVREPGroupControl(xw);
             wellCollection()->updateWellTargets(xw.wellRates());
-            for (int w = 0; w < nw; ++w) {
-                const WellControls* wc = wells().ctrls[w];
-                updateWellStateWithTarget(wc, updated_control_index[w], w, xw);
+            for (int w = 0; w < number_of_wells_; ++w) {
+                // TODO: check whether we need current argument in updateWellStateWithTarget
+                // maybe there is some circumstances that the current is different from the one
+                // in the WellState.
+                // while probalby, the current argument can be removed
+                const int current = xw.currentControls()[w];
+                well_container_[w]->updateWellStateWithTarget(current, xw);
             }
         }
     }

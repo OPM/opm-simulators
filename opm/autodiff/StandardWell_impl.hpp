@@ -818,6 +818,7 @@ namespace Opm
                     const BlackoilModelParameters& param,
                     WellState& well_state) const
     {
+        // TODO: to check whether all the things from PR 1220 were incoporated.
         const int np = numberOfPhases();
         const int nw = well_state.bhp().size();
         const double dFLimit = param.dbhp_max_rel_;

@@ -155,6 +155,11 @@ namespace Opm
                                     WellState& well_state,
                                     bool only_wells) = 0;
 
+        virtual void updateWellStateWithTarget(const int current,
+                                               WellState& xw) const = 0;
+
+        virtual void updateWellControl(WellState& xw) const = 0;
+
     protected:
         // TODO: some variables shared by all the wells should be made static
         // well name
