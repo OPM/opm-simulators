@@ -105,6 +105,7 @@ set(rel_tol 1e-5)
 
 add_test_compareECLFiles(spe1 SPE1CASE2 flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
+add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow_ebos_2p ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
 add_test_compareECLFiles(spe1 SPE1CASE2 flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
 add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
 add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles "")

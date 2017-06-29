@@ -239,7 +239,7 @@ namespace Opm {
                     }
 
                     // add trivial equation for 2p cases (Only support water + oil)
-                    if (numComp == 2) {
+                    if (numComp < numEq ) {
                         assert(!active_[ Gas ]);
                         invDuneD_[w][w][Gas][Gas] = 1.0;
                     }
