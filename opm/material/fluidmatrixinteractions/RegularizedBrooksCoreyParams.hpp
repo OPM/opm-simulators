@@ -30,8 +30,6 @@
 #include "BrooksCorey.hpp"
 #include "BrooksCoreyParams.hpp"
 
-#include <dune/common/deprecated.hh>
-
 #include <cassert>
 
 #include <opm/material/common/EnsureFinalized.hpp>
@@ -106,9 +104,6 @@ public:
      *        pressure is regularized.
      */
     void setPcLowSw(Scalar value)
-    { pcnwLowSw_ = value; }
-
-    void setThresholdSw(Scalar value) DUNE_DEPRECATED_MSG("this method has been renamed to setPcLowSw()")
     { pcnwLowSw_ = value; }
 
     /*!
