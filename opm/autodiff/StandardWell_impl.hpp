@@ -28,6 +28,7 @@ namespace Opm
     , perf_densities_(numberOfPerforations())
     , perf_pressure_diffs_(numberOfPerforations())
     , well_variables_(numWellEq) // the number of the primary variables
+    , F0_(numWellEq)
     {
         duneB_.setBuildMode( Mat::row_wise );
         duneC_.setBuildMode( Mat::row_wise );
@@ -1468,7 +1469,7 @@ namespace Opm
         // TODO: can make this a member?
         const int nw = xw.bhp().size();
         const int numComp = numComponents();
-        const PhaseUsage& pu = phase_usage_;
+        const PhaseUsage& pu = *phase_usage_;
         b_perf.resize(nperf*numComp);
         surf_dens_perf.resize(nperf*numComp);
         const int w = indexOfWell();
@@ -1816,6 +1817,27 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
+    computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                   const WellState& well_state)
+    {
+         // 1. Compute properties required by computeConnectionPressureDelta().
+         //    Note that some of the complexity of this part is due to the function
+         //    taking std::vector<double> arguments, and not Eigen objects.
+         std::vector<double> b_perf;
+         std::vector<double> rsmax_perf;
+         std::vector<double> rvmax_perf;
+         std::vector<double> surf_dens_perf;
+         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+         computeWellConnectionDensitesPressures(well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
     wellEqIteration(Simulator& ebosSimulator,
                     const ModelParameters& param,
                     WellState& well_state)
@@ -1826,6 +1848,20 @@ namespace Opm
         invDuneD_.mv(resWell_, dx_well);
 
         updateWellState(dx_well, param, well_state);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeAccumWell()
+    {
+        for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+            F0_[eq_idx] = wellSurfaceVolumeFraction(eq_idx).value();
+        }
     }
 
 }

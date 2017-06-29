@@ -238,13 +238,6 @@ enum WellVariablePositions {
             void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                 const WellState& xw);
 
-            void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
-                                                             const WellState& xw,
-                                                             std::vector<double>& b_perf,
-                                                             std::vector<double>& rsmax_perf,
-                                                             std::vector<double>& rvmax_perf,
-                                                             std::vector<double>& surf_dens_perf) const;
-
             void updateWellState(const BVector& dwells,
                                  WellState& well_state) const;
 
@@ -258,15 +251,6 @@ enum WellVariablePositions {
                                        const Wells* wells_struct,
                                        const WellState& well_state,
                                        DynamicListEconLimited& list_econ_limited) const;
-
-            void computeWellConnectionDensitesPressures(const WellState& xw,
-                                                        const std::vector<double>& b_perf,
-                                                        const std::vector<double>& rsmax_perf,
-                                                        const std::vector<double>& rvmax_perf,
-                                                        const std::vector<double>& surf_dens_perf,
-                                                        const std::vector<double>& depth_perf,
-                                                        const double grav);
-
 
             // Calculating well potentials for each well
             // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.

@@ -164,6 +164,13 @@ namespace Opm
 
         virtual void updateWellControl(WellState& xw) const = 0;
 
+        virtual void computeAccumWell() = 0;
+
+        // TODO: it should come with a different name
+        // for MS well, the definition is different and should not use this name anymore
+        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                    const WellState& xw) = 0;
+
     protected:
         // TODO: some variables shared by all the wells should be made static
         // well name

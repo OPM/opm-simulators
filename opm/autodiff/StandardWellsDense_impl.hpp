@@ -237,6 +237,8 @@ namespace Opm {
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
             report = solveWellEq(ebosSimulator, dt, well_state);
+            std::cout << " solvWellEq is done ! " << std::endl;
+            std::cin.ignore();
         }
         assembleWellEq(ebosSimulator, dt, well_state, false);
 
@@ -728,11 +730,8 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     computeAccumWells()
     {
-        const int nw = wells().number_of_wells;
-        for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
-            for (int w = 0; w < nw; ++w) {
-                F0_[w + nw * eqIdx] = wellSurfaceVolumeFraction(w, eqIdx).value();
-            }
+        for (auto& well : well_container_) {
+            well->computeAccumWell();
         }
     }
 
@@ -1034,123 +1033,9 @@ namespace Opm {
     {
          if( ! localWellsActive() ) return ;
 
-         // 1. Compute properties required by computeConnectionPressureDelta().
-         //    Note that some of the complexity of this part is due to the function
-         //    taking std::vector<double> arguments, and not Eigen objects.
-         std::vector<double> b_perf;
-         std::vector<double> rsmax_perf;
-         std::vector<double> rvmax_perf;
-         std::vector<double> surf_dens_perf;
-         computePropertiesForWellConnectionPressures(ebosSimulator, xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(xw, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, cell_depths_, gravity_);
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
-                                                const WellState& xw,
-                                                std::vector<double>& b_perf,
-                                                std::vector<double>& rsmax_perf,
-                                                std::vector<double>& rvmax_perf,
-                                                std::vector<double>& surf_dens_perf) const
-    {
-        const int nperf = wells().well_connpos[wells().number_of_wells];
-        const int nw = wells().number_of_wells;
-        const int numComp = numComponents();
-        const PhaseUsage& pu = phase_usage_;
-        b_perf.resize(nperf*numComp);
-        surf_dens_perf.resize(nperf*numComp);
-
-        //rs and rv are only used if both oil and gas is present
-        if (pu.phase_used[BlackoilPhases::Vapour] && pu.phase_pos[BlackoilPhases::Liquid]) {
-            rsmax_perf.resize(nperf);
-            rvmax_perf.resize(nperf);
-        }
-
-        // Compute the average pressure in each well block
-        for (int w = 0; w < nw; ++w) {
-            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w+1]; ++perf) {
-
-                const int cell_idx = wells().well_cells[perf];
-                const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                const auto& fs = intQuants.fluidState();
-
-                const double p_above = perf == wells().well_connpos[w] ? xw.bhp()[w] : xw.perfPress()[perf - 1];
-                const double p_avg = (xw.perfPress()[perf] + p_above)/2;
-                const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
-
-                if (pu.phase_used[BlackoilPhases::Aqua]) {
-                    b_perf[ pu.phase_pos[BlackoilPhases::Aqua] + perf * numComp] =
-                    FluidSystem::waterPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                }
-
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
-                    const int gaspos = pu.phase_pos[BlackoilPhases::Vapour] + perf * numComp;
-                    const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
-
-                    if (pu.phase_used[BlackoilPhases::Liquid]) {
-                        const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
-                        const double oilrate = std::abs(xw.wellRates()[oilpos_well]); //in order to handle negative rates in producers
-                        rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        if (oilrate > 0) {
-                            const double gasrate = std::abs(xw.wellRates()[gaspos_well]) - xw.solventWellRate(w);
-                            double rv = 0.0;
-                            if (gasrate > 0) {
-                                rv = oilrate / gasrate;
-                            }
-                            rv = std::min(rv, rvmax_perf[perf]);
-
-                            b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rv);
-                        }
-                        else {
-                            b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        }
-
-                    } else {
-                        b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    }
-                }
-
-                if (pu.phase_used[BlackoilPhases::Liquid]) {
-                    const int oilpos = pu.phase_pos[BlackoilPhases::Liquid] + perf * numComp;
-                    const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
-                    if (pu.phase_used[BlackoilPhases::Vapour]) {
-                        rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
-                        const double gasrate = std::abs(xw.wellRates()[gaspos_well]) - xw.solventWellRate(w);
-                        if (gasrate > 0) {
-                            const double oilrate = std::abs(xw.wellRates()[oilpos_well]);
-                            double rs = 0.0;
-                            if (oilrate > 0) {
-                                rs = gasrate / oilrate;
-                            }
-                            rs = std::min(rs, rsmax_perf[perf]);
-                            b_perf[oilpos] = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rs);
-                        } else {
-                            b_perf[oilpos] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                        }
-                    } else {
-                        b_perf[oilpos] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    }
-                }
-
-                // Surface density.
-                for (int p = 0; p < pu.num_phases; ++p) {
-                    surf_dens_perf[numComp*perf + p] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx( p ), fs.pvtRegionIndex());
-                }
-
-                // We use cell values for solvent injector
-                if (has_solvent_) {
-                    b_perf[numComp*perf + solventSaturationIdx] = intQuants.solventInverseFormationVolumeFactor().value();
-                    surf_dens_perf[numComp*perf + solventSaturationIdx] = intQuants.solventRefDensity();
-                }
-            }
-        }
+         for (auto& well : well_container_) {
+             well->computeWellConnectionPressures(ebosSimulator, xw);
+         }
     }
 
 
@@ -1298,45 +1183,6 @@ namespace Opm {
             }
 
         } // for (int w = 0; w < nw; ++w)
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    computeWellConnectionDensitesPressures(const WellState& xw,
-                                           const std::vector<double>& b_perf,
-                                           const std::vector<double>& rsmax_perf,
-                                           const std::vector<double>& rvmax_perf,
-                                           const std::vector<double>& surf_dens_perf,
-                                           const std::vector<double>& depth_perf,
-                                           const double grav)
-    {
-        // Compute densities
-        const int nperf = depth_perf.size();
-        const int numComponent = b_perf.size() / nperf;
-        const int np = wells().number_of_phases;
-        std::vector<double> perfRates(b_perf.size(),0.0);
-        for (int perf = 0; perf < nperf; ++perf) {
-            for (int phase = 0; phase < np; ++phase) {
-                perfRates[perf*numComponent + phase] =  xw.perfPhaseRates()[perf*np + phase];
-            }
-            if(has_solvent_) {
-                perfRates[perf*numComponent + solventSaturationIdx] =  xw.perfRateSolvent()[perf];
-            }
-        }
-        well_perforation_densities_ =
-                  WellDensitySegmented::computeConnectionDensities(
-                          wells(), phase_usage_, perfRates,
-                          b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-
-        // Compute pressure deltas
-        well_perforation_pressure_diffs_ =
-                  WellDensitySegmented::computeConnectionPressureDelta(
-                          wells(), depth_perf, well_perforation_densities_, grav);
     }
 
 

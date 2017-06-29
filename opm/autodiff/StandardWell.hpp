@@ -40,6 +40,9 @@ namespace Opm
     {
 
     public:
+        // TODO: some functions working with AD variables handles only with values (double) without
+        // dealing with derivatives. It can be beneficial to make functions can work with either AD or scalar value.
+        // And also, it can also be beneficial to make these functions hanle different types of AD variables.
         // TODO: several functions related to polymer and PLYSHLOG are not incorprated yet,
         // like the function wpolymer, setupCompressedToCartesian, computeRepRadiusPerfLength,
         // They are introduced though PR 1220 and will be included later.
@@ -136,6 +139,11 @@ namespace Opm
         virtual bool getWellConvergence(Simulator& ebosSimulator,
                                         const std::vector<double>& B_avg,
                                         const ModelParameters& param) const;
+
+        virtual void computeAccumWell();
+
+        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                    const WellState& xw);
 
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
