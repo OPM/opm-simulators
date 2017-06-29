@@ -2511,4 +2511,31 @@ namespace Opm {
 
 
 
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    outputWellState(const WellState& well_state) const
+    {
+        std::cout << " output the bhp " << std::endl;
+        for (const double bhp : well_state.bhp()) {
+            std::cout << bhp << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << " output the well rates " << std::endl;
+        for (const double rate : well_state.wellRates()) {
+            std::cout << rate << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << " output the wellSolutions " << std::endl;
+        for (const double solution : well_state.wellSolutions()) {
+            std::cout << solution << " ";
+        }
+        std::cout << std::endl;
+    }
+
+
+
+
 } // namespace Opm

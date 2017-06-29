@@ -425,6 +425,8 @@ enum WellVariablePositions {
 
             void computeAverageFormationFactor(Simulator& ebosSimulator,
                                                std::vector<double>& B_avg) const;
+
+            void outputWellState(const WellState& well_state) const;
         };
 
 
