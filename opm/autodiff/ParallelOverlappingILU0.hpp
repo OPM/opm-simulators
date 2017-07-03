@@ -165,6 +165,7 @@ class ParallelOverlappingILU0
 {
     typedef ParallelInfoT ParallelInfo;
 
+
 public:
     //! \brief The matrix type the preconditioner is for.
     typedef typename Dune::remove_const<Matrix>::type matrix_type;
@@ -238,8 +239,9 @@ public:
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
     */
-    template<class Matrix1>
-    ParallelOverlappingILU0 (const Matrix1& A, const int n, const field_type w )
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const int n, const field_type w )
         : lower_(),
           upper_(),
           inv_(),
@@ -257,8 +259,9 @@ public:
       \param A The matrix to operate on.
       \param w The relaxation factor.
     */
-    template<class Matrix1>
-    ParallelOverlappingILU0 (const Matrix1& A, const field_type w)
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const field_type w)
         : ParallelOverlappingILU0( A, 0, w )
     {
     }
@@ -270,8 +273,9 @@ public:
       \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
       \param w      The relaxation factor.
     */
-    template<class Matrix1>
-    ParallelOverlappingILU0 (const Matrix1& A, const ParallelInfo& comm, const field_type w)
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const ParallelInfo& comm, const field_type w)
         : lower_(),
           upper_(),
           inv_(),
