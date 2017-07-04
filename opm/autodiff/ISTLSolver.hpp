@@ -289,7 +289,14 @@ namespace Opm
             }
         }
 
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2 , 5)
         typedef ParallelOverlappingILU0<Matrix,Vector,Vector> SeqPreconditioner;
+#else
+        typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
+                                                                           Matrix::block_type::rows,
+                                                                           Matrix::block_type::cols> >,
+                                        Vector, Vector> SeqPreconditioner;
+#endif
 
         template <class Operator>
         std::unique_ptr<SeqPreconditioner> constructPrecond(Operator& opA, const Dune::Amg::SequentialInformation&) const
@@ -302,7 +309,14 @@ namespace Opm
 
 #if HAVE_MPI
         typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2 , 5)
         typedef ParallelOverlappingILU0<Matrix,Vector,Vector,Comm> ParPreconditioner;
+#else
+        typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
+                                                                           Matrix::block_type::rows,
+                                                                           Matrix::block_type::cols> >,
+                                        Vector, Vector, Comm> ParPreconditioner;
+#endif
         template <class Operator>
         std::unique_ptr<ParPreconditioner>
         constructPrecond(Operator& opA, const Comm& comm) const

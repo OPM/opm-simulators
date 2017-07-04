@@ -165,6 +165,7 @@ class ParallelOverlappingILU0
 {
     typedef ParallelInfoT ParallelInfo;
 
+
 public:
     //! \brief The matrix type the preconditioner is for.
     typedef typename Dune::remove_const<Matrix>::type matrix_type;
@@ -238,14 +239,18 @@ public:
       \param n ILU fill in level (for testing). This does not work in parallel.
       \param w The relaxation factor.
     */
-    ParallelOverlappingILU0 (const Matrix& A, const int n, const field_type w )
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const int n, const field_type w )
         : lower_(),
           upper_(),
           inv_(),
           comm_(nullptr), w_(w),
           relaxation_( std::abs( w - 1.0 ) > 1e-15 )
     {
-        init( A, n );
+        // BlockMatrix is a Subclass of FieldMatrix that just adds
+        // methods. Therefore this cast should be safe.
+        init( reinterpret_cast<const Matrix&>(A), n );
     }
 
     /*! \brief Constructor.
@@ -254,7 +259,9 @@ public:
       \param A The matrix to operate on.
       \param w The relaxation factor.
     */
-    ParallelOverlappingILU0 (const Matrix& A, const field_type w)
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const field_type w)
         : ParallelOverlappingILU0( A, 0, w )
     {
     }
@@ -266,14 +273,18 @@ public:
       \param comm   communication object, e.g. Dune::OwnerOverlapCopyCommunication
       \param w      The relaxation factor.
     */
-    ParallelOverlappingILU0 (const Matrix& A, const ParallelInfo& comm, const field_type w)
+    template<class BlockType, class Alloc>
+    ParallelOverlappingILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A,
+                             const ParallelInfo& comm, const field_type w)
         : lower_(),
           upper_(),
           inv_(),
           comm_(&comm), w_(w),
           relaxation_( std::abs( w - 1.0 ) > 1e-15 )
     {
-        init( A, 0 );
+        // BlockMatrix is a Subclass of FieldMatrix that just adds
+        // methods. Therefore this cast should be safe.
+        init( reinterpret_cast<const Matrix&>(A), 0 );
     }
 
     /*!
