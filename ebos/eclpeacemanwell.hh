@@ -94,11 +94,7 @@ class EclPeacemanWell : public BaseAuxiliaryModule<TypeTag>
     typedef Opm::MathToolbox<Evaluation> Toolbox;
 
     typedef typename GridView::template Codim<0>::Entity        Element;
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
     typedef Element  ElementStorage;
-#else
-    typedef typename GridView::template Codim<0>::EntityPointer ElementStorage;
-#endif
 
     // the dimension of the simulator's world
     static const int dimWorld = GridView::dimensionworld;
@@ -373,11 +369,7 @@ public:
             // influence of grid on well
             auto& curBlock = matrix[wellGlobalDofIdx][gridDofIdx];
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
             elemCtx.updateStencil( dofVars.element );
-#else
-            elemCtx.updateStencil( *dofVars.element );
-#endif
             curBlock = 0.0;
             for (unsigned priVarIdx = 0; priVarIdx < numModelEq; ++priVarIdx) {
                 // calculate the derivative of the well equation w.r.t. the current
@@ -609,11 +601,7 @@ public:
         DofVariables& dofVars = *dofVariables_[globalDofIdx];
         wellTotalVolume_ += context.model().dofTotalVolume(globalDofIdx);
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 4)
         dofVars.element = context.element();
-#else
-        dofVars.element = ElementStorage( context.element() );
-#endif
 
         dofVars.localDofIdx = dofIdx;
         dofVars.pvtRegionIdx = context.problem().pvtRegionIndex(context, dofIdx, /*timeIdx=*/0);
@@ -622,13 +610,8 @@ public:
         // determine the size of the element
         dofVars.effectiveSize.fill(0.0);
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 4)
         // we assume all elements to be hexahedrons!
         assert(context.element().subEntities(/*codim=*/dimWorld) == 8);
-#else
-        // we assume all elements to be hexahedrons!
-        assert(context.element().template count</*codim=*/dimWorld>() == 8);
-#endif
 
         const auto& refElem = Dune::ReferenceElements<Scalar, /*dim=*/3>::cube();
 

@@ -263,13 +263,8 @@ private:
                 const auto& inside = intersection.inside();
                 const auto& outside = intersection.outside();
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                 unsigned insideElemIdx = elementMapper.index(inside);
                 unsigned outsideElemIdx = elementMapper.index(outside);
-#else
-                unsigned insideElemIdx = elementMapper.map(*inside);
-                unsigned outsideElemIdx = elementMapper.map(*outside);
-#endif
 
                 unsigned equilRegionInside = elemEquilRegion_[insideElemIdx];
                 unsigned equilRegionOutside = elemEquilRegion_[outsideElemIdx];
