@@ -823,8 +823,8 @@ namespace Opm
         // TODO: to check whether all the things from PR 1220 were incoporated.
         const int np = numberOfPhases();
         const int nw = well_state.bhp().size();
-        const double dFLimit = param.dbhp_max_rel_;
-        const double dBHPLimit = param.dwell_fraction_max_;
+        const double dBHPLimit = param.dbhp_max_rel_;
+        const double dFLimit = param.dwell_fraction_max_;
 
         std::vector<double> xvar_well_old(numWellEq);
         // TODO: better way to handle this?
