@@ -1722,7 +1722,8 @@ namespace Opm
 
         std::vector<Scalar> res(numComp);
         for (int comp = 0; comp < numWellEq; ++comp) {
-            res[comp] = resWell_[0][comp];
+            // magnitude of the residual matters
+            res[comp] = std::abs(resWell_[0][comp]);
         }
 
         Vector well_flux_residual(numComp);

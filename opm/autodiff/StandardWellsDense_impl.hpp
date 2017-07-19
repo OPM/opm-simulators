@@ -237,8 +237,6 @@ namespace Opm {
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
             report = solveWellEq(ebosSimulator, dt, well_state);
-            std::cout << " solvWellEq is done ! " << std::endl;
-            std::cin.ignore();
         }
         assembleWellEq(ebosSimulator, dt, well_state, false);
 
@@ -989,8 +987,8 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if ( !well->getWellConvergence(ebosSimulator, B_avg, param_) ) {
                 converged_well = false;
+                // break; // TODO: no need to check other wells?
             }
-            break;
         }
 
         // TODO: to think about the output here.
