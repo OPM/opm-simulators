@@ -1023,8 +1023,8 @@ namespace Opm
             case RESERVOIR_RATE:
             {
                 const int sign1 = dwells[0][XvarWell] > 0 ? 1: -1;
-                const double dx1_limited = sign1 * std::min(std::abs(dwells[0][XvarWell]),std::abs(xvar_well_old[nw*XvarWell + indexOfWell()])*dBHPLimit);
-                well_state.wellSolutions()[nw*XvarWell + indexOfWell()] = std::max(xvar_well_old[nw*XvarWell + indexOfWell()] - dx1_limited,1e5);
+                const double dx1_limited = sign1 * std::min(std::abs(dwells[0][XvarWell]),std::abs(xvar_well_old[XvarWell])*dBHPLimit);
+                well_state.wellSolutions()[nw*XvarWell + indexOfWell()] = std::max(xvar_well_old[XvarWell] - dx1_limited,1e5);
                 well_state.bhp()[indexOfWell()] = well_state.wellSolutions()[nw*XvarWell + indexOfWell()];
 
                 if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
