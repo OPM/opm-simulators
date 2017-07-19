@@ -290,7 +290,8 @@ public:
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+                output_writer_.writeTimeStep( timer, state, well_state, solver->model(),
+                                              false, -1.0, SimulatorReport(), true);
 
                 report.output_write_time += perfTimer.stop();
             }

@@ -223,6 +223,7 @@ namespace Opm
          *        visualization tools like ResInsight. This function will extract the
          *        requested output cell properties specified by the RPTRST keyword
          *        and write these to file.
+         * \param inititalWrite If true this function will set the initial OIP.
          */
         template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
@@ -231,7 +232,8 @@ namespace Opm
                            const Model& physicalModel,
                            const bool substep = false,
                            const double nextstep = -1.0,
-                           const SimulatorReport& simulatorReport = SimulatorReport());
+                           const SimulatorReport& simulatorReport = SimulatorReport(),
+                           bool initialWrite = false);
 
 
         /*!
@@ -246,7 +248,7 @@ namespace Opm
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const std::map<std::string, double>& miscSummaryData,
                            const std::map<std::string, std::vector<double>>& extraRestartData,
-                           bool substep = false);
+                           bool substep = false, bool initialWrite = false);
 
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
@@ -272,7 +274,8 @@ namespace Opm
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
                                  const std::map<std::string, std::vector<double>>& extraRestartData,
-                                 bool substep);
+                                 bool substep,
+                                 bool initialWrite);
 
         /** \brief return output directory */
         const std::string& outputDirectory() const { return outputDir_; }
@@ -998,7 +1001,8 @@ namespace Opm
                   const Model& physicalModel,
                   const bool substep,
                   const double nextstep,
-                  const SimulatorReport& simulatorReport)
+                  const SimulatorReport& simulatorReport,
+                  bool initialWrite)
     {
         data::Solution localCellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
@@ -1037,7 +1041,7 @@ namespace Opm
             }
         }
 
-        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep);
+        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep, initialWrite);
     }
 }
 #endif

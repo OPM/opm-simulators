@@ -188,6 +188,7 @@ namespace Opm
             std::map<std::string, double> miscSummaryData_;
             std::map<std::string, std::vector<double>> extraRestartData_;
             const bool substep_;
+            const bool writeInitial_;
 
             explicit WriterCall( BlackoilOutputWriter& writer,
                                  const SimulatorTimerInterface& timer,
@@ -196,7 +197,7 @@ namespace Opm
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
                                  const std::map<std::string, std::vector<double>>& extraRestartData,
-                                 bool substep )
+                                 bool substep, bool writeInitial)
                 : writer_( writer ),
                   timer_( timer.clone() ),
                   state_( state ),
@@ -204,7 +205,8 @@ namespace Opm
                   simProps_( simProps ),
                   miscSummaryData_( miscSummaryData ),
                   extraRestartData_( extraRestartData ),
-                  substep_( substep )
+                  substep_( substep ),
+                  writeInitial_( writeInitial )
             {
             }
 
@@ -212,7 +214,7 @@ namespace Opm
             void run ()
             {
                 // write data
-                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, miscSummaryData_, extraRestartData_, substep_ );
+                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, miscSummaryData_, extraRestartData_, substep_, writeInitial_ );
             }
         };
     }
@@ -252,7 +254,7 @@ namespace Opm
                   const WellStateFullyImplicitBlackoil& localWellState,
                   const std::map<std::string, double>& miscSummaryData,
                   const std::map<std::string, std::vector<double>>& extraRestartData,
-                  bool substep)
+                  bool substep, bool writeInitial)
     {
         // VTK output (is parallel if grid is parallel)
         if( vtkWriter_ ) {
@@ -287,12 +289,12 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep ) );
+                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep, writeInitial ) );
             }
             else {
                 // just write the data to disk
                 try {
-                    writeTimeStepSerial( timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep );
+                    writeTimeStepSerial( timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep, writeInitial );
                 } catch (std::runtime_error& msg) {
                     err = 1;
                     emsg = msg.what();
@@ -324,7 +326,7 @@ namespace Opm
                         const data::Solution& simProps,
                         const std::map<std::string, double>& miscSummaryData,
                         const std::map<std::string, std::vector<double>>& extraRestartData,
-                        bool substep)
+                        bool substep, bool initialWrite)
     {
         // Matlab output
         if( matlabWriter_ ) {
@@ -338,6 +340,11 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
+                if ( initialWrite )
+                {
+                    // Set the initial OIP
+                    eclIO_->overwriteInitialOIP(simProps);
+                }
                 // ... insert "extra" data (KR, VISC, ...)
                 eclIO_->writeTimeStep(timer.reportStepNum(),
                                       substep,
