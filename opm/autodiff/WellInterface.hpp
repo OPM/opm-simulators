@@ -212,7 +212,7 @@ namespace Opm
         std::vector<double> perf_depth_;
 
         // reference depth for the BHP
-        int ref_depth_;
+        double ref_depth_;
 
         double well_efficiency_factor_;
 
