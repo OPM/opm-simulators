@@ -667,9 +667,9 @@ namespace Opm
 
                     // Store the perforation phase flux for later usage.
                     if (has_solvent && componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
-                        well_state.perfRateSolvent()[perf] = cq_s[componentIdx].value();
+                        well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
                     } else {
-                        well_state.perfPhaseRates()[perf*np + componentIdx] = cq_s[componentIdx].value();
+                        well_state.perfPhaseRates()[(first_perf_ + perf) * np + componentIdx] = cq_s[componentIdx].value();
                     }
                 }
 
@@ -691,7 +691,7 @@ namespace Opm
                 } */
 
                 // Store the perforation pressure for later usage.
-                well_state.perfPress()[perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
+                well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
             }
 
             // add vol * dF/dt + Q to the well equations;
@@ -1489,7 +1489,7 @@ namespace Opm
             // TODO: this is another place to show why WellState need to be a vector of WellState.
             // TODO: to check why should be perf - 1
             const double p_above = perf == 0 ? xw.bhp()[w] : xw.perfPress()[first_perf_ + perf - 1];
-            const double p_avg = (xw.perfPress()[perf] + p_above)/2;
+            const double p_avg = (xw.perfPress()[first_perf_ + perf] + p_above)/2;
             const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
             if (pu.phase_used[BlackoilPhases::Aqua]) {
@@ -1801,7 +1801,7 @@ namespace Opm
                 perfRates[perf*numComponent + phase] =  xw.perfPhaseRates()[(first_perf_ + perf) * np + phase];
             }
             if(has_solvent) {
-                perfRates[perf*numComponent + contiSolventEqIdx] =  xw.perfRateSolvent()[perf + first_perf_];
+                perfRates[perf*numComponent + contiSolventEqIdx] =  xw.perfRateSolvent()[first_perf_ + perf];
             }
         }
 
