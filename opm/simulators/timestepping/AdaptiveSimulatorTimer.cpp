@@ -51,7 +51,12 @@ namespace Opm
         provideTimeStepEstimate( lastStepTaken );
     }
 
-    AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
+    bool AdaptiveSimulatorTimer::initialStep () const
+    {
+        return ( report_step_ == 0 ) && ( current_step_ == 0 );
+    }
+
+AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     {
         ++current_step_;
         current_time_ += dt_;

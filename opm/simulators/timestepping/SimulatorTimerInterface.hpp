@@ -83,6 +83,9 @@ namespace Opm
         /// Return true if timer indicates that simulation of timer interval is finished
         virtual bool done() const = 0;
 
+        /// Whether the current step is the first step.
+        virtual bool initialStep() const = 0;
+
         /// Return start date of simulation
         virtual boost::posix_time::ptime startDateTime() const = 0;
 

@@ -56,6 +56,9 @@ namespace Opm
         /// \brief provide and estimate for new time step size
         void provideTimeStepEstimate( const double dt_estimate );
 
+        /// \brief Whether this is the first step
+        bool initialStep () const;
+
         /// \brief \copydoc SimulationTimer::currentStepNum
         int currentStepNum () const;
 
