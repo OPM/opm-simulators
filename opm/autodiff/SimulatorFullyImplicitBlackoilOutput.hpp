@@ -223,7 +223,6 @@ namespace Opm
          *        visualization tools like ResInsight. This function will extract the
          *        requested output cell properties specified by the RPTRST keyword
          *        and write these to file.
-         * \param inititalWrite If true this function will set the initial OIP.
          */
         template<class Model>
         void writeTimeStep(const SimulatorTimerInterface& timer,
@@ -247,7 +246,7 @@ namespace Opm
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const std::map<std::string, double>& miscSummaryData,
                            const std::map<std::string, std::vector<double>>& extraRestartData,
-                           bool substep = false );
+                           bool substep = false);
 
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
