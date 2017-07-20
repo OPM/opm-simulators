@@ -232,8 +232,7 @@ namespace Opm
                            const Model& physicalModel,
                            const bool substep = false,
                            const double nextstep = -1.0,
-                           const SimulatorReport& simulatorReport = SimulatorReport(),
-                           bool initialWrite = false);
+                           const SimulatorReport& simulatorReport = SimulatorReport());
 
 
         /*!
@@ -248,7 +247,7 @@ namespace Opm
                            const Opm::WellStateFullyImplicitBlackoil& wellState,
                            const std::map<std::string, double>& miscSummaryData,
                            const std::map<std::string, std::vector<double>>& extraRestartData,
-                           bool substep = false, bool initialWrite = false);
+                           bool substep = false );
 
         /*!
          * \brief Write a blackoil reservoir state to disk for later inspection with
@@ -274,8 +273,7 @@ namespace Opm
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
                                  const std::map<std::string, std::vector<double>>& extraRestartData,
-                                 bool substep,
-                                 bool initialWrite);
+                                 bool substep );
 
         /** \brief return output directory */
         const std::string& outputDirectory() const { return outputDir_; }
@@ -1001,8 +999,7 @@ namespace Opm
                   const Model& physicalModel,
                   const bool substep,
                   const double nextstep,
-                  const SimulatorReport& simulatorReport,
-                  bool initialWrite)
+                  const SimulatorReport& simulatorReport)
     {
         data::Solution localCellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
@@ -1041,7 +1038,7 @@ namespace Opm
             }
         }
 
-        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep, initialWrite);
+        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep);
     }
 }
 #endif

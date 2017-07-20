@@ -188,7 +188,6 @@ namespace Opm
             std::map<std::string, double> miscSummaryData_;
             std::map<std::string, std::vector<double>> extraRestartData_;
             const bool substep_;
-            const bool writeInitial_;
 
             explicit WriterCall( BlackoilOutputWriter& writer,
                                  const SimulatorTimerInterface& timer,
@@ -197,7 +196,7 @@ namespace Opm
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
                                  const std::map<std::string, std::vector<double>>& extraRestartData,
-                                 bool substep, bool writeInitial)
+                                 bool substep)
                 : writer_( writer ),
                   timer_( timer.clone() ),
                   state_( state ),
@@ -205,8 +204,7 @@ namespace Opm
                   simProps_( simProps ),
                   miscSummaryData_( miscSummaryData ),
                   extraRestartData_( extraRestartData ),
-                  substep_( substep ),
-                  writeInitial_( writeInitial )
+                  substep_( substep )
             {
             }
 
@@ -214,7 +212,7 @@ namespace Opm
             void run ()
             {
                 // write data
-                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, miscSummaryData_, extraRestartData_, substep_, writeInitial_ );
+                writer_.writeTimeStepSerial( *timer_, state_, wellState_, simProps_, miscSummaryData_, extraRestartData_, substep_ );
             }
         };
     }
@@ -254,7 +252,7 @@ namespace Opm
                   const WellStateFullyImplicitBlackoil& localWellState,
                   const std::map<std::string, double>& miscSummaryData,
                   const std::map<std::string, std::vector<double>>& extraRestartData,
-                  bool substep, bool writeInitial)
+                  bool substep)
     {
         // VTK output (is parallel if grid is parallel)
         if( vtkWriter_ ) {
@@ -289,12 +287,12 @@ namespace Opm
         {
             if( asyncOutput_ ) {
                 // dispatch the write call to the extra thread
-                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep, writeInitial ) );
+                asyncOutput_->dispatch( detail::WriterCall( *this, timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep ) );
             }
             else {
                 // just write the data to disk
                 try {
-                    writeTimeStepSerial( timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep, writeInitial );
+                    writeTimeStepSerial( timer, state, wellState, cellData, miscSummaryData, extraRestartData, substep );
                 } catch (std::runtime_error& msg) {
                     err = 1;
                     emsg = msg.what();
@@ -326,7 +324,7 @@ namespace Opm
                         const data::Solution& simProps,
                         const std::map<std::string, double>& miscSummaryData,
                         const std::map<std::string, std::vector<double>>& extraRestartData,
-                        bool substep, bool initialWrite)
+                        bool substep)
     {
         // Matlab output
         if( matlabWriter_ ) {
@@ -340,7 +338,7 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
-                if ( initialWrite )
+                if ( timer.initialStep() )
                 {
                     // Set the initial OIP
                     eclIO_->overwriteInitialOIP(simProps);
