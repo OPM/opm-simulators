@@ -284,10 +284,9 @@ namespace Opm {
                 const int nc = AutoDiffGrid::numCells(grid_);
                 const int nw = numWells();
                 BVector x(nc);
-                BVector xw(nw);
 
                 try {
-                    solveJacobianSystem(x, xw);
+                    solveJacobianSystem(x);
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
                 }
@@ -488,7 +487,7 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        void solveJacobianSystem(BVector& x, BVector& xw) const
+        void solveJacobianSystem(BVector& x) const
         {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
@@ -509,13 +508,6 @@ namespace Opm {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, false > Operator;
                 Operator opA(ebosJac, well_model_);
                 istlSolver().solve( opA, x, ebosResid );
-            }
-
-            if( xw.size() > 0 )
-            {
-                // recover wells.
-                xw = 0.0;
-                wellModel().recoverVariable(x, xw);
             }
         }
 
