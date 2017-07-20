@@ -50,9 +50,10 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(Scalar);
 NEW_PROP_TAG(GridManager);
+NEW_PROP_TAG(Grid);
+NEW_PROP_TAG(GridView);
 NEW_PROP_TAG(ElementMapper);
 }
 
@@ -65,7 +66,7 @@ NEW_PROP_TAG(ElementMapper);
 template <class TypeTag>
 class EclTransmissibility
 {
-    typedef typename GET_PROP_TYPE(TypeTag, Grid)     Grid;
+    typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
     typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
     typedef typename GET_PROP_TYPE(TypeTag, GridManager) GridManager;
