@@ -53,20 +53,19 @@ namespace Opm
 
 
         // setup sparsity pattern for the matrices
-        // TODO: C and B are opposite compared with the notations used in the paper.
-        //[A B^T    [x    =  [ res
-        // C D] x_well]      res_well]
+        //[A C^T    [x    =  [ res
+        // B D] x_well]      res_well]
         // set the size of the matrices
         invDuneD_.setSize(1, 1, 1);
-        duneC_.setSize(1, num_cells, numberOfPerforations());
         duneB_.setSize(1, num_cells, numberOfPerforations());
+        duneC_.setSize(1, num_cells, numberOfPerforations());
 
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
 
-        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
+        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             for (int perf = 0 ; perf < numberOfPerforations(); ++perf) {
                 const int cell_idx = wellCells()[perf];
@@ -74,8 +73,8 @@ namespace Opm
             }
         }
 
-        // make the B^T matrix
-        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
+        // make the C^T matrix
+        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
             for (int perf = 0; perf < numberOfPerforations(); ++perf) {
                 const int cell_idx = wellCells()[perf];
                 row.insert(cell_idx);
@@ -85,7 +84,7 @@ namespace Opm
         resWell_.resize(1);
 
         // resize temporary class variables
-        Cx_.resize( duneC_.N() );
+        Bx_.resize( duneB_.N() );
         invDrw_.resize( invDuneD_.N() );
     }
 
@@ -646,7 +645,7 @@ namespace Opm
                     for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                         if (!only_wells) {
                             // also need to consider the efficiency factor when manipulating the jacobians.
-                            duneB_[0][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
+                            duneC_[0][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
                         }
                         invDuneD_[0][0][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
                     }
@@ -655,7 +654,7 @@ namespace Opm
                         if (!only_wells) {
                             // also need to consider the efficiency factor when manipulating the jacobians.
                             ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
-                            duneC_[0][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                            duneB_[0][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
                         }
                     }
 

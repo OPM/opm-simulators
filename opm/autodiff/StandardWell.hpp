@@ -195,7 +195,7 @@ namespace Opm
         Mat invDuneD_;
 
         // several vector used in the matrix calculation
-        mutable BVector Cx_;
+        mutable BVector Bx_;
         mutable BVector invDrw_;
         mutable BVector scaleAddRes_;
 
