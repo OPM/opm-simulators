@@ -431,6 +431,7 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        // TODO: do we still need localWellsActive()?
         if ( ! localWellsActive() ) {
             return;
         }
@@ -486,24 +487,16 @@ namespace Opm {
 
 
 
-    // xw = D^-1(resWell - B * x)
-    // TODO: this function should be moved to StandardWell
-    // xw should not appear in StandardWellsDense to avoid
-    // the data type to hold different types of xw
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    recoverVariable(const BVector& x, BVector& xw) const
+    applySolutionWellState(const BVector& x, WellState& well_state) const
     {
-        if ( ! localWellsActive() ) {
-             return;
+        for (auto& well : well_container_) {
+            well->applySolutionWellState(x, param_, well_state);
         }
-        BVector resWell = resWell_;
-        // resWell = resWell - B * x
-        duneB_.mmv(x, resWell);
-        // xw = D^-1 * resWell
-        invDuneD_.mv(resWell, xw);
     }
+
 
 
 

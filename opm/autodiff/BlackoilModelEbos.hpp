@@ -321,7 +321,11 @@ namespace Opm {
                 // Apply the update, with considering model-dependent limitations and
                 // chopping of the update.
                 updateState(x,iteration);
-                wellModel().updateWellState(xw, well_state);
+
+                if( nw > 0 )
+                {
+                    wellModel().applySolutionWellState(x, well_state);
+                }
                 report.update_time += perfTimer.stop();
             }
 

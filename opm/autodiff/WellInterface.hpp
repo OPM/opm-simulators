@@ -192,6 +192,11 @@ namespace Opm
         // r = r - C D^-1 Rw
         virtual void apply(BVector& r) const = 0;
 
+        // using the solution x to recover the solution xw for wells and applying
+        // xw to update Well State
+        virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
+                                            WellState& well_state) const = 0;
+
     protected:
         // TODO: some variables shared by all the wells should be made static
         // well name

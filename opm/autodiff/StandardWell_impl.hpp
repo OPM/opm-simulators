@@ -1904,4 +1904,36 @@ namespace Opm
         duneC_.mmtv(invDrw_, r);
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    recoverSolutionWell(const BVector& x, BVector& xw) const
+    {
+        BVector resWell = resWell_;
+        // resWell = resWell - B * x
+        duneB_.mmv(x, resWell);
+        // xw = D^-1 * resWell
+        invDuneD_.mv(resWell, xw);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    applySolutionWellState(const BVector& x,
+                           const ModelParameters& param,
+                           WellState& well_state) const
+    {
+        BVector xw(1);
+        recoverSolutionWell(x, xw);
+        updateWellState(xw, param, well_state);
+    }
+
 }

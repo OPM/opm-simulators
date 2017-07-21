@@ -98,6 +98,8 @@ enum WellVariablePositions {
             static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
             static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
+            // TODO: where we should put these types, WellInterface or Well Model?
+            // or there is some other strategy, like TypeTag
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
             typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
@@ -175,8 +177,9 @@ enum WellVariablePositions {
             // apply well model with scaling of alpha
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
-            // xw = inv(D)*(rw - C*x)
-            void recoverVariable(const BVector& x, BVector& xw) const;
+            // using the solution x to recover the solution xw for wells and applying
+            // xw to update Well State
+            void applySolutionWellState(const BVector& x, WellState& well_state) const;
 
             int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 

@@ -141,6 +141,11 @@ namespace Opm
         // r = r - C D^-1 Rw
         virtual void apply(BVector& r) const;
 
+        // using the solution x to recover the solution xw for wells and applying
+        // xw to update Well State
+        virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
+                                            WellState& well_state) const;
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
@@ -166,6 +171,9 @@ namespace Opm
 
         // TODO: maybe this function can go to some helper file.
         void localInvert(Mat& istlA) const;
+
+        // xw = inv(D)*(rw - C*x)
+        void recoverSolutionWell(const BVector& x, BVector& xw) const;
 
         // TODO: decide wether to use member function to refer to private member later
         using WellInterface<TypeTag>::vfp_properties_;
