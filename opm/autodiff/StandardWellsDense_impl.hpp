@@ -30,12 +30,6 @@ namespace Opm {
        , F0_(wells_ ? (wells_arg->number_of_wells * numWellEq) : 0 )
     {
        createWellContainer(wells_arg);
-        if( wells_ )
-        {
-            invDuneD_.setBuildMode( Mat::row_wise );
-            duneB_.setBuildMode( Mat::row_wise );
-            duneC_.setBuildMode( Mat::row_wise );
-         }
     }
 
 
@@ -68,10 +62,6 @@ namespace Opm {
 
         calculateEfficiencyFactors();
 
-        // setup sparsity pattern for the matrices
-        //[A C^T    [x    =  [ res
-        // B D] x_well]      res_well]
-
         const int nw = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];
         const int nc = numCells();
@@ -85,41 +75,7 @@ namespace Opm {
         assert (np == 3 || (np == 2 && !pu.phase_used[Gas]) );
 #endif
 
-        // set invDuneD
-        invDuneD_.setSize( nw, nw, nw );
-
-        // set duneB
-        duneB_.setSize( nw, nc, nperf );
-
-        // set duneC
-        duneC_.setSize( nw, nc, nperf );
-
-        for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
-            // Add nonzeros for diagonal
-            row.insert(row.index());
-        }
-
-        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
-            // Add nonzeros for diagonal
-            for (int perf = wells().well_connpos[row.index()] ; perf < wells().well_connpos[row.index()+1]; ++perf) {
-                const int cell_idx = wells().well_cells[perf];
-                row.insert(cell_idx);
-            }
-        }
-
-        // make the C^T matrix
-        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
-            for (int perf = wells().well_connpos[row.index()] ; perf < wells().well_connpos[row.index()+1]; ++perf) {
-                const int cell_idx = wells().well_cells[perf];
-                row.insert(cell_idx);
-            }
-        }
-
         resWell_.resize( nw );
-
-        // resize temporary class variables
-        Bx_.resize( duneB_.N() );
-        invDrw_.resize( invDuneD_.N() );
 
         if (has_polymer_)
         {

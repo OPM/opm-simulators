@@ -338,20 +338,11 @@ enum WellVariablePositions {
             std::vector<EvalWell> wellVariables_;
             std::vector<double> F0_;
 
-            Mat duneB_;
-            Mat duneC_;
-            Mat invDuneD_;
-
             BVector resWell_;
 
             long int global_nc_;
 
-            mutable BVector Bx_;
-            mutable BVector invDrw_;
             mutable BVector scaleAddRes_;
-
-            double dbhpMaxRel() const {return param_.dbhp_max_rel_; }
-            double dWellFractionMax() const {return param_.dwell_fraction_max_; }
 
             // protected methods
             EvalWell getBhp(const int wellIdx) const;
