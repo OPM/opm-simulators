@@ -23,33 +23,26 @@
 /*!
  * \file
  *
- * \brief Two-phase test for the immiscible model which uses the
- *        vertex-centered finite volume discretization
+ * \brief Test for the Forchheimer velocity model
  */
 #include "config.h"
 
 #include <ewoms/common/start.hh>
 #include <ewoms/models/immiscible/immisciblemodel.hh>
-#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
-#include "problems/lensproblem.hh"
+#include "problems/powerinjectionproblem.hh"
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(LensProblemEcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
+NEW_TYPE_TAG(PowerInjectionForchheimerFdProblem,
+             INHERITS_FROM(ImmiscibleTwoPhaseModel,
+                           PowerInjectionBaseProblem));
 
-// use the element centered finite volume spatial discretization
-SET_TAG_PROP(LensProblemEcfv, SpatialDiscretizationSplice, EcfvDiscretization);
-
-// use automatic differentiation for this simulator
-SET_TAG_PROP(LensProblemEcfv, LocalLinearizerSplice, AutoDiffLocalLinearizer);
-
-// this problem works fine if the linear solver uses single precision scalars
-SET_TYPE_PROP(LensProblemEcfv, LinearSolverScalar, float);
-
+SET_TYPE_PROP(PowerInjectionForchheimerFdProblem, FluxModule, Ewoms::ForchheimerFluxModule<TypeTag>);
+SET_TAG_PROP(PowerInjectionForchheimerFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
 }}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(LensProblemEcfv) ProblemTypeTag;
+    typedef TTAG(PowerInjectionForchheimerFdProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }

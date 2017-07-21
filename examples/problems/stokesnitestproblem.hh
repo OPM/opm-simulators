@@ -204,6 +204,7 @@ public:
     void boundary(BoundaryRateVector& values, const Context& context,
                   unsigned spaceIdx, unsigned timeIdx) const
     {
+#if 0
         const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onUpperBoundary_(pos))
@@ -216,6 +217,12 @@ public:
             // left and right
             values.setNoFlow(context, spaceIdx, timeIdx);
         }
+#else
+        // this is a hack because something seems to be broken with the code for boundary
+        // conditions in the Stokes model...
+        values = 0.0;
+#endif
+
     }
 
     //! \}

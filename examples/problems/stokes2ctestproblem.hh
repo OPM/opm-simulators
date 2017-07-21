@@ -123,6 +123,7 @@ class Stokes2cTestProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
 
     typedef typename GridView::ctype CoordScalar;
     typedef Dune::FieldVector<CoordScalar, dimWorld> GlobalPosition;
+    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
 
 public:
     /*!
@@ -154,7 +155,17 @@ public:
      * \copydoc FvBaseProblem::name
      */
     std::string name() const
-    { return "stokes2ctest"; }
+    {
+        std::ostringstream oss;
+        oss << "stokes2ctest_";
+        if (std::is_same<typename GET_PROP_TYPE(TypeTag, LocalLinearizerSplice),
+                         TTAG(AutoDiffLocalLinearizer)>::value)
+            oss << "ad";
+        else
+            oss << "fd";
+
+        return oss.str();
+    }
 
     /*!
      * \copydoc FvBaseProblem::endTimeStep
@@ -208,16 +219,21 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
+#if 0
         const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         if (onLowerBoundary_(pos))
             values.setOutFlow(context, spaceIdx, timeIdx);
         else if (onUpperBoundary_(pos))
-            // upper boundary is constraint!
-            values = 0.0;
+            values.setInFlow(context, spaceIdx, timeIdx);
         else
             // left and right boundaries
             values.setNoFlow(context, spaceIdx, timeIdx);
+#else
+        // this is a hack because something seems to be broken with the code for boundary
+        // conditions in the Stokes model...
+        values = 0.0;
+#endif
     }
 
     //! \}
@@ -244,14 +260,11 @@ public:
         values = 0.0;
 
         // parabolic profile
-        const Scalar v1 = 1.0;
-        values[velocity0Idx + 1] =
-            - v1
-            * (globalPos[0] - this->boundingBoxMin()[0])
-            * (this->boundingBoxMax()[0] - globalPos[0])
-            / (0.25
-               * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0])
-               * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0]));
+        DimVector v;
+        initialVelocity_(globalPos, v);
+
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++ dimIdx)
+            values[velocity0Idx + dimIdx] = v[dimIdx];
 
         Scalar moleFrac[numComponents];
         if (onUpperBoundary_(globalPos))
@@ -261,7 +274,6 @@ public:
         moleFrac[AirIdx] = 1.0 - moleFrac[H2OIdx];
 
         values[pressureIdx] = 1e5;
-        values[velocity0Idx + 0] = 0.0;
         values[moleFrac1Idx] = moleFrac[1];
     }
 
@@ -311,6 +323,19 @@ private:
 
     bool onUpperBoundary_(const GlobalPosition& globalPos) const
     { return globalPos[1] > this->boundingBoxMax()[1] - eps_; }
+
+    void initialVelocity_(const GlobalPosition& globalPos, DimVector v) const
+    {
+        const Scalar v1max = 1.0;
+        v[0] = 0.0;
+        v[1] =
+            - v1max
+            * (globalPos[0] - this->boundingBoxMin()[0])
+            * (this->boundingBoxMax()[0] - globalPos[0])
+            / (0.25
+               * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0])
+               * (this->boundingBoxMax()[0] - this->boundingBoxMin()[0]));
+    }
 
     Scalar eps_;
 };

@@ -34,17 +34,19 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(LensProblemVcfv, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
+NEW_TYPE_TAG(LensProblemVcfvAd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
 
+// use automatic differentiation for this simulator
+SET_TAG_PROP(LensProblemVcfvAd, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+
+// use linear finite element gradients if dune-localfunctions is available
 #if HAVE_DUNE_LOCALFUNCTIONS
-// for this test we use P1 finite element gradients (if they are available)
-SET_BOOL_PROP(LensProblemVcfv, UseP1FiniteElementGradients, true);
-#endif // HAVE_DUNE_LOCALFUNCTIONS
-
-}} // namespace Properties, Ewoms
+SET_BOOL_PROP(LensProblemVcfvAd, UseP1FiniteElementGradients, true);
+#endif
+}}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(LensProblemVcfv) ProblemTypeTag;
+    typedef TTAG(LensProblemVcfvAd) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }

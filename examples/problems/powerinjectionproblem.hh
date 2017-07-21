@@ -239,6 +239,13 @@ public:
             oss << "darcy";
         else
             oss << "forchheimer";
+
+        if (std::is_same<typename GET_PROP_TYPE(TypeTag, LocalLinearizerSplice),
+                         TTAG(AutoDiffLocalLinearizer)>::value)
+            oss << "_" << "ad";
+        else
+            oss << "_" << "fd";
+
         return oss.str();
     }
 
