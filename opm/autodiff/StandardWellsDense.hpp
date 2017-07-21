@@ -343,7 +343,7 @@ enum WellVariablePositions {
 
             long int global_nc_;
 
-            mutable BVector Cx_;
+            mutable BVector Bx_;
             mutable BVector invDrw_;
             mutable BVector scaleAddRes_;
 

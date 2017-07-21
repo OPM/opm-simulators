@@ -33,8 +33,8 @@ namespace Opm {
         if( wells_ )
         {
             invDuneD_.setBuildMode( Mat::row_wise );
-            duneC_.setBuildMode( Mat::row_wise );
             duneB_.setBuildMode( Mat::row_wise );
+            duneC_.setBuildMode( Mat::row_wise );
          }
     }
 
@@ -69,8 +69,8 @@ namespace Opm {
         calculateEfficiencyFactors();
 
         // setup sparsity pattern for the matrices
-        //[A B^T    [x    =  [ res
-        // C D] x_well]      res_well]
+        //[A C^T    [x    =  [ res
+        // B D] x_well]      res_well]
 
         const int nw = wells().number_of_wells;
         const int nperf = wells().well_connpos[nw];
@@ -88,18 +88,18 @@ namespace Opm {
         // set invDuneD
         invDuneD_.setSize( nw, nw, nw );
 
-        // set duneC
-        duneC_.setSize( nw, nc, nperf );
-
         // set duneB
         duneB_.setSize( nw, nc, nperf );
+
+        // set duneC
+        duneC_.setSize( nw, nc, nperf );
 
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             row.insert(row.index());
         }
 
-        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
+        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
             // Add nonzeros for diagonal
             for (int perf = wells().well_connpos[row.index()] ; perf < wells().well_connpos[row.index()+1]; ++perf) {
                 const int cell_idx = wells().well_cells[perf];
@@ -107,8 +107,8 @@ namespace Opm {
             }
         }
 
-        // make the B^T matrix
-        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
+        // make the C^T matrix
+        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
             for (int perf = wells().well_connpos[row.index()] ; perf < wells().well_connpos[row.index()+1]; ++perf) {
                 const int cell_idx = wells().well_cells[perf];
                 row.insert(cell_idx);
@@ -118,7 +118,7 @@ namespace Opm {
         resWell_.resize( nw );
 
         // resize temporary class variables
-        Cx_.resize( duneC_.N() );
+        Bx_.resize( duneB_.N() );
         invDrw_.resize( invDuneD_.N() );
 
         if (has_polymer_)
@@ -405,7 +405,7 @@ namespace Opm {
         assert( invDrw_.size() == invDuneD_.N() );
 
         invDuneD_.mv(resWell_,invDrw_);
-        duneB_.mmtv(invDrw_, r);
+        duneC_.mmtv(invDrw_, r);
     }
 
 
@@ -421,14 +421,14 @@ namespace Opm {
             return;
         }
 
-        assert( Cx_.size() == duneC_.N() );
+        assert( Bx_.size() == duneB_.N() );
 
-        BVector& invDCx = invDrw_;
-        assert( invDCx.size() == invDuneD_.N());
+        BVector& invDBx = invDrw_;
+        assert( invDBx.size() == invDuneD_.N());
 
-        duneC_.mv(x, Cx_);
-        invDuneD_.mv(Cx_, invDCx);
-        duneB_.mmtv(invDCx,Ax);
+        duneB_.mv(x, Bx_);
+        invDuneD_.mv(Bx_, invDBx);
+        duneC_.mmtv(invDBx,Ax);
     }
 
 
@@ -466,7 +466,7 @@ namespace Opm {
              return;
         }
         BVector resWell = resWell_;
-        duneC_.mmv(x, resWell);
+        duneB_.mmv(x, resWell);
         invDuneD_.mv(resWell, xw);
     }
 
