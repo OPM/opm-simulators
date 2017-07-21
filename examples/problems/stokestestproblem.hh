@@ -196,23 +196,26 @@ public:
      * a parabolic velocity profile via constraints.
      */
     template <class Context>
-    void boundary(BoundaryRateVector& values, const Context& context,
-                  unsigned spaceIdx, unsigned timeIdx) const
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
+                  unsigned spaceIdx,
+                  unsigned timeIdx) const
     {
+#if 0
         const GlobalPosition& pos = context.pos(spaceIdx, timeIdx);
 
         Scalar y = pos[1] - this->boundingBoxMin()[1];
         Scalar height = this->boundingBoxMax()[1] - this->boundingBoxMin()[1];
 
         // parabolic velocity profile
-        const Scalar maxVelocity = 1.0;
+        Scalar maxVelocity = 1.0;
 
-        Scalar a = -4 * maxVelocity / (height * height);
-        Scalar b = -a * height;
-        Scalar c = 0;
+        Scalar a = -4*maxVelocity/(height*height);
+        Scalar b = -a*height;
+        Scalar c = 0.0;
 
         DimVector velocity(0.0);
-        velocity[0] = a * y * y + b * y + c;
+        velocity[0] = a*y*y + b*y + c;
 
         if (onRightBoundary_(pos))
             values.setOutFlow(context, spaceIdx, timeIdx);
@@ -224,6 +227,11 @@ public:
             // top and bottom
             values.setNoFlow(context, spaceIdx, timeIdx);
         }
+#else
+        // this is a hack because something seems to be broken with the code for boundary
+        // conditions in the Stokes model...
+        values = 0.0;
+#endif
     }
 
     //! \}

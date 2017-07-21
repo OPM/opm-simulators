@@ -33,15 +33,16 @@
 
 namespace Ewoms {
 namespace Properties {
-NEW_TYPE_TAG(PowerInjectionProblem,
+NEW_TYPE_TAG(PowerInjectionDarcyFdProblem,
              INHERITS_FROM(ImmiscibleTwoPhaseModel,
                            PowerInjectionBaseProblem));
 
-SET_TYPE_PROP(PowerInjectionProblem, FluxModule, Ewoms::DarcyFluxModule<TypeTag>);
+SET_TYPE_PROP(PowerInjectionDarcyFdProblem, FluxModule, Ewoms::DarcyFluxModule<TypeTag>);
+SET_TAG_PROP(PowerInjectionDarcyFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
 }}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(PowerInjectionProblem) ProblemTypeTag;
+    typedef TTAG(PowerInjectionDarcyFdProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }
