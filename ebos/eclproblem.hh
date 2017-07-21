@@ -149,6 +149,21 @@ public:
     typedef typename EclMaterialLawManager::MaterialLaw type;
 };
 
+// ebos can use a slightly faster stencil class because it does not need the normals and
+// the integration points of intersections
+SET_PROP(EclBaseProblem, Stencil)
+{
+private:
+    typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
+    typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
+
+public:
+    typedef Ewoms::EcfvStencil<Scalar,
+                               GridView,
+                               /*needIntegrationPos=*/false,
+                               /*needNormal=*/false> type;
+};
+
 // Enable gravity
 SET_BOOL_PROP(EclBaseProblem, EnableGravity, true);
 
