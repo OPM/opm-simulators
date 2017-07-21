@@ -901,11 +901,16 @@ namespace Opm {
         const int nw = wells().number_of_wells;
         WellState well_state0 = well_state;
 
+        const int numComp = numComponents();
+        std::vector< Scalar > B_avg( numComp, Scalar() );
+        computeAverageFormationFactor(ebosSimulator, B_avg);
+
         int it  = 0;
         bool converged;
         do {
             assembleWellEq(ebosSimulator, dt, well_state, true);
-            converged = getWellConvergence(ebosSimulator, it);
+
+            converged = getWellConvergence(ebosSimulator, B_avg);
 
             // checking whether the group targets are converged
             if (wellCollection()->groupControlActive()) {
@@ -998,16 +1003,8 @@ namespace Opm {
     bool
     StandardWellsDense<TypeTag>::
     getWellConvergence(Simulator& ebosSimulator,
-                       const int iteration) const
+                       const std::vector<Scalar>& B_avg) const
     {
-        typedef double Scalar;
-        typedef std::vector< Scalar > Vector;
-
-        const int numComp = numComponents();
-
-        std::vector< Scalar > B_avg( numComp, Scalar() );
-        computeAverageFormationFactor(ebosSimulator, B_avg);
-
         bool converged_well = true;
 
         // TODO: to check the strategy here

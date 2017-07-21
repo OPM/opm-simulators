@@ -909,7 +909,6 @@ namespace Opm {
 
             Vector CNV(numComp);
             Vector mass_balance_residual(numComp);
-            Vector well_flux_residual(numComp);
 
             bool converged_MB = true;
             bool converged_CNV = true;
@@ -923,8 +922,7 @@ namespace Opm {
                 converged_CNV               = converged_CNV && (CNV[compIdx] < tol_cnv);
                 // Well flux convergence is only for fluid phases, not other materials
                 // in our current implementation.
-                well_flux_residual[compIdx] = B_avg[compIdx] * maxNormWell[compIdx];
-                converged_Well = converged_Well && (well_flux_residual[compIdx] < tol_wells);
+                converged_Well = wellModel().getWellConvergence(ebosSimulator_, B_avg);
 
                 residual_norms.push_back(CNV[compIdx]);
             }
@@ -961,9 +959,9 @@ namespace Opm {
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    CNV(" + key[ compIdx ] + ") ";
                     }
-                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                    /* for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "  W-FLUX(" + key[ compIdx ] + ")";
-                    }
+                    } */
                     OpmLog::note(msg);
                 }
                 std::ostringstream ss;
@@ -976,9 +974,9 @@ namespace Opm {
                 for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                     ss << std::setw(11) << CNV[compIdx];
                 }
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    ss << std::setw(11) << well_flux_residual[compIdx];
-                }
+                // for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                //     ss << std::setw(11) << well_flux_residual[compIdx];
+                // }
                 ss.precision(oprec);
                 ss.flags(oflags);
                 OpmLog::note(ss.str());
@@ -988,13 +986,13 @@ namespace Opm {
                 const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
 
                 if (std::isnan(mass_balance_residual[phaseIdx])
-                    || std::isnan(CNV[phaseIdx])
-                    || (phaseIdx < numPhases() && std::isnan(well_flux_residual[phaseIdx]))) {
+                    || std::isnan(CNV[phaseIdx])) {
+                    // || (phaseIdx < numPhases() && std::isnan(well_flux_residual[phaseIdx]))) {
                     OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
                 }
                 if (mass_balance_residual[phaseIdx] > maxResidualAllowed()
-                    || CNV[phaseIdx] > maxResidualAllowed()
-                    || (phaseIdx < numPhases() && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
+                    || CNV[phaseIdx] > maxResidualAllowed()) {
+                    // || (phaseIdx < numPhases() && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }

@@ -236,7 +236,7 @@ enum WellVariablePositions {
             std::vector<double> residual() const;
 
             bool getWellConvergence(Simulator& ebosSimulator,
-                                    const int iteration) const;
+                                    const std::vector<Scalar>& B_avg) const;
 
             void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                 const WellState& xw);
