@@ -1864,4 +1864,44 @@ namespace Opm
         }
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    apply(const BVector& x, BVector& Ax) const
+    {
+        assert( Bx_.size() == duneB_.N() );
+        assert( invDrw_.size() == invDuneD_.N() );
+
+        // Bx_ = duneB_ * x
+        duneB_.mv(x, Bx_);
+        // invDBx = invDuneD_ * Bx_
+        // TODO: with this, we modified the content of the invDrw_.
+        // Is it necessary to do this to save some memory?
+        BVector& invDBx = invDrw_;
+        invDuneD_.mv(Bx_, invDBx);
+
+        // Ax = Ax - duneC_^T * invDBx
+        duneC_.mmtv(invDBx,Ax);
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    apply(BVector& r) const
+    {
+        assert( invDrw_.size() == invDuneD_.N() );
+
+        // invDrw_ = invDuneD_ * resWell_
+        invDuneD_.mv(resWell_, invDrw_);
+        // r = r - duneC_^T * invDrw_
+        duneC_.mmtv(invDrw_, r);
+    }
+
 }

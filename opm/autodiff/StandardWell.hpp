@@ -25,13 +25,6 @@
 
 #include <opm/autodiff/WellInterface.hpp>
 
-#include<dune/common/fmatrix.hh>
-#include<dune/istl/bcrsmatrix.hh>
-#include<dune/istl/matrixmatrix.hh>
-
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
-
 namespace Opm
 {
 
@@ -64,20 +57,18 @@ namespace Opm
             SFrac = 3
         };
 
+        using WellInterface<TypeTag>::numEq;
+        using typename WellInterface<TypeTag>::VectorBlockType;
+        using typename WellInterface<TypeTag>::MatrixBlockType;
+        using typename WellInterface<TypeTag>::Mat;
+        using typename WellInterface<TypeTag>::BVector;
+        using typename WellInterface<TypeTag>::Eval;
 
-        typedef double Scalar;
-        // static const int numEq = BlackoilIndices::numEq;
-        static const int numEq = BlackoilIndices::numEq;
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? 3:numEq; // //numEq; //number of wellEq is only for 3 for polymer
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
 
-        typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
-        typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-        typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
-        typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
-        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
         StandardWell(const Well* well, const int time_step, const Wells* wells);
 
@@ -144,6 +135,11 @@ namespace Opm
 
         virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                     const WellState& xw);
+
+        // Ax = Ax - C D^-1 B x
+        virtual void apply(const BVector& x, BVector& Ax) const;
+        // r = r - C D^-1 Rw
+        virtual void apply(BVector& r) const;
 
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;

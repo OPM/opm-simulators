@@ -377,6 +377,13 @@ namespace Opm {
 
 
 
+    // applying the well residual to reservoir residuals
+    // r = r - duneC_^T * invDuneD_ * resWell_
+    // TODO: for this, we should calcuate the duneC_^T * invDuneD_ * resWell_ for each
+    // well, then sum them up and apply to r finally
+    // In a more general case, the number of the equations for reservoir and wells can be different,
+    // we need to think about the possible data types can be faced.
+    // we do not want to expose the some well related data type even inside the Well Model
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
@@ -402,16 +409,23 @@ namespace Opm {
             return;
         }
 
-        assert( invDrw_.size() == invDuneD_.N() );
+        for (auto& well : well_container_) {
+            well->apply(r);
+        }
 
+        /* assert( invDrw_.size() == invDuneD_.N() );
+
+        // invDrw_ = invDuneD_ * resWell_
         invDuneD_.mv(resWell_,invDrw_);
-        duneC_.mmtv(invDrw_, r);
+        // r = r - duneC_^T * invDrw_
+        duneC_.mmtv(invDrw_, r); */
     }
 
 
 
 
 
+    // Ax = A x - C D^-1 B x
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
@@ -421,20 +435,33 @@ namespace Opm {
             return;
         }
 
-        assert( Bx_.size() == duneB_.N() );
+        for (auto& well : well_container_) {
+            well->apply(x, Ax);
+        }
+
+        /* assert( Bx_.size() == duneB_.N() );
 
         BVector& invDBx = invDrw_;
         assert( invDBx.size() == invDuneD_.N());
 
+        // Bx_ = duneB_ * x
         duneB_.mv(x, Bx_);
+        // invDBx = invDuneD_ * Bx_
         invDuneD_.mv(Bx_, invDBx);
+        // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
+        */
     }
 
 
 
 
 
+    // Ax = Ax - alpha * C D^-1 B x
+    // TODO: for the new Well Model, we will calcuate
+    // C D^-1 B for each well and sum it up
+    // while it can be implemented in the function apply()
+    // then this function does not need to change
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
@@ -449,7 +476,9 @@ namespace Opm {
         }
 
         scaleAddRes_ = 0.0;
+        // scaleAddRes_  = - C D^-1 B x
         apply( x, scaleAddRes_ );
+        // Ax = Ax + alpha * scaleAddRes_
         Ax.axpy( alpha, scaleAddRes_ );
     }
 
@@ -457,6 +486,10 @@ namespace Opm {
 
 
 
+    // xw = D^-1(resWell - B * x)
+    // TODO: this function should be moved to StandardWell
+    // xw should not appear in StandardWellsDense to avoid
+    // the data type to hold different types of xw
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
@@ -466,7 +499,9 @@ namespace Opm {
              return;
         }
         BVector resWell = resWell_;
+        // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
+        // xw = D^-1 * resWell
         invDuneD_.mv(resWell, xw);
     }
 

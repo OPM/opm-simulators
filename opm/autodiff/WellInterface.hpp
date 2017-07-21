@@ -39,6 +39,13 @@
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
+#include<dune/common/fmatrix.hh>
+#include<dune/istl/bcrsmatrix.hh>
+#include<dune/istl/matrixmatrix.hh>
+
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+
 #include <string>
 #include <memory>
 #include <vector>
@@ -62,7 +69,15 @@ namespace Opm
         typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
 
-        static const int solventCompIdx = 3; //TODO get this from ebos
+        static const int numEq = BlackoilIndices::numEq;
+        typedef double Scalar;
+
+        typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+        typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+        typedef Dune::BlockVector<VectorBlockType> BVector;
+        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
 
         /// Constructor
@@ -170,6 +185,12 @@ namespace Opm
         // for MS well, the definition is different and should not use this name anymore
         virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                     const WellState& xw) = 0;
+
+        // Ax = Ax - C D^-1 B x
+        virtual void apply(const BVector& x, BVector& Ax) const = 0;
+
+        // r = r - C D^-1 Rw
+        virtual void apply(BVector& r) const = 0;
 
     protected:
         // TODO: some variables shared by all the wells should be made static
