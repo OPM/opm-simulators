@@ -2013,7 +2013,7 @@ namespace Opm
                     double liquid = 0.0;
                     double vapour = 0.0;
 
-                    const Opm::PhaseUsage& pu = phase_usage_;
+                    const Opm::PhaseUsage& pu = *phase_usage_;
 
                     if (active()[ Water ]) {
                         aqua = potentials[pu.phase_pos[ Water ] ];
@@ -2091,6 +2091,53 @@ namespace Opm
         }
 
         return potentials;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeWellPotentials(const Simulator& ebosSimulator,
+                          const WellState& well_state,
+                          std::vector<double>& well_potentials) const
+    {
+        const int np = numberOfPhases();
+
+        well_potentials.resize(np, 0.0);
+
+        // get the bhp value based on the bhp constraints
+        const double bhp = mostStrictBhpFromBhpLimits();
+
+        // does the well have a THP related constraint?
+        if ( !wellHasTHPConstraints() ) {
+            assert(std::abs(bhp) != std::numeric_limits<double>::max());
+
+            computeWellRatesWithBhp(ebosSimulator, bhp, well_potentials);
+        } else {
+            // the well has a THP related constraint
+            // checking whether a well is newly added, it only happens at the beginning of the report step
+            if ( !well_state.isNewWell(indexOfWell()) ) {
+                for (int p = 0; p < np; ++p) {
+                    // This is dangerous for new added well
+                    // since we are not handling the initialization correctly for now
+                    well_potentials[p] = well_state.wellRates()[indexOfWell() * np + p];
+                }
+            } else {
+                // We need to generate a reasonable rates to start the iteration process
+                computeWellRatesWithBhp(ebosSimulator, bhp, well_potentials);
+                for (double& value : well_potentials) {
+                    // make the value a little safer in case the BHP limits are default ones
+                    // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
+                    const double rate_safety_scaling_factor = 0.00001;
+                    value *= rate_safety_scaling_factor;
+                }
+            }
+
+            well_potentials = computeWellPotentialWithTHP(ebosSimulator, bhp, well_potentials);
+        }
     }
 
 }

@@ -197,9 +197,9 @@ namespace Opm
         virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
                                             WellState& well_state) const = 0;
 
-        void computeWellPotentials(const Simulator& ebosSimulator,
-                                   const WellState& well_state,
-                                   std::vector<double>& well_potentials) const;
+        virtual void computeWellPotentials(const Simulator& ebosSimulator,
+                                           const WellState& well_state,
+                                           std::vector<double>& well_potentials) const = 0;
 
     protected:
         // TODO: some variables shared by all the wells should be made static

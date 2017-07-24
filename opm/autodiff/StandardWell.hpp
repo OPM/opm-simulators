@@ -146,6 +146,10 @@ namespace Opm
         virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
                                             WellState& well_state) const;
 
+        virtual void computeWellPotentials(const Simulator& ebosSimulator,
+                                           const WellState& well_state,
+                                           std::vector<double>& well_potentials) const;
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
