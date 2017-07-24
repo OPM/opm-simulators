@@ -244,6 +244,12 @@ namespace Opm
         virtual void wellEqIteration(Simulator& ebosSimulator,
                                      const ModelParameters& param,
                                      WellState& well_state);
+
+        // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
+        // calculation of the derivatives
+        void computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                                     const EvalWell& bhp,
+                                     std::vector<double>& well_flux) const;
     };
 
 }

@@ -1936,4 +1936,36 @@ namespace Opm
         updateWellState(xw, param, well_state);
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computeWellRatesWithBhp(const Simulator& ebosSimulator,
+                            const EvalWell& bhp,
+                            std::vector<double>& well_flux) const
+    {
+        const int np = numberOfPhases();
+        const int numComp = numComponents();
+        well_flux.resize(np, 0.0);
+
+        const bool allow_cf = crossFlowAllowed(ebosSimulator);
+
+        for (int perf = 0; perf < numberOfPerforations(); ++perf) {
+            const int cell_idx = wellCells()[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            // flux for each perforation
+            std::vector<EvalWell> cq_s(numComp, 0.0);
+            std::vector<EvalWell> mob(numComp, 0.0);
+            getMobility(ebosSimulator, perf, mob);
+            computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perfPressureDiffs()[perf], allow_cf, cq_s);
+
+            for(int p = 0; p < np; ++p) {
+                well_flux[p] += cq_s[p].value();
+            }
+        }
+    }
+
 }
