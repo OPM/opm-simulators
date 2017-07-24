@@ -27,7 +27,6 @@ namespace Opm {
        , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
        , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
        , wellVariables_( wells_ ? (wells_arg->number_of_wells * numWellEq) : 0)
-       , F0_(wells_ ? (wells_arg->number_of_wells * numWellEq) : 0 )
     {
        createWellContainer(wells_arg);
     }
@@ -83,8 +82,6 @@ namespace Opm {
                 computeRepRadiusPerfLength(grid);
             }
         }
-
-        // do the initialization work
 
         // do the initialization for all the wells
         // TODO: to see whether we can postpone of the intialization of the well containers to
@@ -226,90 +223,6 @@ namespace Opm {
     StandardWellsDense<TypeTag >::
     getMobility(const Simulator& ebosSimulator, const int w, const int perf, const int cell_idx, std::vector<EvalWell>& mob) const
     {
-
-        const int np = wells().number_of_phases;
-        assert (int(mob.size()) == numComponents());
-        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
-
-        // either use mobility of the perforation cell or calcualte its own
-        // based on passing the saturation table index
-        const int satid = wells().sat_table_id[perf] - 1;
-        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
-        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
-
-            for (int phase = 0; phase < np; ++phase) {
-                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
-                mob[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
-            }
-            if (has_solvent_) {
-                mob[solventSaturationIdx] = extendEval(intQuants.solventMobility());
-            }
-        } else {
-
-            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            Eval relativePerms[3] = { 0.0, 0.0, 0.0 };
-            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
-
-            // reset the satnumvalue back to original
-            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
-
-            // compute the mobility
-            for (int phase = 0; phase < np; ++phase) {
-                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
-                mob[phase] = extendEval(relativePerms[ebosPhaseIdx] / intQuants.fluidState().viscosity(ebosPhaseIdx));
-            }
-
-            // this may not work if viscosity and relperms has been modified?
-            if (has_solvent_) {
-                OPM_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent");
-            }
-        }
-
-        // modify the water mobility if polymer is present
-        if (has_polymer_) {
-            // assume fully mixture for wells.
-            EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
-
-            if (wells().type[w] == INJECTOR) {
-                const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(intQuants.pvtRegionIndex());
-                mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
-            }
-
-            if (PolymerModule::hasPlyshlog()) {
-                // compute the well water velocity with out shear effects.
-                const int numComp = numComponents();
-                const bool allow_cf = well_container_[w]->crossFlowAllowed(ebosSimulator);
-                const EvalWell& bhp = getBhp(w);
-                std::vector<EvalWell> cq_s(numComp,0.0);
-                computeWellFlux(w, wells().WI[perf], intQuants, mob, bhp, wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
-                double area = 2 * M_PI * wells_rep_radius_[perf] * wells_perf_length_[perf];
-                const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
-                const auto& scaledDrainageInfo =
-                        materialLawManager->oilWaterScaledEpsInfoDrainage(cell_idx);
-                const Scalar& Swcr = scaledDrainageInfo.Swcr;
-                const EvalWell poro = extendEval(intQuants.porosity());
-                const EvalWell Sw = extendEval(intQuants.fluidState().saturation(flowPhaseToEbosPhaseIdx(Water)));
-                // guard against zero porosity and no water
-                const EvalWell denom = Opm::max( (area * poro * (Sw - Swcr)), 1e-12);
-                EvalWell waterVelocity = cq_s[ Water ] / denom * extendEval(intQuants.fluidState().invB(flowPhaseToEbosPhaseIdx(Water)));
-
-                if (PolymerModule::hasShrate()) {
-                    // TODO Use the same conversion as for the reservoar equations.
-                    // Need the "permeability" of the well?
-                    // For now use the same formula as in legacy.
-                    waterVelocity *= PolymerModule::shrate( intQuants.pvtRegionIndex() ) / wells_bore_diameter_[perf];
-                }
-                EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
-                EvalWell shearFactor = PolymerModule::computeShearFactor(polymerConcentration,
-                                                                         intQuants.pvtRegionIndex(),
-                                                                         waterVelocity);
-
-                // modify the mobility with the shear factor and recompute the well fluxes.
-                mob[ Water ] /= shearFactor;
-            }
-        }
-
     }
 
 
@@ -321,12 +234,6 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     localInvert(Mat& istlA) const
     {
-        for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
-            for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
-                //std::cout << (*col) << std::endl;
-                (*col).invert();
-            }
-        }
     }
 
 
@@ -615,23 +522,6 @@ namespace Opm {
     localWellsActive() const
     {
         return wells_ ? (wells_->number_of_wells > 0 ) : false;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    StandardWellsDense<TypeTag>::
-    numWellVars() const
-    {
-        if ( !localWellsActive() ) {
-            return 0;
-        }
-
-        const int nw = wells().number_of_wells;
-        return numWellEq * nw;
     }
 
 
@@ -1015,25 +905,6 @@ namespace Opm {
          for (auto& well : well_container_) {
              well->computeWellConnectionPressures(ebosSimulator, xw);
          }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    updateWellState(const BVector& dwells,
-                    WellState& well_state) const
-    {
-        // TODO: the interface of the function should change.
-        // the current plan is to make different wells have different matrix
-        // and residual system.
-        if( !localWellsActive() ) return;
-        /* for (auto& well : well_container_) {
-            well->updateWellState(dwells, param_, well_state);
-        } */
     }
 
 

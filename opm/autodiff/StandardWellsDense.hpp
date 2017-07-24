@@ -208,8 +208,6 @@ enum WellVariablePositions {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            int numWellVars() const;
-
             /// Density of each well perforation
             const std::vector<double>& wellPerforationDensities() const;
 
@@ -240,11 +238,6 @@ enum WellVariablePositions {
 
             void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                 const WellState& xw);
-
-            void updateWellState(const BVector& dwells,
-                                 WellState& well_state) const;
-
-
 
             void updateWellControls(WellState& xw) const;
 
@@ -336,7 +329,6 @@ enum WellVariablePositions {
             std::vector<double> wells_bore_diameter_;
 
             std::vector<EvalWell> wellVariables_;
-            std::vector<double> F0_;
 
             BVector resWell_;
 
