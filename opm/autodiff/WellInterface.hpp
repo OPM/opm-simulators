@@ -159,7 +159,7 @@ namespace Opm
         // TODO: for this kind of function, maybe can make a function with parameter perf
         const std::vector<int>& saturationTableNumber() const;
 
-        const double wsolvent() const;
+        double wsolvent() const;
 
         virtual bool getWellConvergence(Simulator& ebosSimulator,
                                         const std::vector<double>& B_avg,
@@ -196,6 +196,10 @@ namespace Opm
         // xw to update Well State
         virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
                                             WellState& well_state) const = 0;
+
+        void computeWellPotentials(const Simulator& ebosSimulator,
+                                   const WellState& well_state,
+                                   std::vector<double>& well_potentials) const;
 
     protected:
         // TODO: some variables shared by all the wells should be made static
@@ -255,6 +259,10 @@ namespace Opm
         const VFPProperties* vfp_properties_;
 
         double gravity_;
+
+        bool wellHasTHPConstraints() const;
+
+        double mostStrictBhpFromBhpLimits() const;
     };
 
 }

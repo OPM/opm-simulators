@@ -245,11 +245,18 @@ namespace Opm
                                      const ModelParameters& param,
                                      WellState& well_state);
 
+        using WellInterface<TypeTag>::wellHasTHPConstraints;
+        using WellInterface<TypeTag>::mostStrictBhpFromBhpLimits;
+
         // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
         // calculation of the derivatives
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
                                      const EvalWell& bhp,
                                      std::vector<double>& well_flux) const;
+
+        std::vector<double> computeWellPotentialWithTHP(const Simulator& ebosSimulator,
+                                                        const double initial_bhp, // bhp from BHP constraints
+                                                        const std::vector<double>& initial_potential) const;
     };
 
 }

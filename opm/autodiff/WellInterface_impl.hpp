@@ -376,7 +376,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    const double
+    double
     WellInterface<TypeTag>::
     wsolvent() const
     {
@@ -387,4 +387,119 @@ namespace Opm
         return 0.0;
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    computeWellPotentials(const Simulator& ebosSimulator,
+                          const WellState& well_state,
+                          std::vector<double>& well_potentials) const
+    {
+        const int np = numberOfPhases();
+
+        well_potentials.resize(np, 0.0);
+
+        // get the bhp value based on the bhp constraints
+        const double bhp = mostStrictBhpFromBhpLimits();
+
+        // does the well have a THP related constraint?
+        if ( !wellHasTHPConstraints() ) {
+            assert(std::abs(bhp) != std::numeric_limits<double>::max());
+
+            computeWellRatesWithBhp(ebosSimulator, bhp, well_potentials);
+        } else {
+            // the well has a THP related constraint
+            // checking whether a well is newly added, it only happens at the beginning of the report step
+            if ( !well_state.isNewWell(index_of_well_) ) {
+                for (int p = 0; p < np; ++p) {
+                    // This is dangerous for new added well
+                    // since we are not handling the initialization correctly for now
+                    well_potentials[p] = well_state.wellRates()[index_of_well_ * np + p];
+                }
+            } else {
+                // We need to generate a reasonable rates to start the iteration process
+                computeWellRatesWithBhp(ebosSimulator, bhp, well_potentials);
+                for (double& value : well_potentials) {
+                    // make the value a little safer in case the BHP limits are default ones
+                    // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
+                    const double rate_safety_scaling_factor = 0.00001;
+                    value *= rate_safety_scaling_factor;
+                }
+            }
+
+            // potentials = computeWellPotentialWithTHP(ebosSimulator, w, bhp, potentials);
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    mostStrictBhpFromBhpLimits() const
+    {
+        double bhp;
+
+        // initial bhp value, making the value not usable
+        switch( well_type_ ) {
+        case INJECTOR:
+            bhp = std::numeric_limits<double>::max();
+            break;
+        case PRODUCER:
+            bhp = -std::numeric_limits<double>::max();
+            break;
+        default:
+            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+        }
+
+        // The number of the well controls/constraints
+        const int nwc = well_controls_get_num(well_controls_);
+
+        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+            // finding a BHP constraint
+            if (well_controls_iget_type(well_controls_, ctrl_index) == BHP) {
+                // get the bhp constraint value, it should always be postive assummingly
+                const double bhp_target = well_controls_iget_target(well_controls_, ctrl_index);
+
+                switch(well_type_) {
+                case INJECTOR: // using the lower bhp contraint from Injectors
+                    if (bhp_target < bhp) {
+                        bhp = bhp_target;
+                    }
+                    break;
+                case PRODUCER:
+                    if (bhp_target > bhp) {
+                        bhp = bhp_target;
+                    }
+                    break;
+                default:
+                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << name());
+                } // end of switch
+            }
+        }
+
+        return bhp;
+    }
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    wellHasTHPConstraints() const
+    {
+        const int nwc = well_controls_get_num(well_controls_);
+        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+            if (well_controls_iget_type(well_controls_, ctrl_index) == THP) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -1968,4 +1968,129 @@ namespace Opm
         }
     }
 
+
+
+
+
+    template<typename TypeTag>
+    std::vector<double>
+    StandardWell<TypeTag>::
+    computeWellPotentialWithTHP(const Simulator& ebosSimulator,
+                                const double initial_bhp, // bhp from BHP constraints
+                                const std::vector<double>& initial_potential) const
+    {
+        // TODO: pay attention to the situation that finally the potential is calculated based on the bhp control
+        // TODO: should we consider the bhp constraints during the iterative process?
+        const int np = numberOfPhases();
+
+        assert( np == int(initial_potential.size()) );
+
+        std::vector<double> potentials = initial_potential;
+        std::vector<double> old_potentials = potentials; // keeping track of the old potentials
+
+        double bhp = initial_bhp;
+        double old_bhp = bhp;
+
+        bool converged = false;
+        const int max_iteration = 1000;
+        const double bhp_tolerance = 1000.; // 1000 pascal
+
+        int iteration = 0;
+
+        while ( !converged && iteration < max_iteration ) {
+            // for each iteration, we calculate the bhp based on the rates/potentials with thp constraints
+            // with considering the bhp value from the bhp limits. At the beginning of each iteration,
+            // we initialize the bhp to be the bhp value from the bhp limits. Then based on the bhp values calculated
+            // from the thp constraints, we decide the effective bhp value for well potential calculation.
+            bhp = initial_bhp;
+
+            // The number of the well controls/constraints
+            const int nwc = well_controls_get_num(wellControls());
+
+            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
+                if (well_controls_iget_type(wellControls(), ctrl_index) == THP) {
+                    double aqua = 0.0;
+                    double liquid = 0.0;
+                    double vapour = 0.0;
+
+                    const Opm::PhaseUsage& pu = phase_usage_;
+
+                    if (active()[ Water ]) {
+                        aqua = potentials[pu.phase_pos[ Water ] ];
+                    }
+                    if (active()[ Oil ]) {
+                        liquid = potentials[pu.phase_pos[ Oil ] ];
+                    }
+                    if (active()[ Gas ]) {
+                        vapour = potentials[pu.phase_pos[ Gas ] ];
+                    }
+
+                    const int vfp        = well_controls_iget_vfp(wellControls(), ctrl_index);
+                    const double thp    = well_controls_iget_target(wellControls(), ctrl_index);
+                    const double alq    = well_controls_iget_alq(wellControls(), ctrl_index);
+
+                    // Calculating the BHP value based on THP
+                    // TODO: check whether it is always correct to do calculation based on the depth of the first perforation.
+                    const double rho = 0.; // perf_densities_[0]; // TODO: this item is the one keeping the function from WellInterface
+                    const double well_ref_depth = perf_depth_[0];
+                    if (wellType() == INJECTOR) {
+                        const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
+                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
+                        const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+                        // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
+                        if (bhp_calculated < bhp) {
+                            bhp = bhp_calculated;
+                        }
+                    }
+                    else if (wellType() == PRODUCER) {
+                        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
+                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
+                        const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+                        // apply the strictest of the bhp controlls i.e. largest bhp for producers
+                        if (bhp_calculated > bhp) {
+                            bhp = bhp_calculated;
+                        }
+                    } else {
+                       OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+                    }
+                }
+            }
+
+            // there should be always some available bhp/thp constraints there
+            if (std::isinf(bhp) || std::isnan(bhp)) {
+                OPM_THROW(std::runtime_error, "Unvalid bhp value obtained during the potential calculation for well " << name());
+            }
+
+            converged = std::abs(old_bhp - bhp) < bhp_tolerance;
+
+            computeWellRatesWithBhp(ebosSimulator, bhp, potentials);
+
+            // checking whether the potentials have valid values
+            for (const double value : potentials) {
+                if (std::isinf(value) || std::isnan(value)) {
+                    OPM_THROW(std::runtime_error, "Unvalid potential value obtained during the potential calculation for well " << name());
+                }
+            }
+
+            if (!converged) {
+                old_bhp = bhp;
+                for (int p = 0; p < np; ++p) {
+                    // TODO: improve the interpolation, will it always be valid with the way below?
+                    // TODO: finding better paramters, better iteration strategy for better convergence rate.
+                    const double potential_update_damping_factor = 0.001;
+                    potentials[p] = potential_update_damping_factor * potentials[p] + (1.0 - potential_update_damping_factor) * old_potentials[p];
+                    old_potentials[p] = potentials[p];
+                }
+            }
+
+            ++iteration;
+        }
+
+        if (!converged) {
+            OPM_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << name());
+        }
+
+        return potentials;
+    }
+
 }
