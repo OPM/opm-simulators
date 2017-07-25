@@ -23,14 +23,26 @@
 /*!
  * \file
  *
- * \brief Test for the isothermal Stokes VCVF discretization.
+ * \brief Test for the Forchheimer velocity model
  */
 #include "config.h"
+
 #include <ewoms/common/start.hh>
-#include "problems/stokestestproblem.hh"
+#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include "problems/powerinjectionproblem.hh"
+
+namespace Ewoms {
+namespace Properties {
+NEW_TYPE_TAG(PowerInjectionForchheimerFdProblem,
+             INHERITS_FROM(ImmiscibleTwoPhaseModel,
+                           PowerInjectionBaseProblem));
+
+SET_TYPE_PROP(PowerInjectionForchheimerFdProblem, FluxModule, Ewoms::ForchheimerFluxModule<TypeTag>);
+SET_TAG_PROP(PowerInjectionForchheimerFdProblem, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+}}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(StokesTestProblem) ProblemTypeTag;
+    typedef TTAG(PowerInjectionForchheimerFdProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }
