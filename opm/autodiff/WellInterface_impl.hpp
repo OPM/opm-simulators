@@ -26,6 +26,8 @@ namespace Opm
     template<typename TypeTag>
     WellInterface<TypeTag>::
     WellInterface(const Well* well, const int time_step, const Wells* wells)
+    : well_ecl_(well)
+    , current_step_(time_step)
     {
 
         // TODO: trying to use wells struct as little as possible here, be prepared to
@@ -380,10 +382,42 @@ namespace Opm
     WellInterface<TypeTag>::
     wsolvent() const
     {
-        // TODO: not handling it for the moment
-        // TODO: it needs information from the well_ecl
-        // TODO: will decide on well_ecl role later.
-        // It can be just one member variable and no need to deal with well_ecl at all
+        if (!has_solvent) {
+            return 0.0;
+        }
+
+        WellInjectionProperties injection = well_ecl_->getInjectionProperties(current_step_);
+        if (injection.injectorType == WellInjector::GAS) {
+            double solvent_fraction = well_ecl_->getSolventFraction(current_step_);
+            return solvent_fraction;
+        }
+
+        assert(false);
+        return 0.0;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    wpolymer() const
+    {
+        if (!has_polymer) {
+            return 0.0;
+        }
+
+        WellInjectionProperties injection = well_ecl_->getInjectionProperties(current_step_);
+        WellPolymerProperties polymer = well_ecl_->getPolymerProperties(current_step_);
+
+        if (injection.injectorType == WellInjector::WATER) {
+            const double polymer_injection_concentration = polymer.m_polymerConcentration;
+            return polymer_injection_concentration;
+        }
+
+        assert(false); // TODO: find a more logical way to handle this situation
         return 0.0;
     }
 

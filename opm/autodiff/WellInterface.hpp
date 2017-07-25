@@ -79,9 +79,10 @@ namespace Opm
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
+        static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
 
         /// Constructor
-        //  TODO: Wel can be reference.
+        //  TODO: Well can be reference.
         WellInterface(const Well* well, const int time_step, const Wells* wells);
 
         /// Well name.
@@ -161,6 +162,8 @@ namespace Opm
 
         double wsolvent() const;
 
+        double wpolymer() const;
+
         virtual bool getWellConvergence(Simulator& ebosSimulator,
                                         const std::vector<double>& B_avg,
                                         const ModelParameters& param) const = 0;
@@ -202,6 +205,11 @@ namespace Opm
                                            std::vector<double>& well_potentials) const = 0;
 
     protected:
+
+        const Well* well_ecl_;
+
+        const int current_step_;
+
         // TODO: some variables shared by all the wells should be made static
         // well name
         std::string name_;

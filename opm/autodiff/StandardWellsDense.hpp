@@ -355,10 +355,6 @@ enum WellVariablePositions {
                                                   const WellState& well_state,
                                                   const WellMapEntryType& map_entry) const;
 
-            double wsolvent(const int well_index) const;
-
-            double wpolymer(const int well_index) const;
-
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
             void computeRepRadiusPerfLength(const Grid& grid);
