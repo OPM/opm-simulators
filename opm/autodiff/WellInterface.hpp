@@ -204,6 +204,8 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) const = 0;
 
+        void setWellEfficiencyFactor(const double efficiency_factor);
+
     protected:
 
         const Well* well_ecl_;

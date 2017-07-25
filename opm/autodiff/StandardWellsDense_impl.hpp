@@ -958,15 +958,12 @@ namespace Opm {
         const int nw = wells().number_of_wells;
 
         for (int w = 0; w < nw; ++w) {
-            const std::string well_name = wells().name[w];
+            const std::string well_name = well_container_[w]->name();
             const WellNode& well_node = wellCollection()->findWellNode(well_name);
 
             const double well_efficiency_factor = well_node.getAccumulativeEfficiencyFactor();
 
-            // assign the efficiency factor to each perforation related.
-            for (int perf = wells().well_connpos[w]; perf < wells().well_connpos[w + 1]; ++perf) {
-                well_perforation_efficiency_factors_[perf] = well_efficiency_factor;
-            }
+            well_container_[w]->setWellEfficiencyFactor(well_efficiency_factor);
         }
     }
 

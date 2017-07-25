@@ -98,7 +98,6 @@ namespace Opm
         }
 
         well_efficiency_factor_ = 1.0;
-        // TODO: need to calculate based on wellCollections, or it should happen in the Well Model side.
     }
 
 
@@ -275,6 +274,18 @@ namespace Opm
     allowCrossFlow() const
     {
         return allow_cf_;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    setWellEfficiencyFactor(const double efficiency_factor)
+    {
+        well_efficiency_factor_ = efficiency_factor;
     }
 
 

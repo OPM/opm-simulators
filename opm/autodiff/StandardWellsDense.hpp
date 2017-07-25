@@ -285,12 +285,6 @@ enum WellVariablePositions {
             double gravity_;
             const RateConverterType& rate_converter_;
 
-            // The efficiency factor for each connection. It is specified based on wells and groups,
-            // We calculate the factor for each connection for the computation of contributions to the mass balance equations.
-            // By default, they should all be one.
-            std::vector<double> well_perforation_efficiency_factors_;
-            // the depth of the all the cell centers
-            // for standard Wells, it the same with the perforation depth
             std::vector<double> pv_;
 
             std::vector<double> wells_rep_radius_;
