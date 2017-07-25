@@ -137,6 +137,7 @@ namespace Opm {
                     OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
                 }
 
+                // TODO: The following should not happen, right?
                 const Well* well_ecl = wells_ecl_[index_well];
                 if (well_ecl->getStatus(current_timeIdx_) == WellCommon::SHUT) {
                     continue;
@@ -620,6 +621,7 @@ namespace Opm {
             }
         }
         return res; */
+        return std::vector<double>(1, 0.0); // to disable warning, unusable
     }
 
 
@@ -756,7 +758,7 @@ namespace Opm {
              const int well_number = map_entry[0];
 
              if (econ_production_limits.onAnyRateLimit()) {
-                rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state, well_number);
+                rate_limit_violated = well_container_[well_number]->checkRateEconLimits(econ_production_limits, well_state);
              }
 
              if (rate_limit_violated) {
@@ -1087,58 +1089,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    bool
-    StandardWellsDense<TypeTag>::
-    checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                        const WellState& well_state,
-                        const int well_number) const
-    {
-
-        const Opm::PhaseUsage& pu = phase_usage_;
-        const int np = well_state.numPhases();
-
-        if (econ_production_limits.onMinOilRate()) {
-            assert(active_[Oil]);
-            const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
-            const double min_oil_rate = econ_production_limits.minOilRate();
-            if (std::abs(oil_rate) < min_oil_rate) {
-                return true;
-            }
-        }
-
-        if (econ_production_limits.onMinGasRate() ) {
-            assert(active_[Gas]);
-            const double gas_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Gas ] ];
-            const double min_gas_rate = econ_production_limits.minGasRate();
-            if (std::abs(gas_rate) < min_gas_rate) {
-                return true;
-            }
-        }
-
-        if (econ_production_limits.onMinLiquidRate() ) {
-            assert(active_[Oil]);
-            assert(active_[Water]);
-            const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
-            const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
-            const double liquid_rate = oil_rate + water_rate;
-            const double min_liquid_rate = econ_production_limits.minLiquidRate();
-            if (std::abs(liquid_rate) < min_liquid_rate) {
-                return true;
-            }
-        }
-
-        if (econ_production_limits.onMinReservoirFluidRate()) {
-            OpmLog::warning("NOT_SUPPORTING_MIN_RESERVOIR_FLUID_RATE", "Minimum reservoir fluid production rate limit is not supported yet");
-        }
-
-        return false;
-    }
-
-
-
-
-
-    template<typename TypeTag>
     typename StandardWellsDense<TypeTag>::RatioCheckTuple
     StandardWellsDense<TypeTag>::
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
@@ -1158,8 +1108,11 @@ namespace Opm {
         int worst_offending_connection = INVALIDCONNECTION;
         double violation_extent = -1.0;
 
+        const int index_of_well = map_entry[0];
+
         if (econ_production_limits.onMaxWaterCut()) {
-            const RatioCheckTuple water_cut_return = checkMaxWaterCutLimit(econ_production_limits, well_state, map_entry);
+            const RatioCheckTuple water_cut_return =
+                          well_container_[index_of_well]->checkMaxWaterCutLimit(econ_production_limits, well_state);
             bool water_cut_violated = std::get<0>(water_cut_return);
             if (water_cut_violated) {
                 any_limit_violated = true;
@@ -1190,86 +1143,6 @@ namespace Opm {
         }
 
         return std::make_tuple(any_limit_violated, last_connection, worst_offending_connection, violation_extent);
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::RatioCheckTuple
-    StandardWellsDense<TypeTag>::
-    checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                          const WellState& well_state,
-                          const WellMapEntryType& map_entry) const
-    {
-        bool water_cut_limit_violated = false;
-        int worst_offending_connection = INVALIDCONNECTION;
-        bool last_connection = false;
-        double violation_extent = -1.0;
-
-        const int np = well_state.numPhases();
-        const Opm::PhaseUsage& pu = phase_usage_;
-        const int well_number = map_entry[0];
-
-        assert(active_[Oil]);
-        assert(active_[Water]);
-
-        const double oil_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Oil ] ];
-        const double water_rate = well_state.wellRates()[well_number * np + pu.phase_pos[ Water ] ];
-        const double liquid_rate = oil_rate + water_rate;
-        double water_cut;
-        if (std::abs(liquid_rate) != 0.) {
-            water_cut = water_rate / liquid_rate;
-        } else {
-            water_cut = 0.0;
-        }
-
-        const double max_water_cut_limit = econ_production_limits.maxWaterCut();
-        if (water_cut > max_water_cut_limit) {
-            water_cut_limit_violated = true;
-        }
-
-        if (water_cut_limit_violated) {
-            // need to handle the worst_offending_connection
-            const int perf_start = map_entry[1];
-            const int perf_number = map_entry[2];
-
-            std::vector<double> water_cut_perf(perf_number);
-            for (int perf = 0; perf < perf_number; ++perf) {
-                const int i_perf = perf_start + perf;
-                const double oil_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Oil ] ];
-                const double water_perf_rate = well_state.perfPhaseRates()[i_perf * np + pu.phase_pos[ Water ] ];
-                const double liquid_perf_rate = oil_perf_rate + water_perf_rate;
-                if (std::abs(liquid_perf_rate) != 0.) {
-                    water_cut_perf[perf] = water_perf_rate / liquid_perf_rate;
-                } else {
-                    water_cut_perf[perf] = 0.;
-                }
-            }
-
-            last_connection = (perf_number == 1);
-            if (last_connection) {
-                worst_offending_connection = 0;
-                violation_extent = water_cut_perf[0] / max_water_cut_limit;
-                return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
-            }
-
-            double max_water_cut_perf = 0.;
-            for (int perf = 0; perf < perf_number; ++perf) {
-                if (water_cut_perf[perf] > max_water_cut_perf) {
-                    worst_offending_connection = perf;
-                    max_water_cut_perf = water_cut_perf[perf];
-                }
-            }
-
-            assert(max_water_cut_perf != 0.);
-            assert((worst_offending_connection >= 0) && (worst_offending_connection < perf_number));
-
-            violation_extent = max_water_cut_perf / max_water_cut_limit;
-        }
-
-        return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
     }
 
 

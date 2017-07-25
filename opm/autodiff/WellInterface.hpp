@@ -206,7 +206,24 @@ namespace Opm
 
         void setWellEfficiencyFactor(const double efficiency_factor);
 
+        bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                 const WellState& well_state) const;
+
+        // a tuple type for ratio limit check.
+        // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
+        // values should not be used.
+        // second value indicates whehter there is only one connection left.
+        // third value indicates the indx of the worst-offending connection.
+        // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
+        // the ratio of the actual value to the value of the violated limit.
+        using RatioCheckTuple = std::tuple<bool, bool, int, double>;
+
+        RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                                              const WellState& well_state) const;
     protected:
+
+        // to indicate a invalid connection
+        static const int INVALIDCONNECTION = -100000;
 
         const Well* well_ecl_;
 

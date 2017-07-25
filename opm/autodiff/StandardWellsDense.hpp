@@ -295,10 +295,6 @@ enum WellVariablePositions {
 
             mutable BVector scaleAddRes_;
 
-            bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                     const WellState& well_state,
-                                     const int well_number) const;
-
             using WellMapType = typename WellState::WellMapType;
             using WellMapEntryType = typename WellState::mapentry_t;
 
@@ -319,10 +315,6 @@ enum WellVariablePositions {
             RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                                  const WellState& well_state,
                                                  const WellMapEntryType& map_entry) const;
-
-            RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                                                  const WellState& well_state,
-                                                  const WellMapEntryType& map_entry) const;
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
