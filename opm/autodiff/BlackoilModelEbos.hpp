@@ -763,7 +763,7 @@ namespace Opm {
                                     std::vector< Scalar >& R_sum,
                                     std::vector< Scalar >& maxCoeff,
                                     std::vector< Scalar >& B_avg,
-                                    std::vector< Scalar >& maxNormWell )
+                                    std::vector< Scalar >& maxNormWell)
         {
             // Compute total pore volume (use only owned entries)
             double pvSum = pvSumLocal;
@@ -893,15 +893,15 @@ namespace Opm {
             }
 
             // compute maximum of local well residuals
-            const Vector& wellResidual = wellModel().residual();
-            const int nw = wellResidual.size() / numComp;
-            assert(nw * numComp == int(wellResidual.size()));
-            for( int compIdx = 0; compIdx < numComp; ++compIdx )
+            // const Vector& wellResidual = wellModel().residual();
+            // const int nw = wellResidual.size() / numComp;
+            // assert(nw * numComp == int(wellResidual.size()));
+            /* for( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
                 for ( int w = 0; w < nw; ++w ) {
                     maxNormWell[compIdx] = std::max(maxNormWell[compIdx], std::abs(wellResidual[nw*compIdx + w]));
                 }
-            }
+            } */
 
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,

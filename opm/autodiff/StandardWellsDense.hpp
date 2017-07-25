@@ -355,11 +355,6 @@ enum WellVariablePositions {
                                                   const WellState& well_state,
                                                   const WellMapEntryType& map_entry) const;
 
-            void updateWellStateWithTarget(const WellControls* wc,
-                                           const int current,
-                                           const int well_index,
-                                           WellState& xw) const;
-
             double wsolvent(const int well_index) const;
 
             double wpolymer(const int well_index) const;
