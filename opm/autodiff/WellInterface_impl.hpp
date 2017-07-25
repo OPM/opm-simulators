@@ -631,4 +631,61 @@ namespace Opm
         return std::make_tuple(water_cut_limit_violated, last_connection, worst_offending_connection, violation_extent);
     }
 
+
+
+
+
+    template<typename TypeTag>
+    typename WellInterface<TypeTag>::RatioCheckTuple
+    WellInterface<TypeTag>::
+    checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                         const WellState& well_state) const
+    {
+        // TODO: not sure how to define the worst-offending connection when more than one
+        //       ratio related limit is violated.
+        //       The defintion used here is that we define the violation extent based on the
+        //       ratio between the value and the corresponding limit.
+        //       For each violated limit, we decide the worst-offending connection separately.
+        //       Among the worst-offending connections, we use the one has the biggest violation
+        //       extent.
+
+        bool any_limit_violated = false;
+        bool last_connection = false;
+        int worst_offending_connection = INVALIDCONNECTION;
+        double violation_extent = -1.0;
+
+        if (econ_production_limits.onMaxWaterCut()) {
+            const RatioCheckTuple water_cut_return = checkMaxWaterCutLimit(econ_production_limits, well_state);
+            bool water_cut_violated = std::get<0>(water_cut_return);
+            if (water_cut_violated) {
+                any_limit_violated = true;
+                const double violation_extent_water_cut = std::get<3>(water_cut_return);
+                if (violation_extent_water_cut > violation_extent) {
+                    violation_extent = violation_extent_water_cut;
+                    worst_offending_connection = std::get<2>(water_cut_return);
+                    last_connection = std::get<1>(water_cut_return);
+                }
+            }
+        }
+
+        if (econ_production_limits.onMaxGasOilRatio()) {
+            OpmLog::warning("NOT_SUPPORTING_MAX_GOR", "the support for max Gas-Oil ratio is not implemented yet!");
+        }
+
+        if (econ_production_limits.onMaxWaterGasRatio()) {
+            OpmLog::warning("NOT_SUPPORTING_MAX_WGR", "the support for max Water-Gas ratio is not implemented yet!");
+        }
+
+        if (econ_production_limits.onMaxGasLiquidRatio()) {
+            OpmLog::warning("NOT_SUPPORTING_MAX_GLR", "the support for max Gas-Liquid ratio is not implemented yet!");
+        }
+
+        if (any_limit_violated) {
+            assert(worst_offending_connection >=0);
+            assert(violation_extent > 1.);
+        }
+
+        return std::make_tuple(any_limit_violated, last_connection, worst_offending_connection, violation_extent);
+    }
+
 }

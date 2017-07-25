@@ -220,6 +220,9 @@ namespace Opm
 
         RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                               const WellState& well_state) const;
+
+        RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                             const WellState& well_state) const;
     protected:
 
         // to indicate a invalid connection

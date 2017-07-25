@@ -312,10 +312,6 @@ enum WellVariablePositions {
             };
 
 
-            RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                                 const WellState& well_state,
-                                                 const WellMapEntryType& map_entry) const;
-
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
             void computeRepRadiusPerfLength(const Grid& grid);
