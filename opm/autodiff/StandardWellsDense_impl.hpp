@@ -57,7 +57,6 @@ namespace Opm {
         phase_usage_ = phase_usage_arg;
         active_ = active_arg;
         gravity_ = gravity_arg;
-        cell_depths_ = extractPerfData(depth_arg);
         pv_ = pv_arg;
 
         calculateEfficiencyFactors();
@@ -369,17 +368,6 @@ namespace Opm {
         return flowToEbos[ flowPv ];
     }
 
-    template<typename TypeTag>
-    int
-    StandardWellsDense<TypeTag>::
-    flowPhaseToEbosCompIdx( const int phaseIdx ) const
-    {
-        const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx};
-        if (phaseIdx > 2 )
-            return phaseIdx;
-        return phaseToComp[ phaseIdx ];
-    }
-
 
 
 
@@ -392,23 +380,6 @@ namespace Opm {
         assert(phaseIdx < 3);
         const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
         return flowToEbos[ phaseIdx ];
-    }
-
-    template<typename TypeTag>
-    std::vector<double>
-    StandardWellsDense<TypeTag>::
-    extractPerfData(const std::vector<double>& in) const
-    {
-        const int nw   = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
-        std::vector<double> out(nperf);
-        for (int w = 0; w < nw; ++w) {
-            for (int perf = wells().well_connpos[w] ; perf < wells().well_connpos[w+1]; ++perf) {
-                const int well_idx = wells().well_cells[perf];
-                out[perf] = in[well_idx];
-            }
-        }
-        return out;
     }
 
 
@@ -517,67 +488,12 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    const std::vector<double>&
-    StandardWellsDense<TypeTag>::
-    wellPerforationDensities() const
-    {
-         return well_perforation_densities_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    const std::vector<double>&
-    StandardWellsDense<TypeTag>::
-    wellPerforationPressureDiffs() const
-    {
-        return well_perforation_pressure_diffs_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::EvalWell
-    StandardWellsDense<TypeTag>::
-    extendEval(const Eval& in) const {
-        EvalWell out = 0.0;
-        out.setValue(in.value());
-        for(int eqIdx = 0; eqIdx < numEq;++eqIdx) {
-            out.setDerivative(eqIdx, in.derivative(flowToEbosPvIdx(eqIdx)));
-        }
-        return out;
-    }
-
-
-
-
-
-    template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
     setWellVariables(const WellState& xw)
     {
         for (auto& well : well_container_) {
             well->setWellVariables(xw);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    print(const EvalWell& in) const
-    {
-        std::cout << in.value() << std::endl;
-        for (int i = 0; i < in.size; ++i) {
-            std::cout << in.derivative(i) << std::endl;
         }
     }
 
@@ -1024,17 +940,6 @@ namespace Opm {
     wellCollection() const
     {
         return well_collection_;
-    }
-
-
-
-
-    template<typename TypeTag>
-    const std::vector<double>&
-    StandardWellsDense<TypeTag>::
-    wellPerfEfficiencyFactors() const
-    {
-        return well_perforation_efficiency_factors_;
     }
 
 

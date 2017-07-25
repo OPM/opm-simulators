@@ -105,7 +105,6 @@ enum WellVariablePositions {
             typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
             typedef Dune::BlockVector<VectorBlockType> BVector;
 
-            typedef DenseAd::Evaluation<Scalar, /*size=*/numEq + numWellEq> EvalWell;
             typedef DenseAd::Evaluation<Scalar, /*size=*/numEq> Eval;
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -174,14 +173,9 @@ enum WellVariablePositions {
             // xw to update Well State
             void applySolutionWellState(const BVector& x, WellState& well_state) const;
 
-            int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
-
             int flowToEbosPvIdx( const int flowPv ) const;
 
             int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
-
-            std::vector<double>
-            extractPerfData(const std::vector<double>& in) const;
 
             int numPhases() const;
 
@@ -201,17 +195,7 @@ enum WellVariablePositions {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            /// Density of each well perforation
-            const std::vector<double>& wellPerforationDensities() const;
-
-            /// Diff to bhp for each well perforation.
-            const std::vector<double>& wellPerforationPressureDiffs() const;
-
-            EvalWell extendEval(const Eval& in) const;
-
             void setWellVariables(const WellState& xw);
-
-            void print(const EvalWell& in) const;
 
             void computeAccumWells();
 
@@ -307,20 +291,11 @@ enum WellVariablePositions {
             std::vector<double> well_perforation_efficiency_factors_;
             // the depth of the all the cell centers
             // for standard Wells, it the same with the perforation depth
-            std::vector<double> cell_depths_;
             std::vector<double> pv_;
-
-            std::vector<double> well_perforation_densities_;
-            std::vector<double> well_perforation_pressure_diffs_;
-
-            std::vector<double> wpolymer_;
-            std::vector<double> wsolvent_;
 
             std::vector<double> wells_rep_radius_;
             std::vector<double> wells_perf_length_;
             std::vector<double> wells_bore_diameter_;
-
-            std::vector<EvalWell> wellVariables_;
 
             long int global_nc_;
 
