@@ -157,13 +157,6 @@ enum WellVariablePositions {
                                 WellState& well_state,
                                 bool only_wells);
 
-            void
-            getMobility(const Simulator& ebosSimulator,
-                        const int w,
-                        const int perf,
-                        const int cell_idx,
-                        std::vector<EvalWell>& mob) const;
-
             void localInvert(Mat& istlA) const;
 
             void print(Mat& istlA) const;
@@ -221,9 +214,6 @@ enum WellVariablePositions {
             void print(const EvalWell& in) const;
 
             void computeAccumWells();
-
-            void computeWellFlux(const int& w, const double& Tw, const IntensiveQuantities& intQuants, const std::vector<EvalWell>& mob_perfcells_dense,
-                                 const EvalWell& bhp, const double& cdp, const bool& allow_cf, std::vector<EvalWell>& cq_s)  const;
 
             SimulatorReport solveWellEq(Simulator& ebosSimulator,
                                         const double dt,
@@ -284,6 +274,8 @@ enum WellVariablePositions {
             // TODO: maybe a better name to emphasize it is local?
             const int number_of_wells_;
 
+            const int number_of_phases_;
+
             // a vector of all the wells.
             // eventually, the wells_ above should be gone.
             // the name is just temporary
@@ -330,23 +322,9 @@ enum WellVariablePositions {
 
             std::vector<EvalWell> wellVariables_;
 
-            BVector resWell_;
-
             long int global_nc_;
 
             mutable BVector scaleAddRes_;
-
-            // protected methods
-            EvalWell getBhp(const int wellIdx) const;
-
-            EvalWell getQs(const int wellIdx, const int compIdx) const;
-
-            EvalWell wellVolumeFraction(const int wellIdx, const int compIdx) const;
-
-            EvalWell wellVolumeFractionScaled(const int wellIdx, const int compIdx) const;
-
-            // Q_p / (Q_w + Q_g + Q_o) for three phase cases.
-            EvalWell wellSurfaceVolumeFraction(const int well_index, const int compIdx) const;
 
             bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                      const WellState& well_state,
@@ -381,24 +359,6 @@ enum WellVariablePositions {
                                            const int current,
                                            const int well_index,
                                            WellState& xw) const;
-
-            bool wellHasTHPConstraints(const int well_index) const;
-
-            // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
-            // calculation of the derivatives
-            void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                         const EvalWell& bhp,
-                                         const int well_index,
-                                         std::vector<double>& well_flux) const;
-
-            double mostStrictBhpFromBhpLimits(const int well_index) const;
-
-            // TODO: maybe it should be improved to be calculate general rates for THP control later
-            std::vector<double>
-            computeWellPotentialWithTHP(const Simulator& ebosSimulator,
-                                        const int well_index,
-                                        const double initial_bhp, // bhp from BHP constraints
-                                        const std::vector<double>& initial_potential) const;
 
             double wsolvent(const int well_index) const;
 

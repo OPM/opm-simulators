@@ -16,6 +16,7 @@ namespace Opm {
        , wells_(wells_arg)
        , wells_ecl_(wells_ecl)
        , number_of_wells_(wells_arg ? (wells_arg->number_of_wells) : 0)
+       , number_of_phases_(wells_arg ? (wells_arg->number_of_phases) : 0) // TODO: not sure if it is proper for this way
        , well_collection_(well_collection)
        , param_(param)
        , terminal_output_(terminal_output)
@@ -73,8 +74,6 @@ namespace Opm {
         // WellVariablePositions needs to be changed for 2p runs
         assert (np == 3 || (np == 2 && !pu.phase_used[Gas]) );
 #endif
-
-        resWell_.resize( nw );
 
         if (has_polymer_)
         {
@@ -212,17 +211,6 @@ namespace Opm {
         for (int w = 0; w < number_of_wells_; ++w) {
             well_container_[w]->assembleWellEq(ebosSimulator, dt, well_state, only_wells);
         }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag >::
-    getMobility(const Simulator& ebosSimulator, const int w, const int perf, const int cell_idx, std::vector<EvalWell>& mob) const
-    {
     }
 
 
@@ -573,8 +561,8 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     setWellVariables(const WellState& xw)
     {
-        for (auto& well_interface : well_container_) {
-            well_interface->setWellVariables(xw);
+        for (auto& well : well_container_) {
+            well->setWellVariables(xw);
         }
     }
 
@@ -604,132 +592,6 @@ namespace Opm {
     {
         for (auto& well : well_container_) {
             well->computeAccumWell();
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    computeWellFlux(const int& w, const double& Tw,
-                    const IntensiveQuantities& intQuants,
-                    const std::vector<EvalWell>& mob_perfcells_dense,
-                    const EvalWell& bhp, const double& cdp,
-                    const bool& allow_cf, std::vector<EvalWell>& cq_s)  const
-    {
-        const Opm::PhaseUsage& pu = phase_usage_;
-        const int np = wells().number_of_phases;
-        const int numComp = numComponents();
-        std::vector<EvalWell> cmix_s(numComp,0.0);
-        for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
-            cmix_s[componentIdx] = wellSurfaceVolumeFraction(w, componentIdx);
-        }
-        auto& fs = intQuants.fluidState();
-
-        EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-        EvalWell rs = extendEval(fs.Rs());
-        EvalWell rv = extendEval(fs.Rv());
-        std::vector<EvalWell> b_perfcells_dense(numComp, 0.0);
-        for (int phase = 0; phase < np; ++phase) {
-            int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
-            b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
-        }
-        if (has_solvent_) {
-            b_perfcells_dense[solventSaturationIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
-        }
-
-        // Pressure drawdown (also used to determine direction of flow)
-        EvalWell well_pressure = bhp + cdp;
-        EvalWell drawdown = pressure - well_pressure;
-
-        // producing perforations
-        if ( drawdown.value() > 0 )  {
-            //Do nothing if crossflow is not allowed
-            if (!allow_cf && wells().type[w] == INJECTOR) {
-                return;
-            }
-
-            // compute component volumetric rates at standard conditions
-            for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
-                const EvalWell cq_p = - Tw * (mob_perfcells_dense[componentIdx] * drawdown);
-                cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
-            }
-
-            if (active_[Oil] && active_[Gas]) {
-                const int oilpos = pu.phase_pos[Oil];
-                const int gaspos = pu.phase_pos[Gas];
-                const EvalWell cq_sOil = cq_s[oilpos];
-                const EvalWell cq_sGas = cq_s[gaspos];
-                cq_s[gaspos] += rs * cq_sOil;
-                cq_s[oilpos] += rv * cq_sGas;
-            }
-
-        } else {
-            //Do nothing if crossflow is not allowed
-            if (!allow_cf && wells().type[w] == PRODUCER) {
-                return;
-            }
-
-            // Using total mobilities
-            EvalWell total_mob_dense = mob_perfcells_dense[0];
-            for (int componentIdx = 1; componentIdx < numComp; ++componentIdx) {
-                total_mob_dense += mob_perfcells_dense[componentIdx];
-            }
-
-            // injection perforations total volume rates
-            const EvalWell cqt_i = - Tw * (total_mob_dense * drawdown);
-
-            // compute volume ratio between connection at standard conditions
-            EvalWell volumeRatio = 0.0;
-            if (active_[Water]) {
-                const int watpos = pu.phase_pos[Water];
-                volumeRatio += cmix_s[watpos] / b_perfcells_dense[watpos];
-            }
-
-            if (has_solvent_) {
-                volumeRatio += cmix_s[solventSaturationIdx] / b_perfcells_dense[solventSaturationIdx];
-            }
-
-            if (active_[Oil] && active_[Gas]) {
-                const int oilpos = pu.phase_pos[Oil];
-                const int gaspos = pu.phase_pos[Gas];
-
-                // Incorporate RS/RV factors if both oil and gas active
-                const EvalWell d = 1.0 - rv * rs;
-
-                if (d.value() == 0.0) {
-                    OPM_THROW(Opm::NumericalProblem, "Zero d value obtained for well " << wells().name[w] << " during flux calcuation"
-                                                  << " with rs " << rs << " and rv " << rv);
-                }
-
-                const EvalWell tmp_oil = (cmix_s[oilpos] - rv * cmix_s[gaspos]) / d;
-                //std::cout << "tmp_oil " <<tmp_oil << std::endl;
-                volumeRatio += tmp_oil / b_perfcells_dense[oilpos];
-
-                const EvalWell tmp_gas = (cmix_s[gaspos] - rs * cmix_s[oilpos]) / d;
-                //std::cout << "tmp_gas " <<tmp_gas << std::endl;
-                volumeRatio += tmp_gas / b_perfcells_dense[gaspos];
-            }
-            else {
-                if (active_[Oil]) {
-                    const int oilpos = pu.phase_pos[Oil];
-                    volumeRatio += cmix_s[oilpos] / b_perfcells_dense[oilpos];
-                }
-                if (active_[Gas]) {
-                    const int gaspos = pu.phase_pos[Gas];
-                    volumeRatio += cmix_s[gaspos] / b_perfcells_dense[gaspos];
-                }
-            }
-
-            // injecting connections total volumerates at standard conditions
-            EvalWell cqt_is = cqt_i/volumeRatio;
-            //std::cout << "volrat " << volumeRatio << " " << volrat_perf_[perf] << std::endl;
-            for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
-                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is; // * b_perfcells_dense[phase];
-            }
         }
     }
 
@@ -823,7 +685,10 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     residual() const
     {
-        if( ! wellsActive() )
+        // TODO: to decide later whether to output this
+        // Even yes, we do not need resWell_. We will use the values
+        // from each individual well.
+        /* if( ! wellsActive() )
         {
             return std::vector<double>();
         }
@@ -838,7 +703,7 @@ namespace Opm {
                 res[idx] = resWell_[ wellIdx ][ compIdx ];
             }
         }
-        return res;
+        return res; */
     }
 
 
@@ -1048,48 +913,14 @@ namespace Opm {
     {
 
         // number of wells and phases
-        const int nw = wells().number_of_wells;
-        const int np = wells().number_of_phases;
+        const int nw = number_of_wells_;
+        const int np = number_of_phases_;
 
         well_potentials.resize(nw * np, 0.0);
 
         for (int w = 0; w < nw; ++w) {
-
-            // get the bhp value based on the bhp constraints
-            const double bhp = mostStrictBhpFromBhpLimits(w);
-
-            // does the well have a THP related constraint?
-            const bool has_thp_control = wellHasTHPConstraints(w);
-
-            std::vector<double> potentials(np);
-
-            if ( !has_thp_control ) {
-
-                assert(std::abs(bhp) != std::numeric_limits<double>::max());
-
-                computeWellRatesWithBhp(ebosSimulator, bhp, w, potentials);
-
-            } else { // the well has a THP related constraint
-                // checking whether a well is newly added, it only happens at the beginning of the report step
-                if ( !well_state.isNewWell(w) ) {
-                    for (int p = 0; p < np; ++p) {
-                        // This is dangerous for new added well
-                        // since we are not handling the initialization correctly for now
-                        potentials[p] = well_state.wellRates()[w * np + p];
-                    }
-                } else {
-                    // We need to generate a reasonable rates to start the iteration process
-                    computeWellRatesWithBhp(ebosSimulator, bhp, w, potentials);
-                    for (double& value : potentials) {
-                        // make the value a little safer in case the BHP limits are default ones
-                        // TODO: a better way should be a better rescaling based on the investigation of the VFP table.
-                        const double rate_safety_scaling_factor = 0.00001;
-                        value *= rate_safety_scaling_factor;
-                    }
-                }
-
-                potentials = computeWellPotentialWithTHP(ebosSimulator, w, bhp, potentials);
-            }
+            std::vector<double> potentials;
+            well_container_[w]->computeWellPotentials(ebosSimulator, well_state, potentials);
 
             // putting the sucessfully calculated potentials to the well_potentials
             for (int p = 0; p < np; ++p) {
@@ -1347,118 +1178,6 @@ namespace Opm {
                 well_container_[w]->updateWellStateWithTarget(current, well_state);
             }
         }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::EvalWell
-    StandardWellsDense<TypeTag>::
-    getBhp(const int wellIdx) const {
-        // return well_container_(wellIdx)->getBhp();
-        return 0.0; // TODO: for debugging
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::EvalWell
-    StandardWellsDense<TypeTag>::
-    getQs(const int wellIdx, const int compIdx) const
-    {
-        // TODO: incoporate the change from the new PR to the getQs
-	// in StandardWell
-        return well_container_(wellIdx)->getQs(compIdx);
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::EvalWell
-    StandardWellsDense<TypeTag>::
-    wellVolumeFraction(const int wellIdx, const int compIdx) const
-    {
-        const int nw = wells().number_of_wells;
-        if (compIdx == Water) {
-            return wellVariables_[WFrac * nw + wellIdx];
-        }
-
-        if (compIdx == Gas) {
-            return wellVariables_[GFrac * nw + wellIdx];
-        }
-
-        if (has_solvent_ && compIdx == solventSaturationIdx) {
-            return wellVariables_[SFrac * nw + wellIdx];
-        }
-
-        // Oil fraction
-        EvalWell well_fraction = 1.0;
-        if (active_[Water]) {
-            well_fraction -= wellVariables_[WFrac * nw + wellIdx];
-        }
-
-        if (active_[Gas]) {
-            well_fraction -= wellVariables_[GFrac * nw + wellIdx];
-        }
-        if (has_solvent_) {
-            well_fraction -= wellVariables_[SFrac * nw + wellIdx];
-        }
-        return well_fraction;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::EvalWell
-    StandardWellsDense<TypeTag>::
-    wellVolumeFractionScaled(const int wellIdx, const int compIdx) const
-    {
-        const WellControls* wc = wells().ctrls[wellIdx];
-        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
-
-            if (has_solvent_ && compIdx == solventSaturationIdx) {
-                return wellVolumeFraction(wellIdx, compIdx);
-            }
-            const double* distr = well_controls_get_current_distr(wc);
-            assert(compIdx < 3);
-            if (distr[compIdx] > 0.) {
-                return wellVolumeFraction(wellIdx, compIdx) / distr[compIdx];
-            } else {
-                // TODO: not sure why return EvalWell(0.) causing problem here
-                // Probably due to the wrong Jacobians.
-                return wellVolumeFraction(wellIdx, compIdx);
-            }
-        }
-        std::vector<double> g = {1,1,0.01,0.01};
-        return (wellVolumeFraction(wellIdx, compIdx) / g[compIdx]);
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::EvalWell
-    StandardWellsDense<TypeTag>::
-    wellSurfaceVolumeFraction(const int well_index, const int compIdx) const
-    {
-        EvalWell sum_volume_fraction_scaled = 0.;
-        const int numComp = numComponents();
-        for (int idx = 0; idx < numComp; ++idx) {
-            sum_volume_fraction_scaled += wellVolumeFractionScaled(well_index, idx);
-        }
-
-        assert(sum_volume_fraction_scaled.value() != 0.);
-
-        return wellVolumeFractionScaled(well_index, compIdx) / sum_volume_fraction_scaled;
     }
 
 
@@ -1877,242 +1596,6 @@ namespace Opm {
 
 
 
-
-    template<typename TypeTag>
-    bool
-    StandardWellsDense<TypeTag>::
-    wellHasTHPConstraints(const int well_index) const
-    {
-        const WellControls* well_control = wells().ctrls[well_index];
-        const int nwc = well_controls_get_num(well_control);
-        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
-            if (well_controls_iget_type(well_control, ctrl_index) == THP) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                            const EvalWell& bhp,
-                            const int well_index,
-                            std::vector<double>& well_flux) const
-    {
-        const int np = wells().number_of_phases;
-        const int numComp = numComponents();
-        well_flux.resize(np, 0.0);
-
-        const bool allow_cf = well_container_[well_index]->crossFlowAllowed(ebosSimulator);
-        for (int perf = wells().well_connpos[well_index]; perf < wells().well_connpos[well_index + 1]; ++perf) {
-            const int cell_index = wells().well_cells[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_index, /*timeIdx=*/ 0));
-            // flux for each perforation
-            std::vector<EvalWell> cq_s(numComp, 0.0);
-            std::vector<EvalWell> mob(numComp, 0.0);
-            getMobility(ebosSimulator, well_index, perf, cell_index, mob);
-            computeWellFlux(well_index, wells().WI[perf], intQuants, mob, bhp,
-                            wellPerforationPressureDiffs()[perf], allow_cf, cq_s);
-
-            for(int p = 0; p < np; ++p) {
-                well_flux[p] += cq_s[p].value();
-            }
-        }
-    }
-
-
-
-
-
-
-    template<typename TypeTag>
-    double
-    StandardWellsDense<TypeTag>::
-    mostStrictBhpFromBhpLimits(const int well_index) const
-    {
-        double bhp;
-
-        // type of the well, INJECTOR or PRODUCER
-        const WellType& well_type = wells().type[well_index];
-        // initial bhp value, making the value not usable
-        switch(well_type) {
-        case INJECTOR:
-            bhp = std::numeric_limits<double>::max();
-            break;
-        case PRODUCER:
-            bhp = -std::numeric_limits<double>::max();
-            break;
-        default:
-            OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
-        }
-
-        // the well controls
-        const WellControls* well_control = wells().ctrls[well_index];
-        // The number of the well controls/constraints
-        const int nwc = well_controls_get_num(well_control);
-
-        for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
-            // finding a BHP constraint
-            if (well_controls_iget_type(well_control, ctrl_index) == BHP) {
-                // get the bhp constraint value, it should always be postive assummingly
-                const double bhp_target = well_controls_iget_target(well_control, ctrl_index);
-
-                switch(well_type) {
-                case INJECTOR: // using the lower bhp contraint from Injectors
-                    if (bhp_target < bhp) {
-                        bhp = bhp_target;
-                    }
-                    break;
-                case PRODUCER:
-                    if (bhp_target > bhp) {
-                        bhp = bhp_target;
-                    }
-                    break;
-                default:
-                    OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type for well " << wells().name[well_index]);
-                } // end of switch
-            }
-        }
-
-        return bhp;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    std::vector<double>
-    StandardWellsDense<TypeTag>::
-    computeWellPotentialWithTHP(const Simulator& ebosSimulator,
-                                const int well_index,
-                                const double initial_bhp, // bhp from BHP constraints
-                                const std::vector<double>& initial_potential) const
-    {
-        // TODO: pay attention to the situation that finally the potential is calculated based on the bhp control
-        // TODO: should we consider the bhp constraints during the iterative process?
-        const int np = wells().number_of_phases;
-
-        assert( np == int(initial_potential.size()) );
-
-        std::vector<double> potentials = initial_potential;
-        std::vector<double> old_potentials = potentials; // keeping track of the old potentials
-
-        double bhp = initial_bhp;
-        double old_bhp = bhp;
-
-        bool converged = false;
-        const int max_iteration = 1000;
-        const double bhp_tolerance = 1000.; // 1000 pascal
-
-        int iteration = 0;
-
-        while ( !converged && iteration < max_iteration ) {
-            // for each iteration, we calculate the bhp based on the rates/potentials with thp constraints
-            // with considering the bhp value from the bhp limits. At the beginning of each iteration,
-            // we initialize the bhp to be the bhp value from the bhp limits. Then based on the bhp values calculated
-            // from the thp constraints, we decide the effective bhp value for well potential calculation.
-            bhp = initial_bhp;
-
-            // the well controls
-            const WellControls* well_control = wells().ctrls[well_index];
-            // The number of the well controls/constraints
-            const int nwc = well_controls_get_num(well_control);
-
-            for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
-                if (well_controls_iget_type(well_control, ctrl_index) == THP) {
-                    double aqua = 0.0;
-                    double liquid = 0.0;
-                    double vapour = 0.0;
-
-                    const Opm::PhaseUsage& pu = phase_usage_;
-
-                    if (active_[ Water ]) {
-                        aqua = potentials[pu.phase_pos[ Water ] ];
-                    }
-                    if (active_[ Oil ]) {
-                        liquid = potentials[pu.phase_pos[ Oil ] ];
-                    }
-                    if (active_[ Gas ]) {
-                        vapour = potentials[pu.phase_pos[ Gas ] ];
-                    }
-
-                    const int vfp        = well_controls_iget_vfp(well_control, ctrl_index);
-                    const double thp    = well_controls_iget_target(well_control, ctrl_index);
-                    const double alq    = well_controls_iget_alq(well_control, ctrl_index);
-
-                    // Calculating the BHP value based on THP
-                    // TODO: check whether it is always correct to do calculation based on the depth of the first perforation.
-                    const int first_perf = wells().well_connpos[well_index]; //first perforation
-
-                    const WellType& well_type = wells().type[well_index];
-                    if (well_type == INJECTOR) {
-                        const double dp = wellhelpers::computeHydrostaticCorrection(
-                                          wells(), well_index, vfp_properties_->getInj()->getTable(vfp)->getDatumDepth(),
-                                          wellPerforationDensities()[first_perf], gravity_);
-                        const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                        // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
-                        if (bhp_calculated < bhp) {
-                            bhp = bhp_calculated;
-                        }
-                    }
-                    else if (well_type == PRODUCER) {
-                        const double dp = wellhelpers::computeHydrostaticCorrection(
-                                          wells(), well_index, vfp_properties_->getProd()->getTable(vfp)->getDatumDepth(),
-                                          wellPerforationDensities()[first_perf], gravity_);
-                        const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                        // apply the strictest of the bhp controlls i.e. largest bhp for producers
-                        if (bhp_calculated > bhp) {
-                            bhp = bhp_calculated;
-                        }
-                    } else {
-                       OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
-                    }
-                }
-            }
-
-            // there should be always some available bhp/thp constraints there
-            if (std::isinf(bhp) || std::isnan(bhp)) {
-                OPM_THROW(std::runtime_error, "Unvalid bhp value obtained during the potential calculation for well " << wells().name[well_index]);
-            }
-
-            converged = std::abs(old_bhp - bhp) < bhp_tolerance;
-
-            computeWellRatesWithBhp(ebosSimulator, bhp, well_index, potentials);
-
-            // checking whether the potentials have valid values
-            for (const double value : potentials) {
-                if (std::isinf(value) || std::isnan(value)) {
-                    OPM_THROW(std::runtime_error, "Unvalid potential value obtained during the potential calculation for well " << wells().name[well_index]);
-                }
-            }
-
-            if (!converged) {
-                old_bhp = bhp;
-                for (int p = 0; p < np; ++p) {
-                    // TODO: improve the interpolation, will it always be valid with the way below?
-                    // TODO: finding better paramters, better iteration strategy for better convergence rate.
-                    const double potential_update_damping_factor = 0.001;
-                    potentials[p] = potential_update_damping_factor * potentials[p] + (1.0 - potential_update_damping_factor) * old_potentials[p];
-                    old_potentials[p] = potentials[p];
-                }
-            }
-
-            ++iteration;
-        }
-
-        if (!converged) {
-            OPM_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << wells().name[well_index]);
-        }
-
-        return potentials;
-    }
 
     template<typename TypeTag>
     double
