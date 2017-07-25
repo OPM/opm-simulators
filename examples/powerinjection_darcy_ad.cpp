@@ -23,14 +23,26 @@
 /*!
  * \file
  *
- * \brief Test for the non-isothermal two-component Stokes VCVF discretization.
+ * \brief Test for the Forchheimer velocity model
  */
 #include "config.h"
+
 #include <ewoms/common/start.hh>
-#include "problems/stokesnitestproblem.hh"
+#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include "problems/powerinjectionproblem.hh"
+
+namespace Ewoms {
+namespace Properties {
+NEW_TYPE_TAG(PowerInjectionDarcyAdProblem,
+             INHERITS_FROM(ImmiscibleTwoPhaseModel,
+                           PowerInjectionBaseProblem));
+
+SET_TYPE_PROP(PowerInjectionDarcyAdProblem, FluxModule, Ewoms::DarcyFluxModule<TypeTag>);
+SET_TAG_PROP(PowerInjectionDarcyAdProblem, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+}}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(StokesNiTestProblem) ProblemTypeTag;
+    typedef TTAG(PowerInjectionDarcyAdProblem) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }

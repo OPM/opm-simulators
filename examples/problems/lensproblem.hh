@@ -210,7 +210,6 @@ class LensProblem : public GET_PROP_TYPE(TypeTag, BaseProblem)
     typedef typename GET_PROP_TYPE(TypeTag, EqVector) EqVector;
     typedef typename GET_PROP_TYPE(TypeTag, RateVector) RateVector;
     typedef typename GET_PROP_TYPE(TypeTag, BoundaryRateVector) BoundaryRateVector;
-
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
@@ -365,9 +364,14 @@ public:
      */
     std::string name() const
     {
+        typedef typename GET_PROP_TYPE(TypeTag, LocalLinearizerSplice) LLS;
+
+        bool useAutoDiff = std::is_same<LLS, TTAG(AutoDiffLocalLinearizer)>::value;
+
         std::ostringstream oss;
         oss << "lens_" << Model::name()
-            << "_" << Model::discretizationName();
+            << "_" << Model::discretizationName()
+            << "_" << (useAutoDiff?"ad":"fd");
         return oss.str();
     }
 

@@ -23,15 +23,30 @@
 /*!
  * \file
  *
- * \brief Test for the isothermal two-component Stokes VCVF discretization.
+ * \brief Two-phase test for the immiscible model which uses the
+ *        vertex-centered finite volume discretization
  */
 #include "config.h"
 
 #include <ewoms/common/start.hh>
-#include "problems/stokes2ctestproblem.hh"
+#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include "problems/lensproblem.hh"
+
+namespace Ewoms {
+namespace Properties {
+NEW_TYPE_TAG(LensProblemVcfvFd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
+
+// use the finite difference methodfor this simulator
+SET_TAG_PROP(LensProblemVcfvFd, LocalLinearizerSplice, FiniteDifferenceLocalLinearizer);
+
+// use linear finite element gradients if dune-localfunctions is available
+#if HAVE_DUNE_LOCALFUNCTIONS
+SET_BOOL_PROP(LensProblemVcfvFd, UseP1FiniteElementGradients, true);
+#endif
+}}
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(Stokes2cTestProblem) ProblemTypeTag;
+    typedef TTAG(LensProblemVcfvFd) ProblemTypeTag;
     return Ewoms::start<ProblemTypeTag>(argc, argv);
 }
