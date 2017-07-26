@@ -64,9 +64,11 @@ namespace Opm
         using typename WellInterface<TypeTag>::BVector;
         using typename WellInterface<TypeTag>::Eval;
 
-        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? 3:numEq; // //numEq; //number of wellEq is only for 3 for polymer
+        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
+        static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
+        static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 

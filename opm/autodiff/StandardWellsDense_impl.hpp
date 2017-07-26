@@ -137,12 +137,7 @@ namespace Opm {
                     OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
                 }
 
-                // TODO: The following should not happen, right?
                 const Well* well_ecl = wells_ecl_[index_well];
-                if (well_ecl->getStatus(current_timeIdx_) == WellCommon::SHUT) {
-                    continue;
-                }
-
                 if (well_ecl->isMultiSegment(current_timeIdx_)) {
                     OPM_THROW(Opm::NumericalProblem, "Not handling Multisegment Wells for now");
                 }
@@ -217,40 +212,8 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    localInvert(Mat& istlA) const
-    {
-    }
-
-
-
-
-
     // applying the well residual to reservoir residuals
     // r = r - duneC_^T * invDuneD_ * resWell_
-    // TODO: for this, we should calcuate the duneC_^T * invDuneD_ * resWell_ for each
-    // well, then sum them up and apply to r finally
-    // In a more general case, the number of the equations for reservoir and wells can be different,
-    // we need to think about the possible data types can be faced.
-    // we do not want to expose the some well related data type even inside the Well Model
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    print(Mat& istlA) const
-    {
-        for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
-            for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
-                std::cout << row.index() << " " << col.index() << "/n \n"<<(*col) << std::endl;
-            }
-        }
-    }
-
-
-
-
-
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
@@ -263,13 +226,6 @@ namespace Opm {
         for (auto& well : well_container_) {
             well->apply(r);
         }
-
-        /* assert( invDrw_.size() == invDuneD_.N() );
-
-        // invDrw_ = invDuneD_ * resWell_
-        invDuneD_.mv(resWell_,invDrw_);
-        // r = r - duneC_^T * invDrw_
-        duneC_.mmtv(invDrw_, r); */
     }
 
 
@@ -290,19 +246,6 @@ namespace Opm {
         for (auto& well : well_container_) {
             well->apply(x, Ax);
         }
-
-        /* assert( Bx_.size() == duneB_.N() );
-
-        BVector& invDBx = invDrw_;
-        assert( invDBx.size() == invDuneD_.N());
-
-        // Bx_ = duneB_ * x
-        duneB_.mv(x, Bx_);
-        // invDBx = invDuneD_ * Bx_
-        invDuneD_.mv(Bx_, invDBx);
-        // Ax = Ax - duneC_^T * invDBx
-        duneC_.mmtv(invDBx,Ax);
-        */
     }
 
 
@@ -310,10 +253,6 @@ namespace Opm {
 
 
     // Ax = Ax - alpha * C D^-1 B x
-    // TODO: for the new Well Model, we will calcuate
-    // C D^-1 B for each well and sum it up
-    // while it can be implemented in the function apply()
-    // then this function does not need to change
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::

@@ -56,7 +56,6 @@
 #include<dune/istl/matrixmatrix.hh>
 
 #include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
@@ -64,14 +63,6 @@
 
 
 namespace Opm {
-
-enum WellVariablePositions {
-    XvarWell = 0,
-    WFrac = 1,
-    GFrac = 2,
-    SFrac = 3
-};
-
 
         /// Class for handling the standard well model.
         template<typename TypeTag>
@@ -93,19 +84,13 @@ enum WellVariablePositions {
 
             static const int numEq = BlackoilIndices::numEq;
             static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
-            static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
-            static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
             static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
-            static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
-            typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-            typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
             typedef Dune::BlockVector<VectorBlockType> BVector;
 
-            typedef DenseAd::Evaluation<Scalar, /*size=*/numEq> Eval;
             typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
@@ -155,10 +140,6 @@ enum WellVariablePositions {
                                 const double dt,
                                 WellState& well_state,
                                 bool only_wells);
-
-            void localInvert(Mat& istlA) const;
-
-            void print(Mat& istlA) const;
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -294,23 +275,6 @@ enum WellVariablePositions {
             long int global_nc_;
 
             mutable BVector scaleAddRes_;
-
-            using WellMapType = typename WellState::WellMapType;
-            using WellMapEntryType = typename WellState::mapentry_t;
-
-            // a tuple type for ratio limit check.
-            // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
-            // values should not be used.
-            // second value indicates whehter there is only one connection left.
-            // third value indicates the indx of the worst-offending connection.
-            // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
-            // the ratio of the actual value to the value of the violated limit.
-            using RatioCheckTuple = std::tuple<bool, bool, int, double>;
-
-            enum ConnectionIndex {
-                INVALIDCONNECTION = -10000
-            };
-
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
