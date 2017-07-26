@@ -688,4 +688,96 @@ namespace Opm
         return std::make_tuple(any_limit_violated, last_connection, worst_offending_connection, violation_extent);
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateListEconLimited(const WellState& well_state,
+                          DynamicListEconLimited& list_econ_limited) const
+    {
+        // economic limits only apply for production wells.
+        if (wellType() != PRODUCER) {
+            return;
+        }
+
+        // flag to check if the mim oil/gas rate limit is violated
+        bool rate_limit_violated = false;
+        const WellEconProductionLimits& econ_production_limits = well_ecl_->getEconProductionLimits(current_step_);
+
+        // if no limit is effective here, then continue to the next well
+        if ( !econ_production_limits.onAnyEffectiveLimit() ) {
+            return;
+        }
+
+        const std::string well_name = name_;
+
+        // for the moment, we only handle rate limits, not handling potential limits
+        // the potential limits should not be difficult to add
+        const WellEcon::QuantityLimitEnum& quantity_limit = econ_production_limits.quantityLimit();
+        if (quantity_limit == WellEcon::POTN) {
+            const std::string msg = std::string("POTN limit for well ") + well_name + std::string(" is not supported for the moment. \n")
+                                  + std::string("All the limits will be evaluated based on RATE. ");
+            OpmLog::warning("NOT_SUPPORTING_POTN", msg);
+        }
+
+        if (econ_production_limits.onAnyRateLimit()) {
+            rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state);
+        }
+
+        if (rate_limit_violated) {
+            if (econ_production_limits.endRun()) {
+                const std::string warning_message = std::string("ending run after well closed due to economic limits is not supported yet \n")
+                                                  + std::string("the program will keep running after ") + well_name + std::string(" is closed");
+                OpmLog::warning("NOT_SUPPORTING_ENDRUN", warning_message);
+            }
+
+            if (econ_production_limits.validFollowonWell()) {
+                OpmLog::warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
+            }
+
+            if (well_ecl_->getAutomaticShutIn()) {
+                list_econ_limited.addShutWell(well_name);
+                const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to economic limit");
+                    OpmLog::info(msg);
+            } else {
+                list_econ_limited.addStoppedWell(well_name);
+                const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to economic limit");
+                OpmLog::info(msg);
+            }
+            // the well is closed, not need to check other limits
+            return;
+        }
+
+        // checking for ratio related limits, mostly all kinds of ratio.
+        bool ratio_limits_violated = false;
+        RatioCheckTuple ratio_check_return;
+
+        if (econ_production_limits.onAnyRatioLimit()) {
+            ratio_check_return = checkRatioEconLimits(econ_production_limits, well_state);
+            ratio_limits_violated = std::get<0>(ratio_check_return);
+        }
+
+        if (ratio_limits_violated) {
+            const bool last_connection = std::get<1>(ratio_check_return);
+            const int worst_offending_connection = std::get<2>(ratio_check_return);
+
+            assert((worst_offending_connection >= 0) && (worst_offending_connection < number_of_perforations_));
+
+            const int cell_worst_offending_connection = well_cell_[worst_offending_connection];
+            list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
+            const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
+                                  + well_name + std::string(" will be closed due to economic limit");
+            OpmLog::info(msg);
+
+            if (last_connection) {
+                list_econ_limited.addShutWell(well_name);
+                const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
+                OpmLog::info(msg2);
+            }
+        }
+    }
+
 }

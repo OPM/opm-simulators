@@ -223,6 +223,9 @@ namespace Opm
 
         RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                              const WellState& well_state) const;
+
+        void updateListEconLimited(const WellState& well_state,
+                                   DynamicListEconLimited& list_econ_limited) const;
     protected:
 
         // to indicate a invalid connection
