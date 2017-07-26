@@ -30,8 +30,6 @@ namespace Opm
     , current_step_(time_step)
     {
 
-        // TODO: trying to use wells struct as little as possible here, be prepared to
-        // remove the wells struct in future
         const std::string& well_name = well->name();
 
         // looking for the location of the well in the wells struct

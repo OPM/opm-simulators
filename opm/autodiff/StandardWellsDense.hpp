@@ -83,7 +83,6 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
             static const int numEq = BlackoilIndices::numEq;
-            static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
             static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
 
             // TODO: where we should put these types, WellInterface or Well Model?

@@ -61,12 +61,11 @@ namespace Opm {
 
         calculateEfficiencyFactors();
 
-        const int nw = wells().number_of_wells;
-        const int nperf = wells().well_connpos[nw];
+        const int nw = number_of_wells_;
         const int nc = numCells();
 
 #ifndef NDEBUG
-        const auto pu = phase_usage_;
+        const auto& pu = phase_usage_;
         const int np = pu.num_phases;
 
         // assumes the gas fractions are stored after water fractions
@@ -331,7 +330,7 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     numPhases() const
     {
-        return wells().number_of_phases;
+        return number_of_phases_;
     }
 
 
@@ -420,7 +419,7 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     localWellsActive() const
     {
-        return wells_ ? (wells_->number_of_wells > 0 ) : false;
+        return number_of_wells_ > 0;
     }
 
 
@@ -462,7 +461,7 @@ namespace Opm {
                 const double dt,
                 WellState& well_state)
     {
-        const int nw = wells().number_of_wells;
+        const int nw = number_of_wells_;
         WellState well_state0 = well_state;
 
         const int numComp = numComponents();
@@ -507,7 +506,7 @@ namespace Opm {
             well_state = well_state0;
             // also recover the old well controls
             for (int w = 0; w < nw; ++w) {
-                WellControls* wc = wells().ctrls[w];
+                WellControls* wc = well_container_[w]->wellControls();
                 well_controls_set_current(wc, well_state.currentControls()[w]);
             }
         }
@@ -549,7 +548,7 @@ namespace Opm {
             return std::vector<double>();
         }
 
-        const int nw = wells().number_of_wells;
+        const int nw = number_of_wells_;
         const int numComp = numComponents();
         std::vector<double> res(numEq*nw, 0.0);
         for( int compIdx = 0; compIdx < numComp; ++compIdx) {
@@ -706,7 +705,7 @@ namespace Opm {
     prepareTimeStep(const Simulator& ebos_simulator,
                     WellState& well_state)
     {
-        const int nw = wells().number_of_wells;
+        const int nw = number_of_wells_;
         for (int w = 0; w < nw; ++w) {
             // after restarting, the well_controls can be modified while
             // the well_state still uses the old control index
@@ -714,8 +713,8 @@ namespace Opm {
             resetWellControlFromState(well_state);
 
             if (wellCollection()->groupControlActive()) {
-                WellControls* wc = wells().ctrls[w];
-                WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
+                WellControls* wc = well_container_[w]->wellControls();
+                WellNode& well_node = well_collection_->findWellNode(well_container_[w]->name());
 
                 // handling the situation that wells do not have a valid control
                 // it happens the well specified with GRUP and restarting due to non-convergencing
@@ -768,7 +767,7 @@ namespace Opm {
 
         // since the controls are all updated, we should update well_state accordingly
         for (int w = 0; w < nw; ++w) {
-            WellControls* wc = wells().ctrls[w];
+            WellControls* wc = well_container_[w]->wellControls();
             const int control = well_controls_get_current(wc);
             well_state.currentControls()[w] = control;
             well_container_[w]->updateWellStateWithTarget(control, well_state);
@@ -806,7 +805,7 @@ namespace Opm {
             return;
         }
 
-        const int nw = wells().number_of_wells;
+        const int nw = number_of_wells_;
 
         for (int w = 0; w < nw; ++w) {
             const std::string well_name = well_container_[w]->name();
@@ -849,7 +848,7 @@ namespace Opm {
         std::vector<double> convert_coeff(np, 1.0);
 
         for (int w = 0; w < nw; ++w) {
-            const bool is_producer = wells().type[w] == PRODUCER;
+            const bool is_producer = well_container_[w]->wellType() == PRODUCER;
 
             // not sure necessary to change all the value to be positive
             if (is_producer) {
@@ -899,7 +898,7 @@ namespace Opm {
                     const int well_index = well_node->selfIndex();
                     well_state.currentControls()[well_index] = well_node->groupControlIndex();
 
-                    WellControls* wc = wells().ctrls[well_index];
+                    WellControls* wc = well_container_[well_index]->wellControls();
                     well_controls_set_current(wc, well_node->groupControlIndex());
                 }
             }
@@ -975,7 +974,7 @@ namespace Opm {
             return;
         }
 
-        const int nw = wells().number_of_wells;
+        const int nw = number_of_wells_;
         const int nperf = wells().well_connpos[nw];
 
         const size_t timeStep = current_timeIdx_;
