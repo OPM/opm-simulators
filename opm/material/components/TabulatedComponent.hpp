@@ -111,7 +111,7 @@ public:
             Scalar temperature = iT * (tempMax_ - tempMin_)/(nTemp_ - 1) + tempMin_;
 
             try { vaporPressure_[iT] = RawComponent::vaporPressure(temperature); }
-            catch (std::exception) { vaporPressure_[iT] = NaN; }
+            catch (const std::exception&) { vaporPressure_[iT] = NaN; }
 
             Scalar pgMax = maxGasPressure_(iT);
             Scalar pgMin = minGasPressure_(iT);
@@ -123,19 +123,19 @@ public:
                 unsigned i = iT + iP*nTemp_;
 
                 try { gasEnthalpy_[i] = RawComponent::gasEnthalpy(temperature, pressure); }
-                catch (std::exception) { gasEnthalpy_[i] = NaN; }
+                catch (const std::exception&) { gasEnthalpy_[i] = NaN; }
 
                 try { gasHeatCapacity_[i] = RawComponent::gasHeatCapacity(temperature, pressure); }
-                catch (std::exception) { gasHeatCapacity_[i] = NaN; }
+                catch (const std::exception&) { gasHeatCapacity_[i] = NaN; }
 
                 try { gasDensity_[i] = RawComponent::gasDensity(temperature, pressure); }
-                catch (std::exception) { gasDensity_[i] = NaN; }
+                catch (const std::exception&) { gasDensity_[i] = NaN; }
 
                 try { gasViscosity_[i] = RawComponent::gasViscosity(temperature, pressure); }
-                catch (std::exception) { gasViscosity_[i] = NaN; }
+                catch (const std::exception&) { gasViscosity_[i] = NaN; }
 
                 try { gasThermalConductivity_[i] = RawComponent::gasThermalConductivity(temperature, pressure); }
-                catch (std::exception) { gasThermalConductivity_[i] = NaN; }
+                catch (const std::exception&) { gasThermalConductivity_[i] = NaN; }
             };
 
             Scalar plMin = minLiquidPressure_(iT);
@@ -146,19 +146,19 @@ public:
                 unsigned i = iT + iP*nTemp_;
 
                 try { liquidEnthalpy_[i] = RawComponent::liquidEnthalpy(temperature, pressure); }
-                catch (std::exception) { liquidEnthalpy_[i] = NaN; }
+                catch (const std::exception&) { liquidEnthalpy_[i] = NaN; }
 
                 try { liquidHeatCapacity_[i] = RawComponent::liquidHeatCapacity(temperature, pressure); }
-                catch (std::exception) { liquidHeatCapacity_[i] = NaN; }
+                catch (const std::exception&) { liquidHeatCapacity_[i] = NaN; }
 
                 try { liquidDensity_[i] = RawComponent::liquidDensity(temperature, pressure); }
-                catch (std::exception) { liquidDensity_[i] = NaN; }
+                catch (const std::exception&) { liquidDensity_[i] = NaN; }
 
                 try { liquidViscosity_[i] = RawComponent::liquidViscosity(temperature, pressure); }
-                catch (std::exception) { liquidViscosity_[i] = NaN; }
+                catch (const std::exception&) { liquidViscosity_[i] = NaN; }
 
                 try { liquidThermalConductivity_[i] = RawComponent::liquidThermalConductivity(temperature, pressure); }
-                catch (std::exception) { liquidThermalConductivity_[i] = NaN; }
+                catch (const std::exception&) { liquidThermalConductivity_[i] = NaN; }
             }
         }
 
@@ -185,7 +185,7 @@ public:
                 unsigned i = iT + iRho*nTemp_;
 
                 try { gasPressure_[i] = RawComponent::gasPressure(temperature, density); }
-                catch (std::exception) { gasPressure_[i] = NaN; };
+                catch (const std::exception&) { gasPressure_[i] = NaN; };
             };
 
             // calculate the minimum and maximum values for the liquid
@@ -207,7 +207,7 @@ public:
                 unsigned i = iT + iRho*nTemp_;
 
                 try { liquidPressure_[i] = RawComponent::liquidPressure(temperature, density); }
-                catch (std::exception) { liquidPressure_[i] = NaN; };
+                catch (const std::exception&) { liquidPressure_[i] = NaN; };
             };
         }
     }
