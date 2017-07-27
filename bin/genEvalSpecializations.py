@@ -124,17 +124,7 @@ public:
     {}
 
     //! copy other function evaluation
-    Evaluation(const Evaluation& other)
-{% if numDerivs < 0 %}\
-       : data_(other.data_)
-    { }
-{% else %}\
-    {
-{%   for i in range(0, numDerivs+1) %}\
-        data_[{{i}}] = other.data_[{{i}}];
-{%   endfor %}\
-    }
-{% endif %}\
+    Evaluation(const Evaluation& other) = default;
 
     // create an evaluation which represents a constant function
     //
@@ -469,20 +459,7 @@ public:
     }
 
     // copy assignment from evaluation
-    Evaluation& operator=(const Evaluation& other)
-    {
-{% if numDerivs < 0 %}\
-        for (int i = 0; i < length_; ++i) {
-            data_[i] = other.data_[i];
-        }
-{% else %}\
-{%   for i in range(0, numDerivs+1) %}\
-        data_[{{i}}] = other.data_[{{i}}];
-{%   endfor %}\
-{% endif %}\
-
-        return *this;
-    }
+    Evaluation& operator=(const Evaluation& other) = default;
 
     template <class RhsValueType>
     bool operator==(const RhsValueType& other) const
