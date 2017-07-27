@@ -75,12 +75,7 @@ public:
     {}
 
     //! copy other function evaluation
-    Evaluation(const Evaluation& other)
-    {
-        data_[0] = other.data_[0];
-        data_[1] = other.data_[1];
-        data_[2] = other.data_[2];
-    }
+    Evaluation(const Evaluation& other) = default;
 
     // create an evaluation which represents a constant function
     //
@@ -354,14 +349,7 @@ public:
     }
 
     // copy assignment from evaluation
-    Evaluation& operator=(const Evaluation& other)
-    {
-        data_[0] = other.data_[0];
-        data_[1] = other.data_[1];
-        data_[2] = other.data_[2];
-
-        return *this;
-    }
+    Evaluation& operator=(const Evaluation& other) = default;
 
     template <class RhsValueType>
     bool operator==(const RhsValueType& other) const
