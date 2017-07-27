@@ -195,6 +195,10 @@ public:
             ++ numActivePhases_;
         }
 
+        // The reservoir temperature does not really belong into the table manager. TODO:
+        // change this in opm-parser
+        setReservoirTemperature(eclState.getTableManager().rtemp());
+
         // this fluidsystem only supports two or three phases
         assert(numActivePhases_ >= 2 && numActivePhases_ <= 3);
 
@@ -246,6 +250,8 @@ public:
         std::fill(&phaseIsActive_[0], &phaseIsActive_[numPhases], true);
 
         resizeArrays_(numPvtRegions);
+
+        setReservoirTemperature(surfaceTemperature);
     }
 
     /*!
@@ -1158,12 +1164,30 @@ public:
     static const WaterPvt& waterPvt()
     { return *waterPvt_; }
 
+    /*!
+     * \brief Set the temperature of the reservoir.
+     *
+     * This method is black-oil specific and only makes sense for isothermal simulations.
+     */
+    static Scalar reservoirTemperature(unsigned pvtRegionIdx OPM_UNUSED = 0)
+    { return reservoirTemperature_; }
+
+    /*!
+     * \brief Return the temperature of the reservoir.
+     *
+     * This method is black-oil specific and only makes sense for isothermal simulations.
+     */
+    static void setReservoirTemperature(Scalar value)
+    { reservoirTemperature_ = value; }
+
 private:
     static void resizeArrays_(size_t numRegions)
     {
         molarMass_.resize(numRegions);
         referenceDensity_.resize(numRegions);
     }
+
+    static Scalar reservoirTemperature_;
 
     static std::shared_ptr<GasPvt> gasPvt_;
     static std::shared_ptr<OilPvt> oilPvt_;
@@ -1211,6 +1235,10 @@ BlackOil<Scalar>::surfaceTemperature = 273.15 + 15.56; // [K]
 template <class Scalar>
 const Scalar
 BlackOil<Scalar>::surfacePressure = 101325.0; // [Pa]
+
+template <class Scalar>
+Scalar
+BlackOil<Scalar>::reservoirTemperature_;
 
 template <class Scalar>
 bool BlackOil<Scalar>::enableDissolvedGas_;
