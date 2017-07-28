@@ -65,6 +65,7 @@ namespace Opm
 
         using WellInterface<TypeTag>::numEq;
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
+        // TODO: should these go to WellInterface?
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
         static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
@@ -220,7 +221,7 @@ namespace Opm
         EvalWell getBhp() const;
 
         // TODO: it is also possible to be moved to the base class.
-        EvalWell getQs(const int phase) const;
+        EvalWell getQs(const int comp_idx) const;
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.

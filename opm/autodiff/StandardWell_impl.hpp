@@ -222,7 +222,7 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
     StandardWell<TypeTag>::
-    getQs(const int phase) const
+    getQs(const int comp_idx) const // TODO: phase or component?
     {
         EvalWell qs = 0.0;
 
@@ -230,36 +230,35 @@ namespace Opm
         const int np = numberOfPhases();
         const double target_rate = well_controls_get_current_target(wc);
 
-        // TODO: we need to introduce numComponents() for StandardWell
-        // assert(phase < numComponents());
+        assert(comp_idx < numComponents());
         const auto pu = phaseUsage();
 
         // TODO: the formulation for the injectors decides it only work with single phase
         // surface rate injection control. Improvement will be required.
         if (wellType() == INJECTOR) {
-            // TODO: adding the handling related to solvent
-            /* if (has_solvent_ ) {
+            if (has_solvent) {
                 // TODO: investigate whether the use of the comp_frac is justified.
                 double comp_frac = 0.0;
-                if (has_solvent && compIdx == contiSolventEqIdx) { // solvent
-                    comp_frac = wells().comp_frac[np*wellIdx + pu.phase_pos[ Gas ]] * wsolvent(wellIdx);
-                } else if (compIdx == pu.phase_pos[ Gas ]) {
-                    comp_frac = wells().comp_frac[np*wellIdx + compIdx] * (1.0 - wsolvent(wellIdx));
+                if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
+                    comp_frac = compFrac()[pu.phase_pos[ Gas ]] * wsolvent();
+                } else if (comp_idx == pu.phase_pos[ Gas ]) {
+                    comp_frac = compFrac()[comp_idx] * (1.0 - wsolvent());
                 } else {
-                    comp_frac = wells().comp_frac[np*wellIdx + compIdx];
+                    comp_frac = compFrac()[comp_idx];
                 }
                 if (comp_frac == 0.0) {
                     return qs; //zero
                 }
 
                 if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP) {
-                    return comp_frac * well_variables_[nw*XvarWell + wellIdx];
+                    return comp_frac * well_variables_[XvarWell];
                 }
 
                 qs.setValue(comp_frac * target_rate);
                 return qs;
-            } */
-            const double comp_frac = compFrac()[phase];
+            }
+
+            const double comp_frac = compFrac()[comp_idx];
             if (comp_frac == 0.0) {
                 return qs;
             }
@@ -273,7 +272,7 @@ namespace Opm
 
         // Producers
         if (well_controls_get_current_type(wc) == BHP || well_controls_get_current_type(wc) == THP ) {
-            return well_variables_[XvarWell] * wellVolumeFractionScaled(phase);
+            return well_variables_[XvarWell] * wellVolumeFractionScaled(comp_idx);
         }
 
         if (well_controls_get_current_type(wc) == SURFACE_RATE) {
@@ -305,17 +304,16 @@ namespace Opm
                 assert(phase_under_control >= 0);
 
                 EvalWell wellVolumeFractionScaledPhaseUnderControl = wellVolumeFractionScaled(phase_under_control);
-                // TODO: handling solvent related later
-                /* if (has_solvent_ && phase_under_control == Gas) {
+                if (has_solvent && phase_under_control == Gas) {
                     // for GRAT controlled wells solvent is included in the target
                     wellVolumeFractionScaledPhaseUnderControl += wellVolumeFractionScaled(contiSolventEqIdx);
-                } */
+                }
 
-                if (phase == phase_under_control) {
-                    /* if (has_solvent_ && phase_under_control == Gas) {
+                if (comp_idx == phase_under_control) {
+                    if (has_solvent && phase_under_control == Gas) {
                         qs.setValue(target_rate * wellVolumeFractionScaled(Gas).value() / wellVolumeFractionScaledPhaseUnderControl.value() );
                         return qs;
-                    } */
+                    }
                     qs.setValue(target_rate);
                     return qs;
                 }
@@ -325,7 +323,7 @@ namespace Opm
                 if (wellVolumeFractionScaledPhaseUnderControl < eps) {
                     return qs;
                 }
-                return (target_rate * wellVolumeFractionScaled(phase) / wellVolumeFractionScaledPhaseUnderControl);
+                return (target_rate * wellVolumeFractionScaled(comp_idx) / wellVolumeFractionScaledPhaseUnderControl);
             }
 
             // when it is a combined two phase rate limit, such like LRAT
@@ -337,16 +335,16 @@ namespace Opm
                         combined_volume_fraction += wellVolumeFractionScaled(p);
                     }
                 }
-                return (target_rate * wellVolumeFractionScaled(phase) / combined_volume_fraction);
+                return (target_rate * wellVolumeFractionScaled(comp_idx) / combined_volume_fraction);
             }
 
             // TODO: three phase surface rate control is not tested yet
             if (num_phases_under_rate_control == 3) {
-                return target_rate * wellSurfaceVolumeFraction(phase);
+                return target_rate * wellSurfaceVolumeFraction(comp_idx);
             }
         } else if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
             // ReservoirRate
-            return target_rate * wellVolumeFractionScaled(phase);
+            return target_rate * wellVolumeFractionScaled(comp_idx);
         } else {
             OPM_THROW(std::logic_error, "Unknown control type for well " << name());
         }

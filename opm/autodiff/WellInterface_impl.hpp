@@ -371,6 +371,7 @@ namespace Opm
     WellInterface<TypeTag>::
     numComponents() const
     {
+        // TODO: how about two phase polymer
         if (numPhases() == 2) {
                 return 2;
         }
@@ -378,7 +379,7 @@ namespace Opm
         int numComp = FluidSystem::numComponents;
 
         if (has_solvent) {
-                    numComp ++;
+            numComp++;
         }
         return numComp;
     }
