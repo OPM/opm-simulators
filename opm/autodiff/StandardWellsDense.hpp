@@ -76,10 +76,7 @@ namespace Opm {
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
             typedef typename GET_PROP_TYPE(TypeTag, ElementContext)      ElementContext;
             typedef typename GET_PROP_TYPE(TypeTag, Indices)             BlackoilIndices;
-            typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)    PrimaryVariables;
-            typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)         MaterialLaw;
             typedef typename GET_PROP_TYPE(TypeTag, Simulator)           Simulator;
-            typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
             typedef typename GET_PROP_TYPE(TypeTag, Scalar)              Scalar;
 
             static const int numEq = BlackoilIndices::numEq;
@@ -282,8 +279,6 @@ namespace Opm {
 
             void computeAverageFormationFactor(Simulator& ebosSimulator,
                                                std::vector<double>& B_avg) const;
-
-            void outputWellState(const WellState& well_state) const;
         };
 
 

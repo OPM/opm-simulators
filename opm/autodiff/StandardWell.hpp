@@ -39,13 +39,13 @@ namespace Opm
         // TODO: several functions related to polymer and PLYSHLOG are not incorprated yet,
         // like the function wpolymer, setupCompressedToCartesian, computeRepRadiusPerfLength,
         // They are introduced though PR 1220 and will be included later.
-        using Simulator = typename WellInterface<TypeTag>::Simulator;
-        using WellState = typename WellInterface<TypeTag>::WellState;
-        using IntensiveQuantities = typename WellInterface<TypeTag>::IntensiveQuantities;
-        using FluidSystem = typename WellInterface<TypeTag>::FluidSystem;
-        using MaterialLaw = typename WellInterface<TypeTag>::MaterialLaw;
-        using ModelParameters = typename WellInterface<TypeTag>::ModelParameters;
-        using BlackoilIndices = typename WellInterface<TypeTag>::BlackoilIndices;
+        using typename WellInterface<TypeTag>::Simulator;
+        using typename WellInterface<TypeTag>::WellState;
+        using typename WellInterface<TypeTag>::IntensiveQuantities;
+        using typename WellInterface<TypeTag>::FluidSystem;
+        using typename WellInterface<TypeTag>::MaterialLaw;
+        using typename WellInterface<TypeTag>::ModelParameters;
+        using typename WellInterface<TypeTag>::BlackoilIndices;
 
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
@@ -57,13 +57,13 @@ namespace Opm
             SFrac = 3
         };
 
-        using WellInterface<TypeTag>::numEq;
         using typename WellInterface<TypeTag>::VectorBlockType;
         using typename WellInterface<TypeTag>::MatrixBlockType;
         using typename WellInterface<TypeTag>::Mat;
         using typename WellInterface<TypeTag>::BVector;
         using typename WellInterface<TypeTag>::Eval;
 
+        using WellInterface<TypeTag>::numEq;
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
