@@ -670,12 +670,10 @@ namespace Opm
                     }
                 }
 
-                // TODO: will incoporate the following related to polymer later
-                // which was introduced in PR 1220
-                /* if (has_polymer_) {
+                if (has_polymer) {
                     EvalWell cq_s_poly = cq_s[Water];
                     if (wellType() == INJECTOR) {
-                        cq_s_poly *= wpolymer(w);
+                        cq_s_poly *= wpolymer();
                     } else {
                         cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
                     }
@@ -685,7 +683,7 @@ namespace Opm
                         }
                         ebosResid[cell_idx][contiPolymerEqIdx] -= cq_s_poly.value();
                     }
-                } */
+                }
 
                 // Store the perforation pressure for later usage.
                 well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
@@ -693,7 +691,6 @@ namespace Opm
 
             // add vol * dF/dt + Q to the well equations;
             for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
-                // TODO: the F0_ here is not initialized yet here, which should happen in the first iteration, so it should happen in the assemble function
                 EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
                 resWell_loc += getQs(componentIdx);
                 for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
@@ -701,12 +698,10 @@ namespace Opm
                 }
                 resWell_[0][componentIdx] += resWell_loc.value();
 
-
-                // TODO: to incoporate the following polymer related later, which was introduced in PR 1220
-                /* // add trivial equation for polymer
-                if (has_polymer_) {
-                    invDuneD_[w][w][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0; //
-                } */
+                // add trivial equation for polymer
+                if (has_polymer) {
+                    invDuneD_[0][0][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0;
+                }
             }
 
         // do the local inversion of D.
@@ -763,8 +758,6 @@ namespace Opm
                 const int perf,
                 std::vector<EvalWell>& mob) const
     {
-        // TODO: not incoporating the PLYSHLOG related for now.
-        // which is incoporate from PR 1220 and should be included later.
         const int np = numberOfPhases();
         const int cell_idx = wellCells()[perf];
         assert (int(mob.size()) == numComponents());

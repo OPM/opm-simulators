@@ -153,6 +153,9 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) const;
 
+        using WellInterface<TypeTag>::has_solvent;
+        using WellInterface<TypeTag>::has_polymer;
+
         using WellInterface<TypeTag>::phaseUsage;
         using WellInterface<TypeTag>::active;
         using WellInterface<TypeTag>::numberOfPerforations;
@@ -170,9 +173,9 @@ namespace Opm
         using WellInterface<TypeTag>::flowPhaseToEbosCompIdx;
         using WellInterface<TypeTag>::numComponents;
         using WellInterface<TypeTag>::numPhases;
-        using WellInterface<TypeTag>::has_solvent;
         using WellInterface<TypeTag>::wellIndex;
         using WellInterface<TypeTag>::wsolvent;
+        using WellInterface<TypeTag>::wpolymer;
 
     protected:
 
