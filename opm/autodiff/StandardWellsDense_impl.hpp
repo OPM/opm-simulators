@@ -238,8 +238,8 @@ namespace Opm {
                         }
                     }
 
-                    // add trivial equation for 2p cases (Only support water + oil)
-                    if (numComp < numEq ) {
+                    // add a trivial equation for the dummy phase for 2p cases (Only support water + oil)
+                    if ( numComp < numWellEq ) {
                         assert(!active_[ Gas ]);
                         invDuneD_[w][w][Gas][Gas] = 1.0;
                     }
