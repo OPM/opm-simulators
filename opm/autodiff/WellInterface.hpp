@@ -63,6 +63,7 @@ namespace Opm
         using WellState = WellStateFullyImplicitBlackoilDense;
 
         typedef BlackoilModelParameters ModelParameters;
+        typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
         typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
@@ -213,6 +214,9 @@ namespace Opm
 
         void updateListEconLimited(const WellState& well_state,
                                    DynamicListEconLimited& list_econ_limited) const;
+
+        void computeRepRadiusPerfLength(const Grid& grid, const std::map<int, int>& cartesian_to_compressed);
+
     protected:
 
         // to indicate a invalid connection
@@ -271,6 +275,15 @@ namespace Opm
 
         // saturation table nubmer for each well perforation
         std::vector<int> saturation_table_number_;
+
+        // representative radius of the perforations, used in shear calculation
+        std::vector<double> perf_rep_radius_;
+
+        // length of the perforations, use in shear calculation
+        std::vector<double> perf_length_;
+
+        // well bore diameter
+        std::vector<double> bore_diameters_;
 
         const PhaseUsage* phase_usage_;
 

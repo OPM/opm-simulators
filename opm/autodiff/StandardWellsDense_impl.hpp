@@ -964,106 +964,13 @@ namespace Opm {
         // to be fixed later.
         int number_of_cells = Opm::UgGridHelpers::numCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
-        const int* cart_dims = Opm::UgGridHelpers::cartDims(grid);
-        auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
-        auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
-
-        if (wells_ecl_.size() == 0) {
-            OPM_MESSAGE("No wells specified in Schedule section, "
-                        "initializing no wells");
-            return;
-        }
-
-        const int nw = number_of_wells_;
-        const int nperf = wells().well_connpos[nw];
-
-        const size_t timeStep = current_timeIdx_;
-
-        wells_rep_radius_.clear();
-        wells_perf_length_.clear();
-        wells_bore_diameter_.clear();
-
-        wells_rep_radius_.reserve(nperf);
-        wells_perf_length_.reserve(nperf);
-        wells_bore_diameter_.reserve(nperf);
 
         std::map<int,int> cartesian_to_compressed;
-
         setupCompressedToCartesian(global_cell, number_of_cells,
                                     cartesian_to_compressed);
 
-        int well_index = 0;
-
-        for (auto wellIter= wells_ecl_.begin(); wellIter != wells_ecl_.end(); ++wellIter) {
-             const auto* well = (*wellIter);
-
-             if (well->getStatus(timeStep) == WellCommon::SHUT) {
-                 continue;
-             }
-             {   // COMPDAT handling
-                 const auto& completionSet = well->getCompletions(timeStep);
-                 for (size_t c=0; c<completionSet.size(); c++) {
-                     const auto& completion = completionSet.get(c);
-                     if (completion.getState() == WellCompletion::OPEN) {
-                         int i = completion.getI();
-                         int j = completion.getJ();
-                         int k = completion.getK();
-
-                         const int* cpgdim = cart_dims;
-                         int cart_grid_indx = i + cpgdim[0]*(j + cpgdim[1]*k);
-                         std::map<int, int>::const_iterator cgit = cartesian_to_compressed.find(cart_grid_indx);
-                         if (cgit == cartesian_to_compressed.end()) {
-                             OPM_THROW(std::runtime_error, "Cell with i,j,k indices " << i << ' ' << j << ' '
-                                       << k << " not found in grid (well = " << well->name() << ')');
-                         }
-                         int cell = cgit->second;
-
-                         {
-                             double radius = 0.5*completion.getDiameter();
-                             if (radius <= 0.0) {
-                                 radius = 0.5*unit::feet;
-                                 OPM_MESSAGE("**** Warning: Well bore internal radius set to " << radius);
-                             }
-
-                             const std::array<double, 3> cubical =
-                             WellsManagerDetail::getCubeDim<3>(cell_to_faces, begin_face_centroids, cell);
-
-                             WellCompletion::DirectionEnum direction = completion.getDirection();
-
-                             double re; // area equivalent radius of the grid block
-                             double perf_length; // the length of the well perforation
-
-                             switch (direction) {
-                                 case Opm::WellCompletion::DirectionEnum::X:
-                                     re = std::sqrt(cubical[1] * cubical[2] / M_PI);
-                                     perf_length = cubical[0];
-                                     break;
-                                 case Opm::WellCompletion::DirectionEnum::Y:
-                                     re = std::sqrt(cubical[0] * cubical[2] / M_PI);
-                                     perf_length = cubical[1];
-                                     break;
-                                 case Opm::WellCompletion::DirectionEnum::Z:
-                                     re = std::sqrt(cubical[0] * cubical[1] / M_PI);
-                                     perf_length = cubical[2];
-                                     break;
-                                 default:
-                                     OPM_THROW(std::runtime_error, " Dirtecion of well is not supported ");
-                             }
-
-                             double repR = std::sqrt(re * radius);
-                             wells_rep_radius_.push_back(repR);
-                             wells_perf_length_.push_back(perf_length);
-                             wells_bore_diameter_.push_back(2. * radius);
-                         }
-                     } else {
-                         if (completion.getState() != WellCompletion::SHUT) {
-                             OPM_THROW(std::runtime_error, "Completion state: " << WellCompletion::StateEnum2String( completion.getState() ) << " not handled");
-                         }
-                     }
-
-                 }
-            }
-            well_index++;
+        for (const auto& well : well_container_) {
+            well->computeRepRadiusPerfLength(grid, cartesian_to_compressed);
         }
     }
 
