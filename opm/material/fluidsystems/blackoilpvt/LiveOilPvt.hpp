@@ -494,9 +494,9 @@ public:
         // keyword)
         maxOilSaturation = std::min(maxOilSaturation, Scalar(1.0));
         if (vapPar2_ > 0.0 && maxOilSaturation > 0.01 && oilSaturation < maxOilSaturation) {
-            static const Scalar sqrtEps = std::sqrt(std::numeric_limits<Scalar>::epsilon());
-            const Evaluation& So = Opm::max(oilSaturation, sqrtEps);
-            tmp *= Opm::pow(So/maxOilSaturation, vapPar2_);
+            static const Scalar eps = 0.001;
+            const Evaluation& So = Opm::max(oilSaturation, eps);
+            tmp *= Opm::max(1e-3, Opm::pow(So/maxOilSaturation, vapPar2_));
         }
 
         return tmp;
