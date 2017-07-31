@@ -1705,7 +1705,9 @@ namespace Opm
         const int np = numberOfPhases();
         const int numComp = numComponents();
 
-        assert(int(B_avg.size()) == numComp);
+        // the following implementation assume that the polymer is always after the w-o-g phases
+        // For the polymer case, there is one more mass balance equations of reservoir than wells
+        assert((int(B_avg.size()) == numComp) || has_polymer);
 
         const double tol_wells = param.tolerance_wells_;
         const double maxResidualAllowed = param.max_residual_allowed_;
