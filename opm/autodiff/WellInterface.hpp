@@ -78,6 +78,8 @@ namespace Opm
         typedef Dune::BlockVector<VectorBlockType> BVector;
         typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
 
+        typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
+
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
 

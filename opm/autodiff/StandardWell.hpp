@@ -62,6 +62,7 @@ namespace Opm
         using typename WellInterface<TypeTag>::Mat;
         using typename WellInterface<TypeTag>::BVector;
         using typename WellInterface<TypeTag>::Eval;
+        using typename WellInterface<TypeTag>::PolymerModule;
 
         using WellInterface<TypeTag>::numEq;
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
