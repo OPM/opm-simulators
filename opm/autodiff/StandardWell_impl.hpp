@@ -808,14 +808,15 @@ namespace Opm
                 mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
             }
 
-            /* if (PolymerModule::hasPlyshlog()) {
+            if (PolymerModule::hasPlyshlog()) {
                 // compute the well water velocity with out shear effects.
                 const int numComp = numComponents();
                 const bool allow_cf = crossFlowAllowed(ebosSimulator);
                 const EvalWell& bhp = getBhp();
                 std::vector<EvalWell> cq_s(numComp,0.0);
                 computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perfPressureDiffs()[perf], allow_cf, cq_s);
-                double area = 2 * M_PI * wells_rep_radius_[perf] * wells_perf_length_[perf];
+                // TODO: make area a member
+                double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
                 const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
                 const auto& scaledDrainageInfo =
                         materialLawManager->oilWaterScaledEpsInfoDrainage(cell_idx);
@@ -830,7 +831,7 @@ namespace Opm
                     // TODO Use the same conversion as for the reservoar equations.
                     // Need the "permeability" of the well?
                     // For now use the same formula as in legacy.
-                    waterVelocity *= PolymerModule::shrate( intQuants.pvtRegionIndex() ) / wells_bore_diameter_[perf];
+                    waterVelocity *= PolymerModule::shrate( intQuants.pvtRegionIndex() ) / bore_diameters_[perf];
                 }
                 EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
                 EvalWell shearFactor = PolymerModule::computeShearFactor(polymerConcentration,
@@ -839,7 +840,7 @@ namespace Opm
 
                 // modify the mobility with the shear factor and recompute the well fluxes.
                 mob[ Water ] /= shearFactor;
-            } */
+            }
         }
     }
 

@@ -57,6 +57,7 @@ namespace Opm
             SFrac = 3
         };
 
+        using typename WellInterface<TypeTag>::Scalar;
         using typename WellInterface<TypeTag>::VectorBlockType;
         using typename WellInterface<TypeTag>::MatrixBlockType;
         using typename WellInterface<TypeTag>::Mat;
@@ -195,6 +196,10 @@ namespace Opm
         using WellInterface<TypeTag>::ref_depth_;
         using WellInterface<TypeTag>::perf_depth_;
         using WellInterface<TypeTag>::allow_cf_;
+
+        using WellInterface<TypeTag>::perf_rep_radius_;
+        using WellInterface<TypeTag>::perf_length_;
+        using WellInterface<TypeTag>::bore_diameters_;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
