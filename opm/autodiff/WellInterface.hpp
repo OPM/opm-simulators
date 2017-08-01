@@ -134,6 +134,7 @@ namespace Opm
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
                           const VFPProperties* vfp_properties_arg,
+                          const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
 
@@ -262,6 +263,7 @@ namespace Opm
         // well index for each perforation
         std::vector<double> well_index_;
 
+        // TODO: it might should go to StandardWell
         // depth for each perforation
         std::vector<double> perf_depth_;
 

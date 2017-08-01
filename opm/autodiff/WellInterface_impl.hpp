@@ -83,16 +83,6 @@ namespace Opm
             std::copy(wells->sat_table_id + perf_index_begin,
                       wells->sat_table_id + perf_index_end,
                       saturation_table_number_.begin() );
-
-
-            // TODO: not sure about the processing of depth for perforations here
-            // Will revisit here later. There are different ways and the definition for different wells
-            // can be different, it is possible that we need to remove this from the WellInterface
-            perf_depth_.resize(number_of_perforations_, 0.);
-            const auto& completion_set = well->getCompletions(time_step);
-            for (int i = 0; i < number_of_perforations_; ++i) {
-                perf_depth_[i] = completion_set.get(i).getCenterDepth();
-            }
         }
 
         well_efficiency_factor_ = 1.0;
@@ -108,6 +98,7 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<bool>* active_arg,
          const VFPProperties* vfp_properties_arg,
+         const std::vector<double>& /* depth_arg */,
          const double gravity_arg,
          const int /* num_cells */)
     {

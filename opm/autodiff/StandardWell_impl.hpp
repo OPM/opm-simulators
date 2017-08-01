@@ -45,12 +45,19 @@ namespace Opm
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<bool>* active_arg,
          const VFPProperties* vfp_properties_arg,
+         const std::vector<double>& depth_arg,
          const double gravity_arg,
          const int num_cells)
     {
         WellInterface<TypeTag>::init(phase_usage_arg, active_arg,
-                                     vfp_properties_arg, gravity_arg, num_cells);
+                                     vfp_properties_arg, depth_arg,
+                                     gravity_arg, num_cells);
 
+        perf_depth_.resize(numberOfPerforations(), 0.);
+        for (int perf = 0; perf < numberOfPerforations(); ++perf) {
+            const int cell_idx = wellCells()[perf];
+            perf_depth_[perf] = depth_arg[cell_idx];
+        }
 
         // setup sparsity pattern for the matrices
         //[A C^T    [x    =  [ res
