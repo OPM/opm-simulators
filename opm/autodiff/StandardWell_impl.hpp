@@ -626,83 +626,83 @@ namespace Opm
             getMobility(ebosSimulator, perf, mob);
             computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perfPressureDiffs()[perf], allow_cf, cq_s);
 
-                for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
-                    // the cq_s entering mass balance equations need to consider the efficiency factors.
-                    const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
-
-                    if (!only_wells) {
-                        // subtract sum of component fluxes in the reservoir equation.
-                        // need to consider the efficiency factor
-                        ebosResid[cell_idx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.value();
-                    }
-
-                    // subtract sum of phase fluxes in the well equations.
-                    resWell_[0][componentIdx] -= cq_s[componentIdx].value();
-
-                    // assemble the jacobians
-                    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                        if (!only_wells) {
-                            // also need to consider the efficiency factor when manipulating the jacobians.
-                            duneC_[0][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
-                        }
-                        invDuneD_[0][0][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
-                    }
-
-                    for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-                        if (!only_wells) {
-                            // also need to consider the efficiency factor when manipulating the jacobians.
-                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
-                            duneB_[0][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
-                        }
-                    }
-
-                    // add trivial equation for 2p cases (Only support water + oil)
-                    if (numComp == 2) {
-                        assert(!active()[ Gas ]);
-                        invDuneD_[0][0][Gas][Gas] = 1.0;
-                    }
-
-                    // Store the perforation phase flux for later usage.
-                    if (has_solvent && componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
-                        well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
-                    } else {
-                        well_state.perfPhaseRates()[(first_perf_ + perf) * np + componentIdx] = cq_s[componentIdx].value();
-                    }
-                }
-
-                if (has_polymer) {
-                    EvalWell cq_s_poly = cq_s[Water];
-                    if (wellType() == INJECTOR) {
-                        cq_s_poly *= wpolymer();
-                    } else {
-                        cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
-                    }
-                    if (!only_wells) {
-                        for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
-                            ebosJac[cell_idx][cell_idx][contiPolymerEqIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_poly.derivative(pvIdx);
-                        }
-                        ebosResid[cell_idx][contiPolymerEqIdx] -= cq_s_poly.value();
-                    }
-                }
-
-                // Store the perforation pressure for later usage.
-                well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
-            }
-
-            // add vol * dF/dt + Q to the well equations;
             for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
-                EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
-                resWell_loc += getQs(componentIdx);
-                for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
-                    invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
-                }
-                resWell_[0][componentIdx] += resWell_loc.value();
+                // the cq_s entering mass balance equations need to consider the efficiency factors.
+                const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
 
-                // add trivial equation for polymer
-                if (has_polymer) {
-                    invDuneD_[0][0][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0;
+                if (!only_wells) {
+                    // subtract sum of component fluxes in the reservoir equation.
+                    // need to consider the efficiency factor
+                    ebosResid[cell_idx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.value();
+                }
+
+                // subtract sum of phase fluxes in the well equations.
+                resWell_[0][componentIdx] -= cq_s[componentIdx].value();
+
+                // assemble the jacobians
+                for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+                    if (!only_wells) {
+                        // also need to consider the efficiency factor when manipulating the jacobians.
+                        duneC_[0][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
+                    }
+                    invDuneD_[0][0][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
+                }
+
+                for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+                    if (!only_wells) {
+                        // also need to consider the efficiency factor when manipulating the jacobians.
+                        ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(componentIdx)][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                        duneB_[0][cell_idx][componentIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_effective.derivative(pvIdx);
+                    }
+                }
+
+                // add a trivial equation for the dummy phase for 2p cases (Only support water + oil)
+                if ( numComp < numWellEq ) {
+                    assert(!active()[ Gas ]);
+                    invDuneD_[0][0][Gas][Gas] = 1.0;
+                }
+
+                // Store the perforation phase flux for later usage.
+                if (has_solvent && componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
+                    well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
+                } else {
+                    well_state.perfPhaseRates()[(first_perf_ + perf) * np + componentIdx] = cq_s[componentIdx].value();
                 }
             }
+
+            if (has_polymer) {
+                EvalWell cq_s_poly = cq_s[Water];
+                if (wellType() == INJECTOR) {
+                    cq_s_poly *= wpolymer();
+                } else {
+                    cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
+                }
+                if (!only_wells) {
+                    for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
+                        ebosJac[cell_idx][cell_idx][contiPolymerEqIdx][flowToEbosPvIdx(pvIdx)] -= cq_s_poly.derivative(pvIdx);
+                    }
+                    ebosResid[cell_idx][contiPolymerEqIdx] -= cq_s_poly.value();
+                }
+            }
+
+            // Store the perforation pressure for later usage.
+            well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
+        }
+
+        // add vol * dF/dt + Q to the well equations;
+        for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
+            EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
+            resWell_loc += getQs(componentIdx);
+            for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+                invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
+            }
+            resWell_[0][componentIdx] += resWell_loc.value();
+
+            // add trivial equation for polymer
+            if (has_polymer) {
+                invDuneD_[0][0][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0;
+            }
+        }
 
         // do the local inversion of D.
         localInvert( invDuneD_ );
