@@ -924,7 +924,7 @@ namespace Opm
                                   data::TargetType::SUMMARY );
                 }
                 // Oil in place (in liquid and gas phases)
-                if (hasFRBKeyword(summaryConfig, "OIP")) {
+                if (hasFRBKeyword(summaryConfig, "OIP") || hasFRBKeyword(summaryConfig, "OE")) {
                     output.insert("OIP",
                                   Opm::UnitSystem::measure::volume,
                                   std::move( oip ),
