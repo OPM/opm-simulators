@@ -272,7 +272,7 @@ namespace Opm
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
                                  const std::map<std::string, std::vector<double>>& extraRestartData,
-                                 bool substep);
+                                 bool substep );
 
         /** \brief return output directory */
         const std::string& outputDirectory() const { return outputDir_; }

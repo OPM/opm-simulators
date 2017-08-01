@@ -196,7 +196,7 @@ namespace Opm
                                  const data::Solution& simProps,
                                  const std::map<std::string, double>& miscSummaryData,
                                  const std::map<std::string, std::vector<double>>& extraRestartData,
-                                 bool substep )
+                                 bool substep)
                 : writer_( writer ),
                   timer_( timer.clone() ),
                   state_( state ),
@@ -338,6 +338,11 @@ namespace Opm
             if (initConfig.restartRequested() && ((initConfig.getRestartStep()) == (timer.currentStepNum()))) {
                 std::cout << "Skipping restart write in start of step " << timer.currentStepNum() << std::endl;
             } else {
+                if ( timer.initialStep() )
+                {
+                    // Set the initial OIP
+                    eclIO_->overwriteInitialOIP(simProps);
+                }
                 // ... insert "extra" data (KR, VISC, ...)
                 eclIO_->writeTimeStep(timer.reportStepNum(),
                                       substep,
