@@ -583,6 +583,17 @@ namespace Opm {
             }
         }
 
+        {
+            const auto& grid = ebosSimulator.gridManager().grid();
+            int value = 0;
+            if (converged_well) {
+                value = 1;
+            }
+            if (grid.comm().min(value) < 1) {
+                converged_well = false;
+            }
+        }
+
         // TODO: to think about the output here.
         /* if ( terminal_output_ )
         {
