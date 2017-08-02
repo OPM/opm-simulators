@@ -2077,7 +2077,7 @@ namespace Opm
 
                     // Calculating the BHP value based on THP
                     // TODO: check whether it is always correct to do calculation based on the depth of the first perforation.
-                    const double rho = 0.; // perf_densities_[0]; // TODO: this item is the one keeping the function from WellInterface
+                    const double rho = perf_densities_[0]; // TODO: this item is the one keeping the function from WellInterface
                     const double well_ref_depth = perf_depth_[0];
                     if (wellType() == INJECTOR) {
                         const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
