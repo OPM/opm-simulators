@@ -24,7 +24,7 @@ namespace Opm
     template<typename TypeTag>
     StandardWell<TypeTag>::
     StandardWell(const Well* well, const int time_step, const Wells* wells)
-    : WellInterface<TypeTag>(well, time_step, wells)
+    : Base(well, time_step, wells)
     , perf_densities_(numberOfPerforations())
     , perf_pressure_diffs_(numberOfPerforations())
     , well_variables_(numWellEq) // the number of the primary variables
@@ -49,9 +49,9 @@ namespace Opm
          const double gravity_arg,
          const int num_cells)
     {
-        WellInterface<TypeTag>::init(phase_usage_arg, active_arg,
-                                     vfp_properties_arg, depth_arg,
-                                     gravity_arg, num_cells);
+        Base::init(phase_usage_arg, active_arg,
+                   vfp_properties_arg, depth_arg,
+                   gravity_arg, num_cells);
 
         perf_depth_.resize(numberOfPerforations(), 0.);
         for (int perf = 0; perf < numberOfPerforations(); ++perf) {
@@ -245,6 +245,7 @@ namespace Opm
         if (wellType() == INJECTOR) {
             if (has_solvent) {
                 // TODO: investigate whether the use of the comp_frac is justified.
+                // The usage of the comp_frac is not correct, which should be changed later.
                 double comp_frac = 0.0;
                 if (has_solvent && comp_idx == contiSolventEqIdx) { // solvent
                     comp_frac = compFrac()[pu.phase_pos[ Gas ]] * wsolvent();

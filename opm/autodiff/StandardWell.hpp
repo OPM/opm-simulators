@@ -33,19 +33,17 @@ namespace Opm
     {
 
     public:
+        typedef WellInterface<TypeTag> Base;
         // TODO: some functions working with AD variables handles only with values (double) without
         // dealing with derivatives. It can be beneficial to make functions can work with either AD or scalar value.
         // And also, it can also be beneficial to make these functions hanle different types of AD variables.
-        // TODO: several functions related to polymer and PLYSHLOG are not incorprated yet,
-        // like the function wpolymer, setupCompressedToCartesian, computeRepRadiusPerfLength,
-        // They are introduced though PR 1220 and will be included later.
-        using typename WellInterface<TypeTag>::Simulator;
-        using typename WellInterface<TypeTag>::WellState;
-        using typename WellInterface<TypeTag>::IntensiveQuantities;
-        using typename WellInterface<TypeTag>::FluidSystem;
-        using typename WellInterface<TypeTag>::MaterialLaw;
-        using typename WellInterface<TypeTag>::ModelParameters;
-        using typename WellInterface<TypeTag>::BlackoilIndices;
+        using typename Base::Simulator;
+        using typename Base::WellState;
+        using typename Base::IntensiveQuantities;
+        using typename Base::FluidSystem;
+        using typename Base::MaterialLaw;
+        using typename Base::ModelParameters;
+        using typename Base::BlackoilIndices;
 
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
@@ -57,15 +55,15 @@ namespace Opm
             SFrac = 3
         };
 
-        using typename WellInterface<TypeTag>::Scalar;
-        using typename WellInterface<TypeTag>::VectorBlockType;
-        using typename WellInterface<TypeTag>::MatrixBlockType;
-        using typename WellInterface<TypeTag>::Mat;
-        using typename WellInterface<TypeTag>::BVector;
-        using typename WellInterface<TypeTag>::Eval;
-        using typename WellInterface<TypeTag>::PolymerModule;
+        using typename Base::Scalar;
+        using typename Base::VectorBlockType;
+        using typename Base::MatrixBlockType;
+        using typename Base::Mat;
+        using typename Base::BVector;
+        using typename Base::Eval;
+        using typename Base::PolymerModule;
 
-        using WellInterface<TypeTag>::numEq;
+        using Base::numEq;
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
         // TODO: should these go to WellInterface?
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
@@ -156,29 +154,29 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) const;
 
-        using WellInterface<TypeTag>::has_solvent;
-        using WellInterface<TypeTag>::has_polymer;
+        using Base::has_solvent;
+        using Base::has_polymer;
 
-        using WellInterface<TypeTag>::phaseUsage;
-        using WellInterface<TypeTag>::active;
-        using WellInterface<TypeTag>::numberOfPerforations;
-        using WellInterface<TypeTag>::wellCells;
-        using WellInterface<TypeTag>::saturationTableNumber;
-        using WellInterface<TypeTag>::indexOfWell;
-        using WellInterface<TypeTag>::name;
-        using WellInterface<TypeTag>::wellType;
-        using WellInterface<TypeTag>::wellControls;
-        using WellInterface<TypeTag>::compFrac;
-        using WellInterface<TypeTag>::numberOfPhases;
-        using WellInterface<TypeTag>::perfDepth;
-        using WellInterface<TypeTag>::flowToEbosPvIdx;
-        using WellInterface<TypeTag>::flowPhaseToEbosPhaseIdx;
-        using WellInterface<TypeTag>::flowPhaseToEbosCompIdx;
-        using WellInterface<TypeTag>::numComponents;
-        using WellInterface<TypeTag>::numPhases;
-        using WellInterface<TypeTag>::wellIndex;
-        using WellInterface<TypeTag>::wsolvent;
-        using WellInterface<TypeTag>::wpolymer;
+        using Base::phaseUsage;
+        using Base::active;
+        using Base::numberOfPerforations;
+        using Base::wellCells;
+        using Base::saturationTableNumber;
+        using Base::indexOfWell;
+        using Base::name;
+        using Base::wellType;
+        using Base::wellControls;
+        using Base::compFrac;
+        using Base::numberOfPhases;
+        using Base::perfDepth;
+        using Base::flowToEbosPvIdx;
+        using Base::flowPhaseToEbosPhaseIdx;
+        using Base::flowPhaseToEbosCompIdx;
+        using Base::numComponents;
+        using Base::numPhases;
+        using Base::wellIndex;
+        using Base::wsolvent;
+        using Base::wpolymer;
 
     protected:
 
@@ -189,18 +187,18 @@ namespace Opm
         void recoverSolutionWell(const BVector& x, BVector& xw) const;
 
         // TODO: decide wether to use member function to refer to private member later
-        using WellInterface<TypeTag>::vfp_properties_;
-        using WellInterface<TypeTag>::gravity_;
-        using WellInterface<TypeTag>::well_efficiency_factor_;
-        using WellInterface<TypeTag>::phase_usage_;
-        using WellInterface<TypeTag>::first_perf_;
-        using WellInterface<TypeTag>::ref_depth_;
-        using WellInterface<TypeTag>::perf_depth_;
-        using WellInterface<TypeTag>::allow_cf_;
+        using Base::vfp_properties_;
+        using Base::gravity_;
+        using Base::well_efficiency_factor_;
+        using Base::phase_usage_;
+        using Base::first_perf_;
+        using Base::ref_depth_;
+        using Base::perf_depth_;
+        using Base::allow_cf_;
 
-        using WellInterface<TypeTag>::perf_rep_radius_;
-        using WellInterface<TypeTag>::perf_length_;
-        using WellInterface<TypeTag>::bore_diameters_;
+        using Base::perf_rep_radius_;
+        using Base::perf_length_;
+        using Base::bore_diameters_;
 
         // densities of the fluid in each perforation
         std::vector<double> perf_densities_;
@@ -262,8 +260,8 @@ namespace Opm
                                      const ModelParameters& param,
                                      WellState& well_state);
 
-        using WellInterface<TypeTag>::wellHasTHPConstraints;
-        using WellInterface<TypeTag>::mostStrictBhpFromBhpLimits;
+        using Base::wellHasTHPConstraints;
+        using Base::mostStrictBhpFromBhpLimits;
 
         // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
         // calculation of the derivatives
