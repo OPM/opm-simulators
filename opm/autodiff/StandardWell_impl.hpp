@@ -101,54 +101,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    const std::vector<double>&
-    StandardWell<TypeTag>::
-    perfDensities() const
-    {
-        return perf_densities_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    std::vector<double>&
-    StandardWell<TypeTag>::
-    perfDensities()
-    {
-        return perf_densities_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    const std::vector<double>&
-    StandardWell<TypeTag>::
-    perfPressureDiffs() const
-    {
-        return perf_pressure_diffs_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    std::vector<double>&
-    StandardWell<TypeTag>::
-    perfPressureDiffs()
-    {
-        return perf_pressure_diffs_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
     void StandardWell<TypeTag>::
     setWellVariables(const WellState& well_state)
     {
@@ -631,7 +583,7 @@ namespace Opm
             std::vector<EvalWell> cq_s(numComp,0.0);
             std::vector<EvalWell> mob(numComp, 0.0);
             getMobility(ebosSimulator, perf, mob);
-            computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perfPressureDiffs()[perf], allow_cf, cq_s);
+            computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perf_pressure_diffs_[perf], allow_cf, cq_s);
 
             for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
                 // the cq_s entering mass balance equations need to consider the efficiency factors.
@@ -693,7 +645,7 @@ namespace Opm
             }
 
             // Store the perforation pressure for later usage.
-            well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[indexOfWell()] + perfPressureDiffs()[perf];
+            well_state.perfPress()[first_perf_ + perf] = well_state.bhp()[indexOfWell()] + perf_pressure_diffs_[perf];
         }
 
         // add vol * dF/dt + Q to the well equations;
@@ -740,7 +692,7 @@ namespace Opm
             EvalWell bhp = getBhp();
 
             // Pressure drawdown (also used to determine direction of flow)
-            EvalWell well_pressure = bhp + perfPressureDiffs()[perf];
+            EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
             EvalWell drawdown = pressure - well_pressure;
 
             if (drawdown.value() < 0 && wellType() == INJECTOR)  {
@@ -821,7 +773,7 @@ namespace Opm
                 const bool allow_cf = crossFlowAllowed(ebosSimulator);
                 const EvalWell& bhp = getBhp();
                 std::vector<EvalWell> cq_s(numComp,0.0);
-                computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perfPressureDiffs()[perf], allow_cf, cq_s);
+                computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perf_pressure_diffs_[perf], allow_cf, cq_s);
                 // TODO: make area a member
                 double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
                 const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
@@ -2005,7 +1957,7 @@ namespace Opm
             std::vector<EvalWell> cq_s(numComp, 0.0);
             std::vector<EvalWell> mob(numComp, 0.0);
             getMobility(ebosSimulator, perf, mob);
-            computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perfPressureDiffs()[perf], allow_cf, cq_s);
+            computePerfRate(intQuants, mob, wellIndex()[perf], bhp, perf_pressure_diffs_[perf], allow_cf, cq_s);
 
             for(int p = 0; p < np; ++p) {
                 well_flux[p] += cq_s[p].value();

@@ -92,14 +92,6 @@ namespace Opm
 
         StandardWell(const Well* well, const int time_step, const Wells* wells);
 
-        /// the densities of the fluid  in each perforation
-        virtual const std::vector<double>& perfDensities() const;
-        virtual std::vector<double>& perfDensities();
-
-        /// the pressure difference between different perforations
-        virtual const std::vector<double>& perfPressureDiffs() const;
-        virtual std::vector<double>& perfPressureDiffs();
-
         virtual void setWellVariables(const WellState& well_state);
 
         EvalWell wellVolumeFractionScaled(const int phase) const;

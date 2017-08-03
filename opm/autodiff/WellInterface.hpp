@@ -85,52 +85,23 @@ namespace Opm
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
 
         /// Constructor
-        //  TODO: Well can be reference.
         WellInterface(const Well* well, const int time_step, const Wells* wells);
 
         /// Well name.
         const std::string& name() const;
 
-        /// The index of the well in Wells struct
-        // It is used to locate the inforation in Wells and also WellState for now.
-        int indexOfWell() const;
-
         /// Well type, INJECTOR or PRODUCER.
         WellType wellType() const;
 
-        /// number of phases
-        int numberOfPhases() const;
-
-        /// Component fractions for each phase for the well
-        const std::vector<double>& compFrac() const;
-
         /// Well controls
-        // TODO: later to see whether we need to return const.
         WellControls* wellControls() const;
 
         /// Number of the perforations
         int numberOfPerforations() const;
 
-        /// Well productivity index for each perforation.
-        const std::vector<double>& wellIndex() const;
-
         /// Depth of perforations
         const std::vector<double>& perfDepth() const;
 
-        /// Indices of the grid cells/blocks that perforations are completed within.
-        const std::vector<int>& wellCells() const;
-
-        // TODO: the following function should be able to be removed by refactoring the well class
-        // It is probably only needed for StandardWell
-        /// the densities of the fluid  in each perforation
-        virtual const std::vector<double>& perfDensities() const = 0;
-        virtual std::vector<double>& perfDensities() = 0;
-
-        /// the pressure difference between different perforations
-        virtual const std::vector<double>& perfPressureDiffs() const = 0;
-        virtual std::vector<double>& perfPressureDiffs() = 0;
-
-        // TODO: the parameters need to be optimized/adjusted
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
                           const VFPProperties* vfp_properties_arg,
@@ -138,8 +109,58 @@ namespace Opm
                           const double gravity_arg,
                           const int num_cells);
 
-        // TODO: temporary
         virtual void setWellVariables(const WellState& well_state) = 0;
+
+        virtual bool getWellConvergence(Simulator& ebosSimulator,
+                                        const std::vector<double>& B_avg,
+                                        const ModelParameters& param) const = 0;
+
+        virtual void wellEqIteration(Simulator& ebosSimulator,
+                                     const ModelParameters& param,
+                                     WellState& well_state) = 0;
+
+        virtual void assembleWellEq(Simulator& ebosSimulator,
+                                    const double dt,
+                                    WellState& well_state,
+                                    bool only_wells) = 0;
+
+        void updateListEconLimited(const WellState& well_state,
+                                   DynamicListEconLimited& list_econ_limited) const;
+
+        void setWellEfficiencyFactor(const double efficiency_factor);
+
+        void computeRepRadiusPerfLength(const Grid& grid, const std::map<int, int>& cartesian_to_compressed);
+
+        // using the solution x to recover the solution xw for wells and applying
+        // xw to update Well State
+        virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
+                                            WellState& well_state) const = 0;
+
+        // Ax = Ax - C D^-1 B x
+        virtual void apply(const BVector& x, BVector& Ax) const = 0;
+
+        // r = r - C D^-1 Rw
+        virtual void apply(BVector& r) const = 0;
+
+        virtual void computeWellPotentials(const Simulator& ebosSimulator,
+                                           const WellState& well_state,
+                                           std::vector<double>& well_potentials) const = 0;
+
+        virtual void computeAccumWell() = 0;
+
+        // TODO: it should come with a different name
+        // for MS well, the definition is different and should not use this name anymore
+        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                    const WellState& xw) = 0;
+
+        virtual void updateWellStateWithTarget(const int current,
+                                               WellState& xw) const = 0;
+
+        virtual void updateWellControl(WellState& xw) const = 0;
+
+    protected:
+        // Indices of the grid cells/blocks that perforations are completed within.
+        const std::vector<int>& wellCells() const;
 
         const std::vector<bool>& active() const;
 
@@ -153,6 +174,10 @@ namespace Opm
 
         int numPhases() const;
 
+        // number of phases
+        int numberOfPhases() const;
+
+        // TODO: it is dumplicated with StandardWellsDense
         int numComponents() const;
 
         // simply returning allow_cf_
@@ -168,57 +193,8 @@ namespace Opm
 
         double wpolymer() const;
 
-        virtual bool getWellConvergence(Simulator& ebosSimulator,
-                                        const std::vector<double>& B_avg,
-                                        const ModelParameters& param) const = 0;
-
-        virtual void wellEqIteration(Simulator& ebosSimulator,
-                                     const ModelParameters& param,
-                                     WellState& well_state) = 0;
-
-        virtual void assembleWellEq(Simulator& ebosSimulator,
-                                    const double dt,
-                                    WellState& well_state,
-                                    bool only_wells) = 0;
-
-        virtual void updateWellStateWithTarget(const int current,
-                                               WellState& xw) const = 0;
-
-        virtual void updateWellControl(WellState& xw) const = 0;
-
-        virtual void computeAccumWell() = 0;
-
-        // TODO: it should come with a different name
-        // for MS well, the definition is different and should not use this name anymore
-        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& xw) = 0;
-
-        // Ax = Ax - C D^-1 B x
-        virtual void apply(const BVector& x, BVector& Ax) const = 0;
-
-        // r = r - C D^-1 Rw
-        virtual void apply(BVector& r) const = 0;
-
-        // using the solution x to recover the solution xw for wells and applying
-        // xw to update Well State
-        virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
-                                            WellState& well_state) const = 0;
-
-        virtual void computeWellPotentials(const Simulator& ebosSimulator,
-                                           const WellState& well_state,
-                                           std::vector<double>& well_potentials) const = 0;
-
-        void setWellEfficiencyFactor(const double efficiency_factor);
-
         bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                                  const WellState& well_state) const;
-
-        void updateListEconLimited(const WellState& well_state,
-                                   DynamicListEconLimited& list_econ_limited) const;
-
-        void computeRepRadiusPerfLength(const Grid& grid, const std::map<int, int>& cartesian_to_compressed);
-
-    protected:
 
         // to indicate a invalid connection
         static const int INVALIDCONNECTION = -100000;
@@ -297,6 +273,16 @@ namespace Opm
 
         bool wellHasTHPConstraints() const;
 
+        // The index of the well in Wells struct
+        // It is used to locate the inforation in Wells and also WellState for now.
+        int indexOfWell() const;
+
+        // Component fractions for each phase for the well
+        const std::vector<double>& compFrac() const;
+
+        /// Well productivity index for each perforation.
+        const std::vector<double>& wellIndex() const;
+
         double mostStrictBhpFromBhpLimits() const;
 
         // a tuple type for ratio limit check.
@@ -307,7 +293,6 @@ namespace Opm
         // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
         // the ratio of the actual value to the value of the violated limit.
         using RatioCheckTuple = std::tuple<bool, bool, int, double>;
-
 
         RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                               const WellState& well_state) const;
