@@ -42,13 +42,18 @@ namespace Opm
         typedef std::array< int, 3 >  mapentry_t;
         typedef std::map< std::string, mapentry_t > WellMapType;
 
+        template <class State>
+        void init(const Wells* wells, const State& state)
+        {
+            init(wells, state.pressure());
+        }
+
         /// Allocate and initialize if wells is non-null.
         /// Also tries to give useful initial values to the bhp() and
         /// wellRates() fields, depending on controls.  The
         /// perfRates() field is filled with zero, and perfPress()
         /// with -1e100.
-        template <class State>
-        void init(const Wells* wells, const State& state)
+        void init(const Wells* wells, const std::vector<double>& cellPressures)
         {
             // clear old name mapping
             wellMap_.clear();
@@ -102,7 +107,7 @@ namespace Opm
                             bhp_[w] = well_controls_get_current_target( ctrl );
                         } else {
                             const int first_cell = wells->well_cells[wells->well_connpos[w]];
-                            bhp_[w] = state.pressure()[first_cell];
+                            bhp_[w] = cellPressures[first_cell];
                         }
                     } else {
                         // Open well:
@@ -136,7 +141,7 @@ namespace Opm
                         } else {
                             const int first_cell = wells->well_cells[wells->well_connpos[w]];
                             const double safety_factor = (wells->type[w] == INJECTOR) ? 1.01 : 0.99;
-                            bhp_[w] = safety_factor*state.pressure()[first_cell];
+                            bhp_[w] = safety_factor*cellPressures[first_cell];
                         }
                     }
 
