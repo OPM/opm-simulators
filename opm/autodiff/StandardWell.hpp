@@ -1,6 +1,7 @@
 /*
-  Copyright 2017 SINTEF ICT, Applied Mathematics.
+  Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
+  Copyright 2016 - 2017 IRIS AS.
 
   This file is part of the Open Porous Media project (OPM).
 
