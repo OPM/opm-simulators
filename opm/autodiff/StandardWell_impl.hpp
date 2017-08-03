@@ -30,9 +30,9 @@ namespace Opm
     , well_variables_(numWellEq) // the number of the primary variables
     , F0_(numWellEq)
     {
-        duneB_.setBuildMode( Mat::row_wise );
-        duneC_.setBuildMode( Mat::row_wise );
-        invDuneD_.setBuildMode( Mat::row_wise );
+        duneB_.setBuildMode( OffDiagMatWell::row_wise );
+        duneC_.setBuildMode( OffDiagMatWell::row_wise );
+        invDuneD_.setBuildMode( DiagMatWell::row_wise );
     }
 
 
@@ -152,9 +152,7 @@ namespace Opm
     setWellVariables(const WellState& well_state)
     {
         const int nw = well_state.bhp().size();
-        // for two-phase numComp < numWellEq
-        const int numComp = numComponents();
-        for (int eqIdx = 0; eqIdx < numComp; ++eqIdx) {
+        for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
             const unsigned int idx = nw * eqIdx + indexOfWell();
             assert( eqIdx < well_variables_.size() );
             assert( idx < well_state.wellSolutions().size() );
@@ -665,10 +663,10 @@ namespace Opm
                 }
 
                 // add a trivial equation for the dummy phase for 2p cases (Only support water + oil)
-                if ( numComp < numWellEq ) {
+                /* if ( numComp < numWellEq ) {
                     assert(!active()[ Gas ]);
                     invDuneD_[0][0][Gas][Gas] = 1.0;
-                }
+                } */
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
@@ -707,9 +705,9 @@ namespace Opm
             resWell_[0][componentIdx] += resWell_loc.value();
 
             // add trivial equation for polymer
-            if (has_polymer) {
+            /* if (has_polymer) {
                 invDuneD_[0][0][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0;
-            }
+            } */
         }
 
         // do the local inversion of D.
@@ -859,7 +857,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellState(const BVector& dwells,
+    updateWellState(const BVectorWell& dwells,
                     const BlackoilModelParameters& param,
                     WellState& well_state) const
     {
@@ -1173,7 +1171,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    localInvert(Mat& istlA) const
+    localInvert(DiagMatWell& istlA) const
     {
         for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
             for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
@@ -1890,7 +1888,7 @@ namespace Opm
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        BVector dx_well(1);
+        BVectorWell dx_well(1);
         invDuneD_.mv(resWell_, dx_well);
 
         updateWellState(dx_well, param, well_state);
@@ -1927,7 +1925,7 @@ namespace Opm
         // invDBx = invDuneD_ * Bx_
         // TODO: with this, we modified the content of the invDrw_.
         // Is it necessary to do this to save some memory?
-        BVector& invDBx = invDrw_;
+        BVectorWell& invDBx = invDrw_;
         invDuneD_.mv(Bx_, invDBx);
 
         // Ax = Ax - duneC_^T * invDBx
@@ -1957,9 +1955,9 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    recoverSolutionWell(const BVector& x, BVector& xw) const
+    recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     {
-        BVector resWell = resWell_;
+        BVectorWell resWell = resWell_;
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
@@ -1977,7 +1975,7 @@ namespace Opm
                            const ModelParameters& param,
                            WellState& well_state) const
     {
-        BVector xw(1);
+        BVectorWell xw(1);
         recoverSolutionWell(x, xw);
         updateWellState(xw, param, well_state);
     }

@@ -364,7 +364,7 @@ namespace Opm
     {
         // TODO: how about two phase polymer
         if (numPhases() == 2) {
-                return 2;
+          return 2;
         }
 
         int numComp = FluidSystem::numComponents;

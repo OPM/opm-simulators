@@ -44,6 +44,7 @@ namespace Opm
         using typename Base::MaterialLaw;
         using typename Base::ModelParameters;
         using typename Base::BlackoilIndices;
+        using typename Base::PolymerModule;
 
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
@@ -56,22 +57,37 @@ namespace Opm
         };
 
         using typename Base::Scalar;
-        using typename Base::VectorBlockType;
-        using typename Base::MatrixBlockType;
+        using Base::numEq;
+        // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
+        // it will cause problem here without processing the dummy phase.
+        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // number of wellEq is only numEq - 1 for polymer
         using typename Base::Mat;
         using typename Base::BVector;
         using typename Base::Eval;
-        using typename Base::PolymerModule;
 
-        using Base::numEq;
-        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // //numEq; //number of wellEq is only numEq for polymer
+        typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
+        typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
+
+        // sparsity pattern for the matrices
+        //[A C^T    [x       =  [ res
+        // B  D ]   x_well]      res_well]
+
+        // the matrix type for the diagonal matrix D
+        typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;
+        typedef Dune::BCRSMatrix <DiagMatrixBlockWellType> DiagMatWell;
+
+        // the matrix type for the non-diagonal matrix B and C^T
+        typedef Dune::FieldMatrix<Scalar, numWellEq, numEq>  OffDiagMatrixBlockWellType;
+        typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
+
+        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
+
         // TODO: should these go to WellInterface?
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
         static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
         static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
-        typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
         StandardWell(const Well* well, const int time_step, const Wells* wells);
 
@@ -119,7 +135,7 @@ namespace Opm
                           const int num_cells);
 
         // Update the well_state based on solution
-        void updateWellState(const BVector& dwells,
+        void updateWellState(const BVectorWell& dwells,
                              const BlackoilModelParameters& param,
                              WellState& well_state) const;
 
@@ -181,10 +197,10 @@ namespace Opm
     protected:
 
         // TODO: maybe this function can go to some helper file.
-        void localInvert(Mat& istlA) const;
+        void localInvert(DiagMatWell& istlA) const;
 
         // xw = inv(D)*(rw - C*x)
-        void recoverSolutionWell(const BVector& x, BVector& xw) const;
+        void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
         // TODO: decide wether to use member function to refer to private member later
         using Base::vfp_properties_;
@@ -208,17 +224,17 @@ namespace Opm
         // TODO: probably, they should be moved to the WellInterface, when
         // we decide the template paramters.
         // two off-diagonal matrices
-        Mat duneB_;
-        Mat duneC_;
+        OffDiagMatWell duneB_;
+        OffDiagMatWell duneC_;
         // diagonal matrix for the well
-        Mat invDuneD_;
+        DiagMatWell invDuneD_;
 
         // several vector used in the matrix calculation
-        mutable BVector Bx_;
-        mutable BVector invDrw_;
+        mutable BVectorWell Bx_;
+        mutable BVectorWell invDrw_;
         mutable BVector scaleAddRes_;
 
-        BVector resWell_;
+        BVectorWell resWell_;
 
         std::vector<EvalWell> well_variables_;
         std::vector<double> F0_;
