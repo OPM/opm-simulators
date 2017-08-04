@@ -66,12 +66,13 @@ namespace Opm
         using typename Base::BVector;
         using typename Base::Eval;
 
-        typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
-        typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
-
         // sparsity pattern for the matrices
         //[A C^T    [x       =  [ res
         // B  D ]   x_well]      res_well]
+
+        // the vector type for the res_well and x_well
+        typedef Dune::FieldVector<Scalar, numWellEq> VectorBlockWellType;
+        typedef Dune::BlockVector<VectorBlockWellType> BVectorWell;
 
         // the matrix type for the diagonal matrix D
         typedef Dune::FieldMatrix<Scalar, numWellEq, numWellEq > DiagMatrixBlockWellType;

@@ -105,7 +105,10 @@ namespace Opm
     setWellVariables(const WellState& well_state)
     {
         const int nw = well_state.bhp().size();
-        for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
+        // TODO: using numComp here is only to make the 2p + dummy phase work
+        // TODO: in theory, we should use numWellEq here.
+        // for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
+        for (int eqIdx = 0; eqIdx < numComponents(); ++eqIdx) {
             const unsigned int idx = nw * eqIdx + indexOfWell();
             assert( eqIdx < well_variables_.size() );
             assert( idx < well_state.wellSolutions().size() );
@@ -616,10 +619,10 @@ namespace Opm
                 }
 
                 // add a trivial equation for the dummy phase for 2p cases (Only support water + oil)
-                /* if ( numComp < numWellEq ) {
+                if ( numComp < numWellEq ) {
                     assert(!active()[ Gas ]);
                     invDuneD_[0][0][Gas][Gas] = 1.0;
-                } */
+                }
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
@@ -656,11 +659,6 @@ namespace Opm
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
             resWell_[0][componentIdx] += resWell_loc.value();
-
-            // add trivial equation for polymer
-            /* if (has_polymer) {
-                invDuneD_[0][0][contiPolymerEqIdx][polymerConcentrationIdx] = 1.0;
-            } */
         }
 
         // do the local inversion of D.
