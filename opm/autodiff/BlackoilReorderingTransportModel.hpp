@@ -460,7 +460,7 @@ namespace Opm {
 
 
         template <typename Scalar>
-        void computeCellState(const int cell, const State& state, CellState<Scalar>& cstate)
+        void computeCellState(const int cell, const State& state, CellState<Scalar>& cstate) const
         {
             assert(numPhases() == 3); // I apologize for this to my future self, that will have to fix it.
 
