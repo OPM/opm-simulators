@@ -499,8 +499,8 @@ namespace Opm {
 
             // Compute phase pressures.
             cstate.p[Oil] = constant(poval);
-            cstate.p[Water] = cstate.p[Oil] - cstate.pc[Water]; // pcow = po - pw
-            cstate.p[Gas] =   cstate.p[Oil] + cstate.pc[Gas];   // pcog = pg - po (!)
+            cstate.p[Water] = cstate.p[Oil] + cstate.pc[Water]; // pcow = pw - po (!) [different from old convention]
+            cstate.p[Gas] =   cstate.p[Oil] + cstate.pc[Gas];   // pcog = pg - po
 
             // Compute PVT properties.
             cstate.temperature = constant(0.0); // Temperature is not used.
