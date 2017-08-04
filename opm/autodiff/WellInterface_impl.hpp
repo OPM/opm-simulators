@@ -69,10 +69,10 @@ namespace Opm
             number_of_perforations_ = perf_index_end - perf_index_begin;
             first_perf_ = perf_index_begin;
 
-            well_cell_.resize(number_of_perforations_);
+            well_cells_.resize(number_of_perforations_);
             std::copy(wells->well_cells + perf_index_begin,
                       wells->well_cells + perf_index_end,
-                      well_cell_.begin() );
+                      well_cells_.begin() );
 
             well_index_.resize(number_of_perforations_);
             std::copy(wells->WI + perf_index_begin,
@@ -125,35 +125,11 @@ namespace Opm
 
 
     template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    indexOfWell() const
-    {
-        return index_of_well_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
     WellType
     WellInterface<TypeTag>::
     wellType() const
     {
         return well_type_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    const std::vector<double>&
-    WellInterface<TypeTag>::
-    compFrac() const
-    {
-        return comp_frac_;
     }
 
 
@@ -173,54 +149,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    const std::vector<int>&
-    WellInterface<TypeTag>::
-    saturationTableNumber() const
-    {
-        return saturation_table_number_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    numberOfPerforations() const
-    {
-        return number_of_perforations_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    const std::vector<double>&
-    WellInterface<TypeTag>::
-    wellIndex() const
-    {
-        return well_index_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    const std::vector<int>&
-    WellInterface<TypeTag>::
-    wellCells() const
-    {
-        return well_cell_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
     const std::vector<bool>&
     WellInterface<TypeTag>::
     active() const
@@ -228,18 +156,6 @@ namespace Opm
         assert(active_);
 
         return *active_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    allowCrossFlow() const
-    {
-        return allow_cf_;
     }
 
 
@@ -325,22 +241,10 @@ namespace Opm
     template<typename TypeTag>
     int
     WellInterface<TypeTag>::
-    numPhases() const
-    {
-        return number_of_phases_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
     numComponents() const
     {
         // TODO: how about two phase polymer
-        if (numPhases() == 2) {
+        if (number_of_phases_ == 2) {
           return 2;
         }
 
@@ -479,7 +383,7 @@ namespace Opm
                         const WellState& well_state) const
     {
         const Opm::PhaseUsage& pu = *phase_usage_;
-        const int np = numPhases();
+        const int np = number_of_phases_;
 
         if (econ_production_limits.onMinOilRate()) {
             assert(active()[Oil]);
@@ -534,7 +438,7 @@ namespace Opm
         bool last_connection = false;
         double violation_extent = -1.0;
 
-        const int np = numPhases();
+        const int np = number_of_phases_;
         const Opm::PhaseUsage& pu = *phase_usage_;
         const int well_number = index_of_well_;
 
@@ -733,7 +637,7 @@ namespace Opm
 
             assert((worst_offending_connection >= 0) && (worst_offending_connection < number_of_perforations_));
 
-            const int cell_worst_offending_connection = well_cell_[worst_offending_connection];
+            const int cell_worst_offending_connection = well_cells_[worst_offending_connection];
             list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
             const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
                                   + well_name + std::string(" will be closed due to economic limit");
@@ -761,7 +665,7 @@ namespace Opm
         auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
         auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
 
-        const int nperf = numberOfPerforations();
+        const int nperf = number_of_perforations_;
 
         perf_rep_radius_.clear();
         perf_length_.clear();

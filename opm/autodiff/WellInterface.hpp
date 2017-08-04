@@ -153,9 +153,6 @@ namespace Opm
         virtual void updateWellControl(WellState& xw) const = 0;
 
     protected:
-        // Indices of the grid cells/blocks that perforations are completed within.
-        const std::vector<int>& wellCells() const;
-
         const std::vector<bool>& active() const;
 
         const PhaseUsage& phaseUsage() const;
@@ -166,23 +163,10 @@ namespace Opm
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
-        // number of phases
-        int numPhases() const;
-
         // TODO: it is dumplicated with StandardWellsDense
         int numComponents() const;
 
-        // Number of the perforations
-        int numberOfPerforations() const;
-
-        // simply returning allow_cf_
-        // TODO: to check whether needed, it causes name problem with the crossFlowAllowed
-        bool allowCrossFlow() const;
-
         virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const = 0;
-
-        // TODO: for this kind of function, maybe can make a function with parameter perf
-        const std::vector<int>& saturationTableNumber() const;
 
         double wsolvent() const;
 
@@ -244,7 +228,7 @@ namespace Opm
         double well_efficiency_factor_;
 
         // cell index for each well perforation
-        std::vector<int> well_cell_;
+        std::vector<int> well_cells_;
 
         // saturation table nubmer for each well perforation
         std::vector<int> saturation_table_number_;
@@ -268,15 +252,8 @@ namespace Opm
 
         bool wellHasTHPConstraints() const;
 
-        // The index of the well in Wells struct
-        // It is used to locate the inforation in Wells and also WellState for now.
-        int indexOfWell() const;
-
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
-
-        // Well productivity index for each perforation.
-        const std::vector<double>& wellIndex() const;
 
         double mostStrictBhpFromBhpLimits() const;
 

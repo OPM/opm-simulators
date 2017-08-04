@@ -59,6 +59,10 @@ namespace Opm
 
         using typename Base::Scalar;
         using Base::numEq;
+
+        using Base::has_solvent;
+        using Base::has_polymer;
+
         // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
         // it will cause problem here without processing the dummy phase.
         static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq-1 : numEq; // number of wellEq is only numEq - 1 for polymer
@@ -93,15 +97,15 @@ namespace Opm
 
         StandardWell(const Well* well, const int time_step, const Wells* wells);
 
+        virtual void init(const PhaseUsage* phase_usage_arg,
+                          const std::vector<bool>* active_arg,
+                          const VFPProperties* vfp_properties_arg,
+                          const std::vector<double>& depth_arg,
+                          const double gravity_arg,
+                          const int num_cells);
+
+
         virtual void setWellVariables(const WellState& well_state);
-
-        EvalWell wellVolumeFractionScaled(const int phase) const;
-
-        EvalWell wellVolumeFraction(const int phase) const;
-
-        EvalWell wellSurfaceVolumeFraction(const int phase) const;
-
-        EvalWell extendEval(const Eval& in) const;
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
@@ -116,23 +120,12 @@ namespace Opm
 
         virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const;
 
-        void getMobility(const Simulator& ebosSimulator,
-                         const int perf,
-                         std::vector<EvalWell>& mob) const;
-
-        // TODO: the parameters need to be optimized/adjusted
-        virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<bool>* active_arg,
-                          const VFPProperties* vfp_properties_arg,
-                          const std::vector<double>& depth_arg,
-                          const double gravity_arg,
-                          const int num_cells);
-
-        // Update the well_state based on solution
+        /// updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              const BlackoilModelParameters& param,
                              WellState& well_state) const;
 
+        /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
         virtual void updateWellStateWithTarget(const int current,
                                                WellState& xw) const;
@@ -141,10 +134,12 @@ namespace Opm
         // will need touch different types of well_state, we will see.
         virtual void updateWellControl(WellState& xw) const;
 
+        /// check whether the well equations get converged for this well
         virtual bool getWellConvergence(Simulator& ebosSimulator,
                                         const std::vector<double>& B_avg,
                                         const ModelParameters& param) const;
 
+        /// computing the accumulation term for later use in well mass equations
         virtual void computeAccumWell();
 
         virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
@@ -155,47 +150,30 @@ namespace Opm
         // r = r - C D^-1 Rw
         virtual void apply(BVector& r) const;
 
-        // using the solution x to recover the solution xw for wells and applying
-        // xw to update Well State
+        /// using the solution x to recover the solution xw for wells and applying
+        /// xw to update Well State
         virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
                                             WellState& well_state) const;
 
+        /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) const;
-
-        using Base::has_solvent;
-        using Base::has_polymer;
-
-        using Base::name;
-        using Base::wellType;
-        using Base::wellControls;
-
     protected:
 
         using Base::phaseUsage;
         using Base::active;
-        using Base::numberOfPerforations;
-        using Base::wellCells;
-        using Base::saturationTableNumber;
-        using Base::indexOfWell;
-        using Base::compFrac;
         using Base::flowToEbosPvIdx;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
         using Base::numComponents;
-        using Base::numPhases;
-        using Base::wellIndex;
         using Base::wsolvent;
         using Base::wpolymer;
-
-        // TODO: maybe this function can go to some helper file.
-        void localInvert(DiagMatWell& istlA) const;
-
-        // xw = inv(D)*(rw - C*x)
-        void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
+        using Base::wellHasTHPConstraints;
+        using Base::mostStrictBhpFromBhpLimits;
 
         // TODO: decide wether to use member function to refer to private member later
+        using Base::name_;
         using Base::vfp_properties_;
         using Base::gravity_;
         using Base::well_efficiency_factor_;
@@ -204,6 +182,15 @@ namespace Opm
         using Base::ref_depth_;
         using Base::perf_depth_;
         using Base::allow_cf_;
+        using Base::well_cells_;
+        using Base::number_of_perforations_;
+        using Base::number_of_phases_;
+        using Base::saturation_table_number_;
+        using Base::comp_frac_;
+        using Base::well_index_;
+        using Base::index_of_well_;
+        using Base::well_controls_;
+        using Base::well_type_;
 
         using Base::perf_rep_radius_;
         using Base::perf_length_;
@@ -214,7 +201,7 @@ namespace Opm
         // pressure drop between different perforations
         std::vector<double> perf_pressure_diffs_;
 
-        // TODO: probably, they should be moved to the WellInterface, when
+        // TODO: probably, they should be moved to the WellInterface, then
         // we decide the template paramters.
         // two off-diagonal matrices
         OffDiagMatWell duneB_;
@@ -239,6 +226,20 @@ namespace Opm
 
         // TODO: it is also possible to be moved to the base class.
         EvalWell getQs(const int comp_idx) const;
+
+        EvalWell wellVolumeFractionScaled(const int phase) const;
+
+        EvalWell wellVolumeFraction(const int phase) const;
+
+        EvalWell wellSurfaceVolumeFraction(const int phase) const;
+
+        EvalWell extendEval(const Eval& in) const;
+
+        // TODO: maybe this function can go to some helper file.
+        void localInvert(DiagMatWell& istlA) const;
+
+        // xw = inv(D)*(rw - C*x)
+        void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
@@ -269,9 +270,6 @@ namespace Opm
                                      const ModelParameters& param,
                                      WellState& well_state);
 
-        using Base::wellHasTHPConstraints;
-        using Base::mostStrictBhpFromBhpLimits;
-
         // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
         // calculation of the derivatives
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
@@ -281,6 +279,11 @@ namespace Opm
         std::vector<double> computeWellPotentialWithTHP(const Simulator& ebosSimulator,
                                                         const double initial_bhp, // bhp from BHP constraints
                                                         const std::vector<double>& initial_potential) const;
+
+        // get the mobility for specific perforation
+        void getMobility(const Simulator& ebosSimulator,
+                         const int perf,
+                         std::vector<EvalWell>& mob) const;
     };
 
 }
