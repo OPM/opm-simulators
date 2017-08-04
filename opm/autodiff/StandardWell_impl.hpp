@@ -167,7 +167,7 @@ namespace Opm
             // pick the density in the top layer
             const double rho = perf_densities_[0];
             // TODO: not sure whether it is always correct
-            const double well_ref_depth = perfDepth()[0];
+            const double well_ref_depth = perf_depth_[0];
             const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
             bhp -= dp;
             return bhp;
@@ -188,7 +188,7 @@ namespace Opm
         EvalWell qs = 0.0;
 
         const WellControls* wc = wellControls();
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const double target_rate = well_controls_get_current_target(wc);
 
         assert(comp_idx < numComponents());
@@ -715,7 +715,7 @@ namespace Opm
                 const int perf,
                 std::vector<EvalWell>& mob) const
     {
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const int cell_idx = wellCells()[perf];
         assert (int(mob.size()) == numComponents());
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
@@ -813,7 +813,7 @@ namespace Opm
                     WellState& well_state) const
     {
         // TODO: to check whether all the things from PR 1220 were incoporated.
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const int nw = well_state.bhp().size();
         const double dBHPLimit = param.dbhp_max_rel_;
         const double dFLimit = param.dwell_fraction_max_;
@@ -989,7 +989,7 @@ namespace Opm
                     const WellType& well_type = wellType();
                     // pick the density in the top layer
                     const double rho = perf_densities_[0];
-                    const double well_ref_depth = perfDepth()[0];
+                    const double well_ref_depth = perf_depth_[0];
 
                     if (well_type == INJECTOR) {
                         const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
@@ -1082,7 +1082,7 @@ namespace Opm
 
                     const WellType& well_type = wellType();
                     const double rho = perf_densities_[0];
-                    const double well_ref_depth = perfDepth()[0];
+                    const double well_ref_depth = perf_depth_[0];
                     if (well_type == INJECTOR) {
                         const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
 
@@ -1143,7 +1143,7 @@ namespace Opm
                               WellState& xw) const
     {
         // number of phases
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const int well_index = indexOfWell();
         const WellControls* wc = wellControls();
         // Updating well state and primary variables.
@@ -1184,7 +1184,7 @@ namespace Opm
 
             // pick the density in the top layer
             const double rho = perf_densities_[0];
-            const double well_ref_depth = perfDepth()[0];
+            const double well_ref_depth = perf_depth_[0];
 
             // TODO: make the following a function and we call it so many times.
             if (wellType() == INJECTOR) {
@@ -1362,7 +1362,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWellControl(WellState& xw) const
     {
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const int nw = xw.bhp().size();
         const int w = indexOfWell();
 
@@ -1566,7 +1566,7 @@ namespace Opm
                                const std::vector<double>& surf_dens_perf)
     {
         // Verify that we have consistent input.
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const int nperf = numberOfPerforations();
         const int num_comp = numComponents();
         const PhaseUsage* phase_usage = phase_usage_;
@@ -1704,7 +1704,7 @@ namespace Opm
         typedef double Scalar;
         typedef std::vector< Scalar > Vector;
 
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const int numComp = numComponents();
 
         // the following implementation assume that the polymer is always after the w-o-g phases
@@ -1787,7 +1787,7 @@ namespace Opm
         // Compute densities
         const int nperf = numberOfPerforations();
         const int numComponent = numComponents();
-        const int np = numberOfPhases();
+        const int np = numPhases();
         std::vector<double> perfRates(b_perf.size(),0.0);
 
         for (int perf = 0; perf < nperf; ++perf) {
@@ -1942,7 +1942,7 @@ namespace Opm
                             const EvalWell& bhp,
                             std::vector<double>& well_flux) const
     {
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const int numComp = numComponents();
         well_flux.resize(np, 0.0);
 
@@ -1976,7 +1976,7 @@ namespace Opm
     {
         // TODO: pay attention to the situation that finally the potential is calculated based on the bhp control
         // TODO: should we consider the bhp constraints during the iterative process?
-        const int np = numberOfPhases();
+        const int np = numPhases();
 
         assert( np == int(initial_potential.size()) );
 
@@ -2099,7 +2099,7 @@ namespace Opm
                           const WellState& well_state,
                           std::vector<double>& well_potentials) const
     {
-        const int np = numberOfPhases();
+        const int np = numPhases();
 
         well_potentials.resize(np, 0.0);
 

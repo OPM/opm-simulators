@@ -96,12 +96,6 @@ namespace Opm
         /// Well controls
         WellControls* wellControls() const;
 
-        /// Number of the perforations
-        int numberOfPerforations() const;
-
-        /// Depth of perforations
-        const std::vector<double>& perfDepth() const;
-
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
                           const VFPProperties* vfp_properties_arg,
@@ -172,13 +166,14 @@ namespace Opm
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
-        int numPhases() const;
-
         // number of phases
-        int numberOfPhases() const;
+        int numPhases() const;
 
         // TODO: it is dumplicated with StandardWellsDense
         int numComponents() const;
+
+        // Number of the perforations
+        int numberOfPerforations() const;
 
         // simply returning allow_cf_
         // TODO: to check whether needed, it causes name problem with the crossFlowAllowed
@@ -280,7 +275,7 @@ namespace Opm
         // Component fractions for each phase for the well
         const std::vector<double>& compFrac() const;
 
-        /// Well productivity index for each perforation.
+        // Well productivity index for each perforation.
         const std::vector<double>& wellIndex() const;
 
         double mostStrictBhpFromBhpLimits() const;

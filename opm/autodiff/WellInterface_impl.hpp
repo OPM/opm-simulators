@@ -149,17 +149,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    numberOfPhases() const
-    {
-        return number_of_phases_;
-    }
-
-
-
-
-    template<typename TypeTag>
     const std::vector<double>&
     WellInterface<TypeTag>::
     compFrac() const
@@ -213,18 +202,6 @@ namespace Opm
     wellIndex() const
     {
         return well_index_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    const std::vector<double>&
-    WellInterface<TypeTag>::
-    perfDepth() const
-    {
-        return perf_depth_;
     }
 
 
@@ -502,7 +479,7 @@ namespace Opm
                         const WellState& well_state) const
     {
         const Opm::PhaseUsage& pu = *phase_usage_;
-        const int np = numberOfPhases();
+        const int np = numPhases();
 
         if (econ_production_limits.onMinOilRate()) {
             assert(active()[Oil]);
@@ -557,7 +534,7 @@ namespace Opm
         bool last_connection = false;
         double violation_extent = -1.0;
 
-        const int np = numberOfPhases();
+        const int np = numPhases();
         const Opm::PhaseUsage& pu = *phase_usage_;
         const int well_number = index_of_well_;
 

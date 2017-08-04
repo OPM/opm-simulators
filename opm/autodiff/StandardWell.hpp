@@ -167,18 +167,19 @@ namespace Opm
         using Base::has_solvent;
         using Base::has_polymer;
 
+        using Base::name;
+        using Base::wellType;
+        using Base::wellControls;
+
+    protected:
+
         using Base::phaseUsage;
         using Base::active;
         using Base::numberOfPerforations;
         using Base::wellCells;
         using Base::saturationTableNumber;
         using Base::indexOfWell;
-        using Base::name;
-        using Base::wellType;
-        using Base::wellControls;
         using Base::compFrac;
-        using Base::numberOfPhases;
-        using Base::perfDepth;
         using Base::flowToEbosPvIdx;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
@@ -187,8 +188,6 @@ namespace Opm
         using Base::wellIndex;
         using Base::wsolvent;
         using Base::wpolymer;
-
-    protected:
 
         // TODO: maybe this function can go to some helper file.
         void localInvert(DiagMatWell& istlA) const;
