@@ -28,6 +28,7 @@ namespace Opm
     : Base(well, time_step, wells)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
+    , well_solutions_(numWellEq, 0.0)
     , well_variables_(numWellEq) // the number of the primary variables
     , F0_(numWellEq)
     {
@@ -107,12 +108,10 @@ namespace Opm
         // TODO: in theory, we should use numWellEq here.
         // for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
         for (int eqIdx = 0; eqIdx < numComponents(); ++eqIdx) {
-            const unsigned int idx = nw * eqIdx + index_of_well_;
-            assert( eqIdx < well_variables_.size() );
-            assert( idx < well_state.wellSolutions().size() );
+            assert( eqIdx < well_solutions_.size() );
 
             well_variables_[eqIdx] = 0.0;
-            well_variables_[eqIdx].setValue(well_state.wellSolutions()[idx]);
+            well_variables_[eqIdx].setValue(well_solutions_[eqIdx]);
             well_variables_[eqIdx].setDerivative(numEq + eqIdx, 1.0);
         }
     }
@@ -815,48 +814,44 @@ namespace Opm
         const double dBHPLimit = param.dbhp_max_rel_;
         const double dFLimit = param.dwell_fraction_max_;
 
-        std::vector<double> xvar_well_old(numWellEq);
-        // TODO: better way to handle this?
-        for (int i = 0; i < numWellEq; ++i) {
-            xvar_well_old[i] = well_state.wellSolutions()[i * nw + index_of_well_];
-        }
+        const std::vector<double> xvar_well_old = well_solutions_;
 
         // update the second and third well variable (The flux fractions)
         std::vector<double> F(np,0.0);
         if (active()[ Water ]) {
             const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
             const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac]),dFLimit);
-            well_state.wellSolutions()[WFrac * nw + index_of_well_] = xvar_well_old[WFrac] - dx2_limited;
+            well_solutions_[WFrac] = xvar_well_old[WFrac] - dx2_limited;
         }
 
         if (active()[ Gas ]) {
             const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
             const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac]),dFLimit);
-            well_state.wellSolutions()[GFrac*nw + index_of_well_] = xvar_well_old[GFrac] - dx3_limited;
+            well_solutions_[GFrac] = xvar_well_old[GFrac] - dx3_limited;
         }
 
         if (has_solvent) {
             const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
             const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]),dFLimit);
-            well_state.wellSolutions()[SFrac*nw + index_of_well_] = xvar_well_old[SFrac] - dx4_limited;
+            well_solutions_[SFrac] = xvar_well_old[SFrac] - dx4_limited;
         }
 
         assert(active()[ Oil ]);
         F[Oil] = 1.0;
 
         if (active()[ Water ]) {
-            F[Water] = well_state.wellSolutions()[WFrac*nw + index_of_well_];
+            F[Water] = well_solutions_[WFrac];
             F[Oil] -= F[Water];
         }
 
         if (active()[ Gas ]) {
-            F[Gas] = well_state.wellSolutions()[GFrac*nw + index_of_well_];
+            F[Gas] = well_solutions_[GFrac];
             F[Oil] -= F[Gas];
         }
 
         double F_solvent = 0.0;
         if (has_solvent) {
-            F_solvent = well_state.wellSolutions()[SFrac*nw + index_of_well_];
+            F_solvent = well_solutions_[SFrac];
             F[Oil] -= F_solvent;
         }
 
@@ -900,13 +895,13 @@ namespace Opm
         }
 
         if (active()[ Water ]) {
-            well_state.wellSolutions()[WFrac*nw + index_of_well_] = F[Water];
+            well_solutions_[WFrac] = F[Water];
         }
         if (active()[ Gas ]) {
-            well_state.wellSolutions()[GFrac*nw + index_of_well_] = F[Gas];
+            well_solutions_[GFrac] = F[Gas];
         }
         if(has_solvent) {
-            well_state.wellSolutions()[SFrac*nw + index_of_well_] = F_solvent;
+            well_solutions_[SFrac] = F_solvent;
         }
 
         // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
@@ -943,18 +938,18 @@ namespace Opm
             case THP: // The BHP and THP both uses the total rate as first well variable.
             case BHP:
             {
-                well_state.wellSolutions()[nw*XvarWell + index_of_well_] = xvar_well_old[XvarWell] - dwells[0][XvarWell];
+                well_solutions_[XvarWell] = xvar_well_old[XvarWell] - dwells[0][XvarWell];
 
                 switch (well_type_) {
                 case INJECTOR:
                     for (int p = 0; p < np; ++p) {
                         const double comp_frac = comp_frac_[p];
-                        well_state.wellRates()[index_of_well_ * np + p] = comp_frac * well_state.wellSolutions()[nw*XvarWell + index_of_well_];
+                        well_state.wellRates()[index_of_well_ * np + p] = comp_frac * well_solutions_[XvarWell];
                     }
                     break;
                 case PRODUCER:
                     for (int p = 0; p < np; ++p) {
-                        well_state.wellRates()[index_of_well_ * np + p] = well_state.wellSolutions()[nw*XvarWell + index_of_well_] * F[p];
+                        well_state.wellRates()[index_of_well_ * np + p] = well_solutions_[XvarWell] * F[p];
                     }
                     break;
                 }
@@ -1013,8 +1008,8 @@ namespace Opm
             {
                 const int sign1 = dwells[0][XvarWell] > 0 ? 1: -1;
                 const double dx1_limited = sign1 * std::min(std::abs(dwells[0][XvarWell]),std::abs(xvar_well_old[XvarWell])*dBHPLimit);
-                well_state.wellSolutions()[nw*XvarWell + index_of_well_] = std::max(xvar_well_old[XvarWell] - dx1_limited,1e5);
-                well_state.bhp()[index_of_well_] = well_state.wellSolutions()[nw*XvarWell + index_of_well_];
+                well_solutions_[XvarWell] = std::max(xvar_well_old[XvarWell] - dx1_limited,1e5);
+                well_state.bhp()[index_of_well_] = well_solutions_[XvarWell];
 
                 if (well_controls_iget_type(wc, current) == SURFACE_RATE) {
                     if (well_type_ == PRODUCER) {
@@ -1279,21 +1274,21 @@ namespace Opm
         switch (well_controls_iget_type(wc, current)) {
         case THP:
         case BHP: {
-            xw.wellSolutions()[nw*XvarWell + well_index] = 0.0;
+            well_solutions_[XvarWell] = 0.0;
             if (well_type_ == INJECTOR) {
                 for (int p = 0; p < np; ++p) {
-                    xw.wellSolutions()[nw*XvarWell + well_index] += xw.wellRates()[np*well_index + p] * comp_frac_[p];
+                    well_solutions_[XvarWell] += xw.wellRates()[np*well_index + p] * comp_frac_[p];
                 }
             } else {
                 for (int p = 0; p < np; ++p) {
-                    xw.wellSolutions()[nw*XvarWell + well_index] += g[p] * xw.wellRates()[np*well_index + p];
+                    well_solutions_[XvarWell] += g[p] * xw.wellRates()[np*well_index + p];
                 }
             }
             break;
         }
         case RESERVOIR_RATE: // Intentional fall-through
         case SURFACE_RATE:
-            xw.wellSolutions()[nw*XvarWell + well_index] = xw.bhp()[well_index];
+            well_solutions_[XvarWell] = xw.bhp()[well_index];
             break;
         } // end of switch
 
@@ -1303,33 +1298,33 @@ namespace Opm
         }
         if(std::abs(tot_well_rate) > 0) {
             if (active()[ Water ]) {
-                xw.wellSolutions()[WFrac*nw + well_index] = g[Water] * xw.wellRates()[np*well_index + Water] / tot_well_rate;
+                well_solutions_[WFrac] = g[Water] * xw.wellRates()[np*well_index + Water] / tot_well_rate;
             }
             if (active()[ Gas ]) {
-                xw.wellSolutions()[GFrac*nw + well_index] = g[Gas] * (xw.wellRates()[np*well_index + Gas] - xw.solventWellRate(well_index)) / tot_well_rate ;
+                well_solutions_[GFrac] = g[Gas] * (xw.wellRates()[np*well_index + Gas] - xw.solventWellRate(well_index)) / tot_well_rate ;
             }
             if (has_solvent) {
-                xw.wellSolutions()[SFrac*nw + well_index] = g[Gas] * xw.solventWellRate(well_index) / tot_well_rate ;
+                well_solutions_[SFrac] = g[Gas] * xw.solventWellRate(well_index) / tot_well_rate ;
             }
         } else { // tot_well_rate == 0
             if (well_type_ == INJECTOR) {
                 // only single phase injection handled
                 if (active()[Water]) {
                     if (distr[Water] > 0.0) {
-                        xw.wellSolutions()[WFrac * nw + well_index] = 1.0;
+                        well_solutions_[WFrac] = 1.0;
                     } else {
-                        xw.wellSolutions()[WFrac * nw + well_index] = 0.0;
+                        well_solutions_[WFrac] = 0.0;
                     }
                 }
 
                 if (active()[Gas]) {
                     if (distr[Gas] > 0.0) {
-                        xw.wellSolutions()[GFrac * nw + well_index] = 1.0 - wsolvent();
+                        well_solutions_[GFrac] = 1.0 - wsolvent();
                         if (has_solvent) {
-                            xw.wellSolutions()[SFrac * nw + well_index] = wsolvent();
+                            well_solutions_[SFrac] = wsolvent();
                         }
                     } else {
-                        xw.wellSolutions()[GFrac * nw + well_index] = 0.0;
+                        well_solutions_[GFrac] = 0.0;
                     }
                 }
 
@@ -1339,10 +1334,10 @@ namespace Opm
             } else if (well_type_ == PRODUCER) { // producers
                 // TODO: the following are not addressed for the solvent case yet
                 if (active()[Water]) {
-                    xw.wellSolutions()[WFrac * nw + well_index] = 1.0 / np;
+                    well_solutions_[WFrac] = 1.0 / np;
                 }
                 if (active()[Gas]) {
-                    xw.wellSolutions()[GFrac * nw + well_index] = 1.0 / np;
+                    well_solutions_[GFrac] = 1.0 / np;
                 }
             } else {
                 OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");

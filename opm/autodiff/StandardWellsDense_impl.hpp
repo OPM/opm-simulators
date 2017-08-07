@@ -506,6 +506,7 @@ namespace Opm {
         if (!converged) {
             well_state = well_state0;
             // also recover the old well controls
+            // TODO: well_solutions_ for each well not recovered here.
             for (int w = 0; w < nw; ++w) {
                 WellControls* wc = well_container_[w]->wellControls();
                 well_controls_set_current(wc, well_state.currentControls()[w]);

@@ -215,6 +215,8 @@ namespace Opm
         // residuals of the well equations
         BVectorWell resWell_;
 
+        mutable std::vector<double> well_solutions_;
+
         std::vector<EvalWell> well_variables_;
         std::vector<double> F0_;
 
