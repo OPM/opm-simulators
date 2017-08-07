@@ -43,7 +43,6 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     init(const PhaseUsage phase_usage_arg,
          const std::vector<bool>& active_arg,
-         const VFPProperties*  vfp_properties_arg,
          const double gravity_arg,
          const std::vector<double>& depth_arg,
          const std::vector<double>& pv_arg,
@@ -60,7 +59,6 @@ namespace Opm {
 
         phase_usage_ = phase_usage_arg;
         active_ = active_arg;
-        vfp_properties_ = vfp_properties_arg;
         gravity_ = gravity_arg;
         cell_depths_ = extractPerfData(depth_arg);
         pv_ = pv_arg;
@@ -129,6 +127,19 @@ namespace Opm {
         }
 
     }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    setVFPProperties(const VFPProperties*  vfp_properties_arg)
+    {
+        vfp_properties_ = vfp_properties_arg;
+    }
+
 
 
 

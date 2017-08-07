@@ -118,7 +118,6 @@ enum WellVariablePositions {
 
             void init(const PhaseUsage phase_usage_arg,
                       const std::vector<bool>& active_arg,
-                      const VFPProperties*  vfp_properties_arg,
                       const double gravity_arg,
                       const std::vector<double>& depth_arg,
                       const std::vector<double>& pv_arg,
@@ -126,6 +125,7 @@ enum WellVariablePositions {
                       long int global_nc,
                       const Grid& grid);
 
+            void setVFPProperties(const VFPProperties*  vfp_properties_arg);
 
             /// The number of components in the model.
             int numComponents() const

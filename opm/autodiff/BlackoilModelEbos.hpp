@@ -181,6 +181,7 @@ namespace Opm {
             wellModel().setWellsActive( wellsActive );
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
+            wellModel().setVFPProperties(&vfp_properties_);
             if (!istlSolver_)
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
