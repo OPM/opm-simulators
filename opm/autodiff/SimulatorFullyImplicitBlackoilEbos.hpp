@@ -435,7 +435,6 @@ protected:
 
         well_model.init(phaseUsage,
                         activePhases,
-                        /*vfpProperties=*/nullptr,
                         gravity,
                         legacyDepth_,
                         legacyPoreVolume_,
