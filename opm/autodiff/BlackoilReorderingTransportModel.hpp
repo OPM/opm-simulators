@@ -753,14 +753,15 @@ namespace Opm {
                 // values from cstate_[other].
                 Eval dh[3];
                 Eval dh_sat[3];
+                const Eval grad_oil_press = cstate_[other].p[Oil] - st.p[Oil];
                 for (int phase : { Water, Oil, Gas }) {
                     const Eval gradp = cstate_[other].p[phase] - st.p[phase];
                     const Eval rhoavg = 0.5 * (st.rho[phase] + cstate_[other].rho[phase]);
                     dh[phase] = gradp - rhoavg * gdz;
-                    dh_sat[phase] = rhoavg * gdz; // TODO: not equivalent to formulation in BlackoilTransportModel for cap. press.
                     if (Base::use_threshold_pressure_) {
-                        applyThresholdPressure(conn.index, dh[phase]); // TODO: Should also dh_sat be treated here? Also: dh is unused, this has no effect!
+                        applyThresholdPressure(conn.index, dh[phase]);
                     }
+                    dh_sat[phase] = grad_oil_press - dh[phase];
                 }
                 const double tran = trans_all_[conn.index]; // TODO: include tr_mult effect.
                 const auto& m1 = st.lambda;
