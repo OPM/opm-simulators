@@ -258,8 +258,6 @@ namespace Opm {
 
             PhaseUsage phase_usage_;
             std::vector<bool>  active_;
-            const VFPProperties* vfp_properties_;
-            double gravity_;
             const RateConverterType& rate_converter_;
 
             std::vector<double> pv_;

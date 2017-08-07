@@ -99,7 +99,6 @@ namespace Opm
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
-                          const VFPProperties* vfp_properties_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -161,6 +160,7 @@ namespace Opm
                                            std::vector<double>& well_potentials) const;
     protected:
 
+        // protected functions from the Base class
         using Base::phaseUsage;
         using Base::active;
         using Base::flowToEbosPvIdx;
@@ -172,7 +172,7 @@ namespace Opm
         using Base::wellHasTHPConstraints;
         using Base::mostStrictBhpFromBhpLimits;
 
-        // TODO: decide wether to use member function to refer to private member later
+        // protected member variables from the Base class
         using Base::name_;
         using Base::vfp_properties_;
         using Base::gravity_;
@@ -201,8 +201,6 @@ namespace Opm
         // pressure drop between different perforations
         std::vector<double> perf_pressure_diffs_;
 
-        // TODO: probably, they should be moved to the WellInterface, then
-        // we decide the template paramters.
         // two off-diagonal matrices
         OffDiagMatWell duneB_;
         OffDiagMatWell duneC_;
@@ -214,6 +212,7 @@ namespace Opm
         mutable BVectorWell invDrw_;
         mutable BVector scaleAddRes_;
 
+        // residuals of the well equations
         BVectorWell resWell_;
 
         std::vector<EvalWell> well_variables_;
@@ -235,7 +234,7 @@ namespace Opm
 
         EvalWell extendEval(const Eval& in) const;
 
-        // TODO: maybe this function can go to some helper file.
+        // TODO: maybe this type of function can go to some helper file.
         void localInvert(DiagMatWell& istlA) const;
 
         // xw = inv(D)*(rw - C*x)
@@ -250,7 +249,7 @@ namespace Opm
                                                          std::vector<double>& rvmax_perf,
                                                          std::vector<double>& surf_dens_perf) const;
 
-        // TODO: not total sure whether it is a good idea to put here
+        // TODO: not total sure whether it is a good idea to put this function here
         // the major reason to put here is to avoid the usage of Wells struct
         void computeConnectionDensities(const std::vector<double>& perfComponentRates,
                                         const std::vector<double>& b_perf,
@@ -270,7 +269,7 @@ namespace Opm
                                      const ModelParameters& param,
                                      WellState& well_state);
 
-        // TODO: maybe we should provide a light version of computeWellFlux, which does not include the
+        // TODO: maybe we should provide a light version of computePerfRate, which does not include the
         // calculation of the derivatives
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
                                      const EvalWell& bhp,

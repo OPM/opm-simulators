@@ -45,14 +45,12 @@ namespace Opm
     StandardWell<TypeTag>::
     init(const PhaseUsage* phase_usage_arg,
          const std::vector<bool>* active_arg,
-         const VFPProperties* vfp_properties_arg,
          const std::vector<double>& depth_arg,
          const double gravity_arg,
          const int num_cells)
     {
         Base::init(phase_usage_arg, active_arg,
-                   vfp_properties_arg, depth_arg,
-                   gravity_arg, num_cells);
+                   depth_arg, gravity_arg, num_cells);
 
         perf_depth_.resize(number_of_perforations_, 0.);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
@@ -166,8 +164,7 @@ namespace Opm
 
             // pick the density in the top layer
             const double rho = perf_densities_[0];
-            // TODO: not sure whether it is always correct
-            const double well_ref_depth = perf_depth_[0];
+            const double well_ref_depth = ref_depth_;
             const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
             bhp -= dp;
             return bhp;
@@ -989,7 +986,7 @@ namespace Opm
                     const WellType& well_type = well_type_;
                     // pick the density in the top layer
                     const double rho = perf_densities_[0];
-                    const double well_ref_depth = perf_depth_[0];
+                    const double well_ref_depth = ref_depth_;
 
                     if (well_type == INJECTOR) {
                         const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
@@ -1082,7 +1079,7 @@ namespace Opm
 
                     const WellType& well_type = well_type_;
                     const double rho = perf_densities_[0];
-                    const double well_ref_depth = perf_depth_[0];
+                    const double well_ref_depth = ref_depth_;
                     if (well_type == INJECTOR) {
                         const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
 
@@ -1184,7 +1181,7 @@ namespace Opm
 
             // pick the density in the top layer
             const double rho = perf_densities_[0];
-            const double well_ref_depth = perf_depth_[0];
+            const double well_ref_depth = ref_depth_;
 
             // TODO: make the following a function and we call it so many times.
             if (well_type_ == INJECTOR) {
@@ -2027,7 +2024,7 @@ namespace Opm
                     // Calculating the BHP value based on THP
                     // TODO: check whether it is always correct to do calculation based on the depth of the first perforation.
                     const double rho = perf_densities_[0]; // TODO: this item is the one keeping the function from WellInterface
-                    const double well_ref_depth = perf_depth_[0];
+                    const double well_ref_depth = ref_depth_;
                     if (well_type_ == INJECTOR) {
                         const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
                         const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);

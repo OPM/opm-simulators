@@ -56,7 +56,6 @@ namespace Opm {
 
         phase_usage_ = phase_usage_arg;
         active_ = active_arg;
-        gravity_ = gravity_arg;
         pv_ = pv_arg;
 
         calculateEfficiencyFactors();
@@ -84,7 +83,7 @@ namespace Opm {
         // TODO: to see whether we can postpone of the intialization of the well containers to
         // optimize the usage of the following several member variables
         for (auto& well : well_container_) {
-            well->init(&phase_usage_, &active_, vfp_properties_, depth_arg, gravity_, nc);
+            well->init(&phase_usage_, &active_, depth_arg, gravity_arg, nc);
         }
     }
 
@@ -97,7 +96,9 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     setVFPProperties(const VFPProperties*  vfp_properties_arg)
     {
-        vfp_properties_ = vfp_properties_arg;
+        for (auto& well : well_container_) {
+            well->setVFPProperties(vfp_properties_arg);
+        }
     }
 
 
@@ -781,6 +782,8 @@ namespace Opm {
             WellControls* wc = well_container_[w]->wellControls();
             const int control = well_controls_get_current(wc);
             well_state.currentControls()[w] = control;
+            // TODO: for VFP control, the perf_densities are still zero here, investigate better
+            // way to handle it later.
             well_container_[w]->updateWellStateWithTarget(control, well_state);
 
             // The wells are not considered to be newly added
