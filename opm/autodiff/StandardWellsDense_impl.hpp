@@ -174,7 +174,7 @@ namespace Opm {
         updateWellControls(well_state);
         updateGroupControls(well_state);
         // Set the primary variables for the wells
-        setWellVariables(well_state);
+        setWellVariables();
 
         if (iterationIdx == 0) {
             computeWellConnectionPressures(ebosSimulator, well_state);
@@ -430,10 +430,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    setWellVariables(const WellState& xw)
+    setWellVariables()
     {
         for (auto& well : well_container_) {
-            well->setWellVariables(xw);
+            well->setWellVariables();
         }
     }
 
@@ -499,7 +499,7 @@ namespace Opm {
             {
                 updateWellControls(well_state);
                 updateGroupControls(well_state);
-                setWellVariables(well_state);
+                setWellVariables();
             }
         } while (it < 15);
 
@@ -758,7 +758,11 @@ namespace Opm {
             if (well_collection_->requireWellPotentials()) {
 
                 // calculate the well potentials
-                setWellVariables(well_state);
+                // TODO: for the purpose of group control, not tested yet
+                for (const auto& well : well_container_) {
+                    well->setWellSolutions(well_state);
+                }
+                setWellVariables();
                 computeWellConnectionPressures(ebos_simulator, well_state);
 
                 // To store well potentials for each well

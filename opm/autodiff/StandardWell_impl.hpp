@@ -101,9 +101,8 @@ namespace Opm
 
     template<typename TypeTag>
     void StandardWell<TypeTag>::
-    setWellVariables(const WellState& well_state)
+    setWellVariables()
     {
-        const int nw = well_state.bhp().size();
         // TODO: using numComp here is only to make the 2p + dummy phase work
         // TODO: in theory, we should use numWellEq here.
         // for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
@@ -1260,89 +1259,7 @@ namespace Opm
             break;
         } // end of switch
 
-
-        std::vector<double> g = {1.0, 1.0, 0.01};
-        if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
-            for (int phase = 0; phase < np; ++phase) {
-                g[phase] = distr[phase];
-            }
-        }
-
-        // the number of wells
-        const int nw = xw.bhp().size();
-
-        switch (well_controls_iget_type(wc, current)) {
-        case THP:
-        case BHP: {
-            well_solutions_[XvarWell] = 0.0;
-            if (well_type_ == INJECTOR) {
-                for (int p = 0; p < np; ++p) {
-                    well_solutions_[XvarWell] += xw.wellRates()[np*well_index + p] * comp_frac_[p];
-                }
-            } else {
-                for (int p = 0; p < np; ++p) {
-                    well_solutions_[XvarWell] += g[p] * xw.wellRates()[np*well_index + p];
-                }
-            }
-            break;
-        }
-        case RESERVOIR_RATE: // Intentional fall-through
-        case SURFACE_RATE:
-            well_solutions_[XvarWell] = xw.bhp()[well_index];
-            break;
-        } // end of switch
-
-        double tot_well_rate = 0.0;
-        for (int p = 0; p < np; ++p)  {
-            tot_well_rate += g[p] * xw.wellRates()[np*well_index + p];
-        }
-        if(std::abs(tot_well_rate) > 0) {
-            if (active()[ Water ]) {
-                well_solutions_[WFrac] = g[Water] * xw.wellRates()[np*well_index + Water] / tot_well_rate;
-            }
-            if (active()[ Gas ]) {
-                well_solutions_[GFrac] = g[Gas] * (xw.wellRates()[np*well_index + Gas] - xw.solventWellRate(well_index)) / tot_well_rate ;
-            }
-            if (has_solvent) {
-                well_solutions_[SFrac] = g[Gas] * xw.solventWellRate(well_index) / tot_well_rate ;
-            }
-        } else { // tot_well_rate == 0
-            if (well_type_ == INJECTOR) {
-                // only single phase injection handled
-                if (active()[Water]) {
-                    if (distr[Water] > 0.0) {
-                        well_solutions_[WFrac] = 1.0;
-                    } else {
-                        well_solutions_[WFrac] = 0.0;
-                    }
-                }
-
-                if (active()[Gas]) {
-                    if (distr[Gas] > 0.0) {
-                        well_solutions_[GFrac] = 1.0 - wsolvent();
-                        if (has_solvent) {
-                            well_solutions_[SFrac] = wsolvent();
-                        }
-                    } else {
-                        well_solutions_[GFrac] = 0.0;
-                    }
-                }
-
-                // TODO: it is possible to leave injector as a oil well,
-                // when F_w and F_g both equals to zero, not sure under what kind of circumstance
-                // this will happen.
-            } else if (well_type_ == PRODUCER) { // producers
-                // TODO: the following are not addressed for the solvent case yet
-                if (active()[Water]) {
-                    well_solutions_[WFrac] = 1.0 / np;
-                }
-                if (active()[Gas]) {
-                    well_solutions_[GFrac] = 1.0 / np;
-                }
-            } else {
-                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
-            }
-        }
+        setWellSolutions(xw);
     }
 
 
@@ -2124,6 +2041,104 @@ namespace Opm
             }
 
             well_potentials = computeWellPotentialWithTHP(ebosSimulator, bhp, well_potentials);
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    setWellSolutions(const WellState& well_state) const
+    {
+        const int np = number_of_phases_;
+        const int well_index = index_of_well_;
+        const WellControls* wc = well_controls_;
+        const double* distr = well_controls_get_current_distr(wc);
+
+        std::vector<double> g = {1.0, 1.0, 0.01};
+        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+            for (int phase = 0; phase < np; ++phase) {
+                g[phase] = distr[phase];
+            }
+        }
+
+        // the number of wells
+        const int nw = well_state.bhp().size();
+
+        switch (well_controls_get_current_type(wc)) {
+        case THP:
+        case BHP: {
+            well_solutions_[XvarWell] = 0.0;
+            if (well_type_ == INJECTOR) {
+                for (int p = 0; p < np; ++p) {
+                    well_solutions_[XvarWell] += well_state.wellRates()[np*well_index + p] * comp_frac_[p];
+                }
+            } else {
+                for (int p = 0; p < np; ++p) {
+                    well_solutions_[XvarWell] += g[p] * well_state.wellRates()[np*well_index + p];
+                }
+            }
+            break;
+        }
+        case RESERVOIR_RATE: // Intentional fall-through
+        case SURFACE_RATE:
+            well_solutions_[XvarWell] = well_state.bhp()[well_index];
+            break;
+        } // end of switch
+
+        double tot_well_rate = 0.0;
+        for (int p = 0; p < np; ++p)  {
+            tot_well_rate += g[p] * well_state.wellRates()[np*well_index + p];
+        }
+        if(std::abs(tot_well_rate) > 0) {
+            if (active()[ Water ]) {
+                well_solutions_[WFrac] = g[Water] * well_state.wellRates()[np*well_index + Water] / tot_well_rate;
+            }
+            if (active()[ Gas ]) {
+                well_solutions_[GFrac] = g[Gas] * (well_state.wellRates()[np*well_index + Gas] - well_state.solventWellRate(well_index)) / tot_well_rate ;
+            }
+            if (has_solvent) {
+                well_solutions_[SFrac] = g[Gas] * well_state.solventWellRate(well_index) / tot_well_rate ;
+            }
+        } else { // tot_well_rate == 0
+            if (well_type_ == INJECTOR) {
+                // only single phase injection handled
+                if (active()[Water]) {
+                    if (distr[Water] > 0.0) {
+                        well_solutions_[WFrac] = 1.0;
+                    } else {
+                        well_solutions_[WFrac] = 0.0;
+                    }
+                }
+
+                if (active()[Gas]) {
+                    if (distr[Gas] > 0.0) {
+                        well_solutions_[GFrac] = 1.0 - wsolvent();
+                        if (has_solvent) {
+                            well_solutions_[SFrac] = wsolvent();
+                        }
+                    } else {
+                        well_solutions_[GFrac] = 0.0;
+                    }
+                }
+
+                // TODO: it is possible to leave injector as a oil well,
+                // when F_w and F_g both equals to zero, not sure under what kind of circumstance
+                // this will happen.
+            } else if (well_type_ == PRODUCER) { // producers
+                // TODO: the following are not addressed for the solvent case yet
+                if (active()[Water]) {
+                    well_solutions_[WFrac] = 1.0 / np;
+                }
+                if (active()[Gas]) {
+                    well_solutions_[GFrac] = 1.0 / np;
+                }
+            } else {
+                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+            }
         }
     }
 

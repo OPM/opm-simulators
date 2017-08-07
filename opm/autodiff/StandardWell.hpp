@@ -104,7 +104,7 @@ namespace Opm
                           const int num_cells);
 
 
-        virtual void setWellVariables(const WellState& well_state);
+        virtual void setWellVariables();
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
@@ -158,6 +158,9 @@ namespace Opm
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) const;
+
+        virtual void setWellSolutions(const WellState& well_state) const;
+
     protected:
 
         // protected functions from the Base class

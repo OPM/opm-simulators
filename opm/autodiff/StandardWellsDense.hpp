@@ -172,7 +172,7 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            void setWellVariables(const WellState& xw);
+            void setWellVariables();
 
             void computeAccumWells();
 
