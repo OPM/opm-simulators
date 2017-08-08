@@ -115,7 +115,7 @@ namespace Opm {
         typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
         typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables ;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)       FluidSystem;
-        typedef typename GET_PROP_TYPE(TypeTag, Indices)           BlackoilIndices;
+        typedef typename GET_PROP_TYPE(TypeTag, Indices)           Indices;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw)       MaterialLaw;
         typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
@@ -1559,86 +1559,6 @@ namespace Opm {
         }
 
     private:
-        void convertResults(BVector& ebosResid, Mat& ebosJac) const
-        {
-            const Opm::PhaseUsage pu = phaseUsage_;
-            const int numFlowPhases = pu.num_phases;
-            const int numCells = ebosJac.N();
-            assert( numCells == static_cast<int>(ebosJac.M()) );
-
-            // write the right-hand-side values from the ebosJac into the objects
-            // allocated above.
-            const auto endrow = ebosJac.end();
-            for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
-            {
-                const double cellVolume = ebosSimulator_.model().dofTotalVolume(cellIdx);
-                auto& cellRes = ebosResid[ cellIdx ];
-
-                unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(cellIdx);
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
-                {
-                    const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
-                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
-                    const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, pvtRegionIdx);
-                    cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] /= refDens;
-                    cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] *= cellVolume;
-                }
-                if (has_solvent_) {
-                    // no need to store refDens for all cells?
-                    const auto& intQuants = ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
-                    const auto& refDens = intQuants->solventRefDensity();
-                    cellRes[ contiSolventEqIdx ] /= refDens;
-                    cellRes[ contiSolventEqIdx ] *= cellVolume;
-                }
-                if (has_polymer_) {
-                    cellRes[ contiPolymerEqIdx ] *= cellVolume;
-                }
-            }
-
-            for( auto row = ebosJac.begin(); row != endrow; ++row )
-            {
-                const int rowIdx = row.index();
-                const double cellVolume = ebosSimulator_.model().dofTotalVolume(rowIdx);
-                unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(rowIdx);
-
-                // translate the Jacobian of the residual from the format used by ebos to
-                // the one expected by flow
-                const auto endcol = row->end();
-                for( auto col = row->begin(); col != endcol; ++col )
-                {
-                    for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
-                    {
-                        const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
-                        const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
-                        const int ebosCompIdx = flowPhaseToEbosCompIdx(canonicalFlowPhaseIdx);
-                        const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, pvtRegionIdx);
-                        for( int pvIdx = 0; pvIdx < numEq; ++pvIdx )
-                        {
-                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
-                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
-                        }
-                    }
-                    if (has_solvent_) {
-                        // TODO store refDens pr pvtRegion?
-                        const auto& intQuants = ebosSimulator_.model().cachedIntensiveQuantities(rowIdx, /*timeIdx=*/0);
-                        const auto& refDens = intQuants->solventRefDensity();
-                        for( int pvIdx=0; pvIdx < numEq; ++pvIdx )
-                        {
-                            (*col)[contiSolventEqIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
-                            (*col)[contiSolventEqIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
-                        }
-                    }
-                    if (has_polymer_) {
-                        for( int pvIdx=0; pvIdx < numEq; ++pvIdx )
-                        {
-                            (*col)[contiPolymerEqIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
-                        }
-                    }
-
-                }
-            }
-        }
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
         {

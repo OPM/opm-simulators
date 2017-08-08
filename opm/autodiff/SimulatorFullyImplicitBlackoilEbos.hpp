@@ -55,6 +55,8 @@ public:
     typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
     typedef typename GET_PROP_TYPE(TypeTag, PrimaryVariables)  PrimaryVariables;
     typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+    typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
+    typedef typename GET_PROP_TYPE(TypeTag, MaterialLawParams) MaterialLawParams;
 
     typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
@@ -516,7 +518,7 @@ protected:
                 // to calculate averages over regions that might cross process
                 // borders. This needs to be done by all processes and therefore
                 // outside of the next if statement.
-                rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+                rateConverter_.template defineState<ElementContext>(ebosSimulator_);
             }
         }
         else
@@ -524,7 +526,7 @@ protected:
         {
             if ( global_number_resv_wells )
             {
-                rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+                rateConverter_.template defineState<ElementContext>(ebosSimulator_);
             }
         }
 
