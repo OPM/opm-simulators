@@ -345,8 +345,6 @@ namespace Opm
 
         class PackUnPackSimulationDataContainer : public P2PCommunicatorType::DataHandleInterface
         {
-            const SimulationDataContainer& localState_;
-            SimulationDataContainer& globalState_;
             const data::Solution& localCellData_;
             data::Solution& globalCellData_;
             const WellStateFullyImplicitBlackoil& localWellState_;
@@ -355,8 +353,7 @@ namespace Opm
             const IndexMapStorageType& indexMaps_;
 
         public:
-            PackUnPackSimulationDataContainer( const SimulationDataContainer& localState,
-                                               SimulationDataContainer& globalState,
+            PackUnPackSimulationDataContainer( std::size_t numGlobalCells,
                                                const data::Solution& localCellData,
                                                data::Solution& globalCellData,
                                                const WellStateFullyImplicitBlackoil& localWellState,
@@ -364,30 +361,20 @@ namespace Opm
                                                const IndexMapType& localIndexMap,
                                                const IndexMapStorageType& indexMaps,
                                                const bool isIORank )
-            : localState_( localState ),
-              globalState_( globalState ),
-              localCellData_( localCellData ),
+            : localCellData_( localCellData ),
               globalCellData_( globalCellData ),
               localWellState_( localWellState ),
               globalWellState_( globalWellState ),
               localIndexMap_( localIndexMap ),
               indexMaps_( indexMaps )
             {
+
                 if( isIORank )
                 {
-                    // add missing data to global state
-                    for (const auto& pair : localState.cellData()) {
-                        const std::string& key = pair.first;
-                        if (!globalState_.hasCellData( key )) {
-                            globalState_.registerCellData( key , localState.numCellDataComponents( key ));
-                        }
-                    }
-
                     // add missing data to global cell data
                     for (const auto& pair : localCellData_) {
                         const std::string& key = pair.first;
-                        std::size_t container_size = globalState_.numCells() *
-                            pair.second.data.size() / localState_.numCells();
+                        std::size_t container_size = numGlobalCells;
                         auto ret = globalCellData_.insert(key, pair.second.dim,
                                                 std::vector<double>(container_size),
                                                 pair.second.target);
@@ -413,13 +400,9 @@ namespace Opm
                 // write all cell data registered in local state
                 for (const auto& pair : localCellData_) {
                     const auto& data = pair.second.data;
-                    const size_t stride = data.size()/localState_.numCells();
 
-                    for( size_t i=0; i<stride; ++i )
-                    {
-                        // write all data from local state to buffer
-                        write( buffer, localIndexMap_, data, i, stride );
-                    }
+                    // write all data from local data to buffer
+                    write( buffer, localIndexMap_, data);
                 }
 
                 // write all data from local well state to buffer
@@ -428,22 +411,15 @@ namespace Opm
 
             void doUnpack( const IndexMapType& indexMap, MessageBufferType& buffer )
             {
-                // write all cell data registered in local state
-                // we loop over the data of the local state as
+                // we loop over the data  as
                 // its order governs the order the data got received.
                 for (auto& pair : localCellData_) {
                     const std::string& key = pair.first;
-
                     auto& data = globalCellData_.data(key);
-                    const size_t stride = data.size() / globalState_.numCells();
 
-                    for( size_t i=0; i<stride; ++i )
-                    {
-                        //write all data from local state to buffer
-                        read( buffer, indexMap, data, i, stride );
-                    }
+                    //write all data from local cell data to buffer
+                    read( buffer, indexMap, data);
                 }
-
 
                 // read well data from buffer
                 readWells( buffer );
@@ -615,7 +591,7 @@ namespace Opm
         };
 
         // gather solution to rank 0 for EclipseWriter
-        bool collectToIORank( const SimulationDataContainer& localReservoirState,
+        bool collectToIORank( const SimulationDataContainer& /*localReservoirState*/,
                               const WellStateFullyImplicitBlackoil& localWellState,
                               const data::Solution& localCellData,
                               const int wellStateStepNumber )
@@ -649,7 +625,7 @@ namespace Opm
                 globalCellData_->clear();
             }
 
-            PackUnPackSimulationDataContainer packUnpack( localReservoirState, *globalReservoirState_,
+            PackUnPackSimulationDataContainer packUnpack( numCells(),
                                                           localCellData, *globalCellData_,
                                                           localWellState, globalWellState_,
                                                           localIndexMap_, indexMaps_,
@@ -663,7 +639,7 @@ namespace Opm
 #endif
             if( isIORank() )
             {
-                // Update values in the globalReservoirState
+                // copy values from globalCellData to globalReservoirState
                 const std::map<std::string, std::vector<double> > no_extra_data;
                 solutionToSim(*globalCellData_, no_extra_data, phaseUsage_, *globalReservoirState_);
             }

@@ -174,14 +174,17 @@ void solutionToSim( const data::Solution& sol,
     }
 
     if( sol.has( "RS" ) ) {
+        state.registerCellData("GASOILRATIO", 1);
         state.getCellData( "GASOILRATIO" ) = sol.data( "RS" );
     }
 
     if( sol.has( "RV" ) ) {
+        state.registerCellData("RV", 1);
         state.getCellData( "RV" ) = sol.data( "RV" );
     }
 
     if ( sol.has( "SSOL" ) ) {
+        state.registerCellData("SSOL", 1);
         state.getCellData("SSOL") = sol.data("SSOL");
     }
 
