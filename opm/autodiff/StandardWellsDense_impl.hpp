@@ -505,6 +505,7 @@ namespace Opm {
 
         if (!converged) {
             well_state = well_state0;
+            setWellSolutions(well_state);
             // also recover the old well controls
             // TODO: well_solutions_ for each well not recovered here.
             for (int w = 0; w < nw; ++w) {
@@ -759,9 +760,7 @@ namespace Opm {
 
                 // calculate the well potentials
                 // TODO: for the purpose of group control, not tested yet
-                for (const auto& well : well_container_) {
-                    well->setWellSolutions(well_state);
-                }
+                setWellSolutions(well_state);
                 setWellVariables();
                 computeWellConnectionPressures(ebos_simulator, well_state);
 
@@ -1041,5 +1040,18 @@ namespace Opm {
         }
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    setWellSolutions(const WellState& well_state) const
+    {
+        for (const auto& well : well_container_) {
+            well->setWellSolutions(well_state);
+        }
+    }
 
 } // namespace Opm

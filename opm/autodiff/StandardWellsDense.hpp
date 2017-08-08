@@ -225,6 +225,9 @@ namespace Opm {
 
             void updateGroupControls(WellState& well_state) const;
 
+            /// setting the well_solutions_ based on well_state.
+            void setWellSolutions(const WellState& well_state) const;
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
