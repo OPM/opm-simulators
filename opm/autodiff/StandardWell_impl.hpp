@@ -1269,7 +1269,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellControl(WellState& xw) const
+    updateWellControl(WellState& xw,
+                      wellhelpers::WellSwitchingLogger& logger) const
     {
         const int np = number_of_phases_;
         const int nw = xw.bhp().size();
@@ -1329,7 +1330,6 @@ namespace Opm
         const int updated_control_index = xw.currentControls()[w];
 
         // checking whether control changed
-        wellhelpers::WellSwitchingLogger logger;
         if (updated_control_index != old_control_index) {
             logger.wellSwitched(name_,
                                 well_controls_iget_type(wc, old_control_index),

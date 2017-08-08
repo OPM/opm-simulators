@@ -657,8 +657,10 @@ namespace Opm {
         // we simply return.
         if( !wellsActive() ) return ;
 
+        wellhelpers::WellSwitchingLogger logger;
+
         for (const auto& well : well_container_) {
-            well->updateWellControl(xw);
+            well->updateWellControl(xw, logger);
         }
     }
 
