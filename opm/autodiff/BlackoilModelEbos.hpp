@@ -416,22 +416,42 @@ namespace Opm {
 		pressureNew = priVarsNew[Indices::pressureSwitchIdx];
 
 		Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
-                saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
-                if (priVarsNew.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
-		    saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
-                saturationsNew[FluidSystem::oilPhaseIdx] = 1.0 - saturationsNew[FluidSystem::waterPhaseIdx] - saturationsNew[FluidSystem::gasPhaseIdx];
+                Scalar oilSaturationNew = 1.0;
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
+                    oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
+                }
+                
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && priVarsNew.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
+                    saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
+                    oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];                     
+                }
+                                    
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    saturationsNew[FluidSystem::oilPhaseIdx] = oilSaturationNew;
+                }
 
                 const auto& priVarsOld = ebosSimulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
 
                 Scalar pressureOld;
-		pressureOld = priVarsNew[Indices::pressureSwitchIdx];
+                pressureOld = priVarsOld[Indices::pressureSwitchIdx];
 
                 Scalar saturationsOld[FluidSystem::numPhases] = { 0.0 };
-                saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
-		if (priVarsOld.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
-		    saturationsOld[FluidSystem::gasPhaseIdx] = priVarsOld[Indices::compositionSwitchIdx];
-                saturationsOld[FluidSystem::oilPhaseIdx] = 1.0 - saturationsOld[FluidSystem::waterPhaseIdx] - saturationsOld[FluidSystem::gasPhaseIdx];
-
+                Scalar oilSaturationOld = 1.0;
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
+                    oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
+                }
+                
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && priVarsOld.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
+                    saturationsOld[FluidSystem::gasPhaseIdx] = priVarsOld[Indices::compositionSwitchIdx];
+                    oilSaturationOld -= saturationsOld[FluidSystem::gasPhaseIdx];
+                }
+                                    
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    saturationsOld[FluidSystem::oilPhaseIdx] = oilSaturationOld;
+                }
+                
                 Scalar tmp = pressureNew - pressureOld;
                 resultDelta += tmp*tmp;
                 resultDenom += pressureNew*pressureNew;
