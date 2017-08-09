@@ -855,13 +855,14 @@ namespace Opm {
 
             // Get saturation updates.
             const double dsw = dx[0];
-            double dso = -dsw;
             double dsg = 0.0;
             auto& hcstate = state_.reservoir_state.hydroCarbonState()[cell];
             if (hcstate == HydroCarbonState::GasAndOil) {
                 dsg = dx[1];
-                dso -= dsg;
+            } else if (hcstate == HydroCarbonState::GasOnly) {
+                dsg = -dsw;
             }
+            const double dso = -(dsw + dsg);
 
             // Handle too large saturation changes.
             const double maxval = std::max(std::fabs(dsw), std::max(std::fabs(dso), std::fabs(dsg)));
