@@ -46,7 +46,7 @@ namespace Opm {
          const double gravity_arg,
          const std::vector<double>& depth_arg,
          const std::vector<double>& pv_arg,
-         const RateConverterType* rate_converter,
+         RateConverterType* rate_converter,
          long int global_nc,
          const Grid& grid)
     {
@@ -139,6 +139,19 @@ namespace Opm {
     {
         vfp_properties_ = vfp_properties_arg;
     }
+
+
+
+
+
+    template<typename TypeTag>
+    typename StandardWellsDense<TypeTag>::RateConverterType*
+    StandardWellsDense<TypeTag>::
+    rateConverter() const
+    {
+        return rate_converter_;
+    }
+
 
 
 

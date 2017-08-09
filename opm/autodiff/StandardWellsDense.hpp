@@ -121,7 +121,7 @@ enum WellVariablePositions {
                       const double gravity_arg,
                       const std::vector<double>& depth_arg,
                       const std::vector<double>& pv_arg,
-                      const RateConverterType* rate_converter,
+                      RateConverterType* rate_converter,
                       long int global_nc,
                       const Grid& grid);
 
@@ -291,6 +291,7 @@ enum WellVariablePositions {
 
             void applyVREPGroupControl(WellState& well_state) const;
 
+            RateConverterType* rateConverter() const;
 
         protected:
             bool wells_active_;
@@ -310,7 +311,7 @@ enum WellVariablePositions {
             std::vector<bool>  active_;
             const VFPProperties* vfp_properties_;
             double gravity_;
-            const RateConverterType* rate_converter_;
+            RateConverterType* rate_converter_;
 
             // The efficiency factor for each connection. It is specified based on wells and groups,
             // We calculate the factor for each connection for the computation of contributions to the mass balance equations.
