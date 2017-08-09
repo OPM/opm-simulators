@@ -934,13 +934,29 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     updateGroupControls(WellState& well_state) const
     {
-        if (wellCollection()->groupControlActive()) {
-            applyVREPGroupControl(well_state);
-            wellCollection()->updateWellTargets(well_state.wellRates());
 
-            // TODO: group control has to be applied in the level of the all wells
+        if (wellCollection()->groupControlActive()) {
+            for (int w = 0; w < number_of_wells_; ++w) {
+                // update whether well is under group control
+                // get well node in the well collection
+                WellNode& well_node = well_collection_->findWellNode(well_container_[w]->name());
+
+                // update whehter the well is under group control or individual control
+                const int current = well_state.currentControls()[w];
+                if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
+                    // under group control
+                    well_node.setIndividualControl(false);
+                } else {
+                    // individual control
+                    well_node.setIndividualControl(true);
+                }
+            }
+
+            applyVREPGroupControl(well_state);
             // upate the well targets following group controls
             // it will not change the control mode, only update the targets
+            wellCollection()->updateWellTargets(well_state.wellRates());
+
             for (int w = 0; w < number_of_wells_; ++w) {
                 // TODO: check whether we need current argument in updateWellStateWithTarget
                 // maybe there is some circumstances that the current is different from the one
