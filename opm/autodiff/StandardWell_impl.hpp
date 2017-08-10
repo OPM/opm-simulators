@@ -1626,30 +1626,6 @@ namespace Opm
             }
         }
 
-        /* if ( terminal_output_ )
-        {
-            // Only rank 0 does print to std::cout
-            if (iteration == 0) {
-                std::string msg;
-                msg = "Iter";
-                for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                    const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                    msg += "  W-FLUX(" + phaseName + ")";
-                }
-                OpmLog::note(msg);
-            }
-
-            std::ostringstream ss;
-            const std::streamsize oprec = ss.precision(3);
-            const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
-            ss << std::setw(4) << iteration;
-            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                ss << std::setw(11) << well_flux_residual[compIdx];
-            }
-            ss.precision(oprec);
-            ss.flags(oflags);
-            OpmLog::note(ss.str());
-        } */
         return converged_Well;
     }
 

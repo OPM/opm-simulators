@@ -495,37 +495,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::vector<double>
-    StandardWellsDense<TypeTag>::
-    residual() const
-    {
-        // TODO: to decide later whether to output this
-        // Even yes, we do not need resWell_. We will use the values
-        // from each individual well.
-        /* if( ! wellsActive() )
-        {
-            return std::vector<double>();
-        }
-
-        const int nw = number_of_wells_;
-        const int numComp = numComponents();
-        std::vector<double> res(numEq*nw, 0.0);
-        for( int compIdx = 0; compIdx < numComp; ++compIdx) {
-
-            for (int wellIdx = 0; wellIdx < nw; ++wellIdx) {
-                int idx = wellIdx + nw*compIdx;
-                res[idx] = resWell_[ wellIdx ][ compIdx ];
-            }
-        }
-        return res; */
-        return std::vector<double>(1, 0.0); // to disable warning, unusable
-    }
-
-
-
-
-
-    template<typename TypeTag>
     bool
     StandardWellsDense<TypeTag>::
     getWellConvergence(Simulator& ebosSimulator,
@@ -533,53 +502,21 @@ namespace Opm {
     {
         bool converged_well = true;
 
-        // TODO: to check the strategy here
         // currently, if there is any well not converged, we consider the well eqautions do not get converged
         for (const auto& well : well_container_) {
             if ( !well->getWellConvergence(ebosSimulator, B_avg, param_) ) {
                 converged_well = false;
-                // break; // TODO: no need to check other wells?
             }
         }
 
-        // TODO: there should be a better way to do the following, while I did not find
-        // a direct way to handle boolean variables there.
         {
             const auto& grid = ebosSimulator.gridManager().grid();
-            int value = 0;
-            if (converged_well) {
-                value = 1;
-            }
-            if (grid.comm().min(value) < 1) {
-                converged_well = false;
-            }
+            int value = converged_well ? 1 : 0;
+
+            converged_well = grid.comm().min(value);
         }
-
         // TODO: to think about the output here.
-        /* if ( terminal_output_ )
-        {
-            // Only rank 0 does print to std::cout
-            if (iteration == 0) {
-                std::string msg;
-                msg = "Iter";
-                for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
-                    const std::string& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
-                    msg += "  W-FLUX(" + phaseName + ")";
-                }
-                OpmLog::note(msg);
-            }
 
-            std::ostringstream ss;
-            const std::streamsize oprec = ss.precision(3);
-            const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
-            ss << std::setw(4) << iteration;
-            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                ss << std::setw(11) << well_flux_residual[compIdx];
-            }
-            ss.precision(oprec);
-            ss.flags(oflags);
-            OpmLog::note(ss.str());
-        } */
         return converged_well;
     }
 

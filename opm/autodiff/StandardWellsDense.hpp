@@ -39,8 +39,6 @@
 #include <opm/core/wells/WellCollection.hpp>
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/VFPInjProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
@@ -169,8 +167,6 @@ namespace Opm {
 
             /// return true if wells are available on this process
             bool localWellsActive() const;
-
-            std::vector<double> residual() const;
 
             bool getWellConvergence(Simulator& ebosSimulator,
                                     const std::vector<Scalar>& B_avg) const;

@@ -1538,9 +1538,6 @@ namespace Opm {
         const StandardWellsDense<TypeTag>&
         wellModel() const { return well_model_; }
 
-        /// return true if wells are available in the reservoir
-        bool wellsActive() const { return well_model_.wellsActive(); }
-
         int numWells() const { return well_model_.numWells(); }
 
         /// return true if wells are available on this process
