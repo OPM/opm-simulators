@@ -83,6 +83,10 @@ NEW_TYPE_TAG(EclFlowProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
 SET_BOOL_PROP(EclFlowProblem, DisableWells, true);
 SET_BOOL_PROP(EclFlowProblem, EnableDebuggingChecks, false);
 SET_BOOL_PROP(EclFlowProblem, ExportGlobalTransmissibility, true);
+// default in flow is to formulate the equations in surface volumes
+SET_BOOL_PROP(EclFlowProblem, BlackoilConserveSurfaceVolume, true);
+SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
+
 
 // SWATINIT is done by the flow part of flow_ebos. this can be removed once the legacy
 // code for fluid and satfunc handling gets fully retired.
@@ -1622,26 +1626,6 @@ namespace Opm {
         }
 
     public:
-        int ebosCompToFlowPhaseIdx( const int compIdx ) const
-        {
-            assert(compIdx < 3);
-            const int compToPhase[ 3 ] = { Oil, Water, Gas };
-            return compToPhase[ compIdx ];
-        }
-
-        int flowToEbosPvIdx( const int flowPv ) const
-        {
-            const int flowToEbos[ 3 ] = {
-                                          BlackoilIndices::pressureSwitchIdx,
-                                          BlackoilIndices::waterSaturationIdx,
-                                          BlackoilIndices::compositionSwitchIdx
-                                        };
-
-            if (flowPv > 2 )
-                return flowPv;
-
-            return flowToEbos[ flowPv ];
-        }
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const
         {
@@ -1652,89 +1636,8 @@ namespace Opm {
         }
 
 
-
-
     private:
-        void convertResults(BVector& ebosResid, Mat& ebosJac) const
-        {
-            const Opm::PhaseUsage pu = phaseUsage_;
-            const int numFlowPhases = pu.num_phases;
-            const int numCells = ebosJac.N();
-            assert( numCells == static_cast<int>(ebosJac.M()) );
 
-            // write the right-hand-side values from the ebosJac into the objects
-            // allocated above.
-            const auto endrow = ebosJac.end();
-            for( int cellIdx = 0; cellIdx < numCells; ++cellIdx )
-            {
-                const double cellVolume = ebosSimulator_.model().dofTotalVolume(cellIdx);
-                auto& cellRes = ebosResid[ cellIdx ];
-
-                unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(cellIdx);
-
-                for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
-                {
-                    const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
-                    const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
-                    const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, pvtRegionIdx);
-                    cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] /= refDens;
-                    cellRes[ flowPhaseToEbosCompIdx( flowPhaseIdx ) ] *= cellVolume;
-                }
-                if (has_solvent_) {
-                    // no need to store refDens for all cells?
-                    const auto& intQuants = ebosSimulator_.model().cachedIntensiveQuantities(cellIdx, /*timeIdx=*/0);
-                    const auto& refDens = intQuants->solventRefDensity();
-                    cellRes[ contiSolventEqIdx ] /= refDens;
-                    cellRes[ contiSolventEqIdx ] *= cellVolume;
-                }
-                if (has_polymer_) {
-                    cellRes[ contiPolymerEqIdx ] *= cellVolume;
-                }
-            }
-
-            for( auto row = ebosJac.begin(); row != endrow; ++row )
-            {
-                const int rowIdx = row.index();
-                const double cellVolume = ebosSimulator_.model().dofTotalVolume(rowIdx);
-                unsigned pvtRegionIdx = ebosSimulator_.problem().pvtRegionIndex(rowIdx);
-
-                // translate the Jacobian of the residual from the format used by ebos to
-                // the one expected by flow
-                const auto endcol = row->end();
-                for( auto col = row->begin(); col != endcol; ++col )
-                {
-                    for( int flowPhaseIdx = 0; flowPhaseIdx < numFlowPhases; ++flowPhaseIdx )
-                    {
-                        const int canonicalFlowPhaseIdx = pu.phase_pos[flowPhaseIdx];
-                        const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(canonicalFlowPhaseIdx);
-                        const int ebosCompIdx = flowPhaseToEbosCompIdx(canonicalFlowPhaseIdx);
-                        const double refDens = FluidSystem::referenceDensity(ebosPhaseIdx, pvtRegionIdx);
-                        for( int pvIdx = 0; pvIdx < numEq; ++pvIdx )
-                        {
-                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
-                            (*col)[ebosCompIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
-                        }
-                    }
-                    if (has_solvent_) {
-                        // TODO store refDens pr pvtRegion?
-                        const auto& intQuants = ebosSimulator_.model().cachedIntensiveQuantities(rowIdx, /*timeIdx=*/0);
-                        const auto& refDens = intQuants->solventRefDensity();
-                        for( int pvIdx=0; pvIdx < numEq; ++pvIdx )
-                        {
-                            (*col)[contiSolventEqIdx][flowToEbosPvIdx(pvIdx)] /= refDens;
-                            (*col)[contiSolventEqIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
-                        }
-                    }
-                    if (has_polymer_) {
-                        for( int pvIdx=0; pvIdx < numEq; ++pvIdx )
-                        {
-                            (*col)[contiPolymerEqIdx][flowToEbosPvIdx(pvIdx)] *= cellVolume;
-                        }
-                    }
-
-                }
-            }
-        }
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
         {
@@ -1826,10 +1729,6 @@ namespace Opm {
             ebosSimulator_.problem().endIteration();
 
             prevEpisodeIdx = ebosSimulator_.episodeIndex();
-
-            auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-            convertResults(ebosResid, ebosJac);
 
             if (param_.update_equations_scaling_) {
                 std::cout << "equation scaling not suported yet" << std::endl;
