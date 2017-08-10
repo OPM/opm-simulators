@@ -642,23 +642,37 @@ namespace Opm {
 
             // Newton loop.
             int iter = 0;
-            const int max_iter = 25;
+            const int max_iter = 100;
             double relaxation = 1.0;
             while (!getConvergence(cell, res) && iter < max_iter) {
                 Vec2 dx;
                 jac.solve(dx, res);
                 dx *= relaxation;
+                const auto hcstate_old = state_.reservoir_state.hydroCarbonState()[cell];
                 updateState(cell, -dx);
+                const auto hcstate = state_.reservoir_state.hydroCarbonState()[cell];
                 assembleSingleCell(cell, res, jac);
                 ++iter;
-                // if (iter > 15) {
-                //     relaxation = 0.7;
-                //     std::ostringstream os;
-                //     os << "Iteration " << iter << " in cell " << cell << ", residual = " << res
-                //        << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
-                //        << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}, dx = " << dx;
-                //     OpmLog::debug(os.str());
-                // }
+                if (iter > 10) {
+                    relaxation = 0.85;
+                    if (iter > 15) {
+                        relaxation = 0.70;
+                    }
+                    if (iter > 20) {
+                        relaxation = 0.55;
+                    }
+                    if (iter > 25) {
+                        relaxation = 0.40;
+                    }
+                    if (iter > 30) {
+                        relaxation = 0.25;
+                    }
+                    std::ostringstream os;
+                    os << "Iteration " << iter << " in cell " << cell << ", residual = " << res
+                       << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
+                       << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}, dx = " << dx << ", hcstate: " << hcstate_old << " -> " << hcstate;
+                    OpmLog::debug(os.str());
+                }
             }
             if (iter == max_iter) {
                 std::ostringstream os;
