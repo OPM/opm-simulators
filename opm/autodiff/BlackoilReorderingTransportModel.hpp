@@ -888,20 +888,24 @@ namespace Opm {
             double& rs = state_.reservoir_state.gasoilratio()[cell];
             const double rs_old = rs;
             if (hcstate == HydroCarbonState::OilOnly) {
-                const double max_allowed_change = std::fabs(rs_old) * Base::drMaxRel();
+                // const double max_allowed_change = std::fabs(rs_old) * Base::drMaxRel();
                 const double drs = dx[1];
-                const double factor = std::min(1.0, max_allowed_change / std::fabs(drs));
-                rs += factor*drs;
+                // const double factor = std::min(1.0, max_allowed_change / std::fabs(drs));
+                // rs += factor*drs;
+                rs += drs;
+                rs = std::max(rs, 0.0);
             }
 
             // Update rv.
             double& rv = state_.reservoir_state.rv()[cell];
             const double rv_old = rv;
             if (hcstate == HydroCarbonState::GasOnly) {
-                const double max_allowed_change = std::fabs(rv_old) * Base::drMaxRel();
+                // const double max_allowed_change = std::fabs(rv_old) * Base::drMaxRel();
                 const double drv = dx[1];
-                const double factor = std::min(1.0, max_allowed_change / std::fabs(drv));
-                rv += factor*drv;
+                // const double factor = std::min(1.0, max_allowed_change / std::fabs(drv));
+                // rv += factor*drv;
+                rv += drv;
+                rv = std::max(rv, 0.0);
             }
 
             const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
