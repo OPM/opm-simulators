@@ -460,7 +460,7 @@ namespace Opm {
 
 
         template <typename Scalar>
-        void computeCellState(const int cell, const State& state, CellState<Scalar>& cstate)
+        void computeCellState(const int cell, const State& state, CellState<Scalar>& cstate) const
         {
             assert(numPhases() == 3); // I apologize for this to my future self, that will have to fix it.
 
@@ -499,8 +499,8 @@ namespace Opm {
 
             // Compute phase pressures.
             cstate.p[Oil] = constant(poval);
-            cstate.p[Water] = cstate.p[Oil] - cstate.pc[Water]; // pcow = po - pw
-            cstate.p[Gas] =   cstate.p[Oil] + cstate.pc[Gas];   // pcog = pg - po (!)
+            cstate.p[Water] = cstate.p[Oil] + cstate.pc[Water]; // pcow = pw - po (!) [different from old convention]
+            cstate.p[Gas] =   cstate.p[Oil] + cstate.pc[Gas];   // pcog = pg - po
 
             // Compute PVT properties.
             cstate.temperature = constant(0.0); // Temperature is not used.
@@ -642,23 +642,37 @@ namespace Opm {
 
             // Newton loop.
             int iter = 0;
-            const int max_iter = 25;
+            const int max_iter = 100;
             double relaxation = 1.0;
             while (!getConvergence(cell, res) && iter < max_iter) {
                 Vec2 dx;
                 jac.solve(dx, res);
                 dx *= relaxation;
+                const auto hcstate_old = state_.reservoir_state.hydroCarbonState()[cell];
                 updateState(cell, -dx);
+                const auto hcstate = state_.reservoir_state.hydroCarbonState()[cell];
                 assembleSingleCell(cell, res, jac);
                 ++iter;
-                // if (iter > 15) {
-                //     relaxation = 0.7;
-                //     std::ostringstream os;
-                //     os << "Iteration " << iter << " in cell " << cell << ", residual = " << res
-                //        << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
-                //        << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}, dx = " << dx;
-                //     OpmLog::debug(os.str());
-                // }
+                if (iter > 10) {
+                    relaxation = 0.85;
+                    if (iter > 15) {
+                        relaxation = 0.70;
+                    }
+                    if (iter > 20) {
+                        relaxation = 0.55;
+                    }
+                    if (iter > 25) {
+                        relaxation = 0.40;
+                    }
+                    if (iter > 30) {
+                        relaxation = 0.25;
+                    }
+                    // std::ostringstream os;
+                    // os << "Iteration " << iter << " in cell " << cell << ", residual = " << res
+                    //    << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
+                    //    << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}, dx = " << dx << ", hcstate: " << hcstate_old << " -> " << hcstate;
+                    // OpmLog::debug(os.str());
+                }
             }
             if (iter == max_iter) {
                 std::ostringstream os;
@@ -753,14 +767,15 @@ namespace Opm {
                 // values from cstate_[other].
                 Eval dh[3];
                 Eval dh_sat[3];
+                const Eval grad_oil_press = cstate_[other].p[Oil] - st.p[Oil];
                 for (int phase : { Water, Oil, Gas }) {
                     const Eval gradp = cstate_[other].p[phase] - st.p[phase];
                     const Eval rhoavg = 0.5 * (st.rho[phase] + cstate_[other].rho[phase]);
                     dh[phase] = gradp - rhoavg * gdz;
-                    dh_sat[phase] = rhoavg * gdz; // TODO: not equivalent to formulation in BlackoilTransportModel for cap. press.
                     if (Base::use_threshold_pressure_) {
-                        applyThresholdPressure(conn.index, dh[phase]); // TODO: Should also dh_sat be treated here? Also: dh is unused, this has no effect!
+                        applyThresholdPressure(conn.index, dh[phase]);
                     }
+                    dh_sat[phase] = grad_oil_press - dh[phase];
                 }
                 const double tran = trans_all_[conn.index]; // TODO: include tr_mult effect.
                 const auto& m1 = st.lambda;
@@ -854,13 +869,14 @@ namespace Opm {
 
             // Get saturation updates.
             const double dsw = dx[0];
-            double dso = -dsw;
             double dsg = 0.0;
             auto& hcstate = state_.reservoir_state.hydroCarbonState()[cell];
             if (hcstate == HydroCarbonState::GasAndOil) {
                 dsg = dx[1];
-                dso -= dsg;
+            } else if (hcstate == HydroCarbonState::GasOnly) {
+                dsg = -dsw;
             }
+            const double dso = -(dsw + dsg);
 
             // Handle too large saturation changes.
             const double maxval = std::max(std::fabs(dsw), std::max(std::fabs(dso), std::fabs(dsg)));
@@ -886,20 +902,24 @@ namespace Opm {
             double& rs = state_.reservoir_state.gasoilratio()[cell];
             const double rs_old = rs;
             if (hcstate == HydroCarbonState::OilOnly) {
-                const double max_allowed_change = std::fabs(rs_old) * Base::drMaxRel();
+                // const double max_allowed_change = std::fabs(rs_old) * Base::drMaxRel();
                 const double drs = dx[1];
-                const double factor = std::min(1.0, max_allowed_change / std::fabs(drs));
-                rs += factor*drs;
+                // const double factor = std::min(1.0, max_allowed_change / std::fabs(drs));
+                // rs += factor*drs;
+                rs += drs;
+                rs = std::max(rs, 0.0);
             }
 
             // Update rv.
             double& rv = state_.reservoir_state.rv()[cell];
             const double rv_old = rv;
             if (hcstate == HydroCarbonState::GasOnly) {
-                const double max_allowed_change = std::fabs(rv_old) * Base::drMaxRel();
+                // const double max_allowed_change = std::fabs(rv_old) * Base::drMaxRel();
                 const double drv = dx[1];
-                const double factor = std::min(1.0, max_allowed_change / std::fabs(drv));
-                rv += factor*drv;
+                // const double factor = std::min(1.0, max_allowed_change / std::fabs(drv));
+                // rv += factor*drv;
+                rv += drv;
+                rv = std::max(rv, 0.0);
             }
 
             const double epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
