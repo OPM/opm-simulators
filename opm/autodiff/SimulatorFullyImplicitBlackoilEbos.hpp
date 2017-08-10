@@ -65,6 +65,7 @@ public:
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
     typedef StandardWellsDense<TypeTag> WellModel;
+    typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
 
 
     /// Initialise from parameters and objects to observe.
@@ -108,14 +109,10 @@ public:
           has_vapoil_(has_vapoil),
           terminal_output_(param.getDefault("output_terminal", true)),
           output_writer_(output_writer),
+          rateConverter_(createRateConverter_()),
           defunct_well_names_( defunct_well_names ),
           is_parallel_run_( false )
     {
-        extractLegacyCellPvtRegionIndex_();
-        rateConverter_.reset(new RateConverterType(phaseUsage_,
-                                                   legacyCellPvtRegionIdx_.data(),
-                                                   AutoDiffGrid::numCells(grid()),
-                                                   std::vector<int>(AutoDiffGrid::numCells(grid()), 0)));
 
 #if HAVE_MPI
         if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
@@ -254,8 +251,8 @@ public:
             solver_timer.start();
 
             const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
-            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_, terminal_output_,
-                                 timer.currentStepNum());
+            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,
+                                 rateConverter_, terminal_output_, timer.currentStepNum());
 
             auto solver = createSolver(well_model);
 
@@ -438,12 +435,12 @@ protected:
                         gravity,
                         legacyDepth_,
                         legacyPoreVolume_,
-                        rateConverter_.get(),
                         globalNumCells,
                         grid());
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       model_param_,
                                                       well_model,
+                                                      rateConverter_,
                                                       solver_,
                                                       terminal_output_));
 
@@ -476,7 +473,7 @@ protected:
                 // to calculate averages over regions that might cross process
                 // borders. This needs to be done by all processes and therefore
                 // outside of the next if statement.
-                rateConverter_->defineState(x, boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()));
+                rateConverter_.defineState(x, boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation()));
             }
         }
         else
@@ -484,7 +481,7 @@ protected:
         {
             if ( global_number_resv_wells )
             {
-                rateConverter_->defineState(x);
+                rateConverter_.defineState(x);
             }
         }
 
@@ -523,7 +520,7 @@ protected:
                         }
 
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
-                        rateConverter_->calcCoeff(prates, fipreg, distr);
+                        rateConverter_.calcCoeff(prates, fipreg, distr);
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
                     }
@@ -545,7 +542,7 @@ protected:
                             SimFIBODetails::historyRates(pu, p, hrates);
 
                             const int fipreg = 0; // Hack.  Ignore FIP regions.
-                            rateConverter_->calcCoeff(hrates, fipreg, distr);
+                            rateConverter_.calcCoeff(hrates, fipreg, distr);
 
                             // WCONHIST/RESV target is sum of all
                             // observed phase rates translated to
@@ -853,8 +850,14 @@ protected:
         }
     }
 
-
-
+    RateConverterType createRateConverter_() {
+        extractLegacyCellPvtRegionIndex_();
+        RateConverterType rate_converter(phaseUsage_,
+                                         legacyCellPvtRegionIdx_.data(),
+                                         AutoDiffGrid::numCells(grid()),
+                                         std::vector<int>(AutoDiffGrid::numCells(grid()), 0));
+        return rate_converter;
+    }
 
 
     // Data.
@@ -863,7 +866,6 @@ protected:
     std::vector<int> legacyCellPvtRegionIdx_;
     std::vector<double> legacyPoreVolume_;
     std::vector<double> legacyDepth_;
-    typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
     typedef typename Solver::SolverParameters SolverParameters;
 
     SimulatorReport failureReport_;
@@ -881,7 +883,7 @@ protected:
     bool       terminal_output_;
     // output_writer
     OutputWriter& output_writer_;
-    std::unique_ptr<RateConverterType> rateConverter_;
+    RateConverterType rateConverter_;
     // The names of wells that should be defunct
     // (e.g. in a parallel run when they are handeled by
     // a different process)

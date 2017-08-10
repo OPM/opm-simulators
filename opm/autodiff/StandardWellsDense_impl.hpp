@@ -9,6 +9,7 @@ namespace Opm {
                        WellCollection* well_collection,
                        const std::vector< const Well* >& wells_ecl,
                        const ModelParameters& param,
+                       const RateConverterType& rate_converter,
                        const bool terminal_output,
                        const int current_timeIdx)
        : wells_active_(wells_arg!=nullptr)
@@ -20,6 +21,7 @@ namespace Opm {
        , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
        , current_timeIdx_(current_timeIdx)
+       , rate_converter_(rate_converter)
        , well_perforation_efficiency_factors_((wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0), 1.0)
        , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
        , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
@@ -46,7 +48,6 @@ namespace Opm {
          const double gravity_arg,
          const std::vector<double>& depth_arg,
          const std::vector<double>& pv_arg,
-         RateConverterType* rate_converter,
          long int global_nc,
          const Grid& grid)
     {
@@ -62,7 +63,6 @@ namespace Opm {
         gravity_ = gravity_arg;
         cell_depths_ = extractPerfData(depth_arg);
         pv_ = pv_arg;
-        rate_converter_ = rate_converter;
 
         calculateEfficiencyFactors();
 
@@ -138,18 +138,6 @@ namespace Opm {
     setVFPProperties(const VFPProperties*  vfp_properties_arg)
     {
         vfp_properties_ = vfp_properties_arg;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    typename StandardWellsDense<TypeTag>::RateConverterType*
-    StandardWellsDense<TypeTag>::
-    rateConverter() const
-    {
-        return rate_converter_;
     }
 
 
@@ -2123,7 +2111,7 @@ namespace Opm {
                 // the average hydrocarbon conditions of the whole field will be used
                 const int fipreg = 0; // Not considering FIP for the moment.
 
-                rate_converter_->calcCoeff(well_rates, fipreg, convert_coeff);
+                rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
                 well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
                                                            convert_coeff.begin(), 0.0);
             } else {
@@ -2134,7 +2122,7 @@ namespace Opm {
                           well_rates.begin());
                 // the average hydrocarbon conditions of the whole field will be used
                 const int fipreg = 0; // Not considering FIP for the moment.
-                rate_converter_->calcCoeff(well_rates, fipreg, convert_coeff);
+                rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
                 std::copy(convert_coeff.begin(), convert_coeff.end(),
                           voidage_conversion_coeffs.begin() + np * w);
             }

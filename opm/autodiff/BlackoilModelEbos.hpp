@@ -155,6 +155,7 @@ namespace Opm {
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
                           const StandardWellsDense<TypeTag>& well_model,
+                          RateConverterType& rate_converter,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
                           )
@@ -173,7 +174,7 @@ namespace Opm {
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
-        , rate_converter_(wellModel().rateConverter())
+        , rate_converter_(rate_converter)
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
@@ -1505,7 +1506,7 @@ namespace Opm {
         long int global_nc_;
 
         // rate converter between the surface volume rates and reservoir voidage rates
-        RateConverterType* rate_converter_;
+        RateConverterType& rate_converter_;
 
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
@@ -1660,7 +1661,7 @@ namespace Opm {
                 global_number_wells = info.communicator().sum(global_number_wells);
                 if ( global_number_wells )
                 {
-                    rate_converter_->defineState(reservoir_state, boost::any_cast<const ParallelISTLInformation&>(istlSolver_->parallelInformation()));
+                    rate_converter_.defineState(reservoir_state, boost::any_cast<const ParallelISTLInformation&>(istlSolver_->parallelInformation()));
                 }
             }
             else
@@ -1668,7 +1669,7 @@ namespace Opm {
             {
                 if ( global_number_wells )
                 {
-                    rate_converter_->defineState(reservoir_state);
+                    rate_converter_.defineState(reservoir_state);
                 }
             }
         }
