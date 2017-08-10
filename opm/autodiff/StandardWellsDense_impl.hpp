@@ -24,10 +24,6 @@ namespace Opm {
        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
        , current_timeIdx_(current_timeIdx)
        , rate_converter_(rate_converter)
-       , well_perforation_efficiency_factors_((wells_!=nullptr ? wells_->well_connpos[wells_->number_of_wells] : 0), 1.0)
-       , well_perforation_densities_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
-       , well_perforation_pressure_diffs_( wells_ ? wells_arg->well_connpos[wells_arg->number_of_wells] : 0)
-       , wellVariables_( wells_ ? (wells_arg->number_of_wells * numWellEq) : 0)
     {
        createWellContainer(wells_arg);
     }
@@ -507,7 +503,6 @@ namespace Opm {
             well_state = well_state0;
             setWellSolutions(well_state);
             // also recover the old well controls
-            // TODO: well_solutions_ for each well not recovered here.
             for (int w = 0; w < nw; ++w) {
                 WellControls* wc = well_container_[w]->wellControls();
                 well_controls_set_current(wc, well_state.currentControls()[w]);
@@ -586,6 +581,8 @@ namespace Opm {
             }
         }
 
+        // TODO: there should be a better way to do the following, while I did not find
+        // a direct way to handle boolean variables there.
         {
             const auto& grid = ebosSimulator.gridManager().grid();
             int value = 0;
@@ -995,7 +992,6 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     computeRepRadiusPerfLength(const Grid& grid)
     {
-
         // TODO, the function does not work for parallel running
         // to be fixed later.
         int number_of_cells = Opm::UgGridHelpers::numCells(grid);

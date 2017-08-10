@@ -807,7 +807,6 @@ namespace Opm
                     const BlackoilModelParameters& param,
                     WellState& well_state) const
     {
-        // TODO: to check whether all the things from PR 1220 were incoporated.
         const int np = number_of_phases_;
         const int nw = well_state.bhp().size();
         const double dBHPLimit = param.dbhp_max_rel_;
@@ -1311,21 +1310,6 @@ namespace Opm
             well_controls_set_current( wc, current);
         }
 
-        // update whether well is under group control
-        /* if (wellCollection()->groupControlActive()) {
-            // get well node in the well collection
-            WellNode& well_node = well_collection_->findWellNode(std::string(wells().name[w]));
-
-            // update whehter the well is under group control or individual control
-            if (well_node.groupControlIndex() >= 0 && current == well_node.groupControlIndex()) {
-                // under group control
-                well_node.setIndividualControl(false);
-            } else {
-                // individual control
-                well_node.setIndividualControl(true);
-            }
-        } */
-
         // the new well control indices after all the related updates,
         const int updated_control_index = xw.currentControls()[w];
 
@@ -1339,17 +1323,6 @@ namespace Opm
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
             updateWellStateWithTarget(updated_control_index, xw);
         }
-
-        // upate the well targets following group controls
-        // it will not change the control mode, only update the targets
-        /* if (wellCollection()->groupControlActive()) {
-            applyVREPGroupControl(xw);
-            wellCollection()->updateWellTargets(xw.wellRates());
-            for (int w = 0; w < nw; ++w) {
-                const WellControls* wc = wells().ctrls[w];
-                updateWellStateWithTarget(wc, updated_control_index[w], w, xw);
-            }
-        } */
     }
 
 
