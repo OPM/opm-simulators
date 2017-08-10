@@ -667,11 +667,11 @@ namespace Opm {
                     if (iter > 30) {
                         relaxation = 0.25;
                     }
-                    std::ostringstream os;
-                    os << "Iteration " << iter << " in cell " << cell << ", residual = " << res
-                       << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
-                       << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}, dx = " << dx << ", hcstate: " << hcstate_old << " -> " << hcstate;
-                    OpmLog::debug(os.str());
+                    // std::ostringstream os;
+                    // os << "Iteration " << iter << " in cell " << cell << ", residual = " << res
+                    //    << ", cell values { s = ( " << cstate_[cell].s[Water] << ", " << cstate_[cell].s[Oil] << ", " << cstate_[cell].s[Gas]
+                    //    << " ), rs = " << cstate_[cell].rs << ", rv = " << cstate_[cell].rv << "}, dx = " << dx << ", hcstate: " << hcstate_old << " -> " << hcstate;
+                    // OpmLog::debug(os.str());
                 }
             }
             if (iter == max_iter) {
