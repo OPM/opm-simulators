@@ -135,7 +135,7 @@ namespace Opm {
             void assembleWellEq(Simulator& ebosSimulator,
                                 const double dt,
                                 WellState& well_state,
-                                bool only_wells);
+                                bool only_wells) const;
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -158,9 +158,9 @@ namespace Opm {
 
             int numCells() const;
 
-            void resetWellControlFromState(const WellState& xw) const;
+            int numWells() const;
 
-            const Wells& wells() const;
+            void resetWellControlFromState(const WellState& xw) const;
 
             const Wells* wellsPointer() const;
 
@@ -172,25 +172,10 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            void setWellVariables();
-
-            void computeAccumWells();
-
-            SimulatorReport solveWellEq(Simulator& ebosSimulator,
-                                        const double dt,
-                                        WellState& well_state);
-
-            void printIf(const int c, const double x, const double y, const double eps, const std::string type) const;
-
             std::vector<double> residual() const;
 
             bool getWellConvergence(Simulator& ebosSimulator,
                                     const std::vector<Scalar>& B_avg) const;
-
-            void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                const WellState& xw);
-
-            void updateWellControls(WellState& xw) const;
 
             /// upate the dynamic lists related to economic limits
             void updateListEconLimited(const Schedule& schedule,
@@ -199,12 +184,6 @@ namespace Opm {
                                        const WellState& well_state,
                                        DynamicListEconLimited& list_econ_limited) const;
 
-            // Calculating well potentials for each well
-            // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
-            void computeWellPotentials(const Simulator& ebosSimulator,
-                                       const WellState& well_state,
-                                       std::vector<double>& well_potentials) const;
-
             // TODO: some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(const Simulator& ebos_simulator,
@@ -212,21 +191,6 @@ namespace Opm {
 
             WellCollection* wellCollection() const;
 
-            const std::vector<double>&
-            wellPerfEfficiencyFactors() const;
-
-            void calculateEfficiencyFactors();
-
-            void computeWellVoidageRates(const WellState& well_state,
-                                         std::vector<double>& well_voidage_rates,
-                                         std::vector<double>& voidage_conversion_coeffs) const;
-
-            void applyVREPGroupControl(WellState& well_state) const;
-
-            void updateGroupControls(WellState& well_state) const;
-
-            /// setting the well_solutions_ based on well_state.
-            void setWellSolutions(const WellState& well_state) const;
 
         protected:
             bool wells_active_;
@@ -265,13 +229,16 @@ namespace Opm {
 
             std::vector<double> pv_;
 
-            std::vector<double> wells_rep_radius_;
-            std::vector<double> wells_perf_length_;
-            std::vector<double> wells_bore_diameter_;
-
             long int global_nc_;
 
             mutable BVector scaleAddRes_;
+
+            void updateWellControls(WellState& xw) const;
+
+            void updateGroupControls(WellState& well_state) const;
+
+            // setting the well_solutions_ based on well_state.
+            void setWellSolutions(const WellState& well_state) const;
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
@@ -280,6 +247,34 @@ namespace Opm {
 
             void computeAverageFormationFactor(Simulator& ebosSimulator,
                                                std::vector<double>& B_avg) const;
+
+            void applyVREPGroupControl(WellState& well_state) const;
+
+            void computeWellVoidageRates(const WellState& well_state,
+                                         std::vector<double>& well_voidage_rates,
+                                         std::vector<double>& voidage_conversion_coeffs) const;
+
+            // Calculating well potentials for each well
+            // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
+            void computeWellPotentials(const Simulator& ebosSimulator,
+                                       const WellState& well_state,
+                                       std::vector<double>& well_potentials) const;
+
+            const std::vector<double>& wellPerfEfficiencyFactors() const;
+
+            void calculateEfficiencyFactors();
+
+            void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                const WellState& xw) const;
+
+            SimulatorReport solveWellEq(Simulator& ebosSimulator,
+                                        const double dt,
+                                        WellState& well_state) const;
+
+            void computeAccumWells() const;
+
+            void setWellVariables() const;
+
         };
 
 

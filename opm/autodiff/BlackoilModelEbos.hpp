@@ -1539,13 +1539,10 @@ namespace Opm {
         const StandardWellsDense<TypeTag>&
         wellModel() const { return well_model_; }
 
-        /// return the Well struct in the StandardWells
-        const Wells& wells() const { return well_model_.wells(); }
-
         /// return true if wells are available in the reservoir
         bool wellsActive() const { return well_model_.wellsActive(); }
 
-        int numWells() const { return wellsActive() ? wells().number_of_wells : 0; }
+        int numWells() const { return well_model_.numWells(); }
 
         /// return true if wells are available on this process
         bool localWellsActive() const { return well_model_.localWellsActive(); }

@@ -103,6 +103,18 @@ namespace Opm {
 
 
     template<typename TypeTag>
+    int
+    StandardWellsDense<TypeTag>::
+    numWells() const
+    {
+        return number_of_wells_;
+    }
+
+
+
+
+
+    template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
     createWellContainer(const Wells* wells_arg)
@@ -168,7 +180,6 @@ namespace Opm {
         }
 
         updateWellControls(well_state);
-        updateGroupControls(well_state);
         // Set the primary variables for the wells
         setWellVariables();
 
@@ -197,7 +208,7 @@ namespace Opm {
     assembleWellEq(Simulator& ebosSimulator,
                    const double dt,
                    WellState& well_state,
-                   bool only_wells)
+                   bool only_wells) const
     {
         for (int w = 0; w < number_of_wells_; ++w) {
             well_container_[w]->assembleWellEq(ebosSimulator, dt, well_state, only_wells);
@@ -363,19 +374,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    const Wells&
-    StandardWellsDense<TypeTag>::
-    wells() const
-    {
-        assert(wells_ != 0);
-        return *(wells_);
-    }
-
-
-
-
-
-    template<typename TypeTag>
     const Wells*
     StandardWellsDense<TypeTag>::
     wellsPointer() const
@@ -426,7 +424,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    setWellVariables()
+    setWellVariables() const
     {
         for (auto& well : well_container_) {
             well->setWellVariables();
@@ -440,7 +438,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    computeAccumWells()
+    computeAccumWells() const
     {
         for (auto& well : well_container_) {
             well->computeAccumWell();
@@ -456,7 +454,7 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     solveWellEq(Simulator& ebosSimulator,
                 const double dt,
-                WellState& well_state)
+                WellState& well_state) const
     {
         const int nw = number_of_wells_;
         WellState well_state0 = well_state;
@@ -494,7 +492,6 @@ namespace Opm {
             if( wellsActive() )
             {
                 updateWellControls(well_state);
-                updateGroupControls(well_state);
                 setWellVariables();
             }
         } while (it < 15);
@@ -513,20 +510,6 @@ namespace Opm {
         report.converged = converged;
         report.total_well_iterations = it;
         return report;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    printIf(const int c, const double x, const double y, const double eps, const std::string type) const
-    {
-        if (std::abs(x-y) > eps) {
-            std::cout << type << " " << c << ": "<<x << " " << y << std::endl;
-        }
     }
 
 
@@ -630,7 +613,7 @@ namespace Opm {
     void
     StandardWellsDense<TypeTag>::
     computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                   const WellState& xw)
+                                   const WellState& xw) const
     {
          if( ! localWellsActive() ) return ;
 
@@ -659,6 +642,8 @@ namespace Opm {
         for (const auto& well : well_container_) {
             well->updateWellControl(xw, logger);
         }
+
+        updateGroupControls(xw);
     }
 
 
