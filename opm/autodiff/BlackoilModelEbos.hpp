@@ -824,7 +824,6 @@ namespace Opm {
             const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
             const double tol_cnv   = param_.tolerance_cnv_;
-            const double tol_wells = param_.tolerance_wells_;
 
             const int np = numPhases();
             const int numComp = numComponents();

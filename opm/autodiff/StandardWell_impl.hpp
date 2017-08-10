@@ -2038,9 +2038,6 @@ namespace Opm
             }
         }
 
-        // the number of wells
-        const int nw = well_state.bhp().size();
-
         switch (well_controls_get_current_type(wc)) {
         case THP:
         case BHP: {

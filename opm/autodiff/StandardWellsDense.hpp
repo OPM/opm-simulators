@@ -150,8 +150,6 @@ namespace Opm {
             // xw to update Well State
             void applySolutionWellState(const BVector& x, WellState& well_state) const;
 
-            int flowToEbosPvIdx( const int flowPv ) const;
-
             int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
             int numPhases() const;

@@ -56,7 +56,6 @@ namespace Opm {
 
         calculateEfficiencyFactors();
 
-        const int nw = number_of_wells_;
         const int nc = numCells();
 
 #ifndef NDEBUG
@@ -292,27 +291,6 @@ namespace Opm {
         for (auto& well : well_container_) {
             well->applySolutionWellState(x, param_, well_state);
         }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    StandardWellsDense<TypeTag>::
-    flowToEbosPvIdx( const int flowPv ) const
-    {
-        const int flowToEbos[ 3 ] = {
-            BlackoilIndices::pressureSwitchIdx,
-            BlackoilIndices::waterSaturationIdx,
-            BlackoilIndices::compositionSwitchIdx
-        };
-
-        if (flowPv > 2 )
-            return flowPv;
-
-        return flowToEbos[ flowPv ];
     }
 
 
@@ -838,8 +816,8 @@ namespace Opm {
         // We only store the conversion coefficients for all the injection wells.
         // Later, more delicate model will be implemented here.
         // And for the moment, group control can only work for serial running.
-        const int nw = well_state.numWells();
-        const int np = well_state.numPhases();
+        const int nw = numWells();
+        const int np = numPhases();
 
         // we calculate the voidage rate for each well, that means the sum of all the phases.
         well_voidage_rates.resize(nw, 0);
@@ -1002,7 +980,6 @@ namespace Opm {
                                   std::vector<double>& B_avg) const
     {
         const int np = numPhases();
-        const int numComp = numComponents();
 
         const auto& grid = ebosSimulator.gridManager().grid();
         const auto& gridView = grid.leafGridView();
