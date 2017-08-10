@@ -155,6 +155,7 @@ namespace Opm {
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
                           const StandardWellsDense<TypeTag>& well_model,
+                          RateConverterType& rate_converter,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
                           )
@@ -171,9 +172,9 @@ namespace Opm {
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
         , param_( param )
-        , well_model_ (well_model)        
+        , well_model_ (well_model)
         , terminal_output_ (terminal_output)
-        , rate_converter_(phaseUsage_, ebosSimulator_.problem().pvtRegionArray().empty()?nullptr:ebosSimulator_.problem().pvtRegionArray().data(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
+        , rate_converter_(rate_converter)
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
@@ -1505,7 +1506,7 @@ namespace Opm {
         long int global_nc_;
 
         // rate converter between the surface volume rates and reservoir voidage rates
-        RateConverterType rate_converter_;
+        RateConverterType& rate_converter_;
 
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
