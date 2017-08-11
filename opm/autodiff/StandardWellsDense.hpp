@@ -104,36 +104,16 @@ namespace Opm {
                       const std::vector<bool>& active_arg,
                       const double gravity_arg,
                       const std::vector<double>& depth_arg,
-                      const std::vector<double>& pv_arg,
                       long int global_nc,
                       const Grid& grid);
 
             void setVFPProperties(const VFPProperties*  vfp_properties_arg);
-
-            /// The number of components in the model.
-            int numComponents() const
-            {
-                if (numPhases() == 2) {
-                    return 2;
-                }
-                int numComp = FluidSystem::numComponents;
-                if (has_solvent_) {
-                    numComp ++;
-                }
-
-                return numComp;
-            }
 
 
             SimulatorReport assemble(Simulator& ebosSimulator,
                                      const int iterationIdx,
                                      const double dt,
                                      WellState& well_state);
-
-            void assembleWellEq(Simulator& ebosSimulator,
-                                const double dt,
-                                WellState& well_state,
-                                bool only_wells) const;
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -148,15 +128,7 @@ namespace Opm {
             // xw to update Well State
             void applySolutionWellState(const BVector& x, WellState& well_state) const;
 
-            int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
-
-            int numPhases() const;
-
-            int numCells() const;
-
             int numWells() const;
-
-            void resetWellControlFromState(const WellState& xw) const;
 
             const Wells* wellsPointer() const;
 
@@ -221,7 +193,8 @@ namespace Opm {
             std::vector<bool>  active_;
             const RateConverterType& rate_converter_;
 
-            std::vector<double> pv_;
+            // the number of the cells in the local grid
+            int number_of_cells_;
 
             long int global_nc_;
 
@@ -269,6 +242,30 @@ namespace Opm {
 
             void setWellVariables() const;
 
+            // The number of components in the model.
+            int numComponents() const
+            {
+                if (numPhases() == 2) {
+                    return 2;
+                }
+                int numComp = FluidSystem::numComponents;
+                if (has_solvent_) {
+                    numComp ++;
+                }
+
+                return numComp;
+            }
+
+            int numPhases() const;
+
+            int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
+
+            void resetWellControlFromState(const WellState& xw) const;
+
+            void assembleWellEq(Simulator& ebosSimulator,
+                                const double dt,
+                                WellState& well_state,
+                                bool only_wells) const;
         };
 
 

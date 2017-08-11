@@ -39,7 +39,6 @@ namespace Opm {
          const std::vector<bool>& active_arg,
          const double gravity_arg,
          const std::vector<double>& depth_arg,
-         const std::vector<double>& pv_arg,
          long int global_nc,
          const Grid& grid)
     {
@@ -52,11 +51,8 @@ namespace Opm {
 
         phase_usage_ = phase_usage_arg;
         active_ = active_arg;
-        pv_ = pv_arg;
 
         calculateEfficiencyFactors();
-
-        const int nc = numCells();
 
 #ifndef NDEBUG
         const auto& pu = phase_usage_;
@@ -74,11 +70,12 @@ namespace Opm {
             }
         }
 
+        number_of_cells_ = Opm::UgGridHelpers::numCells(grid);
         // do the initialization for all the wells
         // TODO: to see whether we can postpone of the intialization of the well containers to
         // optimize the usage of the following several member variables
         for (auto& well : well_container_) {
-            well->init(&phase_usage_, &active_, depth_arg, gravity_arg, nc);
+            well->init(&phase_usage_, &active_, depth_arg, gravity_arg, number_of_cells_);
         }
     }
 
@@ -317,18 +314,6 @@ namespace Opm {
     numPhases() const
     {
         return number_of_phases_;
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    StandardWellsDense<TypeTag>::
-    numCells() const
-    {
-        return pv_.size();
     }
 
 
@@ -668,6 +653,8 @@ namespace Opm {
                 computeWellPotentials(ebos_simulator, well_state, well_potentials);
 
                 // update/setup guide rates for each well based on the well_potentials
+                // TODO: this is one of two places that still need Wells struct. In this function, only the well names
+                // well types are used, probably the order of the wells to locate the correct values in well_potentials.
                 well_collection_->setGuideRatesWithPotentials(wellsPointer(), phase_usage_, well_potentials);
             }
 
@@ -894,11 +881,10 @@ namespace Opm {
     {
         // TODO, the function does not work for parallel running
         // to be fixed later.
-        int number_of_cells = Opm::UgGridHelpers::numCells(grid);
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
 
         std::map<int,int> cartesian_to_compressed;
-        setupCompressedToCartesian(global_cell, number_of_cells,
+        setupCompressedToCartesian(global_cell, number_of_cells_,
                                     cartesian_to_compressed);
 
         for (const auto& well : well_container_) {
