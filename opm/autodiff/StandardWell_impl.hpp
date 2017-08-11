@@ -1001,10 +1001,6 @@ namespace Opm
                     const double thp_target = well_controls_iget_target(wc, current);
                     well_state.thp()[index_of_well_] = thp_target;
                 } else { // otherwise we calculate the thp from the bhp value
-                    double aqua = 0.0;
-                    double liquid = 0.0;
-                    double vapour = 0.0;
-
                     const Opm::PhaseUsage& pu = phaseUsage();
                     std::vector<double> rates(3, 0.0);
 
@@ -1763,10 +1759,6 @@ namespace Opm
 
             for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
                 if (well_controls_iget_type(well_controls_, ctrl_index) == THP) {
-                    double aqua = 0.0;
-                    double liquid = 0.0;
-                    double vapour = 0.0;
-
                     const Opm::PhaseUsage& pu = *phase_usage_;
 
                     std::vector<double> rates(3, 0.0);
