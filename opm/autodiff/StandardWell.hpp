@@ -285,6 +285,11 @@ namespace Opm
                                                         const double initial_bhp, // bhp from BHP constraints
                                                         const std::vector<double>& initial_potential) const;
 
+        template <class ValueType>
+        ValueType calculateBhpFromThp(const std::vector<ValueType>& rates, const int control_index) const;
+
+        double calculateThpFromBhp(const std::vector<double>& rates, const int control_index, const double bhp) const;
+
         // get the mobility for specific perforation
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,

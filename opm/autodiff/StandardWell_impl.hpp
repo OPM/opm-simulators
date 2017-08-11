@@ -132,40 +132,19 @@ namespace Opm
             return bhp;
         } else if (well_controls_get_current_type(wc) == THP) {
             const int control = well_controls_get_current(wc);
-            const double thp = well_controls_get_current_target(wc);
-            const double alq = well_controls_iget_alq(wc, control);
-            const int table_id = well_controls_iget_vfp(wc, control);
-            EvalWell aqua = 0.0;
-            EvalWell liquid = 0.0;
-            EvalWell vapour = 0.0;
-            EvalWell bhp = 0.0;
-            double vfp_ref_depth = 0.0;
 
             const Opm::PhaseUsage& pu = phaseUsage();
-
+            std::vector<EvalWell> rates(3, 0.0);
             if (active()[ Water ]) {
-                aqua = getQs(pu.phase_pos[ Water]);
+                rates[ Water ]= getQs(pu.phase_pos[ Water]);
             }
             if (active()[ Oil ]) {
-                liquid = getQs(pu.phase_pos[ Oil ]);
+                rates[ Oil ] = getQs(pu.phase_pos[ Oil ]);
             }
             if (active()[ Gas ]) {
-                vapour = getQs(pu.phase_pos[ Gas ]);
+                rates[ Gas ] = getQs(pu.phase_pos[ Gas ]);
             }
-            if (well_type_ == INJECTOR) {
-                bhp = vfp_properties_->getInj()->bhp(table_id, aqua, liquid, vapour, thp);
-                vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
-            } else {
-                bhp = vfp_properties_->getProd()->bhp(table_id, aqua, liquid, vapour, thp, alq);
-                vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
-            }
-
-            // pick the density in the top layer
-            const double rho = perf_densities_[0];
-            const double well_ref_depth = ref_depth_;
-            const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-            bhp -= dp;
-            return bhp;
+            return calculateBhpFromThp(rates, control);
         }
 
         return well_variables_[XvarWell];
@@ -955,49 +934,20 @@ namespace Opm
                 if (well_controls_iget_type(wc, current) == THP) {
 
                     // Calculate bhp from thp control and well rates
-                    double aqua = 0.0;
-                    double liquid = 0.0;
-                    double vapour = 0.0;
+                    std::vector<double> rates(3, 0.0); // the vfp related only supports three phases for the moment
 
                     const Opm::PhaseUsage& pu = phaseUsage();
-
                     if (active()[ Water ]) {
-                        aqua = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Water ] ];
+                        rates[ Water ] = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Water ] ];
                     }
                     if (active()[ Oil ]) {
-                        liquid = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
+                        rates[ Oil ]= well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Oil ] ];
                     }
                     if (active()[ Gas ]) {
-                        vapour = well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Gas ] ];
+                        rates[ Gas ]= well_state.wellRates()[index_of_well_ * np + pu.phase_pos[ Gas ] ];
                     }
 
-                    const int vfp        = well_controls_iget_vfp(wc, current);
-                    const double& thp    = well_controls_iget_target(wc, current);
-                    const double& alq    = well_controls_iget_alq(wc, current);
-
-                    // Set *BHP* target by calculating bhp from THP
-                    const WellType& well_type = well_type_;
-                    // pick the density in the top layer
-                    const double rho = perf_densities_[0];
-                    const double well_ref_depth = ref_depth_;
-
-                    if (well_type == INJECTOR) {
-                        const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
-
-                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-
-                        well_state.bhp()[index_of_well_] = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                    }
-                    else if (well_type == PRODUCER) {
-                        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
-
-                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-
-                        well_state.bhp()[index_of_well_] = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                    }
-                    else {
-                        OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
-                    }
+                    well_state.bhp()[index_of_well_] = calculateBhpFromThp(rates, current);
                 }
             }
                 break;
@@ -1056,42 +1006,21 @@ namespace Opm
                     double vapour = 0.0;
 
                     const Opm::PhaseUsage& pu = phaseUsage();
+                    std::vector<double> rates(3, 0.0);
 
                     if (active()[ Water ]) {
-                        aqua = well_state.wellRates()[index_of_well_*np + pu.phase_pos[ Water ] ];
+                        rates[ Water ] = well_state.wellRates()[index_of_well_*np + pu.phase_pos[ Water ] ];
                     }
                     if (active()[ Oil ]) {
-                        liquid = well_state.wellRates()[index_of_well_*np + pu.phase_pos[ Oil ] ];
+                        rates[ Oil ] = well_state.wellRates()[index_of_well_*np + pu.phase_pos[ Oil ] ];
                     }
                     if (active()[ Gas ]) {
-                        vapour = well_state.wellRates()[index_of_well_*np + pu.phase_pos[ Gas ] ];
+                        rates[ Gas ] = well_state.wellRates()[index_of_well_*np + pu.phase_pos[ Gas ] ];
                     }
 
-                    const double alq = well_controls_iget_alq(wc, ctrl_index);
-                    const int table_id = well_controls_iget_vfp(wc, ctrl_index);
+                    const double bhp = well_state.bhp()[index_of_well_];
 
-                    const WellType& well_type = well_type_;
-                    const double rho = perf_densities_[0];
-                    const double well_ref_depth = ref_depth_;
-                    if (well_type == INJECTOR) {
-                        const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
-
-                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-
-                        const double bhp = well_state.bhp()[index_of_well_];
-
-                        well_state.thp()[index_of_well_] = vfp_properties_->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
-                    } else if (well_type == PRODUCER) {
-                        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
-
-                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-
-                        const double bhp = well_state.bhp()[index_of_well_];
-
-                        well_state.thp()[index_of_well_] = vfp_properties_->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
-                    } else {
-                        OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
-                    }
+                    well_state.thp()[index_of_well_] = calculateThpFromBhp(rates, ctrl_index, bhp);
                 }
 
                 // the THP control is found, we leave the loop now
@@ -1150,51 +1079,23 @@ namespace Opm
         case THP: {
             xw.thp()[well_index] = target;
 
-            double aqua = 0.0;
-            double liquid = 0.0;
-            double vapour = 0.0;
-
-            const Opm::PhaseUsage& pu = *phase_usage_;
-
+            const Opm::PhaseUsage& pu = phaseUsage();
+            std::vector<double> rates(3, 0.0);
             if (active()[ Water ]) {
-                aqua = xw.wellRates()[well_index*np + pu.phase_pos[ Water ] ];
+                rates[ Water ] = xw.wellRates()[well_index*np + pu.phase_pos[ Water ] ];
             }
             if (active()[ Oil ]) {
-                 liquid = xw.wellRates()[well_index*np + pu.phase_pos[ Oil ] ];
+                 rates[ Oil ] = xw.wellRates()[well_index*np + pu.phase_pos[ Oil ] ];
             }
             if (active()[ Gas ]) {
-                vapour = xw.wellRates()[well_index*np + pu.phase_pos[ Gas ] ];
+                rates[ Gas ] = xw.wellRates()[well_index*np + pu.phase_pos[ Gas ] ];
             }
 
             const int table_id = well_controls_iget_vfp(wc, current);
             const double& thp    = well_controls_iget_target(wc, current);
             const double& alq    = well_controls_iget_alq(wc, current);
 
-            //Set *BHP* target by calculating bhp from THP
-
-            // pick the density in the top layer
-            const double rho = perf_densities_[0];
-            const double well_ref_depth = ref_depth_;
-
-            // TODO: make the following a function and we call it so many times.
-            if (well_type_ == INJECTOR) {
-
-                const double vfp_ref_depth = vfp_properties_->getInj()->getTable(table_id)->getDatumDepth();
-
-                const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-
-                xw.bhp()[well_index] = vfp_properties_->getInj()->bhp(table_id, aqua, liquid, vapour, thp) - dp;
-            }
-            else if (well_type_ == PRODUCER) {
-                const double vfp_ref_depth = vfp_properties_->getProd()->getTable(table_id)->getDatumDepth();
-
-                const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-
-                xw.bhp()[well_index] = vfp_properties_->getProd()->bhp(table_id, aqua, liquid, vapour, thp, alq) - dp;
-            }
-            else {
-                OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
-            }
+            xw.bhp()[well_index] = calculateBhpFromThp(rates, current);
             break;
         }
 
@@ -1868,43 +1769,25 @@ namespace Opm
 
                     const Opm::PhaseUsage& pu = *phase_usage_;
 
+                    std::vector<double> rates(3, 0.0);
                     if (active()[ Water ]) {
-                        aqua = potentials[pu.phase_pos[ Water ] ];
+                        rates[ Water ] = potentials[pu.phase_pos[ Water ] ];
                     }
                     if (active()[ Oil ]) {
-                        liquid = potentials[pu.phase_pos[ Oil ] ];
+                        rates[ Oil ] = potentials[pu.phase_pos[ Oil ] ];
                     }
                     if (active()[ Gas ]) {
-                        vapour = potentials[pu.phase_pos[ Gas ] ];
+                        rates[ Gas ] = potentials[pu.phase_pos[ Gas ] ];
                     }
 
-                    const int vfp        = well_controls_iget_vfp(well_controls_, ctrl_index);
-                    const double thp    = well_controls_iget_target(well_controls_, ctrl_index);
-                    const double alq    = well_controls_iget_alq(well_controls_, ctrl_index);
+                    const double bhp_calculated = calculateBhpFromThp(rates, ctrl_index);
 
-                    // Calculating the BHP value based on THP
-                    // TODO: check whether it is always correct to do calculation based on the depth of the first perforation.
-                    const double rho = perf_densities_[0]; // TODO: this item is the one keeping the function from WellInterface
-                    const double well_ref_depth = ref_depth_;
-                    if (well_type_ == INJECTOR) {
-                        const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
-                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-                        const double bhp_calculated = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
-                        // apply the strictest of the bhp controlls i.e. smallest bhp for injectors
-                        if (bhp_calculated < bhp) {
-                            bhp = bhp_calculated;
-                        }
+                    if (well_type_ == INJECTOR && bhp_calculated < bhp ) {
+                        bhp = bhp_calculated;
                     }
-                    else if (well_type_ == PRODUCER) {
-                        const double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
-                        const double dp = wellhelpers::computeHydrostaticCorrection(well_ref_depth, vfp_ref_depth, rho, gravity_);
-                        const double bhp_calculated = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
-                        // apply the strictest of the bhp controlls i.e. largest bhp for producers
-                        if (bhp_calculated > bhp) {
-                            bhp = bhp_calculated;
-                        }
-                    } else {
-                       OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
+
+                    if (well_type_ == PRODUCER && bhp_calculated > bhp) {
+                        bhp = bhp_calculated;
                     }
                 }
             }
@@ -2086,6 +1969,97 @@ namespace Opm
                 OPM_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well");
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    template<class ValueType>
+    ValueType
+    StandardWell<TypeTag>::
+    calculateBhpFromThp(const std::vector<ValueType>& rates,
+                        const int control_index) const
+    {
+        assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+
+        const ValueType aqua = rates[Water];
+        const ValueType liquid = rates[Oil];
+        const ValueType vapour = rates[Gas];
+
+        const int vfp        = well_controls_iget_vfp(well_controls_, control_index);
+        const double& thp    = well_controls_iget_target(well_controls_, control_index);
+        const double& alq    = well_controls_iget_alq(well_controls_, control_index);
+
+        // pick the density in the top layer
+        const double rho = perf_densities_[0];
+
+        ValueType bhp = 0.;
+        if (well_type_ == INJECTOR) {
+            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
+
+            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+
+            bhp = vfp_properties_->getInj()->bhp(vfp, aqua, liquid, vapour, thp) - dp;
+         }
+         else if (well_type_ == PRODUCER) {
+             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
+
+             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+
+             bhp = vfp_properties_->getProd()->bhp(vfp, aqua, liquid, vapour, thp, alq) - dp;
+         }
+         else {
+             OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
+         }
+
+         return bhp;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    StandardWell<TypeTag>::
+    calculateThpFromBhp(const std::vector<double>& rates,
+                        const int control_index,
+                        const double bhp) const
+    {
+        assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+
+        const double aqua = rates[Water];
+        const double liquid = rates[Oil];
+        const double vapour = rates[Gas];
+
+        const int vfp        = well_controls_iget_vfp(well_controls_, control_index);
+        const double& alq    = well_controls_iget_alq(well_controls_, control_index);
+
+        // pick the density in the top layer
+        const double rho = perf_densities_[0];
+
+        double thp = 0.0;
+        if (well_type_ == INJECTOR) {
+            const double vfp_ref_depth = vfp_properties_->getInj()->getTable(vfp)->getDatumDepth();
+
+            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+
+            thp = vfp_properties_->getInj()->thp(vfp, aqua, liquid, vapour, bhp + dp);
+         }
+         else if (well_type_ == PRODUCER) {
+             const double vfp_ref_depth = vfp_properties_->getProd()->getTable(vfp)->getDatumDepth();
+
+             const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth_, vfp_ref_depth, rho, gravity_);
+
+             thp = vfp_properties_->getProd()->thp(vfp, aqua, liquid, vapour, bhp + dp, alq);
+         }
+         else {
+             OPM_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well");
+         }
+
+         return thp;
     }
 
 }
