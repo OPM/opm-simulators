@@ -643,7 +643,6 @@ namespace Opm {
             if (well_collection_->requireWellPotentials()) {
 
                 // calculate the well potentials
-                // TODO: for the purpose of group control, not tested yet
                 setWellSolutions(well_state);
                 setWellVariables();
                 computeWellConnectionPressures(ebos_simulator, well_state);

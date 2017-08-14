@@ -150,11 +150,6 @@ namespace Opm {
                                        const WellState& well_state,
                                        DynamicListEconLimited& list_econ_limited) const;
 
-            // TODO: some preparation work, mostly related to group control and RESV,
-            // at the beginning of each time step (Not report step)
-            void prepareTimeStep(const Simulator& ebos_simulator,
-                                 WellState& well_state);
-
             WellCollection* wellCollection() const;
 
 
@@ -266,6 +261,11 @@ namespace Opm {
                                 const double dt,
                                 WellState& well_state,
                                 bool only_wells) const;
+
+            // some preparation work, mostly related to group control and RESV,
+            // at the beginning of each time step (Not report step)
+            void prepareTimeStep(const Simulator& ebos_simulator,
+                                 WellState& well_state);
         };
 
 
