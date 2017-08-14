@@ -762,8 +762,7 @@ namespace Opm {
                                     const double pvSumLocal,
                                     std::vector< Scalar >& R_sum,
                                     std::vector< Scalar >& maxCoeff,
-                                    std::vector< Scalar >& B_avg,
-                                    std::vector< Scalar >& maxNormWell)
+                                    std::vector< Scalar >& B_avg)
         {
             // Compute total pore volume (use only owned entries)
             double pvSum = pvSumLocal;
@@ -775,13 +774,12 @@ namespace Opm {
                 std::vector< Scalar > maxBuffer;
                 const int numComp = B_avg.size();
                 sumBuffer.reserve( 2*numComp + 1 ); // +1 for pvSum
-                maxBuffer.reserve( 2*numComp );
+                maxBuffer.reserve( numComp );
                 for( int compIdx = 0; compIdx < numComp; ++compIdx )
                 {
                     sumBuffer.push_back( B_avg[ compIdx ] );
                     sumBuffer.push_back( R_sum[ compIdx ] );
                     maxBuffer.push_back( maxCoeff[ compIdx ] );
-                    maxBuffer.push_back( maxNormWell[ compIdx ] );
                 }
 
                 // Compute total pore volume
@@ -797,11 +795,14 @@ namespace Opm {
                 for( int compIdx = 0, buffIdx = 0; compIdx < numComp; ++compIdx, ++buffIdx )
                 {
                     B_avg[ compIdx ]    = sumBuffer[ buffIdx ];
-                    maxCoeff[ compIdx ] = maxBuffer[ buffIdx ];
                     ++buffIdx;
 
                     R_sum[ compIdx ]       = sumBuffer[ buffIdx ];
-                    maxNormWell[ compIdx ] = maxBuffer[ buffIdx ];
+                }
+
+                for( int compIdx = 0, buffIdx = 0; compIdx < numComp; ++compIdx, ++buffIdx )
+                {
+                    maxCoeff[ compIdx ] = maxBuffer[ buffIdx ];
                 }
 
                 // restore global pore volume
@@ -831,7 +832,6 @@ namespace Opm {
             Vector R_sum(numComp, 0.0 );
             Vector B_avg(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
-            Vector maxNormWell(numComp, 0.0 );
 
             const auto& ebosModel = ebosSimulator_.model();
             const auto& ebosProblem = ebosSimulator_.problem();
@@ -891,20 +891,13 @@ namespace Opm {
                 B_avg[ i ] /= Scalar( global_nc_ );
             }
 
-            // compute maximum of local well residuals
-            // const Vector& wellResidual = wellModel().residual();
-            // const int nw = wellResidual.size() / numComp;
-            // assert(nw * numComp == int(wellResidual.size()));
-            /* for( int compIdx = 0; compIdx < numComp; ++compIdx )
-            {
-                for ( int w = 0; w < nw; ++w ) {
-                    maxNormWell[compIdx] = std::max(maxNormWell[compIdx], std::abs(wellResidual[nw*compIdx + w]));
-                }
-            } */
+            // TODO: we remove the maxNormWell for now because the convergence of wells are on a individual well basis.
+            // Anyway, we need to provide some infromation to help debug the well iteration process.
+
 
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
-                                                      R_sum, maxCoeff, B_avg, maxNormWell );
+                                                      R_sum, maxCoeff, B_avg);
 
             Vector CNV(numComp);
             Vector mass_balance_residual(numComp);
@@ -958,9 +951,6 @@ namespace Opm {
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    CNV(" + key[ compIdx ] + ") ";
                     }
-                    /* for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "  W-FLUX(" + key[ compIdx ] + ")";
-                    } */
                     OpmLog::note(msg);
                 }
                 std::ostringstream ss;
@@ -973,9 +963,6 @@ namespace Opm {
                 for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                     ss << std::setw(11) << CNV[compIdx];
                 }
-                // for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                //     ss << std::setw(11) << well_flux_residual[compIdx];
-                // }
                 ss.precision(oprec);
                 ss.flags(oflags);
                 OpmLog::note(ss.str());
@@ -986,12 +973,10 @@ namespace Opm {
 
                 if (std::isnan(mass_balance_residual[phaseIdx])
                     || std::isnan(CNV[phaseIdx])) {
-                    // || (phaseIdx < numPhases() && std::isnan(well_flux_residual[phaseIdx]))) {
                     OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
                 }
                 if (mass_balance_residual[phaseIdx] > maxResidualAllowed()
                     || CNV[phaseIdx] > maxResidualAllowed()) {
-                    // || (phaseIdx < numPhases() && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }
