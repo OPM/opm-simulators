@@ -648,9 +648,9 @@ namespace Opm {
                 Vec2 dx;
                 jac.solve(dx, res);
                 dx *= relaxation;
-                const auto hcstate_old = state_.reservoir_state.hydroCarbonState()[cell];
+                // const auto hcstate_old = state_.reservoir_state.hydroCarbonState()[cell];
                 updateState(cell, -dx);
-                const auto hcstate = state_.reservoir_state.hydroCarbonState()[cell];
+                // const auto hcstate = state_.reservoir_state.hydroCarbonState()[cell];
                 assembleSingleCell(cell, res, jac);
                 ++iter;
                 if (iter > 10) {
