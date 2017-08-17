@@ -301,10 +301,16 @@ namespace Opm
                 WellsGroupInterface* parent_node = leaf_nodes_[i]->getParent();
                 // update the target within this group.
                 if (leaf_nodes_[i]->isProducer()) {
+                    if (parent_node->prodSpec().control_mode_ == ProductionSpecification::NONE) {
+                        continue;
+                    }
                     parent_node->updateWellProductionTargets(well_rates);
                 }
 
                 if (leaf_nodes_[i]->isInjector()) {
+                    if (parent_node->injSpec().control_mode_ == InjectionSpecification::NONE) {
+                        continue;
+                    }
                     parent_node->updateWellInjectionTargets(well_rates);
                 }
             }
