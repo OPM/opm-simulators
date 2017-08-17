@@ -73,7 +73,6 @@ namespace Opm
         }
 
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
-            // Add nonzeros for diagonal
             for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
                 const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
