@@ -1355,13 +1355,15 @@ namespace Opm {
                         Pb[cellIdx] = FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()).value();
                     }
                     catch (const NumericalProblem& e) {
-                        failed_cells_pb.push_back(cellIdx);
+                        const auto globalIdx = ebosSimulator_.gridManager().grid().globalCell()[cellIdx];
+                        failed_cells_pb.push_back(globalIdx);
                     }
                     try {
                         Pd[cellIdx] = FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()).value();
                     }
                     catch (const NumericalProblem& e) {
-                        failed_cells_pd.push_back(cellIdx);
+                        const auto globalIdx = ebosSimulator_.gridManager().grid().globalCell()[cellIdx];
+                        failed_cells_pd.push_back(globalIdx);
                     }
                 }
                 if( liquid_active )
@@ -1428,29 +1430,63 @@ namespace Opm {
             }
 
             const size_t max_num_cells_faillog = 20;
-            if (failed_cells_pb.size() > 0) {
+
+            int pb_size = failed_cells_pb.size(), pd_size = failed_cells_pd.size();
+            std::vector<int> displ_pb, displ_pd, recv_len_pb, recv_len_pd;
+            const auto& comm = grid_.comm();
+
+            if ( comm.rank() == 0 )
+            {
+                displ_pb.resize(comm.size()+1, 0);
+                displ_pd.resize(comm.size()+1, 0);
+                recv_len_pb.resize(comm.size());
+                recv_len_pd.resize(comm.size());
+            }
+
+            comm.gather(&pb_size, recv_len_pb.data(), 1, 0);
+            comm.gather(&pd_size, recv_len_pd.data(), 1, 0);
+            std::partial_sum(recv_len_pb.begin(), recv_len_pb.end(), displ_pb.begin()+1);
+            std::partial_sum(recv_len_pd.begin(), recv_len_pd.end(), displ_pd.begin()+1);
+            std::vector<int> global_failed_cells_pb, global_failed_cells_pd;
+
+            if ( comm.rank() == 0 )
+            {
+                global_failed_cells_pb.resize(displ_pb.back());
+                global_failed_cells_pd.resize(displ_pd.back());
+            }
+
+            comm.gatherv(failed_cells_pb.data(), static_cast<int>(failed_cells_pb.size()),
+                         global_failed_cells_pb.data(), recv_len_pb.data(),
+                         displ_pb.data(), 0);
+            comm.gatherv(failed_cells_pd.data(), static_cast<int>(failed_cells_pd.size()),
+                         global_failed_cells_pd.data(),  recv_len_pd.data(),
+                         displ_pd.data(), 0);
+            std::sort(global_failed_cells_pb.begin(), global_failed_cells_pb.end());
+            std::sort(global_failed_cells_pd.begin(), global_failed_cells_pd.end());
+
+            if (global_failed_cells_pb.size() > 0) {
                 std::stringstream errlog;
-                errlog << "Finding the bubble point pressure failed for " << failed_cells_pb.size() << " cells [";
-                errlog << failed_cells_pb[0];
+                errlog << "Finding the bubble point pressure failed for " << global_failed_cells_pb.size() << " cells [";
+                errlog << global_failed_cells_pb[0];
                 const size_t max_elems = std::min(max_num_cells_faillog, failed_cells_pb.size());
                 for (size_t i = 1; i < max_elems; ++i) {
-                    errlog << ", " << failed_cells_pb[i];
+                    errlog << ", " << global_failed_cells_pb[i];
                 }
-                if (failed_cells_pb.size() > max_num_cells_faillog) {
+                if (global_failed_cells_pb.size() > max_num_cells_faillog) {
                     errlog << ", ...";
                 }
                 errlog << "]";
                 OpmLog::warning("Bubble point numerical problem", errlog.str());
             }
-            if (failed_cells_pd.size() > 0) {
+            if (global_failed_cells_pd.size() > 0) {
                 std::stringstream errlog;
-                errlog << "Finding the dew point pressure failed for " << failed_cells_pd.size() << " cells [";
-                errlog << failed_cells_pd[0];
-                const size_t max_elems = std::min(max_num_cells_faillog, failed_cells_pd.size());
+                errlog << "Finding the dew point pressure failed for " << global_failed_cells_pd.size() << " cells [";
+                errlog << global_failed_cells_pd[0];
+                const size_t max_elems = std::min(max_num_cells_faillog, global_failed_cells_pd.size());
                 for (size_t i = 1; i < max_elems; ++i) {
-                    errlog << ", " << failed_cells_pd[i];
+                    errlog << ", " << global_failed_cells_pd[i];
                 }
-                if (failed_cells_pd.size() > max_num_cells_faillog) {
+                if (global_failed_cells_pd.size() > max_num_cells_faillog) {
                     errlog << ", ...";
                 }
                 errlog << "]";
