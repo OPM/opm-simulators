@@ -240,7 +240,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/StandardWells.hpp
   opm/autodiff/StandardWells_impl.hpp
   opm/autodiff/WellInterface.hpp
-  opm/autodiff/StandardWell.cpp
+  opm/autodiff/StandardWell.hpp
   opm/autodiff/StandardWellsDense.hpp
   opm/autodiff/StandardWellsSolvent.hpp
   opm/autodiff/StandardWellsSolvent_impl.hpp
