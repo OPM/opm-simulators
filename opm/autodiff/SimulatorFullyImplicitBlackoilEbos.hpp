@@ -988,6 +988,7 @@ protected:
             }
         }
 
+        // store the solution at the beginning of the time step
         if( iterationIdx == 0 )
         {
             simulator.model().solution( 1 /* timeIdx */ ) = solution;

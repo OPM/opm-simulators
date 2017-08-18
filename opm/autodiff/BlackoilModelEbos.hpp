@@ -172,7 +172,7 @@ namespace Opm {
         , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
         , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
         , param_( param )
-        , well_model_ (well_model)        
+        , well_model_ (well_model)
         , terminal_output_ (terminal_output)
         , rate_converter_(rate_converter)
         , current_relaxation_(1.0)
@@ -303,20 +303,20 @@ namespace Opm {
                 perfTimer.start();
 
                 if (param_.use_update_stabilization_) {
-                // Stabilize the nonlinear update.
-                bool isOscillate = false;
-                bool isStagnate = false;
-                nonlinear_solver.detectOscillations(residual_norms_history_, iteration, isOscillate, isStagnate);
-                if (isOscillate) {
-                    current_relaxation_ -= nonlinear_solver.relaxIncrement();
-                    current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
-                    if (terminalOutputEnabled()) {
-                        std::string msg = "    Oscillating behavior detected: Relaxation set to "
-                            + std::to_string(current_relaxation_);
-                        OpmLog::info(msg);
+                    // Stabilize the nonlinear update.
+                    bool isOscillate = false;
+                    bool isStagnate = false;
+                    nonlinear_solver.detectOscillations(residual_norms_history_, iteration, isOscillate, isStagnate);
+                    if (isOscillate) {
+                        current_relaxation_ -= nonlinear_solver.relaxIncrement();
+                        current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
+                        if (terminalOutputEnabled()) {
+                            std::string msg = "    Oscillating behavior detected: Relaxation set to "
+                                    + std::to_string(current_relaxation_);
+                            OpmLog::info(msg);
+                        }
                     }
-                }
-                nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
+                    nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
                 }
 
                 // Apply the update, with considering model-dependent limitations and
@@ -396,7 +396,7 @@ namespace Opm {
             Scalar resultDelta = 0.0;
             Scalar resultDenom = 0.0;
 
-	    const auto& elemMapper = ebosSimulator_.model().elementMapper();
+            const auto& elemMapper = ebosSimulator_.model().elementMapper();
             const auto& gridView = ebosSimulator_.gridView();
             auto elemIt = gridView.template begin</*codim=*/0>();
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
@@ -621,6 +621,7 @@ namespace Opm {
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
             SolutionVector& solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
 
+            // Store the initial solution.
             if( iterationIdx == 0 )
             {
                 ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
@@ -674,6 +675,7 @@ namespace Opm {
                 // polymer
                 const double dc = has_polymer_ ? dx[cell_idx][Indices::polymerConcentrationIdx] : 0.0;
 
+                // oil
                 dso = - (dsw + dsg + dss);
 
                 // compute a scaling factor for the saturation update so that the maximum
