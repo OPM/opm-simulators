@@ -240,9 +240,6 @@ namespace Opm
 
         EvalWell extendEval(const Eval& in) const;
 
-        // TODO: maybe this type of function can go to some helper file.
-        void localInvert(DiagMatWell& istlA) const;
-
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 

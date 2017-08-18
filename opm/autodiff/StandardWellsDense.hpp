@@ -57,8 +57,6 @@
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
-#include <math.h>
-
 
 namespace Opm {
 
@@ -130,8 +128,6 @@ namespace Opm {
 
             int numWells() const;
 
-            const Wells* wellsPointer() const;
-
             /// return true if wells are available in the reservoir
             bool wellsActive() const;
 
@@ -169,8 +165,7 @@ namespace Opm {
             // eventually, the wells_ above should be gone.
             // the name is just temporary
             // later, might make share_ptr const later.
-            // TODO: forget why make it share_ptr instead of unique_ptr
-            std::vector<std::shared_ptr<WellInterface<TypeTag> > > well_container_;
+            std::vector<std::unique_ptr<WellInterface<TypeTag> > > well_container_;
 
             // TODO: forgot why returning a vector here
             void createWellContainer(const Wells* wells_arg);

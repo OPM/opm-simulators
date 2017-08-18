@@ -154,7 +154,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
-                          const StandardWellsDense<TypeTag>& well_model,
+                          StandardWellsDense<TypeTag>& well_model,
                           RateConverterType& rate_converter,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
@@ -800,9 +800,9 @@ namespace Opm {
                     R_sum[ compIdx ]       = sumBuffer[ buffIdx ];
                 }
 
-                for( int compIdx = 0, buffIdx = 0; compIdx < numComp; ++compIdx, ++buffIdx )
+                for( int compIdx = 0; compIdx < numComp; ++compIdx )
                 {
-                    maxCoeff[ compIdx ] = maxBuffer[ buffIdx ];
+                    maxCoeff[ compIdx ] = maxBuffer[ compIdx ];
                 }
 
                 // restore global pore volume
@@ -1501,7 +1501,7 @@ namespace Opm {
         SimulatorReport failureReport_;
 
         // Well Model
-        StandardWellsDense<TypeTag> well_model_;
+        StandardWellsDense<TypeTag>& well_model_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;

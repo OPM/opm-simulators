@@ -636,7 +636,7 @@ namespace Opm
         }
 
         // do the local inversion of D.
-        localInvert( invDuneD_ );
+        invDuneD_[0][0].invert();
     }
 
 
@@ -1027,23 +1027,6 @@ namespace Opm
         // no THP constraint found
         if (ctrl_index == nwc) { // not finding a THP contstraints
             well_state.thp()[index_of_well_] = 0.0;
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    localInvert(DiagMatWell& istlA) const
-    {
-        for (auto row = istlA.begin(), rowend = istlA.end(); row != rowend; ++row ) {
-            for (auto col = row->begin(), colend = row->end(); col != colend; ++col ) {
-                //std::cout << (*col) << std::endl;
-                (*col).invert();
-            }
         }
     }
 

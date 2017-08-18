@@ -147,8 +147,7 @@ namespace Opm {
                 }
 
                 // Basically, we are handling all the wells as StandardWell for the moment
-                // TODO: to be changed when we begin introducing MultisegmentWell
-                well_container_.push_back(std::make_shared<StandardWell<TypeTag> >(well_ecl, current_timeIdx_, wells_arg) );
+                well_container_.emplace_back(new StandardWell<TypeTag>(well_ecl, current_timeIdx_, wells_arg) );
             }
         }
     }
@@ -330,18 +329,6 @@ namespace Opm {
             WellControls* wc = wells_->ctrls[w];
             well_controls_set_current( wc, xw.currentControls()[w]);
         }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    const Wells*
-    StandardWellsDense<TypeTag>::
-    wellsPointer() const
-    {
-        return wells_;
     }
 
 
@@ -658,7 +645,7 @@ namespace Opm {
                 // update/setup guide rates for each well based on the well_potentials
                 // TODO: this is one of two places that still need Wells struct. In this function, only the well names
                 // well types are used, probably the order of the wells to locate the correct values in well_potentials.
-                well_collection_->setGuideRatesWithPotentials(wellsPointer(), phase_usage_, well_potentials);
+                well_collection_->setGuideRatesWithPotentials(wells_, phase_usage_, well_potentials);
             }
 
             applyVREPGroupControl(well_state);
