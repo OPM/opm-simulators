@@ -62,6 +62,7 @@ namespace Opm
 
         using Base::has_solvent;
         using Base::has_polymer;
+        using Base::name;
 
         // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
         // it will cause problem here without processing the dummy phase.
@@ -165,6 +166,7 @@ namespace Opm
     protected:
 
         // protected functions from the Base class
+        using Base::getAllowCrossFlow;
         using Base::phaseUsage;
         using Base::active;
         using Base::flowToEbosPvIdx;
@@ -177,7 +179,6 @@ namespace Opm
         using Base::mostStrictBhpFromBhpLimits;
 
         // protected member variables from the Base class
-        using Base::name_;
         using Base::vfp_properties_;
         using Base::gravity_;
         using Base::well_efficiency_factor_;
@@ -185,7 +186,6 @@ namespace Opm
         using Base::first_perf_;
         using Base::ref_depth_;
         using Base::perf_depth_;
-        using Base::allow_cf_;
         using Base::well_cells_;
         using Base::number_of_perforations_;
         using Base::number_of_phases_;

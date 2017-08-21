@@ -44,10 +44,8 @@ namespace Opm
         // here, just another assertion.
         assert(index_well != wells->number_of_wells);
 
-        name_ = well_name;
         index_of_well_ = index_well;
         well_type_ = wells->type[index_well];
-        allow_cf_ = wells->allow_cf[index_well];
         number_of_phases_ = wells->number_of_phases;
 
         // copying the comp_frac
@@ -127,7 +125,7 @@ namespace Opm
     WellInterface<TypeTag>::
     name() const
     {
-        return name_;
+        return well_ecl_->name();
     }
 
 
@@ -152,6 +150,18 @@ namespace Opm
     wellControls() const
     {
         return well_controls_;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    getAllowCrossFlow() const
+    {
+        return well_ecl_->getAllowCrossFlow();
     }
 
 
@@ -593,7 +603,7 @@ namespace Opm
             return;
         }
 
-        const std::string well_name = name_;
+        const std::string well_name = name();
 
         // for the moment, we only handle rate limits, not handling potential limits
         // the potential limits should not be difficult to add

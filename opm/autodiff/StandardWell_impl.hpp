@@ -282,7 +282,7 @@ namespace Opm
             // ReservoirRate
             return target_rate * wellVolumeFractionScaled(comp_idx);
         } else {
-            OPM_THROW(std::logic_error, "Unknown control type for well " << name_);
+            OPM_THROW(std::logic_error, "Unknown control type for well " << name());
         }
 
         // avoid warning of condition reaches end of non-void function
@@ -488,7 +488,7 @@ namespace Opm
                 const EvalWell d = 1.0 - rv * rs;
 
                 if (d.value() == 0.0) {
-                    OPM_THROW(Opm::NumericalProblem, "Zero d value obtained for well " << name_ << " during flux calcuation"
+                    OPM_THROW(Opm::NumericalProblem, "Zero d value obtained for well " << name() << " during flux calcuation"
                                                   << " with rs " << rs << " and rv " << rv);
                 }
 
@@ -648,7 +648,7 @@ namespace Opm
     StandardWell<TypeTag>::
     crossFlowAllowed(const Simulator& ebosSimulator) const
     {
-        if (allow_cf_) {
+        if (getAllowCrossFlow()) {
             return true;
         }
 
@@ -1195,7 +1195,7 @@ namespace Opm
 
         // checking whether control changed
         if (updated_control_index != old_control_index) {
-            logger.wellSwitched(name_,
+            logger.wellSwitched(name(),
                                 well_controls_iget_type(wc, old_control_index),
                                 well_controls_iget_type(wc, updated_control_index));
         }
@@ -1498,11 +1498,11 @@ namespace Opm
             const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
 
             if (std::isnan(well_flux_residual[phaseIdx])) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName << " for well " << name_);
+                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName << " for well " << name());
             }
 
             if (well_flux_residual[phaseIdx] > maxResidualAllowed) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName << " for well " << name_);
+                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName << " for well " << name());
             }
         }
 
@@ -1769,7 +1769,7 @@ namespace Opm
 
             // there should be always some available bhp/thp constraints there
             if (std::isinf(bhp) || std::isnan(bhp)) {
-                OPM_THROW(std::runtime_error, "Unvalid bhp value obtained during the potential calculation for well " << name_);
+                OPM_THROW(std::runtime_error, "Unvalid bhp value obtained during the potential calculation for well " << name());
             }
 
             converged = std::abs(old_bhp - bhp) < bhp_tolerance;
@@ -1779,7 +1779,7 @@ namespace Opm
             // checking whether the potentials have valid values
             for (const double value : potentials) {
                 if (std::isinf(value) || std::isnan(value)) {
-                    OPM_THROW(std::runtime_error, "Unvalid potential value obtained during the potential calculation for well " << name_);
+                    OPM_THROW(std::runtime_error, "Unvalid potential value obtained during the potential calculation for well " << name());
                 }
             }
 
@@ -1798,7 +1798,7 @@ namespace Opm
         }
 
         if (!converged) {
-            OPM_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << name_);
+            OPM_THROW(std::runtime_error, "Failed in getting converged for the potential calculation for well " << name());
         }
 
         return potentials;

@@ -157,27 +157,6 @@ namespace Opm
         virtual void setWellSolutions(const WellState& well_state) const = 0;
 
     protected:
-        const std::vector<bool>& active() const;
-
-        const PhaseUsage& phaseUsage() const;
-
-        int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
-
-        int flowToEbosPvIdx( const int flowPv ) const;
-
-        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
-
-        // TODO: it is dumplicated with StandardWellsDense
-        int numComponents() const;
-
-        virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const = 0;
-
-        double wsolvent() const;
-
-        double wpolymer() const;
-
-        bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                 const WellState& well_state) const;
 
         // to indicate a invalid connection
         static const int INVALIDCONNECTION = -100000;
@@ -186,19 +165,12 @@ namespace Opm
 
         const int current_step_;
 
-        // TODO: some variables shared by all the wells should be made static
-        // well name
-        std::string name_;
-
         // the index of well in Wells struct
         int index_of_well_;
 
         // well type
         // INJECTOR or PRODUCER
         enum WellType well_type_;
-
-        // whether the well allows crossflow
-        bool allow_cf_;
 
         // number of phases
         int number_of_phases_;
@@ -248,11 +220,35 @@ namespace Opm
 
         const PhaseUsage* phase_usage_;
 
+        bool getAllowCrossFlow() const;
+
         const std::vector<bool>* active_;
 
         const VFPProperties* vfp_properties_;
 
         double gravity_;
+
+        const std::vector<bool>& active() const;
+
+        const PhaseUsage& phaseUsage() const;
+
+        int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
+
+        int flowToEbosPvIdx( const int flowPv ) const;
+
+        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
+
+        // TODO: it is dumplicated with StandardWellsDense
+        int numComponents() const;
+
+        virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const = 0;
+
+        double wsolvent() const;
+
+        double wpolymer() const;
+
+        bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                 const WellState& well_state) const;
 
         bool wellHasTHPConstraints() const;
 
