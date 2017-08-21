@@ -161,14 +161,17 @@ namespace Opm {
 
             const int number_of_phases_;
 
+            using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
             // eventually, the wells_ above should be gone.
             // the name is just temporary
             // later, might make share_ptr const later.
-            std::vector<std::unique_ptr<WellInterface<TypeTag> > > well_container_;
+            std::vector<WellInterfacePtr > well_container_;
 
-            // TODO: forgot why returning a vector here
-            void createWellContainer(const Wells* wells_arg);
+            // create the well container
+            static std::vector<WellInterfacePtr > createWellContainer(const Wells* wells,
+                                                                      const std::vector<const Well*>& wells_ecl,
+                                                                      const int time_step);
 
             // Well collection is used to enforce the group control
             WellCollection* well_collection_;
@@ -188,6 +191,7 @@ namespace Opm {
 
             long int global_nc_;
 
+            // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
 
             void updateWellControls(WellState& xw) const;

@@ -17,6 +17,7 @@ namespace Opm {
        , wells_ecl_(wells_ecl)
        , number_of_wells_(wells_arg ? (wells_arg->number_of_wells) : 0)
        , number_of_phases_(wells_arg ? (wells_arg->number_of_phases) : 0) // TODO: not sure if it is proper for this way
+       , well_container_(createWellContainer(wells_arg, wells_ecl, current_timeIdx) )
        , well_collection_(well_collection)
        , param_(param)
        , terminal_output_(terminal_output)
@@ -25,7 +26,6 @@ namespace Opm {
        , current_timeIdx_(current_timeIdx)
        , rate_converter_(rate_converter)
     {
-       createWellContainer(wells_arg);
     }
 
 
@@ -111,27 +111,29 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
+    std::vector<typename StandardWellsDense<TypeTag>::WellInterfacePtr >
     StandardWellsDense<TypeTag>::
-    createWellContainer(const Wells* wells_arg)
+    createWellContainer(const Wells* wells,
+                        const std::vector< const Well* >& wells_ecl,
+                        const int time_step)
     {
-        well_container_.clear();
-        // There might be no wells in the process
-        if (localWellsActive()) {
-            const int nw = number_of_wells_;
+        std::vector<WellInterfacePtr> well_container;
 
-            well_container_.reserve(nw);
+        const int nw = wells ? (wells->number_of_wells) : 0;
+
+        if (nw > 0) {
+            well_container.reserve(nw);
 
             // With the following way, it will have the same order with wells struct
             // Hopefully, it can generate the same residual history with master branch
             for (int w = 0; w < nw; ++w) {
-                const std::string well_name = std::string(wells_arg->name[w]);
+                const std::string well_name = std::string(wells->name[w]);
 
                 // finding the location of the well in wells_ecl
-                const int nw_wells_ecl = wells_ecl_.size();
+                const int nw_wells_ecl = wells_ecl.size();
                 int index_well = 0;
                 for (; index_well < nw_wells_ecl; ++index_well) {
-                    if (well_name == wells_ecl_[index_well]->name()) {
+                    if (well_name == wells_ecl[index_well]->name()) {
                         break;
                     }
                 }
@@ -141,15 +143,16 @@ namespace Opm {
                     OPM_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ");
                 }
 
-                const Well* well_ecl = wells_ecl_[index_well];
-                if (well_ecl->isMultiSegment(current_timeIdx_)) {
+                const Well* well_ecl = wells_ecl[index_well];
+                if (well_ecl->isMultiSegment(time_step)) {
                     OPM_THROW(Opm::NumericalProblem, "Not handling Multisegment Wells for now");
                 }
 
                 // Basically, we are handling all the wells as StandardWell for the moment
-                well_container_.emplace_back(new StandardWell<TypeTag>(well_ecl, current_timeIdx_, wells_arg) );
+                well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells) );
             }
         }
+        return well_container;
     }
 
 

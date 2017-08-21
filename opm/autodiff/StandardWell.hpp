@@ -205,6 +205,9 @@ namespace Opm
         // pressure drop between different perforations
         std::vector<double> perf_pressure_diffs_;
 
+        // residuals of the well equations
+        BVectorWell resWell_;
+
         // two off-diagonal matrices
         OffDiagMatWell duneB_;
         OffDiagMatWell duneC_;
@@ -214,10 +217,6 @@ namespace Opm
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
         mutable BVectorWell invDrw_;
-        mutable BVector scaleAddRes_;
-
-        // residuals of the well equations
-        BVectorWell resWell_;
 
         mutable std::vector<double> well_solutions_;
 
