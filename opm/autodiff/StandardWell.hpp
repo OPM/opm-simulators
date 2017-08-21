@@ -107,18 +107,10 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const;
 
-        // TODO: to check whether all the paramters are required
-        void computePerfRate(const IntensiveQuantities& intQuants,
-                             const std::vector<EvalWell>& mob_perfcells_dense,
-                             const double Tw, const EvalWell& bhp, const double& cdp,
-                             const bool& allow_cf, std::vector<EvalWell>& cq_s) const;
-
         virtual void assembleWellEq(Simulator& ebosSimulator,
                                     const double dt,
                                     WellState& well_state,
                                     bool only_wells);
-
-        virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const;
 
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
@@ -239,6 +231,8 @@ namespace Opm
 
         EvalWell extendEval(const Eval& in) const;
 
+        bool crossFlowAllowed(const Simulator& ebosSimulator) const;
+
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
@@ -274,6 +268,12 @@ namespace Opm
 
         virtual void solveEqAndUpdateWellState(const ModelParameters& param,
                                                WellState& well_state);
+
+        // TODO: to check whether all the paramters are required
+        void computePerfRate(const IntensiveQuantities& intQuants,
+                             const std::vector<EvalWell>& mob_perfcells_dense,
+                             const double Tw, const EvalWell& bhp, const double& cdp,
+                             const bool& allow_cf, std::vector<EvalWell>& cq_s) const;
 
         // TODO: maybe we should provide a light version of computePerfRate, which does not include the
         // calculation of the derivatives

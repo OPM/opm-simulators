@@ -240,8 +240,6 @@ namespace Opm
         // TODO: it is dumplicated with StandardWellsDense
         int numComponents() const;
 
-        virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const = 0;
-
         double wsolvent() const;
 
         double wpolymer() const;
