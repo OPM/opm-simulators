@@ -124,7 +124,7 @@ namespace Opm {
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
-            void applySolutionWellState(const BVector& x, WellState& well_state) const;
+            void recoverWellSolutionAndUpdateWellState(const BVector& x, WellState& well_state) const;
 
             int numWells() const;
 
@@ -234,7 +234,7 @@ namespace Opm {
 
             void computeAccumWells() const;
 
-            void setWellVariables() const;
+            void setWellPrimaryVariables() const;
 
             // The number of components in the model.
             int numComponents() const

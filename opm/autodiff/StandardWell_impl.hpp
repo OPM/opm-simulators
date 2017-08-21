@@ -101,7 +101,7 @@ namespace Opm
 
     template<typename TypeTag>
     void StandardWell<TypeTag>::
-    setWellVariables()
+    setWellPrimaryVariables()
     {
         // TODO: using numComp here is only to make the 2p + dummy phase work
         // TODO: in theory, we should use numWellEq here.
@@ -1571,9 +1571,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    wellEqIteration(Simulator& ebosSimulator,
-                    const ModelParameters& param,
-                    WellState& well_state)
+    solveEqAndUpdateWellState(const ModelParameters& param,
+                              WellState& well_state)
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
@@ -1660,9 +1659,9 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    applySolutionWellState(const BVector& x,
-                           const ModelParameters& param,
-                           WellState& well_state) const
+    recoverWellSolutionAndUpdateWellState(const BVector& x,
+                                          const ModelParameters& param,
+                                          WellState& well_state) const
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);

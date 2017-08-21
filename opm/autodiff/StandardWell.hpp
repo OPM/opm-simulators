@@ -105,7 +105,7 @@ namespace Opm
                           const int num_cells);
 
 
-        virtual void setWellVariables();
+        virtual void setWellPrimaryVariables();
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
@@ -119,11 +119,6 @@ namespace Opm
                                     bool only_wells);
 
         virtual bool crossFlowAllowed(const Simulator& ebosSimulator) const;
-
-        /// updating the well_state based on well solution dwells
-        void updateWellState(const BVectorWell& dwells,
-                             const BlackoilModelParameters& param,
-                             WellState& well_state) const;
 
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
@@ -153,8 +148,8 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
-                                            WellState& well_state) const;
+        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
+                                                           WellState& well_state) const;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -242,6 +237,11 @@ namespace Opm
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
+        // updating the well_state based on well solution dwells
+        void updateWellState(const BVectorWell& dwells,
+                             const BlackoilModelParameters& param,
+                             WellState& well_state) const;
+
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
         void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
@@ -267,9 +267,8 @@ namespace Opm
                                                     const std::vector<double>& rvmax_perf,
                                                     const std::vector<double>& surf_dens_perf);
 
-        virtual void wellEqIteration(Simulator& ebosSimulator,
-                                     const ModelParameters& param,
-                                     WellState& well_state);
+        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
+                                               WellState& well_state);
 
         // TODO: maybe we should provide a light version of computePerfRate, which does not include the
         // calculation of the derivatives

@@ -178,8 +178,8 @@ namespace Opm {
         }
 
         updateWellControls(well_state);
-        // Set the primary variables for the wells
-        setWellVariables();
+        // Set the well primary variables
+        setWellPrimaryVariables();
 
         if (iterationIdx == 0) {
             computeWellConnectionPressures(ebosSimulator, well_state);
@@ -285,10 +285,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    applySolutionWellState(const BVector& x, WellState& well_state) const
+    recoverWellSolutionAndUpdateWellState(const BVector& x, WellState& well_state) const
     {
         for (auto& well : well_container_) {
-            well->applySolutionWellState(x, param_, well_state);
+            well->recoverWellSolutionAndUpdateWellState(x, param_, well_state);
         }
     }
 
@@ -377,10 +377,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    setWellVariables() const
+    setWellPrimaryVariables() const
     {
         for (auto& well : well_container_) {
-            well->setWellVariables();
+            well->setWellPrimaryVariables();
         }
     }
 
@@ -436,7 +436,7 @@ namespace Opm {
             if( localWellsActive() )
             {
                 for (auto& well : well_container_) {
-                    well->wellEqIteration(ebosSimulator, param_, well_state);
+                    well->solveEqAndUpdateWellState(param_, well_state);
                 }
             }
             // updateWellControls uses communication
@@ -445,7 +445,7 @@ namespace Opm {
             if( wellsActive() )
             {
                 updateWellControls(well_state);
-                setWellVariables();
+                setWellPrimaryVariables();
             }
         } while (it < 15);
 
@@ -638,10 +638,11 @@ namespace Opm {
 
                 // calculate the well potentials
                 setWellSolutions(well_state);
-                setWellVariables();
                 computeWellConnectionPressures(ebos_simulator, well_state);
 
-                // To store well potentials for each well
+                // set the well primary variables, which is used in computePerfRate for computeWellPotentials
+                // TODO: for computeWellPotentials, no derivative is required actually
+                setWellPrimaryVariables();
                 std::vector<double> well_potentials;
                 computeWellPotentials(ebos_simulator, well_state, well_potentials);
 

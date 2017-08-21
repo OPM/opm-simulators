@@ -104,15 +104,14 @@ namespace Opm
                           const double gravity_arg,
                           const int num_cells);
 
-        virtual void setWellVariables() = 0;
+        virtual void setWellPrimaryVariables() = 0;
 
         virtual bool getWellConvergence(Simulator& ebosSimulator,
                                         const std::vector<double>& B_avg,
                                         const ModelParameters& param) const = 0;
 
-        virtual void wellEqIteration(Simulator& ebosSimulator,
-                                     const ModelParameters& param,
-                                     WellState& well_state) = 0;
+        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
+                                               WellState& well_state) = 0;
 
         virtual void assembleWellEq(Simulator& ebosSimulator,
                                     const double dt,
@@ -128,8 +127,8 @@ namespace Opm
 
         // using the solution x to recover the solution xw for wells and applying
         // xw to update Well State
-        virtual void applySolutionWellState(const BVector& x, const ModelParameters& param,
-                                            WellState& well_state) const = 0;
+        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
+                                                           WellState& well_state) const = 0;
 
         // Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;

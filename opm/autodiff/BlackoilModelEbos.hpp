@@ -324,7 +324,7 @@ namespace Opm {
 
                 if( nw > 0 )
                 {
-                    wellModel().applySolutionWellState(x, well_state);
+                    wellModel().recoverWellSolutionAndUpdateWellState(x, well_state);
                 }
                 report.update_time += perfTimer.stop();
             }
