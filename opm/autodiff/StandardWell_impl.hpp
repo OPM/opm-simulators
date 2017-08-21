@@ -1476,8 +1476,10 @@ namespace Opm
         const double tol_wells = param.tolerance_wells_;
         const double maxResidualAllowed = param.max_residual_allowed_;
 
+        // TODO: it should be the number of numWellEq
+        // using numComp here for flow_ebos running 2p case.
         std::vector<Scalar> res(numComp);
-        for (int comp = 0; comp < numWellEq; ++comp) {
+        for (int comp = 0; comp < numComp; ++comp) {
             // magnitude of the residual matters
             res[comp] = std::abs(resWell_[0][comp]);
         }
