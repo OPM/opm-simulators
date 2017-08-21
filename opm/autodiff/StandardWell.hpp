@@ -105,7 +105,7 @@ namespace Opm
                           const int num_cells);
 
 
-        virtual void setWellPrimaryVariables();
+        virtual void initPrimaryVariablesEvaluation() const;
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,
@@ -156,7 +156,7 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) const;
 
-        virtual void setWellSolutions(const WellState& well_state) const;
+        virtual void updatePrimaryVariables(const WellState& well_state) const;
 
     protected:
 
@@ -213,9 +213,14 @@ namespace Opm
         mutable BVectorWell Bx_;
         mutable BVectorWell invDrw_;
 
-        mutable std::vector<double> well_solutions_;
+        // the values for the primary varibles
+        // based on different solutioin strategies, the wells can have different primary variables
+        mutable std::vector<double> primary_variables_;
 
-        std::vector<EvalWell> well_variables_;
+        // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
+        mutable std::vector<EvalWell> primary_variables_evaluation_;
+
+        // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
 
         // TODO: this function should be moved to the base class.

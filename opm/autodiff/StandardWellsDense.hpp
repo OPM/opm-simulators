@@ -199,7 +199,7 @@ namespace Opm {
             void updateGroupControls(WellState& well_state) const;
 
             // setting the well_solutions_ based on well_state.
-            void setWellSolutions(const WellState& well_state) const;
+            void updatePrimaryVariables(const WellState& well_state) const;
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
@@ -234,7 +234,7 @@ namespace Opm {
 
             void computeAccumWells() const;
 
-            void setWellPrimaryVariables() const;
+            void initPrimaryVariablesEvaluation() const;
 
             // The number of components in the model.
             int numComponents() const

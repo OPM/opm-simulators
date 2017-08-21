@@ -178,8 +178,8 @@ namespace Opm {
         }
 
         updateWellControls(well_state);
-        // Set the well primary variables
-        setWellPrimaryVariables();
+        // Set the well primary variables based on the value of well solutions
+        initPrimaryVariablesEvaluation();
 
         if (iterationIdx == 0) {
             computeWellConnectionPressures(ebosSimulator, well_state);
@@ -377,10 +377,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    setWellPrimaryVariables() const
+    initPrimaryVariablesEvaluation() const
     {
         for (auto& well : well_container_) {
-            well->setWellPrimaryVariables();
+            well->initPrimaryVariablesEvaluation();
         }
     }
 
@@ -445,7 +445,7 @@ namespace Opm {
             if( wellsActive() )
             {
                 updateWellControls(well_state);
-                setWellPrimaryVariables();
+                initPrimaryVariablesEvaluation();
             }
         } while (it < 15);
 
@@ -455,7 +455,7 @@ namespace Opm {
             OpmLog::debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
 
             well_state = well_state0;
-            setWellSolutions(well_state);
+            updatePrimaryVariables(well_state);
             // also recover the old well controls
             for (int w = 0; w < nw; ++w) {
                 WellControls* wc = well_container_[w]->wellControls();
@@ -569,11 +569,16 @@ namespace Opm {
                           const WellState& well_state,
                           std::vector<double>& well_potentials) const
     {
+        updatePrimaryVariables(well_state);
+        computeWellConnectionPressures(ebosSimulator, well_state);
+
+        // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
+        // TODO: for computeWellPotentials, no derivative is required actually
+        initPrimaryVariablesEvaluation();
 
         // number of wells and phases
         const int nw = number_of_wells_;
         const int np = number_of_phases_;
-
         well_potentials.resize(nw * np, 0.0);
 
         for (int w = 0; w < nw; ++w) {
@@ -637,12 +642,6 @@ namespace Opm {
             if (well_collection_->requireWellPotentials()) {
 
                 // calculate the well potentials
-                setWellSolutions(well_state);
-                computeWellConnectionPressures(ebos_simulator, well_state);
-
-                // set the well primary variables, which is used in computePerfRate for computeWellPotentials
-                // TODO: for computeWellPotentials, no derivative is required actually
-                setWellPrimaryVariables();
                 std::vector<double> well_potentials;
                 computeWellPotentials(ebos_simulator, well_state, well_potentials);
 
@@ -940,10 +939,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    setWellSolutions(const WellState& well_state) const
+    updatePrimaryVariables(const WellState& well_state) const
     {
         for (const auto& well : well_container_) {
-            well->setWellSolutions(well_state);
+            well->updatePrimaryVariables(well_state);
         }
     }
 

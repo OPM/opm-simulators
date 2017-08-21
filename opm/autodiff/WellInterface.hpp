@@ -104,7 +104,7 @@ namespace Opm
                           const double gravity_arg,
                           const int num_cells);
 
-        virtual void setWellPrimaryVariables() = 0;
+        virtual void initPrimaryVariablesEvaluation() const = 0;
 
         virtual bool getWellConvergence(Simulator& ebosSimulator,
                                         const std::vector<double>& B_avg,
@@ -153,7 +153,7 @@ namespace Opm
         virtual void updateWellControl(WellState& xw,
                                        wellhelpers::WellSwitchingLogger& logger) const = 0;
 
-        virtual void setWellSolutions(const WellState& well_state) const = 0;
+        virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 
     protected:
 
