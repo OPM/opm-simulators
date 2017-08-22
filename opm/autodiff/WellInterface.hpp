@@ -87,6 +87,9 @@ namespace Opm
         /// Constructor
         WellInterface(const Well* well, const int time_step, const Wells* wells);
 
+        /// Virutal destructor
+        virtual ~WellInterface() {}
+
         /// Well name.
         const std::string& name() const;
 
