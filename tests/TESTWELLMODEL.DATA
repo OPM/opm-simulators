@@ -1,0 +1,58 @@
+RUNSPEC
+
+DIMENS
+    5 5 4 /
+OIL
+GAS
+WATER
+
+GRID
+
+DX
+    100*100. /
+
+DY
+    100*50. /
+
+DZ
+    100*10. /
+
+TOPS
+    25*2500 /
+
+PORO
+    100*0.3 /
+
+PERMX
+    100*10. /
+
+PERMY
+    100*20. /
+
+PERMZ
+    100*1. /
+
+SCHEDULE
+
+WELSPECS
+	'PROD1'	'P' 5   5   2525	'OIL' /
+	'INJE1'	'I'	1	1   2505	'GAS' /
+/
+
+COMPDAT
+    'PROD1' 5   5 3 4 'OPEN' 2* 0.15 /
+	'INJE1'	1	1 1 4 'OPEN' 2* 0.15 /
+/
+
+WCONINJE
+    'INJE1' 'WATER' 'OPEN' 'RATE' 1000. /
+/
+
+WCONPROD
+    'PROD1' 'OPEN' 'GRAT' 2* 50000. /
+/
+
+TSTEP
+10 /
+
+END

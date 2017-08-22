@@ -83,15 +83,6 @@ struct SetupMSW {
         std::unique_ptr<GridInit> grid_init(new GridInit(ecl_state, porv));
         const Grid& grid = grid_init->grid();
 
-        // Create material law manager.
-        std::vector<int> compressed_to_cartesianIdx;
-        Opm::createGlobalCellArray(grid, compressed_to_cartesianIdx);
-
-        std::shared_ptr<MaterialLawManager> material_law_manager(new MaterialLawManager());
-        material_law_manager->initFromDeck(deck, ecl_state, compressed_to_cartesianIdx);
-
-        std::unique_ptr<FluidProps> fluidprops(new FluidProps(deck, ecl_state, material_law_manager, grid));
-
         const size_t current_timestep = 0;
 
         // dummy_dynamic_list_econ_lmited
@@ -115,7 +106,7 @@ struct SetupMSW {
                                         std::unordered_set<std::string>());
 
         const Wells* wells = wells_manager.c_wells();
-        const auto wells_ecl = ecl_state.getSchedule().getWells(current_timestep);
+        const auto& wells_ecl = ecl_state.getSchedule().getWells(current_timestep);
 
         ms_wells.reset(new Opm::MultisegmentWells(wells, &(wells_manager.wellCollection()), wells_ecl, current_timestep));
     };

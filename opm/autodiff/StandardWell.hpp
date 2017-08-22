@@ -135,9 +135,9 @@ namespace Opm
         virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                                     const WellState& xw);
 
-        // Ax = Ax - C D^-1 B x
+        /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;
-        // r = r - C D^-1 Rw
+        /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const;
 
         /// using the solution x to recover the solution xw for wells and applying

@@ -91,6 +91,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_solventprops_ad.cpp
   tests/test_multisegmentwells.cpp
   tests/test_multiphaseupwind.cpp
+  tests/test_wellmodel.cpp
   # tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
@@ -102,6 +103,7 @@ list (APPEND TEST_DATA_FILES
   tests/VFPPROD2
   tests/msw.data
   tests/TESTTIMER.DATA
+  tests/TESTWELLMODEL.DATA
   )
 
 

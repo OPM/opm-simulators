@@ -29,6 +29,7 @@
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/wells/WellsManager.hpp>
 
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/VFPInjProperties.hpp>

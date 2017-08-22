@@ -29,6 +29,17 @@ namespace Opm
     : well_ecl_(well)
     , current_step_(time_step)
     {
+        if (!well) {
+            OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");
+        }
+
+        if (time_step < 0) {
+            OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
+        }
+
+        if (!wells) {
+            OPM_THROW(std::invalid_argument, "Null pointer of Wells is used to construct WellInterface");
+        }
 
         const std::string& well_name = well->name();
 
