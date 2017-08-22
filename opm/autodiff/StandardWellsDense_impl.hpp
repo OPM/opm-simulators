@@ -479,22 +479,51 @@ namespace Opm {
     getWellConvergence(Simulator& ebosSimulator,
                        const std::vector<Scalar>& B_avg) const
     {
-        bool converged_well = true;
+        ConvergenceReport report;
 
-        // currently, if there is any well not converged, we consider the well eqautions do not get converged
         for (const auto& well : well_container_) {
-            if ( !well->getWellConvergence(ebosSimulator, B_avg, param_) ) {
-                converged_well = false;
+            report += well->getWellConvergence(ebosSimulator, B_avg, param_);
+        }
+
+        // checking NaN residuals
+        {
+            bool nan_residual_found = report.nan_residual_found;
+            const auto& grid = ebosSimulator.gridManager().grid();
+            int value = nan_residual_found ? 1 : 0;
+
+            nan_residual_found = grid.comm().max(value);
+
+            if (nan_residual_found) {
+                for (const auto& well : report.nan_residual_wells) {
+                    OpmLog::debug("NaN residual found with phase " + well.phase_name + " for well " + well.well_name);
+                }
+                OPM_THROW(Opm::NumericalProblem, "NaN residual found!");
             }
         }
 
+        // checking too large residuals
+        {
+            bool too_large_residual_found = report.too_large_residual_found;
+            const auto& grid = ebosSimulator.gridManager().grid();
+            int value = too_large_residual_found ? 1 : 0;
+
+            too_large_residual_found = grid.comm().max(value);
+            if (too_large_residual_found) {
+                for (const auto& well : report.too_large_residual_wells) {
+                    OpmLog::debug("Too large residual found with phase " + well.phase_name + " fow well " + well.well_name);
+                }
+                OPM_THROW(Opm::NumericalProblem, "Too large residual found!");
+            }
+        }
+
+        // checking convergence
+        bool converged_well = report.converged;
         {
             const auto& grid = ebosSimulator.gridManager().grid();
             int value = converged_well ? 1 : 0;
 
             converged_well = grid.comm().min(value);
         }
-        // TODO: to think about the output here.
 
         return converged_well;
     }

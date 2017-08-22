@@ -58,6 +58,8 @@ namespace Opm
         };
 
         using typename Base::Scalar;
+        using typename Base::ConvergenceReport;
+
         using Base::numEq;
 
         using Base::has_solvent;
@@ -123,9 +125,9 @@ namespace Opm
                                        wellhelpers::WellSwitchingLogger& logger) const;
 
         /// check whether the well equations get converged for this well
-        virtual bool getWellConvergence(Simulator& ebosSimulator,
-                                        const std::vector<double>& B_avg,
-                                        const ModelParameters& param) const;
+        virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
+                                                     const std::vector<double>& B_avg,
+                                                     const ModelParameters& param) const;
 
         /// computing the accumulation term for later use in well mass equations
         virtual void computeAccumWell();

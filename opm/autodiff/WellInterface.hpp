@@ -109,9 +109,40 @@ namespace Opm
 
         virtual void initPrimaryVariablesEvaluation() const = 0;
 
-        virtual bool getWellConvergence(Simulator& ebosSimulator,
-                                        const std::vector<double>& B_avg,
-                                        const ModelParameters& param) const = 0;
+        /// a struct to collect information about the convergence checking
+        struct ConvergenceReport {
+            struct ProblemWell {
+                std::string well_name;
+                std::string phase_name;
+            };
+            bool converged = true;
+            bool nan_residual_found = false;
+            std::vector<ProblemWell> nan_residual_wells;
+            // We consider Inf is large residual here
+            bool too_large_residual_found = false;
+            std::vector<ProblemWell> too_large_residual_wells;
+
+            ConvergenceReport& operator+=(const ConvergenceReport& rhs) {
+                converged = converged && rhs.converged;
+                nan_residual_found = nan_residual_found || rhs.nan_residual_found;
+                if (rhs.nan_residual_found) {
+                    for (const ProblemWell& well : rhs.nan_residual_wells) {
+                        nan_residual_wells.push_back(well);
+                    }
+                }
+                too_large_residual_found = too_large_residual_found || rhs.too_large_residual_found;
+                if (rhs.too_large_residual_found) {
+                    for (const ProblemWell& well : rhs.too_large_residual_wells) {
+                        too_large_residual_wells.push_back(well);
+                    }
+                }
+                return *this;
+            }
+        };
+
+        virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
+                                                     const std::vector<double>& B_avg,
+                                                     const ModelParameters& param) const = 0;
 
         virtual void solveEqAndUpdateWellState(const ModelParameters& param,
                                                WellState& well_state) = 0;
@@ -128,15 +159,15 @@ namespace Opm
 
         void computeRepRadiusPerfLength(const Grid& grid, const std::map<int, int>& cartesian_to_compressed);
 
-        // using the solution x to recover the solution xw for wells and applying
-        // xw to update Well State
+        /// using the solution x to recover the solution xw for wells and applying
+        /// xw to update Well State
         virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
                                                            WellState& well_state) const = 0;
 
-        // Ax = Ax - C D^-1 B x
+        /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const = 0;
 
-        // r = r - C D^-1 Rw
+        /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const = 0;
 
         virtual void computeWellPotentials(const Simulator& ebosSimulator,

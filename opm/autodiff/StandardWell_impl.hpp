@@ -1457,7 +1457,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    bool
+    typename StandardWell<TypeTag>::ConvergenceReport
     StandardWell<TypeTag>::
     getWellConvergence(Simulator& ebosSimulator,
                        const std::vector<double>& B_avg,
@@ -1485,30 +1485,43 @@ namespace Opm
         }
 
         Vector well_flux_residual(numComp);
-        bool converged_Well = true;
 
         // Finish computation
         for ( int compIdx = 0; compIdx < numComp; ++compIdx )
         {
             well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
-            converged_Well = converged_Well && (well_flux_residual[compIdx] < tol_wells);
         }
 
-        // if one of the residuals is NaN, throw exception, so that the solver can be restarted
+        ConvergenceReport report;
+        // checking if any NaN or too large residuals found
         // TODO: not understand why phase here while component in other places.
         for (int phaseIdx = 0; phaseIdx < np; ++phaseIdx) {
             const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
 
             if (std::isnan(well_flux_residual[phaseIdx])) {
-                OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName << " for well " << name());
-            }
-
-            if (well_flux_residual[phaseIdx] > maxResidualAllowed) {
-                OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName << " for well " << name());
+                report.nan_residual_found = true;
+                const typename ConvergenceReport::ProblemWell problem_well = {name(), phaseName};
+                report.nan_residual_wells.push_back(problem_well);
+            } else {
+                if (well_flux_residual[phaseIdx] > maxResidualAllowed) {
+                    report.too_large_residual_found = true;
+                    const typename ConvergenceReport::ProblemWell problem_well = {name(), phaseName};
+                    report.too_large_residual_wells.push_back(problem_well);
+                }
             }
         }
 
-        return converged_Well;
+        if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
+            // check convergence
+            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
+            {
+                report.converged = report.converged && (well_flux_residual[compIdx] < tol_wells);
+            }
+        } else { // abnormal values found and no need to check the convergence
+            report.converged = false;
+        }
+
+        return report;
     }
 
 

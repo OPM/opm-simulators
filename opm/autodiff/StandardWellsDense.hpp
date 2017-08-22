@@ -168,6 +168,8 @@ namespace Opm {
             // later, might make share_ptr const later.
             std::vector<WellInterfacePtr > well_container_;
 
+            using ConvergenceReport = typename WellInterface<TypeTag>::ConvergenceReport;
+
             // create the well container
             static std::vector<WellInterfacePtr > createWellContainer(const Wells* wells,
                                                                       const std::vector<const Well*>& wells_ecl,
