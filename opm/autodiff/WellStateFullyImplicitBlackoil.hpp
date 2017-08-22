@@ -53,14 +53,20 @@ namespace Opm
         using BaseType :: numWells;
         using BaseType :: numPhases;
 
+        template <class State, class PrevWellState>
+        void init(const Wells* wells, const State& state, const PrevWellState& prevState)
+        {
+            init(wells, state.pressure(), prevState);
+        }
+
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
-        template <class State, class PrevState>
-        void init(const Wells* wells, const State& state, const PrevState& prevState)
+        template <class PrevWellState>
+        void init(const Wells* wells, const std::vector<double>& cellPressures , const PrevWellState& prevState)
         {
             // call init on base class
-            BaseType :: init(wells, state);
+            BaseType :: init(wells, cellPressures);
 
             // if there are no well, do nothing in init
             if (wells == 0) {
@@ -90,7 +96,7 @@ namespace Opm
                         for (int p = 0; p < np; ++p) {
                             perfphaserates_[np*perf + p] = wellRates()[np*w + p] / double(num_perf_this_well);
                         }
-                        perfPress()[perf] = state.pressure()[wells->well_cells[perf]];
+                        perfPress()[perf] = cellPressures[wells->well_cells[perf]];
                     }
                 }
             }

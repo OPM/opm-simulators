@@ -61,11 +61,12 @@ namespace Opm
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
-        template <class State, class PrevState>
-        void init(const Wells* wells, const State& state, const PrevState& prevState, const PhaseUsage& pu)
+        template <class PrevWellState>
+        void init(const Wells* wells, const std::vector<double>& cellPressures, const PrevWellState& prevState, const PhaseUsage& pu)
         {
+
             // call init on base class
-            BaseType :: init(wells, state, prevState);
+            BaseType :: init(wells, cellPressures, prevState);
 
 
             const int nw = wells->number_of_wells;
@@ -207,8 +208,8 @@ namespace Opm
 
         template <class State>
         void resize(const Wells* wells, const State& state, const PhaseUsage& pu ) {
-            const WellStateFullyImplicitBlackoilDense dummy_state{}; // Init with an empty previous state only resizes
-            init(wells, state, dummy_state, pu) ;
+            const WellStateFullyImplicitBlackoilDense dummy_state{}; // Init with an empty previous state only resizes            
+            init(wells, state.pressure(), dummy_state, pu) ;
         }
 
 

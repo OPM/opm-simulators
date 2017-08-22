@@ -450,7 +450,66 @@ namespace Opm {
                 }   
                 calcRmax();
             }
+
             /**
+             * Compute average hydrocarbon pressure and maximum
+             * dissolution and evaporation at average hydrocarbon
+             * pressure in all regions in field.
+             *
+             * Fluid properties are evaluated at average hydrocarbon
+             * pressure for purpose of conversion from surface rate to
+             * reservoir voidage rate.
+             *
+             * \param[in] state Dynamic reservoir state.
+             * \param[in] any  The information and communication utilities
+             *                 about/of the parallelization. in any parallel
+             *                 it wraps a ParallelISTLInformation. Parameter
+             *                 is optional.
+             */
+            template <typename ElementContext, class EbosSimulator>
+            void defineState(const EbosSimulator& simulator)
+            {
+
+                //const int numCells = cellPvtIdx_.size();
+                //const Region region = std::vector<int>(numCells, 0);
+                auto& ra = attr_.attributes(0);
+                auto& p  = ra.pressure;
+                auto& T  = ra.temperature;
+                std::size_t n = 0;
+
+                ElementContext elemCtx( simulator );
+                const auto& gridView = simulator.gridView();
+
+                const auto& elemEndIt = gridView.template end</*codim=*/0>();
+                for (auto elemIt = gridView.template begin</*codim=*/0>();
+                     elemIt != elemEndIt;
+                     ++elemIt)
+                {
+
+                    const auto& elem = *elemIt;
+                    if (elem.partitionType() != Dune::InteriorEntity)
+                        continue;
+
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& fs = intQuants.fluidState();
+
+                    p += fs.pressure(FluidSystem::oilPhaseIdx).value();
+                    T += fs.temperature(FluidSystem::oilPhaseIdx).value();
+                    n += 1;
+                }
+                p = gridView.comm().sum(p);
+                T = gridView.comm().sum(T);
+                n = gridView.comm().sum(n);
+
+                p /= n;
+                T /= n;
+
+                calcRmax();
+            }
+
+	    /**
              * Region identifier.
              *
              * Integral type.
