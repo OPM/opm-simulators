@@ -19,7 +19,7 @@ copyToReferenceDir () {
 }
 
 tests=${@:2}
-test -z "$tests" && tests="spe11 spe12 spe12p spe3 spe5 spe9 norne_init msw_2d_h polymer2d"
+test -z "$tests" && tests="spe11 spe12 spe12p spe3 spe5 spe9 norne_init msw_2d_h polymer2d spe9group"
 if grep -q -i "norne " <<< $ghprbCommentBody
 then
   if test -d $WORKSPACE/deps/opm-data/norne/flow
@@ -112,7 +112,14 @@ for test_name in ${tests}; do
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
-  if grep -q "spe9" <<< $test_name
+  if grep -q "spe9group" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow_ebos+spe9group/ \
+      $OPM_DATA_ROOT/spe9group/opm-simulation-reference/flow_ebos \
+      SPE9_CP_GROUP \
+      EGRID INIT PRT SMSPEC UNRST UNSMRY
+  elif grep -q "spe9" <<< $test_name
   then
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_ebos+spe9/ \
@@ -169,6 +176,7 @@ then
   git status | grep "SPE1CASE2_2P" && tests="$tests spe1-2p"
   git status | grep "SPE5CASE1" && tests="$tests spe5"
   git status | grep "SPE9_CP" && tests="$tests spe9"
+  git status | grep "SPE9_CP_GROUP" && tests="$tests spe9group"
   git status | grep "2D_H__" && tests="$tests msw_2d_h"
   git status | grep "2D_THREEPHASE_POLY_HETER" && tests="$tests simple2d"
   git status | grep "NORNE_ATW2013.INIT" && tests="$tests norne_init"
