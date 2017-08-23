@@ -706,6 +706,7 @@ namespace Opm {
                 if (has_solvent_) {
                     double& ss = priVars[Indices::solventSaturationIdx];
                     ss -= satScaleFactor * dss;
+                    ss = std::min(std::max(ss, 0.0),1.0);
                 }
                 if (has_polymer_) {
                     double& c = priVars[Indices::polymerConcentrationIdx];
