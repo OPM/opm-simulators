@@ -240,6 +240,10 @@ SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
 
 // ebos handles the SWATINIT keyword by default
 SET_BOOL_PROP(EclBaseProblem, EnableSwatinit, true);
+
+//! Set the ParameterMetaData property
+SET_TYPE_PROP(EclBaseProblem, SimulatorParameter, std::pair< std::shared_ptr<Opm::Deck>, std::shared_ptr<Opm::EclipseState> > );
+
 } // namespace Properties
 
 /*!
@@ -489,7 +493,7 @@ public:
             this->model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
 
         this->model().updateMaxOilSaturations();
-        
+
         if (GET_PROP_VALUE(TypeTag, EnablePolymer))
             updateMaxPolymerAdsorption_();
 

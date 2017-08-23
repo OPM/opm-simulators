@@ -134,18 +134,27 @@ public:
         if (myRank == 0)
             std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
-        Opm::Parser parser;
-        typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
-        typedef std::vector<ParseModePair> ParseModePairs;
-        ParseModePairs tmp;
-        tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE));
-        tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN));
-        tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN));
-        tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN));
-        Opm::ParseContext parseContext(tmp);
+        if( ! simulator.simulatorParameter().first )
+        {
+            Opm::Parser parser;
+            typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
+            typedef std::vector<ParseModePair> ParseModePairs;
+            ParseModePairs tmp;
+            tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE));
+            tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN));
+            tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN));
+            tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN));
+            Opm::ParseContext parseContext(tmp);
 
-        deck_ = parser.parseFile(fileName , parseContext);
-        eclState_.reset(new Opm::EclipseState(deck_, parseContext));
+            deck_.reset( new Opm::Deck(parser.parseFile(fileName , parseContext)) );
+            eclState_.reset(new Opm::EclipseState(deck(), parseContext));
+        }
+        else
+        {
+            deck_ = simulator.simulatorParameter().first;
+            assert( simulator.simulatorParameter().second );
+            eclState_ = simulator.simulatorParameter().second;
+        }
 
         asImp_().createGrids_();
 
@@ -156,10 +165,10 @@ public:
      * \brief Return a pointer to the parsed ECL deck
      */
     const Opm::Deck& deck() const
-    { return deck_; }
+    { return *deck_; }
 
     Opm::Deck& deck()
-    { return deck_; }
+    { return *deck_; }
 
     /*!
      * \brief Return a pointer to the internalized ECL deck
@@ -260,8 +269,8 @@ private:
     { return *static_cast<const Implementation*>(this); }
 
     std::string caseName_;
-    Opm::Deck deck_;
-    std::unique_ptr<Opm::EclipseState> eclState_;
+    std::shared_ptr<Opm::Deck>         deck_;
+    std::shared_ptr<Opm::EclipseState> eclState_;
 };
 
 } // namespace Ewoms
