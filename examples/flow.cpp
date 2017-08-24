@@ -118,15 +118,26 @@ int main(int argc, char** argv)
     const bool outputCout = mpi_helper.rank() == 0;
 
     Opm::ParameterGroup param(argc, argv, false, outputCout);
+
     // See if a deck was specified on the command line.
     if (!param.unhandledArguments().empty()) {
         if (param.unhandledArguments().size() != 1) {
             std::cerr << "You can only specify a single input deck on the command line.\n";
-            return false;
+            return EXIT_FAILURE;
         } else {
             const auto casename = detail::simulationCaseName( param.unhandledArguments()[ 0 ] );
             param.insertParameter("deck_filename", casename.string() );
         }
+    }
+
+    // We must have an input deck. Grid and props will be read from that.
+    if (!param.has("deck_filename")) {
+        std::cerr << "This program must be run with an input deck.\n"
+            "Specify the deck filename either\n"
+            "    a) as a command line argument by itself\n"
+            "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
+            "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
+        return EXIT_FAILURE;
     }
 
     std::string deckFilename = param.get<std::string>("deck_filename");
