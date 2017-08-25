@@ -196,7 +196,7 @@ int main(int argc, char** argv)
     }
     catch (const std::invalid_argument& e)
     {
-        std::cerr << "Failed to create valid EclipseState object. See logfile: " << std::endl;
+        std::cerr << "Failed to create valid EclipseState object." << std::endl;
         std::cerr << "Exception caught: " << e.what() << std::endl;
         throw;
     }
