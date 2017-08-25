@@ -75,6 +75,7 @@ namespace Opm
     public:
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
+        typedef typename GET_PROP_TYPE(TypeTag, SimulatorParameter) EbosSimulatorParameter;
         typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
@@ -90,7 +91,9 @@ namespace Opm
         /// simulator classes, based on user command-line input.  The
         /// content of this function used to be in the main() function of
         /// flow.cpp.
-        int execute(int argc, char** argv)
+        int execute(int argc, char** argv,
+                    std::shared_ptr<Opm::Deck> deck = std::shared_ptr<Opm::Deck>(),
+                    std::shared_ptr<Opm::EclipseState> eclipseState = std::shared_ptr<Opm::EclipseState>() )
         {
             try {
                 // we always want to use the default locale, and thus spare us the trouble
@@ -104,7 +107,7 @@ namespace Opm
                     return EXIT_FAILURE;
                 }
 
-                setupEbosSimulator();
+                setupEbosSimulator( deck, eclipseState );
                 setupOutput();
                 setupLogging();
                 printPRTHeader();
@@ -180,8 +183,8 @@ namespace Opm
 
         // Print startup message if on output rank.
         void printStartupMessage()
-        {   
- 
+        {
+
             if (output_cout_) {
                 const int lineLen = 70;
                 const std::string version = moduleVersionName();
@@ -338,29 +341,29 @@ namespace Opm
             streamLog->setMessageFormatter(std::make_shared<SimpleMessageFormatter>(true));
 
             if ( output_cout_ )
-            { 
+            {
             // Read Parameters.
                 OpmLog::debug("\n---------------    Reading parameters     ---------------\n");
             }
         }
-        
+
         void printPRTHeader()
         {
-          // Print header for PRT file.            
+          // Print header for PRT file.
           if ( output_cout_ ) {
               const std::string version = moduleVersionName();
               const double megabyte = 1024 * 1024;
-              unsigned num_cpu = std::thread::hardware_concurrency();    
+              unsigned num_cpu = std::thread::hardware_concurrency();
               struct utsname arch;
-              const char* user = getlogin(); 
+              const char* user = getlogin();
               time_t now = std::time(0);
               struct tm  tstruct;
               char      tmstr[80];
               tstruct = *localtime(&now);
               strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
-              const double mem_size = getTotalSystemMemory() / megabyte;   
+              const double mem_size = getTotalSystemMemory() / megabyte;
               std::ostringstream ss;
-              ss << "\n\n\n ########  #          ######   #           #\n";  
+              ss << "\n\n\n ########  #          ######   #           #\n";
               ss << " #         #         #      #   #         # \n";
               ss << " #####     #         #      #    #   #   #  \n";
               ss << " #         #         #      #     # # # #   \n";
@@ -377,11 +380,11 @@ namespace Opm
               if (user) {
                  ss << "User          =  " << user << std::endl;
                  }
-              ss << "Simulation started on " << tmstr << " hrs\n";                            
+              ss << "Simulation started on " << tmstr << " hrs\n";
               OpmLog::note(ss.str());
             }
         }
-        
+
         void mergeParallelLogFiles()
         {
             // force closing of all log files.
@@ -406,7 +409,7 @@ namespace Opm
                           detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
         }
 
-        void setupEbosSimulator()
+        void setupEbosSimulator( std::shared_ptr<Opm::Deck>& dck, std::shared_ptr<Opm::EclipseState>& eclipseState)
         {
             std::string progName("flow_ebos");
             std::string deckFile("--ecl-deck-file-name=");
@@ -414,9 +417,10 @@ namespace Opm
             char* ptr[2];
             ptr[ 0 ] = const_cast< char * > (progName.c_str());
             ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
+            EbosSimulatorParameter simParam( dck, eclipseState );
             EbosSimulator::registerParameters();
             Ewoms::setupParameters_< TypeTag > ( 2, ptr );
-            ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
+            ebosSimulator_.reset(new EbosSimulator(simParam, /*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
             // Create a grid with a global view.
@@ -737,7 +741,7 @@ namespace Opm
 
             throw std::invalid_argument( "Cannot find input case " + casename );
         }
-        
+
         unsigned long long getTotalSystemMemory()
         {
             long pages = sysconf(_SC_PHYS_PAGES);
@@ -955,4 +959,4 @@ namespace Opm
     };
 } // namespace Opm
 
-#endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED 
+#endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
