@@ -294,9 +294,6 @@ void wellsToState( const data::Wells& wells,
 {
     // Set base class variables.
     wellsToState(wells, phases, static_cast<WellStateFullyImplicitBlackoil&>(state));
-
-    // Set wellSolution() variable.
-    state.setWellSolutions(phases);
 }
 
 

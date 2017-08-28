@@ -154,7 +154,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
-                          const StandardWellsDense<TypeTag>& well_model,
+                          StandardWellsDense<TypeTag>& well_model,
                           RateConverterType& rate_converter,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
@@ -284,10 +284,9 @@ namespace Opm {
                 const int nc = AutoDiffGrid::numCells(grid_);
                 const int nw = numWells();
                 BVector x(nc);
-                BVector xw(nw);
 
                 try {
-                    solveJacobianSystem(x, xw);
+                    solveJacobianSystem(x);
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
                 }
@@ -322,7 +321,11 @@ namespace Opm {
                 // Apply the update, with considering model-dependent limitations and
                 // chopping of the update.
                 updateState(x,iteration);
-                wellModel().updateWellState(xw, well_state);
+
+                if( nw > 0 )
+                {
+                    wellModel().recoverWellSolutionAndUpdateWellState(x, well_state);
+                }
                 report.update_time += perfTimer.stop();
             }
 
@@ -488,7 +491,7 @@ namespace Opm {
 
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
-        void solveJacobianSystem(BVector& x, BVector& xw) const
+        void solveJacobianSystem(BVector& x) const
         {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
@@ -509,13 +512,6 @@ namespace Opm {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, false > Operator;
                 Operator opA(ebosJac, well_model_);
                 istlSolver().solve( opA, x, ebosResid );
-            }
-
-            if( xw.size() > 0 )
-            {
-                // recover wells.
-                xw = 0.0;
-                wellModel().recoverVariable(x, xw);
             }
         }
 
@@ -766,8 +762,7 @@ namespace Opm {
                                     const double pvSumLocal,
                                     std::vector< Scalar >& R_sum,
                                     std::vector< Scalar >& maxCoeff,
-                                    std::vector< Scalar >& B_avg,
-                                    std::vector< Scalar >& maxNormWell )
+                                    std::vector< Scalar >& B_avg)
         {
             // Compute total pore volume (use only owned entries)
             double pvSum = pvSumLocal;
@@ -779,13 +774,12 @@ namespace Opm {
                 std::vector< Scalar > maxBuffer;
                 const int numComp = B_avg.size();
                 sumBuffer.reserve( 2*numComp + 1 ); // +1 for pvSum
-                maxBuffer.reserve( 2*numComp );
+                maxBuffer.reserve( numComp );
                 for( int compIdx = 0; compIdx < numComp; ++compIdx )
                 {
                     sumBuffer.push_back( B_avg[ compIdx ] );
                     sumBuffer.push_back( R_sum[ compIdx ] );
                     maxBuffer.push_back( maxCoeff[ compIdx ] );
-                    maxBuffer.push_back( maxNormWell[ compIdx ] );
                 }
 
                 // Compute total pore volume
@@ -801,11 +795,14 @@ namespace Opm {
                 for( int compIdx = 0, buffIdx = 0; compIdx < numComp; ++compIdx, ++buffIdx )
                 {
                     B_avg[ compIdx ]    = sumBuffer[ buffIdx ];
-                    maxCoeff[ compIdx ] = maxBuffer[ buffIdx ];
                     ++buffIdx;
 
                     R_sum[ compIdx ]       = sumBuffer[ buffIdx ];
-                    maxNormWell[ compIdx ] = maxBuffer[ buffIdx ];
+                }
+
+                for( int compIdx = 0; compIdx < numComp; ++compIdx )
+                {
+                    maxCoeff[ compIdx ] = maxBuffer[ compIdx ];
                 }
 
                 // restore global pore volume
@@ -828,7 +825,6 @@ namespace Opm {
             const double dt = timer.currentStepLength();
             const double tol_mb    = param_.tolerance_mb_;
             const double tol_cnv   = param_.tolerance_cnv_;
-            const double tol_wells = param_.tolerance_wells_;
 
             const int np = numPhases();
             const int numComp = numComponents();
@@ -836,7 +832,6 @@ namespace Opm {
             Vector R_sum(numComp, 0.0 );
             Vector B_avg(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
-            Vector maxNormWell(numComp, 0.0 );
 
             const auto& ebosModel = ebosSimulator_.model();
             const auto& ebosProblem = ebosSimulator_.problem();
@@ -896,24 +891,16 @@ namespace Opm {
                 B_avg[ i ] /= Scalar( global_nc_ );
             }
 
-            // compute maximum of local well residuals
-            const Vector& wellResidual = wellModel().residual();
-            const int nw = wellResidual.size() / numComp;
-            assert(nw * numComp == int(wellResidual.size()));
-            for( int compIdx = 0; compIdx < numComp; ++compIdx )
-            {
-                for ( int w = 0; w < nw; ++w ) {
-                    maxNormWell[compIdx] = std::max(maxNormWell[compIdx], std::abs(wellResidual[nw*compIdx + w]));
-                }
-            }
+            // TODO: we remove the maxNormWell for now because the convergence of wells are on a individual well basis.
+            // Anyway, we need to provide some infromation to help debug the well iteration process.
+
 
             // compute global sum and max of quantities
             const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
-                                                      R_sum, maxCoeff, B_avg, maxNormWell );
+                                                      R_sum, maxCoeff, B_avg);
 
             Vector CNV(numComp);
             Vector mass_balance_residual(numComp);
-            Vector well_flux_residual(numComp);
 
             bool converged_MB = true;
             bool converged_CNV = true;
@@ -927,8 +914,7 @@ namespace Opm {
                 converged_CNV               = converged_CNV && (CNV[compIdx] < tol_cnv);
                 // Well flux convergence is only for fluid phases, not other materials
                 // in our current implementation.
-                well_flux_residual[compIdx] = B_avg[compIdx] * maxNormWell[compIdx];
-                converged_Well = converged_Well && (well_flux_residual[compIdx] < tol_wells);
+                converged_Well = wellModel().getWellConvergence(ebosSimulator_, B_avg);
 
                 residual_norms.push_back(CNV[compIdx]);
             }
@@ -965,9 +951,6 @@ namespace Opm {
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    CNV(" + key[ compIdx ] + ") ";
                     }
-                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "  W-FLUX(" + key[ compIdx ] + ")";
-                    }
                     OpmLog::note(msg);
                 }
                 std::ostringstream ss;
@@ -980,9 +963,6 @@ namespace Opm {
                 for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                     ss << std::setw(11) << CNV[compIdx];
                 }
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    ss << std::setw(11) << well_flux_residual[compIdx];
-                }
                 ss.precision(oprec);
                 ss.flags(oflags);
                 OpmLog::note(ss.str());
@@ -992,13 +972,11 @@ namespace Opm {
                 const auto& phaseName = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(phaseIdx));
 
                 if (std::isnan(mass_balance_residual[phaseIdx])
-                    || std::isnan(CNV[phaseIdx])
-                    || (phaseIdx < numPhases() && std::isnan(well_flux_residual[phaseIdx]))) {
+                    || std::isnan(CNV[phaseIdx])) {
                     OPM_THROW(Opm::NumericalProblem, "NaN residual for phase " << phaseName);
                 }
                 if (mass_balance_residual[phaseIdx] > maxResidualAllowed()
-                    || CNV[phaseIdx] > maxResidualAllowed()
-                    || (phaseIdx < numPhases() && well_flux_residual[phaseIdx] > maxResidualAllowed())) {
+                    || CNV[phaseIdx] > maxResidualAllowed()) {
                     OPM_THROW(Opm::NumericalProblem, "Too large residual for phase " << phaseName);
                 }
             }
@@ -1523,7 +1501,7 @@ namespace Opm {
         SimulatorReport failureReport_;
 
         // Well Model
-        StandardWellsDense<TypeTag> well_model_;
+        StandardWellsDense<TypeTag>& well_model_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1545,13 +1523,7 @@ namespace Opm {
         const StandardWellsDense<TypeTag>&
         wellModel() const { return well_model_; }
 
-        /// return the Well struct in the StandardWells
-        const Wells& wells() const { return well_model_.wells(); }
-
-        /// return true if wells are available in the reservoir
-        bool wellsActive() const { return well_model_.wellsActive(); }
-
-        int numWells() const { return wellsActive() ? wells().number_of_wells : 0; }
+        int numWells() const { return well_model_.numWells(); }
 
         /// return true if wells are available on this process
         bool localWellsActive() const { return well_model_.localWellsActive(); }

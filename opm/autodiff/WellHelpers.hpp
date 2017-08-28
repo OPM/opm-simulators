@@ -35,7 +35,7 @@ namespace Opm {
     namespace wellhelpers
     {
 
-    
+
         inline
         double rateToCompare(const std::vector<double>& well_phase_flow_rate,
                              const int well,
@@ -143,6 +143,15 @@ namespace Opm {
             const double well_ref_depth = wells.depth_ref[w];
             const double dh = vfp_ref_depth - well_ref_depth;
             const double dp = rho*gravity*dh;
+
+            return dp;
+        }
+
+        inline
+        double computeHydrostaticCorrection(const double well_ref_depth, const double vfp_ref_depth,
+                                            const double rho, const double gravity) {
+            const double dh = vfp_ref_depth - well_ref_depth;
+            const double dp = rho * gravity * dh;
 
             return dp;
         }

@@ -108,101 +108,6 @@ namespace Opm
                     }
                 }
             }
-
-
-            // TODO: the reason to keep this is to avoid getting defaulted value BHP
-            // some facilities needed from opm-parser or opm-core
-            // It is a little tricky, since sometimes before applying group control, the only
-            // available constraints in the well_controls is the defaulted BHP value, and it
-            // is really not desirable to use this value to enter the Newton iterations.
-            setWellSolutions(pu);
-        }
-
-
-
-        /// Set wellSolutions() based on the base class members.
-        void setWellSolutions(const PhaseUsage& pu)
-        {
-            // Set nw and np, or return if no wells.
-            if (wells_.get() == nullptr) {
-                return;
-            }
-            const int nw = wells_->number_of_wells;
-            if (nw == 0) {
-                return;
-            }
-
-
-            const int np = wells_->number_of_phases;
-            const int numComp = pu.has_solvent? np+1:np;
-            well_solutions_.clear();
-            well_solutions_.resize(nw * numComp, 0.0);
-            std::vector<double> g = {1.0,1.0,0.01};
-            for (int w = 0; w < nw; ++w) {
-                WellControls* wc = wells_->ctrls[w];
-
-                // The current control in the well state overrides
-                // the current control set in the Wells struct, which
-                // is instead treated as a default.
-                const int current = currentControls()[w];
-                well_controls_set_current( wc, current);
-                const WellType& well_type = wells_->type[w];
-
-                switch (well_controls_iget_type(wc, current)) {
-                case THP: // Intentional fall-through
-                case BHP:
-                    if (well_type == INJECTOR) {
-                        for (int p = 0; p < np; ++p)  {
-                            well_solutions_[w] += wellRates()[np*w + p] * wells_->comp_frac[np*w + p];
-                        }
-                    } else {
-                        for (int p = 0; p < np; ++p) {
-                            well_solutions_[w] += g[p] * wellRates()[np*w + p];
-                        }
-                    }
-                    break;
-                case RESERVOIR_RATE: // Intentional fall-through
-                case SURFACE_RATE:
-                    wellSolutions()[w] = bhp()[w];
-                    break;
-                }
-
-                double total_rates = 0.0;
-                for (int p = 0; p < np; ++p)  {
-                    total_rates += g[p] * wellRates()[np*w + p];
-                }
-
-                const int waterpos = pu.phase_pos[Water];
-                const int gaspos = pu.phase_pos[Gas];
-
-                assert(np > 2 || (np == 2 && !pu.phase_used[Gas]));
-                // assumes the gas fractions are stored after water fractions
-                if(std::abs(total_rates) > 0) {
-                    if( pu.phase_used[Water] ) {
-                        wellSolutions()[nw + w] = g[Water] * wellRates()[np*w + waterpos] / total_rates;
-                    }
-                    if( pu.phase_used[Gas] ) {
-                        wellSolutions()[2*nw + w] = g[Gas] * (wellRates()[np*w + gaspos] - solventWellRate(w))  / total_rates ;
-                    }
-                    if( pu.has_solvent) {
-                        wellSolutions()[3*nw + w] = g[Gas] * solventWellRate(w) / total_rates;
-                    }
-
-
-
-                } else {
-                    if( pu.phase_used[Water] ) {
-                        wellSolutions()[nw + w] = wells_->comp_frac[np*w + waterpos];
-                    }
-                    if( pu.phase_used[Gas] ) {
-                        wellSolutions()[2*nw + w] = wells_->comp_frac[np*w + gaspos];
-                    }
-                    if (pu.has_solvent) {
-                        wellSolutions()[3*nw + w] = 0;
-                    }
-
-                }
-            }
         }
 
 
@@ -211,11 +116,6 @@ namespace Opm
             const WellStateFullyImplicitBlackoilDense dummy_state{}; // Init with an empty previous state only resizes            
             init(wells, state.pressure(), dummy_state, pu) ;
         }
-
-
-        /// One rate per phase and well connection.
-        std::vector<double>& wellSolutions() { return well_solutions_; }
-        const std::vector<double>& wellSolutions() const { return well_solutions_; }
 
         /// One rate pr well connection.
         std::vector<double>& perfRateSolvent() { return perfRateSolvent_; }
@@ -252,7 +152,6 @@ namespace Opm
 
 
     private:
-        std::vector<double> well_solutions_;
         std::vector<double> perfRateSolvent_;
 
     };

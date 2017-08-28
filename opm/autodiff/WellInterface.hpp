@@ -1,0 +1,313 @@
+/*
+  Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
+  Copyright 2017 Statoil ASA.
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+#ifndef OPM_WELLINTERFACE_HEADER_INCLUDED
+#define OPM_WELLINTERFACE_HEADER_INCLUDED
+
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well.hpp>
+#include <opm/core/wells.h>
+#include <opm/core/well_controls.h>
+#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/wells/WellsManager.hpp>
+
+#include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/VFPInjProperties.hpp>
+#include <opm/autodiff/VFPProdProperties.hpp>
+#include <opm/autodiff/WellHelpers.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
+#include <opm/autodiff/BlackoilModelParameters.hpp>
+
+#include <opm/simulators/WellSwitchingLogger.hpp>
+
+#include<dune/common/fmatrix.hh>
+#include<dune/istl/bcrsmatrix.hh>
+#include<dune/istl/matrixmatrix.hh>
+
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+
+#include <string>
+#include <memory>
+#include <vector>
+#include <cassert>
+
+namespace Opm
+{
+
+
+    template<typename TypeTag>
+    class WellInterface
+    {
+    public:
+
+        using WellState = WellStateFullyImplicitBlackoilDense;
+
+        typedef BlackoilModelParameters ModelParameters;
+        typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+        typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
+        typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
+        typedef typename GET_PROP_TYPE(TypeTag, Indices) BlackoilIndices;
+        typedef typename GET_PROP_TYPE(TypeTag, IntensiveQuantities) IntensiveQuantities;
+        typedef typename GET_PROP_TYPE(TypeTag, MaterialLaw) MaterialLaw;
+
+        static const int numEq = BlackoilIndices::numEq;
+        typedef double Scalar;
+
+        typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
+        typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+        typedef Dune::BCRSMatrix <MatrixBlockType> Mat;
+        typedef Dune::BlockVector<VectorBlockType> BVector;
+        typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+
+        typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
+
+        static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
+        static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
+
+        /// Constructor
+        WellInterface(const Well* well, const int time_step, const Wells* wells);
+
+        /// Virutal destructor
+        virtual ~WellInterface() {}
+
+        /// Well name.
+        const std::string& name() const;
+
+        /// Well type, INJECTOR or PRODUCER.
+        WellType wellType() const;
+
+        /// Well controls
+        WellControls* wellControls() const;
+
+        void setVFPProperties(const VFPProperties* vfp_properties_arg);
+
+        virtual void init(const PhaseUsage* phase_usage_arg,
+                          const std::vector<bool>* active_arg,
+                          const std::vector<double>& depth_arg,
+                          const double gravity_arg,
+                          const int num_cells);
+
+        virtual void initPrimaryVariablesEvaluation() const = 0;
+
+        /// a struct to collect information about the convergence checking
+        struct ConvergenceReport {
+            struct ProblemWell {
+                std::string well_name;
+                std::string phase_name;
+            };
+            bool converged = true;
+            bool nan_residual_found = false;
+            std::vector<ProblemWell> nan_residual_wells;
+            // We consider Inf is large residual here
+            bool too_large_residual_found = false;
+            std::vector<ProblemWell> too_large_residual_wells;
+
+            ConvergenceReport& operator+=(const ConvergenceReport& rhs) {
+                converged = converged && rhs.converged;
+                nan_residual_found = nan_residual_found || rhs.nan_residual_found;
+                if (rhs.nan_residual_found) {
+                    for (const ProblemWell& well : rhs.nan_residual_wells) {
+                        nan_residual_wells.push_back(well);
+                    }
+                }
+                too_large_residual_found = too_large_residual_found || rhs.too_large_residual_found;
+                if (rhs.too_large_residual_found) {
+                    for (const ProblemWell& well : rhs.too_large_residual_wells) {
+                        too_large_residual_wells.push_back(well);
+                    }
+                }
+                return *this;
+            }
+        };
+
+        virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
+                                                     const std::vector<double>& B_avg,
+                                                     const ModelParameters& param) const = 0;
+
+        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
+                                               WellState& well_state) = 0;
+
+        virtual void assembleWellEq(Simulator& ebosSimulator,
+                                    const double dt,
+                                    WellState& well_state,
+                                    bool only_wells) = 0;
+
+        void updateListEconLimited(const WellState& well_state,
+                                   DynamicListEconLimited& list_econ_limited) const;
+
+        void setWellEfficiencyFactor(const double efficiency_factor);
+
+        void computeRepRadiusPerfLength(const Grid& grid, const std::map<int, int>& cartesian_to_compressed);
+
+        /// using the solution x to recover the solution xw for wells and applying
+        /// xw to update Well State
+        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
+                                                           WellState& well_state) const = 0;
+
+        /// Ax = Ax - C D^-1 B x
+        virtual void apply(const BVector& x, BVector& Ax) const = 0;
+
+        /// r = r - C D^-1 Rw
+        virtual void apply(BVector& r) const = 0;
+
+        virtual void computeWellPotentials(const Simulator& ebosSimulator,
+                                           const WellState& well_state,
+                                           std::vector<double>& well_potentials) const = 0;
+
+        virtual void computeAccumWell() = 0;
+
+        // TODO: it should come with a different name
+        // for MS well, the definition is different and should not use this name anymore
+        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                    const WellState& xw) = 0;
+
+        virtual void updateWellStateWithTarget(const int current,
+                                               WellState& xw) const = 0;
+
+        virtual void updateWellControl(WellState& xw,
+                                       wellhelpers::WellSwitchingLogger& logger) const = 0;
+
+        virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
+
+    protected:
+
+        // to indicate a invalid connection
+        static const int INVALIDCONNECTION = -100000;
+
+        const Well* well_ecl_;
+
+        const int current_step_;
+
+        // the index of well in Wells struct
+        int index_of_well_;
+
+        // well type
+        // INJECTOR or PRODUCER
+        enum WellType well_type_;
+
+        // number of phases
+        int number_of_phases_;
+
+        // component fractions for each well
+        // typically, it should apply to injection wells
+        std::vector<double> comp_frac_;
+
+        // controls for this well
+        // TODO: later will check whehter to let it stay with pointer
+        struct WellControls* well_controls_;
+
+        // number of the perforations for this well
+        int number_of_perforations_;
+
+        // record the index of the first perforation
+        // TODO: it might not be needed if we refactor WellState to be a vector
+        // of states of individual well.
+        int first_perf_;
+
+        // well index for each perforation
+        std::vector<double> well_index_;
+
+        // TODO: it might should go to StandardWell
+        // depth for each perforation
+        std::vector<double> perf_depth_;
+
+        // reference depth for the BHP
+        double ref_depth_;
+
+        double well_efficiency_factor_;
+
+        // cell index for each well perforation
+        std::vector<int> well_cells_;
+
+        // saturation table nubmer for each well perforation
+        std::vector<int> saturation_table_number_;
+
+        // representative radius of the perforations, used in shear calculation
+        std::vector<double> perf_rep_radius_;
+
+        // length of the perforations, use in shear calculation
+        std::vector<double> perf_length_;
+
+        // well bore diameter
+        std::vector<double> bore_diameters_;
+
+        const PhaseUsage* phase_usage_;
+
+        bool getAllowCrossFlow() const;
+
+        const std::vector<bool>* active_;
+
+        const VFPProperties* vfp_properties_;
+
+        double gravity_;
+
+        const std::vector<bool>& active() const;
+
+        const PhaseUsage& phaseUsage() const;
+
+        int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
+
+        int flowToEbosPvIdx( const int flowPv ) const;
+
+        int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
+
+        // TODO: it is dumplicated with StandardWellsDense
+        int numComponents() const;
+
+        double wsolvent() const;
+
+        double wpolymer() const;
+
+        bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                 const WellState& well_state) const;
+
+        bool wellHasTHPConstraints() const;
+
+        // Component fractions for each phase for the well
+        const std::vector<double>& compFrac() const;
+
+        double mostStrictBhpFromBhpLimits() const;
+
+        // a tuple type for ratio limit check.
+        // first value indicates whether ratio limit is violated, when the ratio limit is not violated, the following three
+        // values should not be used.
+        // second value indicates whehter there is only one connection left.
+        // third value indicates the indx of the worst-offending connection.
+        // the last value indicates the extent of the violation for the worst-offending connection, which is defined by
+        // the ratio of the actual value to the value of the violated limit.
+        using RatioCheckTuple = std::tuple<bool, bool, int, double>;
+
+        RatioCheckTuple checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                                              const WellState& well_state) const;
+
+        RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                             const WellState& well_state) const;
+
+    };
+
+}
+
+#include "WellInterface_impl.hpp"
+
+#endif // OPM_WELLINTERFACE_HEADER_INCLUDED

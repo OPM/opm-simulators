@@ -141,7 +141,6 @@ public:
         ExtraData extra;
 
         failureReport_ = SimulatorReport();
-        extractLegacyPoreVolume_();
         extractLegacyDepth_();
 
         // communicate the initial solution to ebos
@@ -480,7 +479,6 @@ protected:
                         activePhases,
                         gravity,
                         legacyDepth_,
-                        legacyPoreVolume_,
                         globalNumCells,
                         grid());
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
@@ -867,22 +865,6 @@ protected:
         }
     }
 
-    void extractLegacyPoreVolume_()
-    {
-        const auto& grid = ebosSimulator_.gridManager().grid();
-        const unsigned numCells = grid.size(/*codim=*/0);
-        const auto& ebosProblem = ebosSimulator_.problem();
-        const auto& ebosModel = ebosSimulator_.model();
-
-        legacyPoreVolume_.resize(numCells);
-        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            // todo (?): respect rock compressibility
-            legacyPoreVolume_[cellIdx] =
-                ebosModel.dofTotalVolume(cellIdx)
-                *ebosProblem.porosity(cellIdx);
-        }
-    }
-
     void extractLegacyDepth_()
     {
         const auto& grid = ebosSimulator_.gridManager().grid();
@@ -1009,7 +991,6 @@ protected:
     Simulator& ebosSimulator_;
 
     std::vector<int> legacyCellPvtRegionIdx_;
-    std::vector<double> legacyPoreVolume_;
     std::vector<double> legacyDepth_;
     typedef typename Solver::SolverParameters SolverParameters;
 

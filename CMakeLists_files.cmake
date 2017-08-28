@@ -91,6 +91,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_solventprops_ad.cpp
   tests/test_multisegmentwells.cpp
   tests/test_multiphaseupwind.cpp
+  tests/test_wellmodel.cpp
   # tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
@@ -102,6 +103,7 @@ list (APPEND TEST_DATA_FILES
   tests/VFPPROD2
   tests/msw.data
   tests/TESTTIMER.DATA
+  tests/TESTWELLMODEL.DATA
   )
 
 
@@ -239,6 +241,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/WellHelpers.hpp
   opm/autodiff/StandardWells.hpp
   opm/autodiff/StandardWells_impl.hpp
+  opm/autodiff/WellInterface.hpp
+  opm/autodiff/WellInterface_impl.hpp
+  opm/autodiff/StandardWell.hpp
+  opm/autodiff/StandardWell_impl.hpp
   opm/autodiff/StandardWellsDense.hpp
   opm/autodiff/StandardWellsSolvent.hpp
   opm/autodiff/StandardWellsSolvent_impl.hpp
