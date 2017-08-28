@@ -135,6 +135,12 @@ namespace Opm
 
         virtual void updatePrimaryVariables(const WellState& well_state) const;
 
+        /// number of segments for this well
+        /// int number_of_segments_;
+        int numberOfSegments() const;
+
+        int numberOfPerforations() const;
+
     protected:
         int number_segments_;
 
@@ -157,9 +163,6 @@ namespace Opm
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
 
-        // number of segments for this well
-        // int number_of_segments_;
-        int numberOfSegments() const;
 
         // indices of the gird blocks that segments locate at.
         // TODO: the grid cell related to a segment should be calculated based on the location
