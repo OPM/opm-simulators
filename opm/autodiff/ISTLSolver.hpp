@@ -169,8 +169,8 @@ static inline K invertMatrix (const FieldMatrix<K,4,4> &matrix, FieldMatrix<K,4,
         }
         return 1.0;
     }
-    det = 1.0 / det;
-    inverse *= det;
+    K inv_det = 1.0 / det;
+    inverse *= inv_det;
 
     return det;
 }

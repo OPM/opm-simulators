@@ -94,6 +94,7 @@ list (APPEND TEST_SOURCE_FILES
   # tests/test_thresholdpressure.cpp
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
+  tests/test_invert.cpp
   )
 
 list (APPEND TEST_DATA_FILES
