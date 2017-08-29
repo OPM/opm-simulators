@@ -135,6 +135,9 @@ namespace Opm
 
         virtual void updatePrimaryVariables(const WellState& well_state) const;
 
+        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
+                                               WellState& well_state); // const?
+
         /// number of segments for this well
         /// int number_of_segments_;
         int numberOfSegments() const;
@@ -200,10 +203,26 @@ namespace Opm
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
         // TODO: should we introduce a data structure for segment to simplify this?
-        mutable std::vector<double> primary_variables_;
+        // or std::vector<std::vector<double> >
+        mutable std::vector<std::array<double, numWellEq> > primary_variables_;
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
-        mutable std::vector<EvalWell> primary_variables_evaluation_;
+        mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
+
+        // protected functions
+        // EvalWell getBhp(); this one should be something similar to getSegmentPressure();
+        // EvalWell getQs(); this one should be something similar to getSegmentRates()
+        // EValWell wellVolumeFractionScaled, wellVolumeFraction, wellSurfaceVolumeFraction ... these should have different names, and probably will be needed.
+        // bool crossFlowAllowed(const Simulator& ebosSimulator) const; probably will be needed
+        // xw = inv(D)*(rw - C*x)
+        void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
+
+        // updating the well_state based on well solution dwells
+        void updateWellState(const BVectorWell& dwells,
+                             const BlackoilModelParameters& param,
+                             WellState& well_state) const;
+
+        // void computePerfRate() will be a key function here.
     };
 
 }
