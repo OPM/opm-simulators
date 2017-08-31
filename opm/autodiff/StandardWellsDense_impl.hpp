@@ -651,6 +651,8 @@ namespace Opm {
             // after restarting, the well_controls can be modified while
             // the well_state still uses the old control index
             // we need to synchronize these two.
+            // keep in mind that we set the control index of well_state to be the same with
+            // with the wellControls from the deck when we create well_state at the beginning of the report step
             resetWellControlFromState(well_state);
 
             if (wellCollection()->groupControlActive()) {

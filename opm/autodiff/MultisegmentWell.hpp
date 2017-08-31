@@ -175,6 +175,14 @@ namespace Opm
         //       when no perforation is related to the segment, use it outlet segment's cell.
         std::vector<int> segment_cell_;
 
+        // the completions that is related to each segment
+        // the completions's ids are their location in the vector well_index_, well_cell_
+        // This is also assuming the order of the completions in Well is the same with
+        // the order of the completions in wells.
+        // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
+        // belonging to this segment
+        std::vector<std::vector<int>> segment_perforations_;
+
         // Things are easy to get from SegmentSet
         // segment_volume_, segment_cross_area_, segment_length_(total length), segment_depth_
         // segment_internal_diameter_, segment_roughness_

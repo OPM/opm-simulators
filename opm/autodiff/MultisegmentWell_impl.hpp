@@ -60,8 +60,7 @@ namespace Opm
         // it can also use the cell center, which is the same for StandardWell.
         // For the last case, should we update the depth with the depth_arg? For the
         // future, it can be a source of wrong result with Multisegment well.
-        // More facility will be required from the opm-parser to make all the situations
-        // make sense.
+        // An indicator from the opm-parser should indicate what kind of depth we should use here.
     }
 
 

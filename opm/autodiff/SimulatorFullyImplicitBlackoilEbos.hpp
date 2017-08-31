@@ -298,6 +298,13 @@ public:
 
             const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
             extractLegacyCellPvtRegionIndex_();
+            // handling MS well related
+            for (const auto& well : wells_ecl) {
+                if (well->isMultiSegment(timer.currentStepNum())) { // there is one well is MS well
+                    well_state.initMSWell(wells, wells_ecl, timer.currentStepNum());
+                    break;
+                }
+            }
             WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,
                                  rateConverter_, terminal_output_, timer.currentStepNum(), legacyCellPvtRegionIdx_);
 
