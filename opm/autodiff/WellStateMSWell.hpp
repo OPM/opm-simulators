@@ -23,8 +23,6 @@
 #ifndef OPM_WELLSTATEMSWELL_HEADER_INCLUDED
 #define OPM_WELLSTATEMSWELL_HEADER_INCLUDED
 
-#include <opm/autodiff/MultisegmentWell.hpp>
-
 namespace Opm
 {
     // TODO: eventually, there should be a base class for WellState
@@ -33,16 +31,18 @@ namespace Opm
     {
     public:
         // TODO: looks like will need ResarvoirState.
-        explicit WellStateMSWell(const std::unique_ptr<MultisegmentWell>& ms_well)
-         : well_name_(ms_well->name())
-         , nseg_(ms_well->numberOfSegments())
-         , nperf_(ms_well->numberOfPerforations())
-         , num_phases_(ms_well->numPhases())
+        // TODO: It is possible, we can not use unique_ptr here if we need dynamic_cast, we should
+        // cast it as a reference.
+        WellStateMSWell(const Well* well_ecl, const int np)
+         : well_name_()
+         , nseg_(ms_well.numberOfSegments())
+         , nperf_(ms_well.numberOfPerforations())
+         , num_phases_(ms_well.numPhases())
          , wellrate_(num_phases_)
          , segphaserate_(nseg_ * num_phases_)
          , segpress_(nseg_)
         {
-            const WellControls* ctrl = ms_well->wellControls();
+            const WellControls* ctrl = ms_well.wellControls();
             current_control_ = well_controls_get_current(ctrl);
 
             if (!well_controls_well_is_stopped(ctrl)) {
@@ -58,7 +58,7 @@ namespace Opm
                     }
                 } else {
                     const double small_rate = 1e-14;
-                    const double sign = (ms_well->wellType() == INJECTOR) ? 1.0 : -1.0;
+                    const double sign = (ms_well.wellType() == INJECTOR) ? 1.0 : -1.0;
                     for (int p = 0; p < np; ++p) {
                         wellrate_[p] = small_rate * sign;
                     }
@@ -68,8 +68,8 @@ namespace Opm
                if (well_controls_get_current_type(ctrl) == BHP) {
                     bhp_ = well_controls_get_current_target(ctrl);
                } else {
-                    const int first_cell = ms_well->wellCells()[0];
-                    const double safety_factor = (ms_well->wellType() == INJECTOR) ? 1.01 : 0.99;
+                    const int first_cell = ms_well.wellCells()[0];
+                    const double safety_factor = (ms_well.wellType() == INJECTOR) ? 1.01 : 0.99;
                     bhp_ = safety_factor* state.pressure()[first_cell];
                }
                // 3. Thp:
@@ -84,23 +84,23 @@ namespace Opm
                     for (int p = 0; p < num_phases_; ++p) {
                         perfphaserates_ [np * i + p] = wellrate_[p] / double(nperf_);
                     }
-                    const double safety_factor = (ms_well->wellType() == INJECTOR) ? 1.01 : 0.99;
-                    const int cell_index = ms_well->wellCells()[i];
+                    const double safety_factor = (ms_well.wellType() == INJECTOR) ? 1.01 : 0.99;
+                    const int cell_index = ms_well.wellCells()[i];
                     perfpress_[i] = safety_factor * state.pressure()[cell_index];
                 }
 
-                // 5. Segment pressures and rates
+                /* // 5. Segment pressures and rates
                 // top segment
                 segpress_[0] = bhp_;
                 for (int i = 1; i < nseg_; ++i) {
                     // the first perforation of the segment
-                    const int first_perforation = ms_well-> [0];
+                    const int first_perforation = ms_well. [0];
                     segpress_[i] = perfpress_[first_perforation];
                 }
                 // segment rates
                 for (int i = 1; i < nseg_; ++i) {
                     // basically summ up the perforations
-                }
+                } */
             } else {
                 // Stopped well
                 // 1. WellRates: 0
@@ -109,7 +109,7 @@ namespace Opm
                 if (well_controls_get_current_type(ctrl) == BHP) {
                     bhp_[w] = well_controls_get_current_target(ctrl);
                 } else {
-                    const int first_cell = ms_well->wellCells()[0];
+                    const int first_cell = ms_well.wellCells()[0];
                     bhp_[w] = state.pressure()[first_cell];
                 }
                // 3. Thp: assign thp equal to thp control, if applicable,
@@ -123,9 +123,19 @@ namespace Opm
                // 5. Segment pressures and phase rates
             }
         }
+
+
+        const std::string& name() const { return well_name_; }
+
+        int numSegments() const { return nseg_; }
+
+        int numPhases() const { return num_phases_; }
+
+        int numPerforations() const { return nperf_; }
+
     private:
         // well name is the id of the well
-        const std::string& well_name_;
+        const std::string well_name_;
         // number of segments
         const int nseg_;
         // number of perforations
@@ -147,6 +157,19 @@ namespace Opm
         // current control
         int current_control_;
     };
+
+    // TODO: only when the segment and perforation infromation, and well type are the same,
+    // we can copy the Well State. Otherwise, we can just use the initialized one.
+    // we should have a function here bool consistent() here to decide if we can copy
+    // it is not a very safe judgement. well types are also needed to be considered, while
+    // we do not have the information from the previous WellModel. Not sure whether to add a WellType here.
+    // we can also make an experiment to see if we need to copy the old Well State.
+    bool copyable(const WellStateMSWell& well_state, const WellStateMSWell& prev_state) {
+        return ( well_state.name() == prev_state.name() &&
+                 well_state.numSegments() == prev_state.numSegments() &&
+                 well_state.numPerforations() == prev_state.numPerforations() &&
+                 well_state.numPhases() == prev_state.numPhases() );
+    }
 }
 
 #endif
