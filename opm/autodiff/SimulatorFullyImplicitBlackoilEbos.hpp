@@ -900,7 +900,9 @@ protected:
             // set non-switching primary variables
             PrimaryVariables& cellPv = solution[ cellIdx ];
             // set water saturation
-            cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
+            if ( active[Water] ) {
+                cellPv[BlackoilIndices::waterSaturationIdx] = saturations[cellIdx*numPhases + pu.phase_pos[Water]];
+            }
 
             if (has_solvent) {
                 cellPv[BlackoilIndices::solventSaturationIdx] = reservoirState.getCellData( reservoirState.SSOL )[cellIdx];
@@ -944,7 +946,9 @@ protected:
                             /*storeViscosity=*/false,
                             /*storeEnthalpy=*/false> SatOnlyFluidState;
                     SatOnlyFluidState fluidState;
-                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
+                    if ( active[Water] ) {
+                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
+                    }
                     fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
                     fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
 
