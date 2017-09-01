@@ -146,13 +146,12 @@ namespace Opm {
                 }
 
                 const Well* well_ecl = wells_ecl[index_well];
-                // TODO: stopping throwing when encoutnering MS wells for now.
-                /* if (well_ecl->isMultiSegment(time_step)) {
-                    OPM_THROW(Opm::NumericalProblem, "Not handling Multisegment Wells for now");
-                } */
 
-                // Basically, we are handling all the wells as StandardWell for the moment
-                well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells) );
+                if ( !well_ecl->isMultiSegment(time_step) ) {
+                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells) );
+                } else {
+                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells) );
+                }
             }
         }
         return well_container;

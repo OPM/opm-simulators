@@ -36,6 +36,8 @@ namespace Opm
 
         // TODO: the WellState does not have any information related to segments
         using typename Base::WellState;
+        using typename Base::Simulator;
+        using typename Base::ModelParameters;
 
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
         // TODO: should I begin with the old primary variable or the new fraction based variable systems?
@@ -157,6 +159,7 @@ namespace Opm
 
         using Base::well_ecl_;
         using Base::number_of_perforations_; // TODO: can use well_ecl_?
+        using Base::current_step_;
 
         using Base::well_cells_; // TODO: are the perforation orders same with StandardWell or Wells?
         using Base::well_index_;
@@ -173,6 +176,8 @@ namespace Opm
         //       As the current temporary solution, the grid cell related to a segment determined by the
         //       first perforation cell related to the segment.
         //       when no perforation is related to the segment, use it outlet segment's cell.
+
+        // TODO: it can be a source of error
         std::vector<int> segment_cell_;
 
         // the completions that is related to each segment
@@ -181,7 +186,11 @@ namespace Opm
         // the order of the completions in wells.
         // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
         // belonging to this segment
-        std::vector<std::vector<int>> segment_perforations_;
+        std::vector<std::vector<int> > segment_perforations_;
+
+        // the inlet segments for each segment. It is for convinience and efficiency reason
+        // the original segment structure is defined as a gathering tree structure based on outlet_segment
+        std::vector<std::vector<int> > segment_inlets_;
 
         // Things are easy to get from SegmentSet
         // segment_volume_, segment_cross_area_, segment_length_(total length), segment_depth_
@@ -206,7 +215,7 @@ namespace Opm
         mutable BVector scaleAddRes_;
 
         // residuals of the well equations
-        BVectorWell resWell_;
+        mutable BVectorWell resWell_;
 
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
@@ -216,6 +225,8 @@ namespace Opm
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
         mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
+
+        void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
         // EvalWell getBhp(); this one should be something similar to getSegmentPressure();

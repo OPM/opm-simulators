@@ -27,7 +27,10 @@ namespace Opm
     template<typename TypeTag>
     MultisegmentWell<TypeTag>::
     MultisegmentWell(const Well* well, const int time_step, const Wells* wells)
-    :Basse(well, time_step, wells)
+    : Base(well, time_step, wells)
+    , segment_cell_(numberOfSegments())
+    , segment_perforations_(numberOfSegments())
+    , segment_inlets_(numberOfSegments())
     {
         // TODO: to see what information we need to process here later.
         // const auto& completion_set = well->getCompletions(time_step);
@@ -61,6 +64,10 @@ namespace Opm
         // For the last case, should we update the depth with the depth_arg? For the
         // future, it can be a source of wrong result with Multisegment well.
         // An indicator from the opm-parser should indicate what kind of depth we should use here.
+
+        // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
+        // specified perforation depth
+        initMatrixAndVectors(num_cells);
     }
 
 
@@ -81,9 +88,9 @@ namespace Opm
         //  B D] x_well]      res_well]
 
         // the number of the nnz should be numSegment() + numberOfOutlet()
-        invDuneD_.setSize(numSegment(), numSegment(), 100000);
-        duneB_.setSize(numSegment(), num_cells, number_of_perforations_);
-        duneC_.setSize(numSegment(), num_cells, number_of_perforations_);
+        invDuneD_.setSize(numberOfSegments(), numberOfSegments(), 100000);
+        duneB_.setSize(numberOfSegments(), num_cells, number_of_perforations_);
+        duneC_.setSize(numberOfSegments(), num_cells, number_of_perforations_);
 
         // we need to add the off diagonal ones
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
@@ -93,8 +100,8 @@ namespace Opm
 
         for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
             // the number of the row corresponds to the segment number now.
-            for (int perf = 0 ; perf < ]; ++perf) { // the segments hold some perforations
-                const int cell_idx = wells().well_cells[perf];
+            for (int perf = 0 ; perf < number_of_perforations_; ++perf) { // the segments hold some perforations
+                const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
             }
         }
@@ -102,16 +109,16 @@ namespace Opm
         // make the B^T matrix
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
             // the number of the row corresponds to the segment number now.
-            for (int perf = wells().well_connpos[row.index()] ; perf < wells().well_connpos[row.index()+1]; ++perf) {
-                const int cell_idx = wells().well_cells[perf];
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
             }
         }
 
-        resWell_.resize( nw );
+        resWell_.resize( numberOfSegments() );
 
         // resize temporary class variables
-        Cx_.resize( duneC_.N() );
+        Bx_.resize( duneC_.N() );
         invDrw_.resize( invDuneD_.N() );
     }
 
@@ -124,7 +131,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     initPrimaryVariablesEvaluation() const
     {
-        for (int seg = 0; seg < numSegment(); ++seg) {
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
             for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
                 primary_variables_evaluation_[seg][eq_idx] = 0.0;
                 primary_variables_evaluation_[seg][eq_idx].setValue(primary_variables_[seg][eq_idx]);
@@ -186,6 +193,8 @@ namespace Opm
                        const ModelParameters& param) const
     {
         // TODO: it will be very similar
+        ConvergenceReport report;
+        return report;
     }
 
 
@@ -222,7 +231,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    void apply(const BVector& x, BVector& Ax) const
+    apply(const BVector& x, BVector& Ax) const
     {
 
 
@@ -309,7 +318,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     segmentSet() const
     {
-        return well_ecl_->getSegmentSet(time_step);
+        return well_ecl_->getSegmentSet(current_step_);
     }
 
 
