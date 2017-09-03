@@ -26,14 +26,25 @@
  * \brief Two-phase test for the immiscible model which uses the element-centered finite
  *        volume discretization in conjunction with automatic differentiation
  */
-#include "config.h"
+#ifndef EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
+#define EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
 
-#include "lens_immiscible_ecfv_ad.hh"
+#include <ewoms/models/immiscible/immisciblemodel.hh>
+#include <ewoms/disc/ecfv/ecfvdiscretization.hh>
+#include "problems/lensproblem.hh"
 
-#include <ewoms/common/start.hh>
+namespace Ewoms {
+namespace Properties {
+NEW_TYPE_TAG(LensProblemEcfvAd, INHERITS_FROM(ImmiscibleTwoPhaseModel, LensBaseProblem));
 
-int main(int argc, char **argv)
-{
-    typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
-}
+// use the element centered finite volume spatial discretization
+SET_TAG_PROP(LensProblemEcfvAd, SpatialDiscretizationSplice, EcfvDiscretization);
+
+// use automatic differentiation for this simulator
+SET_TAG_PROP(LensProblemEcfvAd, LocalLinearizerSplice, AutoDiffLocalLinearizer);
+
+// this problem works fine if the linear solver uses single precision scalars
+SET_TYPE_PROP(LensProblemEcfvAd, LinearSolverScalar, float);
+}}
+
+#endif // EWOMS_LENS_IMMISCIBLE_ECFV_AD_HH
