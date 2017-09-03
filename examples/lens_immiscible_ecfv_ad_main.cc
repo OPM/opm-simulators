@@ -23,17 +23,19 @@
 /*!
  * \file
  *
- * \brief Two-phase test for the immiscible model which uses the element-centered finite
- *        volume discretization in conjunction with automatic differentiation
+ * \brief This test is identical to the simulation of the lens problem that uses the
+ *        element centered finite volume discretization in conjunction with automatic
+ *        differentiation (lens_immiscible_ecfv_ad).
+ *
+ * The only difference is that it uses multiple compile units in order to ensure that
+ * eWoms code can be used within libraries that use the same type tag within multiple
+ * compile units. This file calls contains main() and just calls the main entry point
+ * defined by the first compile unit.
  */
-#include "config.h"
-
-#include "lens_immiscible_ecfv_ad.hh"
-
-#include <ewoms/common/start.hh>
+int mainCU1(int argc, char **argv);
+int mainCU2(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-    typedef TTAG(LensProblemEcfvAd) ProblemTypeTag;
-    return Ewoms::start<ProblemTypeTag>(argc, argv);
+    return mainCU1(argc, argv);
 }
