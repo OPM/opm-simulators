@@ -269,7 +269,11 @@ namespace Opm {
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(const Simulator& ebos_simulator,
-                                 WellState& well_state);
+                                 WellState& well_state) const;
+
+            void prepareGroupControl(const Simulator& ebos_simulator,
+                                     WellState& well_state) const;
+
         };
 
 

@@ -643,18 +643,48 @@ namespace Opm {
     void
     StandardWellsDense<TypeTag>::
     prepareTimeStep(const Simulator& ebos_simulator,
-                    WellState& well_state)
+                    WellState& well_state) const
     {
-        const int nw = number_of_wells_;
-        for (int w = 0; w < nw; ++w) {
-            // after restarting, the well_controls can be modified while
-            // the well_state still uses the old control index
-            // we need to synchronize these two.
-            // keep in mind that we set the control index of well_state to be the same with
-            // with the wellControls from the deck when we create well_state at the beginning of the report step
-            resetWellControlFromState(well_state);
+        // after restarting, the well_controls can be modified while
+        // the well_state still uses the old control index
+        // we need to synchronize these two.
+        // keep in mind that we set the control index of well_state to be the same with
+        // with the wellControls from the deck when we create well_state at the beginning of the report step
+        resetWellControlFromState(well_state);
 
-            if (wellCollection()->groupControlActive()) {
+        // process group control related
+        prepareGroupControl(ebos_simulator, well_state);
+
+        // since the controls are all updated, we should update well_state accordingly
+        for (int w = 0; w < number_of_wells_; ++w) {
+            WellControls* wc = well_container_[w]->wellControls();
+            const int control = well_controls_get_current(wc);
+            well_state.currentControls()[w] = control;
+            // TODO: for VFP control, the perf_densities are still zero here, investigate better
+            // way to handle it later.
+            well_container_[w]->updateWellStateWithTarget(control, well_state);
+
+            // The wells are not considered to be newly added
+            // for next time step
+            if (well_state.isNewWell(w) ) {
+                well_state.setNewWell(w, false);
+            }
+        }  // end of for (int w = 0; w < nw; ++w)
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWellsDense<TypeTag>::
+    prepareGroupControl(const Simulator& ebos_simulator,
+                        WellState& well_state) const
+    {
+        // group control related processing
+        if (well_collection_->groupControlActive()) {
+            for (int w = 0; w < number_of_wells_; ++w) {
                 WellControls* wc = well_container_[w]->wellControls();
                 WellNode& well_node = well_collection_->findWellNode(well_container_[w]->name());
 
@@ -681,9 +711,7 @@ namespace Opm {
                     well_node.setIndividualControl(true);
                 }
             }
-        }
 
-        if (well_collection_->groupControlActive()) {
             if (well_collection_->requireWellPotentials()) {
 
                 // calculate the well potentials
@@ -704,22 +732,6 @@ namespace Opm {
                 wellCollection()->updateWellTargets(well_state.wellRates());
             }
         }
-
-        // since the controls are all updated, we should update well_state accordingly
-        for (int w = 0; w < nw; ++w) {
-            WellControls* wc = well_container_[w]->wellControls();
-            const int control = well_controls_get_current(wc);
-            well_state.currentControls()[w] = control;
-            // TODO: for VFP control, the perf_densities are still zero here, investigate better
-            // way to handle it later.
-            well_container_[w]->updateWellStateWithTarget(control, well_state);
-
-            // The wells are not considered to be newly added
-            // for next time step
-            if (well_state.isNewWell(w) ) {
-                well_state.setNewWell(w, false);
-            }
-        }  // end of for (int w = 0; w < nw; ++w)
     }
 
 
