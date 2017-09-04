@@ -43,6 +43,138 @@
 
 namespace Dune
 {
+namespace FMatrixHelp {
+//! invert 4x4 Matrix without changing the original matrix
+template <typename K>
+static inline K invertMatrix (const FieldMatrix<K,4,4> &matrix, FieldMatrix<K,4,4> &inverse)
+{
+    inverse[0][0] = matrix[1][1] * matrix[2][2] * matrix[3][3] -
+            matrix[1][1] * matrix[2][3] * matrix[3][2] -
+            matrix[2][1] * matrix[1][2] * matrix[3][3] +
+            matrix[2][1] * matrix[1][3] * matrix[3][2] +
+            matrix[3][1] * matrix[1][2] * matrix[2][3] -
+            matrix[3][1] * matrix[1][3] * matrix[2][2];
+
+    inverse[1][0] = -matrix[1][0] * matrix[2][2] * matrix[3][3] +
+            matrix[1][0] * matrix[2][3] * matrix[3][2] +
+            matrix[2][0] * matrix[1][2] * matrix[3][3] -
+            matrix[2][0] * matrix[1][3] * matrix[3][2] -
+            matrix[3][0] * matrix[1][2] * matrix[2][3] +
+            matrix[3][0] * matrix[1][3] * matrix[2][2];
+
+    inverse[2][0] = matrix[1][0] * matrix[2][1] * matrix[3][3] -
+            matrix[1][0] * matrix[2][3] * matrix[3][1] -
+            matrix[2][0] * matrix[1][1] * matrix[3][3] +
+            matrix[2][0] * matrix[1][3] * matrix[3][1] +
+            matrix[3][0] * matrix[1][1] * matrix[2][3] -
+            matrix[3][0] * matrix[1][3] * matrix[2][1];
+
+    inverse[3][0] = -matrix[1][0] * matrix[2][1] * matrix[3][2] +
+            matrix[1][0] * matrix[2][2] * matrix[3][1] +
+            matrix[2][0] * matrix[1][1] * matrix[3][2] -
+            matrix[2][0] * matrix[1][2] * matrix[3][1] -
+            matrix[3][0] * matrix[1][1] * matrix[2][2] +
+            matrix[3][0] * matrix[1][2] * matrix[2][1];
+
+    inverse[0][1]= -matrix[0][1]  * matrix[2][2] * matrix[3][3] +
+            matrix[0][1] * matrix[2][3] * matrix[3][2] +
+            matrix[2][1] * matrix[0][2] * matrix[3][3] -
+            matrix[2][1] * matrix[0][3] * matrix[3][2] -
+            matrix[3][1] * matrix[0][2] * matrix[2][3] +
+            matrix[3][1] * matrix[0][3] * matrix[2][2];
+
+    inverse[1][1] = matrix[0][0] * matrix[2][2] * matrix[3][3] -
+            matrix[0][0] * matrix[2][3] * matrix[3][2] -
+            matrix[2][0] * matrix[0][2] * matrix[3][3] +
+            matrix[2][0] * matrix[0][3] * matrix[3][2] +
+            matrix[3][0] * matrix[0][2] * matrix[2][3] -
+            matrix[3][0] * matrix[0][3] * matrix[2][2];
+
+    inverse[2][1] = -matrix[0][0] * matrix[2][1] * matrix[3][3] +
+            matrix[0][0] * matrix[2][3] * matrix[3][1] +
+            matrix[2][0] * matrix[0][1] * matrix[3][3] -
+            matrix[2][0] * matrix[0][3] * matrix[3][1] -
+            matrix[3][0] * matrix[0][1] * matrix[2][3] +
+            matrix[3][0] * matrix[0][3] * matrix[2][1];
+
+    inverse[3][1] = matrix[0][0] * matrix[2][1] * matrix[3][2] -
+            matrix[0][0] * matrix[2][2] * matrix[3][1] -
+            matrix[2][0] * matrix[0][1] * matrix[3][2] +
+            matrix[2][0] * matrix[0][2] * matrix[3][1] +
+            matrix[3][0] * matrix[0][1] * matrix[2][2] -
+            matrix[3][0] * matrix[0][2] * matrix[2][1];
+
+    inverse[0][2] = matrix[0][1] * matrix[1][2] * matrix[3][3] -
+            matrix[0][1] * matrix[1][3] * matrix[3][2] -
+            matrix[1][1] * matrix[0][2] * matrix[3][3] +
+            matrix[1][1] * matrix[0][3] * matrix[3][2] +
+            matrix[3][1] * matrix[0][2] * matrix[1][3] -
+            matrix[3][1] * matrix[0][3] * matrix[1][2];
+
+    inverse[1][2] = -matrix[0][0]  * matrix[1][2] * matrix[3][3] +
+            matrix[0][0] * matrix[1][3] * matrix[3][2] +
+            matrix[1][0] * matrix[0][2] * matrix[3][3] -
+            matrix[1][0] * matrix[0][3] * matrix[3][2] -
+            matrix[3][0] * matrix[0][2] * matrix[1][3] +
+            matrix[3][0] * matrix[0][3] * matrix[1][2];
+
+    inverse[2][2] = matrix[0][0] * matrix[1][1] * matrix[3][3] -
+            matrix[0][0] * matrix[1][3] * matrix[3][1] -
+            matrix[1][0] * matrix[0][1] * matrix[3][3] +
+            matrix[1][0] * matrix[0][3] * matrix[3][1] +
+            matrix[3][0] * matrix[0][1] * matrix[1][3] -
+            matrix[3][0] * matrix[0][3] * matrix[1][1];
+
+    inverse[3][2] = -matrix[0][0] * matrix[1][1] * matrix[3][2] +
+            matrix[0][0] * matrix[1][2] * matrix[3][1] +
+            matrix[1][0] * matrix[0][1] * matrix[3][2] -
+            matrix[1][0] * matrix[0][2] * matrix[3][1] -
+            matrix[3][0] * matrix[0][1] * matrix[1][2] +
+            matrix[3][0] * matrix[0][2] * matrix[1][1];
+
+    inverse[0][3] = -matrix[0][1] * matrix[1][2] * matrix[2][3] +
+            matrix[0][1] * matrix[1][3] * matrix[2][2] +
+            matrix[1][1] * matrix[0][2] * matrix[2][3] -
+            matrix[1][1] * matrix[0][3] * matrix[2][2] -
+            matrix[2][1] * matrix[0][2] * matrix[1][3] +
+            matrix[2][1] * matrix[0][3] * matrix[1][2];
+
+    inverse[1][3] = matrix[0][0] * matrix[1][2] * matrix[2][3] -
+            matrix[0][0] * matrix[1][3] * matrix[2][2] -
+            matrix[1][0] * matrix[0][2] * matrix[2][3] +
+            matrix[1][0] * matrix[0][3] * matrix[2][2] +
+            matrix[2][0] * matrix[0][2] * matrix[1][3] -
+            matrix[2][0] * matrix[0][3] * matrix[1][2];
+
+    inverse[2][3] = -matrix[0][0] * matrix[1][1] * matrix[2][3] +
+            matrix[0][0] * matrix[1][3] * matrix[2][1] +
+            matrix[1][0] * matrix[0][1] * matrix[2][3] -
+            matrix[1][0] * matrix[0][3] * matrix[2][1] -
+            matrix[2][0] * matrix[0][1] * matrix[1][3] +
+            matrix[2][0] * matrix[0][3] * matrix[1][1];
+
+    inverse[3][3] = matrix[0][0] * matrix[1][1] * matrix[2][2] -
+            matrix[0][0] * matrix[1][2] * matrix[2][1] -
+            matrix[1][0] * matrix[0][1] * matrix[2][2] +
+            matrix[1][0] * matrix[0][2] * matrix[2][1] +
+            matrix[2][0] * matrix[0][1] * matrix[1][2] -
+            matrix[2][0] * matrix[0][2] * matrix[1][1];
+
+    K det = matrix[0][0] * inverse[0][0] + matrix[0][1] * inverse[1][0] + matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
+
+    // return identity for singular or nearly singular matrices.
+    if (std::abs(det) < 1e-40) {
+        for (int i = 0; i < 4; ++i){
+            inverse[i][i] = 1.0;
+        }
+        return 1.0;
+    }
+    K inv_det = 1.0 / det;
+    inverse *= inv_det;
+
+    return det;
+}
+} // end FMatrixHelp
 
 namespace ISTLUtility {
 
@@ -67,6 +199,14 @@ template <typename K>
 static inline void invertMatrix (FieldMatrix<K,3,3> &matrix)
 {
     FieldMatrix<K,3,3> A ( matrix );
+    FMatrixHelp::invertMatrix(A, matrix );
+}
+
+//! invert matrix by calling FMatrixHelp::invert
+template <typename K>
+static inline void invertMatrix (FieldMatrix<K,4,4> &matrix)
+{
+    FieldMatrix<K,4,4> A ( matrix );
     FMatrixHelp::invertMatrix(A, matrix );
 }
 
