@@ -157,14 +157,21 @@ namespace Opm
         // get the SegmentSet from the well_ecl_
         const SegmentSet& segmentSet() const;
 
+        // protected member variables from the Base class
         using Base::well_ecl_;
         using Base::number_of_perforations_; // TODO: can use well_ecl_?
         using Base::current_step_;
+        using Base::index_of_well_;
+        using Base::number_of_phases_;
 
         using Base::well_cells_; // TODO: are the perforation orders same with StandardWell or Wells?
         using Base::well_index_;
+        using Base::well_type_;
 
         using Base::well_controls_;
+
+        // protected functions from the Base class
+        using Base::active;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -190,6 +197,8 @@ namespace Opm
 
         // the inlet segments for each segment. It is for convinience and efficiency reason
         // the original segment structure is defined as a gathering tree structure based on outlet_segment
+        // the reason that we can not use the old way of WellOps, which is based on the Eigen matrix and vector.
+        // TODO: can we use DUNE FieldMatrix and FieldVector.
         std::vector<std::vector<int> > segment_inlets_;
 
         // Things are easy to get from SegmentSet

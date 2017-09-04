@@ -282,12 +282,12 @@ namespace Opm
             return res;
         }
 
-        std::vector<double>& segRates()
+        const std::vector<double>& segRates() const
         {
             return segrates_;
         }
 
-        std::vector<double>& segPress()
+        const std::vector<double>& segPress() const
         {
             return segpress_;
         }
@@ -297,7 +297,7 @@ namespace Opm
             return nseg_;
         }
 
-        int topSegment(const int w) const
+        int topSegmentLocation(const int w) const
         {
             assert(w < int(top_segment_loc_.size()) );
             return top_segment_loc_[w];

@@ -68,6 +68,26 @@ namespace Opm
         // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
         // specified perforation depth
         initMatrixAndVectors(num_cells);
+
+        // initialize the segment_perforations_
+        const CompletionSet& completion_set = well_ecl_->getCompletions(current_step_);
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            const Completion& completion = completion_set.get(perf);
+            const int segment_number = completion.getSegmentNumber();
+            const int segment_location = numberToLocation(segment_number);
+            segment_perforations_[segment_location].push_back(perf);
+        }
+
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            const Segment& segment = segmentSet()[seg];
+            const int segment_number = segment.segmentNumber();
+            const int outlet_segment_number = segment.outletSegment();
+            if (outlet_segment_number > 0) {
+                const int segment_location = numberToLocation(segment_number);
+                const int outlet_segment_location = numberToLocation(outlet_segment_number);
+                segment_inlets_[outlet_segment_location].push_back(segment_location);
+            }
+        }
     }
 
 
@@ -120,6 +140,10 @@ namespace Opm
         // resize temporary class variables
         Bx_.resize( duneC_.N() );
         invDrw_.resize( invDuneD_.N() );
+
+        // TODO: maybe this function need a different name for better meaning
+        primary_variables_.resize(numberOfSegments());
+        primary_variables_evaluation_.resize(numberOfSegments());
     }
 
 
@@ -291,8 +315,74 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state) const
     {
+        // TODO: not tested yet.
+        // TODO: not handling solvent or polymer for now.
 
+        // TODO: to test using rate conversion coefficients to see if it will be better than
+        // this default one
+        std::vector<double> g = {1.0, 1.0, 0.01};
 
+        if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
+            const double* distr = well_controls_get_current_distr(well_controls_);
+            for (int phase = 0; phase < number_of_phases_; ++phase) {
+                g[phase] = distr[phase];
+            }
+        }
+
+        // the location of the top segment in the WellState
+        const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+        const std::vector<double>& segment_rates = well_state.segRates();
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            // calculate the total rate for each segment
+            double total_seg_rate = 0.0;
+            const int seg_location = top_segment_location + seg;
+            // the segment pressure
+            primary_variables_[seg][SPres] = well_state.segPress()[seg_location];
+            // TODO: under what kind of circustances, the following will be wrong?
+            // the definition of g makes the gas phase is always the last phase
+            for (int p = 0; p < number_of_phases_; p++) {
+                total_seg_rate += g[p] * segment_rates[number_of_phases_ * seg_location + p];
+            }
+
+            primary_variables_[seg][GTotal] = total_seg_rate;
+            if (std::abs(total_seg_rate) > 0.) {
+                if (active()[Water]) {
+                    primary_variables_[seg][WFrac] = g[Water] * segment_rates[number_of_phases_ * seg_location + Water] / total_seg_rate;
+                }
+                if (active()[Gas]) {
+                    primary_variables_[seg][GFrac] = g[Gas] * segment_rates[number_of_phases_ * seg_location + Gas] / total_seg_rate;
+                }
+            } else { // total_seg_rate == 0
+                if (well_type_ == INJECTOR) {
+                    // only single phase injection handled
+                    const double* distr = well_controls_get_current_distr(well_controls_);
+                    if (active()[Water]) {
+                        if (distr[Water] > 0.0) {
+                            primary_variables_[seg][WFrac] = 1.0;
+                        } else {
+                            primary_variables_[seg][WFrac] = 0.0;
+                        }
+                    }
+
+                    if (active()[Gas]) {
+                        if (distr[Gas] > 0.0) {
+                            // TODO: not handling solvent here yet
+                            primary_variables_[seg][GFrac] = 1.0;
+                        } else {
+                            primary_variables_[seg][GFrac] = 0.0;
+                        }
+                    }
+                } else if (well_type_ == PRODUCER) { // producers
+                    if (active()[Water]) {
+                        primary_variables_[seg][WFrac] = 1.0 / number_of_phases_;
+                    }
+
+                    if (active()[Gas]) {
+                        primary_variables_[seg][GFrac] = 1.0 / number_of_phases_;
+                    }
+                }
+            }
+        }
     }
 
 
