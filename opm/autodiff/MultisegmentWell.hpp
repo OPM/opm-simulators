@@ -102,11 +102,11 @@ namespace Opm
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
         virtual void updateWellStateWithTarget(const int current,
-                                               WellState& xw) const;
+                                               WellState& well_state) const;
 
         // TODO: this should go to the WellInterface, while updateWellStateWithTarget
         // will need touch different types of well_state, we will see.
-        virtual void updateWellControl(WellState& xw,
+        virtual void updateWellControl(WellState& well_state,
                                        wellhelpers::WellSwitchingLogger& logger) const;
 
         /// check whether the well equations get converged for this well
@@ -118,7 +118,7 @@ namespace Opm
         virtual void computeAccumWell();
 
         virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& xw);
+                                                    const WellState& well_state);
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;
@@ -174,6 +174,7 @@ namespace Opm
         // protected functions from the Base class
         using Base::active;
         using Base::phaseUsage;
+        using Base::name;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
