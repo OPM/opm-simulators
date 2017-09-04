@@ -77,7 +77,7 @@ struct SetupTest {
         Opm::ParseContext parse_context;
         Opm::Parser parser;
         auto deck = parser.parseFile("TESTWELLMODEL.DATA", parse_context);
-        ecl_state = std::make_unique<const Opm::EclipseState>(deck , parse_context);
+        ecl_state.reset(new Opm::EclipseState(deck , parse_context) );
 
         // Create grid.
         const std::vector<double>& porv =
@@ -96,17 +96,17 @@ struct SetupTest {
         current_timestep = 0;
 
         // Create wells.
-        wells_manager = std::make_unique<const Opm::WellsManager> (*ecl_state,
-                                                                   current_timestep,
-                                                                   Opm::UgGridHelpers::numCells(grid),
-                                                                   Opm::UgGridHelpers::globalCell(grid),
-                                                                   Opm::UgGridHelpers::cartDims(grid),
-                                                                   Opm::UgGridHelpers::dimensions(grid),
-                                                                   Opm::UgGridHelpers::cell2Faces(grid),
-                                                                   Opm::UgGridHelpers::beginFaceCentroids(grid),
-                                                                   dummy_dynamic_list,
-                                                                   false,
-                                                                   std::unordered_set<std::string>());
+        wells_manager.reset(new Opm::WellsManager(*ecl_state,
+                                                  current_timestep,
+                                                  Opm::UgGridHelpers::numCells(grid),
+                                                  Opm::UgGridHelpers::globalCell(grid),
+                                                  Opm::UgGridHelpers::cartDims(grid),
+                                                  Opm::UgGridHelpers::dimensions(grid),
+                                                  Opm::UgGridHelpers::cell2Faces(grid),
+                                                  Opm::UgGridHelpers::beginFaceCentroids(grid),
+                                                  dummy_dynamic_list,
+                                                  false,
+                                                  std::unordered_set<std::string>() ) );
 
     };
 
