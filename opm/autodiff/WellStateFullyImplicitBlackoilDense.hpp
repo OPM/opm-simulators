@@ -287,7 +287,17 @@ namespace Opm
             return segrates_;
         }
 
+        std::vector<double>& segRates()
+        {
+            return segrates_;
+        }
+
         const std::vector<double>& segPress() const
+        {
+            return segpress_;
+        }
+
+        std::vector<double>& segPress()
         {
             return segpress_;
         }

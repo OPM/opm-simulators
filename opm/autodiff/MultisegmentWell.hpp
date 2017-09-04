@@ -167,11 +167,13 @@ namespace Opm
         using Base::well_cells_; // TODO: are the perforation orders same with StandardWell or Wells?
         using Base::well_index_;
         using Base::well_type_;
+        using Base::first_perf_;
 
         using Base::well_controls_;
 
         // protected functions from the Base class
         using Base::active;
+        using Base::phaseUsage;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.

@@ -186,11 +186,141 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const int current,
-                              WellState& xw) const
+                              WellState& well_state) const
     {
-        // TODO: it can be challenging, when updating the segment and perforation related
-        // well rates will be okay.
+        // TODO: it can be challenging, when updating the segment and perforation related,
+        // well rates needs to be okay.
+
+        // Updating well state bas on well control
+        // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
+        const double target = well_controls_iget_target(well_controls_, current);
+        const double* distr = well_controls_iget_distr(well_controls_, current);
+        switch (well_controls_iget_type(well_controls_, current)) {
+        case BHP: {
+            well_state.bhp()[index_of_well_] = target;
+            const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+            well_state.segPress()[top_segment_location] = well_state.bhp()[index_of_well_];
+            // TODO: similar to the way below to handle THP
+            // we should not something related to thp here when there is thp constraint
+            break;
+        }
+
+        case THP: {
+            well_state.thp()[index_of_well_] = target;
+
+            const Opm::PhaseUsage& pu = phaseUsage();
+            std::vector<double> rates(3, 0.0);
+            if (active()[ Water ]) {
+                rates[ Water ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Water ] ];
+            }
+            if (active()[ Oil ]) {
+                 rates[ Oil ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Oil ] ];
+            }
+            if (active()[ Gas ]) {
+                rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
+            }
+
+            const int table_id = well_controls_iget_vfp(well_controls_, current);
+            const double& thp    = well_controls_iget_target(well_controls_, current);
+            const double& alq    = well_controls_iget_alq(well_controls_, current);
+
+            // TODO: implement calculateBhpFromThp function
+            // well_state.bhp()[index_of_well_] = calculateBhpFromThp(rates, current);
+            // also the top segment pressure
+            /* const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+            well_state.segPress()[top_segment_location] = well_state.bhp()[index_of_well_]; */
+            break;
+        }
+
+        case RESERVOIR_RATE: // intentional fall-through
+        case SURFACE_RATE:
+            // for the update of the rates, after we update the well rates, we can try to scale
+            // the segment rates and perforation rates with the same factor
+            // or the other way, we can use the same approach like the initialization of the well state,
+            // we devide the well rates to update the perforation rates, then we update the segment rates based
+            // on the perforation rates.
+            // the second way is safer, since if the well control is changed, the first way will not guarantee the consistence
+            // of between the segment rates and peforation rates
+
+            // checking the number of the phases under control
+            int numPhasesWithTargetsUnderThisControl = 0;
+            for (int phase = 0; phase < number_of_phases_; ++phase) {
+                if (distr[phase] > 0.0) {
+                    numPhasesWithTargetsUnderThisControl += 1;
+                }
+            }
+
+            assert(numPhasesWithTargetsUnderThisControl > 0);
+
+            if (well_type_ == INJECTOR) {
+                // assign target value as initial guess for injectors
+                // only handles single phase control at the moment
+                assert(numPhasesWithTargetsUnderThisControl == 1);
+
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    if (distr[phase] > 0.) {
+                        well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] = target / distr[phase];
+                    } else {
+                        well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] = 0.;
+                    }
+                }
+            } else if (well_type_ == PRODUCER) {
+                // update the rates of phases under control based on the target,
+                // and also update rates of phases not under control to keep the rate ratio,
+                // assuming the mobility ratio does not change for the production wells
+                double original_rates_under_phase_control = 0.0;
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        original_rates_under_phase_control += well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] * distr[phase];
+                    }
+                }
+
+                if (original_rates_under_phase_control != 0.0 ) {
+                    double scaling_factor = target / original_rates_under_phase_control;
+
+                    for (int phase = 0; phase < number_of_phases_; ++phase) {
+                        well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] *= scaling_factor;
+                    }
+                } else { // scaling factor is not well defied when original_rates_under_phase_control is zero
+                    // separating targets equally between phases under control
+                    const double target_rate_divided = target / numPhasesWithTargetsUnderThisControl;
+                    for (int phase = 0; phase < number_of_phases_; ++phase) {
+                        if (distr[phase] > 0.0) {
+                            well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] = target_rate_divided / distr[phase];
+                        } else {
+                            // this only happens for SURFACE_RATE control
+                            well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] = target_rate_divided;
+                        }
+                    }
+                }
+            }
+
+            // update the perforation rates and then segment rates
+            {
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    const double perf_phaserate = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / number_of_perforations_;
+                    for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                        well_state.perfPhaseRates()[number_of_phases_ * (first_perf_ + perf) + phase] = perf_phaserate;
+                    }
+                }
+
+                const std::vector<double> perforation_rates(well_state.perfPhaseRates().begin() + number_of_phases_ * first_perf_,
+                                             well_state.perfPhaseRates().begin() + number_of_phases_ * (first_perf_ + number_of_perforations_) );
+                std::vector<double> segment_rates;
+                WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
+                                                 0 /* top segment */, segment_rates);
+                const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+                std::copy(segment_rates.begin(), segment_rates.end(),
+                          well_state.segRates().begin() + number_of_phases_ * top_segment_location );
+                // we need to check the top segment rates should be same with the well rates
+            }
+
+            break;
+        } // end of switch
+
+        updatePrimaryVariables(well_state);
     }
+
 
 
 
@@ -199,7 +329,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellControl(WellState& xw,
+    updateWellControl(WellState& well_state,
                       wellhelpers::WellSwitchingLogger& logger) const
     {
         // TODO: it will be very similar to the StandardWell, while updateWellStateWithTarget will be chanlleging.
@@ -241,7 +371,7 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                   const WellState& xw)
+                                   const WellState& well_state)
     {
         // TODO: the name of the function need to change.
         // it will be calculating the pressure difference between the perforation and grid cells
