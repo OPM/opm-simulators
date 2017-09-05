@@ -109,12 +109,6 @@ namespace Opm
                                                      const std::vector<double>& B_avg,
                                                      const ModelParameters& param) const;
 
-        /// computing the accumulation term for later use in well mass equations
-        virtual void computeAccumWell();
-
-        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& well_state);
-
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;
         /// r = r - C D^-1 Rw
@@ -135,8 +129,8 @@ namespace Opm
         virtual void solveEqAndUpdateWellState(const ModelParameters& param,
                                                WellState& well_state); // const?
 
-        virtual void calculateExplictQuantities(const Simulator& ebosSimulator,
-                                                const WellState& well_state); // should be const?
+        virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                                 const WellState& well_state); // should be const?
 
         /// number of segments for this well
         /// int number_of_segments_;
@@ -250,6 +244,9 @@ namespace Opm
         void updateWellState(const BVectorWell& dwells,
                              const BlackoilModelParameters& param,
                              WellState& well_state) const;
+
+        // computing the accumulation term for later use in well mass equations
+        void computeAccumWell();
 
         // void computePerfRate() will be a key function here.
     };

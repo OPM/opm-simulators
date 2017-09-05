@@ -125,12 +125,6 @@ namespace Opm
                                                      const std::vector<double>& B_avg,
                                                      const ModelParameters& param) const;
 
-        /// computing the accumulation term for later use in well mass equations
-        virtual void computeAccumWell();
-
-        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& xw);
-
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;
         /// r = r - C D^-1 Rw
@@ -151,8 +145,8 @@ namespace Opm
         virtual void solveEqAndUpdateWellState(const ModelParameters& param,
                                                WellState& well_state);
 
-        virtual void calculateExplictQuantities(const Simulator& ebosSimulator,
-                                                const WellState& well_state); // should be const?
+        virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                                 const WellState& well_state); // should be const?
     protected:
 
         // protected functions from the Base class
@@ -267,6 +261,12 @@ namespace Opm
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
                                                     const std::vector<double>& surf_dens_perf);
+
+        // computing the accumulation term for later use in well mass equations
+        void computeAccumWell();
+
+        void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                    const WellState& xw);
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,

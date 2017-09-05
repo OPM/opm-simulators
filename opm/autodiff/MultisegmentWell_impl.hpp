@@ -356,21 +356,6 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                   const WellState& well_state)
-    {
-        // TODO: the name of the function need to change.
-        // it will be calculating the pressure difference between the perforation and grid cells
-        // With MS well, the depth of the perforation is not necessarily the center of the grid cells.
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
 
@@ -522,8 +507,8 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    calculateExplictQuantities(const Simulator& ebosSimulator,
-                               const WellState& well_state)
+    calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                const WellState& well_state)
     {
     }
 

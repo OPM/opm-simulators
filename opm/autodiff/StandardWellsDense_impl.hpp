@@ -183,7 +183,7 @@ namespace Opm {
         initPrimaryVariablesEvaluation();
 
         if (iterationIdx == 0) {
-            calculateExplictQuantities(ebosSimulator, well_state);
+            calculateExplicitQuantities(ebosSimulator, well_state);
         }
 
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
@@ -533,11 +533,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    calculateExplictQuantities(const Simulator& ebosSimulator,
+    calculateExplicitQuantities(const Simulator& ebosSimulator,
                                const WellState& xw) const
     {
          for (auto& well : well_container_) {
-             well->calculateExplictQuantities(ebosSimulator, xw);
+             well->calculateExplicitQuantities(ebosSimulator, xw);
          }
     }
 

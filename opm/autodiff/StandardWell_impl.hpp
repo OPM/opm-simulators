@@ -1507,8 +1507,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    calculateExplictQuantities(const Simulator& ebosSimulator,
-                               const WellState& well_state)
+    calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                const WellState& well_state)
     {
         computeWellConnectionPressures(ebosSimulator, well_state);
         computeAccumWell();

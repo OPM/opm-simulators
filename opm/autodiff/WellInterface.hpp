@@ -179,13 +179,6 @@ namespace Opm
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials) = 0;
 
-        virtual void computeAccumWell() = 0;
-
-        // TODO: it should come with a different name
-        // for MS well, the definition is different and should not use this name anymore
-        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& xw) = 0;
-
         virtual void updateWellStateWithTarget(const int current,
                                                WellState& xw) const = 0;
 
@@ -194,8 +187,8 @@ namespace Opm
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 
-        virtual void calculateExplictQuantities(const Simulator& ebosSimulator,
-                                                const WellState& xw) = 0; // should be const?
+        virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                                 const WellState& xw) = 0; // should be const?
 
     protected:
 
