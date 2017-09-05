@@ -120,11 +120,6 @@ namespace Opm
         virtual void updateWellStateWithTarget(const int current,
                                                WellState& xw) const;
 
-        // TODO: this should go to the WellInterface, while updateWellStateWithTarget
-        // will need touch different types of well_state, we will see.
-        virtual void updateWellControl(WellState& xw,
-                                       wellhelpers::WellSwitchingLogger& logger) const;
-
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
                                                      const std::vector<double>& B_avg,

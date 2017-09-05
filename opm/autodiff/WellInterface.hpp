@@ -188,8 +188,8 @@ namespace Opm
         virtual void updateWellStateWithTarget(const int current,
                                                WellState& xw) const = 0;
 
-        virtual void updateWellControl(WellState& xw,
-                                       wellhelpers::WellSwitchingLogger& logger) const = 0;
+        void updateWellControl(WellState& xw,
+                               wellhelpers::WellSwitchingLogger& logger) const;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
 
