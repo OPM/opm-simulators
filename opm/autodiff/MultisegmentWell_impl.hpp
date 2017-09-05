@@ -415,7 +415,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
-                          std::vector<double>& well_potentials) const
+                          std::vector<double>& well_potentials)
     {
 
 
@@ -513,6 +513,18 @@ namespace Opm
     {
 
 
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    calculateExplictQuantities(const Simulator& ebosSimulator,
+                               const WellState& well_state)
+    {
     }
 
 

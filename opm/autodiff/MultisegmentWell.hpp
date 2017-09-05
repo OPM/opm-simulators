@@ -128,12 +128,15 @@ namespace Opm
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials) const;
+                                           std::vector<double>& well_potentials);
 
         virtual void updatePrimaryVariables(const WellState& well_state) const;
 
         virtual void solveEqAndUpdateWellState(const ModelParameters& param,
                                                WellState& well_state); // const?
+
+        virtual void calculateExplictQuantities(const Simulator& ebosSimulator,
+                                                const WellState& well_state); // should be const?
 
         /// number of segments for this well
         /// int number_of_segments_;

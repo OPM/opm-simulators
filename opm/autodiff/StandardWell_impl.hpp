@@ -1507,6 +1507,20 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
+    calculateExplictQuantities(const Simulator& ebosSimulator,
+                               const WellState& well_state)
+    {
+        computeWellConnectionPressures(ebosSimulator, well_state);
+        computeAccumWell();
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
     computeAccumWell()
     {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
@@ -1730,10 +1744,16 @@ namespace Opm
     StandardWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
-                          std::vector<double>& well_potentials) const
+                          std::vector<double>& well_potentials) // const
     {
-        const int np = number_of_phases_;
+        updatePrimaryVariables(well_state);
+        computeWellConnectionPressures(ebosSimulator, well_state);
 
+        // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
+        // TODO: for computeWellPotentials, no derivative is required actually
+        initPrimaryVariablesEvaluation();
+
+        const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
 
         // get the bhp value based on the bhp constraints

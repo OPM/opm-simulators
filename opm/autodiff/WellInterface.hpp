@@ -174,9 +174,10 @@ namespace Opm
         /// r = r - C D^-1 Rw
         virtual void apply(BVector& r) const = 0;
 
+        // TODO: before we decide to put more information under mutable, this function is not const
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials) const = 0;
+                                           std::vector<double>& well_potentials) = 0;
 
         virtual void computeAccumWell() = 0;
 
@@ -192,6 +193,9 @@ namespace Opm
                                wellhelpers::WellSwitchingLogger& logger) const;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const = 0;
+
+        virtual void calculateExplictQuantities(const Simulator& ebosSimulator,
+                                                const WellState& xw) = 0; // should be const?
 
     protected:
 

@@ -169,14 +169,13 @@ namespace Opm {
              const double dt,
              WellState& well_state)
     {
-
-        if (iterationIdx == 0) {
-            prepareTimeStep(ebosSimulator, well_state);
-        }
-
         SimulatorReport report;
         if ( ! wellsActive() ) {
             return report;
+        }
+
+        if (iterationIdx == 0) {
+            prepareTimeStep(ebosSimulator, well_state);
         }
 
         updateWellControls(well_state);
@@ -184,8 +183,7 @@ namespace Opm {
         initPrimaryVariablesEvaluation();
 
         if (iterationIdx == 0) {
-            computeWellConnectionPressures(ebosSimulator, well_state);
-            computeAccumWells();
+            calculateExplictQuantities(ebosSimulator, well_state);
         }
 
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
@@ -399,20 +397,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
-    StandardWellsDense<TypeTag>::
-    computeAccumWells() const
-    {
-        for (auto& well : well_container_) {
-            well->computeAccumWell();
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
     SimulatorReport
     StandardWellsDense<TypeTag>::
     solveWellEq(Simulator& ebosSimulator,
@@ -549,13 +533,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     StandardWellsDense<TypeTag>::
-    computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                   const WellState& xw) const
+    calculateExplictQuantities(const Simulator& ebosSimulator,
+                               const WellState& xw) const
     {
-         if( ! localWellsActive() ) return ;
-
          for (auto& well : well_container_) {
-             well->computeWellConnectionPressures(ebosSimulator, xw);
+             well->calculateExplictQuantities(ebosSimulator, xw);
          }
     }
 
@@ -612,13 +594,6 @@ namespace Opm {
                           const WellState& well_state,
                           std::vector<double>& well_potentials) const
     {
-        updatePrimaryVariables(well_state);
-        computeWellConnectionPressures(ebosSimulator, well_state);
-
-        // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
-        // TODO: for computeWellPotentials, no derivative is required actually
-        initPrimaryVariablesEvaluation();
-
         // number of wells and phases
         const int nw = number_of_wells_;
         const int np = number_of_phases_;

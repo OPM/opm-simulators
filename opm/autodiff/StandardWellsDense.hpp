@@ -230,14 +230,17 @@ namespace Opm {
 
             void calculateEfficiencyFactors();
 
-            void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                const WellState& xw) const;
+            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
+            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
+            // twice at the beginning of the time step
+            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
+            /// at the beginning of the time step and no derivatives are included in these quantities
+            void calculateExplictQuantities(const Simulator& ebosSimulator,
+                                            const WellState& xw) const;
 
             SimulatorReport solveWellEq(Simulator& ebosSimulator,
                                         const double dt,
                                         WellState& well_state) const;
-
-            void computeAccumWells() const;
 
             void initPrimaryVariablesEvaluation() const;
 
