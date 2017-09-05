@@ -55,13 +55,13 @@ namespace Properties {
     NEW_TYPE_TAG(EclFlowOilWaterProblem, INHERITS_FROM(EclFlowProblem));
     //! The indices required by the model
     SET_TYPE_PROP(EclFlowOilWaterProblem, Indices,
-      Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,  /*PVOffset=*/0, /*gasoil=*/false>);
+      Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,  /*PVOffset=*/0, /*disabledCompIdx=*/2>);
 
 
     NEW_TYPE_TAG(EclFlowGasOilProblem, INHERITS_FROM(EclFlowProblem));
     //! The indices required by the model
     SET_TYPE_PROP(EclFlowGasOilProblem, Indices,
-      Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,  /*PVOffset=*/0, /*gasoil=*/true>);
+      Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,  /*PVOffset=*/0, /*disabledCompIdx=*/1>);
 
     ///////////////////////////////////
     //   Polymer case

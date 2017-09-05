@@ -299,26 +299,13 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFractionScaled(const int compIdx) const
     {
-        // TODO: we should be able to set the g for the well based on the control type
-        // instead of using explicit code for g all the times
-        const WellControls* wc = well_controls_;
-        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
 
-            if (has_solvent && compIdx == contiSolventEqIdx) {
-                return wellVolumeFraction(compIdx);
-            }
-            const double* distr = well_controls_get_current_distr(wc);
-            assert(compIdx < 3);
-            if (distr[compIdx] > 0.) {
-                return wellVolumeFraction(compIdx) / distr[compIdx];
-            } else {
-                // TODO: not sure why return EvalWell(0.) causing problem here
-                // Probably due to the wrong Jacobians.
-                return wellVolumeFraction(compIdx);
-            }
-        }
+        const double scal = scalingFactor(compIdx);
+        if (scal > 0)
+            return  wellVolumeFraction(compIdx) / scal;
 
-        return (wellVolumeFraction(compIdx) / scalingFactor(compIdx) );
+        // the scaling factor may be zero for RESV controlled wells.
+        return wellVolumeFraction(compIdx);
     }
 
 
@@ -893,18 +880,12 @@ namespace Opm
         const int current = well_state.currentControls()[index_of_well_];
         const double target_rate = well_controls_iget_target(wc, current);
 
-        if (well_controls_iget_type(wc, current) == RESERVOIR_RATE) {
-            const double* distr = well_controls_iget_distr(wc, current);
-            for (int p = 0; p < np; ++p) {
-                if (distr[p] > 0.) { // For injection wells, there only one non-zero distr value
-                    F[p] /= distr[p];
-                } else {
-                    F[p] = 0.;
-                }
-            }
-        } else {
-            for (int p = 0; p < np; ++p) {
-                F[p] /= scalingFactor(p);
+        for (int p = 0; p < np; ++p) {
+            const double scal = scalingFactor(p);
+            if (scal > 0) {
+                F[p] /= scal ;
+            } else {
+                F[p] = 0.;
             }
         }
 
@@ -1876,17 +1857,6 @@ namespace Opm
         const double* distr = well_controls_get_current_distr(wc);
         const auto pu = phaseUsage();
 
-        std::vector<double> g(np);
-        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
-            for (int phase = 0; phase < np; ++phase) {
-                g[phase] = distr[phase];
-            }
-        } else {
-            for (int phase = 0; phase < np; ++phase) {
-                g[phase] = scalingFactor(phase);
-            }
-        }
-
         switch (well_controls_get_current_type(wc)) {
         case THP:
         case BHP: {
@@ -1897,7 +1867,7 @@ namespace Opm
                 }
             } else {
                 for (int p = 0; p < np; ++p) {
-                    primary_variables_[XvarWell] += g[p] * well_state.wellRates()[np*well_index + p];
+                    primary_variables_[XvarWell] += scalingFactor(p) * well_state.wellRates()[np*well_index + p];
                 }
             }
             break;
@@ -1910,17 +1880,17 @@ namespace Opm
 
         double tot_well_rate = 0.0;
         for (int p = 0; p < np; ++p)  {
-            tot_well_rate += g[p] * well_state.wellRates()[np*well_index + p];
+            tot_well_rate += scalingFactor(p) * well_state.wellRates()[np*well_index + p];
         }
         if(std::abs(tot_well_rate) > 0) {
             if (active()[ Water ]) {
-                primary_variables_[WFrac] = g[pu.phase_pos[Water]] * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / tot_well_rate;
+                primary_variables_[WFrac] = scalingFactor(pu.phase_pos[Water]) * well_state.wellRates()[np*well_index + pu.phase_pos[Water]] / tot_well_rate;
             }
             if (active()[ Gas ]) {
-                primary_variables_[GFrac] = g[ pu.phase_pos[Gas]] * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / tot_well_rate ;
+                primary_variables_[GFrac] = scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates()[np*well_index + pu.phase_pos[Gas]] - well_state.solventWellRate(well_index)) / tot_well_rate ;
             }
             if (has_solvent) {
-                primary_variables_[SFrac] = g[ pu.phase_pos[Gas]] * well_state.solventWellRate(well_index) / tot_well_rate ;
+                primary_variables_[SFrac] = scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / tot_well_rate ;
             }
         } else { // tot_well_rate == 0
             if (well_type_ == INJECTOR) {
@@ -2062,7 +2032,15 @@ namespace Opm
     double
     StandardWell<TypeTag>::scalingFactor(const int phaseIdx) const
     {
-        //std::vector<double> g = {1,1,0.01,0.01};
+        const WellControls* wc = well_controls_;
+        const double* distr = well_controls_get_current_distr(wc);
+
+        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+            if (has_solvent && phaseIdx == contiSolventEqIdx )
+                   OPM_THROW(std::runtime_error, "RESERVOIR_RATE control in combination with solvent is not implemented");
+
+            return distr[phaseIdx];
+        }
         const auto& pu = phaseUsage();
         if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
             return 1.0;

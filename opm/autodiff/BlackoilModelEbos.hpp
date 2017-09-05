@@ -644,7 +644,6 @@ namespace Opm {
 
                 // Saturation updates.
                 const double dsw = active_[Water] ? dx[cell_idx][Indices::waterSaturationIdx] : 0.0;
-                const int xvar_ind = active_[Water] ? 2 : 1;
                 const double dxvar = active_[Gas] ? dx[cell_idx][Indices::compositionSwitchIdx] : 0.0;
 
                 double dso = 0.0;
