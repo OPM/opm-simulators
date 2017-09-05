@@ -34,13 +34,22 @@ declare -A downstreamRev
 
 # Clone opm-common
 pushd .
-mkdir -p $WORKSPACE/deps/opm-common
-cd $WORKSPACE/deps/opm-common
-git init .
-git remote add origin https://github.com/OPM/opm-common
-git fetch --depth 1 origin ${upstreamRev[opm-common]}:branch_to_build
-test $? -eq 0 || exit 1
-git checkout branch_to_build
+if [ ! -d $WORKSPACE/deps/opm-common ];then
+    mkdir -p $WORKSPACE/deps/opm-common
+    cd $WORKSPACE/deps/opm-common
+    git init .
+    git remote add origin https://github.com/OPM/opm-common
+    git fetch --depth 1 origin ${upstreamRev[opm-common]}:branch_to_build
+    test $? -eq 0 || exit 1
+    git checkout branch_to_build
+else
+    cd $WORKSPACE/deps/opm-common
+    #git fetch --depth 1 origin ${upstreamRev[opm-common]}:branch_to_build
+    #test $? -eq 0 || exit 1
+    git checkout branch_to_build   
+    git pull
+fi
+       
 popd
 
 source $WORKSPACE/deps/opm-common/jenkins/build-opm-module.sh
