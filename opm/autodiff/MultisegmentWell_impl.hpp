@@ -31,6 +31,8 @@ namespace Opm
     , segment_cell_(numberOfSegments())
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
+    , perforation_cell_pressure_diffs_(number_of_perforations_, 0.0)
+    , segment_comp_initial_(numberOfSegments(), 0.0)
     {
         // TODO: to see what information we need to process here later.
         // const auto& completion_set = well->getCompletions(time_step);
@@ -344,18 +346,6 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeAccumWell()
-    {
-        // it will be vector of compositions of segments
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
 
@@ -507,9 +497,35 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                const WellState& well_state)
+    computePerfCellPressDiffs(const Simulator& ebosSimulator)
     {
+        // TODO: will implement later
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    computeInitialComposition()
+    {
+        // TODO this, we need to implement the wellSurfaceVolumeFraction() function
+        // should we provide member variables to store all these values to avoid calculate again and again?
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                const WellState& /* well_state */)
+    {
+        computePerfCellPressDiffs(ebosSimulator);
     }
 
 
@@ -582,6 +598,95 @@ namespace Opm
     numberToLocation(const int segment_number) const
     {
         return segmentSet().numberToLocation(segment_number);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    volumeFraction(const int seg, const int comp_idx) const
+    {
+        if (comp_idx == Water) {
+            return primary_variables_evaluation_[seg][WFrac];
+        }
+
+        if (comp_idx == Gas) {
+            return primary_variables_evaluation_[seg][GFrac];
+        }
+
+        // TODO: not handling solvent for now
+        // if (has_solvent && compIdx == contiSolventEqIdx) {
+        //     return primary_variables_evaluation_[seg][SFrac];
+        // }
+
+        // Oil fraction
+        EvalWell oil_fraction = 1.0;
+        if (active()[Water]) {
+            oil_fraction -= primary_variables_evaluation_[seg][WFrac];
+        }
+
+        if (active()[Gas]) {
+            oil_fraction -= primary_variables_evaluation_[seg][GFrac];
+        }
+        /* if (has_solvent) {
+            oil_fraction -= primary_variables_evaluation_[seg][SFrac];
+        } */
+        return oil_fraction;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    volumeFractionScaled(const int seg, const int comp_idx) const
+    {
+        // For reservoir rate control, the distr in well control is used for the
+        // rate conversion coefficients. For the injection well, only the distr of the injection
+        // phase is not zero.
+        if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
+            // TODO: not handling solvent for now
+            /* if (has_solvent && comp_idx == contiSolventEqIdx) {
+                return wellVolumeFraction(comp_idx);
+            } */
+
+            const double* distr = well_controls_get_current_distr(well_controls_);
+            assert(comp_idx < 3);
+            if (distr[comp_idx] > 0.) {
+                return volumeFraction(seg, comp_idx) / distr[comp_idx];
+            } else {
+                // TODO: not sure why return EvalWell(0.) causing problem here
+                // Probably due to the wrong Jacobians.
+                return volumeFraction(seg, comp_idx);
+            }
+        }
+        std::vector<double> g = {1, 1, 0.01};
+        return volumeFraction(seg, comp_idx) / g[comp_idx];
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    surfaceVolumeFraction(const int seg, const int comp_idx) const
+    {
+        EvalWell sum_volume_fraction_scaled = 0.;
+        const int num_comp = numComponents();
+        for (int idx = 0; idx < num_comp; ++idx) {
+            sum_volume_fraction_scaled += volumeFractionScaled(seg, idx);
+        }
+
+        assert(sum_volume_fraction_scaled.value() != 0.);
+
+        return volumeFractionScaled(seg, comp_idx) / sum_volume_fraction_scaled;
     }
 
 }

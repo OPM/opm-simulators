@@ -167,6 +167,7 @@ namespace Opm
         using Base::active;
         using Base::phaseUsage;
         using Base::name;
+        using Base::numComponents;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -230,6 +231,13 @@ namespace Opm
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
         mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
 
+        // pressure correction due to the different depth of the perforation and
+        // center depth of the grid block
+        std::vector<double> perforation_cell_pressure_diffs_;
+
+        // the intial component compistion of segments
+        std::vector<double> segment_comp_initial_;
+
         void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
@@ -246,7 +254,20 @@ namespace Opm
                              WellState& well_state) const;
 
         // computing the accumulation term for later use in well mass equations
-        void computeAccumWell();
+        void computeInitialComposition();
+
+        // compute the pressure difference between the perforation and cell center
+        void computePerfCellPressDiffs(const Simulator& ebosSimulator);
+
+        // fraction value of the primary variables
+        // should we just use member variables to store them instead of calculating them again and again
+        EvalWell volumeFraction(const int seg, const int comp_idx) const;
+
+        // F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p
+        EvalWell volumeFractionScaled(const int seg, const int comp_idx) const;
+
+        // basically Q_p / \sigma_p Q_p
+        EvalWell surfaceVolumeFraction(const int seg, const int comp_idx) const;
 
         // void computePerfRate() will be a key function here.
     };
