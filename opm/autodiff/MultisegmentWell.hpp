@@ -236,7 +236,7 @@ namespace Opm
         std::vector<double> perforation_cell_pressure_diffs_;
 
         // the intial component compistion of segments
-        std::vector<double> segment_comp_initial_;
+        std::vector<std::vector<double> > segment_comp_initial_;
 
         void initMatrixAndVectors(const int num_cells) const;
 

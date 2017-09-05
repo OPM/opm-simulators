@@ -32,7 +32,7 @@ namespace Opm
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
     , perforation_cell_pressure_diffs_(number_of_perforations_, 0.0)
-    , segment_comp_initial_(numberOfSegments(), 0.0)
+    , segment_comp_initial_(numberOfSegments(), std::vector<double>(numWellEq, 0.0))
     {
         // TODO: to see what information we need to process here later.
         // const auto& completion_set = well->getCompletions(time_step);
@@ -511,8 +511,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeInitialComposition()
     {
-        // TODO this, we need to implement the wellSurfaceVolumeFraction() function
-        // should we provide member variables to store all these values to avoid calculate again and again?
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                segment_comp_initial_[seg][eq_idx] = surfaceVolumeFraction(seg, eq_idx).value();
+            }
+        }
     }
 
 
@@ -526,6 +529,7 @@ namespace Opm
                                 const WellState& /* well_state */)
     {
         computePerfCellPressDiffs(ebosSimulator);
+        computeInitialComposition();
     }
 
 
