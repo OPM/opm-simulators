@@ -532,8 +532,6 @@ namespace Opm
                    WellState& well_state,
                    bool only_wells)
     {
-        // TODO: accessing well_state information is the only place to use nw at the moment
-        const int nw = well_state.bhp().size();
         const int numComp = numComponents();
         const int np = number_of_phases_;
 
@@ -787,7 +785,6 @@ namespace Opm
                     WellState& well_state) const
     {
         const int np = number_of_phases_;
-        const int nw = well_state.bhp().size();
         const double dBHPLimit = param.dbhp_max_rel_;
         const double dFLimit = param.dwell_fraction_max_;
 
@@ -1152,7 +1149,6 @@ namespace Opm
                       wellhelpers::WellSwitchingLogger& logger) const
     {
         const int np = number_of_phases_;
-        const int nw = xw.bhp().size();
         const int w = index_of_well_;
 
         const int old_control_index = xw.currentControls()[w];
