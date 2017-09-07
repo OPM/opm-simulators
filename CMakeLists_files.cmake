@@ -137,6 +137,7 @@ list (APPEND MAIN_SOURCE_FILES
 list (APPEND TEST_SOURCE_FILES
   tests/test_autodiffhelpers.cpp
   tests/test_autodiffmatrix.cpp
+  tests/test_blackoil_amg.cpp
   tests/test_block.cpp
   tests/test_boprops_ad.cpp
   tests/test_rateconverter.cpp
@@ -256,6 +257,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/AutoDiffHelpers.hpp
   opm/autodiff/AutoDiffMatrix.hpp
   opm/autodiff/AutoDiff.hpp
+  opm/autodiff/BlackoilAmg.hpp
   opm/autodiff/BlackoilDetails.hpp
   opm/autodiff/BlackoilLegacyDetails.hpp
   opm/autodiff/BlackoilModel.hpp

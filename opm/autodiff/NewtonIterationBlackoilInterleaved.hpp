@@ -46,6 +46,7 @@ namespace Opm
         bool   require_full_sparsity_pattern_;
         bool   ignoreConvergenceFailure_;
         bool   linear_solver_use_amg_;
+        bool   amg_blackoil_system_;
 
         NewtonIterationBlackoilInterleavedParameters() { reset(); }
         // read values from parameter class
@@ -63,6 +64,7 @@ namespace Opm
             require_full_sparsity_pattern_ = param.getDefault("require_full_sparsity_pattern", require_full_sparsity_pattern_);
             ignoreConvergenceFailure_ = param.getDefault("linear_solver_ignoreconvergencefailure", ignoreConvergenceFailure_);
             linear_solver_use_amg_    = param.getDefault("linear_solver_use_amg", linear_solver_use_amg_ );
+            amg_blackoil_system_      = param.getDefault("amg_blackoil_system", amg_blackoil_system_);
             ilu_relaxation_           = param.getDefault("ilu_relaxation", ilu_relaxation_ );
             ilu_fillin_level_         = param.getDefault("ilu_fillin_level",  ilu_fillin_level_ );
         }
@@ -70,6 +72,7 @@ namespace Opm
         // set default values
         void reset()
         {
+            amg_blackoil_system_     = false;
             newton_use_gmres_        = false;
             linear_solver_reduction_ = 1e-2;
             linear_solver_maxiter_   = 150;

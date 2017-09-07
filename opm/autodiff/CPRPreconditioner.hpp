@@ -271,6 +271,29 @@ createEllipticPreconditionerPointer(const M& Ae, double relax,
 
 #endif // #if HAVE_MPI
 
+template < class C, class Op, class P, class AMG >
+inline void
+createAMGPreconditionerPointer(Op& opA, const double relax, const P& comm, std::unique_ptr< AMG >& amgPtr )
+{
+    // TODO: revise choice of parameters
+    int coarsenTarget=1200;
+    using Criterion = C;
+    Criterion criterion(15, coarsenTarget);
+    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
+    criterion.setDefaultValuesIsotropic(2);
+    criterion.setNoPostSmoothSteps( 1 );
+    criterion.setNoPreSmoothSteps( 1 );
+
+    // for DUNE 2.2 we also need to pass the smoother args
+    typedef typename AMG::Smoother Smoother;
+    typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
+    SmootherArgs  smootherArgs;
+    smootherArgs.iterations = 1;
+    smootherArgs.relaxationFactor = relax;
+
+    amgPtr.reset( new AMG(opA, criterion, smootherArgs, comm ) );
+}
+
 /// \brief Creates the elliptic preconditioner (ILU0)
 /// \param opA     The operator representing the matrix of the system.
 /// \param relax   The relaxation parameter for ILU0.
@@ -292,22 +315,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
     // The coarsening criterion used in the AMG
     typedef Dune::Amg::CoarsenCriterion<CritBase> Criterion;
 
-    // TODO: revise choice of parameters
-    int coarsenTarget=1200;
-    Criterion criterion(15,coarsenTarget);
-    criterion.setDebugLevel( 0 ); // no debug information, 1 for printing hierarchy information
-    criterion.setDefaultValuesIsotropic(2);
-    criterion.setNoPostSmoothSteps( 1 );
-    criterion.setNoPreSmoothSteps( 1 );
-
-    // for DUNE 2.2 we also need to pass the smoother args
-    typedef typename AMG::Smoother Smoother;
-    typedef typename Dune::Amg::SmootherTraits<Smoother>::Arguments  SmootherArgs;
-    SmootherArgs  smootherArgs;
-    smootherArgs.iterations = 1;
-    smootherArgs.relaxationFactor = relax;
-
-    amgPtr.reset( new AMG(opA, criterion, smootherArgs, comm ) );
+    createAMGPreconditionerPointer<Criterion>(opA, relax, comm, amgPtr);
 }
 
 } // end namespace ISTLUtility
