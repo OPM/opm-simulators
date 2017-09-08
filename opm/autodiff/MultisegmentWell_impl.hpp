@@ -57,6 +57,7 @@ namespace Opm
             const int segment_number = segment.segmentNumber();
             const int outlet_segment_number = segment.outletSegment();
             if (outlet_segment_number > 0) {
+                // TODO: to make sure segment_location == seg here
                 const int segment_location = numberToLocation(segment_number);
                 const int outlet_segment_location = numberToLocation(outlet_segment_number);
                 segment_inlets_[outlet_segment_location].push_back(segment_location);
@@ -113,20 +114,43 @@ namespace Opm
         // [A C^T    [x    =  [ res
         //  B D] x_well]      res_well]
 
-        // the number of the nnz should be numSegment() + numberOfOutlet()
-        invDuneD_.setSize(numberOfSegments(), numberOfSegments(), 100000);
+        // calculatiing the NNZ for invDuneD_
+        // NNZ = number_of_segments + 2 * (number_of_inlets / number_of_outlets)
+        {
+            int nnz_d = numberOfSegments();
+            for (const std::vector<int>& inlets : segment_inlets_) {
+                nnz_d += 2 * inlets.size();
+            }
+            invDuneD_.setSize(numberOfSegments(), numberOfSegments(), nnz_d);
+        }
         duneB_.setSize(numberOfSegments(), num_cells, number_of_perforations_);
         duneC_.setSize(numberOfSegments(), num_cells, number_of_perforations_);
 
         // we need to add the off diagonal ones
         for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
+            // the number of the row corrspnds to the segment now
+            const int seg = row.index();
+            // adding the item related to outlet relation
+            const Segment& segment = segmentSet()[seg];
+            const int outlet_segment_number = segment.outletSegment();
+            if (outlet_segment_number > 0) {
+                const int outlet_segment_location = numberToLocation(outlet_segment_number);
+                row.insert(outlet_segment_location);
+            }
+
             // Add nonzeros for diagonal
-            row.insert(row.index());
+            row.insert(seg);
+
+            // insert the item related to its inlets
+            for (const int& inlet : segment_inlets_[seg]) {
+                row.insert(inlet);
+            }
         }
 
+        // make the C matrix
         for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
             // the number of the row corresponds to the segment number now.
-            for (int perf = 0 ; perf < number_of_perforations_; ++perf) { // the segments hold some perforations
+            for (const int& perf : segment_perforations_[row.index()]) {
                 const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
             }
@@ -135,7 +159,7 @@ namespace Opm
         // make the B^T matrix
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
             // the number of the row corresponds to the segment number now.
-            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            for (const int& perf : segment_perforations_[row.index()]) {
                 const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
             }
