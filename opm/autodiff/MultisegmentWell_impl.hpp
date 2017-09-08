@@ -712,6 +712,141 @@ namespace Opm
 
 
     template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    computePerfRate(const IntensiveQuantities& int_quants,
+                    const std::vector<EvalWell>& mob_perfcells,
+                    const int seg,
+                    const double well_index,
+                    const EvalWell& segment_pressure,
+                    const bool& allow_cf,
+                    std::vector<EvalWell>& cq_s) const
+    {
+        const int num_comp = numComponents();
+        std::vector<EvalWell> cmix_s(num_comp, 0.0);
+
+        // the composition of the components inside wellbore
+        for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            cmix_s[comp_idx] = surfaceVolumeFraction(seg, comp_idx);
+        }
+
+        const auto& fs = int_quants.fluidState();
+
+        const EvalWell pressure_cell = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+        const EvalWell rs = extendEval(fs.Rs());
+        const EvalWell rv = extendEval(fs.Rv());
+
+        // not using number_of_phases_ because of solvent
+        std::vector<EvalWell> b_perfcells(num_comp, 0.0);
+
+        for (int phase = 0; phase < number_of_phases_; ++phase) {
+            const int phase_idx_ebos = flowPhaseToEbosPhaseIdx(phase);
+            b_perfcells[phase] = extendEval(fs.invB(phase_idx_ebos));
+        }
+
+        // TODO: not handling solvent for now
+        // if (has_solvent) {
+        //     b_perfcells[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
+        // }
+
+        // the pressure of the segment
+        const EvalWell seg_pressure = getSegmentPressure(seg);
+
+        // Pressure drawdown (also used to determine direction of flow)
+        // TODO: not considering the two pressure difference for now. Trying to finish the framework first.
+        const EvalWell drawdown = seg_pressure - pressure_cell;
+
+        const Opm::PhaseUsage& pu = phaseUsage();
+        // producing perforations
+        if ( drawdown > 0.0) {
+            // Do nothing is crossflow is not allowed
+            if (!allow_cf && well_type_ == INJECTOR) {
+                return;
+            }
+
+            // compute component volumetric rates at standard conditions
+            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                const EvalWell cq_p = - well_index * (mob_perfcells[comp_idx] * drawdown);
+                cq_s[comp_idx] = b_perfcells[comp_idx] * cq_p;
+            }
+
+            if (active()[Oil] && active()[Gas]) {
+                const int oilpos = pu.phase_pos[Oil];
+                const int gaspos = pu.phase_pos[Gas];
+                const EvalWell cq_s_oil = cq_s[oilpos];
+                const EvalWell cq_s_gas = cq_s[gaspos];
+                cq_s[gaspos] += rs * cq_s_oil;
+                cq_s[oilpos] += rv * cq_s_gas;
+            }
+        } else { // injecting perforations
+            // Do nothing if crossflow is not allowed
+            if (!allow_cf && well_type_ == PRODUCER) {
+                return;
+            }
+
+            // for injecting perforations, we use total mobility
+            EvalWell total_mob = mob_perfcells[0];
+            for (int comp_idx = 1; comp_idx < num_comp; ++comp_idx) {
+                total_mob += mob_perfcells[comp_idx];
+            }
+
+            // injection perforations total volume rates
+            const EvalWell cqt_i = - well_index * (total_mob * drawdown);
+
+            // compute volume ratio between connection and at standard conditions
+            EvalWell volume_ratio = 0.0;
+            if (active()[Water]) {
+                const int watpos = pu.phase_pos[Water];
+                volume_ratio += cmix_s[watpos] / b_perfcells[watpos];
+            }
+
+            // TODO: not handling
+            // if (has_solvent) {
+            //     volumeRatio += cmix_s[contiSolventEqIdx] / b_perfcells_dense[contiSolventEqIdx];
+            // }
+
+            if (active()[Oil] && active()[Gas]) {
+                const int oilpos = pu.phase_pos[Oil];
+                const int gaspos = pu.phase_pos[Gas];
+
+                // Incorporate RS/RV factors if both oil and gas active
+                // TODO: not sure we use rs rv from the perforation cells when handling injecting perforations
+                // basically, for injecting perforations, the wellbore is the upstreaming side.
+                const EvalWell d = 1.0 - rv * rs;
+
+                if (d.value() == 0.0) {
+                    OPM_THROW(Opm::NumericalProblem, "Zero d value obtained for well " << name() << " during flux calcuation"
+                                                  << " with rs " << rs << " and rv " << rv);
+                }
+
+                const EvalWell tmp_oil = (cmix_s[oilpos] - rv * cmix_s[gaspos]) / d;
+                volume_ratio += tmp_oil / b_perfcells[oilpos];
+
+                const EvalWell tmp_gas = (cmix_s[gaspos] - rs * cmix_s[oilpos]) / d;
+                volume_ratio += tmp_gas / b_perfcells[gaspos];
+            } else { // not having gas and oil at the same time
+                if (active()[Oil]) {
+                    const int oilpos = pu.phase_pos[Oil];
+                    volume_ratio += cmix_s[oilpos] / b_perfcells[oilpos];
+                }
+                if (active()[Gas]) {
+                    const int gaspos = pu.phase_pos[Gas];
+                    volume_ratio += cmix_s[gaspos] / b_perfcells[gaspos];
+                }
+            }
+            // injecting connections total volumerates at standard conditions
+            EvalWell cqt_is = cqt_i / volume_ratio;
+            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                cq_s[comp_idx] = cmix_s[comp_idx] * cqt_is; // // TODO: checking there * b_perfcells[phase];
+            }
+        } // end for injection perforations
+    }
+
+
+
+
+
+    template<typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     extendEval(const Eval& in) const
@@ -856,6 +991,9 @@ namespace Opm
             for (int phase = 0; phase < pu.num_phases; ++phase) {
                 surf_dens[phase] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx(phase), pvt_region_index );
             }
+
+
+            // TODO: not handling solvent for now.
 
             EvalWell density(0.0);
             for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
