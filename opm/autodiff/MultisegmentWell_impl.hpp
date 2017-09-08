@@ -182,6 +182,72 @@ namespace Opm
                    WellState& well_state,
                    bool only_wells)
     {
+        // clear all entries
+        duneB_ = 0.0;
+        duneC_ = 0.0;
+        invDuneD_ = 0.0;
+        resWell_ = 0.0;
+
+        // for the black oil cases, there will be four equations,
+        // the first three of them are the mass balance equations, the last one is the pressure equations.
+        //
+        // but for the top segment, the pressure equation will be the well control equation, and the other three will be the same.
+
+        auto& ebosJac = ebosSimulator.model().linearizer().matrix();
+        auto& ebosResid = ebosSimulator.model().linearizer().residual();
+
+        const bool allow_cf = getAllowCrossFlow();
+
+        const int nseg = numberOfSegments();
+        const int num_comp = numComponents();
+
+        for (int seg = 0; seg < nseg; ++seg) {
+            const EvalWell seg_pressure = getSegmentPressure(seg);
+            // calculating the perforation rate for each perforation that belongs to this segment
+            for (const int perf : segment_perforations_[seg]) {
+                const int cell_idx = well_cells_[perf];
+                const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                std::vector<EvalWell> mob(num_comp, 0.0);
+                getMobility(ebosSimulator, perf, mob);
+                std::vector<EvalWell> cq_s(num_comp, 0.0);
+                computePerfRate(int_quants, mob, seg, well_index_[perf], seg_pressure, allow_cf, cq_s);
+
+                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                    // the cq_s entering mass balance equations need to consider the efficiency factors.
+                    const EvalWell cq_s_effective = cq_s[comp_idx] * well_efficiency_factor_;
+
+                    if (!only_wells) {
+                        // subtract sum of component fluxes in the reservoir equation.
+                        // need to consider the efficiency factor
+                        // TODO: the name of the function flowPhaseToEbosCompIdx is prolematic, since the input
+                        // is a component index :D
+                        ebosResid[cell_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.value();
+                    }
+
+                    // subtract sum of phase fluxes in the well equations.
+                    resWell_[seg][comp_idx] -= cq_s[comp_idx].value();
+
+                    // assemble the jacobians
+                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                        if (!only_wells) {
+                            // also need to consider the efficiency factor when manipulating the jacobians.
+                            duneC_[seg][cell_idx][pv_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
+                        }
+                        // the index name for the D should be eq_idx / pv_idx
+                        invDuneD_[seg][seg][comp_idx][pv_idx] -= cq_s[comp_idx].derivative(pv_idx + numEq);
+                    }
+
+                    for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
+                        if (!only_wells) {
+                            // also need to consider the efficiency factor when manipulating the jacobians.
+                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(comp_idx)][flowToEbosPvIdx(pv_idx)] -= cq_s_effective.derivative(pv_idx);
+                            duneB_[seg][cell_idx][comp_idx][flowToEbosPvIdx(pv_idx)] -= cq_s_effective.derivative(pv_idx);
+                        }
+                    }
+                }
+                // should save the perforation pressure and perforation rates?
+            }
+        }
     }
 
 
@@ -1015,5 +1081,83 @@ namespace Opm
         return primary_variables_evaluation_[seg][SPres];
     }
 
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getSegmentRate(const int seg,
+                   const int comp_idx) const
+    {
+        return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    getMobility(const Simulator& ebosSimulator,
+                const int perf,
+                std::vector<EvalWell>& mob) const
+    {
+        // TODO: most of this function, if not the whole function, can be moved to the base class
+        const int np = number_of_phases_;
+        const int cell_idx = well_cells_[perf];
+        assert (int(mob.size()) == numComponents());
+        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
+
+        // either use mobility of the perforation cell or calcualte its own
+        // based on passing the saturation table index
+        const int satid = saturation_table_number_[perf] - 1;
+        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
+        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
+
+            for (int phase = 0; phase < np; ++phase) {
+                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+                mob[phase] = extendEval(intQuants.mobility(ebosPhaseIdx));
+            }
+            // if (has_solvent) {
+            //     mob[contiSolventEqIdx] = extendEval(intQuants.solventMobility());
+            // }
+        } else {
+
+            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
+            Eval relativePerms[3] = { 0.0, 0.0, 0.0 };
+            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
+
+            // reset the satnumvalue back to original
+            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
+
+            // compute the mobility
+            for (int phase = 0; phase < np; ++phase) {
+                int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+                mob[phase] = extendEval(relativePerms[ebosPhaseIdx] / intQuants.fluidState().viscosity(ebosPhaseIdx));
+            }
+
+            // this may not work if viscosity and relperms has been modified?
+            // if (has_solvent) {
+            //     OPM_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent");
+            // }
+        }
+
+        // modify the water mobility if polymer is present
+        // if (has_polymer) {
+            // assume fully mixture for wells.
+            // EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
+
+            // if (well_type_ == INJECTOR) {
+            //     const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(intQuants.pvtRegionIndex());
+            //     mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
+            // }
+
+            // TODO: not sure if we should handle shear calculation with MS well
+        // }
+    }
 
 }

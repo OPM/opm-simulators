@@ -40,6 +40,7 @@ namespace Opm
         using typename Base::IntensiveQuantities;
         using typename Base::FluidSystem;
         using typename Base::ModelParameters;
+        using typename Base::MaterialLaw;
 
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
         // TODO: should I begin with the old primary variable or the new fraction based variable systems?
@@ -162,6 +163,8 @@ namespace Opm
         using Base::well_index_;
         using Base::well_type_;
         using Base::first_perf_;
+        using Base::saturation_table_number_;
+        using Base::well_efficiency_factor_;
 
         using Base::well_controls_;
 
@@ -172,6 +175,8 @@ namespace Opm
         using Base::numComponents;
         using Base::flowToEbosPvIdx;
         using Base::flowPhaseToEbosPhaseIdx;
+        using Base::flowPhaseToEbosCompIdx;
+        using Base::getAllowCrossFlow;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -302,6 +307,12 @@ namespace Opm
 
         EvalWell getSegmentPressure(const int seg) const;
 
+        EvalWell getSegmentRate(const int seg, const int comp_idx) const;
+
+        // get the mobility for specific perforation
+        void getMobility(const Simulator& ebosSimulator,
+                         const int perf,
+                         std::vector<EvalWell>& mob) const;
     };
 
 }
