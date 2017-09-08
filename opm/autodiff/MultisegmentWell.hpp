@@ -37,6 +37,8 @@ namespace Opm
         // TODO: the WellState does not have any information related to segments
         using typename Base::WellState;
         using typename Base::Simulator;
+        using typename Base::IntensiveQuantities;
+        using typename Base::FluidSystem;
         using typename Base::ModelParameters;
 
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
@@ -168,6 +170,8 @@ namespace Opm
         using Base::phaseUsage;
         using Base::name;
         using Base::numComponents;
+        using Base::flowToEbosPvIdx;
+        using Base::flowPhaseToEbosPhaseIdx;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -235,8 +239,18 @@ namespace Opm
         // center depth of the grid block
         std::vector<double> perforation_cell_pressure_diffs_;
 
+        // depth difference between the segment and the peforation
+        // or in another way, the depth difference between the perforation and
+        // the segment the perforation belongs to
+        std::vector<double> segment_perforation_depth_diffs_;
+
         // the intial component compistion of segments
         std::vector<std::vector<double> > segment_comp_initial_;
+
+        // the densities of segment fluids
+        // TODO: if it turned out it is only used to calculate the pressure difference,
+        // we should not have this member variable
+        std::vector<EvalWell> segment_densities_;
 
         void initMatrixAndVectors(const int num_cells) const;
 
@@ -269,7 +283,25 @@ namespace Opm
         // basically Q_p / \sigma_p Q_p
         EvalWell surfaceVolumeFraction(const int seg, const int comp_idx) const;
 
-        // void computePerfRate() will be a key function here.
+        void computePerfRate(const IntensiveQuantities& int_quants,
+                             const std::vector<EvalWell>& mob_perfcells,
+                             const int seg,
+                             const double well_index,
+                             const EvalWell& segment_pressure,
+                             const bool& allow_cf,
+                             std::vector<EvalWell>& cq_s) const;
+
+        // convert a Eval from reservoir to contain the derivative related to wells
+        EvalWell extendEval(const Eval& in) const;
+
+        // compute the densities of the mixture in the segments
+        // TODO: probably other fluid properties also.
+        // They will be treated implicitly, so they need to be of Evaluation type
+        void computeSegmentFluidProperties(const Simulator& ebosSimulator,
+                                           const WellState& well_state);
+
+        EvalWell getSegmentPressure(const int seg) const;
+
     };
 
 }

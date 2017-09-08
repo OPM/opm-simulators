@@ -28,11 +28,12 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     MultisegmentWell(const Well* well, const int time_step, const Wells* wells)
     : Base(well, time_step, wells)
-    , segment_cell_(numberOfSegments())
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
     , perforation_cell_pressure_diffs_(number_of_perforations_, 0.0)
+    , segment_perforation_depth_diffs_(number_of_perforations_)
     , segment_comp_initial_(numberOfSegments(), std::vector<double>(numWellEq, 0.0))
+    , segment_densities_(numberOfSegments(), 0.0)
     {
         // TODO: to see what information we need to process here later.
         // const auto& completion_set = well->getCompletions(time_step);
@@ -40,6 +41,29 @@ namespace Opm
 
         // since we decide to use the SegmentSet from the well parser. we can reuse a lot from it.
         // other facilities needed we need to process them here
+
+        // initialize the segment_perforations_
+        const CompletionSet& completion_set = well_ecl_->getCompletions(current_step_);
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            const Completion& completion = completion_set.get(perf);
+            const int segment_number = completion.getSegmentNumber();
+            const int segment_location = numberToLocation(segment_number);
+            segment_perforations_[segment_location].push_back(perf);
+        }
+
+        // initialize the segment_inlets_
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            const Segment& segment = segmentSet()[seg];
+            const int segment_number = segment.segmentNumber();
+            const int outlet_segment_number = segment.outletSegment();
+            if (outlet_segment_number > 0) {
+                const int segment_location = numberToLocation(segment_number);
+                const int outlet_segment_location = numberToLocation(outlet_segment_number);
+                segment_inlets_[outlet_segment_location].push_back(segment_location);
+            }
+        }
+
+        // callcuate the depth difference between perforations and their segments
 
     }
 
@@ -70,26 +94,6 @@ namespace Opm
         // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
         // specified perforation depth
         initMatrixAndVectors(num_cells);
-
-        // initialize the segment_perforations_
-        const CompletionSet& completion_set = well_ecl_->getCompletions(current_step_);
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const Completion& completion = completion_set.get(perf);
-            const int segment_number = completion.getSegmentNumber();
-            const int segment_location = numberToLocation(segment_number);
-            segment_perforations_[segment_location].push_back(perf);
-        }
-
-        for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            const Segment& segment = segmentSet()[seg];
-            const int segment_number = segment.segmentNumber();
-            const int outlet_segment_number = segment.outletSegment();
-            if (outlet_segment_number > 0) {
-                const int segment_location = numberToLocation(segment_number);
-                const int outlet_segment_location = numberToLocation(outlet_segment_number);
-                segment_inlets_[outlet_segment_location].push_back(segment_location);
-            }
-        }
     }
 
 
@@ -298,6 +302,16 @@ namespace Opm
             }
 
             // update the perforation rates and then segment rates
+            // TODO: it is something different from the StandardWell. In StandardWell, we do not update the perforation rates
+            // when we update the well rates to the target rates. Here, we update the perforation rates so that we can update the
+            // segment rates. This will make the calculation of the explicit quantities different, which relies on the perforation rates
+            // from the last time step. Maybe the better way to do this is to scale the perforation rates based on the well rates
+            // update, so that the compositon inside the wellbore will be preserved.
+            //
+            //
+            // Or we might just update the segment rates directly without changing the perforation rates?
+            //
+            // Or we check our old way of the old MultisegmentWells implementation.
             {
                 for (int phase = 0; phase < number_of_phases_; ++phase) {
                     const double perf_phaserate = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / number_of_perforations_;
@@ -692,5 +706,176 @@ namespace Opm
 
         return volumeFractionScaled(seg, comp_idx) / sum_volume_fraction_scaled;
     }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    extendEval(const Eval& in) const
+    {
+        EvalWell out = 0.0;
+        out.setValue(in.value());
+        for(int eq_idx = 0; eq_idx < numEq;++eq_idx) {
+            out.setDerivative(eq_idx, in.derivative(flowToEbosPvIdx(eq_idx)));
+        }
+        return out;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    computeSegmentFluidProperties(const Simulator& ebosSimulator,
+                                  const WellState& well_state)
+    {
+        // TODO: the phase location is so confusing, double check to make sure they are right
+        // do I need the gaspos, oilpos here?
+
+        // compute the segment density first
+        // TODO: the new understanding is that it might not need to know the grid block of the segments
+        // It is a try to calculate the fluid properties without assuming the segment is associated with
+        // any grid blocks
+
+        // get the temperature for later use. It is only useful when we are not handling
+        // thermal related simulation
+        // basically, it is a single value for all the segments
+        EvalWell temperature;
+        // not sure how to handle the pvt region related to segment
+        // for the current approach, we use the pvt region of the first perforated cell
+        // although there are some text indicating using the pvt region of the lowest
+        // perforated cell
+        // TODO: later to investigate how to handle the pvt region
+        int pvt_region_index;
+        {
+            // using the first perforated cell
+            const int cell_idx = well_cells_[0];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& fs = intQuants.fluidState();
+            temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
+            pvt_region_index = fs.pvtRegionIndex();
+        }
+
+        const int num_comp = numComponents();
+        const Opm::PhaseUsage& pu = phaseUsage();
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            // the compostion of the components inside wellbore under surface condition
+            std::vector<EvalWell> mix_s(num_comp, 0.0);
+            std::vector<EvalWell> b(num_comp, 0.0);
+            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                mix_s[comp_idx] = surfaceVolumeFraction(seg, comp_idx);
+            }
+
+            const double seg_pressure = getSegmentPressure(seg);
+            if (pu.phase_used[BlackoilPhases::Aqua]) {
+                b[seg][pu.phase_pos[BlackoilPhases::Aqua]] =
+                    FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+            }
+
+            EvalWell rv(0.0);
+            // gas phase
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
+                const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
+                if (pu.phase_used[BlackoilPhases::Liquid]) {
+                    const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
+                    const EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
+                    if (mix_s[oilpos] > 0.0) {
+                        if (mix_s[gaspos] > 0.0) {
+                            rv = mix_s[oilpos] / mix_s[gaspos];
+                        }
+
+                        if (rv > rvmax) {
+                            rv = rvmax;
+                        }
+                        b[gaspos] =
+                            FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rv);
+                    } else { // no oil exists
+                        b[gaspos] =
+                            FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                    }
+                } else { // no Liquid phase
+                    // it is the same with zero mix_s[Oil]
+                    b[gaspos] =
+                        FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                }
+            }
+
+            EvalWell rs(0.0);
+            // oil phase
+            if (pu.phase_used[BlackoilPhases::Liquid]) {
+                const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
+                if (pu.phase_used[BlackoilPhases::Liquid]) {
+                    const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
+                    const EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
+                    if (mix_s[gaspos] > 0.0) {
+                        if (mix_s[oilpos] > 0.0) {
+                            rs = mix_s[gaspos] / mix_s[oilpos];
+                        }
+
+                        if (rs > rsmax) {
+                            rs = rsmax;
+                        }
+                        b[oilpos] =
+                            FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rs);
+                    } else { // no oil exists
+                        b[oilpos] =
+                            FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                    }
+                } else { // no Liquid phase
+                    // it is the same with zero mix_s[Oil]
+                    b[oilpos] =
+                        FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                }
+            }
+
+            std::vector<double> mix(mix_s);
+            if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
+                const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
+                const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
+                if (rs != 0.0) { // rs > 0.0?
+                    mix[gaspos] = (mix_s[gaspos] - mix_s[oilpos] * rs) / (1. - rs * rv);
+                }
+                if (rv != 0.0) { // rv > 0.0?
+                    mix[oilpos] = (mix_s[oilpos] - mix_s[gaspos] * rv) / (1. - rs * rv);
+                }
+            }
+
+            EvalWell volrat(0.0);
+            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                volrat += mix[comp_idx] / b[comp_idx];
+            }
+
+            std::vector<double> surf_dens[num_comp];
+            // Surface density.
+            // not using num_comp here is because solvent can be component
+            for (int phase = 0; phase < pu.num_phases; ++phase) {
+                surf_dens[phase] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx(phase), pvt_region_index );
+            }
+
+            EvalWell density(0.0);
+            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                density += surf_dens[comp_idx] * mix_s[comp_idx];
+            }
+            segment_densities_[seg] = density /= volrat;
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getSegmentPressure(const int seg) const
+    {
+        return primary_variables_evaluation_[seg][SPres];
+    }
+
 
 }
