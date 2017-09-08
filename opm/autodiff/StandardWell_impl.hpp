@@ -400,14 +400,14 @@ namespace Opm
         for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
             cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
         }
-        auto& fs = intQuants.fluidState();
+        const auto& fs = intQuants.fluidState();
 
-        EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-        EvalWell rs = extendEval(fs.Rs());
-        EvalWell rv = extendEval(fs.Rv());
+        const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+        const EvalWell rs = extendEval(fs.Rs());
+        const EvalWell rv = extendEval(fs.Rv());
         std::vector<EvalWell> b_perfcells_dense(numComp, 0.0);
         for (int phase = 0; phase < np; ++phase) {
-            int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+            const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
             b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
         }
         if (has_solvent) {
@@ -415,8 +415,8 @@ namespace Opm
         }
 
         // Pressure drawdown (also used to determine direction of flow)
-        EvalWell well_pressure = bhp + cdp;
-        EvalWell drawdown = pressure - well_pressure;
+        const EvalWell well_pressure = bhp + cdp;
+        const EvalWell drawdown = pressure - well_pressure;
 
         // producing perforations
         if ( drawdown.value() > 0 )  {
@@ -1126,7 +1126,7 @@ namespace Opm
         const int nperf = number_of_perforations_;
         // TODO: can make this a member?
         const int numComp = numComponents();
-        const PhaseUsage& pu = *phase_usage_;
+        const PhaseUsage& pu = phaseUsage();
         b_perf.resize(nperf*numComp);
         surf_dens_perf.resize(nperf*numComp);
         const int w = index_of_well_;
@@ -1234,7 +1234,7 @@ namespace Opm
         const int np = number_of_phases_;
         const int nperf = number_of_perforations_;
         const int num_comp = numComponents();
-        const PhaseUsage* phase_usage = phase_usage_;
+        const PhaseUsage& phase_usage = phaseUsage();
 
         // 1. Compute the flow (in surface volume units for each
         //    component) exiting up the wellbore from each perforation,
@@ -1262,8 +1262,8 @@ namespace Opm
         //    absolute values of the surface rates divided by their sum.
         //    Then compute volume ratios (formation factors) for each perforation.
         //    Finally compute densities for the segments associated with each perforation.
-        const int gaspos = phase_usage->phase_pos[BlackoilPhases::Vapour];
-        const int oilpos = phase_usage->phase_pos[BlackoilPhases::Liquid];
+        const int gaspos = phase_usage.phase_pos[BlackoilPhases::Vapour];
+        const int oilpos = phase_usage.phase_pos[BlackoilPhases::Liquid];
         std::vector<double> mix(num_comp,0.0);
         std::vector<double> x(num_comp);
         std::vector<double> surf_dens(num_comp);
@@ -1673,7 +1673,7 @@ namespace Opm
 
             for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
                 if (well_controls_iget_type(well_controls_, ctrl_index) == THP) {
-                    const Opm::PhaseUsage& pu = *phase_usage_;
+                    const Opm::PhaseUsage& pu = phaseUsage();
 
                     std::vector<double> rates(3, 0.0);
                     if (active()[ Water ]) {

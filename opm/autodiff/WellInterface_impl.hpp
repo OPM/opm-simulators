@@ -471,7 +471,7 @@ namespace Opm
     checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                         const WellState& well_state) const
     {
-        const Opm::PhaseUsage& pu = *phase_usage_;
+        const Opm::PhaseUsage& pu = phaseUsage();
         const int np = number_of_phases_;
 
         if (econ_production_limits.onMinOilRate()) {
@@ -528,7 +528,7 @@ namespace Opm
         double violation_extent = -1.0;
 
         const int np = number_of_phases_;
-        const Opm::PhaseUsage& pu = *phase_usage_;
+        const Opm::PhaseUsage& pu = phaseUsage();
         const int well_number = index_of_well_;
 
         assert(active()[Oil]);

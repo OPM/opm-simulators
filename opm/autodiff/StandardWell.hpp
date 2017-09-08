@@ -165,7 +165,6 @@ namespace Opm
         using Base::vfp_properties_;
         using Base::gravity_;
         using Base::well_efficiency_factor_;
-        using Base::phase_usage_;
         using Base::first_perf_;
         using Base::ref_depth_;
         using Base::perf_depth_;
