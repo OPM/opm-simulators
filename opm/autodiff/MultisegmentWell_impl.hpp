@@ -127,13 +127,13 @@ namespace Opm
         duneC_.setSize(numberOfSegments(), num_cells, number_of_perforations_);
 
         // we need to add the off diagonal ones
-        for (auto row=invDuneD_.createbegin(), end = invDuneD_.createend(); row!=end; ++row) {
+        for (auto row = invDuneD_.createbegin(), end = invDuneD_.createend(); row != end; ++row) {
             // the number of the row corrspnds to the segment now
             const int seg = row.index();
             // adding the item related to outlet relation
             const Segment& segment = segmentSet()[seg];
             const int outlet_segment_number = segment.outletSegment();
-            if (outlet_segment_number > 0) {
+            if (outlet_segment_number > 0) { // if there is a outlet_segment
                 const int outlet_segment_location = numberToLocation(outlet_segment_number);
                 row.insert(outlet_segment_location);
             }
@@ -148,7 +148,7 @@ namespace Opm
         }
 
         // make the C matrix
-        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row!=end; ++row) {
+        for (auto row = duneC_.createbegin(), end = duneC_.createend(); row != end; ++row) {
             // the number of the row corresponds to the segment number now.
             for (const int& perf : segment_perforations_[row.index()]) {
                 const int cell_idx = well_cells_[perf];
@@ -157,7 +157,7 @@ namespace Opm
         }
 
         // make the B^T matrix
-        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
+        for (auto row = duneB_.createbegin(), end = duneB_.createend(); row != end; ++row) {
             // the number of the row corresponds to the segment number now.
             for (const int& perf : segment_perforations_[row.index()]) {
                 const int cell_idx = well_cells_[perf];
@@ -226,8 +226,37 @@ namespace Opm
         const int num_comp = numComponents();
 
         for (int seg = 0; seg < nseg; ++seg) {
-            const EvalWell seg_pressure = getSegmentPressure(seg);
+            // calculating the accumulation term // TODO: without considering the efficiencty factor for now
+            // volume of the semgent
+            {
+                const double volume = segmentSet()[seg].volume();
+                // for each component
+                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                    EvalWell accumulation_term = volume / dt * (surfaceVolumeFraction(seg, comp_idx) - segment_comp_initial_[seg][comp_idx])
+                                               + getSegmentRate(seg, comp_idx);
+
+                    resWell_[seg][comp_idx] += accumulation_term.value();
+                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                        invDuneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + numEq);
+                    }
+                }
+            }
+
+            // considering the contributions from the inlet segments
+            {
+                for (const int inlet : segment_inlets_[seg]) {
+                    for (int comp_idx; comp_idx < num_comp; ++comp_idx) {
+                        const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
+                        resWell_[seg][comp_idx] -= inlet_rate.value();
+                        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                            invDuneD_[seg][inlet][comp_idx][pv_idx] += -inlet_rate.derivative(pv_idx + numEq);
+                        }
+                    }
+                }
+            }
+
             // calculating the perforation rate for each perforation that belongs to this segment
+            const EvalWell seg_pressure = getSegmentPressure(seg);
             for (const int perf : segment_perforations_[seg]) {
                 const int cell_idx = well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -249,7 +278,7 @@ namespace Opm
                     }
 
                     // subtract sum of phase fluxes in the well equations.
-                    resWell_[seg][comp_idx] -= cq_s[comp_idx].value();
+                    resWell_[seg][comp_idx] -= cq_s_effective.value();
 
                     // assemble the jacobians
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -258,7 +287,7 @@ namespace Opm
                             duneC_[seg][cell_idx][pv_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
                         }
                         // the index name for the D should be eq_idx / pv_idx
-                        invDuneD_[seg][seg][comp_idx][pv_idx] -= cq_s[comp_idx].derivative(pv_idx + numEq);
+                        invDuneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
                     }
 
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
@@ -270,6 +299,15 @@ namespace Opm
                     }
                 }
                 // should save the perforation pressure and perforation rates?
+            }
+
+            // the fourth dequation, the pressure drop equation
+            // if it is the top segment, it should be the well control equations
+            // if it is not, it will be the pressure drop equation
+            if (seg != 0) { // not the top segment
+                ;
+            } else { // the top segment
+                ;
             }
         }
     }
@@ -1123,6 +1161,18 @@ namespace Opm
 
 
     template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getSegmentGTotal(const int seg) const
+    {
+        return primary_variables_evaluation_[seg][GTotal];
+    }
+
+
+
+
+
+    template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     getMobility(const Simulator& ebosSimulator,
@@ -1182,6 +1232,83 @@ namespace Opm
 
             // TODO: not sure if we should handle shear calculation with MS well
         // }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getControlEq() const
+    {
+        EvalWell control_eq(0.0);
+
+        switch (well_controls_get_current_type(well_controls_)) {
+            case THP: // not handling this one for now
+            {
+                OPM_THROW(std::runtime_error, "Not handling THP control for Multisegment wells for now");
+            }
+            case BHP:
+            {
+                const double target_bhp = well_controls_get_current_target(well_controls_);
+                control_eq = getSegmentPressure(0) - target_bhp;
+                break;
+            }
+            case SURFACE_RATE:
+            {
+                // finding if it is a single phase control or combined phase control
+                int number_phases_under_control = 0;
+                const double* distr = well_controls_get_current_distr(well_controls_);
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    if (distr[phase] > 0.0) {
+                        ++number_phases_under_control;
+                    }
+                }
+                assert(number_phases_under_control > 0);
+
+                const std::vector<double> g = {1.0, 1.0, 0.01};
+                const double target_rate = well_controls_get_current_target(well_controls_);
+                // TODO: the two situations below should be able to be merged to be handled as one situation
+
+                if (number_phases_under_control == 1) { // single phase control
+                    for (int phase = 0; phase < number_of_phases_; ++phase) {
+                        if (distr[phase] > 0.) { // under the control of this phase
+                            control_eq = getSegmentGTotal(0) * volumeFraction(0, phase) - g[phase] * target_rate;
+                            break;
+                        }
+                    }
+                } else { // multiphase rate control
+                    EvalWell rate_for_control(0.0);
+                    const EvalWell G_total = getSegmentGTotal(0);
+                    for (int phase = 0; phase < number_of_phases_; ++phase) {
+                        if (distr[phase] > 0.) {
+                            rate_for_control += G_total * volumeFractionScaled(0, phase);
+                        }
+                    }
+                    // TODO: maybe the following equation can be scaled a little bit for gas phase
+                    control_eq = rate_for_control - target_rate;
+                }
+                break;
+            }
+            case RESERVOIR_RATE:
+            {
+                EvalWell rate_for_control(0.0); // reservoir rate
+                const double* distr = well_controls_get_current_distr(well_controls_);
+                for (int phase = 0; phase < number_of_phases_; ++phase) {
+                    if (distr[phase] > 0.) {
+                        rate_for_control += getSegmentGTotal(0) * volumeFraction(0, phase);
+                    }
+                }
+                const double target_rate = well_controls_get_current_target(well_controls_);
+                control_eq = rate_for_control - target_rate;
+                break;
+            }
+            default:
+                OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
+        }
+        return control_eq;
     }
 
 }

@@ -309,10 +309,14 @@ namespace Opm
 
         EvalWell getSegmentRate(const int seg, const int comp_idx) const;
 
+        EvalWell getSegmentGTotal(const int seg) const;
+
         // get the mobility for specific perforation
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,
                          std::vector<EvalWell>& mob) const;
+
+        EvalWell getControlEq() const;
     };
 
 }
