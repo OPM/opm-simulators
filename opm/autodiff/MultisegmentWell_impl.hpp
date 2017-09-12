@@ -330,6 +330,8 @@ namespace Opm
                 }
             }
         }
+        // TODO: invert invDuneD_
+        // invDuneD_.inverse(D_);
     }
 
 
@@ -510,8 +512,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-
-
+        // TODO:  to be implemented later
     }
 
 
@@ -523,8 +524,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(BVector& r) const
     {
-
-
+        // TODO: to be implemented later
     }
 
 
@@ -538,9 +538,7 @@ namespace Opm
                                           const ModelParameters& param,
                                           WellState& well_state) const
     {
-
-
-
+        // TODO: to be implemented later
     }
 
 
@@ -554,9 +552,7 @@ namespace Opm
                           const WellState& well_state,
                           std::vector<double>& well_potentials)
     {
-
-
-
+        // TODO: to be implemented later
     }
 
 
@@ -648,8 +644,7 @@ namespace Opm
     solveEqAndUpdateWellState(const ModelParameters& param,
                               WellState& well_state)
     {
-
-
+        // TODO: to be implemented later
     }
 
 
@@ -678,6 +673,56 @@ namespace Opm
                 segment_comp_initial_[seg][eq_idx] = surfaceVolumeFraction(seg, eq_idx).value();
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    updateWellState(const BVectorWell& dwells,
+                    const BlackoilModelParameters& param,
+                    WellState& well_state) const
+    {
+        // I guess the following can also be applied to the segmnet pressure
+        // maybe better to give it a different name
+        const double dBHPLimit = param.dbhp_max_rel_;
+        const double dFLimit = param.dwell_fraction_max_;
+        const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
+
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            if (active()[ Water ]) {
+                const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), dFLimit);
+                primary_variables_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
+            }
+
+            if (active()[ Gas ]) {
+                const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), dFLimit);
+                primary_variables_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
+            }
+
+            // update the segment pressure
+            {
+                const int sign = dwells[seg][SPres] > 0.? 1 : -1;
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres], dBHPLimit));
+                primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
+            }
+            // update the total rate // TODO: should we have a limitation of the total rate change
+            {
+                primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dwells[seg][SPres];
+            }
+
+            // TODO: not handling solvent related for now
+
+            // handling the overshooting or undershooting of the fraction first
+            processFractions(seg);
+        }
+
+        updateWellStateFromPrimaryVariabls(well_state);
     }
 
 
@@ -1375,9 +1420,9 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    processFractions(const int seg,
-                     std::vector<double>& fractions) const
+    processFractions(const int seg) const
     {
+        std::vector<double> fractions(number_of_phases_, 0.0);
         assert( active()[Oil] );
         fractions[Oil] = 1.0;
 
@@ -1425,6 +1470,67 @@ namespace Opm
 
         if ( active()[Gas] ) {
             primary_variables_[seg][GFrac] = fractions[Gas];
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    updateWellStateFromPrimaryVariabls(WellState& well_state) const
+    {
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            std::vector<double> fractions(number_of_phases_, 0.0);
+            assert( active()[Oil] );
+            fractions[Oil] = 1.0;
+
+            if ( active()[Water] ) {
+                fractions[Water] = primary_variables_[seg][WFrac];
+                fractions[Oil] -= fractions[Water];
+            }
+
+            if ( active()[Gas] ) {
+                fractions[Gas] = primary_variables_[seg][GFrac];
+                fractions[Oil] -= fractions[Gas];
+            }
+
+            // convert the fractions to be Q_p / G_total to calculate the phase rates
+            if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
+                const double* distr = well_controls_get_current_distr(well_controls_);
+                for (int p = 0; p < number_of_phases_; ++p) {
+                    if (distr[p] > 0.) { // for injection wells, thre is only one non-zero distr value
+                        fractions[p] /= distr[p];
+                    } else {
+                        // this only happens to injection well so far
+                        fractions[p] = 0.;
+                    }
+                }
+            } else {
+                const std::vector<double> g = {1., 1., 0.01};
+                for (int p = 0; p < number_of_phases_; ++p) {
+                    fractions[p] /= g[p];
+                }
+            }
+
+            // calculate the phase rates based on the primary variables
+            const double g_total = primary_variables_[seg][GTotal];
+            const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+            for (int p = 0; p < number_of_phases_; ++p) {
+                const double phase_rate = g_total * fractions[p];
+                well_state.segRates()[(seg + top_segment_location) * number_of_phases_ + p] = phase_rate;
+                if (seg == 0) { // top segment
+                    well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = phase_rate;
+                }
+            }
+
+            // update the segment pressure
+            well_state.segPress()[seg + top_segment_location] = primary_variables_[seg][SPres];
+            if (seg == 0) { // top segment
+                well_state.bhp()[index_of_well_] = well_state.segPress()[seg + top_segment_location];
+            }
         }
     }
 }

@@ -223,6 +223,7 @@ namespace Opm
         mutable OffDiagMatWell duneB_;
         mutable OffDiagMatWell duneC_;
         // diagonal matrix for the well
+        // TODO: if we decided not to invert it, we better change the name of it
         mutable DiagMatWell invDuneD_;
 
         // several vector used in the matrix calculation
@@ -328,7 +329,9 @@ namespace Opm
         EvalWell getHydorPressureLoss(const int seg) const;
 
         // handling the overshooting and undershooting of the fractions
-        void processFractions(const int seg, std::vector<double>& fractions) const;
+        void processFractions(const int seg) const;
+
+        void updateWellStateFromPrimaryVariabls(WellState& well_state) const;
     };
 
 }
