@@ -326,6 +326,9 @@ namespace Opm
 
         // hytrostatic pressure loss
         EvalWell getHydorPressureLoss(const int seg) const;
+
+        // handling the overshooting and undershooting of the fractions
+        void processFractions(const int seg, std::vector<double>& fractions) const;
     };
 
 }

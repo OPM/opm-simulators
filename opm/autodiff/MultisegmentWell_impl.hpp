@@ -1367,4 +1367,64 @@ namespace Opm
     {
         return segment_densities_[seg] * gravity_ * segment_depth_diffs_;
     }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    processFractions(const int seg,
+                     std::vector<double>& fractions) const
+    {
+        assert( active()[Oil] );
+        fractions[Oil] = 1.0;
+
+        if ( active()[Water] ) {
+            fractions[Water] = primary_variables_[seg][WFrac];
+            fractions[Oil] -= fractions[Water];
+        }
+
+        if ( active()[Gas] ) {
+            fractions[Gas] = primary_variables_[seg][GFrac];
+            fractions[Oil] -= fractions[Gas];
+        }
+
+        // TODO: not handling solvent related
+
+        if (fractions[Water] < 0.0) {
+            if ( active()[Gas] ) {
+                fractions[Gas] /= (1.0 - fractions[Water]);
+            }
+            fractions[Oil] /= (1.0 - fractions[Water]);
+            fractions[Water] = 0.0;
+        }
+
+        if (fractions[Gas] < 0.0) {
+            if ( active()[Water] ) {
+                fractions[Water] /= (1.0 - fractions[Gas]);
+            }
+            fractions[Oil] /= (1.0 - fractions[Gas]);
+            fractions[Gas] = 0.0;
+        }
+
+        if (fractions[Oil] < 0.0) {
+            if ( active()[Water] ) {
+                fractions[Water] /= (1.0 - fractions[Oil]);
+            }
+            if ( active()[Gas] ) {
+                fractions[Gas] /= (1.0 - fractions[Oil]);
+            }
+            fractions[Oil] = 0.0;
+        }
+
+        if ( active()[Water] ) {
+            primary_variables_[seg][WFrac] = fractions[Water];
+        }
+
+        if ( active()[Gas] ) {
+            primary_variables_[seg][GFrac] = fractions[Gas];
+        }
+    }
 }
