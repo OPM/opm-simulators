@@ -45,6 +45,8 @@ namespace Opm
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
         // TODO: should I begin with the old primary variable or the new fraction based variable systems?
         // Let us begin with the new one
+        // TODO: we need to have order for the primary variables and also the order for the well equations.
+        // sometimes, they are similar, while sometimes, they can have very different forms.
         enum WellVariablePositions {
             GTotal = 0,
             WFrac = 1,
@@ -317,6 +319,8 @@ namespace Opm
                          std::vector<EvalWell>& mob) const;
 
         EvalWell getControlEq() const;
+
+        EvalWell getPressureEq(const int seg) const;
     };
 
 }

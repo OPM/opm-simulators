@@ -245,7 +245,7 @@ namespace Opm
             // considering the contributions from the inlet segments
             {
                 for (const int inlet : segment_inlets_[seg]) {
-                    for (int comp_idx; comp_idx < num_comp; ++comp_idx) {
+                    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
                         const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
                         resWell_[seg][comp_idx] -= inlet_rate.value();
                         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -304,10 +304,18 @@ namespace Opm
             // the fourth dequation, the pressure drop equation
             // if it is the top segment, it should be the well control equations
             // if it is not, it will be the pressure drop equation
-            if (seg != 0) { // not the top segment
-                ;
-            } else { // the top segment
-                ;
+            {
+                // TODO: currently, we only handle the hydrostatic pressure difference.
+                // We need to add the friction pressure loss and also the acceleration pressure loss
+                // with the acceleration pressure loss, there will be inlets flow rates (maybe alos the oulet flow)
+                // not sure whether to handle them implicitly or explicitly
+                // TODO: we can try to handle them explicitly first, if it does not work, we can handle them
+                // implicitly. Even explicily, we can calculate them without considering the derivative first
+                const EvalWell control_eq = getControlEq();
+                resWell_[seg][SPres] = control_eq.value();
+                for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                    invDuneD_[seg][seg][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
+                }
             }
         }
     }
@@ -1311,4 +1319,27 @@ namespace Opm
         return control_eq;
     }
 
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getPressureEq(const int seg) const
+    {
+        // for top segment, the well control equation will be used.
+        if (seg == 0) { // for top segment, the well control equation will be used.
+            return getControlEq();
+        }
+
+        const EvalWell pressure_equation = getSegmentPressure(seg);
+        const int outlet_segment_location = numberToLocation(segmentSet()[seg].outletSegment());
+        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_location);
+        pressure_equation -= outlet_pressure;
+
+        // we need to handle the pressure difference between the two segments
+        // we only consider the hydrostatic pressure loss first
+        return pressure_equation;
+    }
 }
