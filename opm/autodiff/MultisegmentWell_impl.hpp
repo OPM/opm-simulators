@@ -24,6 +24,7 @@
 namespace Opm
 {
 
+
     template<typename TypeTag>
     MultisegmentWell<TypeTag>::
     MultisegmentWell(const Well* well, const int time_step, const Wells* wells)
@@ -34,6 +35,7 @@ namespace Opm
     , segment_perforation_depth_diffs_(number_of_perforations_)
     , segment_comp_initial_(numberOfSegments(), std::vector<double>(numWellEq, 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
+    , segment_depth_diffs_(numberOfSegments(), 0.0)
     {
         // TODO: to see what information we need to process here later.
         // const auto& completion_set = well->getCompletions(time_step);
@@ -95,6 +97,16 @@ namespace Opm
         // \Note: we do not update the depth here. And it looks like for now, we only have the option to use
         // specified perforation depth
         initMatrixAndVectors(num_cells);
+
+        // calculating the depth difference between the segment and its oulet_segments
+        // for the top segment, we will make its zero unless we find other purpose to use this value
+        for (int seg = 1; seg < numberOfSegments(); ++seg) {
+            const double segment_depth = segmentSet()[seg].depth();
+            const int outlet_segment_number = segmentSet()[seg].outletSegment();
+            const Segment& outlet_segment = segmentSet()[numberToLocation(outlet_segment_number)];
+            const double outlet_depth = outlet_segment.depth();
+            segment_depth_diffs_[seg] = outlet_depth - segment_depth;
+        }
     }
 
 
@@ -1135,7 +1147,7 @@ namespace Opm
             for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
             }
-            segment_densities_[seg] = density /= volrat;
+            segment_densities_[seg] = density / volrat;
         }
     }
 
@@ -1340,6 +1352,19 @@ namespace Opm
 
         // we need to handle the pressure difference between the two segments
         // we only consider the hydrostatic pressure loss first
+        pressure_equation -= getHydorPressureLoss(seg);
         return pressure_equation;
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getHydorPressureLoss(const int seg) const
+    {
+        return segment_densities_[seg] * gravity_ * segment_depth_diffs_;
     }
 }

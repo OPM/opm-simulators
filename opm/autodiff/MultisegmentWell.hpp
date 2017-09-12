@@ -167,7 +167,7 @@ namespace Opm
         using Base::first_perf_;
         using Base::saturation_table_number_;
         using Base::well_efficiency_factor_;
-
+        using Base::gravity_;
         using Base::well_controls_;
 
         // protected functions from the Base class
@@ -259,6 +259,8 @@ namespace Opm
         // we should not have this member variable
         std::vector<EvalWell> segment_densities_;
 
+        std::vector<double> segment_depth_diffs_;
+
         void initMatrixAndVectors(const int num_cells) const;
 
         // protected functions
@@ -321,6 +323,9 @@ namespace Opm
         EvalWell getControlEq() const;
 
         EvalWell getPressureEq(const int seg) const;
+
+        // hytrostatic pressure loss
+        EvalWell getHydorPressureLoss(const int seg) const;
     };
 
 }
