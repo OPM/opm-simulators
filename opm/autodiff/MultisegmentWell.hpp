@@ -25,6 +25,8 @@
 
 #include <opm/autodiff/WellInterface.hpp>
 
+#include <dune/istl/solvers.hh>
+
 namespace Opm
 {
 
@@ -333,6 +335,35 @@ namespace Opm
 
         void updateWellStateFromPrimaryVariabls(WellState& well_state) const;
     };
+
+    // obtain y = D^-1 * x
+    template<typename MatrixType, typename VectorType>
+    VectorType
+    invDX(MatrixType D, VectorType x)
+    {
+        // TODO: checking the problem related to use reference parameter
+        VectorType y(x.size());
+        y = 0.;
+        Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
+
+        // Sequential incomplete LU decomposition as the preconditioner
+        Dune::SeqILU0<MatrixType, VectorType, VectorType> preconditioner(D, 1.0);
+
+        // Preconditioned conjugate −gradient solver
+        Dune::BiCGSTABSolver<VectorType> linsolver(linearOperator,
+                                                   preconditioner,
+                                                   1.e-6, // desired residual reduction factor
+                                                   50, // maximum number of iterations
+                                                   0); // verbosity of the solver
+
+        // Object storing some statistics about the solving process
+        Dune::InverseOperatorResult statistics ;
+
+        // Solve
+        linsolver.apply(y, x, statistics );
+
+        return y;
+    }
 
 }
 
