@@ -120,26 +120,26 @@ namespace Opm
     {
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
-        invDuneD_.setBuildMode( DiagMatWell::row_wise );
+        duneD_.setBuildMode( DiagMatWell::row_wise );
 
         // set the size and patterns for all the matrices and vectors
         // [A C^T    [x    =  [ res
         //  B D] x_well]      res_well]
 
-        // calculatiing the NNZ for invDuneD_
+        // calculatiing the NNZ for duneD_
         // NNZ = number_of_segments + 2 * (number_of_inlets / number_of_outlets)
         {
             int nnz_d = numberOfSegments();
             for (const std::vector<int>& inlets : segment_inlets_) {
                 nnz_d += 2 * inlets.size();
             }
-            invDuneD_.setSize(numberOfSegments(), numberOfSegments(), nnz_d);
+            duneD_.setSize(numberOfSegments(), numberOfSegments(), nnz_d);
         }
         duneB_.setSize(numberOfSegments(), num_cells, number_of_perforations_);
         duneC_.setSize(numberOfSegments(), num_cells, number_of_perforations_);
 
         // we need to add the off diagonal ones
-        for (auto row = invDuneD_.createbegin(), end = invDuneD_.createend(); row != end; ++row) {
+        for (auto row = duneD_.createbegin(), end = duneD_.createend(); row != end; ++row) {
             // the number of the row corrspnds to the segment now
             const int seg = row.index();
             // adding the item related to outlet relation
@@ -181,7 +181,6 @@ namespace Opm
 
         // resize temporary class variables
         Bx_.resize( duneC_.N() );
-        invDrw_.resize( invDuneD_.N() );
 
         // TODO: maybe this function need a different name for better meaning
         primary_variables_.resize(numberOfSegments());
@@ -221,7 +220,7 @@ namespace Opm
         // clear all entries
         duneB_ = 0.0;
         duneC_ = 0.0;
-        invDuneD_ = 0.0;
+        duneD_ = 0.0;
         resWell_ = 0.0;
 
         // for the black oil cases, there will be four equations,
@@ -249,7 +248,7 @@ namespace Opm
 
                     resWell_[seg][comp_idx] += accumulation_term.value();
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                        invDuneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + numEq);
+                        duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + numEq);
                     }
                 }
             }
@@ -261,7 +260,7 @@ namespace Opm
                         const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
                         resWell_[seg][comp_idx] -= inlet_rate.value();
                         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                            invDuneD_[seg][inlet][comp_idx][pv_idx] += -inlet_rate.derivative(pv_idx + numEq);
+                            duneD_[seg][inlet][comp_idx][pv_idx] += -inlet_rate.derivative(pv_idx + numEq);
                         }
                     }
                 }
@@ -299,7 +298,7 @@ namespace Opm
                             duneC_[seg][cell_idx][pv_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
                         }
                         // the index name for the D should be eq_idx / pv_idx
-                        invDuneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
+                        duneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
                     }
 
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
@@ -326,12 +325,10 @@ namespace Opm
                 const EvalWell control_eq = getControlEq();
                 resWell_[seg][SPres] = control_eq.value();
                 for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                    invDuneD_[seg][seg][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
+                    duneD_[seg][seg][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
                 }
             }
         }
-        // TODO: invert invDuneD_
-        // invDuneD_.inverse(D_);
     }
 
 
@@ -512,7 +509,15 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        // TODO:  to be implemented later
+        assert( Bx_.size() == duneB_.N() );
+
+        // Bx_ = duneB_ * x
+        duneB_.mv(x, Bx_);
+        // invDBx = duneD^-1 * Bx_
+        BVectorWell invDBx = invDX(duneD_, Bx_);
+
+        // Ax = Ax - duneC_^T * invDBx
+        duneC_.mmtv(invDBx,Ax);
     }
 
 
@@ -524,7 +529,10 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(BVector& r) const
     {
-        // TODO: to be implemented later
+        // invDrw_ = invDuneD_ * resWell_
+        BVectorWell invDrw = invDX(duneD_, resWell_);
+        // r = r - duneC_^T * invDrw
+        duneC_.mmtv(invDrw, r);
     }
 
 
@@ -538,7 +546,6 @@ namespace Opm
                                           const ModelParameters& param,
                                           WellState& well_state) const
     {
-        // TODO: to be implemented later
     }
 
 
@@ -641,10 +648,30 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
+    recoverSolutionWell(const BVector& x, BVectorWell& xw) const
+    {
+        BVectorWell resWell = resWell_;
+        // resWell = resWell - B * x
+        duneB_.mmv(x, resWell);
+        // xw = D^-1 * resWell
+        xw = invDX(duneD_, resWell);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
     solveEqAndUpdateWellState(const ModelParameters& param,
                               WellState& well_state)
     {
-        // TODO: to be implemented later
+        // We assemble the well equations, then we check the convergence,
+        // which is why we do not put the assembleWellEq here.
+        BVectorWell dx_well = invDX(duneD_, resWell_);
+
+        updateWellState(dx_well, param, well_state);
     }
 
 
@@ -708,7 +735,7 @@ namespace Opm
             // update the segment pressure
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres], dBHPLimit));
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), dBHPLimit);
                 primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
             }
             // update the total rate // TODO: should we have a limitation of the total rate change

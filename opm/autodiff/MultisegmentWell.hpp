@@ -226,11 +226,10 @@ namespace Opm
         mutable OffDiagMatWell duneC_;
         // diagonal matrix for the well
         // TODO: if we decided not to invert it, we better change the name of it
-        mutable DiagMatWell invDuneD_;
+        mutable DiagMatWell duneD_;
 
         // several vector used in the matrix calculation
         mutable BVectorWell Bx_;
-        mutable BVectorWell invDrw_;
         mutable BVector scaleAddRes_;
 
         // residuals of the well equations
