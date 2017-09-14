@@ -408,7 +408,6 @@ namespace Opm
                       wellhelpers::WellSwitchingLogger& logger) const
     {
         const int np = number_of_phases_;
-        const int nw = well_state.bhp().size();
         const int w = index_of_well_;
 
         const int old_control_index = well_state.currentControls()[w];

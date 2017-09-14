@@ -495,8 +495,73 @@ namespace Opm
                        const std::vector<double>& B_avg,
                        const ModelParameters& param) const
     {
-        // TODO: it will be very similar
+        // assert((int(B_avg.size()) == numComponents()) || has_polymer);
+        assert( (int(B_avg.size()) == numComponents()) );
+
+        // checking if any residual is NaN or too large. The two large one is only handled for the well flux
+        std::vector<std::vector<double>> residual(numberOfSegments(), std::vector<double>(numWellEq, 0.0));
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                residual[seg][eq_idx] = std::abs(resWell_[seg][eq_idx]);
+            }
+        }
+
+        std::vector<double> maximum_residual(numComponents(), 0.0);
+
         ConvergenceReport report;
+        // TODO: the following is a little complicated, maybe can be simplified in some way?
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
+                if (eq_idx < numComponents()) { // phase or component mass equations
+                    const double flux_residual = B_avg[eq_idx] * residual[seg][eq_idx];
+                    // TODO: the report can not handle the segment number yet.
+                    if (std::isnan(flux_residual)) {
+                        report.nan_residual_found = true;
+                        const auto& phase_name = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(eq_idx));
+                        const typename ConvergenceReport::ProblemWell problem_well = {name(), phase_name};
+                        report.nan_residual_wells.push_back(problem_well);
+                    } else if (flux_residual > param.max_residual_allowed_) {
+                        report.too_large_residual_found = true;
+                        const auto& phase_name = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(eq_idx));
+                        const typename ConvergenceReport::ProblemWell problem_well = {name(), phase_name};
+                        report.nan_residual_wells.push_back(problem_well);
+                    } else { // it is a normal residual
+                        if (flux_residual > maximum_residual[eq_idx]) {
+                            maximum_residual[eq_idx] = flux_residual;
+                        }
+                    }
+                } else { // pressure equation
+                    const double pressure_residal = residual[seg][eq_idx];
+                    const std::string eq_name("Pressure");
+                    if (std::isnan(pressure_residal)) {
+                        report.nan_residual_found = true;
+                        const typename ConvergenceReport::ProblemWell problem_well = {name(), eq_name};
+                        report.nan_residual_wells.push_back(problem_well);
+                    } else if (std::isinf(pressure_residal)) {
+                        report.too_large_residual_found = true;
+                        const typename ConvergenceReport::ProblemWell problem_well = {name(), eq_name};
+                        report.nan_residual_wells.push_back(problem_well);
+                    } else { // it is a normal residual
+                        if (pressure_residal > maximum_residual[eq_idx]) {
+                            maximum_residual[eq_idx] = pressure_residal;
+                        }
+                    }
+                }
+            }
+        }
+
+        if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
+            // check convergence
+            for ( int comp_idx = 0; comp_idx < numComponents(); ++comp_idx)
+            {
+                report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_);
+            }
+
+            report.converged = report.converged && (maximum_residual[SPres] < param.tolerance_well_control_);
+        } else { // abnormal values found and no need to check the convergence
+            report.converged = false;
+        }
+
         return report;
     }
 
