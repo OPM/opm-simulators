@@ -313,8 +313,6 @@ namespace Opm
             }
 
             // the fourth dequation, the pressure drop equation
-            // if it is the top segment, it should be the well control equations
-            // if it is not, it will be the pressure drop equation
             {
                 // TODO: currently, we only handle the hydrostatic pressure difference.
                 // We need to add the friction pressure loss and also the acceleration pressure loss
@@ -322,10 +320,10 @@ namespace Opm
                 // not sure whether to handle them implicitly or explicitly
                 // TODO: we can try to handle them explicitly first, if it does not work, we can handle them
                 // implicitly. Even explicily, we can calculate them without considering the derivative first
-                const EvalWell control_eq = getControlEq();
-                resWell_[seg][SPres] = control_eq.value();
+                const EvalWell pressure_eq = getPressureEq(seg);
+                resWell_[seg][SPres] = pressure_eq.value();
                 for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                    duneD_[seg][seg][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
+                    duneD_[seg][seg][SPres][pv_idx] = pressure_eq.derivative(pv_idx + numEq);
                 }
             }
         }
@@ -506,7 +504,7 @@ namespace Opm
             }
         }
 
-        std::vector<double> maximum_residual(numComponents(), 0.0);
+        std::vector<double> maximum_residual(numWellEq, 0.0);
 
         ConvergenceReport report;
         // TODO: the following is a little complicated, maybe can be simplified in some way?
@@ -1482,7 +1480,7 @@ namespace Opm
             return getControlEq();
         }
 
-        const EvalWell pressure_equation = getSegmentPressure(seg);
+        EvalWell pressure_equation = getSegmentPressure(seg);
         const int outlet_segment_location = numberToLocation(segmentSet()[seg].outletSegment());
         const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_location);
         pressure_equation -= outlet_pressure;
@@ -1502,7 +1500,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     getHydorPressureLoss(const int seg) const
     {
-        return segment_densities_[seg] * gravity_ * segment_depth_diffs_;
+        return segment_densities_[seg] * gravity_ * segment_depth_diffs_[seg];
     }
 
 
