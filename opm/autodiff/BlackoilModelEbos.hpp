@@ -391,7 +391,7 @@ namespace Opm {
             }
             catch ( const Dune::FMatrixError& e  )
             {
-                OPM_THROW(Opm::NumericalProblem,"Well equation did not converge");
+                OPM_THROW(Opm::NumericalProblem,"The following FMatrixError got caught during well modeling \n" << e.what());
             }
 
             return report;
