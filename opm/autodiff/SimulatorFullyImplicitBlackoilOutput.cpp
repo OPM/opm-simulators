@@ -344,7 +344,8 @@ namespace Opm
                     eclIO_->overwriteInitialOIP(simProps);
                 }
                 // ... insert "extra" data (KR, VISC, ...)
-                eclIO_->writeTimeStep(timer.reportStepNum(),
+                const int reportStepForOutput = substep ? timer.reportStepNum() + 1 : timer.reportStepNum();
+                eclIO_->writeTimeStep(reportStepForOutput,
                                       substep,
                                       timer.simulationTimeElapsed(),
                                       simProps,
