@@ -14,6 +14,9 @@
 #                                                                         #
 ###########################################################################
 
+# Mandatory call to project
+project(opm-material CXX)
+
 cmake_minimum_required (VERSION 2.8)
 
 set( OPM_COMMON_ROOT "" CACHE PATH "Root directory containing OPM related cmake modules")
