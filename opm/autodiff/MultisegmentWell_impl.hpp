@@ -787,24 +787,27 @@ namespace Opm
                 primary_variables_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
             }
 
+            // handling the overshooting or undershooting of the fractions
+            processFractions(seg);
+
             // update the segment pressure
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), dBHPLimit);
+                const double current_pressure = old_primary_variables[seg][SPres];
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), dBHPLimit * current_pressure);
                 primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
             }
-            // update the total rate // TODO: should we have a limitation of the total rate change
+
+            // update the total rate // TODO: should we have a limitation of the total rate change?
             {
-                primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dwells[seg][SPres];
+                primary_variables_[seg][GTotal] = old_primary_variables[seg][GTotal] - dwells[seg][GTotal];
             }
 
             // TODO: not handling solvent related for now
 
-            // handling the overshooting or undershooting of the fraction first
-            processFractions(seg);
         }
 
-        updateWellStateFromPrimaryVariabls(well_state);
+        updateWellStateFromPrimaryVariables(well_state);
     }
 
 
@@ -1583,7 +1586,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellStateFromPrimaryVariabls(WellState& well_state) const
+    updateWellStateFromPrimaryVariables(WellState& well_state) const
     {
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             std::vector<double> fractions(number_of_phases_, 0.0);

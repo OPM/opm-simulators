@@ -332,7 +332,7 @@ namespace Opm
         // handling the overshooting and undershooting of the fractions
         void processFractions(const int seg) const;
 
-        void updateWellStateFromPrimaryVariabls(WellState& well_state) const;
+        void updateWellStateFromPrimaryVariables(WellState& well_state) const;
     };
 
     // obtain y = D^-1 * x
