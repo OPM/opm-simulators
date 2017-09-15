@@ -47,7 +47,7 @@ if(NOT OPM_COMMON_ROOT)
         " opm-common_DIR is not a directory")
     endif()
   endif()	
-   find_package(opm-common QUIET)
+   find_package(opm-common REQUIRED)
 endif()
 
 if (opm-common_FOUND)
