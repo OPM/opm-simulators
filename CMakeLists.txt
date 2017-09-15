@@ -23,6 +23,24 @@ set( OPM_COMMON_ROOT "" CACHE PATH "Root directory containing OPM related cmake 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 
 if(NOT OPM_COMMON_ROOT)
+  if(SIBLING_SEARCH AND NOT opm-common_DIR)
+    # guess the sibling dir
+    get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
+    get_filename_component(_parent_full_dir ${PROJECT_BINARY_DIR} DIRECTORY)
+    get_filename_component(_parent_dir_name ${_parent_full_dir} NAME)
+    if(_parent_dir_name STREQUAL CMAKE_PROJECT_NAME)
+      #looks like <module-name>/<build-dir> is used
+      get_filename_component(_modules_dir ${_parent_full_dir} DIRECTORY)
+      if(IS_DIRECTORY ${_modules_dir}/opm-common/${_leaf_dir_name})
+        set(opm-common_DIR ${_modules_dir}/opm-common/${_leaf_dir_name})
+      endif()
+    elseif(_leaf_dir_name STREQUAL CMAKE_PROJECT_NAME)
+      # we assume <build-dir>/<module-name>
+      if(IS_DIRECTORY ${_parent_full_dir}/opm-common)
+        set(opm-common_DIR "${_parent_full_dir}/opm-common}")
+      endif()
+    endif()
+  endif()
    find_package(opm-common QUIET)
 endif()
 
