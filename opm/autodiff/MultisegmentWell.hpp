@@ -322,9 +322,9 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
-        EvalWell getControlEq() const;
+        void assembleControlEq() const;
 
-        EvalWell getPressureEq(const int seg) const;
+        void assemblePressureEq(const int seg) const;
 
         // hytrostatic pressure loss
         EvalWell getHydorPressureLoss(const int seg) const;
@@ -348,7 +348,7 @@ namespace Opm
         // Sequential incomplete LU decomposition as the preconditioner
         Dune::SeqILU0<MatrixType, VectorType, VectorType> preconditioner(D, 1.0);
 
-        // Preconditioned conjugate −gradient solver
+        // Preconditioned BICGSTAB solver
         Dune::BiCGSTABSolver<VectorType> linsolver(linearOperator,
                                                    preconditioner,
                                                    1.e-6, // desired residual reduction factor

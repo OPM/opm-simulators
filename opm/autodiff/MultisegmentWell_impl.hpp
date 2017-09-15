@@ -260,7 +260,7 @@ namespace Opm
                         const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
                         resWell_[seg][comp_idx] -= inlet_rate.value();
                         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                            duneD_[seg][inlet][comp_idx][pv_idx] += -inlet_rate.derivative(pv_idx + numEq);
+                            duneD_[seg][inlet][comp_idx][pv_idx] -= inlet_rate.derivative(pv_idx + numEq);
                         }
                     }
                 }
@@ -313,18 +313,10 @@ namespace Opm
             }
 
             // the fourth dequation, the pressure drop equation
-            {
-                // TODO: currently, we only handle the hydrostatic pressure difference.
-                // We need to add the friction pressure loss and also the acceleration pressure loss
-                // with the acceleration pressure loss, there will be inlets flow rates (maybe alos the oulet flow)
-                // not sure whether to handle them implicitly or explicitly
-                // TODO: we can try to handle them explicitly first, if it does not work, we can handle them
-                // implicitly. Even explicily, we can calculate them without considering the derivative first
-                const EvalWell pressure_eq = getPressureEq(seg);
-                resWell_[seg][SPres] = pressure_eq.value();
-                for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                    duneD_[seg][seg][SPres][pv_idx] = pressure_eq.derivative(pv_idx + numEq);
-                }
+            if (seg == 0) { // top segment, pressure equation is the control equation
+                assembleControlEq();
+            } else {
+                assemblePressureEq(seg);
             }
         }
     }
@@ -1394,9 +1386,9 @@ namespace Opm
 
 
     template<typename TypeTag>
-    typename MultisegmentWell<TypeTag>::EvalWell
+    void
     MultisegmentWell<TypeTag>::
-    getControlEq() const
+    assembleControlEq() const
     {
         EvalWell control_eq(0.0);
 
@@ -1463,7 +1455,14 @@ namespace Opm
             default:
                 OPM_THROW(std::runtime_error, "Unknown well control control types for well " << name());
         }
-        return control_eq;
+
+
+        // using control_eq to update the matrix and residuals
+
+        resWell_[0][SPres] = control_eq.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + numEq);
+        }
     }
 
 
@@ -1471,24 +1470,38 @@ namespace Opm
 
 
     template<typename TypeTag>
-    typename MultisegmentWell<TypeTag>::EvalWell
+    void
     MultisegmentWell<TypeTag>::
-    getPressureEq(const int seg) const
+    assemblePressureEq(const int seg) const
     {
-        // for top segment, the well control equation will be used.
-        if (seg == 0) { // for top segment, the well control equation will be used.
-            return getControlEq();
-        }
+        // TODO: currently, we only handle the hydrostatic pressure difference.
+        // We need to add the friction pressure loss and also the acceleration pressure loss
+        // with the acceleration pressure loss, there will be inlets flow rates (maybe alos the oulet flow)
+        // not sure whether to handle them implicitly or explicitly
+        // TODO: we can try to handle them explicitly first, if it does not work, we can handle them
 
+        assert(seg != 0); // not top segment
+
+        // for top segment, the well control equation will be used.
         EvalWell pressure_equation = getSegmentPressure(seg);
-        const int outlet_segment_location = numberToLocation(segmentSet()[seg].outletSegment());
-        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_location);
-        pressure_equation -= outlet_pressure;
 
         // we need to handle the pressure difference between the two segments
         // we only consider the hydrostatic pressure loss first
         pressure_equation -= getHydorPressureLoss(seg);
-        return pressure_equation;
+
+        resWell_[seg][SPres] = pressure_equation.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
+        }
+
+        // contribution from the outlet segment
+        const int outlet_segment_location = numberToLocation(segmentSet()[seg].outletSegment());
+        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_location);
+
+        resWell_[seg][SPres] -= outlet_pressure.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][outlet_segment_location][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
+        }
     }
 
 
