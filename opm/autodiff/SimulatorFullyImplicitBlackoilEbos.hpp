@@ -146,6 +146,7 @@ public:
         // communicate the initial solution to ebos
         if (timer.initialStep()) {
             convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
+	    // ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
@@ -156,8 +157,20 @@ public:
             initHysteresisParams(state);
             // communicate the restart solution to ebos
             convertInput(/*iterationIdx=*/0, state, ebosSimulator_ );
+            //ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-        }
+        }else{
+//	  if( ratelimtype > FluidSystems::None ){
+//	    /assert(timer.currentStepNum() == 0)
+//	    // this should probably have been placed in the initiations
+//	    FluidSystem::setEnableRateLimmitedDissolvedGas(FluidSystems::None);
+//	    ebosSimulator_.model().updatePrimaryIntensiveQuantities(0);
+//	    FluidSystem::setEnableRateLimmitedDissolvedGas(ratelimtype);
+//            ebosSimulator_.model().cellValues();
+//            ebosSimulator_.model().updataMaxOilSat();
+          }
+	  
+	}
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
@@ -208,6 +221,7 @@ public:
             initHysteresisParams(state);
             // communicate the restart solution to ebos
             convertInput(0, state, ebosSimulator_);
+            //ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
@@ -227,6 +241,11 @@ public:
         }
         std::vector<std::vector<double>> originalFluidInPlace;
         std::vector<double> originalFluidInPlaceTotals;
+
+
+        //initiate prevoise time step
+
+
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -271,7 +290,17 @@ public:
                 }
 
                 elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                // update prevois step to pressent.
+                FluidSystems::RateLimmitCells ratelimtype = FluidSystem::enableRateLimmitedDissolvedGas();
+                // update prevois step if first step
+		if( ratelimtype > FluidSystems::None && timer.currentStepNum() == 0 && output_writer_.isRestart() ){
+		  // the cell values need to updated assuming equlibrium, if we new
+		     FluidSystem::setEnableRateLimmitedDissolvedGas(FluidSystems::None);
+		     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);// assumes standard black oil
+		     FluidSystem::setEnableRateLimmitedDissolvedGas(ratelimtype);
+                }else{
+		  elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+		}
 
                 const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
