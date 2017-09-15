@@ -22,6 +22,12 @@ cmake_minimum_required (VERSION 2.8)
 set( OPM_COMMON_ROOT "" CACHE PATH "Root directory containing OPM related cmake modules")
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 
+if(OPM_COMMON_ROOT AND opm-common_DIR)
+  message(WARNING "Both the variables OPM_COMMON_ROOT and opm-common_DIR are set. "
+    "Will use opm-common_DIR")
+  set(OPM_COMMON_ROOT "OPM_COMMON_ROOT-NOTFOUND")
+endif()
+
 if(NOT OPM_COMMON_ROOT)
   if(SIBLING_SEARCH AND NOT opm-common_DIR)
     # guess the sibling dir
