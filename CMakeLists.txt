@@ -53,6 +53,11 @@ endif()
 if (opm-common_FOUND)
    include(OpmInit)
 else()
+   if(OPM_COMMON_ROOT)
+     message(WARNING "Setting OPM_COMMON_ROOT is deprecated. Please either "
+       "set opm-common_DIR instead or rely on sibling build")
+   endif()
+
    unset(opm-common_FOUND)
 
    if (NOT OPM_COMMON_ROOT AND SIBLING_SEARCH)
