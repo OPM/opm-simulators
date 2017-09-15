@@ -23,6 +23,12 @@ set( OPM_COMMON_ROOT "" CACHE PATH "Root directory containing OPM related cmake 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 
+if(OPM_COMMON_ROOT AND opm-common_DIR)
+  message(WARNING "Both the variables OPM_COMMON_ROOT and opm-common_DIR are set. "
+    "Will use opm-common_DIR")
+  set(OPM_COMMON_ROOT "OPM_COMMON_ROOT-NOTFOUND")
+endif()
+
 if(NOT OPM_COMMON_ROOT)
   if(SIBLING_SEARCH AND NOT opm-common_DIR)
     # guess the sibling dir
