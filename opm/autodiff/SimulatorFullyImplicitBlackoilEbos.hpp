@@ -168,9 +168,9 @@ public:
 //	    FluidSystem::setEnableRateLimmitedDissolvedGas(ratelimtype);
 //            ebosSimulator_.model().cellValues();
 //            ebosSimulator_.model().updataMaxOilSat();
-          }
+         }
 	  
-	}
+
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
