@@ -105,7 +105,7 @@ namespace Opm
             const int outlet_segment_number = segmentSet()[seg].outletSegment();
             const Segment& outlet_segment = segmentSet()[numberToLocation(outlet_segment_number)];
             const double outlet_depth = outlet_segment.depth();
-            segment_depth_diffs_[seg] = outlet_depth - segment_depth;
+            segment_depth_diffs_[seg] = segment_depth - outlet_depth;
         }
     }
 
@@ -235,6 +235,9 @@ namespace Opm
 
         const int nseg = numberOfSegments();
         const int num_comp = numComponents();
+
+        // TODO: finding better place to put it
+        computeSegmentFluidProperties(ebosSimulator, well_state);
 
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term // TODO: without considering the efficiencty factor for now
@@ -1032,9 +1035,10 @@ namespace Opm
 
         // Pressure drawdown (also used to determine direction of flow)
         // TODO: not considering the two pressure difference for now. Trying to finish the framework first.
-        const EvalWell drawdown = seg_pressure - pressure_cell;
+        const EvalWell drawdown = pressure_cell - seg_pressure;
 
         const Opm::PhaseUsage& pu = phaseUsage();
+
         // producing perforations
         if ( drawdown > 0.0) {
             // Do nothing is crossflow is not allowed
@@ -1184,9 +1188,9 @@ namespace Opm
                 mix_s[comp_idx] = surfaceVolumeFraction(seg, comp_idx);
             }
 
-            const double seg_pressure = getSegmentPressure(seg);
+            const EvalWell seg_pressure = getSegmentPressure(seg);
             if (pu.phase_used[BlackoilPhases::Aqua]) {
-                b[seg][pu.phase_pos[BlackoilPhases::Aqua]] =
+                b[pu.phase_pos[BlackoilPhases::Aqua]] =
                     FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
             }
 
@@ -1246,7 +1250,7 @@ namespace Opm
                 }
             }
 
-            std::vector<double> mix(mix_s);
+            std::vector<EvalWell> mix(mix_s);
             if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
                 const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
                 const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
@@ -1263,7 +1267,7 @@ namespace Opm
                 volrat += mix[comp_idx] / b[comp_idx];
             }
 
-            std::vector<double> surf_dens[num_comp];
+            std::vector<double> surf_dens(num_comp);
             // Surface density.
             // not using num_comp here is because solvent can be component
             for (int phase = 0; phase < pu.num_phases; ++phase) {
@@ -1490,7 +1494,7 @@ namespace Opm
 
         // we need to handle the pressure difference between the two segments
         // we only consider the hydrostatic pressure loss first
-        pressure_equation -= getHydorPressureLoss(seg);
+        pressure_equation -= getHydroPressureLoss(seg);
 
         resWell_[seg][SPres] = pressure_equation.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1503,7 +1507,7 @@ namespace Opm
 
         resWell_[seg][SPres] -= outlet_pressure.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][outlet_segment_location][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
+            duneD_[seg][outlet_segment_location][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
         }
     }
 
@@ -1514,7 +1518,7 @@ namespace Opm
     template<typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
-    getHydorPressureLoss(const int seg) const
+    getHydroPressureLoss(const int seg) const
     {
         return segment_densities_[seg] * gravity_ * segment_depth_diffs_[seg];
     }

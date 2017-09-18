@@ -327,7 +327,7 @@ namespace Opm
         void assemblePressureEq(const int seg) const;
 
         // hytrostatic pressure loss
-        EvalWell getHydorPressureLoss(const int seg) const;
+        EvalWell getHydroPressureLoss(const int seg) const;
 
         // handling the overshooting and undershooting of the fractions
         void processFractions(const int seg) const;
