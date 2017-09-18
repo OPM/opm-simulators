@@ -604,6 +604,9 @@ namespace Opm
                                           const ModelParameters& param,
                                           WellState& well_state) const
     {
+        BVectorWell xw(1);
+        recoverSolutionWell(x, xw);
+        updateWellState(xw, param, well_state);
     }
 
 
