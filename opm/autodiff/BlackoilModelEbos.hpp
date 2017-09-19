@@ -905,7 +905,6 @@ namespace Opm {
 
             bool converged_MB = true;
             bool converged_CNV = true;
-            bool converged_Well = true;
             // Finish computation
             for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
@@ -913,12 +912,11 @@ namespace Opm {
                 mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
                 converged_MB                = converged_MB && (mass_balance_residual[compIdx] < tol_mb);
                 converged_CNV               = converged_CNV && (CNV[compIdx] < tol_cnv);
-                // Well flux convergence is only for fluid phases, not other materials
-                // in our current implementation.
-                converged_Well = wellModel().getWellConvergence(ebosSimulator_, B_avg);
 
                 residual_norms.push_back(CNV[compIdx]);
             }
+
+            const bool converged_Well = wellModel().getWellConvergence(ebosSimulator_, B_avg);
 
             bool converged = converged_MB && converged_Well;
 
