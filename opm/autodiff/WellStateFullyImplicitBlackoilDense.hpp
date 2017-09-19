@@ -112,7 +112,7 @@ namespace Opm
         }
 
         /// init the MS well related.
-        void initMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl, const int time_step)
+        void initWellStateMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl, const int time_step)
         {
             // still using the order in wells
             const int nw = wells->number_of_wells;

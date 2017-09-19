@@ -341,6 +341,11 @@ namespace Opm
     invDX(MatrixType D, VectorType x)
     {
         // TODO: checking the problem related to use reference parameter
+
+        // TODO: store some of the following information to avoid to call it again and again for
+        // efficiency improvement.
+        // Bassically, only the solve / apply step is different.
+
         VectorType y(x.size());
         y = 0.;
         Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
