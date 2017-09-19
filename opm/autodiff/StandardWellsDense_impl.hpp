@@ -45,12 +45,12 @@ namespace Opm {
         // has to be set always for the convergence check!
         global_nc_   = global_nc;
 
+        phase_usage_ = phase_usage_arg;
+        active_ = active_arg;
+
         if ( ! localWellsActive() ) {
             return;
         }
-
-        phase_usage_ = phase_usage_arg;
-        active_ = active_arg;
 
         calculateEfficiencyFactors();
 
