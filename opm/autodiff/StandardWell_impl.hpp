@@ -577,12 +577,6 @@ namespace Opm
                     }
                 }
 
-                // add a trivial equation for the dummy phase for 2p cases (Only support water + oil)
-                if ( numComp < numWellEq ) {
-                    assert(!active()[ Gas ]);
-                    invDuneD_[0][0][Gas][Gas] = 1.0;
-                }
-
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == contiSolventEqIdx) {// if (flowPhaseToEbosCompIdx(componentIdx) == Solvent)
                     well_state.perfRateSolvent()[first_perf_ + perf] = cq_s[componentIdx].value();
