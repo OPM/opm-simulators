@@ -112,7 +112,9 @@ namespace Opm
         }
 
         /// init the MS well related.
-        void initWellStateMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl, const int time_step)
+        template <typename PrevWellState>
+        void initWellStateMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl,
+                                 const int time_step, const PrevWellState& prev_well_state)
         {
             // still using the order in wells
             const int nw = wells->number_of_wells;
@@ -216,7 +218,40 @@ namespace Opm
             }
             assert(int(segpress_.size()) == nseg_);
             assert(int(segrates_.size()) == nseg_ * numPhases() );
-            // maybe also check whether the segment rates of the top segments consistent with the well rates.
+
+            if (!prev_well_state.wellMap().empty()) {
+                // copying MS well related
+                const auto& end = prev_well_state.wellMap().end();
+                const int np = numPhases();
+                for (int w = 0; w < nw; ++w) {
+                    const std::string name( wells->name[w] );
+                    const auto& it = prev_well_state.wellMap().find( name );
+
+                    if (it != end) { // the well is found in the prev_well_state
+                        // TODO: the well with same name can change a lot, like they might not have same number of segments
+                        // we need to handle that later.
+                        // for now, we just copy them.
+                        const int old_index_well = (*it).second[0];
+                        const int new_index_well = w;
+                        const int old_top_segment_location = prev_well_state.topSegmentLocation(old_index_well);
+                        const int new_top_segmnet_location = topSegmentLocation(new_index_well);
+                        int number_of_segment = 0;
+                        if (new_index_well == top_segment_loc_.size() - 1) {
+                            number_of_segment = nseg_ - new_top_segmnet_location;
+                        } else {
+                            number_of_segment = topSegmentLocation(new_index_well + 1) - new_top_segmnet_location;
+                        }
+
+                        for (int i = 0; i < number_of_segment * np; ++i) {
+                            segrates_[new_top_segmnet_location * np + i] = prev_well_state.segRates()[old_top_segment_location * np + i];
+                        }
+
+                        for (int i = 0; i < number_of_segment; ++i) {
+                            segpress_[new_top_segmnet_location + i] = prev_well_state.segPress()[old_top_segment_location + i];
+                        }
+                    }
+                }
+            }
         }
 
         static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const std::vector<std::vector<int>>&segment_perforations,
