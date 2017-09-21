@@ -2045,7 +2045,7 @@ namespace Opm
         if (has_solvent && phaseIdx == contiSolventEqIdx )
             return 0.01;
 
-        // we should come this fare
+        // we should not come this far
         assert(false);
         return 1.0;
     }

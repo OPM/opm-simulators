@@ -268,8 +268,6 @@ namespace Opm
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 
-        int flowToEbosPvIdx( const int flowPv ) const;
-
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
         // TODO: it is dumplicated with StandardWellsDense

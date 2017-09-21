@@ -245,12 +245,15 @@ namespace Opm
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
         const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
+        if (active()[Water] && pu.phase_pos[Water] == phaseIdx) {
             return FluidSystem::waterPhaseIdx;
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
+        }
+        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx) {
             return FluidSystem::oilPhaseIdx;
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
+        }
+        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx) {
             return FluidSystem::gasPhaseIdx;
+        }
 
         assert(phaseIdx < 3);
         // for other phases return the index
