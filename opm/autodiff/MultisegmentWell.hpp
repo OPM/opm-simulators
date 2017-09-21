@@ -308,8 +308,7 @@ namespace Opm
         // compute the densities of the mixture in the segments
         // TODO: probably other fluid properties also.
         // They will be treated implicitly, so they need to be of Evaluation type
-        void computeSegmentFluidProperties(const Simulator& ebosSimulator,
-                                           const WellState& well_state);
+        void computeSegmentFluidProperties(const Simulator& ebosSimulator);
 
         EvalWell getSegmentPressure(const int seg) const;
 

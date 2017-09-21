@@ -237,7 +237,7 @@ namespace Opm
         const int num_comp = numComponents();
 
         // TODO: finding better place to put it
-        computeSegmentFluidProperties(ebosSimulator, well_state);
+        computeSegmentFluidProperties(ebosSimulator);
 
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term // TODO: without considering the efficiencty factor for now
@@ -544,13 +544,13 @@ namespace Opm
         }
 
         if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
-            // check convergence
+            // check convergence for flux residuals
             for ( int comp_idx = 0; comp_idx < numComponents(); ++comp_idx)
             {
-                report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_);
+                report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_ * 10.);
             }
 
-            report.converged = report.converged && (maximum_residual[SPres] < param.tolerance_well_control_);
+            report.converged = report.converged && (maximum_residual[SPres] < 100.0);
         } else { // abnormal values found and no need to check the convergence
             report.converged = false;
         }
@@ -587,7 +587,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(BVector& r) const
     {
-        // invDrw_ = invDuneD_ * resWell_
+        // invDrw_ = duneD^-1 * resWell_
         BVectorWell invDrw = invDX(duneD_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
@@ -730,7 +730,7 @@ namespace Opm
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        BVectorWell dx_well = invDX(duneD_, resWell_);
+        const BVectorWell dx_well = invDX(duneD_, resWell_);
 
         updateWellState(dx_well, param, well_state);
     }
@@ -1033,12 +1033,9 @@ namespace Opm
         //     b_perfcells[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         // }
 
-        // the pressure of the segment
-        const EvalWell seg_pressure = getSegmentPressure(seg);
-
         // Pressure drawdown (also used to determine direction of flow)
         // TODO: not considering the two pressure difference for now. Trying to finish the framework first.
-        const EvalWell drawdown = pressure_cell - seg_pressure;
+        const EvalWell drawdown = pressure_cell - segment_pressure;
 
         const Opm::PhaseUsage& pu = phaseUsage();
 
@@ -1151,8 +1148,7 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeSegmentFluidProperties(const Simulator& ebosSimulator,
-                                  const WellState& well_state)
+    computeSegmentFluidProperties(const Simulator& ebosSimulator)
     {
         // TODO: the phase location is so confusing, double check to make sure they are right
         // do I need the gaspos, oilpos here?
@@ -1186,11 +1182,11 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             // the compostion of the components inside wellbore under surface condition
             std::vector<EvalWell> mix_s(num_comp, 0.0);
-            std::vector<EvalWell> b(num_comp, 0.0);
             for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
                 mix_s[comp_idx] = surfaceVolumeFraction(seg, comp_idx);
             }
 
+            std::vector<EvalWell> b(num_comp, 0.0);
             const EvalWell seg_pressure = getSegmentPressure(seg);
             if (pu.phase_used[BlackoilPhases::Aqua]) {
                 b[pu.phase_pos[BlackoilPhases::Aqua]] =
