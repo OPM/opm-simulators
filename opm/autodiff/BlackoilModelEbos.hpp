@@ -635,7 +635,7 @@ namespace Opm {
 
                 PrimaryVariables& priVars = solution[ cell_idx ];
 
-                const double& dp = dx[cell_idx][flowPhaseToEbosCompIdx(0)];
+                const double& dp = dx[cell_idx][Indices::pressureSwitchIdx];
                 double& p = priVars[Indices::pressureSwitchIdx];
                 const double& dp_rel_max = dpMaxRel();
                 const int sign_dp = dp > 0 ? 1: -1;
@@ -643,9 +643,8 @@ namespace Opm {
                 p = std::max(p, 0.0);
 
                 // Saturation updates.
-                const double dsw = active_[Water] ? dx[cell_idx][flowPhaseToEbosCompIdx(1)] : 0.0;
-                const int xvar_ind = active_[Water] ? 2 : 1;
-                const double dxvar = active_[Gas] ? dx[cell_idx][flowPhaseToEbosCompIdx(xvar_ind)] : 0.0;
+                const double dsw = active_[Water] ? dx[cell_idx][Indices::waterSaturationIdx] : 0.0;
+                const double dxvar = active_[Gas] ? dx[cell_idx][Indices::compositionSwitchIdx] : 0.0;
 
                 double dso = 0.0;
                 double dsg = 0.0;
@@ -1533,51 +1532,36 @@ namespace Opm {
 
 
     public:
-        int ebosCompToFlowPhaseIdx( const int compIdx ) const
-        {
-            assert(compIdx < 3);
-            const int compToPhase[ 3 ] = { Oil, Water, Gas };
-            return compToPhase[ compIdx ];
-        }
-
-        int flowToEbosPvIdx( const int flowPv ) const
-        {
-            const int flowToEbos[] = {
-                Indices::pressureSwitchIdx,
-                Indices::waterSaturationIdx,
-                Indices::compositionSwitchIdx,
-                Indices::solventSaturationIdx
-            };
-
-            if (flowPv > 2 )
-                return flowPv;
-
-            return flowToEbos[ flowPv ];
-        }
-
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const
         {
-            const int phaseToComp[] = {
-                FluidSystem::waterCompIdx,
-                FluidSystem::oilCompIdx,
-                FluidSystem::gasCompIdx
-            };
+            const auto& pu = phaseUsage_;
+            if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
+                return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
+                return Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+            if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
+                return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
 
-            if (phaseIdx > 2 )
-                return phaseIdx;
-
-            return phaseToComp[ phaseIdx ];
+            // for other phases return the index
+            return phaseIdx;
         }
-
-    private:
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
         {
+            const auto& pu = phaseUsage_;
+            if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
+                return FluidSystem::waterPhaseIdx;
+            if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
+                return FluidSystem::oilPhaseIdx;
+            if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
+                return FluidSystem::gasPhaseIdx;
+
             assert(phaseIdx < 3);
-            const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx};
-            return flowToEbos[ phaseIdx ];
+            // for other phases return the index
+            return phaseIdx;
         }
 
+    private:
 
         void updateRateConverter()
         {

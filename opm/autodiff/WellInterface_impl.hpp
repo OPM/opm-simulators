@@ -224,33 +224,17 @@ namespace Opm
     WellInterface<TypeTag>::
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
-        const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx};
-        if (phaseIdx > 2 )
-            return phaseIdx;
-        return phaseToComp[ phaseIdx ];
+        const auto& pu = phaseUsage();
+        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
+            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
+            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
+            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+
+        // for other phases return the index
+        return phaseIdx;
     }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    flowToEbosPvIdx( const int flowPv ) const
-    {
-        const int flowToEbos[ 3 ] = {
-            BlackoilIndices::pressureSwitchIdx,
-            BlackoilIndices::waterSaturationIdx,
-            BlackoilIndices::compositionSwitchIdx
-        };
-
-        if (flowPv > 2 )
-            return flowPv;
-
-        return flowToEbos[ flowPv ];
-    }
-
 
 
 
@@ -260,11 +244,21 @@ namespace Opm
     WellInterface<TypeTag>::
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
-        assert(phaseIdx < 3);
-        const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
-        return flowToEbos[ phaseIdx ];
-    }
+        const auto& pu = phaseUsage();
+        if (active()[Water] && pu.phase_pos[Water] == phaseIdx) {
+            return FluidSystem::waterPhaseIdx;
+        }
+        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx) {
+            return FluidSystem::oilPhaseIdx;
+        }
+        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx) {
+            return FluidSystem::gasPhaseIdx;
+        }
 
+        assert(phaseIdx < 3);
+        // for other phases return the index
+        return phaseIdx;
+    }
 
 
 

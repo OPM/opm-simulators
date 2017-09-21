@@ -38,7 +38,7 @@ namespace Properties {
 NEW_TYPE_TAG(EclFlowTwoPhaseProblem, INHERITS_FROM(EclFlowProblem));
 //! The indices required by the model
 SET_TYPE_PROP(EclFlowTwoPhaseProblem, Indices,
-              Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0, /*PVOffset=*/0>);
+              Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0, /*PVOffset=*/0, /*disabledCompIdx=*/2>);
 }}
 
 // ----------------- Main program -----------------

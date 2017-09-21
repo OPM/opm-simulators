@@ -45,12 +45,12 @@ namespace Opm {
         // has to be set always for the convergence check!
         global_nc_   = global_nc;
 
+        phase_usage_ = phase_usage_arg;
+        active_ = active_arg;
+
         if ( ! localWellsActive() ) {
             return;
         }
-
-        phase_usage_ = phase_usage_arg;
-        active_ = active_arg;
 
         calculateEfficiencyFactors();
 
@@ -302,9 +302,17 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
+        const auto& pu = phase_usage_;
+        if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
+            return FluidSystem::waterPhaseIdx;
+        if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
+            return FluidSystem::oilPhaseIdx;
+        if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
+            return FluidSystem::gasPhaseIdx;
+
         assert(phaseIdx < 3);
-        const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
-        return flowToEbos[ phaseIdx ];
+        // for other phases return the index
+        return phaseIdx;
     }
 
 

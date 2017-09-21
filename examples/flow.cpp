@@ -52,11 +52,16 @@ namespace Properties {
     //   Twophase case
     ///////////////////////////////////
 
-    NEW_TYPE_TAG(EclFlowTwoPhaseProblem, INHERITS_FROM(EclFlowProblem));
+    NEW_TYPE_TAG(EclFlowOilWaterProblem, INHERITS_FROM(EclFlowProblem));
     //! The indices required by the model
-    SET_TYPE_PROP(EclFlowTwoPhaseProblem, Indices,
-      Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,  /*PVOffset=*/0>);
+    SET_TYPE_PROP(EclFlowOilWaterProblem, Indices,
+      Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,  /*PVOffset=*/0, /*disabledCompIdx=*/2>);
 
+
+    NEW_TYPE_TAG(EclFlowGasOilProblem, INHERITS_FROM(EclFlowProblem));
+    //! The indices required by the model
+    SET_TYPE_PROP(EclFlowGasOilProblem, Indices,
+      Ewoms::BlackOilTwoPhaseIndices<GET_PROP_VALUE(TypeTag, EnableSolvent)?1:0, GET_PROP_VALUE(TypeTag, EnablePolymer)?1:0,  /*PVOffset=*/0, /*disabledCompIdx=*/1>);
 
     ///////////////////////////////////
     //   Polymer case
@@ -168,8 +173,22 @@ int main(int argc, char** argv)
 
         // Twophase case
         if( phases.size() == 2 ) {
-            Opm::FlowMainEbos<TTAG(EclFlowTwoPhaseProblem)> mainfunc;
-            return mainfunc.execute(argc, argv, deck, eclipseState );
+            // oil-gas
+            if (phases.active( Opm::Phase::GAS ))
+            {
+                Opm::FlowMainEbos<TTAG(EclFlowGasOilProblem)> mainfunc;
+                return mainfunc.execute(argc, argv, deck, eclipseState );
+            }
+            // oil-water
+            else if ( phases.active( Opm::Phase::WATER ) )
+            {
+                Opm::FlowMainEbos<TTAG(EclFlowOilWaterProblem)> mainfunc;
+                return mainfunc.execute(argc, argv, deck, eclipseState );
+            }
+            else {
+                std::cerr << "No suitable configuration found, valid are Twophase (oilwater and oilgas), polymer, solvent, or blackoil" << std::endl;
+                return EXIT_FAILURE;
+            }
         }
         // Polymer case
         else if ( phases.active( Opm::Phase::POLYMER ) ) {
