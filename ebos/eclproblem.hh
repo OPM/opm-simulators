@@ -1102,11 +1102,7 @@ private:
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& element = *elemIt;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
             const unsigned int elemIdx = elemMapper.index(element);
-#else
-            const unsigned int elemIdx = elemMapper.map(element);
-#endif
 
             elementCenterDepth_[elemIdx] = cellCenterDepth( element );
         }
@@ -1662,18 +1658,9 @@ private:
         {
             const auto& elementMapper = this->model().elementMapper();
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
             unsigned globalElemIdx = elementMapper.index(stencil.entity(localDofIdx));
-#else
-            unsigned globalElemIdx = elementMapper.map(stencil.entity(localDofIdx));
-#endif
-
             if (localDofIdx != 0) {
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                 unsigned globalCenterElemIdx = elementMapper.index(stencil.entity(/*dofIdx=*/0));
-#else
-                unsigned globalCenterElemIdx = elementMapper.map(stencil.entity(/*dofIdx=*/0));
-#endif
                 dofData.transmissibility = transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
             }
         };

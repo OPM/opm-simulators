@@ -213,11 +213,7 @@ namespace Ewoms
                     auto elemIt = gridManager.equilGrid().leafGridView().template begin<0>();
                     const auto& elemEndIt = gridManager.equilGrid().leafGridView().template end<0>();
                     for (; elemIt != elemEndIt; ++elemIt) {
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                         int elemIdx = equilElemMapper.index(*elemIt );
-#else
-                        int elemIdx = equilElemMapper.map(*elemIt );
-#endif
                         int cartElemIdx = gridManager.equilCartesianIndexMapper().cartesianIndex(elemIdx);
                         globalCartesianIndex_[elemIdx] = cartElemIdx;
                     }
@@ -255,11 +251,7 @@ namespace Ewoms
                      end = localGridView.template end< 0, Dune::Interior_Partition >(); it != end; ++it )
                 {
                     const auto element = *it ;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                     int elemIdx = elemMapper.index( element );
-#else
-                    int elemIdx = elemMapper.map( element );
-#endif
                     distributedCartesianIndex[elemIdx] = gridManager.cartesianIndex( elemIdx );
 
                     // only store interior element for collection

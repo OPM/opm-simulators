@@ -129,11 +129,7 @@ public:
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
             unsigned elemIdx = elemMapper.index(elem);
-#else
-            unsigned elemIdx = elemMapper.map(elem);
-#endif
 
             // compute the axis specific "centroids" used for the transmissibilities. for
             // consistency with the flow simulator, we use the element centers as
@@ -170,13 +166,8 @@ public:
 
                 const auto& inside = intersection.inside();
                 const auto& outside = intersection.outside();
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                 unsigned insideElemIdx = elemMapper.index(inside);
                 unsigned outsideElemIdx = elemMapper.index(outside);
-#else
-                unsigned insideElemIdx = elemMapper.map(*inside);
-                unsigned outsideElemIdx = elemMapper.map(*outside);
-#endif
 
                 // we only need to calculate a face's transmissibility
                 // once...

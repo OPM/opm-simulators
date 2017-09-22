@@ -170,13 +170,8 @@ public:
                     if (!is.neighbor())
                         continue;
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                     unsigned I = elemMapper.index(is.inside());
                     unsigned J = elemMapper.index(is.outside());
-#else
-                    unsigned I = elemMapper.map(is.inside());
-                    unsigned J = elemMapper.map(is.outside());
-#endif
 
                     // FIXME (?): this is not portable!
                     unsigned faceIdx = is.id();
