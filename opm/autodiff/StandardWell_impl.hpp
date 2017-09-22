@@ -522,8 +522,10 @@ namespace Opm
         const int np = number_of_phases_;
 
         // clear all entries
-        duneB_ = 0.0;
-        duneC_ = 0.0;
+        if (!only_wells) {
+            duneB_ = 0.0;
+            duneC_ = 0.0;
+        }
         invDuneD_ = 0.0;
         resWell_ = 0.0;
 

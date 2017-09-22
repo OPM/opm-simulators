@@ -218,8 +218,11 @@ namespace Opm
                    bool only_wells)
     {
         // clear all entries
-        duneB_ = 0.0;
-        duneC_ = 0.0;
+        if (!only_wells) {
+            duneB_ = 0.0;
+            duneC_ = 0.0;
+        }
+
         duneD_ = 0.0;
         resWell_ = 0.0;
 
