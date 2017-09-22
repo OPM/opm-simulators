@@ -293,17 +293,7 @@ void testQuadrature()
 
     typedef Dune::YaspGrid<dim> Grid;
     typedef Grid::LeafGridView GridView;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 4)
     Grid grid(upperRight, cellRes);
-#else
-    Grid grid(
-#ifdef HAVE_MPI
-        Dune::MPIHelper::getCommunicator(),
-#endif
-        upperRight,     // upper right
-        cellRes,        // number of cells
-        isPeriodic, 0); // overlap
-#endif
 
     // compute approximate integral
     auto gridView = grid.leafGridView();
