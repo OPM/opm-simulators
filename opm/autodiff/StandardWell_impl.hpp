@@ -558,7 +558,7 @@ namespace Opm
                 }
 
                 // subtract sum of phase fluxes in the well equations.
-                resWell_[0][componentIdx] -= cq_s[componentIdx].value();
+                resWell_[0][componentIdx] -= cq_s_effective.value();
 
                 // assemble the jacobians
                 for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
@@ -566,7 +566,7 @@ namespace Opm
                         // also need to consider the efficiency factor when manipulating the jacobians.
                         duneC_[0][cell_idx][pvIdx][flowPhaseToEbosCompIdx(componentIdx)] -= cq_s_effective.derivative(pvIdx+numEq); // intput in transformed matrix
                     }
-                    invDuneD_[0][0][componentIdx][pvIdx] -= cq_s[componentIdx].derivative(pvIdx+numEq);
+                    invDuneD_[0][0][componentIdx][pvIdx] -= cq_s_effective.derivative(pvIdx+numEq);
                 }
 
                 for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
@@ -593,6 +593,7 @@ namespace Opm
                     cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
                 }
                 if (!only_wells) {
+                    // TODO: we need to consider the efficiency here.
                     for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                         ebosJac[cell_idx][cell_idx][contiPolymerEqIdx][pvIdx] -= cq_s_poly.derivative(pvIdx);
                     }
@@ -607,7 +608,7 @@ namespace Opm
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
             EvalWell resWell_loc = (wellSurfaceVolumeFraction(componentIdx) - F0_[componentIdx]) * volume / dt;
-            resWell_loc += getQs(componentIdx);
+            resWell_loc += getQs(componentIdx) * well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
                 invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+numEq);
             }
