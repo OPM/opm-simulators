@@ -56,6 +56,7 @@ namespace Opm
         solve_welleq_initially_ = param.getDefault("solve_welleq_initially",solve_welleq_initially_);
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
         use_update_stabilization_ = param.getDefault("use_update_stabilization", use_update_stabilization_);
+        use_multisegment_well_ = param.getDefault("use_multisegment_well", use_multisegment_well_);
         deck_file_name_ = param.template get<std::string>("deck_filename");
     }
 
@@ -79,6 +80,7 @@ namespace Opm
         solve_welleq_initially_ = true;
         update_equations_scaling_ = false;
         use_update_stabilization_ = true;
+        use_multisegment_well_ = false;
     }
 
 

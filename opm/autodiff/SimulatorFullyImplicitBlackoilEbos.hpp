@@ -299,10 +299,12 @@ public:
             const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
             extractLegacyCellPvtRegionIndex_();
             // handling MS well related
-            for (const auto& well : wells_ecl) {
-                if (well->isMultiSegment(timer.currentStepNum())) { // there is one well is MS well
-                    well_state.initWellStateMSWell(wells, wells_ecl, timer.currentStepNum(), phaseUsage_, prev_well_state);
-                    break;
+            if (model_param_.use_multisegment_well_) { // if we use MultisegmentWell model
+                for (const auto& well : wells_ecl) {
+                    if (well->isMultiSegment(timer.currentStepNum()) ) { // there is one well is MS well
+                        well_state.initWellStateMSWell(wells, wells_ecl, timer.currentStepNum(), phaseUsage_, prev_well_state);
+                        break;
+                    }
                 }
             }
             WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,

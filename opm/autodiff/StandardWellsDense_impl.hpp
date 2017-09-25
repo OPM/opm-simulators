@@ -18,7 +18,7 @@ namespace Opm {
        , wells_ecl_(wells_ecl)
        , number_of_wells_(wells_arg ? (wells_arg->number_of_wells) : 0)
        , number_of_phases_(wells_arg ? (wells_arg->number_of_phases) : 0) // TODO: not sure if it is proper for this way
-       , well_container_(createWellContainer(wells_arg, wells_ecl, current_timeIdx) )
+       , well_container_(createWellContainer(wells_arg, wells_ecl, param.use_multisegment_well_, current_timeIdx) )
        , well_collection_(well_collection)
        , param_(param)
        , terminal_output_(terminal_output)
@@ -117,6 +117,7 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     createWellContainer(const Wells* wells,
                         const std::vector< const Well* >& wells_ecl,
+                        const bool use_multisegment_well,
                         const int time_step)
     {
         std::vector<WellInterfacePtr> well_container;
@@ -147,7 +148,7 @@ namespace Opm {
 
                 const Well* well_ecl = wells_ecl[index_well];
 
-                if ( !well_ecl->isMultiSegment(time_step) ) {
+                if ( !well_ecl->isMultiSegment(time_step) || !use_multisegment_well) {
                     well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells) );
                 } else {
                     well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells) );

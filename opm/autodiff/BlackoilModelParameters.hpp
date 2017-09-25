@@ -68,6 +68,13 @@ namespace Opm
         /// Try to detect oscillation or stagnation.
         bool use_update_stabilization_;
 
+        /// Whehter to use MultisegmentWell to handle multisegment wells
+        // it is something temporary before the multisegment well model is considered to be
+        // well developed and tested.
+        // if it is false, we will handle multisegment wells as standard wells, which will be
+        // the default behavoir for the moment. Later, we might it to be true by default if necessary
+        bool use_multisegment_well_;
+
         // The file name of the deck
         std::string deck_file_name_;
 

@@ -175,6 +175,7 @@ namespace Opm {
             // create the well container
             static std::vector<WellInterfacePtr > createWellContainer(const Wells* wells,
                                                                       const std::vector<const Well*>& wells_ecl,
+                                                                      const bool use_multisegment_well,
                                                                       const int time_step);
 
             // Well collection is used to enforce the group control
