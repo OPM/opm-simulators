@@ -23,7 +23,7 @@ cd ..
 
 ecode=0
 echo "=== Executing comparison for summary file ==="
-${COMPARE_SUMMARY_COMMAND} -r ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${ABS_TOL} ${REL_TOL}
+${COMPARE_SUMMARY_COMMAND} -r ${RESULT_PATH}/${FILENAME} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} 1e-12 1e-12
 if [ $? -ne 0 ]
 then
   ecode=1
