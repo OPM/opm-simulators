@@ -310,8 +310,8 @@ namespace Opm
                     for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
                         if (!only_wells) {
                             // also need to consider the efficiency factor when manipulating the jacobians.
-                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(comp_idx)][flowToEbosPvIdx(pv_idx)] -= cq_s_effective.derivative(pv_idx);
-                            duneB_[seg][cell_idx][comp_idx][flowToEbosPvIdx(pv_idx)] -= cq_s_effective.derivative(pv_idx);
+                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(comp_idx)][pv_idx] -= cq_s_effective.derivative(pv_idx);
+                            duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
                         }
                     }
                 }
@@ -1141,7 +1141,7 @@ namespace Opm
         EvalWell out = 0.0;
         out.setValue(in.value());
         for(int eq_idx = 0; eq_idx < numEq;++eq_idx) {
-            out.setDerivative(eq_idx, in.derivative(flowToEbosPvIdx(eq_idx)));
+            out.setDerivative(eq_idx, in.derivative(eq_idx));
         }
         return out;
     }

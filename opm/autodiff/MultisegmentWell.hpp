@@ -177,7 +177,6 @@ namespace Opm
         using Base::phaseUsage;
         using Base::name;
         using Base::numComponents;
-        using Base::flowToEbosPvIdx;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
         using Base::getAllowCrossFlow;
