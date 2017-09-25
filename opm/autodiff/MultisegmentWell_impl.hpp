@@ -550,9 +550,11 @@ namespace Opm
             // check convergence for flux residuals
             for ( int comp_idx = 0; comp_idx < numComponents(); ++comp_idx)
             {
-                report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_ * 10.);
+                // report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_ * 10.);
+                report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_);
             }
 
+            // TODO: it is not good to use a hard-coded value.
             report.converged = report.converged && (maximum_residual[SPres] < 100.0);
         } else { // abnormal values found and no need to check the convergence
             report.converged = false;

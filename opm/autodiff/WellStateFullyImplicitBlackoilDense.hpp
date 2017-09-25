@@ -114,7 +114,7 @@ namespace Opm
         /// init the MS well related.
         template <typename PrevWellState>
         void initWellStateMSWell(const Wells* wells, const std::vector<const Well*>& wells_ecl,
-                                 const int time_step, const PrevWellState& prev_well_state)
+                                 const int time_step, const PhaseUsage& pu, const PrevWellState& prev_well_state)
         {
             // still using the order in wells
             const int nw = wells->number_of_wells;
@@ -178,12 +178,25 @@ namespace Opm
                         }
                     }
 
+
                     // for the segrates_, now it becomes a recursive solution procedure.
                     {
                         const int np = numPhases();
                         const int start_perf = wells->well_connpos[w];
                         const int start_perf_next_well = wells->well_connpos[w + 1];
                         assert(nperf == (start_perf_next_well - start_perf)); // make sure the information from wells_ecl consistent with wells
+                        if (pu.phase_used[Gas]) {
+                            const int gaspos = pu.phase_pos[Gas];
+                            // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
+                            // it will probably benefit the standard well too, while it needs to be justified
+                            // TODO: to see if this strategy can benefit StandardWell too
+                            // TODO: it might cause big problem for gas rate control or if there is gas rate limit
+                            for (int perf = 0; perf < nperf; perf++) {
+                                const int perf_pos = start_perf + perf;
+                                perfPhaseRates()[np * perf_pos + gaspos] *= 100.;
+                            }
+                        }
+
                         const std::vector<double> perforation_rates(perfPhaseRates().begin() + np * start_perf,
                                                                     perfPhaseRates().begin() + np * start_perf_next_well); // the perforation rates for this well
                         std::vector<double> segment_rates;

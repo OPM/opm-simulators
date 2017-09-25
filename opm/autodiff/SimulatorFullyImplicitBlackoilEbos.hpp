@@ -301,7 +301,7 @@ public:
             // handling MS well related
             for (const auto& well : wells_ecl) {
                 if (well->isMultiSegment(timer.currentStepNum())) { // there is one well is MS well
-                    well_state.initWellStateMSWell(wells, wells_ecl, timer.currentStepNum(), prev_well_state);
+                    well_state.initWellStateMSWell(wells, wells_ecl, timer.currentStepNum(), phaseUsage_, prev_well_state);
                     break;
                 }
             }
