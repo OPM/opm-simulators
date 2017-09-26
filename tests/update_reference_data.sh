@@ -58,8 +58,8 @@ for test_name in ${tests}; do
   if grep -q "spe12p" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_ebos+spe1_2p/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_ebos \
+      $configuration/build-opm-simulators/tests/results/flow_ebos_2p+spe1_2p/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_ebos_2p \
       SPE1CASE2_2P \
       EGRID INIT SMSPEC UNRST UNSMRY
 
