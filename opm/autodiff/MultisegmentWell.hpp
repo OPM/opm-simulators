@@ -232,10 +232,6 @@ namespace Opm
         // TODO: if we decided not to invert it, we better change the name of it
         mutable DiagMatWell duneD_;
 
-        // several vector used in the matrix calculation
-        mutable BVectorWell Bx_;
-        mutable BVector scaleAddRes_;
-
         // residuals of the well equations
         mutable BVectorWell resWell_;
 
@@ -343,9 +339,9 @@ namespace Opm
     // obtain y = D^-1 * x
     template<typename MatrixType, typename VectorType>
     VectorType
-    invDX(MatrixType D, VectorType x)
+    invDX(const MatrixType& D, VectorType x)
     {
-        // TODO: checking the problem related to use reference parameter
+        // the function will change the value of x, so we should not use reference of x here.
 
         // TODO: store some of the following information to avoid to call it again and again for
         // efficiency improvement.
@@ -353,6 +349,7 @@ namespace Opm
 
         VectorType y(x.size());
         y = 0.;
+
         Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
 
         // Sequential incomplete LU decomposition as the preconditioner

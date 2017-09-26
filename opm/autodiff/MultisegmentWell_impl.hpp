@@ -179,9 +179,6 @@ namespace Opm
 
         resWell_.resize( numberOfSegments() );
 
-        // resize temporary class variables
-        Bx_.resize( duneC_.N() );
-
         // TODO: maybe this function need a different name for better meaning
         primary_variables_.resize(numberOfSegments());
         primary_variables_evaluation_.resize(numberOfSegments());
@@ -572,12 +569,12 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        assert( Bx_.size() == duneB_.N() );
+        BVectorWell Bx(duneB_.N());
 
-        // Bx_ = duneB_ * x
-        duneB_.mv(x, Bx_);
+        duneB_.mv(x, Bx);
+
         // invDBx = duneD^-1 * Bx_
-        BVectorWell invDBx = invDX(duneD_, Bx_);
+        BVectorWell invDBx = invDX(duneD_, Bx);
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -1625,24 +1622,6 @@ namespace Opm
                 } else {
                     // this should only happens to injection wells
                     fractions[p] = 0.;
-                }
-            }
-
-            // convert the fractions to be Q_p / G_total to calculate the phase rates
-            if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
-                const double* distr = well_controls_get_current_distr(well_controls_);
-                for (int p = 0; p < number_of_phases_; ++p) {
-                    if (distr[p] > 0.) { // for injection wells, thre is only one non-zero distr value
-                        fractions[p] /= distr[p];
-                    } else {
-                        // this only happens to injection well so far
-                        fractions[p] = 0.;
-                    }
-                }
-            } else {
-                const std::vector<double> g = {1., 1., 0.01};
-                for (int p = 0; p < number_of_phases_; ++p) {
-                    fractions[p] /= g[p];
                 }
             }
 
