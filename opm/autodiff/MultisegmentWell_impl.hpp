@@ -33,7 +33,7 @@ namespace Opm
     , segment_inlets_(numberOfSegments())
     , perforation_cell_pressure_diffs_(number_of_perforations_, 0.0)
     , segment_perforation_depth_diffs_(number_of_perforations_)
-    , segment_comp_initial_(numberOfSegments(), std::vector<double>(numWellEq, 0.0))
+    , segment_comp_initial_(numberOfSegments(), std::vector<double>(numComponents(), 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     {
@@ -762,8 +762,10 @@ namespace Opm
     computeInitialComposition()
     {
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
-            for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-                segment_comp_initial_[seg][eq_idx] = surfaceVolumeFraction(seg, eq_idx).value();
+            // TODO: probably it should be numWellEq -1 more accurately,
+            // while by meaning it should be num_comp
+            for (int comp_idx = 0; comp_idx < numComponents(); ++comp_idx) {
+                segment_comp_initial_[seg][comp_idx] = surfaceVolumeFraction(seg, comp_idx).value();
             }
         }
     }

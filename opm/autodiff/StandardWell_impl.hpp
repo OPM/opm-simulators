@@ -316,7 +316,7 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFraction(const int compIdx) const
     {
-        const auto pu = phaseUsage();
+        const auto& pu = phaseUsage();
         if (active()[Water] && compIdx == pu.phase_pos[Water]) {
             return primary_variables_evaluation_[WFrac];
         }
@@ -1525,6 +1525,8 @@ namespace Opm
     StandardWell<TypeTag>::
     computeAccumWell()
     {
+        // TODO: it should be num_comp, while it also bring problem for
+        // the polymer case.
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             F0_[eq_idx] = wellSurfaceVolumeFraction(eq_idx).value();
         }
