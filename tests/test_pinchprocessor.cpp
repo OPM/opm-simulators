@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(Processing)
     for (int i = 0; i < nc; ++i) {
         multz[i] = transMult.getMultiplier(global_cell[i], Opm::FaceDir::ZPlus);
     }
-    Opm::NNC nnc(deck, eclgrid);
+    Opm::NNC nnc(deck);
     pinch.process(grid, htrans, actnum, multz, porv, nnc);
     std::vector<NNCdata> nncdata = nnc.nncdata();
 
