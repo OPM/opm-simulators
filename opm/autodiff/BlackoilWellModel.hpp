@@ -21,8 +21,8 @@
 */
 
 
-#ifndef OPM_STANDARDWELLSDENSE_HEADER_INCLUDED
-#define OPM_STANDARDWELLSDENSE_HEADER_INCLUDED
+#ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
+#define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -61,9 +61,9 @@
 
 namespace Opm {
 
-        /// Class for handling the standard well model.
+        /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class StandardWellsDense {
+        class BlackoilWellModel {
         public:
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoil WellState;
@@ -91,14 +91,14 @@ namespace Opm {
                 SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
 
             // ---------  Public methods  ---------
-            StandardWellsDense(const Wells* wells_arg,
-                               WellCollection* well_collection,
-                               const std::vector< const Well* >& wells_ecl,
-                               const ModelParameters& param,
-                               const RateConverterType& rate_converter,
-                               const bool terminal_output,
-                               const int current_index,
-                               std::vector<int>& pvt_region_idx);
+            BlackoilWellModel(const Wells* wells_arg,
+                              WellCollection* well_collection,
+                              const std::vector< const Well* >& wells_ecl,
+                              const ModelParameters& param,
+                              const RateConverterType& rate_converter,
+                              const bool terminal_output,
+                              const int current_index,
+			      std::vector<int>& pvt_region_idx);
 
             void init(const PhaseUsage phase_usage_arg,
                       const std::vector<bool>& active_arg,
@@ -283,5 +283,5 @@ namespace Opm {
 
 } // namespace Opm
 
-#include "StandardWellsDense_impl.hpp"
+#include "BlackoilWellModel_impl.hpp"
 #endif

@@ -252,7 +252,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/StandardWell_impl.hpp
   opm/autodiff/MultisegmentWell.hpp
   opm/autodiff/MultisegmentWell_impl.hpp
-  opm/autodiff/StandardWellsDense.hpp
+  opm/autodiff/BlackoilWellModel.hpp
+  opm/autodiff/BlackoilWellModel_impl.hpp
   opm/autodiff/StandardWellsSolvent.hpp
   opm/autodiff/StandardWellsSolvent_impl.hpp
   opm/autodiff/MissingFeatures.hpp

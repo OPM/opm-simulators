@@ -27,7 +27,7 @@
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/StandardWellsDense.hpp>
+#include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/SimFIBODetails.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
@@ -66,7 +66,7 @@ public:
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
-    typedef StandardWellsDense<TypeTag> WellModel;
+    typedef BlackoilWellModel<TypeTag> WellModel;
     typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
 
 

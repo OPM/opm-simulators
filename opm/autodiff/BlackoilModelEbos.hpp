@@ -28,7 +28,7 @@
 #include <ewoms/common/start.hh>
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/StandardWellsDense.hpp>
+#include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
@@ -154,7 +154,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
-                          StandardWellsDense<TypeTag>& well_model,
+                          BlackoilWellModel<TypeTag>& well_model,
                           RateConverterType& rate_converter,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
@@ -503,14 +503,14 @@ namespace Opm {
             // Solve system.
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, true > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
                 Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, false > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
                 Operator opA(ebosJac, well_model_);
                 istlSolver().solve( opA, x, ebosResid );
             }
@@ -1500,7 +1500,7 @@ namespace Opm {
         SimulatorReport failureReport_;
 
         // Well Model
-        StandardWellsDense<TypeTag>& well_model_;
+        BlackoilWellModel<TypeTag>& well_model_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1517,9 +1517,10 @@ namespace Opm {
 
     public:
         /// return the StandardWells object
-        StandardWellsDense<TypeTag>&
+        BlackoilWellModel<TypeTag>&
         wellModel() { return well_model_; }
-        const StandardWellsDense<TypeTag>&
+
+        const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
 
         int numWells() const { return well_model_.numWells(); }

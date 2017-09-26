@@ -56,7 +56,7 @@
 #include <ewoms/common/start.hh>
 
 #include <opm/autodiff/StandardWell.hpp>
-#include <opm/autodiff/StandardWellsDense.hpp>
+#include <opm/autodiff/BlackoilWellModel.hpp>
 
 // maybe should just include BlackoilModelEbos.hpp
 namespace Ewoms {

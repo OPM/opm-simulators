@@ -270,7 +270,7 @@ namespace Opm
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
-        // TODO: it is dumplicated with StandardWellsDense
+        // TODO: it is dumplicated with BlackoilWellModel
         int numComponents() const;
 
         double wsolvent() const;

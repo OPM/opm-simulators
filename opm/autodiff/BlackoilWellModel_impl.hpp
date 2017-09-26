@@ -4,15 +4,15 @@
 namespace Opm {
 
     template<typename TypeTag>
-    StandardWellsDense<TypeTag>::
-    StandardWellsDense(const Wells* wells_arg,
-                       WellCollection* well_collection,
-                       const std::vector< const Well* >& wells_ecl,
-                       const ModelParameters& param,
-                       const RateConverterType& rate_converter,
-                       const bool terminal_output,
-                       const int current_timeIdx,
-                       std::vector<int>& pvt_region_idx)
+    BlackoilWellModel<TypeTag>::
+    BlackoilWellModel(const Wells* wells_arg,
+                      WellCollection* well_collection,
+                      const std::vector< const Well* >& wells_ecl,
+                      const ModelParameters& param,
+                      const RateConverterType& rate_converter,
+                      const bool terminal_output,
+                      const int current_timeIdx,
+                      std::vector<int>& pvt_region_idx)
        : wells_active_(wells_arg!=nullptr)
        , wells_(wells_arg)
        , wells_ecl_(wells_ecl)
@@ -36,7 +36,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     init(const PhaseUsage phase_usage_arg,
          const std::vector<bool>& active_arg,
          const double gravity_arg,
@@ -87,7 +87,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     setVFPProperties(const VFPProperties*  vfp_properties_arg)
     {
         for (auto& well : well_container_) {
@@ -102,7 +102,7 @@ namespace Opm {
 
     template<typename TypeTag>
     int
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     numWells() const
     {
         return number_of_wells_;
@@ -113,8 +113,8 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::vector<typename StandardWellsDense<TypeTag>::WellInterfacePtr >
-    StandardWellsDense<TypeTag>::
+    std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
+    BlackoilWellModel<TypeTag>::
     createWellContainer(const Wells* wells,
                         const std::vector< const Well* >& wells_ecl,
                         const bool use_multisegment_well,
@@ -164,7 +164,7 @@ namespace Opm {
 
     template<typename TypeTag>
     SimulatorReport
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     assemble(Simulator& ebosSimulator,
              const int iterationIdx,
              const double dt,
@@ -203,7 +203,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     assembleWellEq(Simulator& ebosSimulator,
                    const double dt,
                    WellState& well_state,
@@ -222,7 +222,7 @@ namespace Opm {
     // r = r - duneC_^T * invDuneD_ * resWell_
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     apply( BVector& r) const
     {
         if ( ! localWellsActive() ) {
@@ -241,7 +241,7 @@ namespace Opm {
     // Ax = A x - C D^-1 B x
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
         // TODO: do we still need localWellsActive()?
@@ -261,7 +261,7 @@ namespace Opm {
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
         if ( ! localWellsActive() ) {
@@ -285,7 +285,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x, WellState& well_state) const
     {
         for (auto& well : well_container_) {
@@ -299,7 +299,7 @@ namespace Opm {
 
     template<typename TypeTag>
     int
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
         const auto& pu = phase_usage_;
@@ -321,7 +321,7 @@ namespace Opm {
 
     template<typename TypeTag>
     int
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     numPhases() const
     {
         return number_of_phases_;
@@ -333,7 +333,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     resetWellControlFromState(const WellState& xw) const
     {
         const int        nw   = wells_->number_of_wells;
@@ -349,7 +349,7 @@ namespace Opm {
 
     template<typename TypeTag>
     bool
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     wellsActive() const
     {
         return wells_active_;
@@ -361,7 +361,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     setWellsActive(const bool wells_active)
     {
         wells_active_ = wells_active;
@@ -373,7 +373,7 @@ namespace Opm {
 
     template<typename TypeTag>
     bool
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     localWellsActive() const
     {
         return number_of_wells_ > 0;
@@ -385,7 +385,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     initPrimaryVariablesEvaluation() const
     {
         for (auto& well : well_container_) {
@@ -399,7 +399,7 @@ namespace Opm {
 
     template<typename TypeTag>
     SimulatorReport
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     solveWellEq(Simulator& ebosSimulator,
                 const double dt,
                 WellState& well_state) const
@@ -474,7 +474,7 @@ namespace Opm {
 
     template<typename TypeTag>
     bool
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     getWellConvergence(Simulator& ebosSimulator,
                        const std::vector<Scalar>& B_avg) const
     {
@@ -533,7 +533,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     calculateExplicitQuantities(const Simulator& ebosSimulator,
                                const WellState& xw) const
     {
@@ -548,7 +548,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     updateWellControls(WellState& xw) const
     {
         // Even if there no wells active locally, we cannot
@@ -572,7 +572,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     updateListEconLimited(const Schedule& schedule,
                           const int current_step,
                           const Wells* wells_struct,
@@ -590,7 +590,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
                           std::vector<double>& well_potentials) const
@@ -617,7 +617,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     prepareTimeStep(const Simulator& ebos_simulator,
                     WellState& well_state) const
     {
@@ -654,7 +654,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     prepareGroupControl(const Simulator& ebos_simulator,
                         WellState& well_state) const
     {
@@ -716,7 +716,7 @@ namespace Opm {
 
     template<typename TypeTag>
     WellCollection*
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     wellCollection() const
     {
         return well_collection_;
@@ -728,7 +728,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     calculateEfficiencyFactors()
     {
         if ( !localWellsActive() ) {
@@ -753,7 +753,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     computeWellVoidageRates(const WellState& well_state,
                             std::vector<double>& well_voidage_rates,
                             std::vector<double>& voidage_conversion_coeffs) const
@@ -815,7 +815,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     applyVREPGroupControl(WellState& well_state) const
     {
         if ( wellCollection()->havingVREPGroups() ) {
@@ -843,7 +843,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     updateGroupControls(WellState& well_state) const
     {
 
@@ -886,7 +886,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const
     {
         if (global_cell) {
@@ -904,7 +904,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     computeRepRadiusPerfLength(const Grid& grid)
     {
         // TODO, the function does not work for parallel running
@@ -926,7 +926,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     computeAverageFormationFactor(Simulator& ebosSimulator,
                                   std::vector<double>& B_avg) const
     {
@@ -973,7 +973,7 @@ namespace Opm {
 
     template<typename TypeTag>
     void
-    StandardWellsDense<TypeTag>::
+    BlackoilWellModel<TypeTag>::
     updatePrimaryVariables(const WellState& well_state) const
     {
         for (const auto& well : well_container_) {
