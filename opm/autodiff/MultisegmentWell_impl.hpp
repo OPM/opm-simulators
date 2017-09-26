@@ -642,18 +642,12 @@ namespace Opm
 
         // TODO: to test using rate conversion coefficients to see if it will be better than
         // this default one
-        std::vector<double> g = {1.0, 1.0, 0.01};
-
-        if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
-            const double* distr = well_controls_get_current_distr(well_controls_);
-            for (int phase = 0; phase < number_of_phases_; ++phase) {
-                g[phase] = distr[phase];
-            }
-        }
 
         // the location of the top segment in the WellState
         const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
         const std::vector<double>& segment_rates = well_state.segRates();
+        const PhaseUsage& pu = phaseUsage();
+
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             // calculate the total rate for each segment
             double total_seg_rate = 0.0;
@@ -663,23 +657,25 @@ namespace Opm
             // TODO: under what kind of circustances, the following will be wrong?
             // the definition of g makes the gas phase is always the last phase
             for (int p = 0; p < number_of_phases_; p++) {
-                total_seg_rate += g[p] * segment_rates[number_of_phases_ * seg_location + p];
+                total_seg_rate += scalingFactor(p) * segment_rates[number_of_phases_ * seg_location + p];
             }
 
             primary_variables_[seg][GTotal] = total_seg_rate;
             if (std::abs(total_seg_rate) > 0.) {
                 if (active()[Water]) {
-                    primary_variables_[seg][WFrac] = g[Water] * segment_rates[number_of_phases_ * seg_location + Water] / total_seg_rate;
+                    const int water_pos = pu.phase_pos[Water];
+                    primary_variables_[seg][WFrac] = scalingFactor(water_pos) * segment_rates[number_of_phases_ * seg_location + water_pos] / total_seg_rate;
                 }
                 if (active()[Gas]) {
-                    primary_variables_[seg][GFrac] = g[Gas] * segment_rates[number_of_phases_ * seg_location + Gas] / total_seg_rate;
+                    const int gas_pos = pu.phase_pos[Gas];
+                    primary_variables_[seg][GFrac] = scalingFactor(gas_pos) * segment_rates[number_of_phases_ * seg_location + gas_pos] / total_seg_rate;
                 }
             } else { // total_seg_rate == 0
                 if (well_type_ == INJECTOR) {
                     // only single phase injection handled
                     const double* distr = well_controls_get_current_distr(well_controls_);
                     if (active()[Water]) {
-                        if (distr[Water] > 0.0) {
+                        if (distr[pu.phase_pos[Water]] > 0.0) {
                             primary_variables_[seg][WFrac] = 1.0;
                         } else {
                             primary_variables_[seg][WFrac] = 0.0;
@@ -687,7 +683,7 @@ namespace Opm
                     }
 
                     if (active()[Gas]) {
-                        if (distr[Gas] > 0.0) {
+                        if (distr[pu.phase_pos[Gas]] > 0.0) {
                             // TODO: not handling solvent here yet
                             primary_variables_[seg][GFrac] = 1.0;
                         } else {
@@ -918,11 +914,13 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     volumeFraction(const int seg, const int comp_idx) const
     {
-        if (comp_idx == Water) {
+        const PhaseUsage& pu = phaseUsage();
+
+        if (active()[Water] && comp_idx == pu.phase_pos[Water]) {
             return primary_variables_evaluation_[seg][WFrac];
         }
 
-        if (comp_idx == Gas) {
+        if (active()[Gas] && comp_idx == pu.phase_pos[Gas]) {
             return primary_variables_evaluation_[seg][GFrac];
         }
 
@@ -958,24 +956,12 @@ namespace Opm
         // For reservoir rate control, the distr in well control is used for the
         // rate conversion coefficients. For the injection well, only the distr of the injection
         // phase is not zero.
-        if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
-            // TODO: not handling solvent for now
-            /* if (has_solvent && comp_idx == contiSolventEqIdx) {
-                return wellVolumeFraction(comp_idx);
-            } */
-
-            const double* distr = well_controls_get_current_distr(well_controls_);
-            assert(comp_idx < 3);
-            if (distr[comp_idx] > 0.) {
-                return volumeFraction(seg, comp_idx) / distr[comp_idx];
-            } else {
-                // TODO: not sure why return EvalWell(0.) causing problem here
-                // Probably due to the wrong Jacobians.
-                return volumeFraction(seg, comp_idx);
-            }
+        const double scale = scalingFactor(comp_idx);
+        if (scale > 0.) {
+            return volumeFraction(seg, comp_idx) / scale;
         }
-        std::vector<double> g = {1, 1, 0.01};
-        return volumeFraction(seg, comp_idx) / g[comp_idx];
+
+        return volumeFraction(seg, comp_idx);
     }
 
 
@@ -1538,54 +1524,66 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     processFractions(const int seg) const
     {
+        const PhaseUsage& pu = phaseUsage();
+
         std::vector<double> fractions(number_of_phases_, 0.0);
+
         assert( active()[Oil] );
-        fractions[Oil] = 1.0;
+        const int oil_pos = pu.phase_pos[Oil];
+        fractions[oil_pos] = 1.0;
 
         if ( active()[Water] ) {
-            fractions[Water] = primary_variables_[seg][WFrac];
-            fractions[Oil] -= fractions[Water];
+            const int water_pos = pu.phase_pos[Water];
+            fractions[water_pos] = primary_variables_[seg][WFrac];
+            fractions[oil_pos] -= fractions[water_pos];
         }
 
         if ( active()[Gas] ) {
-            fractions[Gas] = primary_variables_[seg][GFrac];
-            fractions[Oil] -= fractions[Gas];
+            const int gas_pos = pu.phase_pos[Gas];
+            fractions[gas_pos] = primary_variables_[seg][GFrac];
+            fractions[oil_pos] -= fractions[gas_pos];
         }
 
         // TODO: not handling solvent related
 
-        if (fractions[Water] < 0.0) {
-            if ( active()[Gas] ) {
-                fractions[Gas] /= (1.0 - fractions[Water]);
+        if (active()[Water]) {
+            const int water_pos = pu.phase_pos[Water];
+            if (fractions[water_pos] < 0.0) {
+                if ( active()[Gas] ) {
+                    fractions[pu.phase_pos[Gas]] /= (1.0 - fractions[water_pos]);
+                }
+                fractions[oil_pos] /= (1.0 - fractions[water_pos]);
+                fractions[water_pos] = 0.0;
             }
-            fractions[Oil] /= (1.0 - fractions[Water]);
-            fractions[Water] = 0.0;
         }
 
-        if (fractions[Gas] < 0.0) {
-            if ( active()[Water] ) {
-                fractions[Water] /= (1.0 - fractions[Gas]);
+        if (active()[Gas]) {
+            const int gas_pos = pu.phase_pos[Gas];
+            if (fractions[gas_pos] < 0.0) {
+                if ( active()[Water] ) {
+                    fractions[pu.phase_pos[Water]] /= (1.0 - fractions[gas_pos]);
+                }
+                fractions[oil_pos] /= (1.0 - fractions[gas_pos]);
+                fractions[gas_pos] = 0.0;
             }
-            fractions[Oil] /= (1.0 - fractions[Gas]);
-            fractions[Gas] = 0.0;
         }
 
-        if (fractions[Oil] < 0.0) {
+        if (fractions[oil_pos] < 0.0) {
             if ( active()[Water] ) {
-                fractions[Water] /= (1.0 - fractions[Oil]);
+                fractions[pu.phase_pos[Water]] /= (1.0 - fractions[oil_pos]);
             }
             if ( active()[Gas] ) {
-                fractions[Gas] /= (1.0 - fractions[Oil]);
+                fractions[pu.phase_pos[Gas]] /= (1.0 - fractions[oil_pos]);
             }
-            fractions[Oil] = 0.0;
+            fractions[oil_pos] = 0.0;
         }
 
         if ( active()[Water] ) {
-            primary_variables_[seg][WFrac] = fractions[Water];
+            primary_variables_[seg][WFrac] = fractions[pu.phase_pos[Water]];
         }
 
         if ( active()[Gas] ) {
-            primary_variables_[seg][GFrac] = fractions[Gas];
+            primary_variables_[seg][GFrac] = fractions[pu.phase_pos[Gas]];
         }
     }
 
@@ -1598,19 +1596,36 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellStateFromPrimaryVariables(WellState& well_state) const
     {
+        const PhaseUsage& pu = phaseUsage();
+        assert( active()[Oil] );
+        const int oil_pos = pu.phase_pos[Oil];
+
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             std::vector<double> fractions(number_of_phases_, 0.0);
-            assert( active()[Oil] );
-            fractions[Oil] = 1.0;
+            fractions[oil_pos] = 1.0;
 
             if ( active()[Water] ) {
-                fractions[Water] = primary_variables_[seg][WFrac];
-                fractions[Oil] -= fractions[Water];
+                const int water_pos = pu.phase_pos[Water];
+                fractions[water_pos] = primary_variables_[seg][WFrac];
+                fractions[oil_pos] -= fractions[water_pos];
             }
 
             if ( active()[Gas] ) {
-                fractions[Gas] = primary_variables_[seg][GFrac];
-                fractions[Oil] -= fractions[Gas];
+                const int gas_pos = pu.phase_pos[Gas];
+                fractions[gas_pos] = primary_variables_[seg][GFrac];
+                fractions[oil_pos] -= fractions[gas_pos];
+            }
+
+            // convert the fractions to be Q_p / G_total to calculate the phase rates
+            for (int p = 0; p < number_of_phases_; ++p) {
+                const double scale = scalingFactor(p);
+                // for injection wells, there should only one non-zero scaling factor
+                if (scale > 0.) {
+                    fractions[p] /= scale;
+                } else {
+                    // this should only happens to injection wells
+                    fractions[p] = 0.;
+                }
             }
 
             // convert the fractions to be Q_p / G_total to calculate the phase rates
@@ -1648,5 +1663,37 @@ namespace Opm
                 well_state.bhp()[index_of_well_] = well_state.segPress()[seg + top_segment_location];
             }
         }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::scalingFactor(const int comp_idx) const
+    {
+        const double* distr = well_controls_get_current_distr(well_controls_);
+
+        if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
+            // if (has_solvent && phaseIdx == contiSolventEqIdx )
+            //        OPM_THROW(std::runtime_error, "RESERVOIR_RATE control in combination with solvent is not implemented");
+            return distr[comp_idx];
+        }
+
+        const PhaseUsage& pu = phaseUsage();
+
+        if (active()[Water] && pu.phase_pos[Water] == comp_idx)
+            return 1.0;
+        if (active()[Oil] && pu.phase_pos[Oil] == comp_idx)
+            return 1.0;
+        if (active()[Gas] && pu.phase_pos[Gas] == comp_idx)
+            return 0.01;
+        // if (has_solvent && phaseIdx == contiSolventEqIdx )
+        //     return 0.01;
+
+        // we should not come this far
+        assert(false);
+        return 1.0;
     }
 }

@@ -43,26 +43,31 @@ namespace Opm
         using typename Base::FluidSystem;
         using typename Base::ModelParameters;
         using typename Base::MaterialLaw;
+        using typename Base::BlackoilIndices;
+
+        /// the number of reservior equations
+        using Base::numEq;
 
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
         // TODO: should I begin with the old primary variable or the new fraction based variable systems?
         // Let us begin with the new one
         // TODO: we need to have order for the primary variables and also the order for the well equations.
         // sometimes, they are similar, while sometimes, they can have very different forms.
-        enum WellVariablePositions {
-            GTotal = 0,
-            WFrac = 1,
-            GFrac = 2,
-            SPres = 3
-        };
+
+        // TODO: the following system looks not rather flexible. Looking into all kinds of possibilities
+        // TODO: gas is always there? how about oil water case?
+        // Is it gas oil two phase case?
+        static const bool gasoil = numEq == 2 && (BlackoilIndices::compositionSwitchIdx >= 0);
+        static const int GTotal = 0;
+        static const int WFrac = gasoil? -1000: 1;
+        static const int GFrac = gasoil? 1 : 2;
+        static const int SPres = gasoil? 2 : 3;
 
         ///  the number of well equations // TODO: it should have a more general strategy for it
-        static const int numWellEq = 4;
+        static const int numWellEq = GET_PROP_VALUE(TypeTag, EnablePolymer)? numEq : numEq + 1;
 
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
-        /// the number of reservior equations
-        using Base::numEq;
 
         /// the matrix and vector types for the reservoir
         using typename Base::Mat;
@@ -331,6 +336,8 @@ namespace Opm
         void processFractions(const int seg) const;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
+
+        double scalingFactor(const int comp_idx) const;
     };
 
     // obtain y = D^-1 * x
