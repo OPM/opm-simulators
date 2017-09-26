@@ -42,11 +42,10 @@ if(SIBLING_SEARCH AND NOT opm-common_DIR)
       set(opm-common_DIR "${_parent_full_dir}/opm-common}")
     endif()
   endif()
-else()
-  if(NOT IS_DIRECTORY ${opm-common_DIR})
-    message(WARNING "Value ${opm-common_DIR} passed to variable"
-      " opm-common_DIR is not a directory")
-  endif()
+endif()
+if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
+  message(WARNING "Value ${opm-common_DIR} passed to variable"
+    " opm-common_DIR is not a directory")
 endif()
 
 find_package(opm-common REQUIRED)
