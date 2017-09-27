@@ -249,7 +249,7 @@ namespace Opm
                         const int old_top_segment_location = prev_well_state.topSegmentLocation(old_index_well);
                         const int new_top_segmnet_location = topSegmentLocation(new_index_well);
                         int number_of_segment = 0;
-                        if (new_index_well == top_segment_loc_.size() - 1) {
+                        if (new_index_well == int(top_segment_loc_.size()) - 1) {
                             number_of_segment = nseg_ - new_top_segmnet_location;
                         } else {
                             number_of_segment = topSegmentLocation(new_index_well + 1) - new_top_segmnet_location;

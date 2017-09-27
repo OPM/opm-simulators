@@ -366,9 +366,9 @@ namespace Opm
                 rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
             }
 
-            const int table_id = well_controls_iget_vfp(well_controls_, current);
-            const double& thp    = well_controls_iget_target(well_controls_, current);
-            const double& alq    = well_controls_iget_alq(well_controls_, current);
+            // const int table_id = well_controls_iget_vfp(well_controls_, current);
+            // const double& thp    = well_controls_iget_target(well_controls_, current);
+            // const double& alq    = well_controls_iget_alq(well_controls_, current);
 
             // TODO: implement calculateBhpFromThp function
             // well_state.bhp()[index_of_well_] = calculateBhpFromThp(rates, current);
