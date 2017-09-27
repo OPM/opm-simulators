@@ -23,6 +23,7 @@
 #define OPM_MSWELLHELPERS_HEADER_INCLUDED
 
 #include <dune/istl/solvers.hh>
+#include <cmath>
 
 namespace Opm {
 
@@ -63,6 +64,70 @@ namespace mswellhelpers
 
         return y;
     }
+
+
+
+
+
+    static double haalandFormular(const double re, const double diameter, const double roughness)
+    {
+        const double value = std::exp(10. / 9. * std::log(roughness / (3.7 * diameter)) );
+        return -3.6 * std::log10( 6.9 / re + value);
+    }
+
+
+
+
+
+    static double calculateFrictionFactor(const double cr, const double area, const double diameter,
+                                          const double w, const double roughness, const double mu)
+    {
+
+        double f = 0.;
+        // Reynolds number
+        const double re = cr * diameter * w / (area * mu);
+
+        assert(re > 0.0);
+
+        const double re_value1 = 200.;
+        const double re_value2 = 4000.;
+
+        if (re < re_value1) {
+            f = 16. / re;
+        } else if (re > re_value2){
+            f = haalandFormular(re, diameter, roughness);
+        } else { // in between
+            const double f1 = 16. / re_value1;
+            const double f2 = haalandFormular(re_value2, diameter, roughness);
+
+            f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
+        }
+        return f;
+    }
+
+
+
+
+
+
+    // TODO: not sure whether mu, density and mass flow rate should be Evaluation
+    // only use its value first
+    // cr and cf are unit conversion factors
+    // l is the segment length
+    // area is the segment cross area
+    // diameter is the segment inner diameter
+    // w is mass flow rate through the segment
+    // roughness is the absolute roughness
+    // mu is the average phase viscosity
+    double frictionPressureLoss(const double cf, const double cr, const double l,
+                                const double diameter, const double area, const double density,
+                                const double w, const double roughness, const double mu)
+    {
+        const double f = calculateFrictionFactor(cr, area, diameter, w, roughness, mu);
+        return cf * f * l * w * w / (area * area * diameter * density);
+    }
+
+
 
 
 } // namespace mswellhelpers

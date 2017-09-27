@@ -333,7 +333,17 @@ namespace Opm
 
         double scalingFactor(const int comp_idx) const;
 
+        // TODO: the value should not be hard-coded, while has not found a correct way to handle it
+        double cf() const
+        {
+            return 2.679e-15;
+        }
 
+        double cr() const
+        {
+            return 0.01158;
+        }
+    };
 
 }
 
