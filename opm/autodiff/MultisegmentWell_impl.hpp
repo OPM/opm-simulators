@@ -19,7 +19,7 @@
 */
 
 
-
+#include <opm/autodiff/MSWellHelpers.hpp>
 
 namespace Opm
 {
@@ -574,7 +574,7 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
-        BVectorWell invDBx = invDX(duneD_, Bx);
+        BVectorWell invDBx = mswellhelpers::invDX(duneD_, Bx);
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -590,7 +590,7 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-        BVectorWell invDrw = invDX(duneD_, resWell_);
+        BVectorWell invDrw = mswellhelpers::invDX(duneD_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }
@@ -713,7 +713,7 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        xw = invDX(duneD_, resWell);
+        xw = mswellhelpers::invDX(duneD_, resWell);
     }
 
 
@@ -728,7 +728,7 @@ namespace Opm
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = invDX(duneD_, resWell_);
+        const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
 
         updateWellState(dx_well, param, well_state);
     }

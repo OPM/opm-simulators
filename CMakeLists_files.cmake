@@ -252,6 +252,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/StandardWell_impl.hpp
   opm/autodiff/MultisegmentWell.hpp
   opm/autodiff/MultisegmentWell_impl.hpp
+  opm/autodiff/MSWellHelpers.hpp
   opm/autodiff/BlackoilWellModel.hpp
   opm/autodiff/BlackoilWellModel_impl.hpp
   opm/autodiff/StandardWellsSolvent.hpp

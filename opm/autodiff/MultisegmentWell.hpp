@@ -25,8 +25,6 @@
 
 #include <opm/autodiff/WellInterface.hpp>
 
-#include <dune/istl/solvers.hh>
-
 namespace Opm
 {
 
@@ -334,42 +332,8 @@ namespace Opm
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
-    };
 
-    // obtain y = D^-1 * x
-    template<typename MatrixType, typename VectorType>
-    VectorType
-    invDX(const MatrixType& D, VectorType x)
-    {
-        // the function will change the value of x, so we should not use reference of x here.
 
-        // TODO: store some of the following information to avoid to call it again and again for
-        // efficiency improvement.
-        // Bassically, only the solve / apply step is different.
-
-        VectorType y(x.size());
-        y = 0.;
-
-        Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
-
-        // Sequential incomplete LU decomposition as the preconditioner
-        Dune::SeqILU0<MatrixType, VectorType, VectorType> preconditioner(D, 1.0);
-
-        // Preconditioned BICGSTAB solver
-        Dune::BiCGSTABSolver<VectorType> linsolver(linearOperator,
-                                                   preconditioner,
-                                                   1.e-6, // desired residual reduction factor
-                                                   50, // maximum number of iterations
-                                                   0); // verbosity of the solver
-
-        // Object storing some statistics about the solving process
-        Dune::InverseOperatorResult statistics ;
-
-        // Solve
-        linsolver.apply(y, x, statistics );
-
-        return y;
-    }
 
 }
 
