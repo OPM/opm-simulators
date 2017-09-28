@@ -31,8 +31,9 @@ namespace Opm
     : Base(well, time_step, wells)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
+    , perforation_cell_depth_diffs_(number_of_perforations_, 0.0)
     , perforation_cell_pressure_diffs_(number_of_perforations_, 0.0)
-    , segment_perforation_depth_diffs_(number_of_perforations_)
+    , segment_perforation_depth_diffs_(number_of_perforations_, 0.0)
     , segment_comp_initial_(numberOfSegments(), std::vector<double>(numComponents(), 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
     , segment_viscosities_(numberOfSegments(), 0.0)
@@ -69,7 +70,29 @@ namespace Opm
         }
 
         // callcuate the depth difference between perforations and their segments
+        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+            const double segment_depth = segmentSet()[seg].depth();
+            for (const int perf : segment_perforations_[seg]) {
+                // TODO: what kind of depth actually we get from the Wells struct?
+                // TODO: not sure whether to use the one from opm-parser or the one from Wells struct
+                // TODO: use the one from the opm-parser first
+                // TODO: checking wehther the order of the perforation changed or not
+                perf_depth_[perf] = completion_set.get(perf).getCenterDepth();
+                segment_perforation_depth_diffs_[perf] = segment_depth - perf_depth_[perf];
+            }
+        }
 
+        // TODO: should we store the depth of the perforations?
+
+        // calculating the depth difference between the segment and its oulet_segments
+        // for the top segment, we will make its zero unless we find other purpose to use this value
+        for (int seg = 1; seg < numberOfSegments(); ++seg) {
+            const double segment_depth = segmentSet()[seg].depth();
+            const int outlet_segment_number = segmentSet()[seg].outletSegment();
+            const Segment& outlet_segment = segmentSet()[numberToLocation(outlet_segment_number)];
+            const double outlet_depth = outlet_segment.depth();
+            segment_depth_diffs_[seg] = segment_depth - outlet_depth;
+        }
     }
 
 
@@ -100,14 +123,10 @@ namespace Opm
         // specified perforation depth
         initMatrixAndVectors(num_cells);
 
-        // calculating the depth difference between the segment and its oulet_segments
-        // for the top segment, we will make its zero unless we find other purpose to use this value
-        for (int seg = 1; seg < numberOfSegments(); ++seg) {
-            const double segment_depth = segmentSet()[seg].depth();
-            const int outlet_segment_number = segmentSet()[seg].outletSegment();
-            const Segment& outlet_segment = segmentSet()[numberToLocation(outlet_segment_number)];
-            const double outlet_depth = outlet_segment.depth();
-            segment_depth_diffs_[seg] = segment_depth - outlet_depth;
+        // calcuate the depth difference between the perforations and the perforated grid block
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+            const int cell_idx = well_cells_[perf];
+            perforation_cell_depth_diffs_[perf] = perf_depth_[perf] - depth_arg[cell_idx];
         }
     }
 
@@ -243,7 +262,7 @@ namespace Opm
 
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term // TODO: without considering the efficiencty factor for now
-            // volume of the semgent
+            // volume of the segment
             {
                 const double volume = segmentSet()[seg].volume();
                 // for each component

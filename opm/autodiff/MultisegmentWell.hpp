@@ -174,6 +174,7 @@ namespace Opm
         using Base::well_efficiency_factor_;
         using Base::gravity_;
         using Base::well_controls_;
+        using Base::perf_depth_;
 
         // protected functions from the Base class
         using Base::active;
@@ -242,6 +243,8 @@ namespace Opm
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
         mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
 
+        // depth difference between perforations and the perforated grid cells
+        std::vector<double> perforation_cell_depth_diffs_;
         // pressure correction due to the different depth of the perforation and
         // center depth of the grid block
         std::vector<double> perforation_cell_pressure_diffs_;
