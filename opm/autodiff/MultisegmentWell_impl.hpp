@@ -25,7 +25,7 @@ namespace Opm
 {
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     MultisegmentWell<TypeTag>::
     MultisegmentWell(const Well* well, const int time_step, const Wells* wells)
     : Base(well, time_step, wells)
@@ -76,7 +76,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     init(const PhaseUsage* phase_usage_arg,
@@ -115,7 +115,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     initMatrixAndVectors(const int num_cells) const
@@ -190,7 +190,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     initPrimaryVariablesEvaluation() const
@@ -208,7 +208,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     assembleWellEq(Simulator& ebosSimulator,
@@ -330,7 +330,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     updateWellStateWithTarget(const int current,
@@ -483,7 +483,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::ConvergenceReport
     MultisegmentWell<TypeTag>::
     getWellConvergence(Simulator& ebosSimulator,
@@ -566,7 +566,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
@@ -586,7 +586,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     apply(BVector& r) const
@@ -601,7 +601,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
@@ -617,7 +617,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
@@ -631,7 +631,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state) const
@@ -706,7 +706,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     recoverSolutionWell(const BVector& x, BVectorWell& xw) const
@@ -722,7 +722,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     solveEqAndUpdateWellState(const ModelParameters& param,
@@ -739,7 +739,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     computePerfCellPressDiffs(const Simulator& ebosSimulator)
@@ -751,7 +751,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     computeInitialComposition()
@@ -769,7 +769,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
@@ -822,7 +822,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     calculateExplicitQuantities(const Simulator& ebosSimulator,
@@ -836,7 +836,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     const SegmentSet&
     MultisegmentWell<TypeTag>::
     segmentSet() const
@@ -848,7 +848,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     int
     MultisegmentWell<TypeTag>::
     numberOfSegments() const
@@ -860,7 +860,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     int
     MultisegmentWell<TypeTag>::
     numberOfPerforations() const
@@ -872,7 +872,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     WellSegment::CompPressureDropEnum
     MultisegmentWell<TypeTag>::
     compPressureDrop() const
@@ -884,7 +884,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     WellSegment::MultiPhaseModelEnum
     MultisegmentWell<TypeTag>::
     multiphaseModel() const
@@ -896,7 +896,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     int
     MultisegmentWell<TypeTag>::
     numberToLocation(const int segment_number) const
@@ -908,7 +908,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     volumeFraction(const int seg, const int comp_idx) const
@@ -947,7 +947,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     volumeFractionScaled(const int seg, const int comp_idx) const
@@ -967,7 +967,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     surfaceVolumeFraction(const int seg, const int comp_idx) const
@@ -987,7 +987,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     computePerfRate(const IntensiveQuantities& int_quants,
@@ -1120,7 +1120,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     extendEval(const Eval& in) const
@@ -1137,7 +1137,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     computeSegmentFluidProperties(const Simulator& ebosSimulator)
@@ -1317,7 +1317,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     getSegmentPressure(const int seg) const
@@ -1329,7 +1329,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     getSegmentRate(const int seg,
@@ -1342,7 +1342,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     getSegmentGTotal(const int seg) const
@@ -1354,7 +1354,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     getMobility(const Simulator& ebosSimulator,
@@ -1420,7 +1420,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     assembleControlEq() const
@@ -1504,7 +1504,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     assemblePressureEq(const int seg) const
@@ -1524,6 +1524,11 @@ namespace Opm
         // we only consider the hydrostatic pressure loss first
         pressure_equation -= getHydroPressureLoss(seg);
 
+        if (frictionalPressureLossConsidered()) {
+            // TODO: deciding the direction of friction later
+            pressure_equation -= getFrictionPressureLoss(seg);
+        }
+
         resWell_[seg][SPres] = pressure_equation.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[seg][seg][SPres][pv_idx] = pressure_equation.derivative(pv_idx + numEq);
@@ -1537,13 +1542,17 @@ namespace Opm
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[seg][outlet_segment_location][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
         }
+
+        if (accelerationalPressureLossConsidered()) {
+            handleAccelerationPressureLoss(seg);
+        }
     }
 
 
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     getHydroPressureLoss(const int seg) const
@@ -1555,7 +1564,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::EvalWell
     MultisegmentWell<TypeTag>::
     getFrictionPressureLoss(const int seg) const
@@ -1570,14 +1579,56 @@ namespace Opm
         const double area = segmentSet()[seg].crossArea();
         const double diameter = segmentSet()[seg].internalDiameter();
 
-        return frictionPressureLoss(length, diameter, area, density, mass_rate, roughness, visc);
+        return mswellhelpers::frictionPressureLoss(length, diameter, area, roughness, density, mass_rate, visc);
     }
 
 
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    handleAccelerationPressureLoss(const int seg) const
+    {
+        // handle the out velcocity head
+        const double area = segmentSet()[seg].crossArea();
+        const EvalWell mass_rate = segment_mass_rates_[seg];
+        const EvalWell density = segment_densities_[seg];
+        const EvalWell out_velocity_head = mswellhelpers::velocityHead(area, mass_rate, density);
+
+        // TODO: the sign is really hard and not sure
+        resWell_[seg][SPres] -= out_velocity_head.value();
+        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+            duneD_[seg][seg][SPres][pv_idx] -= out_velocity_head.derivative(pv_idx + numEq);
+        }
+
+        // calcuate the maximum cross-area among the segment and its inlet segments
+        double max_area = area;
+        for (const int inlet : segment_inlets_[seg]) {
+            const double inlet_area = segmentSet()[seg].crossArea();
+            if (inlet_area > max_area) {
+                max_area = inlet_area;
+            }
+        }
+
+        // handling the velocity head of intlet segments
+        for (const int inlet : segment_inlets_[seg]) {
+            const EvalWell density = segment_densities_[inlet];
+            const EvalWell mass_rate = segment_mass_rates_[inlet];
+            const EvalWell inlet_velocity_head = mswellhelpers::velocityHead(area, mass_rate, density);
+            resWell_[seg][SPres] += inlet_velocity_head.value();
+            for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                duneD_[seg][inlet][SPres][pv_idx] += inlet_velocity_head.derivative(pv_idx + numEq);
+            }
+        }
+    }
+
+
+
+
+
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     processFractions(const int seg) const
@@ -1649,7 +1700,7 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
     updateWellStateFromPrimaryVariables(WellState& well_state) const
@@ -1709,9 +1760,10 @@ namespace Opm
 
 
 
-    template<typename TypeTag>
+    template <typename TypeTag>
     double
-    MultisegmentWell<TypeTag>::scalingFactor(const int comp_idx) const
+    MultisegmentWell<TypeTag>::
+    scalingFactor(const int comp_idx) const
     {
         const double* distr = well_controls_get_current_distr(well_controls_);
 
@@ -1736,4 +1788,30 @@ namespace Opm
         assert(false);
         return 1.0;
     }
+
+
+
+
+
+    template <typename TypeTag>
+    bool
+    MultisegmentWell<TypeTag>::
+    frictionalPressureLossConsidered() const
+    {
+        // HF- and HFA needs to consider frictional pressure loss
+        return (SegmentSet().compPressureDrop() != WellSegment::H__);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    bool
+    MultisegmentWell<TypeTag>::
+    accelerationalPressureLossConsidered() const
+    {
+        return (SegmentSet().compPressureDrop() == WellSegment::HFA);
+    }
+
 }

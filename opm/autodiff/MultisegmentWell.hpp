@@ -335,12 +335,18 @@ namespace Opm
         // frictinal pressure loss
         EvalWell getFrictionPressureLoss(const int seg) const;
 
+        void handleAccelerationPressureLoss(const int seg) const;
+
         // handling the overshooting and undershooting of the fractions
         void processFractions(const int seg) const;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
+
+        bool frictionalPressureLossConsidered() const;
+
+        bool accelerationalPressureLossConsidered() const;
     };
 
 }

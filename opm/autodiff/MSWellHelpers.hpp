@@ -31,7 +31,7 @@ namespace mswellhelpers
 {
 
     // obtain y = D^-1 * x
-    template<typename MatrixType, typename VectorType>
+    template <typename MatrixType, typename VectorType>
     VectorType
     invDX(const MatrixType& D, VectorType x)
     {
@@ -119,15 +119,23 @@ namespace mswellhelpers
     // density is density
     // roughness is the absolute roughness
     // mu is the average phase viscosity
-    template <class ValueType>
-    ValueType frictionPressureLoss(const double l, const double diameter, const double area, const ValueType& density,
-                                   const ValueType& w, const double roughness, const ValueType& mu)
+    template <typename ValueType>
+    ValueType frictionPressureLoss(const double l, const double diameter, const double area, const double roughness,
+                                   const ValueType& density, const ValueType& w, const ValueType& mu)
     {
         const double f = calculateFrictionFactor(area, diameter, w.value(), roughness, mu.value());
         return f * l * w * w / (area * area * diameter * density);
     }
 
 
+
+
+
+    template <typename ValueType>
+    ValueType velocityHead(const double area, const ValueType& mass_rate, const ValueType& density)
+    {
+        return (0.5 * mass_rate * mass_rate / (area * area * density));
+    }
 
 
 } // namespace mswellhelpers
