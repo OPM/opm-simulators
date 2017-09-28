@@ -35,6 +35,7 @@ namespace Opm
     , segment_perforation_depth_diffs_(number_of_perforations_)
     , segment_comp_initial_(numberOfSegments(), std::vector<double>(numComponents(), 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
+    , segment_viscosities_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     {
         // TODO: to see what information we need to process here later.
@@ -1140,6 +1141,10 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeSegmentFluidProperties(const Simulator& ebosSimulator)
     {
+        // TODO: the concept of phases and components are rather confusing in this function.
+        // needs to be addressed sooner or later.
+
+
         // TODO: the phase location is so confusing, double check to make sure they are right
         // do I need the gaspos, oilpos here?
 
@@ -1177,10 +1182,16 @@ namespace Opm
             }
 
             std::vector<EvalWell> b(num_comp, 0.0);
+            // it is the phase viscosities asked for
+            std::vector<EvalWell> visc(number_of_phases_, 0.0);
             const EvalWell seg_pressure = getSegmentPressure(seg);
             if (pu.phase_used[BlackoilPhases::Aqua]) {
-                b[pu.phase_pos[BlackoilPhases::Aqua]] =
+                // TODO: what is the difference between Water and BlackoilPhases::Aqua?
+                const int water_pos = pu.phase_pos[BlackoilPhases::Aqua];
+                b[water_pos] =
                     FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                visc[water_pos] =
+                    FluidSystem::waterPvt().viscosity(pvt_region_index, temperature, seg_pressure);
             }
 
             EvalWell rv(0.0);
@@ -1200,14 +1211,20 @@ namespace Opm
                         }
                         b[gaspos] =
                             FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rv);
+                        visc[gaspos] =
+                            FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, rv);
                     } else { // no oil exists
                         b[gaspos] =
                             FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                        visc[gaspos] =
+                            FluidSystem::gasPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
                     }
                 } else { // no Liquid phase
                     // it is the same with zero mix_s[Oil]
                     b[gaspos] =
                         FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                    visc[gaspos] =
+                        FluidSystem::gasPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
                 }
             }
 
@@ -1228,14 +1245,20 @@ namespace Opm
                         }
                         b[oilpos] =
                             FluidSystem::oilPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rs);
+                        visc[oilpos] =
+                            FluidSystem::oilPvt().viscosity(pvt_region_index, temperature, seg_pressure, rs);
                     } else { // no oil exists
                         b[oilpos] =
                             FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                        visc[oilpos] =
+                            FluidSystem::oilPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
                     }
                 } else { // no Liquid phase
                     // it is the same with zero mix_s[Oil]
                     b[oilpos] =
                         FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
+                    visc[oilpos] =
+                        FluidSystem::oilPvt().saturatedViscosity(pvt_region_index, temperature, seg_pressure);
                 }
             }
 
@@ -1254,6 +1277,14 @@ namespace Opm
             EvalWell volrat(0.0);
             for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
                 volrat += mix[comp_idx] / b[comp_idx];
+            }
+
+            segment_viscosities_[seg] = 0.;
+            // calculate the average viscosity
+            for (int p = 0; p < number_of_phases_; ++p) {
+                // const EvalWell phase_fraction = mix[p] / b[p] / volrat;
+                // segment_viscosities_[seg] += visc[p] * phase_fraction;
+                segment_viscosities_[seg] += visc[p] * mix[p];
             }
 
             std::vector<double> surf_dens(num_comp);

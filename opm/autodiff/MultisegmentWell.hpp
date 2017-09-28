@@ -259,6 +259,9 @@ namespace Opm
         // we should not have this member variable
         std::vector<EvalWell> segment_densities_;
 
+        // the viscosity of the segment 
+        std::vector<EvalWell> segment_viscosities_;
+
         std::vector<double> segment_depth_diffs_;
 
         void initMatrixAndVectors(const int num_cells) const;
