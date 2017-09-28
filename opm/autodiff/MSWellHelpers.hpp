@@ -79,13 +79,13 @@ namespace mswellhelpers
 
 
 
-    static double calculateFrictionFactor(const double cr, const double area, const double diameter,
+    static double calculateFrictionFactor(const double area, const double diameter,
                                           const double w, const double roughness, const double mu)
     {
 
         double f = 0.;
         // Reynolds number
-        const double re = cr * diameter * w / (area * mu);
+        const double re = diameter * w / (area * mu);
 
         assert(re > 0.0);
 
@@ -111,20 +111,19 @@ namespace mswellhelpers
 
 
     // TODO: not sure whether mu, density and mass flow rate should be Evaluation
-    // only use its value first
-    // cr and cf are unit conversion factors
+    // only use its value for now.
     // l is the segment length
     // area is the segment cross area
     // diameter is the segment inner diameter
     // w is mass flow rate through the segment
+    // density is density
     // roughness is the absolute roughness
     // mu is the average phase viscosity
-    double frictionPressureLoss(const double cf, const double cr, const double l,
-                                const double diameter, const double area, const double density,
+    double frictionPressureLoss(const double l, const double diameter, const double area, const double density,
                                 const double w, const double roughness, const double mu)
     {
-        const double f = calculateFrictionFactor(cr, area, diameter, w, roughness, mu);
-        return cf * f * l * w * w / (area * area * diameter * density);
+        const double f = calculateFrictionFactor(area, diameter, w, roughness, mu);
+        return f * l * w * w / (area * area * diameter * density);
     }
 
 

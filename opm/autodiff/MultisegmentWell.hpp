@@ -259,7 +259,7 @@ namespace Opm
         // we should not have this member variable
         std::vector<EvalWell> segment_densities_;
 
-        // the viscosity of the segment 
+        // the viscosity of the segments
         std::vector<EvalWell> segment_viscosities_;
 
         std::vector<double> segment_depth_diffs_;
@@ -329,23 +329,15 @@ namespace Opm
         // hytrostatic pressure loss
         EvalWell getHydroPressureLoss(const int seg) const;
 
+        // frictinal pressure loss
+        EvalWell getFrictionPressureLoss(const int seg) const;
+
         // handling the overshooting and undershooting of the fractions
         void processFractions(const int seg) const;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
 
         double scalingFactor(const int comp_idx) const;
-
-        // TODO: the value should not be hard-coded, while has not found a correct way to handle it
-        double cf() const
-        {
-            return 2.679e-15;
-        }
-
-        double cr() const
-        {
-            return 0.01158;
-        }
     };
 
 }
