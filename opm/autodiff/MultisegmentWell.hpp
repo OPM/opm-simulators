@@ -262,6 +262,9 @@ namespace Opm
         // the viscosity of the segments
         std::vector<EvalWell> segment_viscosities_;
 
+        // the mass rate of the segments
+        std::vector<EvalWell> segment_mass_rates_;
+
         std::vector<double> segment_depth_diffs_;
 
         void initMatrixAndVectors(const int num_cells) const;

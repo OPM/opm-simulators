@@ -85,7 +85,7 @@ namespace mswellhelpers
 
         double f = 0.;
         // Reynolds number
-        const double re = diameter * w / (area * mu);
+        const double re = std::abs(diameter * w / (area * mu));
 
         assert(re > 0.0);
 
@@ -119,10 +119,11 @@ namespace mswellhelpers
     // density is density
     // roughness is the absolute roughness
     // mu is the average phase viscosity
-    double frictionPressureLoss(const double l, const double diameter, const double area, const double density,
-                                const double w, const double roughness, const double mu)
+    template <class ValueType>
+    ValueType frictionPressureLoss(const double l, const double diameter, const double area, const ValueType& density,
+                                   const ValueType& w, const double roughness, const ValueType& mu)
     {
-        const double f = calculateFrictionFactor(area, diameter, w, roughness, mu);
+        const double f = calculateFrictionFactor(area, diameter, w.value(), roughness, mu.value());
         return f * l * w * w / (area * area * diameter * density);
     }
 

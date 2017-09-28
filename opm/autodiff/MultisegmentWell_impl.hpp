@@ -36,6 +36,7 @@ namespace Opm
     , segment_comp_initial_(numberOfSegments(), std::vector<double>(numComponents(), 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
     , segment_viscosities_(numberOfSegments(), 0.0)
+    , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     {
         // TODO: to see what information we need to process here later.
@@ -1172,6 +1173,13 @@ namespace Opm
             pvt_region_index = fs.pvtRegionIndex();
         }
 
+        std::vector<double> surf_dens(number_of_phases_);
+        // Surface density.
+        // not using num_comp here is because solvent can be component
+        for (int phase = 0; phase < number_of_phases_; ++phase) {
+            surf_dens[phase] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx(phase), pvt_region_index );
+        }
+
         const int num_comp = numComponents();
         const Opm::PhaseUsage& pu = phaseUsage();
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -1287,13 +1295,6 @@ namespace Opm
                 segment_viscosities_[seg] += visc[p] * mix[p];
             }
 
-            std::vector<double> surf_dens(num_comp);
-            // Surface density.
-            // not using num_comp here is because solvent can be component
-            for (int phase = 0; phase < pu.num_phases; ++phase) {
-                surf_dens[phase] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx(phase), pvt_region_index );
-            }
-
 
             // TODO: not handling solvent for now.
 
@@ -1302,6 +1303,13 @@ namespace Opm
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
             }
             segment_densities_[seg] = density / volrat;
+
+            // calculate the mass rates
+            segment_mass_rates_[seg] = 0.;
+            for (int phase = 0; phase < number_of_phases_; ++phase) {
+                const EvalWell rate = getSegmentRate(seg, phase);
+                segment_mass_rates_[seg] += rate * surf_dens[phase];
+            }
         }
     }
 
@@ -1541,6 +1549,28 @@ namespace Opm
     getHydroPressureLoss(const int seg) const
     {
         return segment_densities_[seg] * gravity_ * segment_depth_diffs_[seg];
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    typename MultisegmentWell<TypeTag>::EvalWell
+    MultisegmentWell<TypeTag>::
+    getFrictionPressureLoss(const int seg) const
+    {
+        const EvalWell mass_rate = segment_mass_rates_[seg];
+        const EvalWell density = segment_densities_[seg];
+        const EvalWell visc = segment_viscosities_[seg];
+        const int outlet_segment_location = numberToLocation(segmentSet()[seg].outletSegment());
+        const double length = segmentSet()[seg].totalLength() - segmentSet()[outlet_segment_location].totalLength();
+        assert(length > 0.);
+        const double roughness = segmentSet()[seg].roughness();
+        const double area = segmentSet()[seg].crossArea();
+        const double diameter = segmentSet()[seg].internalDiameter();
+
+        return frictionPressureLoss(length, diameter, area, density, mass_rate, roughness, visc);
     }
 
 
