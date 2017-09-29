@@ -94,6 +94,53 @@ SET_BOOL_PROP(EclFlowProblem, EnableSwatinit, false);
 }}
 
 namespace Opm {
+namespace Detail
+{
+template<class C, class D = typename C::value_type>
+struct CopyValuesHandle
+{
+public:
+    using DataType = D;
+
+    CopyValuesHandle(C& cont)
+        : cont_(cont)
+    {}
+    bool contains(int dim,int codim)const
+    {
+        return codim==0;
+    }
+    bool fixedsize(int dim,int codim)const
+    {
+        return true;
+    }
+    template<class E>
+    std::size_t size(const E& e) const
+    {
+        return 1;
+    }
+    template<class B, class E>
+    void gather(B& buff, const E& e) const
+    {
+        buff.write(cont_[e.index()]);
+    }
+    template<class B, class E>
+    void scatter(B& buff, const E& e, int s)
+    {
+        buff.read(cont_[e.index()]);
+    }
+private:
+     C& cont_;
+};
+
+template<class T, class A>
+CopyValuesHandle<Dune::BlockVector<Ewoms::BlackOilPrimaryVariables<T>,A>, Dune::FieldVector<double,GET_PROP_VALUE(T, NumEq)> > makeCopyHandle(Dune::BlockVector<Ewoms::BlackOilPrimaryVariables<T>,A>& container)
+{
+    using Handle =
+        CopyValuesHandle<Dune::BlockVector<Ewoms::BlackOilPrimaryVariables<T>,A>,
+                         Dune::FieldVector<double,GET_PROP_VALUE(T, NumEq)> >;
+    return Handle(container);
+}
+} // end namespace Detail
     /// A model implementation for three-phase black oil.
     ///
     /// The simulator is capable of handling three-phase problems
@@ -214,6 +261,8 @@ namespace Opm {
             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
+            auto copyHandle = Detail::makeCopyHandle(ebosSimulator_.model().solution(0));
+            grid_.communicate(copyHandle, Dune::InteriorBorder_All_Interface, Dune::ForwardCommunication);
         }
 
 
