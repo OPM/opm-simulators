@@ -70,6 +70,7 @@ namespace Opm
         }
 
         // callcuate the depth difference between perforations and their segments
+        perf_depth_.resize(number_of_perforations_, 0.);
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             const double segment_depth = segmentSet()[seg].depth();
             for (const int perf : segment_perforations_[seg]) {
@@ -333,7 +334,9 @@ namespace Opm
                         }
                     }
                 }
-                // should save the perforation pressure and perforation rates?
+                // TODO: we should save the perforation pressure and preforation rates?
+                // we do not use it in the simulation for now, while we might need them if
+                // we handle the pressure in SEG mode.
             }
 
             // the fourth dequation, the pressure drop equation
@@ -1668,7 +1671,7 @@ namespace Opm
         // calcuate the maximum cross-area among the segment and its inlet segments
         double max_area = area;
         for (const int inlet : segment_inlets_[seg]) {
-            const double inlet_area = segmentSet()[seg].crossArea();
+            const double inlet_area = segmentSet()[inlet].crossArea();
             if (inlet_area > max_area) {
                 max_area = inlet_area;
             }
@@ -1861,7 +1864,7 @@ namespace Opm
     frictionalPressureLossConsidered() const
     {
         // HF- and HFA needs to consider frictional pressure loss
-        return (SegmentSet().compPressureDrop() != WellSegment::H__);
+        return (segmentSet().compPressureDrop() != WellSegment::H__);
     }
 
 
@@ -1873,7 +1876,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     accelerationalPressureLossConsidered() const
     {
-        return (SegmentSet().compPressureDrop() == WellSegment::HFA);
+        return (segmentSet().compPressureDrop() == WellSegment::HFA);
     }
 
 }
