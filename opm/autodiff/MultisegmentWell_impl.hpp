@@ -763,7 +763,50 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computePerfCellPressDiffs(const Simulator& ebosSimulator)
     {
-        // TODO: will implement later
+        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+
+            std::vector<double> kr(number_of_phases_, 0.0);
+            std::vector<double> density(number_of_phases_, 0.0);
+
+            const int cell_idx = well_cells_[perf];
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& fs = intQuants.fluidState();
+
+            double sum_kr = 0.;
+
+            const PhaseUsage& pu = phaseUsage();
+            if (pu.phase_used[BlackoilPhases::Aqua]) {
+                const int water_pos = pu.phase_pos[BlackoilPhases::Aqua];
+                kr[water_pos] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value();
+                sum_kr += kr[water_pos];
+                density[water_pos] = fs.density(FluidSystem::waterPhaseIdx).value();
+            }
+
+            if (pu.phase_used[BlackoilPhases::Liquid]) {
+                const int oil_pos = pu.phase_pos[BlackoilPhases::Liquid];
+                kr[oil_pos] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
+                sum_kr += kr[oil_pos];
+                density[oil_pos] = fs.density(FluidSystem::oilPhaseIdx).value();
+            }
+
+            if (pu.phase_used[BlackoilPhases::Vapour]) {
+                const int gas_pos = pu.phase_pos[BlackoilPhases::Vapour];
+                kr[gas_pos] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value();
+                sum_kr += kr[gas_pos];
+                density[gas_pos] = fs.density(FluidSystem::gasPhaseIdx).value();
+            }
+
+            assert(sum_kr != 0.);
+
+            // calculate the average density
+            double average_density = 0.;
+            for (int p = 0; p < number_of_phases_; ++p) {
+                average_density += kr[p] * density[p];
+            }
+            average_density /= sum_kr;
+
+            perforation_cell_pressure_diffs_[perf] = gravity_ * average_density * perforation_cell_depth_diffs_[perf];
+        }
     }
 
 
