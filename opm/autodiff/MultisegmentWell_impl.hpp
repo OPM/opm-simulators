@@ -1644,7 +1644,9 @@ namespace Opm
         const double area = segmentSet()[seg].crossArea();
         const double diameter = segmentSet()[seg].internalDiameter();
 
-        return mswellhelpers::frictionPressureLoss(length, diameter, area, roughness, density, mass_rate, visc);
+        const double sign = mass_rate < 0. ? 1.0 : - 1.0;
+
+        return sign * mswellhelpers::frictionPressureLoss(length, diameter, area, roughness, density, mass_rate, visc);
     }
 
 
