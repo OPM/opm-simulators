@@ -292,8 +292,9 @@ public:
             solver_timer.start();
 
             const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
+            extractLegacyCellPvtRegionIndex_();
             WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,
-                                 rateConverter_, terminal_output_, timer.currentStepNum());
+                                 rateConverter_, terminal_output_, timer.currentStepNum(), legacyCellPvtRegionIdx_);
 
             auto solver = createSolver(well_model);
 
@@ -542,6 +543,9 @@ protected:
             {
                 WellControls* ctrl = wells->ctrls[*rp];
                 const bool is_producer = wells->type[*rp] == PRODUCER;
+                const int well_cell_top = wells->well_cells[wells->well_connpos[*rp]];
+                const auto& eclProblem = ebosSimulator_.problem();
+                const int pvtreg = eclProblem.pvtRegionIndex(well_cell_top);
 
                 // RESV control mode, all wells
                 {
@@ -563,7 +567,7 @@ protected:
                         }
 
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
-                        rateConverter_.calcCoeff(prates, fipreg, distr);
+                        rateConverter_.calcCoeff(fipreg, pvtreg, distr);
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
                     }
@@ -585,7 +589,7 @@ protected:
                             SimFIBODetails::historyRates(pu, p, hrates);
 
                             const int fipreg = 0; // Hack.  Ignore FIP regions.
-                            rateConverter_.calcCoeff(hrates, fipreg, distr);
+                            rateConverter_.calcCoeff(fipreg, pvtreg, distr);
 
                             // WCONHIST/RESV target is sum of all
                             // observed phase rates translated to
@@ -978,11 +982,8 @@ protected:
     }
 
     RateConverterType createRateConverter_() {
-        extractLegacyCellPvtRegionIndex_();
         RateConverterType rate_converter(phaseUsage_,
-                                         legacyCellPvtRegionIdx_.data(),
-                                         AutoDiffGrid::numCells(grid()),
-                                         std::vector<int>(AutoDiffGrid::numCells(grid()), 0));
+                                         std::vector<int>(AutoDiffGrid::numCells(grid()), 0)); // FIP = 0
         return rate_converter;
     }
 
