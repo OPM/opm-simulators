@@ -31,9 +31,9 @@ namespace Opm
     : Base(well, time_step, wells)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
-    , perforation_cell_depth_diffs_(number_of_perforations_, 0.0)
-    , perforation_cell_pressure_diffs_(number_of_perforations_, 0.0)
-    , segment_perforation_depth_diffs_(number_of_perforations_, 0.0)
+    , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
+    , cell_perforation_pressure_diffs_(number_of_perforations_, 0.0)
+    , perforation_segment_depth_diffs_(number_of_perforations_, 0.0)
     , segment_comp_initial_(numberOfSegments(), std::vector<double>(numComponents(), 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
     , segment_viscosities_(numberOfSegments(), 0.0)
@@ -79,7 +79,7 @@ namespace Opm
                 // TODO: use the one from the opm-parser first
                 // TODO: checking wehther the order of the perforation changed or not
                 perf_depth_[perf] = completion_set.get(perf).getCenterDepth();
-                segment_perforation_depth_diffs_[perf] = segment_depth - perf_depth_[perf];
+                perforation_segment_depth_diffs_[perf] = perf_depth_[perf] - segment_depth;
             }
         }
 
@@ -127,7 +127,7 @@ namespace Opm
         // calcuate the depth difference between the perforations and the perforated grid block
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
-            perforation_cell_depth_diffs_[perf] = perf_depth_[perf] - depth_arg[cell_idx];
+            cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - perf_depth_[perf];
         }
     }
 
@@ -299,7 +299,7 @@ namespace Opm
                 std::vector<EvalWell> mob(num_comp, 0.0);
                 getMobility(ebosSimulator, perf, mob);
                 std::vector<EvalWell> cq_s(num_comp, 0.0);
-                computePerfRate(int_quants, mob, seg, well_index_[perf], seg_pressure, allow_cf, cq_s);
+                computePerfRate(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s);
 
                 for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
@@ -808,7 +808,7 @@ namespace Opm
             }
             average_density /= sum_kr;
 
-            perforation_cell_pressure_diffs_[perf] = gravity_ * average_density * perforation_cell_depth_diffs_[perf];
+            cell_perforation_pressure_diffs_[perf] = gravity_ * average_density * cell_perforation_depth_diffs_[perf];
         }
     }
 
@@ -1058,7 +1058,7 @@ namespace Opm
     computePerfRate(const IntensiveQuantities& int_quants,
                     const std::vector<EvalWell>& mob_perfcells,
                     const int seg,
-                    const double well_index,
+                    const int perf,
                     const EvalWell& segment_pressure,
                     const bool& allow_cf,
                     std::vector<EvalWell>& cq_s) const
@@ -1090,9 +1090,14 @@ namespace Opm
         //     b_perfcells[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
         // }
 
+        // pressure difference between the segment and the perforation
+        const EvalWell perf_seg_press_diff = gravity_ * segment_densities_[seg] * perforation_segment_depth_diffs_[seg];
+        // pressure difference between the perforation and the grid cell
+        const double cell_perf_press_diff = cell_perforation_pressure_diffs_[perf];
+
         // Pressure drawdown (also used to determine direction of flow)
-        // TODO: not considering the two pressure difference for now. Trying to finish the framework first.
-        const EvalWell drawdown = pressure_cell - segment_pressure;
+        // TODO: not sure about the sign of the seg_perf_press_diff, not tested.
+        const EvalWell drawdown = (pressure_cell + cell_perf_press_diff) - (segment_pressure + perf_seg_press_diff);
 
         const Opm::PhaseUsage& pu = phaseUsage();
 
@@ -1105,7 +1110,7 @@ namespace Opm
 
             // compute component volumetric rates at standard conditions
             for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-                const EvalWell cq_p = - well_index * (mob_perfcells[comp_idx] * drawdown);
+                const EvalWell cq_p = - well_index_[perf] * (mob_perfcells[comp_idx] * drawdown);
                 cq_s[comp_idx] = b_perfcells[comp_idx] * cq_p;
             }
 
@@ -1130,7 +1135,7 @@ namespace Opm
             }
 
             // injection perforations total volume rates
-            const EvalWell cqt_i = - well_index * (total_mob * drawdown);
+            const EvalWell cqt_i = - well_index_[perf] * (total_mob * drawdown);
 
             // compute volume ratio between connection and at standard conditions
             EvalWell volume_ratio = 0.0;

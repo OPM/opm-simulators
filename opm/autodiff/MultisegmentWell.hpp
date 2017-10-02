@@ -244,15 +244,15 @@ namespace Opm
         mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
 
         // depth difference between perforations and the perforated grid cells
-        std::vector<double> perforation_cell_depth_diffs_;
+        std::vector<double> cell_perforation_depth_diffs_;
         // pressure correction due to the different depth of the perforation and
         // center depth of the grid block
-        std::vector<double> perforation_cell_pressure_diffs_;
+        std::vector<double> cell_perforation_pressure_diffs_;
 
         // depth difference between the segment and the peforation
         // or in another way, the depth difference between the perforation and
         // the segment the perforation belongs to
-        std::vector<double> segment_perforation_depth_diffs_;
+        std::vector<double> perforation_segment_depth_diffs_;
 
         // the intial component compistion of segments
         std::vector<std::vector<double> > segment_comp_initial_;
@@ -304,7 +304,7 @@ namespace Opm
         void computePerfRate(const IntensiveQuantities& int_quants,
                              const std::vector<EvalWell>& mob_perfcells,
                              const int seg,
-                             const double well_index,
+                             const int perf,
                              const EvalWell& segment_pressure,
                              const bool& allow_cf,
                              std::vector<EvalWell>& cq_s) const;
