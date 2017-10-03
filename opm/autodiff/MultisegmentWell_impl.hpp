@@ -1360,11 +1360,9 @@ namespace Opm
             segment_viscosities_[seg] = 0.;
             // calculate the average viscosity
             for (int p = 0; p < number_of_phases_; ++p) {
-                // const EvalWell phase_fraction = mix[p] / b[p] / volrat;
-                // segment_viscosities_[seg] += visc[p] * phase_fraction;
-                segment_viscosities_[seg] += visc[p] * mix[p];
+                const EvalWell phase_fraction = mix[p] / b[p] / volrat;
+                segment_viscosities_[seg] += visc[p] * phase_fraction;
             }
-
 
             // TODO: not handling solvent for now.
 
@@ -1579,12 +1577,6 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     assemblePressureEq(const int seg) const
     {
-        // TODO: currently, we only handle the hydrostatic pressure difference.
-        // We need to add the friction pressure loss and also the acceleration pressure loss
-        // with the acceleration pressure loss, there will be inlets flow rates (maybe alos the oulet flow)
-        // not sure whether to handle them implicitly or explicitly
-        // TODO: we can try to handle them explicitly first, if it does not work, we can handle them
-
         assert(seg != 0); // not top segment
 
         // for top segment, the well control equation will be used.
@@ -1595,7 +1587,6 @@ namespace Opm
         pressure_equation -= getHydroPressureLoss(seg);
 
         if (frictionalPressureLossConsidered()) {
-            // TODO: deciding the direction of friction later
             pressure_equation -= getFrictionPressureLoss(seg);
         }
 

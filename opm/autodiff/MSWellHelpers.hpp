@@ -71,8 +71,12 @@ namespace mswellhelpers
 
     static double haalandFormular(const double re, const double diameter, const double roughness)
     {
-        const double value = std::exp(10. / 9. * std::log(roughness / (3.7 * diameter)) );
-        return -3.6 * std::log10( 6.9 / re + value);
+        const double value = -3.6 * std::log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
+
+        // sqrt(1/f) should be non-positive
+        assert(value >= 0.0);
+
+        return 1. / (value * value);
     }
 
 
@@ -110,8 +114,7 @@ namespace mswellhelpers
 
 
 
-    // TODO: not sure whether mu, density and mass flow rate should be Evaluation
-    // only use its value for now.
+    // calculating the friction pressure loss
     // l is the segment length
     // area is the segment cross area
     // diameter is the segment inner diameter
@@ -124,7 +127,8 @@ namespace mswellhelpers
                                    const ValueType& density, const ValueType& w, const ValueType& mu)
     {
         const double f = calculateFrictionFactor(area, diameter, w.value(), roughness, mu.value());
-        return f * l * w * w / (area * area * diameter * density);
+        // TODO: a factor of 2 needs to be here based on the dimensional analysis
+        return 2. * f * l * w * w / (area * area * diameter * density);
     }
 
 
