@@ -71,25 +71,25 @@ namespace Opm {
             scaledEpsInfo_[c].extractScaled(eclState, epsGridProperties, cartIdx);
 
             // SGU <= 1.0 - SWL
-            if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)+tolerance) {
+            if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl + tolerance)) {
                 const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGU exceed 1.0 - SWL";
                 OpmLog::warning(tag, msg);
             }
             
             // SGL <= 1.0 - SWU
-            if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)+tolerance) {
+            if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu + tolerance)) {
                 const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL exceed 1.0 - SWU";
                 OpmLog::warning(tag, msg);
             }
 
             if (deck.hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
                 // Mobilility check.
-                if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0+tolerance) {
+		    if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= (1.0 + tolerance)) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";
                     OpmLog::warning(tag, msg);
                 }
 
-                if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0+tolerance) {
+            if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= (1.0 + tolerance)) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR + SGCR + SWL exceed 1.0";
                     OpmLog::warning(tag, msg);
                 }
