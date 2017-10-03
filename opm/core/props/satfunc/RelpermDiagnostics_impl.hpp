@@ -99,11 +99,6 @@ namespace Opm {
                     OpmLog::warning(tag, msg);
                 }
 
-                if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SWCR > SOWCR";
-                    OpmLog::warning(tag, msg);
-                }
-            
                 if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR > SWU";
                     OpmLog::warning(tag, msg);
@@ -118,11 +113,6 @@ namespace Opm {
             }
 
             if (fluidSystem_ != FluidSystem::BlackOil) {
-                if (scaledEpsInfo_[c].Sgcr > scaledEpsInfo_[c].Sogcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGCR > SOGCR";
-                    OpmLog::warning(tag, msg);
-                }
-
                 if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR > SGU";
                     OpmLog::warning(tag, msg);
