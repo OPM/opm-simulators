@@ -40,12 +40,8 @@ namespace Opm
     , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     {
-        // TODO: to see what information we need to process here later.
-        // const auto& completion_set = well->getCompletions(time_step);
-        // const auto& segment_set = well->getSegmentSet(time_step);
-
         // since we decide to use the SegmentSet from the well parser. we can reuse a lot from it.
-        // other facilities needed we need to process them here
+        // for other facilities needed but not available from parser, we need to process them here
 
         // initialize the segment_perforations_
         const CompletionSet& completion_set = well_ecl_->getCompletions(current_step_);
@@ -62,7 +58,6 @@ namespace Opm
             const int segment_number = segment.segmentNumber();
             const int outlet_segment_number = segment.outletSegment();
             if (outlet_segment_number > 0) {
-                // TODO: to make sure segment_location == seg here
                 const int segment_location = numberToLocation(segment_number);
                 const int outlet_segment_location = numberToLocation(outlet_segment_number);
                 segment_inlets_[outlet_segment_location].push_back(segment_location);
@@ -74,16 +69,10 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             const double segment_depth = segmentSet()[seg].depth();
             for (const int perf : segment_perforations_[seg]) {
-                // TODO: what kind of depth actually we get from the Wells struct?
-                // TODO: not sure whether to use the one from opm-parser or the one from Wells struct
-                // TODO: use the one from the opm-parser first
-                // TODO: checking wehther the order of the perforation changed or not
                 perf_depth_[perf] = completion_set.get(perf).getCenterDepth();
                 perforation_segment_depth_diffs_[perf] = perf_depth_[perf] - segment_depth;
             }
         }
-
-        // TODO: should we store the depth of the perforations?
 
         // calculating the depth difference between the segment and its oulet_segments
         // for the top segment, we will make its zero unless we find other purpose to use this value
@@ -201,7 +190,6 @@ namespace Opm
 
         resWell_.resize( numberOfSegments() );
 
-        // TODO: maybe this function need a different name for better meaning
         primary_variables_.resize(numberOfSegments());
         primary_variables_evaluation_.resize(numberOfSegments());
     }
@@ -358,9 +346,6 @@ namespace Opm
     updateWellStateWithTarget(const int current,
                               WellState& well_state) const
     {
-        // TODO: it can be challenging, when updating the segment and perforation related,
-        // well rates needs to be okay.
-
         // Updating well state bas on well control
         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
         const double target = well_controls_iget_target(well_controls_, current);
@@ -473,9 +458,7 @@ namespace Opm
             // update, so that the compositon inside the wellbore will be preserved.
             //
             //
-            // Or we might just update the segment rates directly without changing the perforation rates?
-            //
-            // Or we check our old way of the old MultisegmentWells implementation.
+            // It is just difficult to initialize the segment rates without initializing the perforation rates.
             {
                 for (int phase = 0; phase < number_of_phases_; ++phase) {
                     const double perf_phaserate = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / number_of_perforations_;
@@ -659,7 +642,6 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state) const
     {
-        // TODO: not tested yet.
         // TODO: not handling solvent or polymer for now.
 
         // TODO: to test using rate conversion coefficients to see if it will be better than
@@ -1182,7 +1164,7 @@ namespace Opm
             // injecting connections total volumerates at standard conditions
             EvalWell cqt_is = cqt_i / volume_ratio;
             for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-                cq_s[comp_idx] = cmix_s[comp_idx] * cqt_is; // // TODO: checking there * b_perfcells[phase];
+                cq_s[comp_idx] = cmix_s[comp_idx] * cqt_is;
             }
         } // end for injection perforations
     }

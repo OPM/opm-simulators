@@ -166,7 +166,9 @@ namespace Opm
         using Base::index_of_well_;
         using Base::number_of_phases_;
 
-        using Base::well_cells_; // TODO: are the perforation orders same with StandardWell or Wells?
+        // TODO: the current implementation really relies on the order of the
+        // perforation does not change from the parser to Wells structure.
+        using Base::well_cells_;
         using Base::well_index_;
         using Base::well_type_;
         using Base::first_perf_;
@@ -188,17 +190,6 @@ namespace Opm
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
 
-
-        // indices of the gird blocks that segments locate at.
-        // TODO: the grid cell related to a segment should be calculated based on the location
-        //       of the segment node.
-        //       As the current temporary solution, the grid cell related to a segment determined by the
-        //       first perforation cell related to the segment.
-        //       when no perforation is related to the segment, use it outlet segment's cell.
-
-        // TODO: it can be a source of error
-        std::vector<int> segment_cell_;
-
         // the completions that is related to each segment
         // the completions's ids are their location in the vector well_index_, well_cell_
         // This is also assuming the order of the completions in Well is the same with
@@ -208,16 +199,7 @@ namespace Opm
         std::vector<std::vector<int> > segment_perforations_;
 
         // the inlet segments for each segment. It is for convinience and efficiency reason
-        // the original segment structure is defined as a gathering tree structure based on outlet_segment
-        // the reason that we can not use the old way of WellOps, which is based on the Eigen matrix and vector.
-        // TODO: can we use DUNE FieldMatrix and FieldVector.
         std::vector<std::vector<int> > segment_inlets_;
-
-        // Things are easy to get from SegmentSet
-        // segment_volume_, segment_cross_area_, segment_length_(total length), segment_depth_
-        // segment_internal_diameter_, segment_roughness_
-        // outlet_segment_., in the outlet_segment, we store the ID of the segment, we will need to use numberToLocation to get
-        // their location in the segmentSet
 
         // segment number is an ID of the segment, it is specified in the deck
         // get the loation of the segment with a segment number in the segmentSet
@@ -228,7 +210,6 @@ namespace Opm
         mutable OffDiagMatWell duneB_;
         mutable OffDiagMatWell duneC_;
         // diagonal matrix for the well
-        // TODO: if we decided not to invert it, we better change the name of it
         mutable DiagMatWell duneD_;
 
         // residuals of the well equations
@@ -236,8 +217,6 @@ namespace Opm
 
         // the values for the primary varibles
         // based on different solutioin strategies, the wells can have different primary variables
-        // TODO: should we introduce a data structure for segment to simplify this?
-        // or std::vector<std::vector<double> >
         mutable std::vector<std::array<double, numWellEq> > primary_variables_;
 
         // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
@@ -258,7 +237,6 @@ namespace Opm
         std::vector<std::vector<double> > segment_comp_initial_;
 
         // the densities of segment fluids
-        // TODO: if it turned out it is only used to calculate the pressure difference,
         // we should not have this member variable
         std::vector<EvalWell> segment_densities_;
 
@@ -312,8 +290,7 @@ namespace Opm
         // convert a Eval from reservoir to contain the derivative related to wells
         EvalWell extendEval(const Eval& in) const;
 
-        // compute the densities of the mixture in the segments
-        // TODO: probably other fluid properties also.
+        // compute the fluid properties, such as densities, viscosities, and so on, in the segments
         // They will be treated implicitly, so they need to be of Evaluation type
         void computeSegmentFluidProperties(const Simulator& ebosSimulator);
 
