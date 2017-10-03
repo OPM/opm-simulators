@@ -64,7 +64,6 @@ class EclCpGridManager : public EclBaseGridManager<TypeTag>
     typedef EclBaseGridManager<TypeTag> ParentType;
 
     typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
-    typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
     typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
 
 public:
