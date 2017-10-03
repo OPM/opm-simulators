@@ -30,6 +30,7 @@
 
 #include <ewoms/io/structuredgridmanager.hh>
 #include <ewoms/models/immiscible/immiscibleproperties.hh>
+#include <ewoms/disc/common/fvbaseadlocallinearizer.hh>
 
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
