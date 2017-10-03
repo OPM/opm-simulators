@@ -94,32 +94,6 @@ namespace Opm {
                     OpmLog::warning(tag, msg);
                 }
             }
-            ///Following rules come from NEXUS.
-            if (fluidSystem_ != FluidSystem::WaterGas) {
-                if (scaledEpsInfo_[c].Swl > scaledEpsInfo_[c].Swcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SWL > SWCR";
-                    OpmLog::warning(tag, msg);
-                }
-
-                if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR > SWU";
-                    OpmLog::warning(tag, msg);
-                }
-            }
-
-            if (fluidSystem_ != FluidSystem::OilWater) {
-                if (scaledEpsInfo_[c].Sgl > scaledEpsInfo_[c].Sgcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL > SGCR";
-                    OpmLog::warning(tag, msg);
-                }
-            }
-
-            if (fluidSystem_ != FluidSystem::BlackOil) {
-                if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR > SGU";
-                    OpmLog::warning(tag, msg);
-                }
-            }
         } 
     }
 
