@@ -51,6 +51,8 @@ namespace Opm
         /// Tolerance for the well control equations
         //  TODO: it might need to distinguish between rate control and pressure control later
         double tolerance_well_control_;
+        /// Tolerance for the pressure equations for multisegment wells
+        double tolerance_pressure_ms_wells_;
 
         /// Tolerance for time step in seconds where single precision can be used
         /// for solving for the Jacobian

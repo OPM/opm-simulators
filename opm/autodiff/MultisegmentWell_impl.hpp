@@ -548,6 +548,8 @@ namespace Opm
                         }
                     }
                 } else { // pressure equation
+                    // TODO: we should distinguish the rate control equations, bhp control equations
+                    // and the oridnary pressure equations
                     const double pressure_residal = residual[seg][eq_idx];
                     const std::string eq_name("Pressure");
                     if (std::isnan(pressure_residal)) {
@@ -575,8 +577,7 @@ namespace Opm
                 report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_);
             }
 
-            // TODO: it is not good to use a hard-coded value.
-            report.converged = report.converged && (maximum_residual[SPres] < 100.0);
+            report.converged = report.converged && (maximum_residual[SPres] < param.tolerance_pressure_ms_wells_);
         } else { // abnormal values found and no need to check the convergence
             report.converged = false;
         }
