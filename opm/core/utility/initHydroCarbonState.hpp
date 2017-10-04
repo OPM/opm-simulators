@@ -6,7 +6,7 @@
 namespace Opm
 {
 
-void initHydroCarbonState(BlackoilState& state, const PhaseUsage& pu, const int num_cells, const bool has_disgas, const bool has_vapoil) {
+inline void initHydroCarbonState(BlackoilState& state, const PhaseUsage& pu, const int num_cells, const bool has_disgas, const bool has_vapoil) {
     enum { Oil = BlackoilPhases::Liquid, Gas = BlackoilPhases::Vapour, Water = BlackoilPhases::Aqua };
     // hydrocarbonstate is only used when gas and oil is present
     assert(pu.phase_used[Oil]);
