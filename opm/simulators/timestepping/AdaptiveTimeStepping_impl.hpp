@@ -74,11 +74,10 @@ namespace Opm {
 
     // AdaptiveTimeStepping
     //---------------------
-
-    AdaptiveTimeStepping::AdaptiveTimeStepping( const Tuning& tuning,
-                                                size_t time_step,
-                                                const ParameterGroup& param,
-                                                const bool terminal_output )
+    inline AdaptiveTimeStepping::AdaptiveTimeStepping( const Tuning& tuning,
+                                                       size_t time_step,
+                                                       const ParameterGroup& param,
+                                                       const bool terminal_output )
         : timeStepControl_()
         , restart_factor_( tuning.getTSFCNV(time_step) )
         , growth_factor_(tuning.getTFDIFF(time_step) )
@@ -97,8 +96,8 @@ namespace Opm {
 
     }
 
-    AdaptiveTimeStepping::AdaptiveTimeStepping( const ParameterGroup& param,
-                                                const bool terminal_output )
+    inline AdaptiveTimeStepping::AdaptiveTimeStepping( const ParameterGroup& param,
+                                                       const bool terminal_output )
         : timeStepControl_()
         , restart_factor_( param.getDefault("solver.restartfactor", double(0.33) ) )
         , growth_factor_( param.getDefault("solver.growthfactor", double(2) ) )
@@ -116,7 +115,7 @@ namespace Opm {
         init(param);
     }
 
-    void AdaptiveTimeStepping::
+    inline void AdaptiveTimeStepping::
     init(const ParameterGroup& param)
     {
         // valid are "pid" and "pid+iteration"
