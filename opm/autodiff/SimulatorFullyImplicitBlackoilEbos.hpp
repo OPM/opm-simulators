@@ -949,6 +949,9 @@ protected:
                     if ( active[Water] ) {
                         fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
                     }
+                    else {
+                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
+                    }
                     fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
                     fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
 
