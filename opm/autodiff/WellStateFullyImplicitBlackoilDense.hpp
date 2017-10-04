@@ -63,7 +63,8 @@ namespace Opm
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         template <class PrevWellState>
-        void init(const Wells* wells, const std::vector<double>& cellPressures, const PrevWellState& prevState, const PhaseUsage& pu)
+        void init(const Wells* wells, const std::vector<double>& cellPressures,
+                  const PrevWellState& prevState, const PhaseUsage& pu)
         {
 
             // call init on base class
@@ -109,6 +110,17 @@ namespace Opm
                     }
                 }
             }
+
+            {
+                // we need to create a trival segment related values to avoid there will be some
+                // multi-segment wells added later.
+                top_segment_loc_.reserve(nw);
+                for (int w = 0; w < nw; ++w) {
+                    top_segment_loc_.push_back(w);
+                }
+                segpress_ = bhp();
+                segrates_ = wellRates();
+            }
         }
 
         /// init the MS well related.
@@ -121,6 +133,13 @@ namespace Opm
             if (nw == 0) {
                 return;
             }
+
+            top_segment_loc_.clear();
+            top_segment_loc_.reserve(nw);
+            segpress_.clear();
+            segpress_.reserve(nw);
+            segrates_.clear();
+            segrates_.reserve(nw * numPhases());
 
             nseg_ = 0.;
             // in the init function, the well rates and perforation rates have been initialized or copied from prevState
@@ -358,6 +377,7 @@ namespace Opm
         int topSegmentLocation(const int w) const
         {
             assert(w < int(top_segment_loc_.size()) );
+
             return top_segment_loc_[w];
         }
 
