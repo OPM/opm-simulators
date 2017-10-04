@@ -411,6 +411,8 @@ namespace Opm {
         std::vector< Scalar > B_avg( numComp, Scalar() );
         computeAverageFormationFactor(ebosSimulator, B_avg);
 
+        const int max_iter = param_.max_welleq_iter_;
+
         int it  = 0;
         bool converged;
         do {
@@ -442,7 +444,7 @@ namespace Opm {
                 updateWellControls(well_state);
                 initPrimaryVariablesEvaluation();
             }
-        } while (it < 15);
+        } while (it < max_iter);
 
         if (converged) {
             if ( terminal_output_ ) {

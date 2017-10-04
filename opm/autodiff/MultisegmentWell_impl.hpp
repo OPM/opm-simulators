@@ -556,7 +556,6 @@ namespace Opm
             // check convergence for flux residuals
             for ( int comp_idx = 0; comp_idx < numComponents(); ++comp_idx)
             {
-                // report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_ * 10.);
                 report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_);
             }
 
@@ -828,6 +827,7 @@ namespace Opm
         // maybe better to give it a different name
         const double dBHPLimit = param.dbhp_max_rel_;
         const double dFLimit = param.dwell_fraction_max_;
+        const double max_pressure_change = param.max_pressure_change_ms_wells_;
         const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
 
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -850,7 +850,7 @@ namespace Opm
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
                 const double current_pressure = old_primary_variables[seg][SPres];
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), dBHPLimit * current_pressure);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), max_pressure_change);
                 primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
             }
 

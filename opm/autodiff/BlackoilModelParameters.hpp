@@ -53,6 +53,11 @@ namespace Opm
         double tolerance_well_control_;
         /// Tolerance for the pressure equations for multisegment wells
         double tolerance_pressure_ms_wells_;
+        /// Maximum pressure change over an iteratio for ms wells
+        double max_pressure_change_ms_wells_;
+
+        /// Maximum iteration number of the well equation solution
+        int max_welleq_iter_;
 
         /// Tolerance for time step in seconds where single precision can be used
         /// for solving for the Jacobian
