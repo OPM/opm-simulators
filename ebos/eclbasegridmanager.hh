@@ -94,6 +94,22 @@ public:
     }
 
     /*!
+     * \brief Set the Opm::EclipseState and the Opm::Deck object which ought to be used
+     *        when the grid manager is instantiated.
+     *
+     * This is basically an optimization: In cases where the ECL input deck must be
+     * examined to decide which simulator ought to be used, this avoids having to parse
+     * the input twice. When this method is used, the caller is responsible for lifetime
+     * management of these two objects, i.e., they are not allowed to be deleted as long
+     * as the grid manager object is alive.
+     */
+    static void setExternalDeck(Opm::Deck* deck, Opm::EclipseState* eclState)
+    {
+        externalDeck_ = deck;
+        externalEclState_ = eclState;
+    }
+
+    /*!
      * \brief Create the grid for problem data files which use the ECL file format.
      *
      * This is the file format used by the commercial ECLiPSE simulator. Usually it uses
@@ -131,29 +147,33 @@ public:
         caseName_ = rawCaseName;
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
 
-        if (myRank == 0)
-            std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
+        if (!externalDeck_) {
+            if (myRank == 0)
+                std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
-        if( ! simulator.simulatorParameter().first )
-        {
             Opm::Parser parser;
             typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
             typedef std::vector<ParseModePair> ParseModePairs;
+
             ParseModePairs tmp;
-            tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE));
-            tmp.push_back(ParseModePair(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN));
-            tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN));
-            tmp.push_back(ParseModePair(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN));
+            tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
+            tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
+            tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
+            tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
             Opm::ParseContext parseContext(tmp);
 
-            deck_.reset( new Opm::Deck(parser.parseFile(fileName , parseContext)) );
-            eclState_.reset(new Opm::EclipseState(deck(), parseContext));
+            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext)));
+            internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext));
+
+            deck_ = &(*internalDeck_);
+            eclState_ = &(*internalEclState_);
         }
-        else
-        {
-            deck_ = simulator.simulatorParameter().first;
-            assert( simulator.simulatorParameter().second );
-            eclState_ = simulator.simulatorParameter().second;
+        else {
+            assert(externalDeck_);
+            assert(externalEclState_);
+
+            deck_ = externalDeck_;
+            eclState_ = externalEclState_;
         }
 
         asImp_().createGrids_();
@@ -269,9 +289,23 @@ private:
     { return *static_cast<const Implementation*>(this); }
 
     std::string caseName_;
-    std::shared_ptr<Opm::Deck>         deck_;
-    std::shared_ptr<Opm::EclipseState> eclState_;
+
+    static Opm::Deck* externalDeck_;
+    static Opm::EclipseState* externalEclState_;
+    std::unique_ptr<Opm::Deck> internalDeck_;
+    std::unique_ptr<Opm::EclipseState> internalEclState_;
+
+    // these two attributes point either to the internal or to the external version of the
+    // Deck and EclipsState objects.
+    Opm::Deck* deck_;
+    Opm::EclipseState* eclState_;
 };
+
+template <class TypeTag>
+Opm::Deck* EclBaseGridManager<TypeTag>::externalDeck_ = nullptr;
+
+template <class TypeTag>
+Opm::EclipseState* EclBaseGridManager<TypeTag>::externalEclState_;
 
 } // namespace Ewoms
 
