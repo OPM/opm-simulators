@@ -14,12 +14,15 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
+#ifndef FLOW_EBOS_GASOIL_HPP
+#define FLOW_EBOS_GASOIL_HPP
 
-#include <opm/simulators/flow_ebos_oilwater.hpp>
+#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 
-// ----------------- Main program -----------------
-int main(int argc, char** argv)
-{
-    return Opm::flowEbosOilWaterMain(argc, argv);
+namespace Opm {
+void flowEbosGasOilSetDeck(Deck &deck, EclipseState& eclState);
+int flowEbosGasOilMain(int argc, char** argv);
 }
+
+#endif // FLOW_EBOS_GASOIL_HPP

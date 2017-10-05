@@ -78,7 +78,6 @@ namespace Opm
     public:
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
-        typedef typename GET_PROP_TYPE(TypeTag, SimulatorParameter) EbosSimulatorParameter;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
@@ -419,10 +418,9 @@ namespace Opm
             char* ptr[2];
             ptr[ 0 ] = const_cast< char * > (progName.c_str());
             ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
-            EbosSimulatorParameter simParam( dck, eclipseState );
             EbosSimulator::registerParameters();
             Ewoms::setupParameters_< TypeTag > ( 2, ptr );
-            ebosSimulator_.reset(new EbosSimulator(simParam, /*verbose=*/false));
+            ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
             // Create a grid with a global view.
