@@ -20,28 +20,28 @@ set(BASE_RESULT_PATH ${PROJECT_BINARY_DIR}/tests/results)
 #
 # Details:
 #   - This test class compares output from a simulation to reference files.
-macro (add_test_compareECLFiles casename filename simulator abs_tol rel_tol prefix dirprefix)
-  if(${ARGC} GREATER 7)
-    set(DIR ${ARGV7})
-  else()
-    set(DIR ${casename})
+function(add_test_compareECLFiles)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+  if(NOT PARAM_DIR)
+    set(PARAM_DIR ${PARAM_CASENAME})
   endif()
-  if(${ARGC} GREATER 8)
-    set(TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${ARGV8} deck_filename=${OPM_DATA_ROOT}/${DIR}/${filename}.DATA)
-  else()
-    set(TEST_ARGS ${OPM_DATA_ROOT}/${DIR}/${filename})
+  if(NOT PARAM_PREFIX)
+    set(PARAM_PREFIX compareECLFiles)
   endif()
-  set(RESULT_PATH ${BASE_RESULT_PATH}${dirprefix}/${simulator}+${casename})
-  opm_add_test(${prefix}_${simulator}+${filename} NO_COMPILE
-               EXE_NAME ${simulator}
-               DRIVER_ARGS ${OPM_DATA_ROOT}/${DIR} ${RESULT_PATH}
+  set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${OPM_DATA_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_DIR} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
-                           ${filename}
-                           ${abs_tol} ${rel_tol}
+                           ${PARAM_FILENAME}
+                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
                TEST_ARGS ${TEST_ARGS})
-endmacro (add_test_compareECLFiles)
+endfunction()
 
 ###########################################################################
 # TEST: add_test_compare_restarted_simulation
@@ -53,19 +53,24 @@ endmacro (add_test_compareECLFiles)
 # Details:
 #   - This test class compares the output from a restarted simulation
 #     to that of a non-restarted simulation.
-macro (add_test_compare_restarted_simulation casename filename simulator abs_tol rel_tol)
+function(add_test_compare_restarted_simulation)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-  set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${simulator}+${casename})
-  opm_add_test(compareRestartedSim_${simulator}+${filename} NO_COMPILE
-               EXE_NAME ${simulator}
-               DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
+  set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+
+  opm_add_test(compareRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
-                           ${filename}
-                           ${abs_tol} ${rel_tol}
+                           ${PARAM_FILENAME}
+                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
-               TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename})
-endmacro (add_test_compare_restarted_simulation)
+               TEST_ARGS ${TEST_ARGS})
+endfunction()
 
 ###########################################################################
 # TEST: add_test_compare_parallel_simulation
@@ -77,20 +82,25 @@ endmacro (add_test_compare_restarted_simulation)
 # Details:
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
-macro (add_test_compare_parallel_simulation casename filename simulator abs_tol rel_tol)
-  set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${simulator}+${casename})
+function(add_test_compare_parallel_simulation)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
+  set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
 
   # Add test that runs flow_mpi and outputs the results to file
-  opm_add_test(compareParallelSim_${simulator}+${filename} NO_COMPILE
-               EXE_NAME ${simulator}
-               DRIVER_ARGS ${OPM_DATA_ROOT}/${casename} ${RESULT_PATH}
+  opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${OPM_DATA_ROOT}/${PARAM_CASENAME} ${RESULT_PATH}
                            ${CMAKE_BINARY_DIR}/bin
-                           ${filename}
-                           ${abs_tol} ${rel_tol}
+                           ${PARAM_FILENAME}
+                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_SUMMARY_COMMAND}
                            ${COMPARE_ECL_COMMAND}
-               TEST_ARGS ${OPM_DATA_ROOT}/${casename}/${filename})
-endmacro (add_test_compare_parallel_simulation)
+               TEST_ARGS ${TEST_ARGS})
+endfunction()
 
 if(NOT TARGET test-suite)
   add_custom_target(test-suite)
@@ -103,26 +113,71 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 
-add_test_compareECLFiles(spe1 SPE1CASE2 flow ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe1 SPE1CASE2 flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
-add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow_ebos_2p ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
-add_test_compareECLFiles(spe1 SPE1CASE2 flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe1_2p SPE1CASE2_2P flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "" spe1)
-add_test_compareECLFiles(spe1 SPE1CASE1 flow_sequential ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe3 SPE3CASE1 flow ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe3 SPE3CASE1 flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe3 SPE3CASE1 flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe9group SPE9_CP_GROUP flow ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe9group SPE9_CP_GROUP flow_ebos ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(spe9 SPE9_CP_SHORT flow_legacy ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(msw_2d_h 2D_H__ flow_multisegment ${abs_tol} ${rel_tol} compareECLFiles "")
-#add_test_compareECLFiles(polymer_simple2D 2D_THREEPHASE_POLY_HETER flow ${abs_tol} ${rel_tol} compareECLFiles "")
-add_test_compareECLFiles(polymer_simple2D 2D_THREEPHASE_POLY_HETER flow_polymer ${abs_tol} ${rel_tol} compareECLFiles "")
-#add_test_compareECLFiles(spe5 SPE5CASE1 flow ${abs_tol} 5e-4 compareECLFiles "" spe5 run.param)
-add_test_compareECLFiles(spe5 SPE5CASE1 flow_solvent ${abs_tol} 5e-4 compareECLFiles "" spe5 run.param)
+foreach(SIM flow flow_ebos flow_legacy)
+  add_test_compareECLFiles(CASENAME spe1
+                           FILENAME SPE1CASE2
+                           SIMULATOR ${SIM}
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol})
+endforeach()
+
+foreach(SIM flow flow_legacy)
+  add_test_compareECLFiles(CASENAME spe1_2p
+                           FILENAME SPE1CASE2_2P
+                           SIMULATOR ${SIM}
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR spe1)
+endforeach()
+
+add_test_compareECLFiles(CASENAME spe1
+                         FILENAME SPE1CASE1
+                         SIMULATOR flow_sequential
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
+
+foreach(SIM flow flow_ebos flow_legacy)
+  add_test_compareECLFiles(CASENAME spe3
+                           FILENAME SPE3CASE1
+                           SIMULATOR ${SIM}
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol})
+endforeach()
+
+foreach(SIM flow flow_ebos flow_legacy)
+  add_test_compareECLFiles(CASENAME spe9
+                           FILENAME SPE9_CP_SHORT
+                           SIMULATOR ${SIM}
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol})
+endforeach()
+
+foreach(SIM flow flow_ebos)
+  add_test_compareECLFiles(CASENAME spe9group
+                           FILENAME SPE9_CP_GROUP
+                           SIMULATOR ${SIM}
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol})
+endforeach()
+
+add_test_compareECLFiles(CASENAME msw_2d_h
+                         FILENAME 2D_H__
+                         SIMULATOR flow_multisegment
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
+
+add_test_compareECLFiles(CASENAME polymer_simple2D
+                         FILENAME 2D_THREEPHASE_POLY_HETER
+                         SIMULATOR flow_polymer
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol})
+
+add_test_compareECLFiles(CASENAME spe5
+                         FILENAME SPE5CASE1
+                         SIMULATOR flow_solvent
+                         ABS_TOL ${abs_tol}
+                         REL_TOL 5e-4
+                         TEST_ARGS max_iter=13)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
@@ -131,15 +186,29 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh ""
 set(abs_tol_restart 2e-1)
 set(rel_tol_restart 4e-5)
 foreach(sim flow flow_legacy flow_ebos)
-  add_test_compare_restarted_simulation(spe1 SPE1CASE2_ACTNUM ${sim} ${abs_tol_restart} ${rel_tol_restart})
-  add_test_compare_restarted_simulation(spe9 SPE9_CP_SHORT ${sim} ${abs_tol_restart} ${rel_tol_restart})
+  add_test_compare_restarted_simulation(CASENAME spe1
+                                        FILENAME SPE1CASE2_ACTNUM
+                                        SIMULATOR ${sim}
+                                        ABS_TOL ${abs_tol_restart}
+                                        REL_TOL ${rel_tol_restart})
+  add_test_compare_restarted_simulation(CASENAME spe9
+                                        FILENAME SPE9_CP_SHORT
+                                        SIMULATOR ${sim}
+                                        ABS_TOL ${abs_tol_restart}
+                                        REL_TOL ${rel_tol_restart})
 endforeach()
 
 # Init tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 
 foreach(sim flow flow_legacy flow_ebos)
-  add_test_compareECLFiles(norne NORNE_ATW2013 ${sim} ${abs_tol} ${rel_tol} compareECLInitFiles /init)
+  add_test_compareECLFiles(CASENAME norne
+                           FILENAME NORNE_ATW2013
+                           SIMULATOR ${sim}
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           PREFIX compareECLInitFiles
+                           DIR_PREFIX /init)
 endforeach()
 
 # Parallel tests
@@ -151,8 +220,20 @@ if(MPI_FOUND)
   set(rel_tol_parallel 1e-5)
 
   foreach(sim flow flow_mpi flow_ebos)
-    add_test_compare_parallel_simulation(spe1 SPE1CASE2 ${sim} ${abs_tol_parallel} ${rel_tol_parallel})
-    add_test_compare_parallel_simulation(spe9 SPE9_CP_SHORT ${sim} ${abs_tol_parallel} ${rel_tol_parallel})
+    add_test_compare_parallel_simulation(CASENAME spe1
+                                         FILENAME SPE1CASE2
+                                         SIMULATOR ${sim}
+                                         ABS_TOL ${abs_tol_parallel}
+                                         REL_TOL ${rel_tol_parallel})
+    add_test_compare_parallel_simulation(CASENAME spe9
+                                         FILENAME SPE9_CP_SHORT
+                                         SIMULATOR ${sim}
+                                         ABS_TOL ${abs_tol_parallel}
+                                         REL_TOL ${rel_tol_parallel})
   endforeach()
-  add_test_compare_parallel_simulation(spe3 SPE3CASE1 flow_mpi ${abs_tol_parallel} ${rel_tol_parallel})
+  add_test_compare_parallel_simulation(CASENAME spe3
+                                       FILENAME SPE3CASE1
+                                       SIMULATOR flow_mpi
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel})
 endif()
