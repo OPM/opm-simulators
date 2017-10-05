@@ -45,7 +45,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
-#include <opm/common/ResetLocale.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -55,7 +54,11 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 
-#include <ewoms/version.hh>
+#if HAVE_DUNE_FEM
+#include <dune/fem/misc/mpimanager.hh>
+#else
+#include <dune/common/parallel/mpihelper.hh>
+#endif
 
 namespace Opm
 {
@@ -76,8 +79,8 @@ namespace Opm
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
         typedef typename GET_PROP_TYPE(TypeTag, SimulatorParameter) EbosSimulatorParameter;
-        typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
@@ -96,10 +99,6 @@ namespace Opm
                     std::shared_ptr<Opm::EclipseState> eclipseState = std::shared_ptr<Opm::EclipseState>() )
         {
             try {
-                // we always want to use the default locale, and thus spare us the trouble
-                // with incorrect locale settings.
-                resetLocale();
-
                 setupParallelism(argc, argv);
                 printStartupMessage();
                 const bool ok = setupParameters(argc, argv);
@@ -149,13 +148,16 @@ namespace Opm
     protected:
         void setupParallelism(int argc, char** argv)
         {
-            // MPI setup.
-            // Must ensure an instance of the helper is created to initialise MPI.
-            // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
-            // be 0 and size 1.
-            const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
-            mpi_rank_ = mpi_helper.rank();
-            const int mpi_size = mpi_helper.size();
+            // determine the rank of the current process and the number of processes
+            // involved in the simulation. MPI must have already been initialized here.
+#if HAVE_MPI
+            MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
+            int mpi_size;
+            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#else
+            mpi_rank_ = 0;
+            const int mpi_size = 1;
+#endif
             output_cout_ = ( mpi_rank_ == 0 );
             must_distribute_ = ( mpi_size > 1 );
 
@@ -808,6 +810,8 @@ namespace Opm
 
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
+            typedef typename Grid::LeafGridView GridView;
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
             const auto& cartesianCellIdx = globalGrid.globalCell();
 
@@ -881,6 +885,8 @@ namespace Opm
 
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
+            typedef typename Grid::LeafGridView GridView;
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
 
             const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());

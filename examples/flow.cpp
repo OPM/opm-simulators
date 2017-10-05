@@ -27,6 +27,8 @@
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 
+#include <opm/common/ResetLocale.hpp>
+
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -38,7 +40,6 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG 1
 
-#include <opm/material/densead/Evaluation.hpp>
 #include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/autodiff/DuneMatrix.hpp>
@@ -116,18 +117,31 @@ namespace detail
 int main(int argc, char** argv)
 {
     // MPI setup.
-    // Must ensure an instance of the helper is created to initialise MPI.
-    // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
-    // be 0 and size 1.
-    const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
-    const bool outputCout = mpi_helper.rank() == 0;
+#if HAVE_DUNE_FEM
+    Dune::Fem::MPIManager::initialize(argc, argv);
+    int mpiRank = Dune::Fem::MPIManager::rank();
+#else
+    // the design of the plain dune MPIHelper class is quite flawed: there is no way to
+    // get the instance without having the argc and argv parameters available and it is
+    // not possible to determine the MPI rank and size without an instance. (IOW: the
+    // rank() and size() methods are supposed to be static.)
+    const auto& mpiHelper = Dune::MPIHelper::instance(argc, argv);
+    int mpiRank = mpiHelper.rank();
+#endif
+
+    const bool outputCout = (mpiRank == 0);
+
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    Opm::resetLocale();
 
     Opm::ParameterGroup param(argc, argv, false, outputCout);
 
     // See if a deck was specified on the command line.
     if (!param.unhandledArguments().empty()) {
         if (param.unhandledArguments().size() != 1) {
-            std::cerr << "You can only specify a single input deck on the command line.\n";
+            if (outputCout)
+                std::cerr << "You can only specify a single input deck on the command line.\n";
             return EXIT_FAILURE;
         } else {
             const auto casename = detail::simulationCaseName( param.unhandledArguments()[ 0 ] );
@@ -137,11 +151,12 @@ int main(int argc, char** argv)
 
     // We must have an input deck. Grid and props will be read from that.
     if (!param.has("deck_filename")) {
-        std::cerr << "This program must be run with an input deck.\n"
-            "Specify the deck filename either\n"
-            "    a) as a command line argument by itself\n"
-            "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
-            "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
+        if (outputCout)
+            std::cerr << "This program must be run with an input deck.\n"
+                "Specify the deck filename either\n"
+                "    a) as a command line argument by itself\n"
+                "    b) as a command line parameter with the syntax deck_filename=<path to your deck>, or\n"
+                "    c) as a parameter in a parameter file (.param or .xml) passed to the program.\n";
         return EXIT_FAILURE;
     }
 
@@ -160,8 +175,8 @@ int main(int argc, char** argv)
         Opm::ParseContext parseContext(tmp);
 
         std::shared_ptr<Opm::Deck> deck = std::make_shared< Opm::Deck >( parser.parseFile(deckFilename , parseContext) );
-        Opm::checkDeck(*deck, parser);
         if ( outputCout ) {
+            Opm::checkDeck(*deck, parser);
             Opm::MissingFeatures::checkKeywords(*deck);
         }
 
@@ -171,7 +186,7 @@ int main(int argc, char** argv)
         Opm::Runspec runspec( *deck );
         const auto& phases = runspec.phases();
 
-        // Twophase case
+        // Twophase cases
         if( phases.size() == 2 ) {
             // oil-gas
             if (phases.active( Opm::Phase::GAS ))
@@ -186,7 +201,8 @@ int main(int argc, char** argv)
                 return mainfunc.execute(argc, argv, deck, eclipseState );
             }
             else {
-                std::cerr << "No suitable configuration found, valid are Twophase (oilwater and oilgas), polymer, solvent, or blackoil" << std::endl;
+                if (outputCout)
+                    std::cerr << "No suitable configuration found, valid are Twophase (oilwater and oilgas), polymer, solvent, or blackoil" << std::endl;
                 return EXIT_FAILURE;
             }
         }
@@ -209,14 +225,17 @@ int main(int argc, char** argv)
         }
         else
         {
-            std::cerr << "No suitable configuration found, valid are Twophase, polymer, solvent, or blackoil" << std::endl;
+            if (outputCout)
+                std::cerr << "No suitable configuration found, valid are Twophase, polymer, solvent, or blackoil" << std::endl;
             return EXIT_FAILURE;
         }
     }
     catch (const std::invalid_argument& e)
     {
-        std::cerr << "Failed to create valid EclipseState object." << std::endl;
-        std::cerr << "Exception caught: " << e.what() << std::endl;
+        if (outputCout) {
+            std::cerr << "Failed to create valid EclipseState object." << std::endl;
+            std::cerr << "Exception caught: " << e.what() << std::endl;
+        }
         throw;
     }
 

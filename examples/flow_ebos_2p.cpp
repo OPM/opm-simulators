@@ -25,13 +25,18 @@
 // Define making clear that the simulator supports AMG
 #define FLOW_SUPPORT_AMG 1
 
-#include <opm/material/densead/Evaluation.hpp>
+#include <opm/common/ResetLocale.hpp>
 #include <ewoms/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/autodiff/DuneMatrix.hpp>
 #include <dune/grid/CpGrid.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/autodiff/FlowMainEbos.hpp>
+
+#if HAVE_DUNE_FEM
+#include <dune/fem/misc/mpimanager.hh>
+#else
+#include <dune/common/parallel/mpihelper.hh>
+#endif
 
 namespace Ewoms {
 namespace Properties {
@@ -44,6 +49,16 @@ SET_TYPE_PROP(EclFlowTwoPhaseProblem, Indices,
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    Opm::resetLocale();
+
+#if HAVE_DUNE_FEM
+    Dune::Fem::MPIManager::initialize(argc, argv);
+#else
+    Dune::MPIHelper::instance(argc, argv);
+#endif
+
     Opm::FlowMainEbos<TTAG(EclFlowTwoPhaseProblem)> mainfunc;
     return mainfunc.execute(argc, argv);
 }
