@@ -141,7 +141,8 @@ foreach(SIM flow flow_ebos flow_legacy)
                            FILENAME SPE3CASE1
                            SIMULATOR ${SIM}
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol})
+                           REL_TOL ${rel_tol}
+                           TEST_ARGS max_iter=15)
 endforeach()
 
 foreach(SIM flow flow_ebos flow_legacy)
