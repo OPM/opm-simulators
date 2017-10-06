@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2017 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -54,16 +55,16 @@ namespace Opm
         using BaseType :: numPhases;
 
         template <class State, class PrevWellState>
-        void init(const Wells* wells, const State& state, const PrevWellState& prevState)
+        void init(const Wells* wells, const State& state, const PrevWellState& prevState, const PhaseUsage& pu)
         {
-            init(wells, state.pressure(), prevState);
+            init(wells, state.pressure(), prevState, pu);
         }
 
         /// Allocate and initialize if wells is non-null.  Also tries
         /// to give useful initial values to the bhp(), wellRates()
         /// and perfPhaseRates() fields, depending on controls
         template <class PrevWellState>
-        void init(const Wells* wells, const std::vector<double>& cellPressures , const PrevWellState& prevState)
+        void init(const Wells* wells, const std::vector<double>& cellPressures , const PrevWellState& prevState, const PhaseUsage& pu)
         {
             // call init on base class
             BaseType :: init(wells, cellPressures);
@@ -111,6 +112,9 @@ namespace Opm
 
             is_new_well_.resize(nw, true);
 
+            perfRateSolvent_.clear();
+            perfRateSolvent_.resize(nperf, 0.0);
+
             // intialize wells that have been there before
             // order may change so the mapping is based on the well name
             if( ! prevState.wellMap().empty() )
@@ -141,18 +145,18 @@ namespace Opm
                         }
 
                         // perfPhaseRates
-                        int oldPerf_idx = (*it).second[ 1 ];
+                        const int oldPerf_idx_beg = (*it).second[ 1 ];
                         const int num_perf_old_well = (*it).second[ 2 ];
                         const int num_perf_this_well = wells->well_connpos[newIndex + 1] - wells->well_connpos[newIndex];
                         // copy perforation rates when the number of perforations is equal,
                         // otherwise initialize perfphaserates to well rates divided by the number of perforations.
                         if( num_perf_old_well == num_perf_this_well )
                         {
-                            int oldPerf = oldPerf_idx *np;
-                            for (int perf = wells->well_connpos[ newIndex ]*np;
-                                 perf < wells->well_connpos[ newIndex + 1]*np; ++perf, ++oldPerf )
+                            int old_perf_phase_idx = oldPerf_idx_beg *np;
+                            for (int perf_phase_idx = wells->well_connpos[ newIndex ]*np;
+                                 perf_phase_idx < wells->well_connpos[ newIndex + 1]*np; ++perf_phase_idx, ++old_perf_phase_idx )
                             {
-                                perfPhaseRates()[ perf ] = prevState.perfPhaseRates()[ oldPerf ];
+                                perfPhaseRates()[ perf_phase_idx ] = prevState.perfPhaseRates()[ old_perf_phase_idx ];
                             }
                         } else {
                             for (int perf = wells->well_connpos[newIndex]; perf < wells->well_connpos[newIndex + 1]; ++perf) {
@@ -161,13 +165,26 @@ namespace Opm
                                 }
                             }
                         }
-                        // perfPressures
+                        // perfPressures                        
                         if( num_perf_old_well == num_perf_this_well )
                         {
+                            int oldPerf_idx = oldPerf_idx_beg;
                             for (int perf = wells->well_connpos[ newIndex ];
                                  perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
                             {
                                 perfPress()[ perf ] = prevState.perfPress()[ oldPerf_idx ];
+                            }
+                        }
+                        // perfSolventRates
+                        if (pu.has_solvent) {
+                            if( num_perf_old_well == num_perf_this_well )
+                            {
+                                int oldPerf_idx = oldPerf_idx_beg;
+                                for (int perf = wells->well_connpos[ newIndex ];
+                                     perf < wells->well_connpos[ newIndex + 1]; ++perf, ++oldPerf_idx )
+                                {
+                                    perfRateSolvent()[ perf ] = prevState.perfRateSolvent()[ oldPerf_idx ];
+                                }
                             }
                         }
                     }
@@ -192,14 +209,9 @@ namespace Opm
         }
 
         template <class State>
-        void resize(const Wells* wells, const State& state ) {
+        void resize(const Wells* wells, const State& state, const PhaseUsage& pu) {
             const WellStateFullyImplicitBlackoil dummy_state{}; // Init with an empty previous state only resizes
-            init(wells, state, dummy_state) ;
-        }
-
-        template <class State>
-        void resize(const Wells* wells, const State& state, const PhaseUsage& ) {
-            resize( wells, state );
+            init(wells, state, dummy_state, pu) ;
         }
 
         /// One rate per phase and well connection.
@@ -230,6 +242,14 @@ namespace Opm
 
             if( pu.phase_used[BlackoilPhases::Vapour] ) {
                 phs.at( pu.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
+            }
+
+            if (pu.has_solvent) {
+                // add solvent component
+                for( int w = 0; w < nw; ++w ) {
+                    using rt = data::Rates::opt;
+                    res.at( wells_->name[ w ]).rates.set( rt::solvent, solventWellRate(w) );
+                }
             }
 
             /* this is a reference or example on **how** to convert from
@@ -271,9 +291,24 @@ namespace Opm
             is_new_well_[w] = is_new_well;
         }
 
+
+        /// One rate pr well connection.
+        std::vector<double>& perfRateSolvent() { return perfRateSolvent_; }
+        const std::vector<double>& perfRateSolvent() const { return perfRateSolvent_; }
+
+        /// One rate pr well
+        double solventWellRate(const int w) const {
+            double solvent_well_rate = 0.0;
+            for (int perf = wells_->well_connpos[w]; perf < wells_->well_connpos[w+1]; ++perf ) {
+                solvent_well_rate += perfRateSolvent_[perf];
+            }
+            return solvent_well_rate;
+        }
+
     private:
         std::vector<double> perfphaserates_;
         std::vector<int> current_controls_;
+        std::vector<double> perfRateSolvent_;
 
         // marking whether the well is just added
         // for newly added well, the current initialized rates from WellState

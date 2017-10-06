@@ -45,7 +45,7 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/StandardWell.hpp>
@@ -65,7 +65,7 @@ namespace Opm {
         class StandardWellsDense {
         public:
             // ---------      Types      ---------
-            typedef WellStateFullyImplicitBlackoilDense WellState;
+            typedef WellStateFullyImplicitBlackoil WellState;
             typedef BlackoilModelParameters ModelParameters;
 
             typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;

@@ -35,7 +35,7 @@
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
@@ -61,7 +61,7 @@ namespace Opm
     {
     public:
 
-        using WellState = WellStateFullyImplicitBlackoilDense;
+        using WellState = WellStateFullyImplicitBlackoil;
 
         typedef BlackoilModelParameters ModelParameters;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;

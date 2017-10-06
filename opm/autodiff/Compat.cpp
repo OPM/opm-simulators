@@ -30,7 +30,6 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
@@ -282,19 +281,5 @@ void wellsToState( const data::Wells& wells,
         }
     }
 }
-
-
-
-
-
-
-void wellsToState( const data::Wells& wells,
-                   PhaseUsage phases,
-                   WellStateFullyImplicitBlackoilDense& state )
-{
-    // Set base class variables.
-    wellsToState(wells, phases, static_cast<WellStateFullyImplicitBlackoil&>(state));
-}
-
 
 } // namespace Opm
