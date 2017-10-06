@@ -112,13 +112,14 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-regressionTest.sh "")
 # Set absolute tolerance to be used passed to the macros in the following tests
 set(abs_tol 2e-2)
 set(rel_tol 1e-5)
+set(coarse_rel_tol 5e-3)
 
 foreach(SIM flow flow_ebos flow_legacy)
   add_test_compareECLFiles(CASENAME spe1
                            FILENAME SPE1CASE2
                            SIMULATOR ${SIM}
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol})
+                           REL_TOL ${coarse_rel_tol})
 endforeach()
 
 foreach(SIM flow flow_legacy)
@@ -141,8 +142,8 @@ foreach(SIM flow flow_ebos flow_legacy)
                            FILENAME SPE3CASE1
                            SIMULATOR ${SIM}
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           TEST_ARGS max_iter=15)
+                           REL_TOL ${coarse_rel_tol}
+                           TEST_ARGS tolerance_wells=1e-6 max_iter=20)
 endforeach()
 
 foreach(SIM flow flow_ebos flow_legacy)
