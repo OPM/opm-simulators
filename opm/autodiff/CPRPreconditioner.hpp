@@ -376,7 +376,7 @@ createAMGPreconditionerPointer( Op& opA, const double relax, const P& comm, std:
         //! \brief The type describing the parallel information
         typedef P ParallelInformation;
         //! \brief The matrix type the preconditioner is for.
-        typedef typename Dune::remove_const<M>::type matrix_type;
+        typedef typename std::remove_const<M>::type matrix_type;
         //! \brief The domain type of the preconditioner.
         typedef X domain_type;
         //! \brief The range type of the preconditioner.

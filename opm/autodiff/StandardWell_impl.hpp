@@ -1043,10 +1043,6 @@ namespace Opm
                 rates[ Gas ] = xw.wellRates()[well_index*np + pu.phase_pos[ Gas ] ];
             }
 
-            const int table_id = well_controls_iget_vfp(wc, current);
-            const double& thp    = well_controls_iget_target(wc, current);
-            const double& alq    = well_controls_iget_alq(wc, current);
-
             xw.bhp()[well_index] = calculateBhpFromThp(rates, current);
             break;
         }
@@ -1193,7 +1189,6 @@ namespace Opm
     {
         const int nperf = number_of_perforations_;
         // TODO: can make this a member?
-        const int nw = xw.bhp().size();
         const int numComp = numComponents();
         const PhaseUsage& pu = *phase_usage_;
         b_perf.resize(nperf*numComp);
