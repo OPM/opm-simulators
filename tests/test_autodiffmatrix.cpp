@@ -331,16 +331,24 @@ BOOST_AUTO_TEST_CASE(DivOpsDouble)
     Sp x;
     auto zd = z/factor;
     zd.toSparse(x);
-    BOOST_CHECK(x == zs/factor);
+    Sp tmp = zs/factor;
+    tmp.prune(1e-16);
+    BOOST_CHECK(x == tmp);
     auto id = i/factor;
     id.toSparse(x);
-    BOOST_CHECK(x == is/factor);
+    tmp = is/factor;
+    tmp.prune(1e-16);
+    BOOST_CHECK(x == tmp);
     auto dd = d/factor;
     dd.toSparse(x);
-    BOOST_CHECK(x == ds/factor);
+    tmp = ds/factor;
+    tmp.prune(1e-16);
+    BOOST_CHECK(x == tmp);
     auto sd = s/factor;
     sd.toSparse(x);
-    BOOST_CHECK(x == ss/factor);
+    tmp = ss/factor;
+    tmp.prune(1e-16);
+    BOOST_CHECK(x == tmp);
 }
 
 BOOST_AUTO_TEST_CASE(MultVectorXd)
