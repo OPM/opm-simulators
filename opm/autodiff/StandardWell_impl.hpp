@@ -107,7 +107,7 @@ namespace Opm
         // TODO: in theory, we should use numWellEq here.
         // for (int eqIdx = 0; eqIdx < numWellEq; ++eqIdx) {
         for (int eqIdx = 0; eqIdx < numComponents(); ++eqIdx) {
-            assert( eqIdx < primary_variables_.size() );
+            assert( (size_t)eqIdx < primary_variables_.size() );
 
             primary_variables_evaluation_[eqIdx] = 0.0;
             primary_variables_evaluation_[eqIdx].setValue(primary_variables_[eqIdx]);
