@@ -53,13 +53,19 @@ for test_name in ${tests}; do
       $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_legacy \
       SPE1CASE2 \
       EGRID INIT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+spe1/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow \
+      SPE1CASE2 \
+      EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
   if grep -q "spe12p" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_ebos_2p+spe1_2p/ \
-      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow_ebos_2p \
+      $configuration/build-opm-simulators/tests/results/flow+spe1_2p/ \
+      $OPM_DATA_ROOT/spe1/opm-simulation-reference/flow \
       SPE1CASE2_2P \
       EGRID INIT SMSPEC UNRST UNSMRY
 
@@ -101,6 +107,12 @@ for test_name in ${tests}; do
       $OPM_DATA_ROOT/spe3/opm-simulation-reference/flow_legacy \
       SPE3CASE1 \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+spe3/ \
+      $OPM_DATA_ROOT/spe3/opm-simulation-reference/flow \
+      SPE3CASE1 \
+      EGRID INIT PRT SMSPEC UNRST UNSMRY
   fi
 
   if grep -q "spe5" <<< $test_name
@@ -119,8 +131,20 @@ for test_name in ${tests}; do
       $OPM_DATA_ROOT/spe9group/opm-simulation-reference/flow_ebos \
       SPE9_CP_GROUP \
       EGRID INIT PRT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+spe9group/ \
+      $OPM_DATA_ROOT/spe9group/opm-simulation-reference/flow \
+      SPE9_CP_GROUP \
+      EGRID INIT PRT SMSPEC UNRST UNSMRY
   elif grep -q "spe9" <<< $test_name
   then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+spe9/ \
+      $OPM_DATA_ROOT/spe9/opm-simulation-reference/flow \
+      SPE9_CP_SHORT \
+      EGRID INIT PRT SMSPEC UNRST UNSMRY
+
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_ebos+spe9/ \
       $OPM_DATA_ROOT/spe9/opm-simulation-reference/flow_ebos \
