@@ -22,7 +22,9 @@
 #ifndef OPM_MSWELLHELPERS_HEADER_INCLUDED
 #define OPM_MSWELLHELPERS_HEADER_INCLUDED
 
-#include <dune/istl/solvers.hh>
+#include <opm/common/ErrorMacros.hpp>
+// #include <dune/istl/solvers.hh>
+#include <dune/istl/umfpack.hh>
 #include <cmath>
 
 namespace Opm {
@@ -44,23 +46,34 @@ namespace mswellhelpers
         VectorType y(x.size());
         y = 0.;
 
-        Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
+        /* Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
 
         // Sequential incomplete LU decomposition as the preconditioner
         Dune::SeqILU0<MatrixType, VectorType, VectorType> preconditioner(D, 1.0);
+        // Dune::SeqILUn<MatrixType, VectorType, VectorType> preconditioner(D, 1, 0.92);
+        // Dune::SeqGS<MatrixType, VectorType, VectorType> preconditioner(D, 1, 1);
+        // Dune::SeqJac<MatrixType, VectorType, VectorType> preconditioner(D, 1, 1);
 
         // Preconditioned BICGSTAB solver
         Dune::BiCGSTABSolver<VectorType> linsolver(linearOperator,
                                                    preconditioner,
-                                                   1.e-6, // desired residual reduction factor
-                                                   50, // maximum number of iterations
-                                                   0); // verbosity of the solver
+                                                   // 1.e-8, // desired residual reduction factor
+                                                   // 1.e-6, // desired residual reduction factor
+                                                   1.e-4, // desired residual reduction factor
+                                                   150, // maximum number of iterations
+                                                   0); // verbosity of the solver */
+
+        Dune::UMFPack<MatrixType> linsolver(D, 0);
 
         // Object storing some statistics about the solving process
-        Dune::InverseOperatorResult statistics ;
+        Dune::InverseOperatorResult res;
 
         // Solve
-        linsolver.apply(y, x, statistics );
+        linsolver.apply(y, x, res);
+
+        if ( !res.converged ) {
+            OPM_THROW(Opm::NumericalProblem, "the invDX does not get converged! ");
+        }
 
         return y;
     }
