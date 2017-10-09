@@ -11,7 +11,8 @@ namespace Opm {
                        const ModelParameters& param,
                        const RateConverterType& rate_converter,
                        const bool terminal_output,
-                       const int current_timeIdx)
+                       const int current_timeIdx,
+                       std::vector<int>& pvt_region_idx)
        : wells_active_(wells_arg!=nullptr)
        , wells_(wells_arg)
        , wells_ecl_(wells_ecl)
@@ -25,6 +26,7 @@ namespace Opm {
        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
        , current_timeIdx_(current_timeIdx)
        , rate_converter_(rate_converter)
+       , pvt_region_idx_(pvt_region_idx)
     {
     }
 
@@ -788,6 +790,8 @@ namespace Opm {
 
         for (int w = 0; w < nw; ++w) {
             const bool is_producer = well_container_[w]->wellType() == PRODUCER;
+            const int well_cell_top = well_container_[w]->cells()[0];
+            const int pvtRegionIdx = pvt_region_idx_[well_cell_top];
 
             // not sure necessary to change all the value to be positive
             if (is_producer) {
@@ -798,7 +802,7 @@ namespace Opm {
                 // the average hydrocarbon conditions of the whole field will be used
                 const int fipreg = 0; // Not considering FIP for the moment.
 
-                rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                rate_converter_.calcCoeff(fipreg, pvtRegionIdx, convert_coeff);
                 well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
                                                            convert_coeff.begin(), 0.0);
             } else {
@@ -809,7 +813,7 @@ namespace Opm {
                           well_rates.begin());
                 // the average hydrocarbon conditions of the whole field will be used
                 const int fipreg = 0; // Not considering FIP for the moment.
-                rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                rate_converter_.calcCoeff(fipreg, pvtRegionIdx, convert_coeff);
                 std::copy(convert_coeff.begin(), convert_coeff.end(),
                           voidage_conversion_coeffs.begin() + np * w);
             }

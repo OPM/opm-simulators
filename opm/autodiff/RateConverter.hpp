@@ -81,37 +81,49 @@ namespace Opm {
                  * \brief Computes the temperature, pressure, and counter increment.
                  * \param pressure    The pressure.
                  * \param temperature The temperature.
+                 * \param rs          The rs.
+                 * \param rv          The rv.
                  * \param cell        The current cell index.
                  * \param ownership   A vector indicating whether a cell is owned
                  *                    by this process (value 1), or not (value 0).
                  * \param cell        The cell index.
                  */
-                std::tuple<double, double, int>
+                std::tuple<double, double, double, double, int>
                 operator()(const std::vector<double>& pressure,
                            const std::vector<double>& temperature,
+                           const std::vector<double>& rs,
+                           const std::vector<double>& rv,
                            const std::vector<double>& ownership,
                            std::size_t cell){
                     if ( ownership[cell] )
                     {
                         return std::make_tuple(pressure[cell],
-                                               temperature[cell], 1);
+                                               temperature[cell],
+                                               rs[cell],
+                                               rv[cell],
+                                               1);
                     }
                     else
                     {
-                        return std::make_tuple(0, 0, 0);
+                        return std::make_tuple(0, 0, 0, 0, 0);
                     }
                 }
             };
             template<>
             struct AverageIncrementCalculator<false>
             {
-                std::tuple<double, double, int>
+                std::tuple<double, double, double, double, int>
                 operator()(const std::vector<double>& pressure,
                            const std::vector<double>& temperature,
+                           const std::vector<double>& rs,
+                           const std::vector<double>& rv,
                            const std::vector<double>&,
                            std::size_t cell){
                     return std::make_tuple(pressure[cell],
-                                           temperature[cell], 1);
+                                           temperature[cell],
+                                           rs[cell],
+                                           rv[cell],
+                                           1);
                 }
             };
             /**
@@ -402,17 +414,11 @@ namespace Opm {
              * deck.
              */
             SurfaceToReservoirVoidage(const PhaseUsage& phaseUsage,
-                                      const int* cellPvtRegionIdx,
-                                      const int numCells,
                                       const Region&   region)
                 : phaseUsage_(phaseUsage)
                 , rmap_ (region)
-                , attr_ (rmap_, Attributes(phaseUsage_.num_phases))
+                , attr_ (rmap_, Attributes())
             {
-                cellPvtIdx_.resize(numCells, 0);
-                if (cellPvtRegionIdx) {
-                    std::copy_n(cellPvtRegionIdx, numCells, cellPvtIdx_.begin());
-                }
             }
 
             /**
@@ -448,37 +454,41 @@ namespace Opm {
                     std::vector<double> dummyOwnership; // not actually used
                     calcAverages<false>(state, info, dummyOwnership);
                 }   
-                calcRmax();
             }
 
             /**
-             * Compute average hydrocarbon pressure and maximum
-             * dissolution and evaporation at average hydrocarbon
-             * pressure in all regions in field.
+             * Compute pore volume averaged hydrocarbon state pressure, rs and rv.
              *
              * Fluid properties are evaluated at average hydrocarbon
-             * pressure for purpose of conversion from surface rate to
+             * state for purpose of conversion from surface rate to
              * reservoir voidage rate.
              *
-             * \param[in] state Dynamic reservoir state.
-             * \param[in] any  The information and communication utilities
-             *                 about/of the parallelization. in any parallel
-             *                 it wraps a ParallelISTLInformation. Parameter
-             *                 is optional.
              */
             template <typename ElementContext, class EbosSimulator>
             void defineState(const EbosSimulator& simulator)
             {
 
-                //const int numCells = cellPvtIdx_.size();
-                //const Region region = std::vector<int>(numCells, 0);
-                auto& ra = attr_.attributes(0);
-                auto& p  = ra.pressure;
-                auto& T  = ra.temperature;
-                std::size_t n = 0;
+                // create map from cell to region
+                // and set all attributes to zero
+                const auto& grid = simulator.gridManager().grid();
+                const unsigned numCells = grid.size(/*codim=*/0);
+                std::vector<int> cell2region(numCells, -1);
+                for (const auto& reg : rmap_.activeRegions()) {
+                    for (const auto& cell : rmap_.cells(reg)) {
+                        cell2region[cell] = reg;
+                    }
+                    auto& ra = attr_.attributes(reg);
+                    ra.pressure = 0.0;
+                    ra.temperature = 0.0;
+                    ra.rs = 0.0;
+                    ra.rv = 0.0;
+                    ra.pv = 0.0;
+
+                }
 
                 ElementContext elemCtx( simulator );
                 const auto& gridView = simulator.gridView();
+                const auto& comm = gridView.comm();
 
                 const auto& elemEndIt = gridView.template end</*codim=*/0>();
                 for (auto elemIt = gridView.template begin</*codim=*/0>();
@@ -492,21 +502,58 @@ namespace Opm {
 
                     elemCtx.updatePrimaryStencil(elem);
                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
+                    // use pore volume weighted averages.
+                    const double pv_cell =
+                            simulator.model().dofTotalVolume(cellIdx)
+                            * intQuants.porosity().value();
 
-                    p += fs.pressure(FluidSystem::oilPhaseIdx).value();
-                    T += fs.temperature(FluidSystem::oilPhaseIdx).value();
-                    n += 1;
+                    // only count oil and gas filled parts of the domain
+                    double hydrocarbon = 1.0;
+                    const auto& pu = phaseUsage_;
+                    if (Details::PhaseUsed::water(pu)) {
+                        hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
+                    }
+
+                    int reg = cell2region[cellIdx];
+                    assert(reg >= 0);
+                    auto& ra = attr_.attributes(reg);
+                    auto& p  = ra.pressure;
+                    auto& T  = ra.temperature;
+                    auto& rs  = ra.rs;
+                    auto& rv  = ra.rv;
+                    auto& pv  = ra.pv;
+
+                    // sum p, rs, rv, and T.
+                    double hydrocarbonPV = pv_cell*hydrocarbon;
+                    pv += hydrocarbonPV;
+                    p += fs.pressure(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
+                    rs += fs.Rs().value()*hydrocarbonPV;
+                    rv += fs.Rv().value()*hydrocarbonPV;
+                    T += fs.temperature(FluidSystem::oilPhaseIdx).value()*hydrocarbonPV;
                 }
-                p = gridView.comm().sum(p);
-                T = gridView.comm().sum(T);
-                n = gridView.comm().sum(n);
 
-                p /= n;
-                T /= n;
-
-                calcRmax();
+                for (const auto& reg : rmap_.activeRegions()) {
+                      auto& ra = attr_.attributes(reg);
+                      auto& p  = ra.pressure;
+                      auto& T  = ra.temperature;
+                      auto& rs  = ra.rs;
+                      auto& rv  = ra.rv;
+                      auto& pv  = ra.pv;
+                      // communicate sums
+                      p = comm.sum(p);
+                      T = comm.sum(T);
+                      rs = comm.sum(rs);
+                      rv = comm.sum(rv);
+                      pv = comm.sum(pv);
+                      // compute average
+                      p /= pv;
+                      T /= pv;
+                      rs /= pv;
+                      rv /= pv;
+                }
             }
 
 	    /**
@@ -529,28 +576,22 @@ namespace Opm {
              * support direct indexing through \code operator[]()
              * \endcode.
              *
-             * \param[in] in Single tuple of active component rates at
-             * surface conditions.
              *
-             * \param[in] r Fluid-in-place region to which the
-             * component rates correspond.
+             * \param[in] r Fluid-in-place region of the well
+             * \param[in] pvtRegionIdx PVT region of the well
+             *
              *
              * \param[out] coeff Surface-to-reservoir conversion
-             * coefficients for all active phases, corresponding to
-             * input rates \c in in region \c r.
+             * coefficients for all active phases.
              */
-            template <class Input,
-                      class Coeff>
+            template <class Coeff>
             void
-            calcCoeff(const Input& in, const RegionId r, Coeff& coeff) const
+            calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
             {
                 const auto& pu = phaseUsage_;
                 const auto& ra = attr_.attributes(r);
-
                 const double p = ra.pressure;
                 const double T = ra.temperature;
-                const int cellIdx = attr_.cell(r);
-                const int pvtRegionIdx = cellPvtIdx_[cellIdx];
 
                 const int   iw = Details::PhasePos::water(pu);
                 const int   io = Details::PhasePos::oil  (pu);
@@ -566,36 +607,34 @@ namespace Opm {
                     coeff[iw] = 1.0 / bw;
                 }
 
-                const Miscibility& m = calcMiscibility(in, r);
-
                 // Determinant of 'R' matrix
-                const double detR = 1.0 - (m.rs * m.rv);
+                const double detR = 1.0 - (ra.rs * ra.rv);
 
                 if (Details::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-                    const double Rs = m.rs;
+                    const double Rs = ra.rs;
                     const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
                     const double den = bo * detR;
 
                     coeff[io] += 1.0 / den;
 
                     if (Details::PhaseUsed::gas(pu)) {
-                        coeff[ig] -= m.rv / den;
+                        coeff[ig] -= ra.rv / den;
                     }
                 }
 
                 if (Details::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const double Rv = m.rv;
+                    const double Rv = ra.rv;
                     const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
                     const double den = bg * detR;
 
                     coeff[ig] += 1.0 / den;
 
                     if (Details::PhaseUsed::oil(pu)) {
-                        coeff[io] -= m.rs / den;
+                        coeff[io] -= ra.rs / den;
                     }
                 }
             }
@@ -605,7 +644,6 @@ namespace Opm {
              * Fluid property object.
              */
             const PhaseUsage phaseUsage_;
-            std::vector<int> cellPvtIdx_;
 
             /**
              * "Fluid-in-place" region mapping (forward and reverse).
@@ -616,59 +654,23 @@ namespace Opm {
              * Derived property attributes for each active region.
              */
             struct Attributes {
-                Attributes(const int np)
+                Attributes()
                     : pressure   (0.0)
                     , temperature(0.0)
-                    , Rmax(np, 0.0)
+                    , rs(0.0)
+                    , rv(0.0)
+                    , pv(0.0)
                 {}
 
-                double         pressure;
-                double         temperature;
-                std::vector<double> Rmax;
+                double pressure;
+                double temperature;
+                double rs;
+                double rv;
+                double pv;
             };
 
             Details::RegionAttributes<RegionId, Attributes> attr_;
 
-            /**
-             * Aggregate structure defining fluid miscibility
-             * conditions in single region with particular input
-             * surface rates.
-             */
-            struct Miscibility {
-                Miscibility()
-                    : rs  (1)
-                    , rv  (1)
-                    , cond(1)
-                {
-                    rs = 0.0;
-                    rv = 0.0;
-                }
-
-                /**
-                 * Dissolved gas-oil ratio at particular component oil
-                 * and gas rates at surface conditions.
-                 *
-                 * Limited by "RSmax" at average hydrocarbon pressure
-                 * in region.
-                 */
-                double rs;
-
-                /**
-                 * Evaporated oil-gas ratio at particular component oil
-                 * and gas rates at surface conditions.
-                 *
-                 * Limited by "RVmax" at average hydrocarbon pressure
-                 * in region.
-                 */
-                double rv;
-
-                /**
-                 * Fluid condition in representative region cell.
-                 *
-                 * Needed for purpose of FVF evaluation.
-                 */
-                std::vector<PhasePresence> cond;
-            };
 
             /**
              * Compute average hydrocarbon pressure and temperatures in all
@@ -691,148 +693,54 @@ namespace Opm {
             {
                 const auto& press = state.pressure();
                 const auto& temp  = state.temperature();
+                const auto& Rv  = state.rv();
+                const auto& Rs = state.gasoilratio();
 
                 for (const auto& reg : rmap_.activeRegions()) {
                     auto& ra = attr_.attributes(reg);
                     auto& p  = ra.pressure;
                     auto& T  = ra.temperature;
+                    auto& rs  = ra.rs;
+                    auto& rv  = ra.rv;
 
                     std::size_t n = 0;
                     p = T = 0.0;
                     for (const auto& cell : rmap_.cells(reg)) {
                         auto increment = Details::
-                            AverageIncrementCalculator<is_parallel>()(press, temp,
-                                                                      ownerShip,
-                                                                      cell);
+                                AverageIncrementCalculator<is_parallel>()(press, temp, Rs, Rv,
+                                                                          ownerShip,
+                                                                          cell);
                         p += std::get<0>(increment);
                         T += std::get<1>(increment);
-                        n += std::get<2>(increment);
+                        rs += std::get<2>(increment);
+                        rv += std::get<3>(increment);
+                        n += std::get<4>(increment);
                     }
                     std::size_t global_n = n;
                     double global_p = p;
                     double global_T = T;
+                    double global_rs = rs;
+                    double global_rv = rv;
 #if HAVE_MPI
                     if ( is_parallel )
                     {
                         const auto& real_info = boost::any_cast<const ParallelISTLInformation&>(info);
                         global_n = real_info.communicator().sum(n);
                         global_p = real_info.communicator().sum(p);
+                        global_rs = real_info.communicator().sum(rs);
+                        global_rv = real_info.communicator().sum(rv);
                         global_T = real_info.communicator().sum(T);
                     }
 #endif
                     p = global_p / global_n;
+                    rs = global_rs / global_n;
+                    rv = global_rv / global_n;
                     T = global_T / global_n;
                 }
             }
-            /**
-             * Compute maximum dissolution and evaporation ratios at
-             * average hydrocarbon pressure.
-             *
-             * Uses the pressure value computed by averagePressure()
-             * and must therefore be called *after* that method.
-             */
-            void
-            calcRmax()
-            {
-                const PhaseUsage& pu = phaseUsage_;
 
-                if (Details::PhaseUsed::oil(pu) &&
-                    Details::PhaseUsed::gas(pu))
-                {
-                    const int io = Details::PhasePos::oil(pu);
-                    const int ig = Details::PhasePos::gas(pu);
 
-                    // Note: Intentionally does not take capillary
-                    // pressure into account.  This facility uses the
-                    // average *hydrocarbon* pressure rather than
-                    // average phase pressure.
 
-                    for (const auto& reg : rmap_.activeRegions()) {
-                        auto& ra = attr_.attributes(reg);
-
-                        const double T = ra.temperature;
-                        const double p = ra.pressure;
-                        const int cellIdx = attr_.cell(reg);
-                        const int pvtRegionIdx = cellPvtIdx_[cellIdx];
-
-                        std::vector<double>& Rmax = ra.Rmax;
-                        Rmax[io] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx, T, p);
-                        Rmax[ig] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx, T, p);
-                    }
-                }
-            }
-
-            /**
-             * Compute fluid conditions in particular region for a
-             * given set of component rates at surface conditions.
-             *
-             * \tparam Input Type representing collection of (active)
-             * component rates at surface conditions.  Must support
-             * direct indexing through \code operator[]()\endcode.
-             *
-             * \param[in] in Single tuple of active component rates at
-             * surface conditions.
-             *
-             * \param[in] r Fluid-in-place region to which the
-             * component rates correspond.
-             *
-             * \return Fluid conditions in region \c r corresponding
-             * to surface component rates \c in.
-             */
-            template <class Input>
-            Miscibility
-            calcMiscibility(const Input& in, const RegionId r) const
-            {
-                const auto& pu   = phaseUsage_;
-                const auto& attr = attr_.attributes(r);
-
-                const int io = Details::PhasePos::oil(pu);
-                const int ig = Details::PhasePos::gas(pu);
-
-                Miscibility m;
-                PhasePresence& cond = m.cond[0];
-
-                if (Details::PhaseUsed::water(pu)) {
-                    cond.setFreeWater();
-                }
-
-                if (Details::PhaseUsed::oil(pu)) {
-                    cond.setFreeOil();
-
-                    if (Details::PhaseUsed::gas(pu)) {
-                        const double rsmax = attr.Rmax[io];
-                        const double rs =
-                            (0.0 < std::abs(in[io]))
-                            ? in[ig] / in[io]
-                            : (0.0 < std::abs(in[ig])) ? rsmax : 0.0;
-
-                        if (rsmax < rs) {
-                            cond.setFreeGas();
-                        }
-
-                        m.rs = std::min(rs, rsmax);
-                    }
-                }
-
-                if (Details::PhaseUsed::gas(pu)) {
-                    if (! Details::PhaseUsed::oil(pu)) {
-                        // Oil *NOT* active -- not really supported.
-                        cond.setFreeGas();
-                    }
-
-                    if (Details::PhaseUsed::oil(pu)) {
-                        const double rvmax = attr.Rmax[ig];
-                        const double rv =
-                            (0.0 < std::abs(in[ig]))
-                            ? (in[io] / in[ig])
-                            : (0.0 < std::abs(in[io])) ? rvmax : 0.0;
-
-                        m.rv = std::min(rv, rvmax);
-                    }
-                }
-
-                return m;
-            }
         };
     } // namespace RateConverter
 } // namespace Opm

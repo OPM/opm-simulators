@@ -94,6 +94,9 @@ namespace Opm
         /// Well name.
         const std::string& name() const;
 
+        /// Well cells.
+        const std::vector<int>& cells() {return well_cells_; }
+
         /// Well type, INJECTOR or PRODUCER.
         WellType wellType() const;
 

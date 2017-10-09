@@ -60,7 +60,7 @@ namespace Opm
           terminal_output_(param.getDefault("output_terminal", true)),
           eclipse_state_(eclipse_state),
           output_writer_(output_writer),
-          rateConverter_(props_.phaseUsage(), props.cellPvtRegionIndex(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
+          rateConverter_(props_.phaseUsage(), std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
           is_parallel_run_( false ),
           defunct_well_names_(defunct_well_names)
@@ -560,7 +560,9 @@ namespace Opm
                         }
 
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
-                        rateConverter_.calcCoeff(prates, fipreg, distr);
+                        const int well_cell_top = wells->well_cells[wells->well_connpos[*rp]];
+                        const int pvtreg = props_.cellPvtRegionIndex()[well_cell_top];
+                        rateConverter_.calcCoeff(fipreg, pvtreg, distr);
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
                     }
@@ -582,7 +584,9 @@ namespace Opm
                             SimFIBODetails::historyRates(pu, p, hrates);
 
                             const int fipreg = 0; // Hack.  Ignore FIP regions.
-                            rateConverter_.calcCoeff(hrates, fipreg, distr);
+                            const int well_cell_top = wells->well_cells[wells->well_connpos[*rp]];
+                            const int pvtreg = props_.cellPvtRegionIndex()[well_cell_top];
+                            rateConverter_.calcCoeff(fipreg, pvtreg, distr);
 
                             // WCONHIST/RESV target is sum of all
                             // observed phase rates translated to
