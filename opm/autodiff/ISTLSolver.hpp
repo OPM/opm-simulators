@@ -429,7 +429,9 @@ namespace Opm
             }
         }
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2 , 5)
+#if DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
+        // 3x3 matrix block inversion was unstable at least 2.3 until and including
+        // 2.5.0
         typedef ParallelOverlappingILU0<Matrix,Vector,Vector> SeqPreconditioner;
 #else
         typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
@@ -449,7 +451,9 @@ namespace Opm
 
 #if HAVE_MPI
         typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2 , 5)
+#if DUNE_VERSION_NEWER_REV(DUNE_ISTL, 2 , 5, 1)
+        // 3x3 matrix block inversion was unstable from at least 2.3 until and
+        // including 2.5.0
         typedef ParallelOverlappingILU0<Matrix,Vector,Vector,Comm> ParPreconditioner;
 #else
         typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
