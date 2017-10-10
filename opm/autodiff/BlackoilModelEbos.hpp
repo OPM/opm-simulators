@@ -91,6 +91,10 @@ SET_BOOL_PROP(EclFlowProblem, UseVolumetricResidual, false);
 // SWATINIT is done by the flow part of flow_ebos. this can be removed once the legacy
 // code for fluid and satfunc handling gets fully retired.
 SET_BOOL_PROP(EclFlowProblem, EnableSwatinit, false);
+
+// Silence the deprecation warnings about the SimulatorParameter mechanism. This needs to
+// be removed once the SimulatorParameter mechanism bites the dust!
+SET_TYPE_PROP(EclFlowProblem, SimulatorParameter, Ewoms::EmptySimulationParameters);
 }}
 
 namespace Opm {

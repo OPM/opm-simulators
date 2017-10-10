@@ -455,7 +455,7 @@ public:
     { return ebosSimulator_.gridManager().grid(); }
 
 protected:
-    void handleAdditionalWellInflow(SimulatorTimer& timer,
+    void handleAdditionalWellInflow(SimulatorTimer& /*timer*/,
                                     WellsManager& /* wells_manager */,
                                     WellState& /* well_state */,
                                     const Wells* /* wells */)

@@ -93,19 +93,17 @@ namespace Opm
         /// simulator classes, based on user command-line input.  The
         /// content of this function used to be in the main() function of
         /// flow.cpp.
-        int execute(int argc, char** argv,
-                    std::shared_ptr<Opm::Deck> deck = std::shared_ptr<Opm::Deck>(),
-                    std::shared_ptr<Opm::EclipseState> eclipseState = std::shared_ptr<Opm::EclipseState>() )
+        int execute(int argc, char** argv)
         {
             try {
-                setupParallelism(argc, argv);
+                setupParallelism();
                 printStartupMessage();
                 const bool ok = setupParameters(argc, argv);
                 if (!ok) {
                     return EXIT_FAILURE;
                 }
 
-                setupEbosSimulator( deck, eclipseState );
+                setupEbosSimulator();
                 setupOutput();
                 setupLogging();
                 printPRTHeader();
@@ -145,7 +143,7 @@ namespace Opm
         }
 
     protected:
-        void setupParallelism(int argc, char** argv)
+        void setupParallelism()
         {
             // determine the rank of the current process and the number of processes
             // involved in the simulation. MPI must have already been initialized here.
@@ -410,7 +408,7 @@ namespace Opm
                           detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
         }
 
-        void setupEbosSimulator( std::shared_ptr<Opm::Deck>& dck, std::shared_ptr<Opm::EclipseState>& eclipseState)
+        void setupEbosSimulator()
         {
             std::string progName("flow_ebos");
             std::string deckFile("--ecl-deck-file-name=");
