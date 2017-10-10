@@ -35,6 +35,10 @@
 namespace Ewoms {
 namespace Properties {
 NEW_TYPE_TAG(EclProblem, INHERITS_FROM(BlackOilModel, EclBaseProblem));
+
+//! Set the SimulatorParameter to be empty to avoid the deprecation warnings.
+//! THE SimulatorParameter MECHANISM IS A DEPRECATED HACK, PLEASE REMOVE IT ASAP!
+SET_TYPE_PROP(EclProblem, SimulatorParameter, Ewoms::EmptySimulationParameters);
 }}
 
 int main(int argc, char **argv)
