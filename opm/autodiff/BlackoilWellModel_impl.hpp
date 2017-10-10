@@ -210,7 +210,7 @@ namespace Opm {
                    bool only_wells) const
     {
         for (int w = 0; w < number_of_wells_; ++w) {
-            well_container_[w]->assembleWellEq(ebosSimulator, dt, well_state, only_wells);
+            well_container_[w]->assembleWellEq(ebosSimulator, param_, dt, well_state, only_wells);
         }
     }
 
@@ -929,7 +929,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeAverageFormationFactor(Simulator& ebosSimulator,
+    computeAverageFormationFactor(const Simulator& ebosSimulator,
                                   std::vector<double>& B_avg) const
     {
         const int np = numPhases();

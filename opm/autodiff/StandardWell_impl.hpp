@@ -514,6 +514,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     assembleWellEq(Simulator& ebosSimulator,
+                   const ModelParameters& /* param */,
                    const double dt,
                    WellState& well_state,
                    bool only_wells)
@@ -1364,7 +1365,7 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::ConvergenceReport
     StandardWell<TypeTag>::
-    getWellConvergence(Simulator& ebosSimulator,
+    getWellConvergence(const Simulator& /* ebosSimulator */,
                        const std::vector<double>& B_avg,
                        const ModelParameters& param) const
     {

@@ -220,120 +220,18 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEq(Simulator& ebosSimulator,
+                   const ModelParameters& param,
                    const double dt,
                    WellState& well_state,
                    bool only_wells)
     {
-        // clear all entries
-        if (!only_wells) {
-            duneB_ = 0.0;
-            duneC_ = 0.0;
+
+        const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
+        if (use_inner_iterations) {
+            iterateWellEquations(ebosSimulator, param, dt, well_state);
         }
 
-        duneD_ = 0.0;
-        resWell_ = 0.0;
-
-        // for the black oil cases, there will be four equations,
-        // the first three of them are the mass balance equations, the last one is the pressure equations.
-        //
-        // but for the top segment, the pressure equation will be the well control equation, and the other three will be the same.
-
-        auto& ebosJac = ebosSimulator.model().linearizer().matrix();
-        auto& ebosResid = ebosSimulator.model().linearizer().residual();
-
-        const bool allow_cf = getAllowCrossFlow();
-
-        const int nseg = numberOfSegments();
-        const int num_comp = numComponents();
-
-        // TODO: finding better place to put it
-        computeSegmentFluidProperties(ebosSimulator);
-
-        for (int seg = 0; seg < nseg; ++seg) {
-            // calculating the accumulation term // TODO: without considering the efficiencty factor for now
-            // volume of the segment
-            {
-                const double volume = segmentSet()[seg].volume();
-                // for each component
-                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-                    EvalWell accumulation_term = volume / dt * (surfaceVolumeFraction(seg, comp_idx) - segment_comp_initial_[seg][comp_idx])
-                                               + getSegmentRate(seg, comp_idx);
-
-                    resWell_[seg][comp_idx] += accumulation_term.value();
-                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                        duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + numEq);
-                    }
-                }
-            }
-
-            // considering the contributions from the inlet segments
-            {
-                for (const int inlet : segment_inlets_[seg]) {
-                    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-                        const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
-                        resWell_[seg][comp_idx] -= inlet_rate.value();
-                        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                            duneD_[seg][inlet][comp_idx][pv_idx] -= inlet_rate.derivative(pv_idx + numEq);
-                        }
-                    }
-                }
-            }
-
-            // calculating the perforation rate for each perforation that belongs to this segment
-            const EvalWell seg_pressure = getSegmentPressure(seg);
-            for (const int perf : segment_perforations_[seg]) {
-                const int cell_idx = well_cells_[perf];
-                const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-                std::vector<EvalWell> mob(num_comp, 0.0);
-                getMobility(ebosSimulator, perf, mob);
-                std::vector<EvalWell> cq_s(num_comp, 0.0);
-                computePerfRate(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s);
-
-                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
-                    // the cq_s entering mass balance equations need to consider the efficiency factors.
-                    const EvalWell cq_s_effective = cq_s[comp_idx] * well_efficiency_factor_;
-
-                    if (!only_wells) {
-                        // subtract sum of component fluxes in the reservoir equation.
-                        // need to consider the efficiency factor
-                        // TODO: the name of the function flowPhaseToEbosCompIdx is prolematic, since the input
-                        // is a component index :D
-                        ebosResid[cell_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.value();
-                    }
-
-                    // subtract sum of phase fluxes in the well equations.
-                    resWell_[seg][comp_idx] -= cq_s_effective.value();
-
-                    // assemble the jacobians
-                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                        if (!only_wells) {
-                            // also need to consider the efficiency factor when manipulating the jacobians.
-                            duneC_[seg][cell_idx][pv_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
-                        }
-                        // the index name for the D should be eq_idx / pv_idx
-                        duneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
-                    }
-
-                    for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
-                        if (!only_wells) {
-                            // also need to consider the efficiency factor when manipulating the jacobians.
-                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(comp_idx)][pv_idx] -= cq_s_effective.derivative(pv_idx);
-                            duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
-                        }
-                    }
-                }
-                // TODO: we should save the perforation pressure and preforation rates?
-                // we do not use it in the simulation for now, while we might need them if
-                // we handle the pressure in SEG mode.
-            }
-
-            // the fourth dequation, the pressure drop equation
-            if (seg == 0) { // top segment, pressure equation is the control equation
-                assembleControlEq();
-            } else {
-                assemblePressureEq(seg);
-            }
-        }
+        assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, only_wells);
     }
 
 
@@ -491,7 +389,7 @@ namespace Opm
     template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::ConvergenceReport
     MultisegmentWell<TypeTag>::
-    getWellConvergence(Simulator& ebosSimulator,
+    getWellConvergence(const Simulator& /* ebosSimulator */,
                        const std::vector<double>& B_avg,
                        const ModelParameters& param) const
     {
@@ -823,6 +721,10 @@ namespace Opm
                     const BlackoilModelParameters& param,
                     WellState& well_state) const
     {
+        const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
+
+        const double relaxation_factor = use_inner_iterations ? 0.4 : 1.0;
+
         // I guess the following can also be applied to the segmnet pressure
         // maybe better to give it a different name
         const double dBHPLimit = param.dbhp_max_rel_;
@@ -833,13 +735,13 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             if (active()[ Water ]) {
                 const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), dFLimit);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]), relaxation_factor * dFLimit);
                 primary_variables_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
             }
 
             if (active()[ Gas ]) {
                 const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), dFLimit);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]), relaxation_factor * dFLimit);
                 primary_variables_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
             }
 
@@ -856,7 +758,7 @@ namespace Opm
 
             // update the total rate // TODO: should we have a limitation of the total rate change?
             {
-                primary_variables_[seg][GTotal] = old_primary_variables[seg][GTotal] - dwells[seg][GTotal];
+                primary_variables_[seg][GTotal] = old_primary_variables[seg][GTotal] - relaxation_factor * dwells[seg][GTotal];
             }
 
             // TODO: not handling solvent related for now
@@ -1858,6 +1760,179 @@ namespace Opm
     accelerationalPressureLossConsidered() const
     {
         return (segmentSet().compPressureDrop() == WellSegment::HFA);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    iterateWellEquations(Simulator& ebosSimulator,
+                         const ModelParameters& param,
+                         const double dt,
+                         WellState& well_state)
+    {
+        std::cout << " beginning iterateWellEquations " << std::endl;
+        // basically, it only iterate through the equations.
+        // we update the primary variables
+        // if converged, we can update the well_state.
+        // the function updateWellState() should have a flag to show
+        // if we will update the well state.
+        // assembleWellEq(
+        const int max_iter_number = 3;
+        int it = 0;
+        for (; it < max_iter_number; ++it) {
+
+            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, true);
+
+            const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
+
+            // TODO: use these small values for now, not intend to reach the convergence
+            // in this stage, but, should we?
+            // If we want to use the real one, we need to find a way to get them.
+            const std::vector<double> B {0.1, 0.1, 0.001};
+
+            const ConvergenceReport report = getWellConvergence(ebosSimulator, B, param);
+
+            if (report.converged) {
+                std::cout << " converged in iterateWellEquations " << std::endl;
+                break;
+            }
+
+            updateWellState(dx_well, param, well_state);
+
+            initPrimaryVariablesEvaluation();
+        }
+
+        if (it >= max_iter_number) {
+            std::cout << " the iterateWellEquations did not converged " << std::endl;
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    assembleWellEqWithoutIteration(Simulator& ebosSimulator,
+                                   const double dt,
+                                   WellState& well_state,
+                                   bool only_wells)
+    {
+        // calculate the fluid properties needed.
+        computeSegmentFluidProperties(ebosSimulator);
+
+        // clear all entries
+        if (!only_wells) {
+            duneB_ = 0.0;
+            duneC_ = 0.0;
+        }
+
+        duneD_ = 0.0;
+        resWell_ = 0.0;
+
+        // for the black oil cases, there will be four equations,
+        // the first three of them are the mass balance equations, the last one is the pressure equations.
+        //
+        // but for the top segment, the pressure equation will be the well control equation, and the other three will be the same.
+
+        auto& ebosJac = ebosSimulator.model().linearizer().matrix();
+        auto& ebosResid = ebosSimulator.model().linearizer().residual();
+
+        const bool allow_cf = getAllowCrossFlow();
+
+        const int nseg = numberOfSegments();
+        const int num_comp = numComponents();
+
+        for (int seg = 0; seg < nseg; ++seg) {
+            // calculating the accumulation term // TODO: without considering the efficiencty factor for now
+            // volume of the segment
+            {
+                const double volume = segmentSet()[seg].volume();
+                // for each component
+                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                    EvalWell accumulation_term = volume / dt * (surfaceVolumeFraction(seg, comp_idx) - segment_comp_initial_[seg][comp_idx])
+                                               + getSegmentRate(seg, comp_idx);
+
+                    resWell_[seg][comp_idx] += accumulation_term.value();
+                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                        duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + numEq);
+                    }
+                }
+            }
+
+            // considering the contributions from the inlet segments
+            {
+                for (const int inlet : segment_inlets_[seg]) {
+                    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                        const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
+                        resWell_[seg][comp_idx] -= inlet_rate.value();
+                        for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                            duneD_[seg][inlet][comp_idx][pv_idx] -= inlet_rate.derivative(pv_idx + numEq);
+                        }
+                    }
+                }
+            }
+
+            // calculating the perforation rate for each perforation that belongs to this segment
+            const EvalWell seg_pressure = getSegmentPressure(seg);
+            for (const int perf : segment_perforations_[seg]) {
+                const int cell_idx = well_cells_[perf];
+                const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                std::vector<EvalWell> mob(num_comp, 0.0);
+                getMobility(ebosSimulator, perf, mob);
+                std::vector<EvalWell> cq_s(num_comp, 0.0);
+                computePerfRate(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s);
+
+                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                    // the cq_s entering mass balance equations need to consider the efficiency factors.
+                    const EvalWell cq_s_effective = cq_s[comp_idx] * well_efficiency_factor_;
+
+                    if (!only_wells) {
+                        // subtract sum of component fluxes in the reservoir equation.
+                        // need to consider the efficiency factor
+                        // TODO: the name of the function flowPhaseToEbosCompIdx is prolematic, since the input
+                        // is a component index :D
+                        ebosResid[cell_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.value();
+                    }
+
+                    // subtract sum of phase fluxes in the well equations.
+                    resWell_[seg][comp_idx] -= cq_s_effective.value();
+
+                    // assemble the jacobians
+                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+                        if (!only_wells) {
+                            // also need to consider the efficiency factor when manipulating the jacobians.
+                            duneC_[seg][cell_idx][pv_idx][flowPhaseToEbosCompIdx(comp_idx)] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
+                        }
+                        // the index name for the D should be eq_idx / pv_idx
+                        duneD_[seg][seg][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx + numEq);
+                    }
+
+                    for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
+                        if (!only_wells) {
+                            // also need to consider the efficiency factor when manipulating the jacobians.
+                            ebosJac[cell_idx][cell_idx][flowPhaseToEbosCompIdx(comp_idx)][pv_idx] -= cq_s_effective.derivative(pv_idx);
+                            duneB_[seg][cell_idx][comp_idx][pv_idx] -= cq_s_effective.derivative(pv_idx);
+                        }
+                    }
+                }
+                // TODO: we should save the perforation pressure and preforation rates?
+                // we do not use it in the simulation for now, while we might need them if
+                // we handle the pressure in SEG mode.
+            }
+
+            // the fourth dequation, the pressure drop equation
+            if (seg == 0) { // top segment, pressure equation is the control equation
+                assembleControlEq();
+            } else {
+                assemblePressureEq(seg);
+            }
+        }
     }
 
 }

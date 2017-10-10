@@ -56,6 +56,9 @@ namespace Opm
         /// Maximum pressure change over an iteratio for ms wells
         double max_pressure_change_ms_wells_;
 
+        /// Whether to use inner iterations for ms wells
+        bool use_inner_iterations_ms_wells_;
+
         /// Maximum iteration number of the well equation solution
         int max_welleq_iter_;
 

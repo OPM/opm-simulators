@@ -144,7 +144,7 @@ namespace Opm
             }
         };
 
-        virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
+        virtual ConvergenceReport getWellConvergence(const Simulator& ebosSimulator,
                                                      const std::vector<double>& B_avg,
                                                      const ModelParameters& param) const = 0;
 
@@ -152,6 +152,7 @@ namespace Opm
                                                WellState& well_state) = 0;
 
         virtual void assembleWellEq(Simulator& ebosSimulator,
+                                    const ModelParameters& param,
                                     const double dt,
                                     WellState& well_state,
                                     bool only_wells) = 0;

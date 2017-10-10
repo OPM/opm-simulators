@@ -212,7 +212,7 @@ namespace Opm {
             void computeRepRadiusPerfLength(const Grid& grid);
 
 
-            void computeAverageFormationFactor(Simulator& ebosSimulator,
+            void computeAverageFormationFactor(const Simulator& ebosSimulator,
                                                std::vector<double>& B_avg) const;
 
             void applyVREPGroupControl(WellState& well_state) const;

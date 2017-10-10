@@ -111,6 +111,7 @@ namespace Opm
         virtual void initPrimaryVariablesEvaluation() const;
 
         virtual void assembleWellEq(Simulator& ebosSimulator,
+                                    const ModelParameters& param,
                                     const double dt,
                                     WellState& well_state,
                                     bool only_wells);
@@ -121,7 +122,7 @@ namespace Opm
                                                WellState& xw) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
+        virtual ConvergenceReport getWellConvergence(const Simulator& ebosSimulator,
                                                      const std::vector<double>& B_avg,
                                                      const ModelParameters& param) const;
 

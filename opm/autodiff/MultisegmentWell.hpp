@@ -105,6 +105,7 @@ namespace Opm
         virtual void initPrimaryVariablesEvaluation() const;
 
         virtual void assembleWellEq(Simulator& ebosSimulator,
+                                    const ModelParameters& param,
                                     const double dt,
                                     WellState& well_state,
                                     bool only_wells);
@@ -115,7 +116,7 @@ namespace Opm
                                                WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
+        virtual ConvergenceReport getWellConvergence(const Simulator& ebosSimulator,
                                                      const std::vector<double>& B_avg,
                                                      const ModelParameters& param) const;
 
@@ -327,6 +328,17 @@ namespace Opm
         bool frictionalPressureLossConsidered() const;
 
         bool accelerationalPressureLossConsidered() const;
+
+        // TODO: try to make ebosSimulator const, as it should be
+        void iterateWellEquations(Simulator& ebosSimulator,
+                                  const ModelParameters& param,
+                                  const double dt,
+                                  WellState& well_state);
+
+        void assembleWellEqWithoutIteration(Simulator& ebosSimulator,
+                                            const double dt,
+                                            WellState& well_state,
+                                            bool only_wells);
     };
 
 }
