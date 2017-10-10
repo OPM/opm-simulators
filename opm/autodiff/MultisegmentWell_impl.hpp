@@ -581,7 +581,7 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
-        BVectorWell invDBx = mswellhelpers::invDX(duneD_, Bx);
+        const BVectorWell invDBx = mswellhelpers::invDX(duneD_, Bx);
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -597,7 +597,7 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-        BVectorWell invDrw = mswellhelpers::invDX(duneD_, resWell_);
+        const BVectorWell invDrw = mswellhelpers::invDX(duneD_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }

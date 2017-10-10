@@ -104,7 +104,11 @@ namespace mswellhelpers
         // Reynolds number
         const double re = std::abs(diameter * w / (area * mu));
 
-        assert(re > 0.0);
+        if ( re == 0.0 ) {
+            // make sure it is because the mass rate is zero
+            assert(w == 0.);
+            return 0.0;
+        }
 
         const double re_value1 = 200.;
         const double re_value2 = 4000.;
