@@ -301,6 +301,15 @@ namespace Opm {
                 perfTimer.reset();
                 perfTimer.start();
 
+                // handling well state update before oscillation treatment is a decision based
+                // on observation to avoid some big performance degeneration under some circumstances.
+                // there is no theorectical explanation which way is better for sure.
+
+                if( nw > 0 )
+                {
+                    wellModel().recoverWellSolutionAndUpdateWellState(x, well_state);
+                }
+
                 if (param_.use_update_stabilization_) {
                     // Stabilize the nonlinear update.
                     bool isOscillate = false;
@@ -322,10 +331,6 @@ namespace Opm {
                 // chopping of the update.
                 updateState(x,iteration);
 
-                if( nw > 0 )
-                {
-                    wellModel().recoverWellSolutionAndUpdateWellState(x, well_state);
-                }
                 report.update_time += perfTimer.stop();
             }
 
