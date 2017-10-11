@@ -461,7 +461,7 @@ public:
     { return ebosSimulator_.gridManager().grid(); }
 
 protected:
-    void handleAdditionalWellInflow(SimulatorTimer& timer,
+    void handleAdditionalWellInflow(SimulatorTimer& /*timer*/,
                                     WellsManager& /* wells_manager */,
                                     WellState& /* well_state */,
                                     const Wells* /* wells */)
@@ -957,6 +957,9 @@ protected:
                     SatOnlyFluidState fluidState;
                     if ( active[Water] ) {
                         fluidState.setSaturation(FluidSystem::waterPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Water]]);
+                    }
+                    else {
+                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
                     }
                     fluidState.setSaturation(FluidSystem::oilPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Oil]]);
                     fluidState.setSaturation(FluidSystem::gasPhaseIdx, saturations[cellIdx*numPhases + pu.phase_pos[Gas]]);
