@@ -160,11 +160,14 @@ public:
         auto& elemScaledEpsInfo = *oilWaterScaledEpsInfoDrainage_[elemIdx];
 
         // TODO: Mixed wettability systems - see ecl kw OPTIONS switch 74
-        if (Sw <= elemScaledEpsInfo.Swl)
-            Sw = elemScaledEpsInfo.Swl;
-        else if (pcow < 0.0)
+
+        if (pcow < 0.0)
             Sw = elemScaledEpsInfo.Swu;
         else {
+
+            if (Sw <= elemScaledEpsInfo.Swl)
+                Sw = elemScaledEpsInfo.Swl;
+
             // specify a fluid state which only stores the saturations
             typedef Opm::SimpleModularFluidState<Scalar,
                                                  numPhases,
