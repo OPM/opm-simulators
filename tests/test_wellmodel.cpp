@@ -78,7 +78,7 @@ struct SetupTest {
     {
         Opm::ParseContext parse_context;
         Opm::Parser parser;
-        auto deck = parser.parseFile("TESTWELLMODEL.DATA", parse_context);
+        auto deck = parser.parseFile("tests/TESTWELLMODEL.DATA", parse_context);
         ecl_state.reset(new Opm::EclipseState(deck , parse_context) );
         {
           const Opm::TableManager table ( deck );

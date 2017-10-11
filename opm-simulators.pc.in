@@ -1,0 +1,15 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+CXX=@CXX@
+CC=@CC@
+DEPENDENCIES=@REQUIRES@
+
+Name: @PACKAGE_NAME@
+Version: @VERSION@
+Description: The opm-simulators module
+URL: http://www.opm-project.org/
+Requires: ${DEPENDENCIES}
+Libs: -L${libdir}
+Cflags: -I${includedir}

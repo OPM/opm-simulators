@@ -1106,7 +1106,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 
     Opm::Parser parser;
     Opm::ParseContext parse_mode;
-    boost::filesystem::path file("VFPPROD2");
+    boost::filesystem::path file("tests/VFPPROD2");
 
     auto deck = parser.parseFile(file.string(), parse_mode);
     Opm::checkDeck(deck, parser);
