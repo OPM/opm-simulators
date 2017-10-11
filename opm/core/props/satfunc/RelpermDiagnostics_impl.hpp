@@ -33,7 +33,7 @@ namespace Opm {
                                        const Opm::Deck& deck,
                                        const GridT& grid)
     {
-        OpmLog::info("\n***************Saturation Functions Diagnostics***************");
+        OpmLog::info("\n===============Saturation Functions Diagnostics===============\n");
         phaseCheck_(eclState);
         satFamilyCheck_(eclState);
         tableCheck_(eclState);
@@ -46,6 +46,8 @@ namespace Opm {
                                                    const EclipseState& eclState,
                                                    const GridT& grid)
     {
+        // All end points are subject to round-off errors, checks should account for it
+        const float tolerance = 1e-6;
         const int nc = Opm::UgGridHelpers::numCells(grid);
         const auto& global_cell = Opm::UgGridHelpers::globalCell(grid);
         const auto dims = Opm::UgGridHelpers::cartDims(grid);
@@ -69,62 +71,26 @@ namespace Opm {
             scaledEpsInfo_[c].extractScaled(eclState, epsGridProperties, cartIdx);
 
             // SGU <= 1.0 - SWL
-            if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl)) {
+            if (scaledEpsInfo_[c].Sgu > (1.0 - scaledEpsInfo_[c].Swl + tolerance)) {
                 const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGU exceed 1.0 - SWL";
                 OpmLog::warning(tag, msg);
             }
             
             // SGL <= 1.0 - SWU
-            if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu)) {
+            if (scaledEpsInfo_[c].Sgl > (1.0 - scaledEpsInfo_[c].Swu + tolerance)) {
                 const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL exceed 1.0 - SWU";
                 OpmLog::warning(tag, msg);
             }
 
             if (deck.hasKeyword("SCALECRS") && fluidSystem_ == FluidSystem::BlackOil) {
                 // Mobilility check.
-                if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= 1.0) {
+		    if ((scaledEpsInfo_[c].Sowcr + scaledEpsInfo_[c].Swcr) >= (1.0 + tolerance)) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR + SWCR exceed 1.0";
                     OpmLog::warning(tag, msg);
                 }
 
-                if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= 1.0) {
+            if ((scaledEpsInfo_[c].Sogcr + scaledEpsInfo_[c].Sgcr + scaledEpsInfo_[c].Swl) >= (1.0 + tolerance)) {
                     const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR + SGCR + SWL exceed 1.0";
-                    OpmLog::warning(tag, msg);
-                }
-            }
-            ///Following rules come from NEXUS.
-            if (fluidSystem_ != FluidSystem::WaterGas) {
-                if (scaledEpsInfo_[c].Swl > scaledEpsInfo_[c].Swcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SWL > SWCR";
-                    OpmLog::warning(tag, msg);
-                }
-
-                if (scaledEpsInfo_[c].Swcr > scaledEpsInfo_[c].Sowcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SWCR > SOWCR";
-                    OpmLog::warning(tag, msg);
-                }
-            
-                if (scaledEpsInfo_[c].Sowcr > scaledEpsInfo_[c].Swu) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOWCR > SWU";
-                    OpmLog::warning(tag, msg);
-                }
-            }
-
-            if (fluidSystem_ != FluidSystem::OilWater) {
-                if (scaledEpsInfo_[c].Sgl > scaledEpsInfo_[c].Sgcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGL > SGCR";
-                    OpmLog::warning(tag, msg);
-                }
-            }
-
-            if (fluidSystem_ != FluidSystem::BlackOil) {
-                if (scaledEpsInfo_[c].Sgcr > scaledEpsInfo_[c].Sogcr) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SGCR > SOGCR";
-                    OpmLog::warning(tag, msg);
-                }
-
-                if (scaledEpsInfo_[c].Sogcr > scaledEpsInfo_[c].Sgu) {
-                    const std::string msg = "For scaled endpoints input, cell" + cellIdx + " SATNUM = " + satnumIdx + ", SOGCR > SGU";
                     OpmLog::warning(tag, msg);
                 }
             }
