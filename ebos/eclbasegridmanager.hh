@@ -39,8 +39,6 @@
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 
-#include <dune/common/deprecated.hh>
-
 #if HAVE_MPI
 #include <mpi.h>
 #endif // HAVE_MPI
@@ -48,13 +46,10 @@
 #include <vector>
 #include <unordered_set>
 #include <array>
-#include <type_traits>
 
 namespace Ewoms {
 template <class TypeTag>
 class EclBaseGridManager;
-
-struct EmptySimulationParameters; //< \deprecated, please remove ASAP!
 
 namespace Properties {
 NEW_TYPE_TAG(EclBaseGridManager);
@@ -63,13 +58,9 @@ NEW_TYPE_TAG(EclBaseGridManager);
 NEW_PROP_TAG(Grid);
 NEW_PROP_TAG(EquilGrid);
 NEW_PROP_TAG(Scalar);
-
 NEW_PROP_TAG(EclDeckFileName);
 
-NEW_PROP_TAG(SimulatorParameter); //< \deprecated, please remove ASAP!
-
 SET_STRING_PROP(EclBaseGridManager, EclDeckFileName, "ECLDECK.DATA");
-
 } // namespace Properties
 
 /*!
@@ -156,37 +147,33 @@ public:
         caseName_ = rawCaseName;
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
 
-        if (!getDeckFromSimulatorParameter_()) {
-            if (!externalDeck_) {
-                if (myRank == 0)
-                    std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
+        if (!externalDeck_) {
+            if (myRank == 0)
+                std::cout << "Reading the deck file '" << fileName << "'" << std::endl;
 
-                Opm::Parser parser;
-                typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
-                typedef std::vector<ParseModePair> ParseModePairs;
+            Opm::Parser parser;
+            typedef std::pair<std::string, Opm::InputError::Action> ParseModePair;
+            typedef std::vector<ParseModePair> ParseModePairs;
 
-                ParseModePairs tmp;
-                tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
-                tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
-                tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
-                tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
-                Opm::ParseContext parseContext(tmp);
+            ParseModePairs tmp;
+            tmp.emplace_back(Opm::ParseContext::PARSE_RANDOM_SLASH, Opm::InputError::IGNORE);
+            tmp.emplace_back(Opm::ParseContext::PARSE_MISSING_DIMS_KEYWORD, Opm::InputError::WARN);
+            tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_WELL, Opm::InputError::WARN);
+            tmp.emplace_back(Opm::ParseContext::SUMMARY_UNKNOWN_GROUP, Opm::InputError::WARN);
+            Opm::ParseContext parseContext(tmp);
 
-                internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext)));
-                internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext));
+            internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext)));
+            internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext));
 
-                deck_ = &(*internalDeck_);
-                eclState_ = &(*internalEclState_);
-            }
-            // check if the deprecated SimulatorParameter mechanism is used to pass external
-            // parameters.
-            else {
-                assert(externalDeck_);
-                assert(externalEclState_);
+            deck_ = &(*internalDeck_);
+            eclState_ = &(*internalEclState_);
+        }
+        else {
+            assert(externalDeck_);
+            assert(externalEclState_);
 
-                deck_ = externalDeck_;
-                eclState_ = externalEclState_;
-            }
+            deck_ = externalDeck_;
+            eclState_ = externalEclState_;
         }
 
         asImp_().createGrids_();
@@ -300,36 +287,6 @@ private:
 
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
-
-    // set the deck via the deprecated SimulatorParameter mechanism. The template-foo
-    // ensures that if the simulator parameters are non-empty, a deprecation warning is
-    // produced.
-    typedef typename GET_PROP_TYPE(TypeTag, SimulatorParameter) SimulatorParameter;
-    template <class SimParam = SimulatorParameter>
-    DUNE_DEPRECATED_MSG("Use static setExternalDeck() to pass external parameters to the instead of SimulatorParameter mechanism")
-    typename std::enable_if<!std::is_same<SimParam, Ewoms::EmptySimulationParameters>::value,
-                            bool>::type
-    getDeckFromSimulatorParameter_()
-    {
-        const auto& simParam = this->simulator_.simulatorParameter();
-        if (simParam.first) {
-            externalDeck_ = &(*simParam.first);
-            externalEclState_ = &(*simParam.second);
-
-            deck_ = externalDeck_;
-            eclState_ = externalEclState_;
-
-            return true;
-        }
-
-        return false;
-    }
-
-    template <class SimParam = SimulatorParameter>
-    typename std::enable_if<std::is_same<SimParam, Ewoms::EmptySimulationParameters>::value,
-                            bool>::type
-    getDeckFromSimulatorParameter_()
-    { return false; }
 
     std::string caseName_;
 
