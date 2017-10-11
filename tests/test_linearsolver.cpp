@@ -163,7 +163,6 @@ BOOST_AUTO_TEST_CASE(BiCGILUTest)
     run_test(param);
 }
 
-#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
 BOOST_AUTO_TEST_CASE(FastAMGTest)
 {
     Opm::ParameterGroup param;
@@ -182,7 +181,6 @@ BOOST_AUTO_TEST_CASE(KAMGTest)
     param.insertParameter(std::string("linsolver_max_iterations"), std::string("200"));
     run_test(param);
 }
-#endif
 #endif
 
 #if HAVE_PETSC
