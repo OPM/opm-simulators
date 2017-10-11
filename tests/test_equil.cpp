@@ -829,6 +829,7 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
         { 0, 0, 0, 0.0148267, 0.78528, 0.8, 0.8, 0.8, 0.8, 0.574693, 0.22536, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         { 0.8, 0.8, 0.8, 0.785173, 0.01472, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     };
+    // sw in cell 1-5 is forced to be 0.2 since swl=0.2
     // sw in cell 13 and 14 is forced to be swu=1 since P_oil - P_wat < 0.
     const std::vector<double> swatinit[3]{
         { 0.2, 0.2, 0.2, 0.2, 0.2, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1, 1, 1, 1, 1 },
@@ -857,8 +858,13 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
 
     std::vector<double> pc_scaled_truth = pc_original;
 
-    // modify pcow for cell 5 - 11 (where sw is changed due to swatinit)
+    // modify pcow for cell 1 - 12 (where sw is changed due to swatinit)
     // for the reference scaled pc.
+    pc_scaled_truth[3*0 + 0] = 150031.3;
+    pc_scaled_truth[3*1 + 0] = 136815.6;
+    pc_scaled_truth[3*2 + 0] = 123612.7;
+    pc_scaled_truth[3*3 + 0] = 110422.7;
+    pc_scaled_truth[3*4 + 0] = 97245.4;
     pc_scaled_truth[3*5 + 0] = 84081;
     pc_scaled_truth[3*6 + 0] = 70929;
     pc_scaled_truth[3*7 + 0] = 57791;
@@ -866,7 +872,6 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
     pc_scaled_truth[3*9 + 0] = 31552;
     pc_scaled_truth[3*10 + 0] = 18451.5;
     pc_scaled_truth[3*11 + 0] =  5364.1;
-
 
     // compute the initial state
 
