@@ -187,16 +187,15 @@ namespace Opm
             if (output_cout_) {
                 const int lineLen = 70;
                 const std::string version = moduleVersionName();
-                const std::string banner = "This is flow (version "+version+")";
+                const std::string banner = "This is flow "+version;
                 const int bannerPreLen = (lineLen - 2 - banner.size())/2;
                 const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
                 std::cout << "**********************************************************************\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";
                 std::cout << "*                                                                    *\n";
-                std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
-                std::cout << "*            and is part of OPM. For more information see:           *\n";
-                std::cout << "*                       http://opm-project.org                       *\n";
+                std::cout << "*   Flow is a fully-implicit simulator for geologic applications.    *\n";
+                std::cout << "*        For more information, see http://opm-project.org            *\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "**********************************************************************\n\n";
             }
