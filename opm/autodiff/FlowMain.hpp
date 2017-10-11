@@ -64,7 +64,6 @@
 
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
-#include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
 
 #include <opm/core/utility/share_obj.hpp>
@@ -307,7 +306,7 @@ namespace Opm
         void printStartupMessage()
         {
             if (output_cout_) {
-                const std::string version = moduleVersionName();
+                const std::string version = OPM_SIMULATORS_VERSION;
                 std::cout << "**********************************************************************\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "*            This is flow_legacy (version " << version << ")"

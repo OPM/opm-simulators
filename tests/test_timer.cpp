@@ -42,7 +42,7 @@
 
 BOOST_AUTO_TEST_CASE(CreateTimer)
 {
-    const std::string filename1 = "TESTTIMER.DATA";
+    const std::string filename1 = "tests/TESTTIMER.DATA";
     Opm::ParseContext parseContext;
     Opm::Parser parser;
     Opm::Deck parserDeck = parser.parseFile( filename1 , parseContext);
