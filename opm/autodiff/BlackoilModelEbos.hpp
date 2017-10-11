@@ -110,7 +110,7 @@ namespace Opm {
     public:
         // ---------  Types and enums  ---------
         typedef BlackoilState ReservoirState;
-        typedef WellStateFullyImplicitBlackoilDense WellState;
+        typedef WellStateFullyImplicitBlackoil WellState;
         typedef BlackoilModelParameters ModelParameters;
 
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;

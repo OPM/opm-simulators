@@ -26,7 +26,7 @@
 #include <opm/autodiff/NonlinearSolver.hpp>
 #include <opm/autodiff/BlackoilModelEbos.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/StandardWellsDense.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/SimFIBODetails.hpp>
@@ -60,7 +60,7 @@ public:
 
     typedef Ewoms::BlackOilPolymerModule<TypeTag> PolymerModule;
 
-    typedef WellStateFullyImplicitBlackoilDense WellState;
+    typedef WellStateFullyImplicitBlackoil WellState;
     typedef BlackoilState ReservoirState;
     typedef BlackoilOutputWriter OutputWriter;
     typedef BlackoilModelEbos<TypeTag> Model;
