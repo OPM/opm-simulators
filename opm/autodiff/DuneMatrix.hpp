@@ -33,14 +33,7 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/version.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL,2,4)
 #include <dune/istl/bcrsmatrix.hh>
-#else
-// Include matrix header with hackery to make it possible to inherit.
-#define private protected
-#include <dune/istl/bcrsmatrix.hh>
-#undef private
-#endif
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
@@ -90,15 +83,13 @@ namespace Opm
 
             nnz = ia[rows];
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
-    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 5)
             this->allocationSize_ = nnz;
-    #else
+#else
             this->allocationSize = nnz;
-    #endif
+#endif
             this->avg = 0;
             this->overflowsize = -1.0;
-#endif
 
             // make sure to use the allocators of this matrix
             // because the same allocators are used to deallocate the data

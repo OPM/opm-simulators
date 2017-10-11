@@ -837,13 +837,8 @@ namespace Opm
                         continue; // intersection is on the domain boundary
                     }
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                     unsigned c1 = globalElemMapper.index(is.inside());
                     unsigned c2 = globalElemMapper.index(is.outside());
-#else
-                    unsigned c1 = globalElemMapper.map(is.inside());
-                    unsigned c2 = globalElemMapper.map(is.outside());
-#endif
 
                     if (c1 > c2)
                     {
@@ -909,13 +904,8 @@ namespace Opm
                         continue; // intersection is on the domain boundary
                     }
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                     unsigned c1 = globalElemMapper.index(is.inside());
                     unsigned c2 = globalElemMapper.index(is.outside());
-#else
-                    unsigned c1 = globalElemMapper.map(is.inside());
-                    unsigned c2 = globalElemMapper.map(is.outside());
-#endif
 
                     if (c1 > c2)
                     {
