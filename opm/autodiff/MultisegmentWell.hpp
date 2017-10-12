@@ -262,6 +262,7 @@ namespace Opm
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              const BlackoilModelParameters& param,
+                             const bool inner_iteration,
                              WellState& well_state) const;
 
         // initialize the segment rates with well rates

@@ -525,7 +525,7 @@ namespace Opm
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, param, well_state);
+        updateWellState(xw, param, false, well_state);
     }
 
 
@@ -646,7 +646,7 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
 
-        updateWellState(dx_well, param, well_state);
+        updateWellState(dx_well, param, false, well_state);
     }
 
 
@@ -731,13 +731,14 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     const BlackoilModelParameters& param,
+                    const bool inner_iteration,
                     WellState& well_state) const
     {
         // TODO: we should probably distinguish the inner iteration or the final update
 
         const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
 
-        const double relaxation_factor = use_inner_iterations ? 0.2 : 1.0;
+        const double relaxation_factor = (use_inner_iterations && inner_iteration) ? 0.2 : 1.0;
 
         // I guess the following can also be applied to the segmnet pressure
         // maybe better to give it a different name
@@ -1797,6 +1798,7 @@ namespace Opm
             // in this stage, but, should we?
             // We should try to avoid hard-code values in the code.
             // If we want to use the real one, we need to find a way to get them.
+            // const std::vector<double> B {0.8, 0.8, 0.008};
             const std::vector<double> B {0.5, 0.5, 0.005};
 
             const ConvergenceReport report = getWellConvergence(ebosSimulator, B, param);
@@ -1806,10 +1808,11 @@ namespace Opm
                 break;
             }
 
-            updateWellState(dx_well, param, well_state);
+            updateWellState(dx_well, param, true, well_state);
 
             initPrimaryVariablesEvaluation();
         }
+        // TODO: maybe we should not use these values if they are not converged.
     }
 
 
