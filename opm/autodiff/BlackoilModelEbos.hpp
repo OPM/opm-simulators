@@ -413,11 +413,7 @@ namespace Opm {
                 if (elem.partitionType() != Dune::InteriorEntity)
                     continue;
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
 		unsigned globalElemIdx = elemMapper.index(elem);
-#else
-		unsigned globalElemIdx = elemMapper.map(elem);
-#endif
                 const auto& priVarsNew = ebosSimulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
                 Scalar pressureNew;
