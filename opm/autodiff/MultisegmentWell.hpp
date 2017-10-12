@@ -264,6 +264,11 @@ namespace Opm
                              const BlackoilModelParameters& param,
                              WellState& well_state) const;
 
+        // initialize the segment rates with well rates
+        // when there is no more accurate way to initialize the segment rates, we initialize
+        // the segment rates based on well rates with a simple strategy
+        void initSegmentRatesWithWellRates(WellState& well_state) const;
+
         // computing the accumulation term for later use in well mass equations
         void computeInitialComposition();
 

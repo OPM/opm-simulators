@@ -59,6 +59,9 @@ namespace Opm
         /// Whether to use inner iterations for ms wells
         bool use_inner_iterations_ms_wells_;
 
+        /// Maximum inner iteration number for ms wells
+        int max_inner_iter_ms_wells_;
+
         /// Maximum iteration number of the well equation solution
         int max_welleq_iter_;
 

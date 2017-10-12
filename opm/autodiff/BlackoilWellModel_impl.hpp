@@ -190,6 +190,11 @@ namespace Opm {
         if (param_.solve_welleq_initially_ && iterationIdx == 0) {
             // solve the well equations as a pre-processing step
             report = solveWellEq(ebosSimulator, dt, well_state);
+            if (report.converged) {
+                std::cout << " solveWellEq converged ! " << std::endl;
+            } else {
+                std::cout << " solveWellEq does not get converged ! " << std::endl;
+            }
         }
         assembleWellEq(ebosSimulator, dt, well_state, false);
 

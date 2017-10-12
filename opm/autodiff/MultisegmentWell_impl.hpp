@@ -317,6 +317,9 @@ namespace Opm
                         well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] = 0.;
                     }
                 }
+
+                initSegmentRatesWithWellRates(well_state);
+
             } else if (well_type_ == PRODUCER) {
                 // update the rates of phases under control based on the target,
                 // and also update rates of phases not under control to keep the rate ratio,
@@ -333,8 +336,14 @@ namespace Opm
 
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
                         well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] *= scaling_factor;
+
+                        // scaling the segment rates with the same way with well rates
+                        const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+                        for (int seg = 0; seg < numberOfSegments(); ++seg) {
+                             well_state.segRates()[number_of_phases_ * (seg + top_segment_location) + phase] *= scaling_factor;
+                        }
                     }
-                } else { // scaling factor is not well defied when original_rates_under_phase_control is zero
+                } else { // scaling factor is not well defined when original_rates_under_phase_control is zero
                     // separating targets equally between phases under control
                     const double target_rate_divided = target / numPhasesWithTargetsUnderThisControl;
                     for (int phase = 0; phase < number_of_phases_; ++phase) {
@@ -345,41 +354,42 @@ namespace Opm
                             well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] = target_rate_divided;
                         }
                     }
+                    initSegmentRatesWithWellRates(well_state);
                 }
-            }
-
-            // update the perforation rates and then segment rates
-            // TODO: it is something different from the StandardWell. In StandardWell, we do not update the perforation rates
-            // when we update the well rates to the target rates. Here, we update the perforation rates so that we can update the
-            // segment rates. This will make the calculation of the explicit quantities different, which relies on the perforation rates
-            // from the last time step. Maybe the better way to do this is to scale the perforation rates based on the well rates
-            // update, so that the compositon inside the wellbore will be preserved.
-            //
-            //
-            // It is just difficult to initialize the segment rates without initializing the perforation rates.
-            {
-                for (int phase = 0; phase < number_of_phases_; ++phase) {
-                    const double perf_phaserate = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / number_of_perforations_;
-                    for (int perf = 0; perf < number_of_perforations_; ++perf) {
-                        well_state.perfPhaseRates()[number_of_phases_ * (first_perf_ + perf) + phase] = perf_phaserate;
-                    }
-                }
-
-                const std::vector<double> perforation_rates(well_state.perfPhaseRates().begin() + number_of_phases_ * first_perf_,
-                                             well_state.perfPhaseRates().begin() + number_of_phases_ * (first_perf_ + number_of_perforations_) );
-                std::vector<double> segment_rates;
-                WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
-                                                 0 /* top segment */, segment_rates);
-                const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
-                std::copy(segment_rates.begin(), segment_rates.end(),
-                          well_state.segRates().begin() + number_of_phases_ * top_segment_location );
-                // we need to check the top segment rates should be same with the well rates
             }
 
             break;
         } // end of switch
 
         updatePrimaryVariables(well_state);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    initSegmentRatesWithWellRates(WellState& well_state) const
+    {
+        for (int phase = 0; phase < number_of_phases_; ++phase) {
+            const double perf_phaserate = well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] / number_of_perforations_;
+            for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                well_state.perfPhaseRates()[number_of_phases_ * (first_perf_ + perf) + phase] = perf_phaserate;
+            }
+        }
+
+        const std::vector<double> perforation_rates(well_state.perfPhaseRates().begin() + number_of_phases_ * first_perf_,
+                                                    well_state.perfPhaseRates().begin() +
+                                                    number_of_phases_ * (first_perf_ + number_of_perforations_) );
+        std::vector<double> segment_rates;
+        WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
+                                         0, segment_rates);
+        const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+        std::copy(segment_rates.begin(), segment_rates.end(),
+                  well_state.segRates().begin() + number_of_phases_ * top_segment_location );
+        // we need to check the top segment rates should be same with the well rates
     }
 
 
@@ -449,6 +459,8 @@ namespace Opm
                 }
             }
         }
+
+        std::cout << " maximum_residual " << maximum_residual[0] << " " << maximum_residual[1] << " " << maximum_residual[2] << " " << maximum_residual[3] << std::endl;
 
         if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
             // check convergence for flux residuals
@@ -723,7 +735,7 @@ namespace Opm
     {
         const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
 
-        const double relaxation_factor = use_inner_iterations ? 0.4 : 1.0;
+        const double relaxation_factor = use_inner_iterations ? 0.2 : 1.0;
 
         // I guess the following can also be applied to the segmnet pressure
         // maybe better to give it a different name
@@ -752,7 +764,7 @@ namespace Opm
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
                 const double current_pressure = old_primary_variables[seg][SPres];
-                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), max_pressure_change);
+                const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), relaxation_factor * max_pressure_change);
                 primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
             }
 
@@ -976,7 +988,7 @@ namespace Opm
         // }
 
         // pressure difference between the segment and the perforation
-        const EvalWell perf_seg_press_diff = gravity_ * segment_densities_[seg] * perforation_segment_depth_diffs_[seg];
+        const EvalWell perf_seg_press_diff = gravity_ * segment_densities_[seg] * perforation_segment_depth_diffs_[perf];
         // pressure difference between the perforation and the grid cell
         const double cell_perf_press_diff = cell_perforation_pressure_diffs_[perf];
 
@@ -1774,16 +1786,15 @@ namespace Opm
                          const double dt,
                          WellState& well_state)
     {
-        std::cout << " beginning iterateWellEquations " << std::endl;
         // basically, it only iterate through the equations.
         // we update the primary variables
         // if converged, we can update the well_state.
         // the function updateWellState() should have a flag to show
         // if we will update the well state.
-        // assembleWellEq(
-        const int max_iter_number = 3;
+        const int max_iter_number = param.max_inner_iter_ms_wells_;
         int it = 0;
         for (; it < max_iter_number; ++it) {
+            std::cout << " iterateWellEquations it " << it << std::endl;
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, true);
 
@@ -1791,8 +1802,9 @@ namespace Opm
 
             // TODO: use these small values for now, not intend to reach the convergence
             // in this stage, but, should we?
+            // We should try to avoid hard-code values in the code.
             // If we want to use the real one, we need to find a way to get them.
-            const std::vector<double> B {0.1, 0.1, 0.001};
+            const std::vector<double> B {0.5, 0.5, 0.005};
 
             const ConvergenceReport report = getWellConvergence(ebosSimulator, B, param);
 
@@ -1804,10 +1816,6 @@ namespace Opm
             updateWellState(dx_well, param, well_state);
 
             initPrimaryVariablesEvaluation();
-        }
-
-        if (it >= max_iter_number) {
-            std::cout << " the iterateWellEquations did not converged " << std::endl;
         }
     }
 

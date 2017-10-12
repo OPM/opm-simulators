@@ -54,6 +54,7 @@ namespace Opm
         max_welleq_iter_ = param.getDefault("max_welleq_iter", max_welleq_iter_);
         max_pressure_change_ms_wells_ = param.getDefault("max_pressure_change_ms_wells", max_pressure_change_ms_wells_);
         use_inner_iterations_ms_wells_ = param.getDefault("use_inner_iterations_ms_wells", use_inner_iterations_ms_wells_);
+        max_inner_iter_ms_wells_ = param.getDefault("max_inner_iter_ms_wells", max_inner_iter_ms_wells_);
         maxSinglePrecisionTimeStep_ = unit::convert::from(
                 param.getDefault("max_single_precision_days", unit::convert::to( maxSinglePrecisionTimeStep_, unit::day) ), unit::day );
         max_strict_iter_ = param.getDefault("max_strict_iter",8);
@@ -80,10 +81,11 @@ namespace Opm
         tolerance_cnv_   = 1.0e-2;
         tolerance_wells_ = 1.0e-4;
         tolerance_well_control_ = 1.0e-7;
-        tolerance_pressure_ms_wells_ = 100.0;
+        tolerance_pressure_ms_wells_ = 1000.0; // 0.01 bar
         max_welleq_iter_ = 15;
         max_pressure_change_ms_wells_ = 200000.; // 2.0 bar
         use_inner_iterations_ms_wells_ = true;
+        max_inner_iter_ms_wells_ = 10;
         maxSinglePrecisionTimeStep_ = unit::convert::from( 20.0, unit::day );
         solve_welleq_initially_ = true;
         update_equations_scaling_ = false;
