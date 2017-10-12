@@ -47,9 +47,7 @@
 #include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
 #include <dune/istl/paamg/fastamg.hh>
-#endif
 
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
@@ -77,7 +75,6 @@ namespace Opm
         solveCG_AMG(O& A, Vector& x, Vector& b, S& sp, const C& comm, double tolerance, int maxit, int verbosity,
                     double prolongateFactor, int smoothsteps);
 
-#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
        template<class O, class S, class C>
         LinearSolverInterface::LinearSolverReport
         solveKAMG(O& A, Vector& x, Vector& b, S& sp, const C& comm, double tolerance, int maxit, int verbosity,
@@ -87,7 +84,6 @@ namespace Opm
         LinearSolverInterface::LinearSolverReport
         solveFastAMG(O& A, Vector& x, Vector& b, S& sp, const C& comm, double tolerance, int maxit, int verbosity,
                      double prolongateFactor);
-#endif
 
         template<class O, class S, class C>
         LinearSolverInterface::LinearSolverReport
@@ -223,16 +219,10 @@ namespace Opm
                               linsolver_prolongate_factor_, linsolver_smooth_steps_);
             break;
         case KAMG:
-#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
             res = solveKAMG(opA, x, b, sp, comm, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
                             linsolver_prolongate_factor_, linsolver_smooth_steps_);
-#else
-            throw std::runtime_error("KAMG not supported with this version of DUNE");
-#endif
             break;
         case FastAMG:
-#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
-
 #if HAVE_MPI
             if(std::is_same<C,Dune::OwnerOverlapCopyCommunication<int,int> >::value)
             {
@@ -242,12 +232,6 @@ namespace Opm
 
             res = solveFastAMG(opA, x, b, sp, comm, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
                                linsolver_prolongate_factor_);
-#else
-            if(linsolver_verbosity_)
-              std::cerr<<"Fast AMG is not available; falling back to CG preconditioned with the normal one"<<std::endl;
-            res = solveCG_AMG(opA, x, b, sp, comm, linsolver_residual_tolerance_, maxit, linsolver_verbosity_,
-                               linsolver_prolongate_factor_, linsolver_smooth_steps_);
-#endif
             break;
         case BiCGStab_ILU0:
             res = solveBiCGStab_ILU0(opA, x, b, sp, comm, linsolver_residual_tolerance_, maxit, linsolver_verbosity_);
@@ -409,7 +393,6 @@ namespace Opm
     }
 
 
-#if defined(HAS_DUNE_FAST_AMG) || DUNE_VERSION_NEWER(DUNE_ISTL, 2, 3)
     template<class O, class S, class C>
     LinearSolverInterface::LinearSolverReport
     solveKAMG(O& opA, Vector& x, Vector& b, S& /* sp */, const C& /* comm */, double tolerance, int maxit, int verbosity,
@@ -509,7 +492,6 @@ namespace Opm
         res.residual_reduction = result.reduction;
         return res;
     }
-#endif
 
     template<class O, class S, class C>
     LinearSolverInterface::LinearSolverReport

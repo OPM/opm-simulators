@@ -30,13 +30,8 @@
 #endif
 
 #include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 3)
 #include <dune/common/parallel/mpicollectivecommunication.hh>
 #include <dune/common/parallel/collectivecommunication.hh>
-#else
-#include <dune/common/mpicollectivecommunication.hh>
-#include <dune/common/collectivecommunication.hh>
-#endif
 
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/communicator.hh>
