@@ -261,7 +261,7 @@ namespace Opm
         case THP: {
             well_state.thp()[index_of_well_] = target;
 
-            const Opm::PhaseUsage& pu = phaseUsage();
+            /* const Opm::PhaseUsage& pu = phaseUsage();
             std::vector<double> rates(3, 0.0);
             if (active()[ Water ]) {
                 rates[ Water ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Water ] ];
@@ -271,7 +271,7 @@ namespace Opm
             }
             if (active()[ Gas ]) {
                 rates[ Gas ] = well_state.wellRates()[index_of_well_ * number_of_phases_ + pu.phase_pos[ Gas ] ];
-            }
+            } */
 
             // const int table_id = well_controls_iget_vfp(well_controls_, current);
             // const double& thp    = well_controls_iget_target(well_controls_, current);
@@ -733,6 +733,8 @@ namespace Opm
                     const BlackoilModelParameters& param,
                     WellState& well_state) const
     {
+        // TODO: we should probably distinguish the inner iteration or the final update
+
         const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
 
         const double relaxation_factor = use_inner_iterations ? 0.2 : 1.0;
@@ -1112,18 +1114,10 @@ namespace Opm
         // TODO: the concept of phases and components are rather confusing in this function.
         // needs to be addressed sooner or later.
 
-
-        // TODO: the phase location is so confusing, double check to make sure they are right
-        // do I need the gaspos, oilpos here?
-
-        // compute the segment density first
-        // TODO: the new understanding is that it might not need to know the grid block of the segments
-        // It is a try to calculate the fluid properties without assuming the segment is associated with
-        // any grid blocks
-
         // get the temperature for later use. It is only useful when we are not handling
         // thermal related simulation
         // basically, it is a single value for all the segments
+
         EvalWell temperature;
         // not sure how to handle the pvt region related to segment
         // for the current approach, we use the pvt region of the first perforated cell
@@ -1557,7 +1551,6 @@ namespace Opm
         const EvalWell density = segment_densities_[seg];
         const EvalWell out_velocity_head = mswellhelpers::velocityHead(area, mass_rate, density);
 
-        // TODO: the sign is really hard and not sure
         resWell_[seg][SPres] -= out_velocity_head.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
             duneD_[seg][seg][SPres][pv_idx] -= out_velocity_head.derivative(pv_idx + numEq);

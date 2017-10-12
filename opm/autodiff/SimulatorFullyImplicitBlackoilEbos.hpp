@@ -298,17 +298,22 @@ public:
 
             const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
             extractLegacyCellPvtRegionIndex_();
-            // handling MS well related
+            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,
+                                 rateConverter_, terminal_output_, timer.currentStepNum(), legacyCellPvtRegionIdx_);
+
+	    // handling MS well related
             if (model_param_.use_multisegment_well_) { // if we use MultisegmentWell model
                 for (const auto& well : wells_ecl) {
+		    // TODO: this is acutally not very accurate, because sometimes a deck just claims a MS well
+		    // while keep the well shut. More accurately, we should check if the well exisits in the Wells
+		    // structure here
                     if (well->isMultiSegment(timer.currentStepNum()) ) { // there is one well is MS well
                         well_state.initWellStateMSWell(wells, wells_ecl, timer.currentStepNum(), phaseUsage_, prev_well_state);
                         break;
                     }
                 }
             }
-            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,
-                                 rateConverter_, terminal_output_, timer.currentStepNum(), legacyCellPvtRegionIdx_);
+
 
             auto solver = createSolver(well_model);
 
@@ -775,9 +780,9 @@ protected:
         return totals;
     }
 
-    
+
     void outputTimestampFIP(SimulatorTimer& timer, const std::string version)
-    {   
+    {
         std::ostringstream ss;
         boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
         ss.imbue(std::locale(std::locale::classic(), facet));

@@ -98,7 +98,7 @@ namespace Opm {
                               const RateConverterType& rate_converter,
                               const bool terminal_output,
                               const int current_index,
-			      std::vector<int>& pvt_region_idx);
+                              const std::vector<int>& pvt_region_idx);
 
             void init(const PhaseUsage phase_usage_arg,
                       const std::vector<bool>& active_arg,
@@ -190,7 +190,7 @@ namespace Opm {
             PhaseUsage phase_usage_;
             std::vector<bool>  active_;
             const RateConverterType& rate_converter_;
-            std::vector<int> pvt_region_idx_;
+            const std::vector<int>& pvt_region_idx_;
 
             // the number of the cells in the local grid
             int number_of_cells_;

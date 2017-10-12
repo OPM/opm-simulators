@@ -379,7 +379,8 @@ namespace Opm
                             // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
                             // it will probably benefit the standard well too, while it needs to be justified
                             // TODO: to see if this strategy can benefit StandardWell too
-                            // TODO: it might cause big problem for gas rate control or if there is gas rate limit
+                            // TODO: it might cause big problem for gas rate control or if there is a gas rate limit
+                            // maybe the best way is to initialize the fractions first then get the rates
                             for (int perf = 0; perf < nperf; perf++) {
                                 const int perf_pos = start_perf + perf;
                                 perfPhaseRates()[np * perf_pos + gaspos] *= 100.;

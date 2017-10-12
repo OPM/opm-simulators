@@ -12,7 +12,7 @@ namespace Opm {
                       const RateConverterType& rate_converter,
                       const bool terminal_output,
                       const int current_timeIdx,
-                      std::vector<int>& pvt_region_idx)
+                      const std::vector<int>& pvt_region_idx)
        : wells_active_(wells_arg!=nullptr)
        , wells_(wells_arg)
        , wells_ecl_(wells_ecl)
