@@ -19,6 +19,9 @@
 */
 
 #include "config.h"
+
+#if HAVE_PETSC
+
 #include <cstring>
 #include <opm/core/linalg/LinearSolverPetsc.hpp>
 #include <unordered_map>
@@ -287,3 +290,4 @@ namespace{
 
 } // namespace Opm
 
+#endif // HAVE_PETSC

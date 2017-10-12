@@ -20,6 +20,11 @@
 
 #ifndef OPM_LINEARSOLVERPETSC_HEADER_INCLUDED
 #define OPM_LINEARSOLVERPETSC_HEADER_INCLUDED
+
+#if !HAVE_PETSC
+#error "LinearSolverPetsc.hpp included, but the PETSc libraries are not available!"
+#endif
+
 #include <opm/core/linalg/LinearSolverInterface.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <string>
