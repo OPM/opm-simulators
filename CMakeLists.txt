@@ -21,6 +21,41 @@ if (USE_DUNE_BUILDSYSTEM)
 # set up project and specify the minimum cmake version
 project("opm-simulators" C CXX)
 
+# Sibling build
+option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
+if(SIBLING_SEARCH)
+  # guess the sibling dir
+  get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
+  get_filename_component(_parent_full_dir ${PROJECT_BINARY_DIR} DIRECTORY)
+  get_filename_component(_parent_dir_name ${_parent_full_dir} NAME)
+  get_filename_component(_modules_dir ${_parent_full_dir} DIRECTORY)
+  foreach(MOD dune-common dune-geometry dune-grid dune-localfunctions dune-istl opm-common libecl opm-parser opm-grid opm-data opm-core opm-output opm-material ewoms)
+    # do not overwrite the location of a module if it was explicitly
+    # specified by the user
+    if(${MOD}_DIR)
+      continue()
+    endif()
+
+    # Try various possible locations for the build directory of the dependency
+    foreach(BUILD_DIR "${_leaf_dir_name}" "build-cmake" "build" "../${MOD}-build" "../build-${MOD}" "../build" ".")
+      if(EXISTS "${_modules_dir}/${MOD}/${BUILD_DIR}/${MOD}-config.cmake")
+        set(${MOD}_DIR ${_modules_dir}/${MOD}/${BUILD_DIR})
+        break()
+      endif()
+    endforeach()
+  endforeach()
+endif()
+
+if(dune-common_DIR AND NOT IS_DIRECTORY ${dune-common_DIR})
+  message(WARNING "Value ${dune-common_DIR} passed to variable"
+    " dune-common_DIR is not a directory")
+endif()
+if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
+  message(WARNING "Value ${opm-common_DIR} passed to variable"
+    " opm-common_DIR is not a directory")
+endif()
+
+
 # Set CMP0053 (how to handle escape sequences in strings) to the new
 # behavior to avoid a pretty annoying cmake warning if a library is
 # defined in the toplevel CMakeLists.txt. This should probably be
