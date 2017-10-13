@@ -40,6 +40,14 @@ namespace Opm
     , segment_mass_rates_(numberOfSegments(), 0.0)
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     {
+        // not handling solvent or polymer for now with multisegment well
+        if (has_solvent) {
+            OPM_THROW(std::runtime_error, "solvent is not supported by multisegment well yet");
+        }
+
+        if (has_polymer) {
+            OPM_THROW(std::runtime_error, "polymer is not supported by multisegment well yet");
+        }
         // since we decide to use the SegmentSet from the well parser. we can reuse a lot from it.
         // for other facilities needed but not available from parser, we need to process them here
 
@@ -535,11 +543,11 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeWellPotentials(const Simulator& ebosSimulator,
-                          const WellState& well_state,
-                          std::vector<double>& well_potentials)
+    computeWellPotentials(const Simulator& /* ebosSimulator */,
+                          const WellState& /* well_state */,
+                          std::vector<double>& /* well_potentials */)
     {
-        // TODO: to be implemented later
+        OPM_THROW(std::runtime_error, "well potential calculation for multisegment wells is not supported yet");
     }
 
 
@@ -734,15 +742,10 @@ namespace Opm
                     const bool inner_iteration,
                     WellState& well_state) const
     {
-        // TODO: we should probably distinguish the inner iteration or the final update
-
         const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
 
         const double relaxation_factor = (use_inner_iterations && inner_iteration) ? 0.2 : 1.0;
 
-        // I guess the following can also be applied to the segmnet pressure
-        // maybe better to give it a different name
-        const double dBHPLimit = param.dbhp_max_rel_;
         const double dFLimit = param.dwell_fraction_max_;
         const double max_pressure_change = param.max_pressure_change_ms_wells_;
         const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
@@ -766,7 +769,6 @@ namespace Opm
             // update the segment pressure
             {
                 const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-                const double current_pressure = old_primary_variables[seg][SPres];
                 const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]), relaxation_factor * max_pressure_change);
                 primary_variables_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
             }
@@ -996,7 +998,7 @@ namespace Opm
         const double cell_perf_press_diff = cell_perforation_pressure_diffs_[perf];
 
         // Pressure drawdown (also used to determine direction of flow)
-        // TODO: not sure about the sign of the seg_perf_press_diff, not tested.
+        // TODO: not 100% sure about the sign of the seg_perf_press_diff
         const EvalWell drawdown = (pressure_cell + cell_perf_press_diff) - (segment_pressure + perf_seg_press_diff);
 
         const Opm::PhaseUsage& pu = phaseUsage();
@@ -1546,6 +1548,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     handleAccelerationPressureLoss(const int seg) const
     {
+        // TODO: this pressure loss is not significant enough to be well tested yet.
         // handle the out velcocity head
         const double area = segmentSet()[seg].crossArea();
         const EvalWell mass_rate = segment_mass_rates_[seg];

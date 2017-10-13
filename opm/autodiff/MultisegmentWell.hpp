@@ -46,6 +46,9 @@ namespace Opm
         /// the number of reservior equations
         using Base::numEq;
 
+        using Base::has_solvent;
+        using Base::has_polymer;
+
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
         // TODO: should I begin with the old primary variable or the new fraction based variable systems?
         // Let us begin with the new one
