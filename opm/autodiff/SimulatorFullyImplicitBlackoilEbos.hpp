@@ -345,7 +345,7 @@ public:
                 std::string msg =
                     "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
                     "total solver time " + std::to_string(report.solver_time) + " seconds.";
-                OpmLog::note(msg);
+                OpmLog::debug(msg);
             }
 
             // write simulation state at the report stage

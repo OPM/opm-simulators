@@ -225,7 +225,7 @@ namespace Opm {
             if( timestep_verbose_ )
             {
                 std::ostringstream ss;
-                ss <<"  Substep " << substepTimer.currentStepNum() << ", stepsize "
+                ss <<"Time step " << substepTimer.currentStepNum() << ", stepsize "
                    << unit::convert::to(substepTimer.currentStepLength(), unit::day) << " days.";
                 OpmLog::info(ss.str());
             }
@@ -238,7 +238,7 @@ namespace Opm {
 
                 if( solver_verbose_ ) {
                     // report number of linear iterations
-                    OpmLog::note("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));
+                    OpmLog::debug("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));
                 }
             }
             catch (const Opm::TooManyIterations& e) {
@@ -309,7 +309,7 @@ namespace Opm {
                 if( timestep_verbose_ )
                 {
                     std::ostringstream ss;
-                    ss << "    Substep summary: ";
+                    ss << "Time step summary: ";
                     if (substepReport.total_well_iterations != 0) {
                         ss << "well its = " << std::setw(2) << substepReport.total_well_iterations << ", ";
                     }
@@ -389,7 +389,7 @@ namespace Opm {
             std::ostringstream ss;
             substepTimer.report(ss);
             ss << "Suggested next step size = " << unit::convert::to( suggested_next_timestep_, unit::day ) << " (days)" << std::endl;
-            OpmLog::note(ss.str());
+            OpmLog::debug(ss.str());
         }
 
         if( ! std::isfinite( suggested_next_timestep_ ) ) { // check for NaN
