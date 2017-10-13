@@ -230,7 +230,7 @@ public:
             {
                 std::ostringstream ss;
                 timer.report(ss);
-                OpmLog::note(ss.str());
+                OpmLog::debug(ss.str());
             }
 
             // Run a multiple steps of the solver depending on the time step control.
