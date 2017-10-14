@@ -468,8 +468,6 @@ namespace Opm
             }
         }
 
-        std::cout << " maximum_residual " << maximum_residual[0] << " " << maximum_residual[1] << " " << maximum_residual[2] << " " << maximum_residual[3] << std::endl;
-
         if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
             // check convergence for flux residuals
             for ( int comp_idx = 0; comp_idx < numComponents(); ++comp_idx)
@@ -499,7 +497,7 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
-        const BVectorWell invDBx = mswellhelpers::invDX(duneD_, Bx);
+        const BVectorWell invDBx = mswellhelpers::invDXDirect(duneD_, Bx);
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -515,7 +513,7 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-        const BVectorWell invDrw = mswellhelpers::invDX(duneD_, resWell_);
+        const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }
@@ -637,7 +635,7 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        xw = mswellhelpers::invDX(duneD_, resWell);
+        xw = mswellhelpers::invDXDirect(duneD_, resWell);
     }
 
 
@@ -652,7 +650,7 @@ namespace Opm
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
+        const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
         updateWellState(dx_well, param, false, well_state);
     }
@@ -1791,11 +1789,10 @@ namespace Opm
         const int max_iter_number = param.max_inner_iter_ms_wells_;
         int it = 0;
         for (; it < max_iter_number; ++it) {
-            std::cout << " iterateWellEquations it " << it << std::endl;
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, true);
 
-            const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
+            const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
             // TODO: use these small values for now, not intend to reach the convergence
             // in this stage, but, should we?
@@ -1807,7 +1804,6 @@ namespace Opm
             const ConvergenceReport report = getWellConvergence(ebosSimulator, B, param);
 
             if (report.converged) {
-                std::cout << " converged in iterateWellEquations " << std::endl;
                 break;
             }
 

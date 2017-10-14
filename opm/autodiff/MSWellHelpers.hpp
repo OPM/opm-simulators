@@ -23,7 +23,7 @@
 #define OPM_MSWELLHELPERS_HEADER_INCLUDED
 
 #include <opm/common/ErrorMacros.hpp>
-// #include <dune/istl/solvers.hh>
+#include <dune/istl/solvers.hh>
 #include <dune/istl/umfpack.hh>
 #include <cmath>
 
@@ -32,7 +32,40 @@ namespace Opm {
 namespace mswellhelpers
 {
 
-    // obtain y = D^-1 * x
+    // obtain y = D^-1 * x with a direct solver
+    template <typename MatrixType, typename VectorType>
+    VectorType
+    invDXDirect(const MatrixType& D, VectorType x)
+    {
+        VectorType y(x.size());
+        y = 0.;
+
+        Dune::UMFPack<MatrixType> linsolver(D, 0);
+
+        // Object storing some statistics about the solving process
+        Dune::InverseOperatorResult res;
+
+        // Solve
+        linsolver.apply(y, x, res);
+
+        // Checking if there is any inf or nan in y
+        // it will be the solution before we find a way to catch the singularity of the matrix
+        for (int i_block = 0; i_block < y.size(); ++i_block) {
+            for (int i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
+                if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
+                    OPM_THROW(Opm::NumericalProblem, "nan or inf value found in invDXDirect due to singular matrix");
+                }
+            }
+        }
+
+        return y;
+    }
+
+
+
+
+
+    // obtain y = D^-1 * x with a BICSSTAB iterative solver
     template <typename MatrixType, typename VectorType>
     VectorType
     invDX(const MatrixType& D, VectorType x)
@@ -46,7 +79,7 @@ namespace mswellhelpers
         VectorType y(x.size());
         y = 0.;
 
-        /* Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
+        Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
 
         // Sequential incomplete LU decomposition as the preconditioner
         Dune::SeqILU0<MatrixType, VectorType, VectorType> preconditioner(D, 1.0);
@@ -57,13 +90,9 @@ namespace mswellhelpers
         // Preconditioned BICGSTAB solver
         Dune::BiCGSTABSolver<VectorType> linsolver(linearOperator,
                                                    preconditioner,
-                                                   // 1.e-8, // desired residual reduction factor
-                                                   // 1.e-6, // desired residual reduction factor
-                                                   1.e-4, // desired residual reduction factor
-                                                   150, // maximum number of iterations
+                                                   1.e-8, // desired residual reduction factor
+                                                   250, // maximum number of iterations
                                                    0); // verbosity of the solver */
-
-        Dune::UMFPack<MatrixType> linsolver(D, 0);
 
         // Object storing some statistics about the solving process
         Dune::InverseOperatorResult res;
@@ -144,7 +173,7 @@ namespace mswellhelpers
                                    const ValueType& density, const ValueType& w, const ValueType& mu)
     {
         const double f = calculateFrictionFactor(area, diameter, w.value(), roughness, mu.value());
-        // TODO: a factor of 2 needs to be here based on the dimensional analysis
+        // \Note: a factor of 2 needs to be here based on the dimensional analysis
         return 2. * f * l * w * w / (area * area * diameter * density);
     }
 
