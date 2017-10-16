@@ -391,7 +391,7 @@ namespace Opm {
             }
             catch ( const Dune::FMatrixError& e  )
             {
-                OPM_THROW(Opm::NumericalProblem,"The following FMatrixError got caught during well modeling \n" << e.what());
+                OPM_THROW(Opm::NumericalProblem,"Error encounted when solving well equations");
             }
 
             return report;
@@ -425,12 +425,12 @@ namespace Opm {
                     saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
                     oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
                 }
-                
+
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && priVarsNew.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                     saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
-                    oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];                     
+                    oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];
                 }
-                                    
+
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                     saturationsNew[FluidSystem::oilPhaseIdx] = oilSaturationNew;
                 }
@@ -446,16 +446,16 @@ namespace Opm {
                     saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
                     oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
                 }
-                
+
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && priVarsOld.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                     saturationsOld[FluidSystem::gasPhaseIdx] = priVarsOld[Indices::compositionSwitchIdx];
                     oilSaturationOld -= saturationsOld[FluidSystem::gasPhaseIdx];
                 }
-                                    
+
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                     saturationsOld[FluidSystem::oilPhaseIdx] = oilSaturationOld;
                 }
-                
+
                 Scalar tmp = pressureNew - pressureOld;
                 resultDelta += tmp*tmp;
                 resultDenom += pressureNew*pressureNew;
@@ -680,7 +680,7 @@ namespace Opm {
                 maxVal = std::max(std::abs(dsw),maxVal);
                 maxVal = std::max(std::abs(dsg),maxVal);
                 maxVal = std::max(std::abs(dso),maxVal);
-                maxVal = std::max(std::abs(dss),maxVal);                               
+                maxVal = std::max(std::abs(dss),maxVal);
 
                 double satScaleFactor = 1.0;
                 if (maxVal > dsMax()) {

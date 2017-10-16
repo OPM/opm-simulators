@@ -99,7 +99,7 @@ namespace Opm
         static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells);
+        StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -111,7 +111,6 @@ namespace Opm
         virtual void initPrimaryVariablesEvaluation() const;
 
         virtual void assembleWellEq(Simulator& ebosSimulator,
-                                    const ModelParameters& param,
                                     const double dt,
                                     WellState& well_state,
                                     bool only_wells);
@@ -122,9 +121,7 @@ namespace Opm
                                                WellState& xw) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const Simulator& ebosSimulator,
-                                                     const std::vector<double>& B_avg,
-                                                     const ModelParameters& param) const;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;
@@ -133,7 +130,7 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
+        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const;
 
         /// computing the well potentials for group control
@@ -143,8 +140,7 @@ namespace Opm
 
         virtual void updatePrimaryVariables(const WellState& well_state) const;
 
-        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
-                                               WellState& well_state);
+        virtual void solveEqAndUpdateWellState(WellState& well_state);
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state); // should be const?
@@ -165,6 +161,7 @@ namespace Opm
         // protected member variables from the Base class
         using Base::vfp_properties_;
         using Base::gravity_;
+        using Base::param_;
         using Base::well_efficiency_factor_;
         using Base::first_perf_;
         using Base::ref_depth_;
@@ -234,7 +231,6 @@ namespace Opm
 
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
-                             const BlackoilModelParameters& param,
                              WellState& well_state) const;
 
         // calculate the properties for the well connections

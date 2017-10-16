@@ -138,7 +138,7 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            bool getWellConvergence(Simulator& ebosSimulator,
+            bool getWellConvergence(const Simulator& ebosSimulator,
                                     const std::vector<Scalar>& B_avg) const;
 
             /// upate the dynamic lists related to economic limits
@@ -163,6 +163,8 @@ namespace Opm {
 
             const int number_of_phases_;
 
+            const ModelParameters& param_;
+
             using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
             // eventually, the wells_ above should be gone.
@@ -176,12 +178,12 @@ namespace Opm {
             static std::vector<WellInterfacePtr > createWellContainer(const Wells* wells,
                                                                       const std::vector<const Well*>& wells_ecl,
                                                                       const bool use_multisegment_well,
-                                                                      const int time_step);
+                                                                      const int time_step,
+                                                                      const ModelParameters& param);
 
             // Well collection is used to enforce the group control
             WellCollection* well_collection_;
 
-            ModelParameters param_;
             bool terminal_output_;
             bool has_solvent_;
             bool has_polymer_;

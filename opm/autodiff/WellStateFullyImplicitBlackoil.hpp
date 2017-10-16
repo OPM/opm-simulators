@@ -311,7 +311,7 @@ namespace Opm
             segrates_.clear();
             segrates_.reserve(nw * numPhases());
 
-            nseg_ = 0.;
+            nseg_ = 0;
             // in the init function, the well rates and perforation rates have been initialized or copied from prevState
             // what we do here, is to set the segment rates and perforation rates
             for (int w = 0; w < nw; ++w) {
@@ -340,14 +340,15 @@ namespace Opm
                     }
                 } else { // it is a multi-segment well
                     const SegmentSet& segment_set = well_ecl->getSegmentSet(time_step);
-                    // assuming the oder of the perforations in well_ecl is the same with Wells
+                    // assuming the order of the perforations in well_ecl is the same with Wells
                     const CompletionSet& completion_set = well_ecl->getCompletions(time_step);
-                    const int nseg = segment_set.numberSegment();
+                    // number of segment for this single well
+                    const int well_nseg = segment_set.numberSegment();
                     const int nperf = completion_set.size();
-                    nseg_ += nseg;
+                    nseg_ += well_nseg;
                     // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
                     // that is why I think we should use a well model to initialize the WellState here
-                    std::vector<std::vector<int>> segment_perforations(nseg);
+                    std::vector<std::vector<int>> segment_perforations(well_nseg);
                     for (int perf = 0; perf < nperf; ++perf) {
                         const Completion& completion = completion_set.get(perf);
                         const int segment_number = completion.getSegmentNumber();
@@ -355,8 +356,8 @@ namespace Opm
                         segment_perforations[segment_index].push_back(perf);
                     }
 
-                    std::vector<std::vector<int>> segment_inlets(nseg);
-                    for (int seg = 0; seg < nseg; ++seg) {
+                    std::vector<std::vector<int>> segment_inlets(well_nseg);
+                    for (int seg = 0; seg < well_nseg; ++seg) {
                         const Segment& segment = segment_set[seg];
                         const int segment_number = segment.segmentNumber();
                         const int outlet_segment_number = segment.outletSegment();
@@ -394,10 +395,9 @@ namespace Opm
                         std::copy(segment_rates.begin(), segment_rates.end(), std::back_inserter(segrates_));
                     }
 
-                    // for the segment pressure, the segment pressure is the same with the first perforation
+                    // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
                     // if there is no perforation associated with this segment, it uses the pressure from the outlet segment
                     // which requres the ordering is successful
-                    // TODO: maybe also check the relation with the cell?
                     // Not sure what is the best way to handle the initialization, hopefully, the bad initialization can be
                     // improved during the solveWellEq process
                     {
@@ -405,7 +405,7 @@ namespace Opm
                         segpress_.push_back(bhp()[w]);
                         const int top_segment = top_segment_index_[w];
                         const int start_perf = wells->well_connpos[w];
-                        for (int seg = 1; seg < nseg; ++seg) {
+                        for (int seg = 1; seg < well_nseg; ++seg) {
                             if ( !segment_perforations[seg].empty() ) {
                                 const int first_perf = segment_perforations[seg][0];
                                 segpress_.push_back(perfPress()[start_perf + first_perf]);
@@ -439,6 +439,7 @@ namespace Opm
                         const int old_top_segment_index = prev_well_state.topSegmentIndex(old_index_well);
                         const int new_top_segmnet_index = topSegmentIndex(new_index_well);
                         int number_of_segment = 0;
+                        // if it is the last well in list
                         if (new_index_well == int(top_segment_index_.size()) - 1) {
                             number_of_segment = nseg_ - new_top_segmnet_index;
                         } else {
@@ -464,9 +465,9 @@ namespace Opm
             // the rate of the segment equals to the sum of the contribution from the perforations and inlet segment rates.
             // the first segment is always the top segment, its rates should be equal to the well rates.
             assert(segment_inlets.size() == segment_perforations.size());
-            const int nseg = segment_inlets.size();
+            const int well_nseg = segment_inlets.size();
             if (segment == 0) { // beginning the calculation
-                segment_rates.resize(np * nseg, 0.0);
+                segment_rates.resize(np * well_nseg, 0.0);
             }
             // contributions from the perforations belong to this segment
             for (const int& perf : segment_perforations[segment]) {
@@ -550,13 +551,13 @@ namespace Opm
         std::vector<bool> is_new_well_;
 
         // MS well related
-        // for StandardWell, the segment number will be one
+        // for StandardWell, the number of segments will be one
         std::vector<double> segrates_;
         std::vector<double> segpress_;
         // the index of the top segments, which is used to locate the
         // multisegment well related information in WellState
         std::vector<int> top_segment_index_;
-        int nseg_; // number of the segments
+        int nseg_; // total number of the segments
 
     };
 

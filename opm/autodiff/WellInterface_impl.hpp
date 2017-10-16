@@ -25,9 +25,10 @@ namespace Opm
 
     template<typename TypeTag>
     WellInterface<TypeTag>::
-    WellInterface(const Well* well, const int time_step, const Wells* wells)
+    WellInterface(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
     : well_ecl_(well)
     , current_step_(time_step)
+    , param_(param)
     {
         if (!well) {
             OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");

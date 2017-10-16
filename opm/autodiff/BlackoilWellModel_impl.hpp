@@ -18,9 +18,9 @@ namespace Opm {
        , wells_ecl_(wells_ecl)
        , number_of_wells_(wells_arg ? (wells_arg->number_of_wells) : 0)
        , number_of_phases_(wells_arg ? (wells_arg->number_of_phases) : 0) // TODO: not sure if it is proper for this way
-       , well_container_(createWellContainer(wells_arg, wells_ecl, param.use_multisegment_well_, current_timeIdx) )
-       , well_collection_(well_collection)
        , param_(param)
+       , well_container_(createWellContainer(wells_arg, wells_ecl, param.use_multisegment_well_, current_timeIdx, param) )
+       , well_collection_(well_collection)
        , terminal_output_(terminal_output)
        , has_solvent_(GET_PROP_VALUE(TypeTag, EnableSolvent))
        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
@@ -118,7 +118,8 @@ namespace Opm {
     createWellContainer(const Wells* wells,
                         const std::vector< const Well* >& wells_ecl,
                         const bool use_multisegment_well,
-                        const int time_step)
+                        const int time_step,
+                        const ModelParameters& param)
     {
         std::vector<WellInterfacePtr> well_container;
 
@@ -149,9 +150,9 @@ namespace Opm {
                 const Well* well_ecl = wells_ecl[index_well];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !use_multisegment_well) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells) );
+                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells, param) );
                 } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells) );
+                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells, param) );
                 }
             }
         }
@@ -210,7 +211,7 @@ namespace Opm {
                    bool only_wells) const
     {
         for (int w = 0; w < number_of_wells_; ++w) {
-            well_container_[w]->assembleWellEq(ebosSimulator, param_, dt, well_state, only_wells);
+            well_container_[w]->assembleWellEq(ebosSimulator, dt, well_state, only_wells);
         }
     }
 
@@ -289,7 +290,7 @@ namespace Opm {
     recoverWellSolutionAndUpdateWellState(const BVector& x, WellState& well_state) const
     {
         for (auto& well : well_container_) {
-            well->recoverWellSolutionAndUpdateWellState(x, param_, well_state);
+            well->recoverWellSolutionAndUpdateWellState(x, well_state);
         }
     }
 
@@ -433,7 +434,7 @@ namespace Opm {
             if( localWellsActive() )
             {
                 for (auto& well : well_container_) {
-                    well->solveEqAndUpdateWellState(param_, well_state);
+                    well->solveEqAndUpdateWellState(well_state);
                 }
             }
             // updateWellControls uses communication
@@ -477,13 +478,13 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    getWellConvergence(Simulator& ebosSimulator,
+    getWellConvergence(const Simulator& ebosSimulator,
                        const std::vector<Scalar>& B_avg) const
     {
         ConvergenceReport report;
 
         for (const auto& well : well_container_) {
-            report += well->getWellConvergence(ebosSimulator, B_avg, param_);
+            report += well->getWellConvergence(B_avg);
         }
 
         // checking NaN residuals

@@ -86,7 +86,7 @@ namespace Opm
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
 
         /// Constructor
-        WellInterface(const Well* well, const int time_step, const Wells* wells);
+        WellInterface(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
 
         /// Virutal destructor
         virtual ~WellInterface() {}
@@ -144,15 +144,11 @@ namespace Opm
             }
         };
 
-        virtual ConvergenceReport getWellConvergence(const Simulator& ebosSimulator,
-                                                     const std::vector<double>& B_avg,
-                                                     const ModelParameters& param) const = 0;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const = 0;
 
-        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
-                                               WellState& well_state) = 0;
+        virtual void solveEqAndUpdateWellState(WellState& well_state) = 0;
 
         virtual void assembleWellEq(Simulator& ebosSimulator,
-                                    const ModelParameters& param,
                                     const double dt,
                                     WellState& well_state,
                                     bool only_wells) = 0;
@@ -166,7 +162,7 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
+        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const = 0;
 
         /// Ax = Ax - C D^-1 B x
@@ -203,6 +199,9 @@ namespace Opm
         // the index of well in Wells struct
         int index_of_well_;
 
+        // simulation parameters
+        const ModelParameters& param_;
+
         // well type
         // INJECTOR or PRODUCER
         enum WellType well_type_;
@@ -215,21 +214,18 @@ namespace Opm
         std::vector<double> comp_frac_;
 
         // controls for this well
-        // TODO: later will check whehter to let it stay with pointer
         struct WellControls* well_controls_;
 
         // number of the perforations for this well
         int number_of_perforations_;
 
         // record the index of the first perforation
-        // TODO: it might not be needed if we refactor WellState to be a vector
         // of states of individual well.
         int first_perf_;
 
         // well index for each perforation
         std::vector<double> well_index_;
 
-        // TODO: it might should go to StandardWell
         // depth for each perforation
         std::vector<double> perf_depth_;
 

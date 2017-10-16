@@ -24,8 +24,8 @@ namespace Opm
 {
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well* well, const int time_step, const Wells* wells)
-    : Base(well, time_step, wells)
+    StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
+    : Base(well, time_step, wells, param)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
     , primary_variables_(numWellEq, 0.0)
@@ -514,7 +514,6 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     assembleWellEq(Simulator& ebosSimulator,
-                   const ModelParameters& /* param */,
                    const double dt,
                    WellState& well_state,
                    bool only_wells)
@@ -765,12 +764,11 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
-                    const BlackoilModelParameters& param,
                     WellState& well_state) const
     {
         const int np = number_of_phases_;
-        const double dBHPLimit = param.dbhp_max_rel_;
-        const double dFLimit = param.dwell_fraction_max_;
+        const double dBHPLimit = param_.dbhp_max_rel_;
+        const double dFLimit = param_.dwell_fraction_max_;
         const auto pu = phaseUsage();
 
         const std::vector<double> xvar_well_old = primary_variables_;
@@ -1365,9 +1363,7 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::ConvergenceReport
     StandardWell<TypeTag>::
-    getWellConvergence(const Simulator& /* ebosSimulator */,
-                       const std::vector<double>& B_avg,
-                       const ModelParameters& param) const
+    getWellConvergence(const std::vector<double>& B_avg) const
     {
         typedef double Scalar;
         typedef std::vector< Scalar > Vector;
@@ -1379,8 +1375,8 @@ namespace Opm
         // For the polymer case, there is one more mass balance equations of reservoir than wells
         assert((int(B_avg.size()) == numComp) || has_polymer);
 
-        const double tol_wells = param.tolerance_wells_;
-        const double maxResidualAllowed = param.max_residual_allowed_;
+        const double tol_wells = param_.tolerance_wells_;
+        const double maxResidualAllowed = param_.max_residual_allowed_;
 
         // TODO: it should be the number of numWellEq
         // using numComp here for flow_ebos running 2p case.
@@ -1492,15 +1488,14 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    solveEqAndUpdateWellState(const ModelParameters& param,
-                              WellState& well_state)
+    solveEqAndUpdateWellState(WellState& well_state)
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
         invDuneD_.mv(resWell_, dx_well);
 
-        updateWellState(dx_well, param, well_state);
+        updateWellState(dx_well, well_state);
     }
 
 
@@ -1597,12 +1592,11 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                          const ModelParameters& param,
                                           WellState& well_state) const
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, param, well_state);
+        updateWellState(xw, well_state);
     }
 
 

@@ -34,7 +34,6 @@ namespace Opm
     public:
         typedef WellInterface<TypeTag> Base;
 
-        // TODO: the WellState does not have any information related to segments
         using typename Base::WellState;
         using typename Base::Simulator;
         using typename Base::IntensiveQuantities;
@@ -50,8 +49,7 @@ namespace Opm
         using Base::has_polymer;
 
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
-        // TODO: should I begin with the old primary variable or the new fraction based variable systems?
-        // Let us begin with the new one
+
         // TODO: we need to have order for the primary variables and also the order for the well equations.
         // sometimes, they are similar, while sometimes, they can have very different forms.
 
@@ -96,7 +94,7 @@ namespace Opm
         // TODO: for now, we only use one type to save some implementation efforts, while improve later.
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
-        MultisegmentWell(const Well* well, const int time_step, const Wells* wells);
+        MultisegmentWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -108,7 +106,6 @@ namespace Opm
         virtual void initPrimaryVariablesEvaluation() const;
 
         virtual void assembleWellEq(Simulator& ebosSimulator,
-                                    const ModelParameters& param,
                                     const double dt,
                                     WellState& well_state,
                                     bool only_wells);
@@ -119,9 +116,7 @@ namespace Opm
                                                WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const Simulator& ebosSimulator,
-                                                     const std::vector<double>& B_avg,
-                                                     const ModelParameters& param) const;
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;
@@ -130,7 +125,7 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
+        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const;
 
         /// computing the well potentials for group control
@@ -140,8 +135,7 @@ namespace Opm
 
         virtual void updatePrimaryVariables(const WellState& well_state) const;
 
-        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
-                                               WellState& well_state); // const?
+        virtual void solveEqAndUpdateWellState(WellState& well_state); // const?
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state); // should be const?
@@ -173,6 +167,7 @@ namespace Opm
         // TODO: the current implementation really relies on the order of the
         // perforation does not change from the parser to Wells structure.
         using Base::well_cells_;
+        using Base::param_;
         using Base::well_index_;
         using Base::well_type_;
         using Base::first_perf_;
@@ -264,7 +259,6 @@ namespace Opm
 
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
-                             const BlackoilModelParameters& param,
                              const bool inner_iteration,
                              WellState& well_state) const;
 
@@ -340,7 +334,6 @@ namespace Opm
 
         // TODO: try to make ebosSimulator const, as it should be
         void iterateWellEquations(Simulator& ebosSimulator,
-                                  const ModelParameters& param,
                                   const double dt,
                                   WellState& well_state);
 

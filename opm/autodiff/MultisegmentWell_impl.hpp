@@ -27,8 +27,8 @@ namespace Opm
 
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::
-    MultisegmentWell(const Well* well, const int time_step, const Wells* wells)
-    : Base(well, time_step, wells)
+    MultisegmentWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
+    : Base(well, time_step, wells, param)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
@@ -228,15 +228,14 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     assembleWellEq(Simulator& ebosSimulator,
-                   const ModelParameters& param,
                    const double dt,
                    WellState& well_state,
                    bool only_wells)
     {
 
-        const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
+        const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
         if (use_inner_iterations) {
-            iterateWellEquations(ebosSimulator, param, dt, well_state);
+            iterateWellEquations(ebosSimulator, dt, well_state);
         }
 
         assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, only_wells);
@@ -407,18 +406,16 @@ namespace Opm
     template <typename TypeTag>
     typename MultisegmentWell<TypeTag>::ConvergenceReport
     MultisegmentWell<TypeTag>::
-    getWellConvergence(const Simulator& /* ebosSimulator */,
-                       const std::vector<double>& B_avg,
-                       const ModelParameters& param) const
+    getWellConvergence(const std::vector<double>& B_avg) const
     {
         // assert((int(B_avg.size()) == numComponents()) || has_polymer);
         assert( (int(B_avg.size()) == numComponents()) );
 
         // checking if any residual is NaN or too large. The two large one is only handled for the well flux
-        std::vector<std::vector<double>> residual(numberOfSegments(), std::vector<double>(numWellEq, 0.0));
+        std::vector<std::vector<double>> abs_residual(numberOfSegments(), std::vector<double>(numWellEq, 0.0));
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-                residual[seg][eq_idx] = std::abs(resWell_[seg][eq_idx]);
+                abs_residual[seg][eq_idx] = std::abs(resWell_[seg][eq_idx]);
             }
         }
 
@@ -429,14 +426,14 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
                 if (eq_idx < numComponents()) { // phase or component mass equations
-                    const double flux_residual = B_avg[eq_idx] * residual[seg][eq_idx];
+                    const double flux_residual = B_avg[eq_idx] * abs_residual[seg][eq_idx];
                     // TODO: the report can not handle the segment number yet.
                     if (std::isnan(flux_residual)) {
                         report.nan_residual_found = true;
                         const auto& phase_name = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(eq_idx));
                         const typename ConvergenceReport::ProblemWell problem_well = {name(), phase_name};
                         report.nan_residual_wells.push_back(problem_well);
-                    } else if (flux_residual > param.max_residual_allowed_) {
+                    } else if (flux_residual > param_.max_residual_allowed_) {
                         report.too_large_residual_found = true;
                         const auto& phase_name = FluidSystem::phaseName(flowPhaseToEbosPhaseIdx(eq_idx));
                         const typename ConvergenceReport::ProblemWell problem_well = {name(), phase_name};
@@ -449,7 +446,7 @@ namespace Opm
                 } else { // pressure equation
                     // TODO: we should distinguish the rate control equations, bhp control equations
                     // and the oridnary pressure equations
-                    const double pressure_residal = residual[seg][eq_idx];
+                    const double pressure_residal = abs_residual[seg][eq_idx];
                     const std::string eq_name("Pressure");
                     if (std::isnan(pressure_residal)) {
                         report.nan_residual_found = true;
@@ -472,10 +469,10 @@ namespace Opm
             // check convergence for flux residuals
             for ( int comp_idx = 0; comp_idx < numComponents(); ++comp_idx)
             {
-                report.converged = report.converged && (maximum_residual[comp_idx] < param.tolerance_wells_);
+                report.converged = report.converged && (maximum_residual[comp_idx] < param_.tolerance_wells_);
             }
 
-            report.converged = report.converged && (maximum_residual[SPres] < param.tolerance_pressure_ms_wells_);
+            report.converged = report.converged && (maximum_residual[SPres] < param_.tolerance_pressure_ms_wells_);
         } else { // abnormal values found and no need to check the convergence
             report.converged = false;
         }
@@ -526,12 +523,11 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                          const ModelParameters& param,
                                           WellState& well_state) const
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, param, false, well_state);
+        updateWellState(xw, false, well_state);
     }
 
 
@@ -557,8 +553,6 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state) const
     {
-        // TODO: not handling solvent or polymer for now.
-
         // TODO: to test using rate conversion coefficients to see if it will be better than
         // this default one
 
@@ -603,7 +597,6 @@ namespace Opm
 
                     if (active()[Gas]) {
                         if (distr[pu.phase_pos[Gas]] > 0.0) {
-                            // TODO: not handling solvent here yet
                             primary_variables_[seg][GFrac] = 1.0;
                         } else {
                             primary_variables_[seg][GFrac] = 0.0;
@@ -645,14 +638,13 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(const ModelParameters& param,
-                              WellState& well_state)
+    solveEqAndUpdateWellState(WellState& well_state)
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
 
-        updateWellState(dx_well, param, false, well_state);
+        updateWellState(dx_well, false, well_state);
     }
 
 
@@ -736,16 +728,15 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
-                    const BlackoilModelParameters& param,
                     const bool inner_iteration,
                     WellState& well_state) const
     {
-        const bool use_inner_iterations = param.use_inner_iterations_ms_wells_;
+        const bool use_inner_iterations = param_.use_inner_iterations_ms_wells_;
 
         const double relaxation_factor = (use_inner_iterations && inner_iteration) ? 0.2 : 1.0;
 
-        const double dFLimit = param.dwell_fraction_max_;
-        const double max_pressure_change = param.max_pressure_change_ms_wells_;
+        const double dFLimit = param_.dwell_fraction_max_;
+        const double max_pressure_change = param_.max_pressure_change_ms_wells_;
         const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
 
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -775,8 +766,6 @@ namespace Opm
             {
                 primary_variables_[seg][GTotal] = old_primary_variables[seg][GTotal] - relaxation_factor * dwells[seg][GTotal];
             }
-
-            // TODO: not handling solvent related for now
 
         }
 
@@ -888,11 +877,6 @@ namespace Opm
             return primary_variables_evaluation_[seg][GFrac];
         }
 
-        // TODO: not handling solvent for now
-        // if (has_solvent && compIdx == contiSolventEqIdx) {
-        //     return primary_variables_evaluation_[seg][SFrac];
-        // }
-
         // Oil fraction
         EvalWell oil_fraction = 1.0;
         if (active()[Water]) {
@@ -985,11 +969,6 @@ namespace Opm
             b_perfcells[phase] = extendEval(fs.invB(phase_idx_ebos));
         }
 
-        // TODO: not handling solvent for now
-        // if (has_solvent) {
-        //     b_perfcells[contiSolventEqIdx] = extendEval(intQuants.solventInverseFormationVolumeFactor());
-        // }
-
         // pressure difference between the segment and the perforation
         const EvalWell perf_seg_press_diff = gravity_ * segment_densities_[seg] * perforation_segment_depth_diffs_[perf];
         // pressure difference between the perforation and the grid cell
@@ -1043,11 +1022,6 @@ namespace Opm
                 const int watpos = pu.phase_pos[Water];
                 volume_ratio += cmix_s[watpos] / b_perfcells[watpos];
             }
-
-            // TODO: not handling
-            // if (has_solvent) {
-            //     volumeRatio += cmix_s[contiSolventEqIdx] / b_perfcells_dense[contiSolventEqIdx];
-            // }
 
             if (active()[Oil] && active()[Gas]) {
                 const int oilpos = pu.phase_pos[Oil];
@@ -1256,8 +1230,6 @@ namespace Opm
                 segment_viscosities_[seg] += visc[p] * phase_fraction;
             }
 
-            // TODO: not handling solvent for now.
-
             EvalWell density(0.0);
             for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
@@ -1356,24 +1328,7 @@ namespace Opm
                 mob[phase] = extendEval(relativePerms[ebosPhaseIdx] / intQuants.fluidState().viscosity(ebosPhaseIdx));
             }
 
-            // this may not work if viscosity and relperms has been modified?
-            // if (has_solvent) {
-            //     OPM_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent");
-            // }
         }
-
-        // modify the water mobility if polymer is present
-        // if (has_polymer) {
-            // assume fully mixture for wells.
-            // EvalWell polymerConcentration = extendEval(intQuants.polymerConcentration());
-
-            // if (well_type_ == INJECTOR) {
-            //     const auto& viscosityMultiplier = PolymerModule::plyviscViscosityMultiplierTable(intQuants.pvtRegionIndex());
-            //     mob[ Water ] /= (extendEval(intQuants.waterViscosityCorrection()) * viscosityMultiplier.eval(polymerConcentration, /*extrapolate=*/true) );
-            // }
-
-            // TODO: not sure if we should handle shear calculation with MS well
-        // }
     }
 
 
@@ -1608,8 +1563,6 @@ namespace Opm
             fractions[oil_pos] -= fractions[gas_pos];
         }
 
-        // TODO: not handling solvent related
-
         if (active()[Water]) {
             const int water_pos = pu.phase_pos[Water];
             if (fractions[water_pos] < 0.0) {
@@ -1777,7 +1730,6 @@ namespace Opm
     void
     MultisegmentWell<TypeTag>::
     iterateWellEquations(Simulator& ebosSimulator,
-                         const ModelParameters& param,
                          const double dt,
                          WellState& well_state)
     {
@@ -1786,7 +1738,7 @@ namespace Opm
         // if converged, we can update the well_state.
         // the function updateWellState() should have a flag to show
         // if we will update the well state.
-        const int max_iter_number = param.max_inner_iter_ms_wells_;
+        const int max_iter_number = param_.max_inner_iter_ms_wells_;
         int it = 0;
         for (; it < max_iter_number; ++it) {
 
@@ -1801,13 +1753,13 @@ namespace Opm
             // const std::vector<double> B {0.8, 0.8, 0.008};
             const std::vector<double> B {0.5, 0.5, 0.005};
 
-            const ConvergenceReport report = getWellConvergence(ebosSimulator, B, param);
+            const ConvergenceReport report = getWellConvergence(B);
 
             if (report.converged) {
                 break;
             }
 
-            updateWellState(dx_well, param, true, well_state);
+            updateWellState(dx_well, true, well_state);
 
             initPrimaryVariablesEvaluation();
         }

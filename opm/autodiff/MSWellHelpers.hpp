@@ -111,7 +111,7 @@ namespace mswellhelpers
 
 
 
-    static double haalandFormular(const double re, const double diameter, const double roughness)
+    inline double haalandFormular(const double re, const double diameter, const double roughness)
     {
         const double value = -3.6 * std::log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
 
@@ -125,7 +125,7 @@ namespace mswellhelpers
 
 
 
-    static double calculateFrictionFactor(const double area, const double diameter,
+    inline double calculateFrictionFactor(const double area, const double diameter,
                                           const double w, const double roughness, const double mu)
     {
 
