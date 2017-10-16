@@ -47,20 +47,21 @@ namespace Opm
         using typename Base::BlackoilIndices;
         using typename Base::PolymerModule;
 
+        using Base::numEq;
+
         // the positions of the primary variables for StandardWell
         // there are three primary variables, the second and the third ones are F_w and F_g
         // the first one can be total rate (G_t) or bhp, based on the control
-        enum WellVariablePositions {
-            XvarWell = 0,
-            WFrac = 1,
-            GFrac = 2,
-            SFrac = 3
-        };
+
+        static const bool gasoil = numEq == 2 && (BlackoilIndices::compositionSwitchIdx >= 0);
+        static const int XvarWell = 0;
+        static const int WFrac = gasoil? -1000: 1;
+        static const int GFrac = gasoil? 1: 2;
+        static const int SFrac = 3;
 
         using typename Base::Scalar;
         using typename Base::ConvergenceReport;
 
-        using Base::numEq;
 
         using Base::has_solvent;
         using Base::has_polymer;
@@ -158,7 +159,6 @@ namespace Opm
         using Base::getAllowCrossFlow;
         using Base::phaseUsage;
         using Base::active;
-        using Base::flowToEbosPvIdx;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
         using Base::numComponents;
@@ -296,6 +296,8 @@ namespace Opm
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,
                          std::vector<EvalWell>& mob) const;
+
+        double scalingFactor(const int comp_idx) const;
     };
 
 }

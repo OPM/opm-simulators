@@ -1098,7 +1098,8 @@ namespace Opm {
         if (has_solvent_ && is_miscible_ && b_eff_[0].size() == 0) {
             // A hack to avoid trouble for initial fluid in place, due to usage of b_eff_.
             WellState xw, xwdummy;
-            xw.init(&wells(), x, xwdummy);
+            const Opm::PhaseUsage& pu = fluid_.phaseUsage();
+            xw.init(&wells(), x, xwdummy, pu);
             SolutionState solstate = variableState(x, xw);
             computeEffectiveProperties(solstate);
         }

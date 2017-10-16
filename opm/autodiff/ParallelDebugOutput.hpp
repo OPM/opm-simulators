@@ -621,7 +621,7 @@ namespace Opm
                                            std::unordered_set<std::string>());
 
                 const Wells* wells = wells_manager.c_wells();
-                globalWellState_.init(wells, *globalReservoirState_, globalWellState_ );
+                globalWellState_.init(wells, *globalReservoirState_, globalWellState_, phaseUsage_ );
                 globalCellData_->clear();
             }
 

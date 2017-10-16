@@ -90,8 +90,7 @@ BOOST_FIXTURE_TEST_CASE(Construction, TestFixture<SetupSimple>)
         SurfaceToReservoirVoidage<Props::FluidSystem, Region> RCvrt;
 
     Region reg{ 0 };
-    int numCells = Opm::UgGridHelpers::numCells(*grid.c_grid());
-    RCvrt  cvrt(ad_props.phaseUsage(), ad_props.cellPvtRegionIndex(), numCells, reg);
+    RCvrt  cvrt(ad_props.phaseUsage(), reg);
 }
 
 
@@ -105,18 +104,17 @@ BOOST_FIXTURE_TEST_CASE(ThreePhase, TestFixture<SetupSimple>)
 
     Region reg{ 0 };
     int numCells = Opm::UgGridHelpers::numCells(*grid.c_grid());
-    RCvrt  cvrt(ad_props.phaseUsage(), ad_props.cellPvtRegionIndex(), numCells, reg);
+    RCvrt  cvrt(ad_props.phaseUsage(), reg);
 
     Opm::BlackoilState x(numCells, Opm::UgGridHelpers::numFaces( *grid.c_grid()) , 3);
 
     cvrt.defineState(x);
 
-    std::vector<double> qs{1.0e3, 1.0e1, 1.0e-1};
-    std::vector<double> coeff(qs.size(), 0.0);
+    std::vector<double> coeff(3, 0.0);
 
     // Immiscible and incompressible: All coefficients are one (1),
     // irrespective of actual surface rates.
-    cvrt.calcCoeff(qs, 0, coeff);
+    cvrt.calcCoeff(0, 0, coeff);
     BOOST_CHECK_CLOSE(coeff[0], 1.0, 1.0e-6);
     BOOST_CHECK_CLOSE(coeff[1], 1.0, 1.0e-6);
     BOOST_CHECK_CLOSE(coeff[2], 1.0, 1.0e-6);

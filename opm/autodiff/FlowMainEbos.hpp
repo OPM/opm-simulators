@@ -45,7 +45,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
-#include <opm/common/ResetLocale.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
@@ -55,7 +54,11 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 
-#include <ewoms/version.hh>
+#if HAVE_DUNE_FEM
+#include <dune/fem/misc/mpimanager.hh>
+#else
+#include <dune/common/parallel/mpihelper.hh>
+#endif
 
 namespace Opm
 {
@@ -75,9 +78,8 @@ namespace Opm
     public:
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
-        typedef typename GET_PROP_TYPE(TypeTag, SimulatorParameter) EbosSimulatorParameter;
-        typedef typename GET_PROP_TYPE(TypeTag, ElementMapper) ElementMapper;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
+        typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
         typedef typename GET_PROP_TYPE(TypeTag, Scalar) Scalar;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
@@ -91,23 +93,17 @@ namespace Opm
         /// simulator classes, based on user command-line input.  The
         /// content of this function used to be in the main() function of
         /// flow.cpp.
-        int execute(int argc, char** argv,
-                    std::shared_ptr<Opm::Deck> deck = std::shared_ptr<Opm::Deck>(),
-                    std::shared_ptr<Opm::EclipseState> eclipseState = std::shared_ptr<Opm::EclipseState>() )
+        int execute(int argc, char** argv)
         {
             try {
-                // we always want to use the default locale, and thus spare us the trouble
-                // with incorrect locale settings.
-                resetLocale();
-
-                setupParallelism(argc, argv);
+                setupParallelism();
                 printStartupMessage();
                 const bool ok = setupParameters(argc, argv);
                 if (!ok) {
                     return EXIT_FAILURE;
                 }
 
-                setupEbosSimulator( deck, eclipseState );
+                setupEbosSimulator();
                 setupOutput();
                 setupLogging();
                 printPRTHeader();
@@ -147,15 +143,18 @@ namespace Opm
         }
 
     protected:
-        void setupParallelism(int argc, char** argv)
+        void setupParallelism()
         {
-            // MPI setup.
-            // Must ensure an instance of the helper is created to initialise MPI.
-            // For a build without MPI the Dune::FakeMPIHelper is used, so rank will
-            // be 0 and size 1.
-            const Dune::MPIHelper& mpi_helper = Dune::MPIHelper::instance(argc, argv);
-            mpi_rank_ = mpi_helper.rank();
-            const int mpi_size = mpi_helper.size();
+            // determine the rank of the current process and the number of processes
+            // involved in the simulation. MPI must have already been initialized here.
+#if HAVE_MPI
+            MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
+            int mpi_size;
+            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#else
+            mpi_rank_ = 0;
+            const int mpi_size = 1;
+#endif
             output_cout_ = ( mpi_rank_ == 0 );
             must_distribute_ = ( mpi_size > 1 );
 
@@ -188,7 +187,7 @@ namespace Opm
             if (output_cout_) {
                 const int lineLen = 70;
                 const std::string version = moduleVersionName();
-                const std::string banner = "This is flow (version "+version+")";
+                const std::string banner = "This is flow "+version;
                 const int bannerPreLen = (lineLen - 2 - banner.size())/2;
                 const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
                 std::cout << "**********************************************************************\n";
@@ -196,8 +195,8 @@ namespace Opm
                 std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
-                std::cout << "*            and is part of OPM. For more information see:           *\n";
-                std::cout << "*                       http://opm-project.org                       *\n";
+                std::cout << "*             including solvent and polymer capabilities.            *\n";
+                std::cout << "*          For more information, see http://opm-project.org          *\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "**********************************************************************\n\n";
             }
@@ -409,7 +408,7 @@ namespace Opm
                           detail::ParallelFileMerger(output_path, deck_filename.stem().string()));
         }
 
-        void setupEbosSimulator( std::shared_ptr<Opm::Deck>& dck, std::shared_ptr<Opm::EclipseState>& eclipseState)
+        void setupEbosSimulator()
         {
             std::string progName("flow_ebos");
             std::string deckFile("--ecl-deck-file-name=");
@@ -417,10 +416,9 @@ namespace Opm
             char* ptr[2];
             ptr[ 0 ] = const_cast< char * > (progName.c_str());
             ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
-            EbosSimulatorParameter simParam( dck, eclipseState );
             EbosSimulator::registerParameters();
             Ewoms::setupParameters_< TypeTag > ( 2, ptr );
-            ebosSimulator_.reset(new EbosSimulator(simParam, /*verbose=*/false));
+            ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
             // Create a grid with a global view.
@@ -808,6 +806,8 @@ namespace Opm
 
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
+            typedef typename Grid::LeafGridView GridView;
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
             const auto& cartesianCellIdx = globalGrid.globalCell();
 
@@ -837,13 +837,8 @@ namespace Opm
                         continue; // intersection is on the domain boundary
                     }
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                     unsigned c1 = globalElemMapper.index(is.inside());
                     unsigned c2 = globalElemMapper.index(is.outside());
-#else
-                    unsigned c1 = globalElemMapper.map(is.inside());
-                    unsigned c2 = globalElemMapper.map(is.outside());
-#endif
 
                     if (c1 > c2)
                     {
@@ -881,6 +876,8 @@ namespace Opm
 
             const Grid& globalGrid = this->globalGrid();
             const auto& globalGridView = globalGrid.leafGridView();
+            typedef typename Grid::LeafGridView GridView;
+            typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout> ElementMapper;
             ElementMapper globalElemMapper(globalGridView);
 
             const auto* globalTrans = &(ebosSimulator_->gridManager().globalTransmissibility());
@@ -909,13 +906,8 @@ namespace Opm
                         continue; // intersection is on the domain boundary
                     }
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2,4)
                     unsigned c1 = globalElemMapper.index(is.inside());
                     unsigned c2 = globalElemMapper.index(is.outside());
-#else
-                    unsigned c1 = globalElemMapper.map(is.inside());
-                    unsigned c2 = globalElemMapper.map(is.outside());
-#endif
 
                     if (c1 > c2)
                     {

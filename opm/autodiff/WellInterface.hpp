@@ -35,7 +35,7 @@
 #include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/VFPProdProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp>
+#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
@@ -61,7 +61,7 @@ namespace Opm
     {
     public:
 
-        using WellState = WellStateFullyImplicitBlackoilDense;
+        using WellState = WellStateFullyImplicitBlackoil;
 
         typedef BlackoilModelParameters ModelParameters;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
@@ -93,6 +93,9 @@ namespace Opm
 
         /// Well name.
         const std::string& name() const;
+
+        /// Well cells.
+        const std::vector<int>& cells() {return well_cells_; }
 
         /// Well type, INJECTOR or PRODUCER.
         WellType wellType() const;
@@ -267,8 +270,6 @@ namespace Opm
         const PhaseUsage& phaseUsage() const;
 
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
-
-        int flowToEbosPvIdx( const int flowPv ) const;
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 

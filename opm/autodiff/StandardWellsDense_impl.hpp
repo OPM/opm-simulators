@@ -11,7 +11,8 @@ namespace Opm {
                        const ModelParameters& param,
                        const RateConverterType& rate_converter,
                        const bool terminal_output,
-                       const int current_timeIdx)
+                       const int current_timeIdx,
+                       std::vector<int>& pvt_region_idx)
        : wells_active_(wells_arg!=nullptr)
        , wells_(wells_arg)
        , wells_ecl_(wells_ecl)
@@ -25,6 +26,7 @@ namespace Opm {
        , has_polymer_(GET_PROP_VALUE(TypeTag, EnablePolymer))
        , current_timeIdx_(current_timeIdx)
        , rate_converter_(rate_converter)
+       , pvt_region_idx_(pvt_region_idx)
     {
     }
 
@@ -45,12 +47,12 @@ namespace Opm {
         // has to be set always for the convergence check!
         global_nc_   = global_nc;
 
+        phase_usage_ = phase_usage_arg;
+        active_ = active_arg;
+
         if ( ! localWellsActive() ) {
             return;
         }
-
-        phase_usage_ = phase_usage_arg;
-        active_ = active_arg;
 
         calculateEfficiencyFactors();
 
@@ -302,9 +304,17 @@ namespace Opm {
     StandardWellsDense<TypeTag>::
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
+        const auto& pu = phase_usage_;
+        if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
+            return FluidSystem::waterPhaseIdx;
+        if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
+            return FluidSystem::oilPhaseIdx;
+        if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
+            return FluidSystem::gasPhaseIdx;
+
         assert(phaseIdx < 3);
-        const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
-        return flowToEbos[ phaseIdx ];
+        // for other phases return the index
+        return phaseIdx;
     }
 
 
@@ -451,9 +461,13 @@ namespace Opm {
         } while (it < 15);
 
         if (converged) {
-            OpmLog::debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
+            if ( terminal_output_ ) {
+                OpmLog::debug("Well equation solution gets converged with " + std::to_string(it) + " iterations");
+            }
         } else {
-            OpmLog::debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
+            if ( terminal_output_ ) {
+                OpmLog::debug("Well equation solution failed in getting converged with " + std::to_string(it) + " iterations");
+            }
 
             well_state = well_state0;
             updatePrimaryVariables(well_state);
@@ -776,6 +790,8 @@ namespace Opm {
 
         for (int w = 0; w < nw; ++w) {
             const bool is_producer = well_container_[w]->wellType() == PRODUCER;
+            const int well_cell_top = well_container_[w]->cells()[0];
+            const int pvtRegionIdx = pvt_region_idx_[well_cell_top];
 
             // not sure necessary to change all the value to be positive
             if (is_producer) {
@@ -786,7 +802,7 @@ namespace Opm {
                 // the average hydrocarbon conditions of the whole field will be used
                 const int fipreg = 0; // Not considering FIP for the moment.
 
-                rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                rate_converter_.calcCoeff(fipreg, pvtRegionIdx, convert_coeff);
                 well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
                                                            convert_coeff.begin(), 0.0);
             } else {
@@ -797,7 +813,7 @@ namespace Opm {
                           well_rates.begin());
                 // the average hydrocarbon conditions of the whole field will be used
                 const int fipreg = 0; // Not considering FIP for the moment.
-                rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                rate_converter_.calcCoeff(fipreg, pvtRegionIdx, convert_coeff);
                 std::copy(convert_coeff.begin(), convert_coeff.end(),
                           voidage_conversion_coeffs.begin() + np * w);
             }

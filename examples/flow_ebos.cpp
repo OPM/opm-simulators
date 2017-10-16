@@ -1,8 +1,4 @@
 /*
-  Copyright 2013, 2014, 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2015 IRIS AS
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -18,25 +14,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-
-#if HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
-
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/autodiff/DuneMatrix.hpp>
-#include <dune/grid/CpGrid.hpp>
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/autodiff/FlowMainEbos.hpp>
-
+#include <opm/simulators/flow_ebos_blackoil.hpp>
 
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
-    Opm::FlowMainEbos<TTAG(EclFlowProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return Opm::flowEbosBlackoilMain(argc, argv);
 }

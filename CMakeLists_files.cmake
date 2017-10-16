@@ -62,6 +62,11 @@ list (APPEND MAIN_SOURCE_FILES
   opm/polymer/TransportSolverTwophaseCompressiblePolymer.cpp
   opm/polymer/TransportSolverTwophasePolymer.cpp
   opm/polymer/fullyimplicit/PolymerPropsAd.cpp
+	opm/simulators/flow_ebos_blackoil.cpp
+  opm/simulators/flow_ebos_gasoil.cpp
+  opm/simulators/flow_ebos_oilwater.cpp
+  opm/simulators/flow_ebos_polymer.cpp
+  opm/simulators/flow_ebos_solvent.cpp
   opm/simulators/ensureDirectoryExists.cpp
   opm/simulators/SimulatorCompressibleTwophase.cpp
   opm/simulators/SimulatorIncompTwophase.cpp
@@ -228,7 +233,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/TransportSolverTwophaseAd.hpp
   opm/autodiff/WellDensitySegmented.hpp
   opm/autodiff/WellStateFullyImplicitBlackoil.hpp
-  opm/autodiff/WellStateFullyImplicitBlackoilDense.hpp
   opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
   opm/autodiff/VFPProperties.hpp
@@ -273,6 +277,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp
   opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer_impl.hpp
   opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp
+	opm/simulators/flow_ebos_blackoil.hpp
+  opm/simulators/flow_ebos_gasoil.hpp
+  opm/simulators/flow_ebos_oilwater.hpp
+  opm/simulators/flow_ebos_polymer.hpp
+  opm/simulators/flow_ebos_solvent.hpp
   opm/simulators/ensureDirectoryExists.hpp
   opm/simulators/ParallelFileMerger.hpp
   opm/simulators/SimulatorCompressibleTwophase.hpp

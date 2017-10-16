@@ -168,7 +168,7 @@ class ParallelOverlappingILU0
 
 public:
     //! \brief The matrix type the preconditioner is for.
-    typedef typename Dune::remove_const<Matrix>::type matrix_type;
+    typedef typename std::remove_const<Matrix>::type matrix_type;
     //! \brief The domain type of the preconditioner.
     typedef Domain domain_type;
     //! \brief The range type of the preconditioner.

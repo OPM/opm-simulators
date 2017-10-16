@@ -1,6 +1,4 @@
 /*
-  Copyright 2017 IRIS AS
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -16,27 +14,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-
-#if HAVE_CONFIG_H
 #include "config.h"
-#endif // HAVE_CONFIG_H
 
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/autodiff/DuneMatrix.hpp>
-#include <dune/grid/CpGrid.hpp>
-#include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/autodiff/FlowMainEbos.hpp>
-
-namespace Ewoms {
-namespace Properties {
-NEW_TYPE_TAG(EclFlowPolymerProblem, INHERITS_FROM(EclFlowProblem));
-SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
-}}
+#include <opm/simulators/flow_ebos_polymer.hpp>
 
 // ----------------- Main program -----------------
 int main(int argc, char** argv)
 {
-    Opm::FlowMainEbos<TTAG(EclFlowPolymerProblem)> mainfunc;
-    return mainfunc.execute(argc, argv);
+    return Opm::flowEbosPolymerMain(argc, argv);
 }

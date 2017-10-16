@@ -143,7 +143,7 @@ typedef Eigen::Array<double,
         // the field will be calculated.
         // TODO: more delicate implementation will be required if we want to handle different
         // FIP regions specified from the well specifications.
-        , rate_converter_(fluid_.phaseUsage(), fluid_.cellPvtRegionIndex(), AutoDiffGrid::numCells(grid_), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
+        , rate_converter_(fluid_.phaseUsage(), std::vector<int>(AutoDiffGrid::numCells(grid_),0))
     {
         if (active_[Water]) {
             material_name_.push_back("Water");
@@ -2513,8 +2513,10 @@ typedef Eigen::Array<double,
 
                     // the average hydrocarbon conditions of the whole field will be used
                     const int fipreg = 0; // Not considering FIP for the moment.
+                    const int well_cell_top = wells->well_cells[wells->well_connpos[w]];
+                    const int pvtreg = fluid_.cellPvtRegionIndex()[well_cell_top];
 
-                    rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                    rate_converter_.calcCoeff(fipreg, pvtreg, convert_coeff);
                     well_voidage_rates[w] = std::inner_product(well_rates.begin(), well_rates.end(),
                                                                convert_coeff.begin(), 0.0);
                 } else {
@@ -2525,7 +2527,9 @@ typedef Eigen::Array<double,
                               well_rates.begin());
                     // the average hydrocarbon conditions of the whole field will be used
                     const int fipreg = 0; // Not considering FIP for the moment.
-                    rate_converter_.calcCoeff(well_rates, fipreg, convert_coeff);
+                    const int well_cell_top = wells->well_cells[wells->well_connpos[w]];
+                    const int pvtreg = fluid_.cellPvtRegionIndex()[well_cell_top];
+                    rate_converter_.calcCoeff(fipreg, pvtreg, convert_coeff);
                     std::copy(convert_coeff.begin(), convert_coeff.end(),
                               voidage_conversion_coeffs.begin() + np * w);
                 }

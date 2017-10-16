@@ -224,33 +224,17 @@ namespace Opm
     WellInterface<TypeTag>::
     flowPhaseToEbosCompIdx( const int phaseIdx ) const
     {
-        const int phaseToComp[ 3 ] = { FluidSystem::waterCompIdx, FluidSystem::oilCompIdx, FluidSystem::gasCompIdx};
-        if (phaseIdx > 2 )
-            return phaseIdx;
-        return phaseToComp[ phaseIdx ];
+        const auto& pu = phaseUsage();
+        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
+            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
+            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
+            return BlackoilIndices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+
+        // for other phases return the index
+        return phaseIdx;
     }
-
-
-
-
-
-    template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    flowToEbosPvIdx( const int flowPv ) const
-    {
-        const int flowToEbos[ 3 ] = {
-            BlackoilIndices::pressureSwitchIdx,
-            BlackoilIndices::waterSaturationIdx,
-            BlackoilIndices::compositionSwitchIdx
-        };
-
-        if (flowPv > 2 )
-            return flowPv;
-
-        return flowToEbos[ flowPv ];
-    }
-
 
 
 
@@ -260,11 +244,21 @@ namespace Opm
     WellInterface<TypeTag>::
     flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
     {
-        assert(phaseIdx < 3);
-        const int flowToEbos[ 3 ] = { FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx };
-        return flowToEbos[ phaseIdx ];
-    }
+        const auto& pu = phaseUsage();
+        if (active()[Water] && pu.phase_pos[Water] == phaseIdx) {
+            return FluidSystem::waterPhaseIdx;
+        }
+        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx) {
+            return FluidSystem::oilPhaseIdx;
+        }
+        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx) {
+            return FluidSystem::gasPhaseIdx;
+        }
 
+        assert(phaseIdx < 3);
+        // for other phases return the index
+        return phaseIdx;
+    }
 
 
 
@@ -642,11 +636,11 @@ namespace Opm
 
             if (well_ecl_->getAutomaticShutIn()) {
                 list_econ_limited.addShutWell(well_name);
-                const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to economic limit");
+                const std::string msg = std::string("well ") + well_name + std::string(" will be shut in due to rate economic limit");
                     OpmLog::info(msg);
             } else {
                 list_econ_limited.addStoppedWell(well_name);
-                const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to economic limit");
+                const std::string msg = std::string("well ") + well_name + std::string(" will be stopped due to rate economic limit");
                 OpmLog::info(msg);
             }
             // the well is closed, not need to check other limits
@@ -663,21 +657,48 @@ namespace Opm
         }
 
         if (ratio_limits_violated) {
-            const bool last_connection = std::get<1>(ratio_check_return);
-            const int worst_offending_connection = std::get<2>(ratio_check_return);
+            const WellEcon::WorkoverEnum workover = econ_production_limits.workover();
+            switch (workover) {
+                case WellEcon::CON:
+                {
+                    const bool last_connection = std::get<1>(ratio_check_return);
+                    const int worst_offending_connection = std::get<2>(ratio_check_return);
 
-            assert((worst_offending_connection >= 0) && (worst_offending_connection < number_of_perforations_));
+                    assert((worst_offending_connection >= 0) && (worst_offending_connection < number_of_perforations_));
 
-            const int cell_worst_offending_connection = well_cells_[worst_offending_connection];
-            list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
-            const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
-                                  + well_name + std::string(" will be closed due to economic limit");
-            OpmLog::info(msg);
+                    const int cell_worst_offending_connection = well_cells_[worst_offending_connection];
+                    list_econ_limited.addClosedConnectionsForWell(well_name, cell_worst_offending_connection);
+                    const std::string msg = std::string("Connection ") + std::to_string(worst_offending_connection) + std::string(" for well ")
+                                            + well_name + std::string(" will be closed due to economic limit");
+                    OpmLog::info(msg);
 
-            if (last_connection) {
-                list_econ_limited.addShutWell(well_name);
-                const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
-                OpmLog::info(msg2);
+                    if (last_connection) {
+                        // TODO: there is more things to check here
+                        list_econ_limited.addShutWell(well_name);
+                        const std::string msg2 = well_name + std::string(" will be shut due to the last connection closed");
+                        OpmLog::info(msg2);
+                    }
+                    break;
+                }
+                case WellEcon::WELL:
+                {
+                    if (well_ecl_->getAutomaticShutIn()) {
+                        list_econ_limited.addShutWell(well_name);
+                        const std::string msg = well_name + std::string(" will be shut due to ratio economic limit");
+                        OpmLog::info(msg);
+                    } else {
+                        list_econ_limited.addStoppedWell(well_name);
+                        const std::string msg = well_name + std::string(" will be stopped due to ratio economic limit");
+                        OpmLog::info(msg);
+                    }
+                    break;
+                }
+                case WellEcon::NONE:
+                    break;
+                default:
+                {
+                    OpmLog::warning("NOT_SUPPORTED_WORKOVER_TYPE", "not supporting workover type " + WellEcon::WorkoverEnumToString(workover) );
+                }
             }
         }
     }
