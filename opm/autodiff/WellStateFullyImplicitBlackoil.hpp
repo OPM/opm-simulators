@@ -211,9 +211,9 @@ namespace Opm
             {
                 // we need to create a trival segment related values to avoid there will be some
                 // multi-segment wells added later.
-                top_segment_loc_.reserve(nw);
+                top_segment_index_.reserve(nw);
                 for (int w = 0; w < nw; ++w) {
-                    top_segment_loc_.push_back(w);
+                    top_segment_index_.push_back(w);
                 }
                 segpress_ = bhp();
                 segrates_ = wellRates();
@@ -304,8 +304,8 @@ namespace Opm
                 return;
             }
 
-            top_segment_loc_.clear();
-            top_segment_loc_.reserve(nw);
+            top_segment_index_.clear();
+            top_segment_index_.reserve(nw);
             segpress_.clear();
             segpress_.reserve(nw);
             segrates_.clear();
@@ -330,7 +330,7 @@ namespace Opm
                 }
 
                 const Well* well_ecl = wells_ecl[index_well_ecl];
-                top_segment_loc_.push_back(nseg_);
+                top_segment_index_.push_back(nseg_);
                 if ( !well_ecl->isMultiSegment(time_step) ) { // not multi-segment well
                     nseg_ += 1;
                     segpress_.push_back(bhp()[w]);
@@ -351,8 +351,8 @@ namespace Opm
                     for (int perf = 0; perf < nperf; ++perf) {
                         const Completion& completion = completion_set.get(perf);
                         const int segment_number = completion.getSegmentNumber();
-                        const int segment_location = segment_set.numberToLocation(segment_number);
-                        segment_perforations[segment_location].push_back(perf);
+                        const int segment_index = segment_set.segmentNumberToIndex(segment_number);
+                        segment_perforations[segment_index].push_back(perf);
                     }
 
                     std::vector<std::vector<int>> segment_inlets(nseg);
@@ -361,9 +361,9 @@ namespace Opm
                         const int segment_number = segment.segmentNumber();
                         const int outlet_segment_number = segment.outletSegment();
                         if (outlet_segment_number > 0) {
-                            const int segment_location = segment_set.numberToLocation(segment_number);
-                            const int outlet_segment_location = segment_set.numberToLocation(outlet_segment_number);
-                            segment_inlets[outlet_segment_location].push_back(segment_location);
+                            const int segment_index = segment_set.segmentNumberToIndex(segment_number);
+                            const int outlet_segment_index = segment_set.segmentNumberToIndex(outlet_segment_number);
+                            segment_inlets[outlet_segment_index].push_back(segment_index);
                         }
                     }
 
@@ -403,7 +403,7 @@ namespace Opm
                     {
                         // top segment is always the first one, and its pressure is the well bhp
                         segpress_.push_back(bhp()[w]);
-                        const int top_segment = top_segment_loc_[w];
+                        const int top_segment = top_segment_index_[w];
                         const int start_perf = wells->well_connpos[w];
                         for (int seg = 1; seg < nseg; ++seg) {
                             if ( !segment_perforations[seg].empty() ) {
@@ -413,7 +413,7 @@ namespace Opm
                                 // segpress_.push_back(bhp); // may not be a good decision
                                 // using the outlet segment pressure // it needs the ordering is correct
                                 const int outlet_seg = segment_set[seg].outletSegment();
-                                segpress_.push_back(segpress_[top_segment + segment_set.numberToLocation(outlet_seg)]);
+                                segpress_.push_back(segpress_[top_segment + segment_set.segmentNumberToIndex(outlet_seg)]);
                             }
                         }
                     }
@@ -436,21 +436,21 @@ namespace Opm
                         // for now, we just copy them.
                         const int old_index_well = (*it).second[0];
                         const int new_index_well = w;
-                        const int old_top_segment_location = prev_well_state.topSegmentLocation(old_index_well);
-                        const int new_top_segmnet_location = topSegmentLocation(new_index_well);
+                        const int old_top_segment_index = prev_well_state.topSegmentIndex(old_index_well);
+                        const int new_top_segmnet_index = topSegmentIndex(new_index_well);
                         int number_of_segment = 0;
-                        if (new_index_well == int(top_segment_loc_.size()) - 1) {
-                            number_of_segment = nseg_ - new_top_segmnet_location;
+                        if (new_index_well == int(top_segment_index_.size()) - 1) {
+                            number_of_segment = nseg_ - new_top_segmnet_index;
                         } else {
-                            number_of_segment = topSegmentLocation(new_index_well + 1) - new_top_segmnet_location;
+                            number_of_segment = topSegmentIndex(new_index_well + 1) - new_top_segmnet_index;
                         }
 
                         for (int i = 0; i < number_of_segment * np; ++i) {
-                            segrates_[new_top_segmnet_location * np + i] = prev_well_state.segRates()[old_top_segment_location * np + i];
+                            segrates_[new_top_segmnet_index * np + i] = prev_well_state.segRates()[old_top_segment_index * np + i];
                         }
 
                         for (int i = 0; i < number_of_segment; ++i) {
-                            segpress_[new_top_segmnet_location + i] = prev_well_state.segPress()[old_top_segment_location + i];
+                            segpress_[new_top_segmnet_index + i] = prev_well_state.segPress()[old_top_segment_index + i];
                         }
                     }
                 }
@@ -531,11 +531,11 @@ namespace Opm
             return nseg_;
         }
 
-        int topSegmentLocation(const int w) const
+        int topSegmentIndex(const int w) const
         {
-            assert(w < int(top_segment_loc_.size()) );
+            assert(w < int(top_segment_index_.size()) );
 
-            return top_segment_loc_[w];
+            return top_segment_index_[w];
         }
 
     private:
@@ -553,7 +553,9 @@ namespace Opm
         // for StandardWell, the segment number will be one
         std::vector<double> segrates_;
         std::vector<double> segpress_;
-        std::vector<int> top_segment_loc_; // the index of the top segments
+        // the index of the top segments, which is used to locate the
+        // multisegment well related information in WellState
+        std::vector<int> top_segment_index_;
         int nseg_; // number of the segments
 
     };

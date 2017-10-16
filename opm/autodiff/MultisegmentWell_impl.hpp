@@ -56,8 +56,8 @@ namespace Opm
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const Completion& completion = completion_set.get(perf);
             const int segment_number = completion.getSegmentNumber();
-            const int segment_location = numberToLocation(segment_number);
-            segment_perforations_[segment_location].push_back(perf);
+            const int segment_index = segmentNumberToIndex(segment_number);
+            segment_perforations_[segment_index].push_back(perf);
         }
 
         // initialize the segment_inlets_
@@ -66,9 +66,9 @@ namespace Opm
             const int segment_number = segment.segmentNumber();
             const int outlet_segment_number = segment.outletSegment();
             if (outlet_segment_number > 0) {
-                const int segment_location = numberToLocation(segment_number);
-                const int outlet_segment_location = numberToLocation(outlet_segment_number);
-                segment_inlets_[outlet_segment_location].push_back(segment_location);
+                const int segment_index = segmentNumberToIndex(segment_number);
+                const int outlet_segment_index = segmentNumberToIndex(outlet_segment_number);
+                segment_inlets_[outlet_segment_index].push_back(segment_index);
             }
         }
 
@@ -87,7 +87,7 @@ namespace Opm
         for (int seg = 1; seg < numberOfSegments(); ++seg) {
             const double segment_depth = segmentSet()[seg].depth();
             const int outlet_segment_number = segmentSet()[seg].outletSegment();
-            const Segment& outlet_segment = segmentSet()[numberToLocation(outlet_segment_number)];
+            const Segment& outlet_segment = segmentSet()[segmentNumberToIndex(outlet_segment_number)];
             const double outlet_depth = outlet_segment.depth();
             segment_depth_diffs_[seg] = segment_depth - outlet_depth;
         }
@@ -165,8 +165,8 @@ namespace Opm
             const Segment& segment = segmentSet()[seg];
             const int outlet_segment_number = segment.outletSegment();
             if (outlet_segment_number > 0) { // if there is a outlet_segment
-                const int outlet_segment_location = numberToLocation(outlet_segment_number);
-                row.insert(outlet_segment_location);
+                const int outlet_segment_index = segmentNumberToIndex(outlet_segment_number);
+                row.insert(outlet_segment_index);
             }
 
             // Add nonzeros for diagonal
@@ -259,8 +259,8 @@ namespace Opm
         switch (well_controls_iget_type(well_controls_, current)) {
         case BHP: {
             well_state.bhp()[index_of_well_] = target;
-            const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
-            well_state.segPress()[top_segment_location] = well_state.bhp()[index_of_well_];
+            const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
+            well_state.segPress()[top_segment_index] = well_state.bhp()[index_of_well_];
             // TODO: similar to the way below to handle THP
             // we should not something related to thp here when there is thp constraint
             break;
@@ -288,8 +288,8 @@ namespace Opm
             // TODO: implement calculateBhpFromThp function
             // well_state.bhp()[index_of_well_] = calculateBhpFromThp(rates, current);
             // also the top segment pressure
-            /* const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
-            well_state.segPress()[top_segment_location] = well_state.bhp()[index_of_well_]; */
+            /* const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
+            well_state.segPress()[top_segment_index] = well_state.bhp()[index_of_well_]; */
             break;
         }
 
@@ -346,9 +346,9 @@ namespace Opm
                         well_state.wellRates()[number_of_phases_ * index_of_well_ + phase] *= scaling_factor;
 
                         // scaling the segment rates with the same way with well rates
-                        const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+                        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
                         for (int seg = 0; seg < numberOfSegments(); ++seg) {
-                             well_state.segRates()[number_of_phases_ * (seg + top_segment_location) + phase] *= scaling_factor;
+                             well_state.segRates()[number_of_phases_ * (seg + top_segment_index) + phase] *= scaling_factor;
                         }
                     }
                 } else { // scaling factor is not well defined when original_rates_under_phase_control is zero
@@ -394,9 +394,9 @@ namespace Opm
         std::vector<double> segment_rates;
         WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, number_of_phases_,
                                          0, segment_rates);
-        const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         std::copy(segment_rates.begin(), segment_rates.end(),
-                  well_state.segRates().begin() + number_of_phases_ * top_segment_location );
+                  well_state.segRates().begin() + number_of_phases_ * top_segment_index );
         // we need to check the top segment rates should be same with the well rates
     }
 
@@ -562,32 +562,32 @@ namespace Opm
         // TODO: to test using rate conversion coefficients to see if it will be better than
         // this default one
 
-        // the location of the top segment in the WellState
-        const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+        // the index of the top segment in the WellState
+        const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
         const std::vector<double>& segment_rates = well_state.segRates();
         const PhaseUsage& pu = phaseUsage();
 
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             // calculate the total rate for each segment
             double total_seg_rate = 0.0;
-            const int seg_location = top_segment_location + seg;
+            const int seg_index = top_segment_index + seg;
             // the segment pressure
-            primary_variables_[seg][SPres] = well_state.segPress()[seg_location];
+            primary_variables_[seg][SPres] = well_state.segPress()[seg_index];
             // TODO: under what kind of circustances, the following will be wrong?
             // the definition of g makes the gas phase is always the last phase
             for (int p = 0; p < number_of_phases_; p++) {
-                total_seg_rate += scalingFactor(p) * segment_rates[number_of_phases_ * seg_location + p];
+                total_seg_rate += scalingFactor(p) * segment_rates[number_of_phases_ * seg_index + p];
             }
 
             primary_variables_[seg][GTotal] = total_seg_rate;
             if (std::abs(total_seg_rate) > 0.) {
                 if (active()[Water]) {
                     const int water_pos = pu.phase_pos[Water];
-                    primary_variables_[seg][WFrac] = scalingFactor(water_pos) * segment_rates[number_of_phases_ * seg_location + water_pos] / total_seg_rate;
+                    primary_variables_[seg][WFrac] = scalingFactor(water_pos) * segment_rates[number_of_phases_ * seg_index + water_pos] / total_seg_rate;
                 }
                 if (active()[Gas]) {
                     const int gas_pos = pu.phase_pos[Gas];
-                    primary_variables_[seg][GFrac] = scalingFactor(gas_pos) * segment_rates[number_of_phases_ * seg_location + gas_pos] / total_seg_rate;
+                    primary_variables_[seg][GFrac] = scalingFactor(gas_pos) * segment_rates[number_of_phases_ * seg_index + gas_pos] / total_seg_rate;
                 }
             } else { // total_seg_rate == 0
                 if (well_type_ == INJECTOR) {
@@ -864,9 +864,9 @@ namespace Opm
     template <typename TypeTag>
     int
     MultisegmentWell<TypeTag>::
-    numberToLocation(const int segment_number) const
+    segmentNumberToIndex(const int segment_number) const
     {
-        return segmentSet().numberToLocation(segment_number);
+        return segmentSet().segmentNumberToIndex(segment_number);
     }
 
 
@@ -1488,12 +1488,12 @@ namespace Opm
         }
 
         // contribution from the outlet segment
-        const int outlet_segment_location = numberToLocation(segmentSet()[seg].outletSegment());
-        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_location);
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
 
         resWell_[seg][SPres] -= outlet_pressure.value();
         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-            duneD_[seg][outlet_segment_location][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
+            duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + numEq);
         }
 
         if (accelerationalPressureLossConsidered()) {
@@ -1525,8 +1525,8 @@ namespace Opm
         const EvalWell mass_rate = segment_mass_rates_[seg];
         const EvalWell density = segment_densities_[seg];
         const EvalWell visc = segment_viscosities_[seg];
-        const int outlet_segment_location = numberToLocation(segmentSet()[seg].outletSegment());
-        const double length = segmentSet()[seg].totalLength() - segmentSet()[outlet_segment_location].totalLength();
+        const int outlet_segment_index = segmentNumberToIndex(segmentSet()[seg].outletSegment());
+        const double length = segmentSet()[seg].totalLength() - segmentSet()[outlet_segment_index].totalLength();
         assert(length > 0.);
         const double roughness = segmentSet()[seg].roughness();
         const double area = segmentSet()[seg].crossArea();
@@ -1694,19 +1694,19 @@ namespace Opm
 
             // calculate the phase rates based on the primary variables
             const double g_total = primary_variables_[seg][GTotal];
-            const int top_segment_location = well_state.topSegmentLocation(index_of_well_);
+            const int top_segment_index = well_state.topSegmentIndex(index_of_well_);
             for (int p = 0; p < number_of_phases_; ++p) {
                 const double phase_rate = g_total * fractions[p];
-                well_state.segRates()[(seg + top_segment_location) * number_of_phases_ + p] = phase_rate;
+                well_state.segRates()[(seg + top_segment_index) * number_of_phases_ + p] = phase_rate;
                 if (seg == 0) { // top segment
                     well_state.wellRates()[index_of_well_ * number_of_phases_ + p] = phase_rate;
                 }
             }
 
             // update the segment pressure
-            well_state.segPress()[seg + top_segment_location] = primary_variables_[seg][SPres];
+            well_state.segPress()[seg + top_segment_index] = primary_variables_[seg][SPres];
             if (seg == 0) { // top segment
-                well_state.bhp()[index_of_well_] = well_state.segPress()[seg + top_segment_location];
+                well_state.bhp()[index_of_well_] = well_state.segPress()[seg + top_segment_index];
             }
         }
     }

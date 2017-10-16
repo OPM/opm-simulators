@@ -195,7 +195,7 @@ namespace Opm
         // as possible, it will possibly be re-implemented later for efficiency reason.
 
         // the completions that is related to each segment
-        // the completions's ids are their location in the vector well_index_, well_cell_
+        // the completions's ids are their index in the vector well_index_, well_cell_
         // This is also assuming the order of the completions in Well is the same with
         // the order of the completions in wells.
         // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
@@ -207,7 +207,7 @@ namespace Opm
 
         // segment number is an ID of the segment, it is specified in the deck
         // get the loation of the segment with a segment number in the segmentSet
-        int numberToLocation(const int segment_number) const;
+        int segmentNumberToIndex(const int segment_number) const;
 
         // TODO, the following should go to a class for computing purpose
         // two off-diagonal matrices
