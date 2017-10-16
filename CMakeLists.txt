@@ -83,6 +83,8 @@ include(OpmMacros)
 # find the packages needed to compile the module
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
+find_package(PlainOpmData)
+
 # recursively mark all header files beneath the "opm" directory for
 # installation.
 opm_recusive_export_all_headers("opm")
