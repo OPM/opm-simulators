@@ -99,7 +99,7 @@ namespace Opm
         static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells);
+        StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -120,21 +120,8 @@ namespace Opm
         virtual void updateWellStateWithTarget(const int current,
                                                WellState& xw) const;
 
-        // TODO: this should go to the WellInterface, while updateWellStateWithTarget
-        // will need touch different types of well_state, we will see.
-        virtual void updateWellControl(WellState& xw,
-                                       wellhelpers::WellSwitchingLogger& logger) const;
-
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(Simulator& ebosSimulator,
-                                                     const std::vector<double>& B_avg,
-                                                     const ModelParameters& param) const;
-
-        /// computing the accumulation term for later use in well mass equations
-        virtual void computeAccumWell();
-
-        virtual void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& xw);
+        virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const;
@@ -143,16 +130,20 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x, const ModelParameters& param,
+        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                            WellState& well_state) const;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           std::vector<double>& well_potentials) const;
+                                           std::vector<double>& well_potentials) /* const */;
 
         virtual void updatePrimaryVariables(const WellState& well_state) const;
 
+        virtual void solveEqAndUpdateWellState(WellState& well_state);
+
+        virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                                 const WellState& well_state); // should be const?
     protected:
 
         // protected functions from the Base class
@@ -170,8 +161,8 @@ namespace Opm
         // protected member variables from the Base class
         using Base::vfp_properties_;
         using Base::gravity_;
+        using Base::param_;
         using Base::well_efficiency_factor_;
-        using Base::phase_usage_;
         using Base::first_perf_;
         using Base::ref_depth_;
         using Base::perf_depth_;
@@ -240,7 +231,6 @@ namespace Opm
 
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
-                             const BlackoilModelParameters& param,
                              WellState& well_state) const;
 
         // calculate the properties for the well connections
@@ -268,8 +258,11 @@ namespace Opm
                                                     const std::vector<double>& rvmax_perf,
                                                     const std::vector<double>& surf_dens_perf);
 
-        virtual void solveEqAndUpdateWellState(const ModelParameters& param,
-                                               WellState& well_state);
+        // computing the accumulation term for later use in well mass equations
+        void computeAccumWell();
+
+        void computeWellConnectionPressures(const Simulator& ebosSimulator,
+                                                    const WellState& xw);
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,

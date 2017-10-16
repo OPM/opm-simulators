@@ -24,8 +24,8 @@ namespace Opm
 {
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well* well, const int time_step, const Wells* wells)
-    : Base(well, time_step, wells)
+    StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
+    : Base(well, time_step, wells, param)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
     , primary_variables_(numWellEq, 0.0)
@@ -73,7 +73,6 @@ namespace Opm
         }
 
         for (auto row = duneB_.createbegin(), end = duneB_.createend(); row!=end; ++row) {
-            // Add nonzeros for diagonal
             for (int perf = 0 ; perf < number_of_perforations_; ++perf) {
                 const int cell_idx = well_cells_[perf];
                 row.insert(cell_idx);
@@ -317,7 +316,7 @@ namespace Opm
     StandardWell<TypeTag>::
     wellVolumeFraction(const int compIdx) const
     {
-        const auto pu = phaseUsage();
+        const auto& pu = phaseUsage();
         if (active()[Water] && compIdx == pu.phase_pos[Water]) {
             return primary_variables_evaluation_[WFrac];
         }
@@ -401,14 +400,14 @@ namespace Opm
         for (int componentIdx = 0; componentIdx < numComp; ++componentIdx) {
             cmix_s[componentIdx] = wellSurfaceVolumeFraction(componentIdx);
         }
-        auto& fs = intQuants.fluidState();
+        const auto& fs = intQuants.fluidState();
 
-        EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-        EvalWell rs = extendEval(fs.Rs());
-        EvalWell rv = extendEval(fs.Rv());
+        const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+        const EvalWell rs = extendEval(fs.Rs());
+        const EvalWell rv = extendEval(fs.Rv());
         std::vector<EvalWell> b_perfcells_dense(numComp, 0.0);
         for (int phase = 0; phase < np; ++phase) {
-            int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
+            const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phase);
             b_perfcells_dense[phase] = extendEval(fs.invB(ebosPhaseIdx));
         }
         if (has_solvent) {
@@ -416,8 +415,8 @@ namespace Opm
         }
 
         // Pressure drawdown (also used to determine direction of flow)
-        EvalWell well_pressure = bhp + cdp;
-        EvalWell drawdown = pressure - well_pressure;
+        const EvalWell well_pressure = bhp + cdp;
+        const EvalWell drawdown = pressure - well_pressure;
 
         // producing perforations
         if ( drawdown.value() > 0 )  {
@@ -523,8 +522,10 @@ namespace Opm
         const int np = number_of_phases_;
 
         // clear all entries
-        duneB_ = 0.0;
-        duneC_ = 0.0;
+        if (!only_wells) {
+            duneB_ = 0.0;
+            duneC_ = 0.0;
+        }
         invDuneD_ = 0.0;
         resWell_ = 0.0;
 
@@ -763,12 +764,11 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
-                    const BlackoilModelParameters& param,
                     WellState& well_state) const
     {
         const int np = number_of_phases_;
-        const double dBHPLimit = param.dbhp_max_rel_;
-        const double dFLimit = param.dwell_fraction_max_;
+        const double dBHPLimit = param_.dbhp_max_rel_;
+        const double dFLimit = param_.dwell_fraction_max_;
         const auto pu = phaseUsage();
 
         const std::vector<double> xvar_well_old = primary_variables_;
@@ -1117,69 +1117,6 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellControl(WellState& xw,
-                      wellhelpers::WellSwitchingLogger& logger) const
-    {
-        const int np = number_of_phases_;
-        const int w = index_of_well_;
-
-        const int old_control_index = xw.currentControls()[w];
-
-        // Find, for each well, if any constraints are broken. If so,
-        // switch control to first broken constraint.
-        WellControls* wc = well_controls_;
-
-        // Loop over all controls except the current one, and also
-        // skip any RESERVOIR_RATE controls, since we cannot
-        // handle those.
-        const int nwc = well_controls_get_num(wc);
-        // the current control index
-        int current = xw.currentControls()[w];
-        int ctrl_index = 0;
-        for (; ctrl_index < nwc; ++ctrl_index) {
-            if (ctrl_index == current) {
-                // This is the currently used control, so it is
-                // used as an equation. So this is not used as an
-                // inequality constraint, and therefore skipped.
-                continue;
-            }
-            if (wellhelpers::constraintBroken(
-                    xw.bhp(), xw.thp(), xw.wellRates(),
-                    w, np, well_type_, wc, ctrl_index)) {
-                // ctrl_index will be the index of the broken constraint after the loop.
-                break;
-            }
-        }
-
-        if (ctrl_index != nwc) {
-            // Constraint number ctrl_index was broken, switch to it.
-            xw.currentControls()[w] = ctrl_index;
-            current = xw.currentControls()[w];
-            well_controls_set_current( wc, current);
-        }
-
-        // the new well control indices after all the related updates,
-        const int updated_control_index = xw.currentControls()[w];
-
-        // checking whether control changed
-        if (updated_control_index != old_control_index) {
-            logger.wellSwitched(name(),
-                                well_controls_iget_type(wc, old_control_index),
-                                well_controls_iget_type(wc, updated_control_index));
-        }
-
-        if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(updated_control_index, xw);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
     computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
                                                 const WellState& xw,
                                                 std::vector<double>& b_perf,
@@ -1190,7 +1127,7 @@ namespace Opm
         const int nperf = number_of_perforations_;
         // TODO: can make this a member?
         const int numComp = numComponents();
-        const PhaseUsage& pu = *phase_usage_;
+        const PhaseUsage& pu = phaseUsage();
         b_perf.resize(nperf*numComp);
         surf_dens_perf.resize(nperf*numComp);
         const int w = index_of_well_;
@@ -1298,7 +1235,7 @@ namespace Opm
         const int np = number_of_phases_;
         const int nperf = number_of_perforations_;
         const int num_comp = numComponents();
-        const PhaseUsage* phase_usage = phase_usage_;
+        const PhaseUsage& phase_usage = phaseUsage();
 
         // 1. Compute the flow (in surface volume units for each
         //    component) exiting up the wellbore from each perforation,
@@ -1326,8 +1263,8 @@ namespace Opm
         //    absolute values of the surface rates divided by their sum.
         //    Then compute volume ratios (formation factors) for each perforation.
         //    Finally compute densities for the segments associated with each perforation.
-        const int gaspos = phase_usage->phase_pos[BlackoilPhases::Vapour];
-        const int oilpos = phase_usage->phase_pos[BlackoilPhases::Liquid];
+        const int gaspos = phase_usage.phase_pos[BlackoilPhases::Vapour];
+        const int oilpos = phase_usage.phase_pos[BlackoilPhases::Liquid];
         std::vector<double> mix(num_comp,0.0);
         std::vector<double> x(num_comp);
         std::vector<double> surf_dens(num_comp);
@@ -1426,9 +1363,7 @@ namespace Opm
     template<typename TypeTag>
     typename StandardWell<TypeTag>::ConvergenceReport
     StandardWell<TypeTag>::
-    getWellConvergence(Simulator& ebosSimulator,
-                       const std::vector<double>& B_avg,
-                       const ModelParameters& param) const
+    getWellConvergence(const std::vector<double>& B_avg) const
     {
         typedef double Scalar;
         typedef std::vector< Scalar > Vector;
@@ -1440,8 +1375,8 @@ namespace Opm
         // For the polymer case, there is one more mass balance equations of reservoir than wells
         assert((int(B_avg.size()) == numComp) || has_polymer);
 
-        const double tol_wells = param.tolerance_wells_;
-        const double maxResidualAllowed = param.max_residual_allowed_;
+        const double tol_wells = param_.tolerance_wells_;
+        const double maxResidualAllowed = param_.max_residual_allowed_;
 
         // TODO: it should be the number of numWellEq
         // using numComp here for flow_ebos running 2p case.
@@ -1553,15 +1488,28 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    solveEqAndUpdateWellState(const ModelParameters& param,
-                              WellState& well_state)
+    solveEqAndUpdateWellState(WellState& well_state)
     {
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
         invDuneD_.mv(resWell_, dx_well);
 
-        updateWellState(dx_well, param, well_state);
+        updateWellState(dx_well, well_state);
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                const WellState& well_state)
+    {
+        computeWellConnectionPressures(ebosSimulator, well_state);
+        computeAccumWell();
     }
 
 
@@ -1573,6 +1521,8 @@ namespace Opm
     StandardWell<TypeTag>::
     computeAccumWell()
     {
+        // TODO: it should be num_comp, while it also bring problem for
+        // the polymer case.
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             F0_[eq_idx] = wellSurfaceVolumeFraction(eq_idx).value();
         }
@@ -1642,12 +1592,11 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                          const ModelParameters& param,
                                           WellState& well_state) const
     {
         BVectorWell xw(1);
         recoverSolutionWell(x, xw);
-        updateWellState(xw, param, well_state);
+        updateWellState(xw, well_state);
     }
 
 
@@ -1723,7 +1672,7 @@ namespace Opm
 
             for (int ctrl_index = 0; ctrl_index < nwc; ++ctrl_index) {
                 if (well_controls_iget_type(well_controls_, ctrl_index) == THP) {
-                    const Opm::PhaseUsage& pu = *phase_usage_;
+                    const Opm::PhaseUsage& pu = phaseUsage();
 
                     std::vector<double> rates(3, 0.0);
                     if (active()[ Water ]) {
@@ -1794,10 +1743,16 @@ namespace Opm
     StandardWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
-                          std::vector<double>& well_potentials) const
+                          std::vector<double>& well_potentials) // const
     {
-        const int np = number_of_phases_;
+        updatePrimaryVariables(well_state);
+        computeWellConnectionPressures(ebosSimulator, well_state);
 
+        // initialize the primary variables in Evaluation, which is used in computePerfRate for computeWellPotentials
+        // TODO: for computeWellPotentials, no derivative is required actually
+        initPrimaryVariablesEvaluation();
+
+        const int np = number_of_phases_;
         well_potentials.resize(np, 0.0);
 
         // get the bhp value based on the bhp constraints

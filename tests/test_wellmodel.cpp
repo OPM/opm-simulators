@@ -47,6 +47,7 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
+#include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/createGlobalCellArray.hpp>
 #include <opm/autodiff/GridInit.hpp>
 
@@ -56,7 +57,7 @@
 #include <ewoms/common/start.hh>
 
 #include <opm/autodiff/StandardWell.hpp>
-#include <opm/autodiff/StandardWellsDense.hpp>
+#include <opm/autodiff/BlackoilWellModel.hpp>
 
 // maybe should just include BlackoilModelEbos.hpp
 namespace Ewoms {
@@ -122,9 +123,10 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const auto& wells_ecl = setup_test.ecl_state->getSchedule().getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well* well = wells_ecl[1];
-    BOOST_CHECK_THROW( StandardWell( well, -1, wells), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr), std::invalid_argument);
+    const Opm::BlackoilModelParameters param;
+    BOOST_CHECK_THROW( StandardWell( well, -1, wells, param), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells, param), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr, param), std::invalid_argument);
 }
 
 
@@ -137,6 +139,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
 
     {
         const int nw = wells_struct ? (wells_struct->number_of_wells) : 0;
+        const Opm::BlackoilModelParameters param;
 
         for (int w = 0; w < nw; ++w) {
             const std::string well_name(wells_struct->name[w]);
@@ -150,7 +153,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             // we should always be able to find the well in wells_ecl
             BOOST_CHECK(index_well !=  wells_ecl.size());
 
-            wells.emplace_back(new StandardWell(wells_ecl[index_well], current_timestep, wells_struct) );
+            wells.emplace_back(new StandardWell(wells_ecl[index_well], current_timestep, wells_struct, param) );
         }
     }
 

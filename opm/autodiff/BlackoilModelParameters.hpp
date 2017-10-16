@@ -51,6 +51,19 @@ namespace Opm
         /// Tolerance for the well control equations
         //  TODO: it might need to distinguish between rate control and pressure control later
         double tolerance_well_control_;
+        /// Tolerance for the pressure equations for multisegment wells
+        double tolerance_pressure_ms_wells_;
+        /// Maximum pressure change over an iteratio for ms wells
+        double max_pressure_change_ms_wells_;
+
+        /// Whether to use inner iterations for ms wells
+        bool use_inner_iterations_ms_wells_;
+
+        /// Maximum inner iteration number for ms wells
+        int max_inner_iter_ms_wells_;
+
+        /// Maximum iteration number of the well equation solution
+        int max_welleq_iter_;
 
         /// Tolerance for time step in seconds where single precision can be used
         /// for solving for the Jacobian
@@ -68,7 +81,14 @@ namespace Opm
         /// Try to detect oscillation or stagnation.
         bool use_update_stabilization_;
 
-        // The file name of the deck
+        /// Whether to use MultisegmentWell to handle multisegment wells
+        /// it is something temporary before the multisegment well model is considered to be
+        /// well developed and tested.
+        /// if it is false, we will handle multisegment wells as standard wells, which will be
+        /// the default behavoir for the moment. Later, we might set it to be true by default if necessary
+        bool use_multisegment_well_;
+
+        /// The file name of the deck
         std::string deck_file_name_;
 
         /// Construct from user parameters or defaults.

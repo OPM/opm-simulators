@@ -31,7 +31,6 @@ namespace Opm {
     // Forward declarations
     class SimulationDataContainer;
     class WellStateFullyImplicitBlackoil;
-    class WellStateFullyImplicitBlackoilDense;
 
     /// Extract single data vector from striped data.
     /// \return   u such that u[i] = v[offset + i*stride].
@@ -70,12 +69,6 @@ namespace Opm {
     void wellsToState( const data::Wells& wells,
                        PhaseUsage phases,
                        WellStateFullyImplicitBlackoil& state );
-
-    /// As the WellStateFullyImplicitBlackoil overload, but also sets
-    /// the wellSolution field from the values of the other fields.
-    void wellsToState( const data::Wells& wells,
-                       PhaseUsage phases,
-                       WellStateFullyImplicitBlackoilDense& state );
 
 }
 

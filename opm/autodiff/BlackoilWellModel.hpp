@@ -21,8 +21,8 @@
 */
 
 
-#ifndef OPM_STANDARDWELLSDENSE_HEADER_INCLUDED
-#define OPM_STANDARDWELLSDENSE_HEADER_INCLUDED
+#ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
+#define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -49,6 +49,7 @@
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/StandardWell.hpp>
+#include <opm/autodiff/MultisegmentWell.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
@@ -60,9 +61,9 @@
 
 namespace Opm {
 
-        /// Class for handling the standard well model.
+        /// Class for handling the blackoil well model.
         template<typename TypeTag>
-        class StandardWellsDense {
+        class BlackoilWellModel {
         public:
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoil WellState;
@@ -90,14 +91,14 @@ namespace Opm {
                 SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
 
             // ---------  Public methods  ---------
-            StandardWellsDense(const Wells* wells_arg,
-                               WellCollection* well_collection,
-                               const std::vector< const Well* >& wells_ecl,
-                               const ModelParameters& param,
-                               const RateConverterType& rate_converter,
-                               const bool terminal_output,
-                               const int current_index,
-                               std::vector<int>& pvt_region_idx);
+            BlackoilWellModel(const Wells* wells_arg,
+                              WellCollection* well_collection,
+                              const std::vector< const Well* >& wells_ecl,
+                              const ModelParameters& param,
+                              const RateConverterType& rate_converter,
+                              const bool terminal_output,
+                              const int current_index,
+                              const std::vector<int>& pvt_region_idx);
 
             void init(const PhaseUsage phase_usage_arg,
                       const std::vector<bool>& active_arg,
@@ -137,7 +138,7 @@ namespace Opm {
             /// return true if wells are available on this process
             bool localWellsActive() const;
 
-            bool getWellConvergence(Simulator& ebosSimulator,
+            bool getWellConvergence(const Simulator& ebosSimulator,
                                     const std::vector<Scalar>& B_avg) const;
 
             /// upate the dynamic lists related to economic limits
@@ -162,6 +163,8 @@ namespace Opm {
 
             const int number_of_phases_;
 
+            const ModelParameters& param_;
+
             using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
             // eventually, the wells_ above should be gone.
@@ -174,12 +177,13 @@ namespace Opm {
             // create the well container
             static std::vector<WellInterfacePtr > createWellContainer(const Wells* wells,
                                                                       const std::vector<const Well*>& wells_ecl,
-                                                                      const int time_step);
+                                                                      const bool use_multisegment_well,
+                                                                      const int time_step,
+                                                                      const ModelParameters& param);
 
             // Well collection is used to enforce the group control
             WellCollection* well_collection_;
 
-            ModelParameters param_;
             bool terminal_output_;
             bool has_solvent_;
             bool has_polymer_;
@@ -188,7 +192,7 @@ namespace Opm {
             PhaseUsage phase_usage_;
             std::vector<bool>  active_;
             const RateConverterType& rate_converter_;
-            std::vector<int> pvt_region_idx_;
+            const std::vector<int>& pvt_region_idx_;
 
             // the number of the cells in the local grid
             int number_of_cells_;
@@ -210,7 +214,7 @@ namespace Opm {
             void computeRepRadiusPerfLength(const Grid& grid);
 
 
-            void computeAverageFormationFactor(Simulator& ebosSimulator,
+            void computeAverageFormationFactor(const Simulator& ebosSimulator,
                                                std::vector<double>& B_avg) const;
 
             void applyVREPGroupControl(WellState& well_state) const;
@@ -229,14 +233,17 @@ namespace Opm {
 
             void calculateEfficiencyFactors();
 
-            void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                const WellState& xw) const;
+            // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
+            // makes it a little more difficult. unless we introduce if (iterationIdx != 0) to avoid doing the above functions
+            // twice at the beginning of the time step
+            /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
+            /// at the beginning of the time step and no derivatives are included in these quantities
+            void calculateExplicitQuantities(const Simulator& ebosSimulator,
+                                            const WellState& xw) const;
 
             SimulatorReport solveWellEq(Simulator& ebosSimulator,
                                         const double dt,
                                         WellState& well_state) const;
-
-            void computeAccumWells() const;
 
             void initPrimaryVariablesEvaluation() const;
 
@@ -268,11 +275,15 @@ namespace Opm {
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(const Simulator& ebos_simulator,
-                                 WellState& well_state);
+                                 WellState& well_state) const;
+
+            void prepareGroupControl(const Simulator& ebos_simulator,
+                                     WellState& well_state) const;
+
         };
 
 
 } // namespace Opm
 
-#include "StandardWellsDense_impl.hpp"
+#include "BlackoilWellModel_impl.hpp"
 #endif

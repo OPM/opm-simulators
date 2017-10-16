@@ -28,7 +28,7 @@
 #include <ewoms/common/start.hh>
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
-#include <opm/autodiff/StandardWellsDense.hpp>
+#include <opm/autodiff/BlackoilWellModel.hpp>
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
@@ -154,7 +154,7 @@ namespace Opm {
         /// \param[in] terminal_output  request output to cout/cerr
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
-                          StandardWellsDense<TypeTag>& well_model,
+                          BlackoilWellModel<TypeTag>& well_model,
                           RateConverterType& rate_converter,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
@@ -391,7 +391,7 @@ namespace Opm {
             }
             catch ( const Dune::FMatrixError& e  )
             {
-                OPM_THROW(Opm::NumericalProblem,"Well equation did not converge");
+                OPM_THROW(Opm::NumericalProblem,"Error encounted when solving well equations");
             }
 
             return report;
@@ -425,12 +425,12 @@ namespace Opm {
                     saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
                     oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
                 }
-                
+
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && priVarsNew.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                     saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
-                    oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];                     
+                    oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];
                 }
-                                    
+
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                     saturationsNew[FluidSystem::oilPhaseIdx] = oilSaturationNew;
                 }
@@ -446,16 +446,16 @@ namespace Opm {
                     saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
                     oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
                 }
-                
+
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && priVarsOld.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                     saturationsOld[FluidSystem::gasPhaseIdx] = priVarsOld[Indices::compositionSwitchIdx];
                     oilSaturationOld -= saturationsOld[FluidSystem::gasPhaseIdx];
                 }
-                                    
+
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                     saturationsOld[FluidSystem::oilPhaseIdx] = oilSaturationOld;
                 }
-                
+
                 Scalar tmp = pressureNew - pressureOld;
                 resultDelta += tmp*tmp;
                 resultDenom += pressureNew*pressureNew;
@@ -503,14 +503,14 @@ namespace Opm {
             // Solve system.
             if( isParallel() )
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, true > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
                 Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
-                typedef WellModelMatrixAdapter< Mat, BVector, BVector, StandardWellsDense<TypeTag>, false > Operator;
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
                 Operator opA(ebosJac, well_model_);
                 istlSolver().solve( opA, x, ebosResid );
             }
@@ -680,7 +680,7 @@ namespace Opm {
                 maxVal = std::max(std::abs(dsw),maxVal);
                 maxVal = std::max(std::abs(dsg),maxVal);
                 maxVal = std::max(std::abs(dso),maxVal);
-                maxVal = std::max(std::abs(dss),maxVal);                               
+                maxVal = std::max(std::abs(dss),maxVal);
 
                 double satScaleFactor = 1.0;
                 if (maxVal > dsMax()) {
@@ -905,7 +905,6 @@ namespace Opm {
 
             bool converged_MB = true;
             bool converged_CNV = true;
-            bool converged_Well = true;
             // Finish computation
             for ( int compIdx = 0; compIdx < numComp; ++compIdx )
             {
@@ -913,12 +912,11 @@ namespace Opm {
                 mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
                 converged_MB                = converged_MB && (mass_balance_residual[compIdx] < tol_mb);
                 converged_CNV               = converged_CNV && (CNV[compIdx] < tol_cnv);
-                // Well flux convergence is only for fluid phases, not other materials
-                // in our current implementation.
-                converged_Well = wellModel().getWellConvergence(ebosSimulator_, B_avg);
 
                 residual_norms.push_back(CNV[compIdx]);
             }
+
+            const bool converged_Well = wellModel().getWellConvergence(ebosSimulator_, B_avg);
 
             bool converged = converged_MB && converged_Well;
 
@@ -1502,7 +1500,7 @@ namespace Opm {
         SimulatorReport failureReport_;
 
         // Well Model
-        StandardWellsDense<TypeTag>& well_model_;
+        BlackoilWellModel<TypeTag>& well_model_;
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;
@@ -1519,9 +1517,10 @@ namespace Opm {
 
     public:
         /// return the StandardWells object
-        StandardWellsDense<TypeTag>&
+        BlackoilWellModel<TypeTag>&
         wellModel() { return well_model_; }
-        const StandardWellsDense<TypeTag>&
+
+        const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
 
         int numWells() const { return well_model_.numWells(); }
