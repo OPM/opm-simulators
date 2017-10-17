@@ -51,6 +51,7 @@ namespace Opm
         tolerance_wells_ = param.getDefault("tolerance_wells", tolerance_wells_ );
         tolerance_well_control_ = param.getDefault("tolerance_well_control", tolerance_well_control_);
         max_welleq_iter_ = param.getDefault("max_welleq_iter", max_welleq_iter_);
+        use_multisegment_well_ = param.getDefault("use_multisegment_well", use_multisegment_well_);
         if (use_multisegment_well_) {
             tolerance_pressure_ms_wells_ = param.getDefault("tolerance_pressure_ms_wells", tolerance_pressure_ms_wells_);
             max_pressure_change_ms_wells_ = param.getDefault("max_pressure_change_ms_wells", max_pressure_change_ms_wells_);
@@ -63,7 +64,6 @@ namespace Opm
         solve_welleq_initially_ = param.getDefault("solve_welleq_initially",solve_welleq_initially_);
         update_equations_scaling_ = param.getDefault("update_equations_scaling", update_equations_scaling_);
         use_update_stabilization_ = param.getDefault("use_update_stabilization", use_update_stabilization_);
-        use_multisegment_well_ = param.getDefault("use_multisegment_well", use_multisegment_well_);
         deck_file_name_ = param.template get<std::string>("deck_filename");
     }
 
