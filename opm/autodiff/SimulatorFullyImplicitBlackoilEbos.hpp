@@ -159,11 +159,6 @@ public:
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
-        // Sync the overlap region of the inital solution. It was generated
-        // from the ReservoirState which has wrong values in the ghost region
-        // for some models (SPE9, Norne, Model 2)
-        ebosSimulator_.model().syncOverlap();
-
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
         Opm::time::StopWatch step_timer;
