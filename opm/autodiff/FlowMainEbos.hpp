@@ -728,8 +728,7 @@ namespace Opm
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
                                            eclState(),
-                                           *output_writer_,
-                                           defunctWellNames()));
+                                           *output_writer_));
         }
 
     private:

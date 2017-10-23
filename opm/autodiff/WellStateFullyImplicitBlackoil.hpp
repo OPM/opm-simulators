@@ -21,7 +21,6 @@
 #ifndef OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/core/wells.h>
 #include <opm/core/well_controls.h>
 #include <opm/core/simulator/WellState.hpp>
@@ -35,6 +34,7 @@
 #include <map>
 #include <algorithm>
 #include <array>
+#include <iostream>
 
 namespace Opm
 {
@@ -375,8 +375,8 @@ namespace Opm
                         const int start_perf = wells->well_connpos[w];
                         const int start_perf_next_well = wells->well_connpos[w + 1];
                         assert(nperf == (start_perf_next_well - start_perf)); // make sure the information from wells_ecl consistent with wells
-                        if (pu.phase_used[Gas]) {
-                            const int gaspos = pu.phase_pos[Gas];
+                        if (pu.phase_used[BlackoilPhases::Vapour]) {
+                            const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
                             // scale the phase rates for Gas to avoid too bad initial guess for gas fraction
                             // it will probably benefit the standard well too, while it needs to be justified
                             // TODO: to see if this strategy can benefit StandardWell too

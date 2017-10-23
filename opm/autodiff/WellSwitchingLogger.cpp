@@ -22,7 +22,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/simulators/WellSwitchingLogger.hpp>
+#include "WellSwitchingLogger.hpp"
 #include <numeric>
 
 namespace Opm

@@ -17,14 +17,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
-#define OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_
+#ifndef OPM_AUTODIFF_VFPPRODPROPERTIES_ADB_HPP_
+#define OPM_AUTODIFF_VFPPRODPROPERTIES_ADB_HPP_
 
-#include "VFPHelpers.hpp"
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/core/wells.h>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
+#include <opm/autodiff/VFPHelpersAdb.hpp>
 
 #include <vector>
 #include <map>
@@ -32,38 +30,56 @@
 
 namespace Opm {
 
+template <class Scalar>
+class AutoDiffBlock;
 
 /**
  * Class which linearly interpolates BHP as a function of rate, tubing head pressure,
  * water fraction, gas fraction, and artificial lift for production VFP tables, and similarly
  * the BHP as a function of the rate and tubing head pressure.
  */
-class VFPProdProperties {
+class VFPProdPropertiesAdb {
 public:
+    typedef AutoDiffBlock<double> ADB;
 
     /**
      * Empty constructor
      */
-    VFPProdProperties();
+    VFPProdPropertiesAdb();
 
     /**
      * Constructor
      * Takes *no* ownership of data.
      * @param prod_table A *single* VFPPROD table
      */
-    explicit VFPProdProperties(const VFPProdTable* prod_table);
+    explicit VFPProdPropertiesAdb(const VFPProdTable* prod_table);
 
     /**
      * Constructor
      * Takes *no* ownership of data.
      * @param prod_tables A map of different VFPPROD tables.
      */
-    explicit VFPProdProperties(const std::map<int, VFPProdTable>& prod_tables);
-
+    explicit VFPProdPropertiesAdb(const std::map<int, VFPProdTable>& prod_tables);
 
     /**
-     * Linear interpolation of bhp as a function of the input parameters given as
-     * Evalutions
+     * Linear interpolation of bhp as function of the input parameters.
+     * @param table_id Table number to use
+     * @param wells Wells structure with information about wells in qs
+     * @param qs Flow quantities
+     * @param thp Tubing head pressure
+     * @param alq Artificial lift or other parameter
+     *
+     * @return The bottom hole pressure, interpolated/extrapolated linearly using
+     * the above parameters from the values in the input table.
+     */
+    ADB bhp(const std::vector<int>& table_id,
+            const Wells& wells,
+            const ADB& qs,
+            const ADB& thp,
+            const ADB& alq) const;
+
+    /**
+     * Linear interpolation of bhp as a function of the input parameters given as ADBs
      * Each entry corresponds typically to one well.
      * @param table_id Table number to use. A negative entry (e.g., -1)
      *                 will indicate that no table is used, and the corresponding
@@ -78,44 +94,14 @@ public:
      * the above parameters from the values in the input table, for each entry in the
      * input ADB objects.
      */
-    template <class EvalWell>
-    EvalWell bhp(const int table_id,
-                 const EvalWell& aqua,
-                 const EvalWell& liquid,
-                 const EvalWell& vapour,
-                 const double& thp,
-                 const double& alq) const {
+    ADB bhp(const std::vector<int>& table_id,
+            const ADB& aqua,
+            const ADB& liquid,
+            const ADB& vapour,
+            const ADB& thp,
+            const ADB& alq) const;
 
-        //Get the table
-        const VFPProdTable* table = detail::getTable(m_tables, table_id);
-        EvalWell bhp = 0.0;
-
-        //Find interpolation variables
-        EvalWell flo = detail::getFlo(aqua, liquid, vapour, table->getFloType());
-        EvalWell wfr = detail::getWFR(aqua, liquid, vapour, table->getWFRType());
-        EvalWell gfr = detail::getGFR(aqua, liquid, vapour, table->getGFRType());
-
-        //Compute the BHP for each well independently
-        if (table != nullptr) {
-            //First, find the values to interpolate between
-            //Value of FLO is negative in OPM for producers, but positive in VFP table
-            auto flo_i = detail::findInterpData(-flo.value(), table->getFloAxis());
-            auto thp_i = detail::findInterpData( thp, table->getTHPAxis()); // assume constant
-            auto wfr_i = detail::findInterpData( wfr.value(), table->getWFRAxis());
-            auto gfr_i = detail::findInterpData( gfr.value(), table->getGFRAxis());
-            auto alq_i = detail::findInterpData( alq, table->getALQAxis()); //assume constant
-
-            detail::VFPEvaluation bhp_val = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
-
-            bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo * flo);
-            bhp.setValue(bhp_val.value);
-        }
-        else {
-            bhp.setValue(-1e100); //Signal that this value has not been calculated properly, due to "missing" table
-        }
-        return bhp;
-    }
-
+  
     /**
      * Linear interpolation of bhp as a function of the input parameters
      * @param table_id Table number to use
@@ -178,4 +164,4 @@ private:
 } //namespace
 
 
-#endif /* OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_ */
+#endif /* OPM_AUTODIFF_VFPPRODPROPERTIES_ADB_HPP_ */

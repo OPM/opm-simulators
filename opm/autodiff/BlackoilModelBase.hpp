@@ -31,7 +31,7 @@
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
-#include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/VFPPropertiesAdb.hpp>
 #include <opm/autodiff/RateConverter.hpp>
 #include <opm/autodiff/IterationReport.hpp>
 #include <opm/autodiff/DefaultBlackoilSolutionState.hpp>
@@ -51,7 +51,7 @@ namespace Opm {
     class DerivedGeology;
     class RockCompressibility;
     class NewtonIterationBlackoilInterface;
-    class VFPProperties;
+    class VFPPropertiesAdb;
 
     /// Traits to encapsulate the types used by classes using or
     /// extending this model. Forward declared here, must be
@@ -324,7 +324,7 @@ namespace Opm {
         const BlackoilPropsAdFromDeck& fluid_;
         const DerivedGeology&           geo_;
         const RockCompressibility*      rock_comp_props_;
-        VFPProperties                   vfp_properties_;
+        VFPPropertiesAdb                vfp_properties_;
         const NewtonIterationBlackoilInterface&    linsolver_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;

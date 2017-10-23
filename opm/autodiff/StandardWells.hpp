@@ -42,7 +42,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 #include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-#include <opm/simulators/WellSwitchingLogger.hpp>
+#include <opm/autodiff/WellSwitchingLogger.hpp>
 
 namespace Opm {
 
@@ -76,7 +76,7 @@ namespace Opm {
             void init(const BlackoilPropsAdFromDeck* fluid_arg,
                       const std::vector<bool>* active_arg,
                       const std::vector<PhasePresence>* pc_arg,
-                      const VFPProperties*  vfp_properties_arg,
+                      const VFPPropertiesAdb*  vfp_properties_arg,
                       const double gravity_arg,
                       const Vector& depth_arg);
 
@@ -199,6 +199,11 @@ namespace Opm {
 
             const Vector& wellPerfEfficiencyFactors() const;
 
+            // just return the passed well state
+            template<class WellState>
+            const WellState& wellState(const WellState& well_state) const { return well_state; }
+
+
         protected:
             bool wells_active_;
             const Wells*   wells_;
@@ -214,7 +219,7 @@ namespace Opm {
             const BlackoilPropsAdFromDeck* fluid_;
             const std::vector<bool>*  active_;
             const std::vector<PhasePresence>*  phase_condition_;
-            const VFPProperties* vfp_properties_;
+            const VFPPropertiesAdb* vfp_properties_;
             double gravity_;
             // the depth of the all the cell centers
             // for standard Wells, it the same with the perforation depth

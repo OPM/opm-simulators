@@ -31,14 +31,13 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/wells/WellsManager.hpp>
 
-#include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/VFPInjProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
-#include <opm/autodiff/BlackoilModelParameters.hpp>
-
-#include <opm/simulators/WellSwitchingLogger.hpp>
+#include "VFPProperties.hpp"
+#include "VFPInjProperties.hpp"
+#include "VFPProdProperties.hpp"
+#include "WellHelpers.hpp"
+#include "WellStateFullyImplicitBlackoil.hpp"
+#include "BlackoilModelParameters.hpp"
+#include "WellSwitchingLogger.hpp"
 
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
@@ -64,6 +63,11 @@ namespace Opm
         using WellState = WellStateFullyImplicitBlackoil;
 
         typedef BlackoilModelParameters ModelParameters;
+
+        static const int Water = BlackoilPhases::Aqua;
+        static const int Oil = BlackoilPhases::Liquid;
+        static const int Gas = BlackoilPhases::Vapour;
+
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;
