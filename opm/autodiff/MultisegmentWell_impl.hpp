@@ -494,7 +494,11 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
+#if HAVE_UMFPACK
         const BVectorWell invDBx = mswellhelpers::invDXDirect(duneD_, Bx);
+#else
+        const BVectorWell invDBx = mswellhelpers::invDX(duneD_, Bx);
+#endif
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -510,7 +514,11 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
+#if HAVE_UMFPACK
         const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
+#else
+        const BVectorWell invDrw = mswellhelpers::invDX(duneD_, resWell_);
+#endif // HAVE_UMFPACK
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }
@@ -628,7 +636,11 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
+#if HAVE_UMFPACK
         xw = mswellhelpers::invDXDirect(duneD_, resWell);
+#else
+        xw = mswellhelpers::invDX(duneD_, resWell);
+#endif // HAVE_UMFPACK
     }
 
 
@@ -640,9 +652,13 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     solveEqAndUpdateWellState(WellState& well_state)
     {
+#if HAVE_UMFPACK
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+#else
+        const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
+#endif
 
         updateWellState(dx_well, false, well_state);
     }
@@ -1744,7 +1760,11 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, true);
 
+#if HAVE_UMFPACK
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
+#else
+            const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
+#endif
 
             // TODO: use these small values for now, not intend to reach the convergence
             // in this stage, but, should we?
