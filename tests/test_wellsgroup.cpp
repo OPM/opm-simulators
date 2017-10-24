@@ -53,9 +53,14 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromWell) {
     Parser parser;
     Deck deck =  parser.parseFile(scheduleFile, parseContext);
     EclipseState eclipseState(deck , parseContext);
-    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
+    const auto& grid = eclipseState.getInputGrid();
+    const TableManager table ( deck );
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
 
-    auto wells = eclipseState.getSchedule().getWells();
+   PhaseUsage pu = phaseUsageFromDeck(eclipseState);
+
+    auto wells = sched.getWells();
 
     for (size_t i=0; i<wells.size(); i++) {
         const auto* well = wells[i];
@@ -87,10 +92,15 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     Deck deck =  parser.parseFile(scheduleFile, parseContext);
     EclipseState eclipseState(deck , parseContext);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
+    const auto& grid = eclipseState.getInputGrid();
+    const TableManager table ( deck );
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
 
-    const auto& nodes = eclipseState.getSchedule().getGroupTree(2);
 
-    for( const auto& grp : eclipseState.getSchedule().getGroups() ) {
+    const auto& nodes = sched.getGroupTree(2);
+
+    for( const auto& grp : sched.getGroups() ) {
         if( !nodes.exists( grp->name() ) ) continue;
         const auto& group = *grp;
 

@@ -46,15 +46,20 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     Deck deck = parser.parseFile(scheduleFile, parseContext);
     EclipseState eclipseState(deck, parseContext);
     PhaseUsage pu = phaseUsageFromDeck(eclipseState);
+    const auto& grid = eclipseState.getInputGrid();
+    const TableManager table ( deck );
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+
 
     WellCollection collection;
 
     // Add groups to WellCollection
-    const auto& fieldGroup =  eclipseState.getSchedule().getGroup("FIELD");
+    const auto& fieldGroup =  sched.getGroup("FIELD");
     collection.addField(fieldGroup, 2, pu);
 
-    collection.addGroup( eclipseState.getSchedule().getGroup( "G1" ), fieldGroup.name(), 2, pu);
-    collection.addGroup( eclipseState.getSchedule().getGroup( "G2" ), fieldGroup.name(), 2, pu);
+    collection.addGroup( sched.getGroup( "G1" ), fieldGroup.name(), 2, pu);
+    collection.addGroup( sched.getGroup( "G2" ), fieldGroup.name(), 2, pu);
 
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("FIELD")->name());
     BOOST_CHECK_EQUAL("FIELD", collection.findNode("G1")->getParent()->name());
@@ -62,7 +67,7 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
 
     // Add wells to WellCollection
     WellCollection wellCollection;
-    auto wells = eclipseState.getSchedule().getWells();
+    auto wells = sched.getWells();
     for (size_t i=0; i<wells.size(); i++) {
         collection.addWell(wells[i], 2, pu);
     }

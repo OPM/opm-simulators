@@ -85,6 +85,7 @@ namespace Opm
         ///        the wells handeled by another process. Defaults to empty set.
         template<class F2C, class FC>
         WellsManager(const Opm::EclipseState& eclipseState,
+                     const Opm::Schedule& schedule,
                      const size_t timeStep,
                      int num_cells,
                      const int* global_cell,
@@ -97,6 +98,7 @@ namespace Opm
                      const std::unordered_set<std::string>& deactivated_wells = std::unordered_set<std::string> ());
 
         WellsManager(const Opm::EclipseState& eclipseState,
+                     const Opm::Schedule& schedule,
                      const size_t timeStep,
                      const UnstructuredGrid& grid);
         /// Destructor.
@@ -154,6 +156,7 @@ namespace Opm
     private:
         template<class C2F, class FC>
         void init(const Opm::EclipseState& eclipseState,
+                  const Opm::Schedule& schedule,
                   const size_t timeStep,
                   int num_cells,
                   const int* global_cell,

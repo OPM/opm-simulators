@@ -309,6 +309,7 @@ void WellsManager::createWellsFromSpecs(std::vector<const Well*>& wells, size_t 
 template <class C2F, class FC>
 WellsManager::
 WellsManager(const Opm::EclipseState& eclipseState,
+             const Opm::Schedule& schedule,
              const size_t                    timeStep,
              int                             number_of_cells,
              const int*                      global_cell,
@@ -321,7 +322,7 @@ WellsManager(const Opm::EclipseState& eclipseState,
              const std::unordered_set<std::string>&    deactivated_wells)
     : w_(0), is_parallel_run_(is_parallel_run)
 {
-    init(eclipseState, timeStep, number_of_cells, global_cell,
+  init(eclipseState, schedule, timeStep, number_of_cells, global_cell,
          cart_dims, dimensions,
          cell_to_faces, begin_face_centroids, list_econ_limited, deactivated_wells);
 }
@@ -330,6 +331,7 @@ WellsManager(const Opm::EclipseState& eclipseState,
 template <class C2F, class FC>
 void
 WellsManager::init(const Opm::EclipseState& eclipseState,
+                   const Opm::Schedule& schedule,
                    const size_t                    timeStep,
                    int                             number_of_cells,
                    const int*                      global_cell,
@@ -346,7 +348,7 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
                   "the corresponding grid is 3-dimensional.");
     }
 
-    if (eclipseState.getSchedule().numWells() == 0) {
+    if (schedule.numWells() == 0) {
         OPM_MESSAGE("No wells specified in Schedule section, "
                     "initializing no wells");
         return;
@@ -368,7 +370,6 @@ WellsManager::init(const Opm::EclipseState& eclipseState,
     // For easy lookup:
     std::map<std::string, int> well_names_to_index;
 
-    const auto& schedule = eclipseState.getSchedule();
     auto wells           = schedule.getWells(timeStep);
     std::vector<int> wells_on_proc;
 
