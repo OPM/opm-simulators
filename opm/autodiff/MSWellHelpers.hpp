@@ -24,14 +24,16 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/istl/solvers.hh>
+#if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
+#endif // HAVE_UMFPACK
 #include <cmath>
 
 namespace Opm {
 
 namespace mswellhelpers
 {
-
+#if HAVE_UMFPACK
     // obtain y = D^-1 * x with a direct solver
     template <typename MatrixType, typename VectorType>
     VectorType
@@ -60,6 +62,7 @@ namespace mswellhelpers
 
         return y;
     }
+#endif // HAVE_UMFPACK
 
 
 
