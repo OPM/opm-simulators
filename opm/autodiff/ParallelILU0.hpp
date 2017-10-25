@@ -506,10 +506,10 @@ public:
         }
     }
 
-    template<class B>
-    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B> const& A)
+    template<class B, class B1>
+    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B1> const& A)
     {
-        return createPermutedMatrix(A, A.N(), A.N(), createInverseRowPermutation());
+        return createPermutedMatrix<B>(A, A.N(), A.N(), createInverseRowPermutation());
     }
 
     std::vector<std::size_t> createInverseRowPermutation()
@@ -524,8 +524,8 @@ public:
         return inverse_row_permutation;
     }
 
-    template<class B>
-    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B> const& A,
+    template<class B, class B1>
+    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B1> const& A,
                                                                std::size_t interior_end_index,
                                                                std::size_t interface_start_index,
                                                                std::vector<std::size_t>const& inverse_row_permutation)
@@ -573,6 +573,16 @@ public:
         return permuted_ptr;
     }
 
+    template<class B>
+    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B> const& A,
+                                                               std::size_t interior_end_index,
+                                                               std::size_t interface_start_index,
+                                                               std::vector<std::size_t>const& inverse_row_permutation)
+    {
+        createPermutedMatrix<B,B>(A, interior_end_index, interface_start_index,
+                                  inverse_row_permutation);
+    }
+
     std::size_t operator[](std::size_t i) const
     {
         return row_permutation_[i];
@@ -591,9 +601,9 @@ protected:
     std::size_t no_additional_entries_;
 
 private:
-    template<class Block>
+    template<class Block, class CreateIterator>
     void insertPermutedRowIndices(Dune::BCRSMatrix<Block> const& orig_matrix,
-                                  typename Dune::BCRSMatrix<Block>::CreateIterator& permuted_row ,
+                                  CreateIterator& permuted_row ,
                                   std::size_t end_index,
                                   std::vector<std::size_t> const& inverse_permutation)
     {
@@ -1004,6 +1014,8 @@ class ParallelILU0 : public Dune::Preconditioner<Domain,Range> {
 public:
     //! \brief The matrix type the preconditioner is for.
     typedef typename Dune::remove_const<Matrix>::type matrix_type;
+    //! \brief The matrix block type used.
+    typedef typename matrix_type::block_type block_type;
     //! \brief The domain type of the preconditioner.
     typedef Domain domain_type;
     //! \brief The range type of the preconditioner.
@@ -1024,7 +1036,8 @@ public:
       \param C The parallel information.
       \param w The relaxation factor.
     */
-    ParallelILU0 (const Matrix& A, const ParallelInfo& comm, field_type w)
+    template<class BlockType, class Alloc>
+    ParallelILU0 (const Dune::BCRSMatrix<BlockType,Alloc>& A, const ParallelInfo& comm, field_type w)
         : ilu_(), comm_(comm),
           process_mapping_(new Detail::ColoredProcessLabel(comm)),
           row_permutation_(A, comm, *process_mapping_),
@@ -1038,10 +1051,11 @@ public:
             inverse_row_permutation,
             comm.indexSet(),
             forward_backward_communicator_.getForwardCommunicator());
-        ilu_ = row_permutation_.createPermutedMatrix(A,
-                                                     row_permutation_.interiorInterval()[1],
-                                                     row_permutation_.interfaceInterval()[0],
-                                                     inverse_row_permutation);
+        ilu_ = row_permutation_.
+            createPermutedMatrix<block_type>(A,
+                                             row_permutation_.interiorInterval()[1],
+                                             row_permutation_.interfaceInterval()[0],
+                                             inverse_row_permutation);
         int ilu_setup_successful = decompose();
         // Check whether there was a problem on some process
         if ( comm.communicator().min(ilu_setup_successful) == 0 )
