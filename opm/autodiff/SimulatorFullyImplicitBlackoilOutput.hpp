@@ -304,6 +304,9 @@ namespace Opm
 
         bool requireFIPNUM() const;
 
+        //! Finish the write out process, i.e. wait for output threads.
+        void finishWriting();
+
     protected:
         const bool output_;
         std::unique_ptr< ParallelDebugOutputInterface > parallelOutput_;

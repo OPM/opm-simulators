@@ -847,6 +847,8 @@ namespace Opm
                     }
                 }
 
+                output_writer_->finishWriting();
+
                 if (output_to_files_) {
                     std::string filename = output_dir_ + "/walltime.txt";
                     std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);

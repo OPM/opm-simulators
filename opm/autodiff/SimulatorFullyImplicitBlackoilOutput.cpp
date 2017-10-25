@@ -464,4 +464,11 @@ namespace Opm
     bool BlackoilOutputWriter::requireFIPNUM() const {
         return eclipseState_.getSummaryConfig().requireFIPNUM();
     }
+
+    void BlackoilOutputWriter::finishWriting(){
+        if( asyncOutput_ )
+        {
+            asyncOutput_->signalEndAndJoin();
+        }
+    }
 }

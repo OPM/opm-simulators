@@ -66,15 +66,6 @@ namespace Opm
       {
       }
 
-      ~ThreadHandleQueue()
-      {
-        // wait until all objects have been written.
-        while( ! objQueue_.empty() )
-        {
-            wait();
-        }
-      }
-
       //! insert object into threads queue
       void push_back( std::unique_ptr< ObjectInterface >&& obj )
       {
@@ -150,8 +141,6 @@ namespace Opm
         if( createThread )
         {
            thread_.reset( new std::thread( startThread, &threadObjectQueue_ ) );
-           // detach thread into nirvana
-           thread_->detach();
         }
     } // end constructor
 
@@ -173,14 +162,18 @@ namespace Opm
         }
     }
 
-    //! destructor terminating the thread
-    ~ThreadHandle()
+    //! send terminal obect to pool and wait until the thread finishes.
+    void signalEndAndJoin()
     {
         if( thread_ )
         {
+            // dispatching objects after this point is an error
             // dispatch end object which will terminate the thread
             threadObjectQueue_.push_back( std::unique_ptr< ObjectInterface > (new EndObject()) ) ;
+            // Wait for thread to end
+            thread_->join();
         }
+        // reduce error indicators and throw.
     }
   };
 
