@@ -1,3 +1,24 @@
+Changes in opm-material 2017.10
+===============================
+
+- Support for solvents in the black-oil PVT classes
+- Switch the dense automatic differentiation code to use the
+  convenience functions by default instead of using the math toolbox
+  classes. The main motivation is that this makes the code more
+  flexible when multiple Evaluation types are involved, but the
+  resulting code looks simpler also helps.
+- Addition of specialized Evaluation classes. In many cases, this
+  yields better performance because it convinces the compiler to emit
+  SIMD instructions instead of generic ones. (In principle this is not
+  necessary, but contemporary compilers do not seem to notice this
+  important optimization opportunity without "hand-unrolling" these
+  loops.)
+- The minimum version of DUNE is now 2.4
+- The C++ compiler is now assumed to be fully C++-2011 compliant. GCC
+  >= 4.8.2 and clang > 3.3 should work
+- Many smaller bug fixes and general improvements.
+
+
 Changes in opm-material 2017.04
 ===============================
 
