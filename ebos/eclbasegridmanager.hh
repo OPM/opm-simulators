@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/EclipseGrid.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -103,10 +104,12 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the grid manager object is alive.
      */
-    static void setExternalDeck(Opm::Deck* deck, Opm::EclipseState* eclState)
+    static void setExternalDeck(Opm::Deck* deck, Opm::EclipseState* eclState, Opm::Schedule* schedule, Opm::SummaryConfig* summaryConfig)
     {
         externalDeck_ = deck;
         externalEclState_ = eclState;
+        externalSchedule_ = schedule;
+        externalSummaryConfig_ = summaryConfig;
     }
 
     /*!
@@ -164,20 +167,33 @@ public:
 
             internalDeck_.reset(new Opm::Deck(parser.parseFile(fileName , parseContext)));
             internalEclState_.reset(new Opm::EclipseState(*internalDeck_, parseContext));
+            {
+                const auto& grid = internalEclState_->getInputGrid();
+                const Opm::TableManager table ( *internalDeck_ );
+                const Opm::Eclipse3DProperties eclipseProperties (*internalDeck_  , table, grid);
+                internalSchedule_.reset(new Opm::Schedule(*internalDeck_, grid, eclipseProperties, Opm::Phases(true, true, true), parseContext ));
+                internalSummaryConfig_.reset(new Opm::SummaryConfig(*internalDeck_, *internalSchedule_, table,  parseContext));
+            }
+
 
             deck_ = &(*internalDeck_);
             eclState_ = &(*internalEclState_);
+            summaryConfig_ = &(*internalSummaryConfig_);
+            schedule_ = &(*internalSchedule_);
         }
         else {
             assert(externalDeck_);
             assert(externalEclState_);
+            assert(externalSchedule_);
+            assert(externalSummaryConfig_);
 
             deck_ = externalDeck_;
             eclState_ = externalEclState_;
+            schedule_ = externalSchedule_;
+            summaryConfig_ = externalSummaryConfig_;
         }
 
         asImp_().createGrids_();
-
         asImp_().finalizeInit_();
     }
 
@@ -199,6 +215,13 @@ public:
     Opm::EclipseState& eclState()
     { return *eclState_; }
 
+    const Opm::Schedule& schedule() const {
+        return *schedule_;
+    }
+
+    const Opm::SummaryConfig& summaryConfig() const {
+        return *summaryConfig_;
+    }
     /*!
      * \brief Returns the name of the case.
      *
@@ -292,13 +315,19 @@ private:
 
     static Opm::Deck* externalDeck_;
     static Opm::EclipseState* externalEclState_;
+    static Opm::Schedule* externalSchedule_;
+    static Opm::SummaryConfig* externalSummaryConfig_; 
     std::unique_ptr<Opm::Deck> internalDeck_;
     std::unique_ptr<Opm::EclipseState> internalEclState_;
+    std::unique_ptr<Opm::Schedule> internalSchedule_;
+    std::unique_ptr<Opm::SummaryConfig> internalSummaryConfig_;
 
     // these two attributes point either to the internal or to the external version of the
     // Deck and EclipsState objects.
     Opm::Deck* deck_;
     Opm::EclipseState* eclState_;
+    Opm::Schedule* schedule_;
+    Opm::SummaryConfig* summaryConfig_;
 };
 
 template <class TypeTag>
@@ -306,6 +335,13 @@ Opm::Deck* EclBaseGridManager<TypeTag>::externalDeck_ = nullptr;
 
 template <class TypeTag>
 Opm::EclipseState* EclBaseGridManager<TypeTag>::externalEclState_;
+
+template <class TypeTag>
+Opm::Schedule* EclBaseGridManager<TypeTag>::externalSchedule_ = nullptr;
+
+template <class TypeTag>
+Opm::SummaryConfig* EclBaseGridManager<TypeTag>::externalSummaryConfig_ = nullptr;
+
 
 } // namespace Ewoms
 

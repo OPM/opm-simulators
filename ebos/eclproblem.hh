@@ -373,7 +373,7 @@ public:
         readInitialCondition_();
 
         // Set the start time of the simulation
-        const auto& timeMap = simulator.gridManager().eclState().getSchedule().getTimeMap();
+        const auto& timeMap = simulator.gridManager().schedule().getTimeMap();
         simulator.setStartTime( timeMap.getStartTime(/*timeStepIdx=*/0) );
 
         // We want the episode index to be the same as the report step index to make
@@ -435,7 +435,7 @@ public:
         // Proceed to the next report step
         Simulator& simulator = this->simulator();
         auto& eclState = this->simulator().gridManager().eclState();
-        const auto& schedule = eclState.getSchedule();
+        const auto& schedule = this->simulator().gridManager().schedule();
         const auto& events = schedule.getEvents();
         const auto& timeMap = schedule.getTimeMap();
 
@@ -495,7 +495,8 @@ public:
 
         if (!GET_PROP_VALUE(TypeTag, DisableWells))
             // set up the wells
-            wellManager_.beginEpisode(this->simulator().gridManager().eclState(), isOnRestart);
+            wellManager_.beginEpisode(this->simulator().gridManager().eclState(),
+                                      this->simulator().gridManager().schedule(), isOnRestart);
     }
 
     /*!
@@ -563,10 +564,11 @@ public:
     void endEpisode()
     {
         auto& simulator = this->simulator();
-        const auto& eclState = simulator.gridManager().eclState();
+        const auto& schedule = simulator.gridManager().schedule();
+
         int episodeIdx = simulator.episodeIndex();
 
-        const auto& timeMap = eclState.getSchedule().getTimeMap();
+        const auto& timeMap = schedule.getTimeMap();
         int numReportSteps = timeMap.size() - 1;
         if (episodeIdx + 1 >= numReportSteps) {
             simulator.setFinished(true);
@@ -962,7 +964,7 @@ public:
             // initialize the wells. Note that this needs to be done after initializing the
             // intrinsic permeabilities and the after applying the initial solution because
             // the well model uses these...
-            wellManager_.init(this->simulator().gridManager().eclState());
+            wellManager_.init(this->simulator().gridManager().eclState(), this->simulator().gridManager().schedule());
         }
 
         // let the object for threshold pressures initialize itself. this is done only at

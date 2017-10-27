@@ -180,7 +180,10 @@ public:
             }
 
             //distribute the grid and switch to the distributed view.
-            defunctWellNames_ = std::get<1>(grid_->loadBalance(&this->eclState(), faceTrans.data()));
+            {
+                const auto wells = this->schedule().getWells();
+                defunctWellNames_ = std::get<1>(grid_->loadBalance(&wells, faceTrans.data()));
+            }
             grid_->switchToDistributedView();
 
             delete cartesianIndexMapper_;
