@@ -177,16 +177,14 @@ public:
             tstep_os.open(tstep_filename.c_str());
         }
 
-        const auto& schedule = eclState().getSchedule();
-
         // adaptive time stepping
-        const auto& events = schedule.getEvents();
+        const auto& events = schedule().getEvents();
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
 
             if (param_.getDefault("use_TUNING", false)) {
-                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule.getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule().getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
             }
@@ -246,6 +244,7 @@ public:
 
             // Create wells and well state.
             WellsManager wells_manager(eclState(),
+                                       schedule(),
                                        timer.currentStepNum(),
                                        Opm::UgGridHelpers::numCells(grid()),
                                        Opm::UgGridHelpers::globalCell(grid()),
@@ -296,7 +295,7 @@ public:
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
+            const auto& wells_ecl = schedule().getWells(timer.currentStepNum());
             extractLegacyCellPvtRegionIndex_();
             WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,
                                  rateConverter_, terminal_output_, timer.currentStepNum(), legacyCellPvtRegionIdx_);
@@ -456,7 +455,7 @@ public:
 
             prev_well_state = well_state;
 
-            updateListEconLimited(solver, eclState().getSchedule(), timer.currentStepNum(), wells,
+            updateListEconLimited(solver, schedule(), timer.currentStepNum(), wells,
                                   well_state, dynamic_list_econ_limited);
         }
 
@@ -517,7 +516,7 @@ protected:
     {
         typedef SimFIBODetails::WellMap WellMap;
 
-        const auto w_ecl = eclState().getSchedule().getWells(step);
+        const auto w_ecl = schedule().getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
@@ -841,6 +840,14 @@ protected:
 
     const EclipseState& eclState() const
     { return ebosSimulator_.gridManager().eclState(); }
+
+
+    const Schedule& schedule() const
+    { return ebosSimulator_.gridManager().schedule(); }
+
+    const SummaryConfig& summaryConfig() const
+    { return ebosSimulator_.gridManager().summaryConfig( ); }
+
 
     void extractLegacyCellPvtRegionIndex_()
     {

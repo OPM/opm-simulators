@@ -38,6 +38,8 @@ namespace Opm
                                                       well_model,
                                                       solver_,
                                                       eclipse_state_,
+                                                      schedule_,
+                                                      summary_config_,
                                                       has_disgas_,
                                                       has_vapoil_,
                                                       terminal_output_));
@@ -66,7 +68,7 @@ namespace Opm
         std::ofstream tstep_os(tstep_filename.c_str());
 
         // adaptive time stepping
-        const auto& events = eclipse_state_->getSchedule().getEvents();
+        const auto& events = schedule_->getEvents();
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
@@ -113,6 +115,7 @@ namespace Opm
 
             // Create wells and well state.
             WellsManager wells_manager(*eclipse_state_,
+                                       *schedule_,
                                        timer.currentStepNum(),
                                        Opm::UgGridHelpers::numCells(grid_),
                                        Opm::UgGridHelpers::globalCell(grid_),
@@ -131,7 +134,7 @@ namespace Opm
             WellState well_state;
             // well_state.init(wells, state, prev_well_state);
 
-            const auto wells_ecl = eclipse_state_->getSchedule().getWells(timer.currentStepNum());
+            const auto wells_ecl = schedule_->getWells(timer.currentStepNum());
             const int current_time_step = timer.currentStepNum();
 
             const WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, current_time_step);

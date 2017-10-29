@@ -216,6 +216,8 @@ namespace Opm
         // readDeckInput()
         std::shared_ptr<Deck> deck_;
         std::shared_ptr<EclipseState> eclipse_state_;
+        std::shared_ptr<Schedule> schedule_;
+        std::shared_ptr<SummaryConfig> summary_config_;
         // setupGridAndProps()
         std::unique_ptr<GridInit<Grid>> grid_init_;
         std::shared_ptr<MaterialLawManager> material_law_manager_;
@@ -427,7 +429,7 @@ namespace Opm
             OpmLog::addBackend( "STREAMLOG", streamLog);
             std::shared_ptr<StreamLog> debugLog = std::make_shared<EclipsePRTLog>(debugFile, Log::DefaultMessageTypes, false, output_cout_);
             OpmLog::addBackend( "DEBUGLOG" ,  debugLog);
-            const auto& msgLimits = eclipse_state_->getSchedule().getMessageLimits();
+            const auto& msgLimits = schedule_->getMessageLimits();
             const std::map<int64_t, int> limits = {{Log::MessageType::Note, msgLimits.getCommentPrintLimit(0)},
                                                    {Log::MessageType::Info, msgLimits.getMessagePrintLimit(0)},
                                                    {Log::MessageType::Warning, msgLimits.getWarningPrintLimit(0)},
@@ -501,6 +503,15 @@ namespace Opm
                 }
 
                 eclipse_state_.reset(new EclipseState(*deck_, parseContext));
+                schedule_.reset(new Schedule(*deck_,
+                                             eclipse_state_->getInputGrid(),
+                                             eclipse_state_->get3DProperties(),
+                                             eclipse_state_->runspec().phases(),
+                                             parseContext));
+                summary_config_.reset(new SummaryConfig(*deck_,
+                                                        *schedule_,
+                                                        eclipse_state_->getTableManager(),
+                                                        parseContext));
             }
             catch (const std::invalid_argument& e) {
                 std::cerr << "Failed to create valid EclipseState object. See logfile: " << logFile_ << std::endl;
@@ -682,7 +693,7 @@ namespace Opm
             // and initilialize new properties and states for it.
             if (must_distribute_) {
                 defunct_well_names_ =
-                    distributeGridAndData(grid_init_->grid(), *deck_, *eclipse_state_,
+                    distributeGridAndData(grid_init_->grid(), *deck_, *eclipse_state_, *schedule_,
                                           *state_, *fluidprops_, *geoprops_,
                                           material_law_manager_, threshold_pressures_,
                                           parallel_information_, use_local_perm_);
@@ -752,7 +763,10 @@ namespace Opm
             if( output && output_ecl && output_cout_)
             {
                 const EclipseGrid& inputGrid = eclipse_state_->getInputGrid();
-                eclipse_writer_.reset(new EclipseIO(*eclipse_state_, UgGridHelpers::createEclipseGrid( grid , inputGrid )));
+                eclipse_writer_.reset(new EclipseIO(*eclipse_state_,
+                                                    UgGridHelpers::createEclipseGrid( grid , inputGrid ),
+                                                    *schedule_,
+                                                    *summary_config_ ));
                 eclipse_writer_->writeInitial(geoprops_->simProps(grid),
                                               geoprops_->nonCartesianConnections());
             }
@@ -770,6 +784,8 @@ namespace Opm
             output_writer_.reset(new OutputWriter(grid_init_->grid(),
                                                   param_,
                                                   *eclipse_state_,
+                                                  *schedule_,
+                                                  *summary_config_,
                                                   std::move(eclipse_writer_),
                                                   Opm::phaseUsageFromDeck(*deck_)));
         }
@@ -815,8 +831,7 @@ namespace Opm
         // Returns EXIT_SUCCESS if it does not throw.
         int runSimulator()
         {
-            const auto& schedule = eclipse_state_->getSchedule();
-            const auto& timeMap = schedule.getTimeMap();
+            const auto& timeMap = schedule_->getTimeMap();
             auto& ioConfig = eclipse_state_->getIOConfig();
             SimulatorTimer simtimer;
 
@@ -904,6 +919,8 @@ namespace Opm
                                                  Base::deck_->hasKeyword("DISGAS"),
                                                  Base::deck_->hasKeyword("VAPOIL"),
                                                  Base::eclipse_state_,
+                                                 Base::schedule_,
+                                                 Base::summary_config_,
                                                  *Base::output_writer_,
                                                  Base::threshold_pressures_,
                                                  Base::defunct_well_names_));

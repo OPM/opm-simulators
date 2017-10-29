@@ -233,17 +233,19 @@ namespace Opm {
                                          const StandardWells&                    std_wells,
                                          const NewtonIterationBlackoilInterface& linsolver,
                                          std::shared_ptr<const EclipseState>     eclState,
+                                         std::shared_ptr<const Schedule>         schedule,
+                                         std::shared_ptr<const SummaryConfig>    summary_config,
                                          const bool                              has_disgas,
                                          const bool                              has_vapoil,
                                          const bool                              terminal_output)
             : Base(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
-                   eclState, has_disgas, has_vapoil, terminal_output)
+                   eclState, schedule, summary_config, has_disgas, has_vapoil, terminal_output)
             , graph_(Base::ops_)
             , props_(dynamic_cast<const BlackoilPropsAdFromDeck&>(fluid)) // TODO: remove the need for this cast.
             , state0_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
             , state_{ ReservoirState(0, 0, 0), WellState(), V(), V() }
             , tr_model_(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
-                        eclState, has_disgas, has_vapoil, terminal_output)
+                        eclState, schedule, summary_config, has_disgas, has_vapoil, terminal_output)
         {
             // Set up the common parts of the mass balance equations
             // for each active phase.

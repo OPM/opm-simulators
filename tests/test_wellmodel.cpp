@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ScheduleEnums.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/props/satfunc/SaturationPropsFromDeck.hpp>
@@ -79,6 +80,11 @@ struct SetupTest {
         Opm::Parser parser;
         auto deck = parser.parseFile("TESTWELLMODEL.DATA", parse_context);
         ecl_state.reset(new Opm::EclipseState(deck , parse_context) );
+        {
+          const Opm::TableManager table ( deck );
+          const Opm::Eclipse3DProperties eclipseProperties ( deck , table, ecl_state->getInputGrid());
+          schedule.reset( new Opm::Schedule(deck, ecl_state->getInputGrid(), eclipseProperties, Opm::Phases(true, true, true), parse_context ));
+        }
 
         // Create grid.
         const std::vector<double>& porv =
@@ -98,6 +104,7 @@ struct SetupTest {
 
         // Create wells.
         wells_manager.reset(new Opm::WellsManager(*ecl_state,
+                                                  *schedule,
                                                   current_timestep,
                                                   Opm::UgGridHelpers::numCells(grid),
                                                   Opm::UgGridHelpers::globalCell(grid),
@@ -113,6 +120,7 @@ struct SetupTest {
 
     std::unique_ptr<const Opm::WellsManager> wells_manager;
     std::unique_ptr<const Opm::EclipseState> ecl_state;
+    std::unique_ptr<const Opm::Schedule> schedule;
     int current_timestep;
 };
 
@@ -120,7 +128,7 @@ struct SetupTest {
 BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     SetupTest setup_test;
     const Wells* wells = setup_test.wells_manager->c_wells();
-    const auto& wells_ecl = setup_test.ecl_state->getSchedule().getWells(setup_test.current_timestep);
+    const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well* well = wells_ecl[1];
     const Opm::BlackoilModelParameters param;
@@ -133,7 +141,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
 BOOST_AUTO_TEST_CASE(TestBehavoir) {
     SetupTest setup_test;
     const Wells* wells_struct = setup_test.wells_manager->c_wells();
-    const auto& wells_ecl = setup_test.ecl_state->getSchedule().getWells(setup_test.current_timestep);
+    const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     const int current_timestep = setup_test.current_timestep;
     std::vector<std::unique_ptr<const StandardWell> >  wells;
 

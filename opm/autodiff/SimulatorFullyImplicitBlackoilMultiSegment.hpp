@@ -72,11 +72,13 @@ public:
                                    const bool disgas,
                                    const bool vapoil,
                                    std::shared_ptr<EclipseState> eclipse_state,
+                                   std::shared_ptr<Schedule> schedule,
+                                   std::shared_ptr<SummaryConfig> summary_config,
                                    BlackoilOutputWriter& output_writer,
                                    const std::vector<double>& threshold_pressures_by_face,
                                    const std::unordered_set<std::string>& defunct_well_names)
     : Base(param, grid, geo, props, rock_comp_props, linsolver, gravity, disgas, vapoil,
-           eclipse_state, output_writer, threshold_pressures_by_face, defunct_well_names)
+           eclipse_state, schedule, summary_config, output_writer, threshold_pressures_by_face, defunct_well_names)
     {}
 
 
@@ -92,6 +94,8 @@ protected:
     using Base::solver_;
     using Base::terminal_output_;
     using Base::eclipse_state_;
+    using Base::schedule_;
+    using Base::summary_config_;
     using Base::grid_;
     using Base::props_;
     using Base::is_parallel_run_;

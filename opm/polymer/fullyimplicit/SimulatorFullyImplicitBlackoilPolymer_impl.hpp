@@ -37,6 +37,8 @@ namespace Opm
                                           const bool has_plyshlog,
                                           const bool has_shrate,
                                           std::shared_ptr<EclipseState> eclipse_state,
+                                          std::shared_ptr<Schedule> schedule,
+                                          std::shared_ptr<SummaryConfig> summary_config,
                                           BlackoilOutputWriter& output_writer,
                                           std::shared_ptr< Deck > deck,
                                           const std::vector<double>& threshold_pressures_by_face)
@@ -50,6 +52,8 @@ namespace Opm
                has_disgas,
                has_vapoil,
                eclipse_state,
+               schedule,
+               summary_config,
                output_writer,
                threshold_pressures_by_face,
                // names of deactivated wells in parallel run
@@ -79,6 +83,8 @@ namespace Opm
                                                       well_model,
                                                       BaseType::solver_,
                                                       BaseType::eclipse_state_,
+                                                      BaseType::schedule_,
+                                                      BaseType::summary_config_,
                                                       BaseType::has_disgas_,
                                                       BaseType::has_vapoil_,
                                                       has_polymer_,
@@ -112,7 +118,7 @@ namespace Opm
             if (wells_manager.c_wells() == 0) {
                 OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
             }
-            polymer_inflow_ptr.reset(new PolymerInflowFromDeck(*BaseType::eclipse_state_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
+            polymer_inflow_ptr.reset(new PolymerInflowFromDeck(*BaseType::schedule_, *wells, Opm::UgGridHelpers::numCells(BaseType::grid_), timer.currentStepNum()));
         } else {
             OPM_MESSAGE("Warning: simulating with no WPOLYMER in deck (no polymer will be injected).");
             polymer_inflow_ptr.reset(new PolymerInflowBasic(0.0*Opm::unit::day,
@@ -126,7 +132,7 @@ namespace Opm
         well_state.polymerInflow() = polymer_inflow_c;
 
         if (has_plyshlog_) {
-            computeRepRadiusPerfLength(*BaseType::eclipse_state_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_, wells_bore_diameter_);
+            computeRepRadiusPerfLength(*BaseType::schedule_, timer.currentStepNum(), BaseType::grid_, wells_rep_radius_, wells_perf_length_, wells_bore_diameter_);
         }
     }
 
@@ -152,7 +158,7 @@ namespace Opm
 
     template <class GridT>
     void SimulatorFullyImplicitBlackoilPolymer<GridT>::
-    computeRepRadiusPerfLength(const Opm::EclipseState&        eclipseState,
+    computeRepRadiusPerfLength(const Opm::Schedule&            schedule,
                                const size_t                    timeStep,
                                const GridT&                    grid,
                                std::vector<double>&            wells_rep_radius,
@@ -168,7 +174,7 @@ namespace Opm
         auto cell_to_faces = Opm::UgGridHelpers::cell2Faces(grid);
         auto begin_face_centroids = Opm::UgGridHelpers::beginFaceCentroids(grid);
 
-        if (eclipseState.getSchedule().numWells() == 0) {
+        if (schedule.numWells() == 0) {
             OPM_MESSAGE("No wells specified in Schedule section, "
                         "initializing no wells");
             return;
@@ -189,7 +195,6 @@ namespace Opm
         setupCompressedToCartesian(global_cell, number_of_cells,
                                    cartesian_to_compressed);
 
-        const auto& schedule = eclipseState.getSchedule();
         auto wells           = schedule.getWells(timeStep);
 
         int well_index = 0;

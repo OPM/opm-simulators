@@ -329,7 +329,7 @@ namespace Opm
 
             std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
             OpmLog::addBackend( "STREAMLOG", streamLog);
-            const auto& msgLimits = eclState().getSchedule().getMessageLimits();
+            const auto& msgLimits = schedule().getMessageLimits();
             const std::map<int64_t, int> limits = {{Log::MessageType::Note, msgLimits.getCommentPrintLimit(0)},
                                                    {Log::MessageType::Info, msgLimits.getMessagePrintLimit(0)},
                                                    {Log::MessageType::Warning, msgLimits.getWarningPrintLimit(0)},
@@ -462,6 +462,12 @@ namespace Opm
         EclipseState& eclState()
         { return ebosSimulator_->gridManager().eclState(); }
 
+        const Schedule& schedule() const
+        { return ebosSimulator_->gridManager().schedule(); }
+
+        const SummaryConfig& summaryConfig() const
+        { return ebosSimulator_->gridManager().summaryConfig(); }
+  
         // Initialise the reservoir state. Updated fluid props for SWATINIT.
         // Writes to:
         //   state_
@@ -613,7 +619,10 @@ namespace Opm
                 exportNncStructure_();
 
                 const EclipseGrid& inputGrid = eclState().getInputGrid();
-                eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( this->globalGrid() , inputGrid )));
+                eclIO_.reset(new EclipseIO(eclState(),
+                                           UgGridHelpers::createEclipseGrid( this->globalGrid() , inputGrid ),
+                                           schedule(),
+                                           summaryConfig()));
                 eclIO_->writeInitial(computeLegacySimProps_(), nnc_);
             }
         }
@@ -629,6 +638,8 @@ namespace Opm
             output_writer_.reset(new OutputWriter(grid(),
                                                   param_,
                                                   eclState(),
+                                                  schedule(),
+                                                  summaryConfig(),
                                                   std::move(eclIO_),
                                                   Opm::phaseUsageFromDeck(deck())) );
         }
@@ -637,7 +648,7 @@ namespace Opm
         // Returns EXIT_SUCCESS if it does not throw.
         int runSimulator()
         {
-            const auto& schedule = eclState().getSchedule();
+            const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
             auto& ioConfig = eclState().getIOConfig();
             SimulatorTimer simtimer;

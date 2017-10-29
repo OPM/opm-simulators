@@ -122,6 +122,8 @@ namespace Opm
                                               const bool plyshlog,
                                               const bool shrate,
                                               std::shared_ptr<EclipseState> eclipse_state,
+                                              std::shared_ptr<Schedule> schedule,
+                                              std::shared_ptr<SummaryConfig> summary_config,
                                               BlackoilOutputWriter& output_writer,
                                               std::shared_ptr< Deck > deck,
                                               const std::vector<double>& threshold_pressures_by_face);
@@ -157,7 +159,7 @@ namespace Opm
         //  and store the wellbore diameters
         //  it will be used in the shear-thinning calcluation only.
         void
-        computeRepRadiusPerfLength(const EclipseState&             eclipseState,
+        computeRepRadiusPerfLength(const Schedule&                 schedule,
                                    const size_t                    timeStep,
                                    const GridT&                    grid,
                                    std::vector<double>&            wells_rep_radius,

@@ -101,6 +101,8 @@ namespace Opm
                                                  Base::deck_->hasKeyword("DISGAS"),
                                                  Base::deck_->hasKeyword("VAPOIL"),
                                                  Base::eclipse_state_,
+                                                 Base::schedule_,
+                                                 Base::summary_config_,
                                                  *Base::output_writer_,
                                                  Base::deck_,
                                                  Base::threshold_pressures_,

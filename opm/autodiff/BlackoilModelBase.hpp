@@ -153,6 +153,8 @@ namespace Opm {
                           const WellModel&                well_model,
                           const NewtonIterationBlackoilInterface& linsolver,
                           std::shared_ptr< const EclipseState > eclState,
+                          std::shared_ptr< const Schedule> schedule,
+                          std::shared_ptr< const SummaryConfig> summary_config,
                           const bool has_disgas,
                           const bool has_vapoil,
                           const bool terminal_output);

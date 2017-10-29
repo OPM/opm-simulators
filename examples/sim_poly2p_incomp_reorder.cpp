@@ -94,6 +94,7 @@ try
     boost::scoped_ptr<IncompPropertiesInterface> props;
     boost::scoped_ptr<RockCompressibility> rock_comp;
     std::shared_ptr< EclipseState > eclipseState;
+    std::shared_ptr<Schedule> schedule;
     std::unique_ptr<PolymerState> state;
     Opm::PolymerProperties poly_props;
     // bool check_well_controls = false;
@@ -106,7 +107,7 @@ try
         deck = parser.parseFile(deck_filename , parseContext);
 
         eclipseState.reset(new Opm::EclipseState(deck , parseContext));
-
+        schedule.reset( new Opm::Schedule(deck, eclipseState->getInputGrid(), eclipseState->get3DProperties(), eclipseState->runspec().phases(), parseContext));
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
@@ -295,7 +296,7 @@ try
 
         WellState well_state;
         int step = 0;
-        const auto& timeMap = eclipseState->getSchedule().getTimeMap();
+        const auto& timeMap = schedule->getTimeMap();
         SimulatorTimer simtimer;
         simtimer.init(timeMap);
         // Check for WPOLYMER presence in last epoch to decide
@@ -316,13 +317,13 @@ try
                       << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, polymer inflow controls.
-            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid());
+            WellsManager wells(*eclipseState , *schedule, reportStepIdx , *grid->c_grid());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {
                     OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
-                polymer_inflow.reset(new PolymerInflowFromDeck(*eclipseState, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
+                polymer_inflow.reset(new PolymerInflowFromDeck(*schedule, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
             } else {
                 polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
                                                             param.getDefault("poly_end_days", 800.0)*Opm::unit::day,

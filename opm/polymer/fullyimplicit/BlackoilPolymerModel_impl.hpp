@@ -83,6 +83,8 @@ namespace Opm {
                                                      const StandardWells&                    well_model,
                                                      const NewtonIterationBlackoilInterface& linsolver,
                                                      std::shared_ptr< const EclipseState >   eclipse_state,
+                                                     std::shared_ptr< const Schedule>        schedule,
+                                                     std::shared_ptr< const SummaryConfig>   summary_config,
                                                      const bool                              has_disgas,
                                                      const bool                              has_vapoil,
                                                      const bool                              has_polymer,
@@ -93,7 +95,7 @@ namespace Opm {
                                                      const std::vector<double>&              wells_bore_diameter,
                                                      const bool                              terminal_output)
         : Base(param, grid, fluid, geo, rock_comp_props, well_model, linsolver, eclipse_state,
-               has_disgas, has_vapoil, terminal_output),
+               schedule, summary_config, has_disgas, has_vapoil, terminal_output),
           polymer_props_ad_(polymer_props_ad),
           has_polymer_(has_polymer),
           has_plyshlog_(has_plyshlog),
