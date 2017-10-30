@@ -573,16 +573,6 @@ public:
         return permuted_ptr;
     }
 
-    template<class B>
-    std::unique_ptr<Dune::BCRSMatrix<B> > createPermutedMatrix(Dune::BCRSMatrix<B> const& A,
-                                                               std::size_t interior_end_index,
-                                                               std::size_t interface_start_index,
-                                                               std::vector<std::size_t>const& inverse_row_permutation)
-    {
-        createPermutedMatrix<B,B>(A, interior_end_index, interface_start_index,
-                                  inverse_row_permutation);
-    }
-
     std::size_t operator[](std::size_t i) const
     {
         return row_permutation_[i];

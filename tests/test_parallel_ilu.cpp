@@ -401,7 +401,8 @@ void test_parallel_ilu0()
                                                                       global_region, 1, N);
     ParallelGlobalLinearSystemPermutation permutation(N, size);
 
-    std::unique_ptr<BCRSMat> global_mat_permuted = permutation.createPermutedMatrix(*global_mat);
+    std::unique_ptr<BCRSMat> global_mat_permuted =
+        permutation.template createPermutedMatrix<typename BCRSMat::block_type>(*global_mat);
 
     comm.remoteIndices().template rebuild<false>();
     Opm::ParallelILU0<BCRSMat, Vector, Vector, Communication> pilu0(*mat, comm, 1.0);
