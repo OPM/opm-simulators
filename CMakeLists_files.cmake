@@ -131,7 +131,6 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
   examples/sim_simple.cpp
-  examples/opm_init_check.cpp
   examples/sim_poly2p_comp_reorder.cpp
   examples/sim_poly2p_incomp_reorder.cpp
   examples/flow_polymer.cpp
