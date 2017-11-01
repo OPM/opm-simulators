@@ -4,7 +4,7 @@
 # suggests opm-simulators!
 #
 
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3)
 
 if(EIGEN3_FOUND)
   set(HAVE_EIGEN "${EIGEN3_FOUND}")
