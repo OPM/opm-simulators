@@ -33,12 +33,12 @@ namespace Opm {
 
 namespace mswellhelpers
 {
-#if HAVE_UMFPACK
     // obtain y = D^-1 * x with a direct solver
     template <typename MatrixType, typename VectorType>
     VectorType
     invDXDirect(const MatrixType& D, VectorType x)
     {
+#if HAVE_UMFPACK
         VectorType y(x.size());
         y = 0.;
 
@@ -61,8 +61,11 @@ namespace mswellhelpers
         }
 
         return y;
-    }
+#else
+        OPM_THROW(std::runtime_error, "Cannot use invDXDirect() without UMFPACK. "
+                  "Reconfigure opm-simulator with SuiteSparse/UMFPACK support and recompile.");
 #endif // HAVE_UMFPACK
+    }
 
 
 
