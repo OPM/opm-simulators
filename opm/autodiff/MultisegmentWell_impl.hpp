@@ -628,11 +628,7 @@ namespace Opm
         // resWell = resWell - B * x
         duneB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-#if HAVE_UMFPACK
         xw = mswellhelpers::invDXDirect(duneD_, resWell);
-#else
-        xw = mswellhelpers::invDX(duneD_, resWell);
-#endif // HAVE_UMFPACK
     }
 
 
@@ -644,13 +640,9 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     solveEqAndUpdateWellState(WellState& well_state)
     {
-#if HAVE_UMFPACK
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
-#else
-        const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
-#endif
 
         updateWellState(dx_well, false, well_state);
     }
@@ -1752,11 +1744,7 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, true);
 
-#if HAVE_UMFPACK
             const BVectorWell dx_well = mswellhelpers::invDXDirect(duneD_, resWell_);
-#else
-            const BVectorWell dx_well = mswellhelpers::invDX(duneD_, resWell_);
-#endif
 
             // TODO: use these small values for now, not intend to reach the convergence
             // in this stage, but, should we?
