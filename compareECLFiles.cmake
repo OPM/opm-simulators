@@ -122,14 +122,19 @@ foreach(SIM flow flow_ebos flow_legacy)
                            REL_TOL ${coarse_rel_tol})
 endforeach()
 
-foreach(SIM flow flow_legacy)
-  add_test_compareECLFiles(CASENAME spe1_2p
-                           FILENAME SPE1CASE2_2P
-                           SIMULATOR ${SIM}
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           DIR spe1)
-endforeach()
+add_test_compareECLFiles(CASENAME spe1_2p
+                         FILENAME SPE1CASE2_2P
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1)
+
+add_test_compareECLFiles(CASENAME spe1_2p
+                         FILENAME SPE1CASE2_2P
+                         SIMULATOR flow_legacy
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         DIR spe1)
 
 add_test_compareECLFiles(CASENAME spe1
                          FILENAME SPE1CASE1
@@ -178,7 +183,7 @@ add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
                          SIMULATOR flow_solvent
                          ABS_TOL ${abs_tol}
-                         REL_TOL 5e-4
+                         REL_TOL ${coarse_rel_tol}
                          TEST_ARGS max_iter=13)
 
 # Restart tests

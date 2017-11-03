@@ -494,11 +494,7 @@ namespace Opm
         duneB_.mv(x, Bx);
 
         // invDBx = duneD^-1 * Bx_
-#if HAVE_UMFPACK
         const BVectorWell invDBx = mswellhelpers::invDXDirect(duneD_, Bx);
-#else
-        const BVectorWell invDBx = mswellhelpers::invDX(duneD_, Bx);
-#endif
 
         // Ax = Ax - duneC_^T * invDBx
         duneC_.mmtv(invDBx,Ax);
@@ -514,11 +510,7 @@ namespace Opm
     apply(BVector& r) const
     {
         // invDrw_ = duneD^-1 * resWell_
-#if HAVE_UMFPACK
         const BVectorWell invDrw = mswellhelpers::invDXDirect(duneD_, resWell_);
-#else
-        const BVectorWell invDrw = mswellhelpers::invDX(duneD_, resWell_);
-#endif // HAVE_UMFPACK
         // r = r - duneC_^T * invDrw
         duneC_.mmtv(invDrw, r);
     }
