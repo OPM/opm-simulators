@@ -132,6 +132,10 @@ namespace Opm
         int iteration = 0;
 
         // Let the model do one nonlinear iteration.
+        // Dummysolver/Adjont state output here?
+        model_.ebosSimulator_.problem().serialize(Restarter& res) // this is for well
+        model_.ebosSimulator_.problem().model().serielize()//this is for black oil model
+        model_.ebosSimulator_.problem().beginEpisode();
 
         // Set up for main solver loop.
         bool converged = false;
