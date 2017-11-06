@@ -44,6 +44,7 @@
 #include <opm/autodiff/AutoDiffBlock.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/simulators/ensureDirectoryExists.hpp>
 
@@ -212,6 +213,8 @@ namespace Opm
         BlackoilOutputWriter(const Grid& grid,
                              const ParameterGroup& param,
                              const Opm::EclipseState& eclipseState,
+                             const Opm::Schedule& schedule,
+                             const Opm::SummaryConfig& summaryConfig,
                              std::unique_ptr<EclipseIO>&& eclIO,
                              const Opm::PhaseUsage &phaseUsage);
 
@@ -320,6 +323,8 @@ namespace Opm
         std::unique_ptr< BlackoilSubWriter > matlabWriter_;
         std::unique_ptr< EclipseIO > eclIO_;
         const EclipseState& eclipseState_;
+        const Schedule& schedule_;
+        const SummaryConfig& summaryConfig_;
 
         std::unique_ptr< ThreadHandle > asyncOutput_;
     };
@@ -336,6 +341,8 @@ namespace Opm
     BlackoilOutputWriter(const Grid& grid,
                          const ParameterGroup& param,
                          const Opm::EclipseState& eclipseState,
+                         const Opm::Schedule& schedule,
+                         const Opm::SummaryConfig& summaryConfig,
                          std::unique_ptr<EclipseIO>&& eclIO,
                          const Opm::PhaseUsage &phaseUsage)
         : output_( [ &param ] () -> bool {
@@ -344,12 +351,14 @@ namespace Opm
                 return ( outputString == "all" ||  outputString == "true" );
             }()
             ),
-        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, phaseUsage.num_phases, phaseUsage ) : 0 ),
+        parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, schedule, phaseUsage.num_phases, phaseUsage ) : 0 ),
         outputDir_( eclipseState.getIOConfig().getOutputDir() ),
         restart_double_si_( output_ ? param.getDefault("restart_double_si", false) : false ),
         lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
         eclipseState_(eclipseState),
+        schedule_(schedule),
+        summaryConfig_(summaryConfig),
         asyncOutput_()
     {
         // For output.
@@ -444,6 +453,7 @@ namespace Opm
         // gives a dummy dynamic_list_econ_limited
         DynamicListEconLimited dummy_list_econ_limited;
         WellsManager wellsmanager(eclipseState_,
+                                  schedule_,
                                   eclipseState_.getInitConfig().getRestartStep(),
                                   Opm::UgGridHelpers::numCells(grid),
                                   Opm::UgGridHelpers::globalCell(grid),
@@ -1002,7 +1012,6 @@ namespace Opm
     {
         data::Solution localCellData{};
         const RestartConfig& restartConfig = eclipseState_.getRestartConfig();
-        const SummaryConfig& summaryConfig = eclipseState_.getSummaryConfig();
         const int reportStepNum = timer.reportStepNum();
         bool logMessages = output_ && parallelOutput_->isIORank();
         std::map<std::string, std::vector<double>> extraRestartData;
@@ -1024,7 +1033,7 @@ namespace Opm
                                         restartConfig, reportStepNum, logMessages );
                 // sd will be invalid after getRestartData has been called
             }
-            detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig );
+            detail::getSummaryData( localCellData, phaseUsage_, physicalModel, summaryConfig_ );
             assert(!localCellData.empty());
 
             // Add suggested next timestep to extra data.

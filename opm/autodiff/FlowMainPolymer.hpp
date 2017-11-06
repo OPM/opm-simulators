@@ -146,6 +146,8 @@ namespace Opm
                                                  Base::deck_->hasKeyword("PLYSHLOG"),
                                                  Base::deck_->hasKeyword("SHRATE"),
                                                  Base::eclipse_state_,
+                                                 Base::schedule_,
+                                                 Base::summary_config_,
                                                  *Base::output_writer_,
                                                  Base::deck_,
                                                  Base::threshold_pressures_));

@@ -38,6 +38,7 @@ try
     Opm::Parser parser;
     Opm::Deck deck = parser.parseFile(file_name , parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
+    Opm::Schedule schedule(deck, eclipseState.getInputGrid(), eclipseState.get3DProperties(), eclipseState.runspec().phases(), parseContext);
     std::cout << "Done!" << std::endl;
 
     // Setup grid
@@ -48,7 +49,7 @@ try
     RockCompressibility rock_comp(eclipseState);
 
     // Finally handle the wells
-    WellsManager wells(eclipseState , 0 , *grid.c_grid());
+    WellsManager wells(eclipseState , schedule, 0 , *grid.c_grid());
 
     double gravity[3] = {0.0, 0.0, parameters.getDefault<double>("gravity", 0.0)};
     Opm::LinearSolverFactory linsolver(parameters);

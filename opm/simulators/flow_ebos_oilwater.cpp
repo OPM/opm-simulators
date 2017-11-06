@@ -45,12 +45,12 @@ SET_TYPE_PROP(EclFlowOilWaterProblem, Indices,
 }}
 
 namespace Opm {
-void flowEbosOilWaterSetDeck(Deck &deck, EclipseState& eclState)
+void flowEbosOilWaterSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     typedef TTAG(EclFlowOilWaterProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, GridManager) GridManager;
 
-    GridManager::setExternalDeck(&deck, &eclState);
+    GridManager::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
 }
 
 // ----------------- Main program -----------------

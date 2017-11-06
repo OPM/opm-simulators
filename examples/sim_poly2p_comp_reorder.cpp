@@ -96,6 +96,7 @@ try
     Opm::PolymerProperties poly_props;
     Opm::Deck deck;
     std::unique_ptr< EclipseState > eclipseState;
+    std::unique_ptr< Schedule> schedule;
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
     double gravity[3] = { 0.0 };
@@ -105,7 +106,7 @@ try
         Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
         deck = parser.parseFile(deck_filename , parseContext);
         eclipseState.reset( new EclipseState(deck , parseContext) );
-
+        schedule.reset( new Schedule(deck, eclipseState->getInputGrid(), eclipseState->get3DProperties(), eclipseState->runspec().phases(), parseContext ));
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
@@ -282,13 +283,13 @@ try
 
             // Create new wells, polymer inflow controls.
             eclipseState.reset( new EclipseState( deck ) );
-            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid());
+            WellsManager wells(*eclipseState , *schedule, reportStepIdx , *grid->c_grid());
             boost::scoped_ptr<PolymerInflowInterface> polymer_inflow;
             if (use_wpolymer) {
                 if (wells.c_wells() == 0) {
                     OPM_THROW(std::runtime_error, "Cannot control polymer injection via WPOLYMER without wells.");
                 }
-                polymer_inflow.reset(new PolymerInflowFromDeck(*eclipseState, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
+                polymer_inflow.reset(new PolymerInflowFromDeck( *schedule, *wells.c_wells(), props->numCells(), simtimer.currentStepNum()));
             } else {
                 polymer_inflow.reset(new PolymerInflowBasic(param.getDefault("poly_start_days", 300.0)*Opm::unit::day,
                                                             param.getDefault("poly_end_days", 800.0)*Opm::unit::day,

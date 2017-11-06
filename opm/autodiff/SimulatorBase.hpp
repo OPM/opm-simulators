@@ -131,6 +131,8 @@ namespace Opm
                       const bool disgas,
                       const bool vapoil,
                       std::shared_ptr<EclipseState> eclipse_state,
+                      std::shared_ptr<Schedule> schedule,
+                      std::shared_ptr<SummaryConfig> summary_config,
                       OutputWriter& output_writer,
                       const std::vector<double>& threshold_pressures_by_face,
                       const std::unordered_set<std::string>& defunct_well_names);
@@ -212,6 +214,8 @@ namespace Opm
         bool       terminal_output_;
         // eclipse_state
         std::shared_ptr<EclipseState> eclipse_state_;
+        std::shared_ptr<Schedule> schedule_;
+        std::shared_ptr<SummaryConfig> summary_config_;
         // output_writer
         OutputWriter& output_writer_;
         RateConverterType rateConverter_;

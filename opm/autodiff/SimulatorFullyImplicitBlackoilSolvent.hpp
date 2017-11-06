@@ -118,6 +118,8 @@ namespace Opm
                                               const bool disgas,
                                               const bool vapoil,
                                               std::shared_ptr<EclipseState> eclipse_state,
+                                              std::shared_ptr<Schedule> schedule,
+                                              std::shared_ptr<SummaryConfig> summary_config,
                                               BlackoilOutputWriter& output_writer,
                                               std::shared_ptr< Deck > deck,
                                               const std::vector<double>& threshold_pressures_by_face,

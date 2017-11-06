@@ -35,6 +35,8 @@ namespace Opm
                                           const bool has_disgas,
                                           const bool has_vapoil,
                                           std::shared_ptr<EclipseState> eclipse_state,
+                                          std::shared_ptr<Schedule> schedule,
+                                          std::shared_ptr<SummaryConfig> summary_config,
                                           BlackoilOutputWriter& output_writer,
                                           std::shared_ptr< Deck > deck,
                                           const std::vector<double>& threshold_pressures_by_face,
@@ -49,6 +51,8 @@ namespace Opm
                has_disgas,
                has_vapoil,
                eclipse_state,
+               schedule,
+               summary_config,
                output_writer,
                threshold_pressures_by_face,
                // names of deactivated wells in parallel run
@@ -80,6 +84,8 @@ namespace Opm
                                                       well_model,
                                                       BaseType::solver_,
                                                       BaseType::eclipse_state_,
+                                                      BaseType::schedule_,
+                                                      BaseType::summary_config_,
                                                       BaseType::has_disgas_,
                                                       BaseType::has_vapoil_,
                                                       BaseType::terminal_output_,
@@ -105,9 +111,8 @@ namespace Opm
         std::vector<double> perfcells_fraction(wells->well_connpos[nw], 0.0);
 
         size_t currentStep = timer.currentStepNum();
-        const auto& schedule = BaseType::eclipse_state_->getSchedule();
 
-        for (const auto&  well_solvent : schedule.getWells( currentStep )) {
+        for (const auto&  well_solvent : BaseType::schedule_->getWells( currentStep )) {
             if (well_solvent->getStatus( currentStep ) == WellCommon::SHUT) {
                 continue;
             }

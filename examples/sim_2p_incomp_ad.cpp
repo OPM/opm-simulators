@@ -107,6 +107,7 @@ try
     std::unique_ptr<RockCompressibility> rock_comp;
     std::unique_ptr<TwophaseState> state;
     std::shared_ptr< EclipseState > eclipseState;
+    std::shared_ptr< Schedule > schedule;
 
     // bool check_well_controls = false;
     // int max_well_control_iterations = 0;
@@ -116,6 +117,11 @@ try
         Opm::ParseContext parseContext;
         auto deck = parser.parseFile(deck_filename, parseContext);
         eclipseState.reset(new EclipseState(deck , parseContext));
+        schedule.reset( new Schedule(deck,
+                                     eclipseState->getInputGrid(),
+                                     eclipseState->get3DProperties(),
+                                     eclipseState->runspec().phases(),
+                                     parseContext));
 
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
@@ -248,7 +254,7 @@ try
     } else {
         // With a deck, we may have more report steps etc.
         WellState well_state;
-        const auto& timeMap = eclipseState->getSchedule().getTimeMap();
+        const auto& timeMap = schedule->getTimeMap();
         SimulatorTimer simtimer;
         for (size_t reportStepIdx = 0; reportStepIdx < timeMap.numTimesteps(); ++reportStepIdx) {
             // Report on start of report step.
@@ -257,7 +263,7 @@ try
                       << timeMap.numTimesteps() - reportStepIdx << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid());
+            WellsManager wells(*eclipseState , *schedule, reportStepIdx , *grid->c_grid());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every report step,
             // since number of wells may change etc.

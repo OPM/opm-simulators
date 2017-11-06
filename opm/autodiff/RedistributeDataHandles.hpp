@@ -43,7 +43,8 @@ inline std::unordered_set<std::string>
 distributeGridAndData( Grid& ,
                        const Opm::Deck& ,
                        const EclipseState& ,
-                       BlackoilState& ,
+                       const Schedule&,
+                       BlackoilState&,
                        BlackoilPropsAdFromDeck& ,
                        DerivedGeology&,
                        std::shared_ptr<BlackoilPropsAdFromDeck::MaterialLawManager>&,
@@ -489,6 +490,7 @@ std::unordered_set<std::string>
 distributeGridAndData( Dune::CpGrid& grid,
                        const Opm::Deck& deck,
                        const EclipseState& eclipseState,
+                       const Schedule& schedule,
                        BlackoilState& state,
                        BlackoilPropsAdFromDeck& properties,
                        DerivedGeology& geology,
@@ -502,8 +504,8 @@ distributeGridAndData( Dune::CpGrid& grid,
 
     // distribute the grid and switch to the distributed view
     using std::get;
-    auto my_defunct_wells = get<1>(grid.loadBalance(&eclipseState,
-                                            geology.transmissibility().data()));
+    auto wells = schedule.getWells();
+    auto my_defunct_wells = get<1>(grid.loadBalance(&wells, geology.transmissibility().data()));
     grid.switchToDistributedView();
     std::vector<int> compressedToCartesianIdx;
     Opm::createGlobalCellArray(grid, compressedToCartesianIdx);

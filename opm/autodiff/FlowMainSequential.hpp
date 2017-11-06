@@ -36,6 +36,8 @@ namespace Opm
     protected:
         using Base = FlowMainBase<FlowMainSequential<Grid, Simulator>, Grid, Simulator>;
         using Base::eclipse_state_;
+        using Base::schedule_;
+        using Base::summary_config_;
         using Base::param_;
         using Base::fis_solver_;
         using Base::parallel_information_;
@@ -127,6 +129,8 @@ namespace Opm
                                                  Base::deck_->hasKeyword("DISGAS"),
                                                  Base::deck_->hasKeyword("VAPOIL"),
                                                  Base::eclipse_state_,
+                                                 Base::schedule_,
+                                                 Base::summary_config_,
                                                  *Base::output_writer_,
                                                  Base::threshold_pressures_));
         }

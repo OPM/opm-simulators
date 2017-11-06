@@ -43,6 +43,8 @@ namespace Opm
                                                  const bool has_disgas,
                                                  const bool has_vapoil,
                                                  std::shared_ptr<EclipseState> eclipse_state,
+                                                 std::shared_ptr<Schedule> schedule,
+                                                 std::shared_ptr<SummaryConfig> summary_config,
                                                  OutputWriter& output_writer,
                                                  const std::vector<double>& threshold_pressures_by_face,
                                                  const std::unordered_set<std::string>& defunct_well_names)
@@ -59,6 +61,8 @@ namespace Opm
           has_vapoil_(has_vapoil),
           terminal_output_(param.getDefault("output_terminal", true)),
           eclipse_state_(eclipse_state),
+          schedule_(schedule),
+          summary_config_(summary_config),
           output_writer_(output_writer),
           rateConverter_(props_.phaseUsage(), std::vector<int>(AutoDiffGrid::numCells(grid_), 0)),
           threshold_pressures_by_face_(threshold_pressures_by_face),
@@ -110,16 +114,14 @@ namespace Opm
                 tstep_os.open(tstep_filename.c_str());
         }
 
-        const auto& schedule = eclipse_state_->getSchedule();
-
         // adaptive time stepping
-        const auto& events = schedule.getEvents();
+        const auto& events = schedule_->getEvents();
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
 
             if (param_.getDefault("use_TUNING", false)) {
-                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule.getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule_->getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
             }
@@ -172,6 +174,7 @@ namespace Opm
 
             // Create wells and well state.
             WellsManager wells_manager(*eclipse_state_,
+                                       *schedule_,
                                        timer.currentStepNum(),
                                        Opm::UgGridHelpers::numCells(grid_),
                                        Opm::UgGridHelpers::globalCell(grid_),
@@ -275,7 +278,7 @@ namespace Opm
                 // section
                 //
                 // TODO (?): handle the parallel case (maybe this works out of the box)
-                const auto& miniDeck = schedule.getModifierDeck(nextTimeStepIdx);
+                const auto& miniDeck = schedule_->getModifierDeck(nextTimeStepIdx);
                 eclipse_state_->applyModifierDeck(miniDeck);
                 geo_.update(grid_, props_, *eclipse_state_, gravity_);
             }
@@ -328,7 +331,7 @@ namespace Opm
 
             prev_well_state = well_state;
 
-            asImpl().updateListEconLimited(solver, eclipse_state_->getSchedule(), timer.currentStepNum(), wells,
+            asImpl().updateListEconLimited(solver, *schedule_, timer.currentStepNum(), wells,
                                            well_state, dynamic_list_econ_limited);
         }
 
@@ -474,6 +477,8 @@ namespace Opm
                                                       well_model,
                                                       solver_,
                                                       eclipse_state_,
+                                                      schedule_,
+                                                      summary_config_,
                                                       has_disgas_,
                                                       has_vapoil_,
                                                       terminal_output_));
@@ -494,7 +499,7 @@ namespace Opm
     {
         typedef SimFIBODetails::WellMap WellMap;
 
-        const auto w_ecl = eclipse_state_->getSchedule().getWells(step);
+        const auto w_ecl = schedule_->getWells(step);
         const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
 
         const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
