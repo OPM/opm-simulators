@@ -119,7 +119,7 @@ foreach(SIM flow flow_ebos flow_legacy)
                            FILENAME SPE1CASE2
                            SIMULATOR ${SIM}
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${coarse_rel_tol})
+                           REL_TOL ${rel_tol})
 endforeach()
 
 add_test_compareECLFiles(CASENAME spe1_2p
@@ -133,7 +133,7 @@ add_test_compareECLFiles(CASENAME spe1_2p
                          FILENAME SPE1CASE2_2P
                          SIMULATOR flow_legacy
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
+                         REL_TOL ${rel_tol}
                          DIR spe1)
 
 add_test_compareECLFiles(CASENAME spe1
@@ -147,8 +147,7 @@ foreach(SIM flow flow_ebos flow_legacy)
                            FILENAME SPE3CASE1
                            SIMULATOR ${SIM}
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${coarse_rel_tol}
-                           TEST_ARGS tolerance_wells=1e-6 max_iter=20)
+                           REL_TOL ${rel_tol})
 endforeach()
 
 foreach(SIM flow flow_ebos flow_legacy)
@@ -183,8 +182,7 @@ add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
                          SIMULATOR flow_solvent
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS max_iter=13)
+                         REL_TOL ${rel_tol})
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
