@@ -40,11 +40,11 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/LinearisedBlackoilResidual.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/VFPProperties.hpp>
+#include <opm/autodiff/VFPPropertiesAdb.hpp>
 
 #include <opm/autodiff/WellMultiSegment.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
-#include <opm/simulators/WellSwitchingLogger.hpp>
+#include "WellSwitchingLogger.hpp"
 
 
 
@@ -101,7 +101,7 @@ namespace Opm {
             void init(const BlackoilPropsAdFromDeck* fluid_arg,
                       const std::vector<bool>* active_arg,
                       const std::vector<PhasePresence>* pc_arg,
-                      const VFPProperties*  vfp_properties_arg,
+                      const VFPPropertiesAdb*  vfp_properties_arg,
                       const double gravity_arg,
                       const Vector& depth_arg);
 
@@ -237,6 +237,10 @@ namespace Opm {
 
             const Vector& wellPerfEfficiencyFactors() const;
 
+            // just return the passed well state
+            template<class WellState>
+            const WellState& wellState(const WellState& well_state) const { return well_state; }
+
 
     protected:
         // TODO: probably a wells_active_ will be required here.
@@ -264,7 +268,7 @@ namespace Opm {
         const BlackoilPropsAdFromDeck* fluid_;
         const std::vector<bool>*  active_;
         const std::vector<PhasePresence>*  phase_condition_;
-        const VFPProperties* vfp_properties_;
+        const VFPPropertiesAdb* vfp_properties_;
         double gravity_;
         // The depth of the all the cell centers
         // It is different from the perforation depth in MultisegmentWells

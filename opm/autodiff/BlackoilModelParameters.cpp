@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/autodiff/BlackoilModelParameters.hpp>
+#include "BlackoilModelParameters.hpp"
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 

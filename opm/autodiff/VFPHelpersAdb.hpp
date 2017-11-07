@@ -18,23 +18,22 @@
 */
 
 
-#ifndef OPM_AUTODIFF_VFPHELPERS_HPP_
-#define OPM_AUTODIFF_VFPHELPERS_HPP_
+#ifndef OPM_AUTODIFF_VFPHELPERS_ADB_HPP_
+#define OPM_AUTODIFF_VFPHELPERS_ADB_HPP_
 
 
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/VFPInjTable.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/common/Exceptions.hpp>
-#include <opm/common/ErrorMacros.hpp>
+#include <opm/autodiff/AutoDiffHelpers.hpp>
 
 /**
- * This file contains a set of helper functions used by VFPProd / VFPInj.
+ * This file contains a set of helper functions used by VFPProdAdb / VFPInjAdb.
  */
 namespace Opm {
 namespace detail {
 
+
+typedef AutoDiffBlock<double> ADB;
 
 
 /**
@@ -45,12 +44,19 @@ inline double zeroIfNan(const double& value) {
 }
 
 /**
- * Returns zero if input value is NaN
+ * Returns zero for every entry in the ADB which is NaN
  */
-template <class EvalWell>
-inline double zeroIfNan(const EvalWell& value) {
-    return (std::isnan(value.value())) ? 0.0 : value.value();
+inline ADB zeroIfNan(const ADB& values) {
+    Selector<ADB::V::Scalar> not_nan_selector(values.value(), Selector<ADB::V::Scalar>::NotNaN);
+
+    const ADB::V z = ADB::V::Zero(values.size());
+    const ADB zero = ADB::constant(z, values.blockPattern());
+
+    ADB retval = not_nan_selector.select(values, zero);
+    return retval;
 }
+
+
 
 
 
@@ -251,8 +257,8 @@ inline InterpData findInterpData(const double& value, const std::vector<double>&
 /**
  * An "ADB-like" structure with a single value and a set of derivatives
  */
-struct VFPEvaluation {
-    VFPEvaluation() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
+struct VFPEvaluationAdb {
+    VFPEvaluationAdb() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
     double value;
     double dthp;
     double dwfr;
@@ -261,9 +267,9 @@ struct VFPEvaluation {
     double dflo;
 };
 
-inline VFPEvaluation operator+(
-        VFPEvaluation lhs,
-        const VFPEvaluation& rhs) {
+inline VFPEvaluationAdb operator+(
+        VFPEvaluationAdb lhs,
+        const VFPEvaluationAdb& rhs) {
     lhs.value += rhs.value;
     lhs.dthp += rhs.dthp;
     lhs.dwfr += rhs.dwfr;
@@ -273,9 +279,9 @@ inline VFPEvaluation operator+(
     return lhs;
 }
 
-inline VFPEvaluation operator-(
-        VFPEvaluation lhs,
-        const VFPEvaluation& rhs) {
+inline VFPEvaluationAdb operator-(
+        VFPEvaluationAdb lhs,
+        const VFPEvaluationAdb& rhs) {
     lhs.value -= rhs.value;
     lhs.dthp -= rhs.dthp;
     lhs.dwfr -= rhs.dwfr;
@@ -285,10 +291,10 @@ inline VFPEvaluation operator-(
     return lhs;
 }
 
-inline VFPEvaluation operator*(
+inline VFPEvaluationAdb operator*(
         double lhs,
-        const VFPEvaluation& rhs) {
-    VFPEvaluation retval;
+        const VFPEvaluationAdb& rhs) {
+    VFPEvaluationAdb retval;
     retval.value = rhs.value * lhs;
     retval.dthp = rhs.dthp * lhs;
     retval.dwfr = rhs.dwfr * lhs;
@@ -312,7 +318,7 @@ inline VFPEvaluation operator*(
 #endif
 
 
-inline VFPEvaluation interpolate(
+inline VFPEvaluationAdb interpolate(
         const VFPProdTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i,
@@ -321,7 +327,7 @@ inline VFPEvaluation interpolate(
         const InterpData& alq_i) {
 
     //Values and derivatives in a 5D hypercube
-    VFPEvaluation nn[2][2][2][2][2];
+    VFPEvaluationAdb nn[2][2][2][2][2];
 
 
     //Pick out nearest neighbors (nn) to our evaluation point
@@ -429,13 +435,13 @@ inline VFPEvaluation interpolate(
  * This basically models interpolate(VFPProdTable::array_type, ...)
  * which performs 5D interpolation, but here for the 2D case only
  */
-inline VFPEvaluation interpolate(
+inline VFPEvaluationAdb interpolate(
         const VFPInjTable::array_type& array,
         const InterpData& flo_i,
         const InterpData& thp_i) {
 
     //Values and derivatives in a 2D plane
-    VFPEvaluation nn[2][2];
+    VFPEvaluationAdb nn[2][2];
 
 
     //Pick out nearest neighbors (nn) to our evaluation point
@@ -495,7 +501,7 @@ inline VFPEvaluation interpolate(
 
 
 
-inline VFPEvaluation bhp(const VFPProdTable* table,
+inline VFPEvaluationAdb bhp(const VFPProdTable* table,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -514,7 +520,7 @@ inline VFPEvaluation bhp(const VFPProdTable* table,
     auto gfr_i = detail::findInterpData( gfr, table->getGFRAxis());
     auto alq_i = detail::findInterpData( alq, table->getALQAxis());
 
-    detail::VFPEvaluation retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    detail::VFPEvaluationAdb retval = detail::interpolate(table->getTable(), flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
     return retval;
 }
@@ -523,7 +529,7 @@ inline VFPEvaluation bhp(const VFPProdTable* table,
 
 
 
-inline VFPEvaluation bhp(const VFPInjTable* table,
+inline VFPEvaluationAdb bhp(const VFPInjTable* table,
         const double& aqua,
         const double& liquid,
         const double& vapour,
@@ -536,7 +542,7 @@ inline VFPEvaluation bhp(const VFPInjTable* table,
     auto thp_i = detail::findInterpData(thp, table->getTHPAxis());
 
     //Then perform the interpolation itself
-    detail::VFPEvaluation retval = detail::interpolate(table->getTable(), flo_i, thp_i);
+    detail::VFPEvaluationAdb retval = detail::interpolate(table->getTable(), flo_i, thp_i);
 
     return retval;
 }
@@ -561,6 +567,76 @@ const T* getTable(const std::map<int, T*> tables, int table_id) {
         return entry->second;
     }
 }
+
+
+
+
+
+
+
+
+
+
+/**
+ * Sets block_pattern to be the "union of x.blockPattern() and block_pattern".
+ */
+inline void extendBlockPattern(const ADB& x, std::vector<int>& block_pattern) {
+    std::vector<int> x_block_pattern = x.blockPattern();
+
+    if (x_block_pattern.empty()) {
+        return;
+    }
+    else {
+        if (block_pattern.empty()) {
+            block_pattern = x_block_pattern;
+            return;
+        }
+        else {
+            if (x_block_pattern != block_pattern) {
+                OPM_THROW(std::logic_error, "Block patterns do not match");
+            }
+        }
+    }
+}
+
+/**
+ * Finds the common block pattern for all inputs
+ */
+inline std::vector<int> commonBlockPattern(
+        const ADB& x1,
+        const ADB& x2,
+        const ADB& x3,
+        const ADB& x4) {
+    std::vector<int> block_pattern;
+
+    extendBlockPattern(x1, block_pattern);
+    extendBlockPattern(x2, block_pattern);
+    extendBlockPattern(x3, block_pattern);
+    extendBlockPattern(x4, block_pattern);
+
+    return block_pattern;
+}
+
+inline std::vector<int> commonBlockPattern(
+        const ADB& x1,
+        const ADB& x2,
+        const ADB& x3,
+        const ADB& x4,
+        const ADB& x5) {
+    std::vector<int> block_pattern = commonBlockPattern(x1, x2, x3, x4);
+    extendBlockPattern(x5, block_pattern);
+
+    return block_pattern;
+}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -600,6 +676,123 @@ VFPInjTable::FLO_TYPE getType(const VFPInjTable* table) {
 
 
 
+
+/**
+ * Returns the actual ADB for the type of FLO/GFR/WFR type
+ */
+template <typename TYPE>
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour, TYPE type);
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPProdTable::FLO_TYPE type) {
+    return detail::getFlo(aqua, liquid, vapour, type);
+}
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPProdTable::WFR_TYPE type) {
+    return detail::getWFR(aqua, liquid, vapour, type);
+}
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPProdTable::GFR_TYPE type) {
+    return detail::getGFR(aqua, liquid, vapour, type);
+}
+
+template <>
+inline
+ADB getValue(
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour,
+        VFPInjTable::FLO_TYPE type) {
+    return detail::getFlo(aqua, liquid, vapour, type);
+}
+
+/**
+ * Given m wells and n types of VFP variables (e.g., FLO = {FLO_OIL, FLO_LIQ}
+ * this function combines the n types of ADB objects, so that each of the
+ * m wells gets the right ADB.
+ * @param TYPE Type of variable to return, e.g., FLO_TYPE, WFR_TYPE, GFR_TYPE
+ * @param TABLE Type of table to use, e.g., VFPInjTable, VFPProdTable.
+ */
+template <typename TYPE, typename TABLE>
+ADB combineADBVars(const std::vector<const TABLE*>& well_tables,
+        const ADB& aqua,
+        const ADB& liquid,
+        const ADB& vapour) {
+
+    const int num_wells = static_cast<int>(well_tables.size());
+    assert(aqua.size() == num_wells);
+    assert(liquid.size() == num_wells);
+    assert(vapour.size() == num_wells);
+
+    //Caching variable for flo/wfr/gfr
+    std::map<TYPE, ADB> map;
+
+    //Indexing variable used when combining the different ADB types
+    std::map<TYPE, std::vector<int> > elems;
+
+    //Compute all of the different ADB types,
+    //and record which wells use which types
+    for (int i=0; i<num_wells; ++i) {
+        const TABLE* table = well_tables[i];
+
+        //Only do something if this well is under THP control
+        if (table != NULL) {
+            TYPE type = getType<TYPE>(table);
+
+            //"Caching" of flo_type etc: Only calculate used types
+            //Create type if it does not exist
+            if (map.find(type) == map.end()) {
+                map.insert(std::pair<TYPE, ADB>(
+                        type,
+                        detail::getValue<TYPE>(aqua, liquid, vapour, type)
+                        ));
+            }
+
+            //Add the index for assembly later in gather_vars
+            elems[type].push_back(i);
+        }
+    }
+
+    //Loop over all types of ADB variables, and combine them
+    //so that each well gets the proper variable
+    ADB retval = ADB::constant(ADB::V::Zero(num_wells));
+    for (const auto& entry : elems) {
+        const auto& key = entry.first;
+        const auto& value = entry.second;
+
+        //Get the ADB for this type of variable
+        assert(map.find(key) != map.end());
+        const ADB& values = map.find(key)->second;
+
+        //Get indices to all elements that should use this ADB
+        const std::vector<int>& current = value;
+
+        //Add these elements to retval
+        retval = retval + superset(subset(values, current), current, values.size());
+    }
+
+    return retval;
+}
 
 /**
  * Helper function that finds x for a given value of y for a line
@@ -775,4 +968,4 @@ inline double findTHP(
 
 
 
-#endif /* OPM_AUTODIFF_VFPHELPERS_HPP_ */
+#endif /* OPM_AUTODIFF_VFPHELPERS_ADB_HPP_ */

@@ -46,9 +46,9 @@
 #include <opm/parser/eclipse/EclipseState/Tables/VFPProdTable.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
-#include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/VFPHelpers.hpp>
+#include <opm/autodiff/VFPPropertiesAdb.hpp>
+#include <opm/autodiff/VFPProdPropertiesAdb.hpp>
+#include <opm/autodiff/VFPHelpersAdb.hpp>
 
 
 
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_SUITE_END() // HelperTests
 
 
 struct ConversionFixture {
-    typedef Opm::VFPProdProperties::ADB ADB;
+    typedef Opm::VFPProdPropertiesAdb::ADB ADB;
 
     ConversionFixture() :
             num_wells(5),
@@ -288,8 +288,8 @@ BOOST_AUTO_TEST_SUITE_END() // unit tests
  * values data is given at
  */
 struct TrivialFixture {
-    typedef Opm::VFPProdProperties::ADB ADB;
-    typedef Opm::detail::VFPEvaluation VFPEvaluation;
+    typedef Opm::VFPProdPropertiesAdb::ADB ADB;
+    typedef Opm::detail::VFPEvaluationAdb VFPEvaluation;
 
     TrivialFixture() : table_ids(1, 1),
             thp_axis{0.0, 1.0},
@@ -395,7 +395,7 @@ struct TrivialFixture {
                    data);
 
         //Initialize properties that use the table
-        properties.reset(new Opm::VFPProdProperties(&table));
+        properties.reset(new Opm::VFPProdPropertiesAdb(&table));
     }
 
 
@@ -409,7 +409,7 @@ struct TrivialFixture {
         return adb;
     }
 
-    std::shared_ptr<Opm::VFPProdProperties> properties;
+    std::shared_ptr<Opm::VFPProdPropertiesAdb> properties;
     Opm::VFPProdTable table;
     std::vector<int> table_ids;
 
@@ -468,7 +468,7 @@ BOOST_AUTO_TEST_CASE(GetTable)
     ADB qs_adb = ADB::constant(qs_adb_v);
 
     //Check that our reference has not changed
-    Opm::detail::VFPEvaluation ref = Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
+    Opm::detail::VFPEvaluationAdb ref = Opm::detail::bhp(&table, aqua_d, liquid_d, vapour_d, thp_d, alq_d);
     BOOST_CHECK_CLOSE(ref.value, 1.0923565702101556,  max_d_tol);
     BOOST_CHECK_CLOSE(ref.dthp,  0.13174065498177251, max_d_tol);
     BOOST_CHECK_CLOSE(ref.dwfr, -1.2298177745501071,  max_d_tol);
@@ -1054,7 +1054,7 @@ VFPPROD \n\
     Opm::VFPProdTable table;
     table.init(deck.getKeyword("VFPPROD", 0), units);
 
-    Opm::VFPProdProperties properties(&table);
+    Opm::VFPProdPropertiesAdb properties(&table);
 
     const int n = 5; //Number of points to check per axis
     double bhp_sad = 0.0; //Sum of absolute difference
@@ -1117,7 +1117,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     Opm::VFPProdTable table;
     table.init(deck.getKeyword("VFPPROD", 0), units);
 
-    Opm::VFPProdProperties properties(&table);
+    Opm::VFPProdPropertiesAdb properties(&table);
 
     //Do some rudimentary testing
     //Get the BHP as a function of rate, thp, wfr, gfr, alq

@@ -47,6 +47,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/VFPProperties.cpp
   opm/autodiff/VFPProdProperties.cpp
   opm/autodiff/VFPInjProperties.cpp
+  opm/autodiff/VFPPropertiesAdb.cpp
+  opm/autodiff/VFPProdPropertiesAdb.cpp
+  opm/autodiff/VFPInjPropertiesAdb.cpp
   opm/autodiff/WellMultiSegment.cpp
   opm/autodiff/MultisegmentWells.cpp
   opm/autodiff/MissingFeatures.cpp
@@ -70,7 +73,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/ensureDirectoryExists.cpp
   opm/simulators/SimulatorCompressibleTwophase.cpp
   opm/simulators/SimulatorIncompTwophase.cpp
-  opm/simulators/WellSwitchingLogger.cpp
+  opm/autodiff/WellSwitchingLogger.cpp
   opm/simulators/vtk/writeVtkData.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
@@ -238,6 +241,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/VFPHelpers.hpp
   opm/autodiff/VFPProdProperties.hpp
   opm/autodiff/VFPInjProperties.hpp
+  opm/autodiff/VFPPropertiesAdb.hpp
+  opm/autodiff/VFPHelpersAdb.hpp
+  opm/autodiff/VFPProdPropertiesAdb.hpp
+  opm/autodiff/VFPInjPropertiesAdb.hpp
   opm/autodiff/WellStateMultiSegment.hpp
   opm/autodiff/WellMultiSegment.hpp
   opm/autodiff/MultisegmentWells.hpp
@@ -290,7 +297,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/SimulatorCompressibleTwophase.hpp
   opm/simulators/SimulatorIncompTwophase.hpp
   opm/simulators/thresholdPressures.hpp
-  opm/simulators/WellSwitchingLogger.hpp
+  opm/autodiff/WellSwitchingLogger.hpp
   opm/simulators/vtk/writeVtkData.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeStepping.hpp

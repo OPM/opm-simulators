@@ -35,9 +35,9 @@
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
-#include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/VFPInjProperties.hpp>
+#include <opm/autodiff/VFPPropertiesAdb.hpp>
+#include <opm/autodiff/VFPProdPropertiesAdb.hpp>
+#include <opm/autodiff/VFPInjPropertiesAdb.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/linalg/LinearSolverInterface.hpp>

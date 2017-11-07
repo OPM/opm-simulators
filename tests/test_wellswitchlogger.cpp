@@ -9,7 +9,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/WellSwitchingLogger.hpp>
+#include <opm/autodiff/WellSwitchingLogger.hpp>
 
 #if HAVE_MPI
 class MPIError {

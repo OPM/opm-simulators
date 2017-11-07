@@ -19,7 +19,7 @@
 */
 
 
-#include <opm/autodiff/MSWellHelpers.hpp>
+#include "MSWellHelpers.hpp"
 
 namespace Opm
 {

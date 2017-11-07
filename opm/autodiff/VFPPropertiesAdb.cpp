@@ -19,29 +19,29 @@
 
 #include "config.h"
 
-#include "VFPProperties.hpp"
-#include "VFPProdProperties.hpp"
-#include "VFPInjProperties.hpp"
+#include <opm/autodiff/VFPPropertiesAdb.hpp>
+#include <opm/autodiff/VFPProdPropertiesAdb.hpp>
+#include <opm/autodiff/VFPInjPropertiesAdb.hpp>
 
 namespace Opm {
 
 
-VFPProperties::VFPProperties() {
+VFPPropertiesAdb::VFPPropertiesAdb() {
 }
 
-VFPProperties::VFPProperties(const VFPInjTable* inj_table, const VFPProdTable* prod_table) {
+VFPPropertiesAdb::VFPPropertiesAdb(const VFPInjTable* inj_table, const VFPProdTable* prod_table) {
     if (inj_table != NULL) {
-        m_inj.reset(new VFPInjProperties(inj_table));
+        m_inj.reset(new VFPInjPropertiesAdb(inj_table));
     }
     if (prod_table != NULL) {
-        m_prod.reset(new VFPProdProperties(prod_table));
+        m_prod.reset(new VFPProdPropertiesAdb(prod_table));
     }
 }
 
-VFPProperties::VFPProperties(const std::map<int, VFPInjTable>& inj_tables,
+VFPPropertiesAdb::VFPPropertiesAdb(const std::map<int, VFPInjTable>& inj_tables,
                              const std::map<int, VFPProdTable>& prod_tables) {
-    m_inj.reset(new VFPInjProperties(inj_tables));
-    m_prod.reset(new VFPProdProperties(prod_tables));
+    m_inj.reset(new VFPInjPropertiesAdb(inj_tables));
+    m_prod.reset(new VFPProdPropertiesAdb(prod_tables));
 }
 
 

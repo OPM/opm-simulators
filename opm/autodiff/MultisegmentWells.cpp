@@ -226,7 +226,7 @@ namespace Opm {
     MultisegmentWells::init(const BlackoilPropsAdFromDeck* fluid_arg,
                             const std::vector<bool>* active_arg,
                             const std::vector<PhasePresence>* pc_arg,
-                            const VFPProperties*  vfp_properties_arg,
+                            const VFPPropertiesAdb*  vfp_properties_arg,
                             const double gravity_arg,
                             const Vector& depth_arg)
     {

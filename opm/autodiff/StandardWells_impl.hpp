@@ -22,8 +22,8 @@
 #include <opm/autodiff/StandardWells.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 
-#include <opm/autodiff/VFPInjProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
+#include <opm/autodiff/VFPInjPropertiesAdb.hpp>
+#include <opm/autodiff/VFPProdPropertiesAdb.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
 
 
@@ -95,7 +95,7 @@ namespace Opm
     StandardWells::init(const BlackoilPropsAdFromDeck* fluid_arg,
                         const std::vector<bool>* active_arg,
                         const std::vector<PhasePresence>* pc_arg,
-                        const VFPProperties*  vfp_properties_arg,
+                        const VFPPropertiesAdb*  vfp_properties_arg,
                         const double gravity_arg,
                         const Vector& depth_arg)
     {
