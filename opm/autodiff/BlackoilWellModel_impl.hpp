@@ -3,6 +3,7 @@
 
 namespace Opm {
 
+
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
     BlackoilWellModel(Simulator& ebosSimulator,
@@ -58,7 +59,7 @@ namespace Opm {
                                                 Opm::UgGridHelpers::cell2Faces(grid),
                                                 Opm::UgGridHelpers::beginFaceCentroids(grid),
                                                 dynamic_list_econ_limited_,
-                                                grid.comm().size()>1,
+                                                grid.comm().size() > 1,
                                                 defunct_well_names) );
 	
         // Wells are active if they are active wells on at least
@@ -68,7 +69,7 @@ namespace Opm {
 
         // The well state initialize bhp with the cell pressure in the top cell.
         // We must therefore provide it with updated cell pressures
-        size_t nc = Opm::UgGridHelpers::numCells(grid);
+        size_t nc = number_of_cells_;
         std::vector<double> cellPressures(nc, 0.0);
         ElementContext elemCtx(ebosSimulator_);
         const auto& gridView = ebosSimulator_.gridManager().gridView();
@@ -136,19 +137,61 @@ namespace Opm {
                                    eclState.getTableManager().getVFPInjTables(),
                                    eclState.getTableManager().getVFPProdTables()) );
 
-        // update the previous well state. This is used to restart failed restarts.
+        // update the previous well state. This is used to restart failed steps.
         previous_well_state_ = well_state_;
 
 
     }
 
 
+    // called at the beginning of a time step
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    beginTimeStep() {
+        well_state_ = previous_well_state_;
 
+        if (wellCollection().havingVREPGroups() ) {
+            rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+
+        }
+    }
+
+    // only use this for restart.
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    setRestartWellState(const WellState& well_state) { previous_well_state_ = well_state; }
+
+    // called at the end of a report step
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    endReportStep() {
+        // update the list contanining information of closed wells
+        // and connections due to economical limits
+        // Used by the wellManager
+        updateListEconLimited(dynamic_list_econ_limited_);
+    }
+
+    // called at the end of a report step
+    template<typename TypeTag>
+    const SimulatorReport&
+    BlackoilWellModel<TypeTag>::
+    lastReport() const {return last_report_; }
+
+    // called at the end of a time step
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    timeStepSucceeded() {
+        previous_well_state_ = well_state_;
+    }
 
     template<typename TypeTag>
     std::vector<typename BlackoilWellModel<TypeTag>::WellInterfacePtr >
     BlackoilWellModel<TypeTag>::
-    createWellContainer(const int time_step)
+    createWellContainer(const int time_step) const
     {
         std::vector<WellInterfacePtr> well_container;
 
@@ -202,16 +245,14 @@ namespace Opm {
 
         last_report_ = SimulatorReport();
 
+        if ( ! wellsActive() ) {
+            return;
+        }
+
         updatePerforationIntensiveQuantities();
 
         if (iterationIdx == 0) {
             prepareTimeStep();
-        }
-
-
-
-        if ( ! wellsActive() ) {
-            return;
         }
 
         updateWellControls();
@@ -669,6 +710,9 @@ namespace Opm {
 
 
 
+
+
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -726,10 +770,6 @@ namespace Opm {
         }
     }
 
-
-
-
-
     template<typename TypeTag>
     const WellCollection&
     BlackoilWellModel<TypeTag>::
@@ -746,8 +786,15 @@ namespace Opm {
         return wells_manager_->wellCollection();
     }
 
+    template<typename TypeTag>
+    const typename BlackoilWellModel<TypeTag>::WellState&
+    BlackoilWellModel<TypeTag>::
+    wellState() const { return well_state_; }
 
-
+    template<typename TypeTag>
+    const typename BlackoilWellModel<TypeTag>::WellState&
+    BlackoilWellModel<TypeTag>::
+    wellState(const WellState& well_state OPM_UNUSED) const { return wellState(); }
 
 
     template<typename TypeTag>
@@ -1001,6 +1048,81 @@ namespace Opm {
     {
         for (const auto& well : well_container_) {
             well->updatePrimaryVariables(well_state_);
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::extractLegacyCellPvtRegionIndex_()
+    {
+        const auto& grid = ebosSimulator_.gridManager().grid();
+        const auto& eclProblem = ebosSimulator_.problem();
+        const unsigned numCells = grid.size(/*codim=*/0);
+
+        pvt_region_idx_.resize(numCells);
+        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            pvt_region_idx_[cellIdx] =
+                eclProblem.pvtRegionIndex(cellIdx);
+        }
+    }
+
+    // The number of components in the model.
+    template<typename TypeTag>
+    int
+    BlackoilWellModel<TypeTag>::numComponents() const
+    {
+        if (numPhases() == 2) {
+            return 2;
+        }
+        int numComp = FluidSystem::numComponents;
+        if (has_solvent_) {
+            numComp ++;
+        }
+
+        return numComp;
+    }
+
+    template<typename TypeTag>
+    int
+    BlackoilWellModel<TypeTag>:: numWells() const
+    {
+        return wells()->number_of_wells;
+    }
+
+    template<typename TypeTag>
+    int
+    BlackoilWellModel<TypeTag>:: numPhases() const
+    {
+        return wells()->number_of_phases;
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::extractLegacyDepth_()
+    {
+        const auto& grid = ebosSimulator_.gridManager().grid();
+        const unsigned numCells = grid.size(/*codim=*/0);
+
+        depth_.resize(numCells);
+        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
+            depth_[cellIdx] =
+                grid.cellCenterDepth(cellIdx);
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updatePerforationIntensiveQuantities() {
+        ElementContext elemCtx(ebosSimulator_);
+        const auto& gridView = ebosSimulator_.gridView();
+        const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+        for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
+             elemIt != elemEndIt;
+             ++elemIt)
+        {
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
     }
 

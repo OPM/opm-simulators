@@ -122,44 +122,31 @@ namespace Opm {
 
             // return all the wells.
             const WellCollection& wellCollection() const;
+            // return non const reference to all the wells.
             WellCollection& wellCollection();
 
             // return the internal well state, ignore the passed one.
             // Used by the legacy code to make it compatible with the legacy well models.
-            const WellState& wellState(const WellState& well_state OPM_UNUSED) const { return wellState(); }
+            const WellState& wellState(const WellState& well_state OPM_UNUSED) const;
 
             // return the internal well state
-            const WellState& wellState() const { return well_state_; }
+            const WellState& wellState() const;
 
             // only use this for restart.
-            void setRestartWellState(const WellState& well_state) { previous_well_state_ = well_state; }
+            void setRestartWellState(const WellState& well_state);
 
             // called at the beginning of a time step
-            void beginTimeStep() {
-                well_state_ = previous_well_state_;
-
-                if (wellCollection().havingVREPGroups() ) {
-                    rateConverter_->template defineState<ElementContext>(ebosSimulator_);
-
-                }
-            }
+            void beginTimeStep();
             // called at the end of a time step
-            void timeStepSucceeded() {
-                previous_well_state_ = well_state_;
-            }
+            void timeStepSucceeded();
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
 
             // called at the end of a report step
-            void endReportStep() {
-                // update the list contanining information of closed wells
-                // and connections due to ecnomical limits
-                // Used by the wellManager
-                updateListEconLimited(dynamic_list_econ_limited_);
-            }
+            void endReportStep();
 
-            const SimulatorReport& lastReport() const {return last_report_; }
+            const SimulatorReport& lastReport() const;
 
         protected:
 
@@ -179,7 +166,7 @@ namespace Opm {
             using ConvergenceReport = typename WellInterface<TypeTag>::ConvergenceReport;
 
             // create the well container
-            std::vector<WellInterfacePtr > createWellContainer(const int time_step);
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step) const;
 
             WellState well_state_;
             WellState previous_well_state_;
@@ -250,28 +237,11 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
 
             // The number of components in the model.
-            int numComponents() const
-            {
-                if (numPhases() == 2) {
-                    return 2;
-                }
-                int numComp = FluidSystem::numComponents;
-                if (has_solvent_) {
-                    numComp ++;
-                }
+            int numComponents() const;
 
-                return numComp;
-            }
+            int numWells() const;
 
-            int numWells() const
-            {
-                return wells()->number_of_wells;
-            }
-
-            int numPhases() const
-            {
-                return wells()->number_of_phases;
-            }
+            int numPhases() const;
 
 
             int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
@@ -289,30 +259,9 @@ namespace Opm {
 
             void computeRESV(const std::size_t step);
 
-            void extractLegacyCellPvtRegionIndex_()
-            {
-                const auto& grid = ebosSimulator_.gridManager().grid();
-                const auto& eclProblem = ebosSimulator_.problem();
-                const unsigned numCells = grid.size(/*codim=*/0);
+            void extractLegacyCellPvtRegionIndex_();
 
-                pvt_region_idx_.resize(numCells);
-                for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                    pvt_region_idx_[cellIdx] =
-                        eclProblem.pvtRegionIndex(cellIdx);
-                }
-            }
-
-            void extractLegacyDepth_()
-            {
-                const auto& grid = ebosSimulator_.gridManager().grid();
-                const unsigned numCells = grid.size(/*codim=*/0);
-
-                depth_.resize(numCells);
-                for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-                    depth_[cellIdx] =
-                        grid.cellCenterDepth(cellIdx);
-                }
-            }
+            void extractLegacyDepth_();
 
             /// return true if wells are available in the reservoir
             bool wellsActive() const;
@@ -325,18 +274,7 @@ namespace Opm {
             /// upate the dynamic lists related to economic limits
             void updateListEconLimited(DynamicListEconLimited& list_econ_limited) const;
 
-            void updatePerforationIntensiveQuantities() {
-                ElementContext elemCtx(ebosSimulator_);
-                const auto& gridView = ebosSimulator_.gridView();
-                const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
-                for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-                     elemIt != elemEndIt;
-                     ++elemIt)
-                {
-                    elemCtx.updatePrimaryStencil(*elemIt);
-                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                }
-            }
+            void updatePerforationIntensiveQuantities();
 
         };
 
