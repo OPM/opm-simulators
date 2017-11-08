@@ -203,12 +203,24 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const SimulatorTimerInterface& /*timer*/,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& /*reservoir_state*/,
                          const WellState& /* well_state */)
         {
             if ( wellModel().wellCollection()->havingVREPGroups() ) {
                 updateRateConverter();
+            }
+
+            // update the solution variables in ebos
+
+            // if the last time step failed we need to update the curent solution
+            // and recalculate the Intesive Quantities.
+            if ( timer.lastStepFailed() ) {
+                ebosSimulator_.model().solution( 0 /* timeIdx */ ) = ebosSimulator_.model().solution( 1 /* timeIdx */ );
+                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+            } else {
+                // set the initial solution.
+                ebosSimulator_.model().solution( 1 /* timeIdx */ ) = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             }
 
             unsigned numDof = ebosSimulator_.model().numGridDof();
@@ -329,7 +341,7 @@ namespace Opm {
 
                 // Apply the update, with considering model-dependent limitations and
                 // chopping of the update.
-                updateState(x,iteration);
+                updateState(x);
 
                 report.update_time += perfTimer.stop();
             }
@@ -605,8 +617,7 @@ namespace Opm {
         /// \param[in]      dx                updates to apply to primary variables
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void updateState(const BVector& dx,
-                         const int iterationIdx)
+        void updateState(const BVector& dx)
         {
             using namespace Opm::AutoDiffGrid;
 
@@ -617,12 +628,6 @@ namespace Opm {
             const auto& gridView = ebosSimulator_.gridView();
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
             SolutionVector& solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
-
-            // Store the initial solution.
-            if( iterationIdx == 0 )
-            {
-                ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-            }
 
             for (auto elemIt = gridView.template begin</*codim=*/0>();
                  elemIt != elemEndIt;
@@ -1610,12 +1615,6 @@ namespace Opm {
             if (ebosSimulator_.model().newtonMethod().numIterations() == 0)
             {
                 ebosSimulator_.problem().beginTimeStep();
-            }
-            // if the last time step failed we need to update the solution varables in ebos
-            // and recalculate the Intesive Quantities.
-            if ( timer.lastStepFailed() && iterationIdx == 0  ) {
-                ebosSimulator_.model().solution( 0 /* timeIdx */ ) = ebosSimulator_.model().solution( 1 /* timeIdx */ );
-                ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
             }
 
             ebosSimulator_.problem().beginIteration();
