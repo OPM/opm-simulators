@@ -64,6 +64,11 @@ namespace Opm
         using WellState = WellStateFullyImplicitBlackoil;
 
         typedef BlackoilModelParameters ModelParameters;
+
+        static const int Water = BlackoilPhases::Aqua;
+        static const int Oil = BlackoilPhases::Liquid;
+        static const int Gas = BlackoilPhases::Vapour;
+
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) Simulator;
         typedef typename GET_PROP_TYPE(TypeTag, FluidSystem) FluidSystem;

@@ -728,8 +728,7 @@ namespace Opm
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
                                            eclState(),
-                                           *output_writer_,
-                                           defunctWellNames()));
+                                           *output_writer_));
         }
 
     private:
@@ -805,9 +804,6 @@ namespace Opm
 
         Scalar gravity() const
         { return ebosProblem().gravity()[2]; }
-
-        std::unordered_set<std::string> defunctWellNames() const
-        { return ebosSimulator_->gridManager().defunctWellNames(); }
 
         data::Solution computeLegacySimProps_()
         {

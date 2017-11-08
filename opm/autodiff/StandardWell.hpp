@@ -67,6 +67,9 @@ namespace Opm
         using Base::has_solvent;
         using Base::has_polymer;
         using Base::name;
+        using Base::Water;
+        using Base::Oil;
+        using Base::Gas;
 
         // TODO: with flow_ebos，for a 2P deck, // TODO: for the 2p deck, numEq will be 3, a dummy phase is already added from the reservoir side.
         // it will cause problem here without processing the dummy phase.

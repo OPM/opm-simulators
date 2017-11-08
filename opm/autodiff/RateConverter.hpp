@@ -21,13 +21,12 @@
 #ifndef OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 #define OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 
-#include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
-
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/linalg/ParallelIstlInformation.hpp>
 
+#include <dune/grid/common/gridenums.hh>
 #include <algorithm>
 #include <cmath>
 #include <memory>

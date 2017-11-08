@@ -116,6 +116,8 @@ namespace Opm {
         using Base::numPhases;
         using Base::numMaterials;
         using Base::materialName;
+        using Base::wellModel;
+
 
     protected:
         // ---------  Data members  ---------
@@ -143,7 +145,6 @@ namespace Opm {
         using Base::vfp_properties_;
         using Base::well_model_;
 
-        using Base::wellModel;
         // using Base::wells;
         using Base::wellsActive;
         using Base::updatePrimalVariableFromState;
