@@ -1045,8 +1045,7 @@ namespace Opm
                 miscSummaryData["TCPU"] = totalSolverTime;
             }
         }
-
-        writeTimeStepWithCellProperties(timer, localState, localCellData, localWellState, miscSummaryData, extraRestartData, substep);
+        writeTimeStepWithCellProperties(timer, localState, localCellData, physicalModel.wellModel().wellState(localWellState), miscSummaryData, extraRestartData, substep);
     }
 }
 #endif

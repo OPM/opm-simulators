@@ -29,15 +29,8 @@
 
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
-#include <opm/autodiff/AutoDiffBlock.hpp>
-#include <opm/autodiff/AutoDiffHelpers.hpp>
 #include <opm/autodiff/GridHelpers.hpp>
-#include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/GeoProps.hpp>
-#include <opm/autodiff/WellDensitySegmented.hpp>
-#include <opm/autodiff/VFPProperties.hpp>
-#include <opm/autodiff/VFPProdProperties.hpp>
-#include <opm/autodiff/VFPInjProperties.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
@@ -136,7 +129,7 @@ namespace Opm {
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
-            SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
+            SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
         typedef Opm::FIPData FIPDataType;
 
@@ -155,7 +148,6 @@ namespace Opm {
         BlackoilModelEbos(Simulator& ebosSimulator,
                           const ModelParameters& param,
                           BlackoilWellModel<TypeTag>& well_model,
-                          RateConverterType& rate_converter,
                           const NewtonIterationBlackoilInterface& linsolver,
                           const bool terminal_output
                           )
@@ -163,9 +155,6 @@ namespace Opm {
         , grid_(ebosSimulator_.gridManager().grid())
         , istlSolver_( dynamic_cast< const ISTLSolverType* > (&linsolver) )
         , phaseUsage_(phaseUsageFromDeck(eclState()))
-        , vfp_properties_(
-            eclState().getTableManager().getVFPInjTables(),
-            eclState().getTableManager().getVFPProdTables())
         , active_(detail::activePhases(phaseUsage_))
         , has_disgas_(FluidSystem::enableDissolvedGas())
         , has_vapoil_(FluidSystem::enableVaporizedOil())
@@ -174,19 +163,12 @@ namespace Opm {
         , param_( param )
         , well_model_ (well_model)
         , terminal_output_ (terminal_output)
-        , rate_converter_(rate_converter)
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
         , isBeginReportStep_(false)
         {
-            // Wells are active if they are active wells on at least
-            // one process.
-            int wellsActive = localWellsActive() ? 1 : 0;
-            wellsActive = grid_.comm().max(wellsActive);
-            wellModel().setWellsActive( wellsActive );
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
-            wellModel().setVFPProperties(&vfp_properties_);
             if (!istlSolver_)
             {
                 OPM_THROW(std::logic_error,"solver down cast to ISTLSolver failed");
@@ -207,13 +189,12 @@ namespace Opm {
                          const ReservoirState& /*reservoir_state*/,
                          const WellState& /* well_state */)
         {
-            if ( wellModel().wellCollection()->havingVREPGroups() ) {
-                updateRateConverter();
-            }
 
             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
+
+            wellModel().beginTimeStep();
         }
 
 
@@ -231,7 +212,7 @@ namespace Opm {
                                            const SimulatorTimerInterface& timer,
                                            NonlinearSolverType& nonlinear_solver,
                                            ReservoirState& /*reservoir_state*/,
-                                           WellState& well_state)
+                                           WellState& /*well_state*/)
         {
             SimulatorReport report;
             failureReport_ = SimulatorReport();
@@ -249,7 +230,7 @@ namespace Opm {
             report.total_linearizations = 1;
 
             try {
-                report += assemble(timer, iteration, well_state);
+                report += assemble(timer, iteration);
                 report.assemble_time += perfTimer.stop();
             }
             catch (...) {
@@ -266,8 +247,8 @@ namespace Opm {
             report.converged = getConvergence(timer, iteration,residual_norms) && iteration > nonlinear_solver.minIter();
 
              // checking whether the group targets are converged
-             if (wellModel().wellCollection()->groupControlActive()) {
-                  report.converged = report.converged && wellModel().wellCollection()->groupTargetConverged(well_state.wellRates());
+             if (wellModel().wellCollection().groupControlActive()) {
+                  report.converged = report.converged && wellModel().wellCollection().groupTargetConverged(wellModel().wellState().wellRates());
              }
 
             report.update_time += perfTimer.stop();
@@ -282,7 +263,6 @@ namespace Opm {
 
                 // Compute the nonlinear update.
                 const int nc = AutoDiffGrid::numCells(grid_);
-                const int nw = numWells();
                 BVector x(nc);
 
                 try {
@@ -304,11 +284,7 @@ namespace Opm {
                 // handling well state update before oscillation treatment is a decision based
                 // on observation to avoid some big performance degeneration under some circumstances.
                 // there is no theorectical explanation which way is better for sure.
-
-                if( nw > 0 )
-                {
-                    wellModel().recoverWellSolutionAndUpdateWellState(x, well_state);
-                }
+                wellModel().recoverWellSolutionAndUpdateWellState(x);
 
                 if (param_.use_update_stabilization_) {
                     // Stabilize the nonlinear update.
@@ -356,6 +332,9 @@ namespace Opm {
             DUNE_UNUSED_PARAMETER(timer);
             DUNE_UNUSED_PARAMETER(reservoir_state);
             DUNE_UNUSED_PARAMETER(well_state);
+
+            wellModel().timeStepSucceeded();
+
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
@@ -363,18 +342,8 @@ namespace Opm {
         /// \param[in, out] well_state        well state variables
         /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
         SimulatorReport assemble(const SimulatorTimerInterface& timer,
-                                 const int iterationIdx,
-                                 WellState& well_state)
+                                 const int iterationIdx)
         {
-            using namespace Opm::AutoDiffGrid;
-
-            SimulatorReport report;
-
-            // when having VREP group control, update the rate converter based on reservoir state
-            if ( wellModel().wellCollection()->havingVREPGroups() ) {
-                updateRateConverter();
-            }
-
             // -------- Mass balance equations --------
             assembleMassBalanceEq(timer, iterationIdx);
 
@@ -383,7 +352,9 @@ namespace Opm {
 
             try
             {
-                report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state);
+                // assembles the well equations and applies the wells to
+                // the reservoir equations as a source term.
+                wellModel().assemble(iterationIdx, dt);
 
                 // apply well residual to the residual.
                 auto& ebosResid = ebosSimulator_.model().linearizer().residual();
@@ -394,7 +365,7 @@ namespace Opm {
                 OPM_THROW(Opm::NumericalProblem,"Error encounted when solving well equations");
             }
 
-            return report;
+            return wellModel().lastReport();
         }
 
         // compute the "relative" change of the solution between time steps
@@ -476,14 +447,6 @@ namespace Opm {
         }
 
 
-        /// The size (number of unknowns) of the nonlinear system of equations.
-        int sizeNonLinear() const
-        {
-            const int nc = Opm::AutoDiffGrid::numCells(grid_);
-            const int nw = numWells();
-            return numComponents() * (nc + nw);
-        }
-
         /// Number of linear iterations used in last call to solveJacobianSystem().
         int linearIterationsLastSolve() const
         {
@@ -497,6 +460,18 @@ namespace Opm {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
+            // J = [A, B; C, D], where A is the reservoir equations, B and C the interaction of well
+            // with the reservoir and D is the wells itself.
+            // The full system is reduced to a number of cells X number of cells system via Schur complement
+            // A -= B^T D^-1 C
+            // Instead of modifying A, the Ax operator is modified. i.e Ax -= B^T D^-1 C x in the WellModelMatrixAdapter.
+            // The residual is modified similarly.
+            // r = [r, r_well], where r is the residual and r_well the well residual.
+            // r -= B^T * D^-1 r_well
+            // Note: Currently the residual is modified in the assembleMassBalanceEq call.
+            // It conceptually belongs here, but moving it changes the solution path for some
+            // unknown reasons.
+
             // set initial guess
             x = 0.0;
 
@@ -504,14 +479,14 @@ namespace Opm {
             if( isParallel() )
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
-                Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
+                Operator opA(ebosJac, wellModel(), istlSolver().parallelInformation() );
                 assert( opA.comm() );
                 istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
             }
             else
             {
                 typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
-                Operator opA(ebosJac, well_model_);
+                Operator opA(ebosJac, wellModel());
                 istlSolver().solve( opA, x, ebosResid );
             }
         }
@@ -916,7 +891,7 @@ namespace Opm {
                 residual_norms.push_back(CNV[compIdx]);
             }
 
-            const bool converged_Well = wellModel().getWellConvergence(ebosSimulator_, B_avg);
+            const bool converged_Well = wellModel().getWellConvergence(B_avg);
 
             bool converged = converged_MB && converged_Well;
 
@@ -1486,7 +1461,6 @@ namespace Opm {
         const Grid&            grid_;
         const ISTLSolverType*  istlSolver_;
         const PhaseUsage phaseUsage_;
-        VFPProperties                   vfp_properties_;
         // For each canonical phase -> true if active
         const std::vector<bool>         active_;
         // Size = # active phases. Maps active -> canonical phase indices.
@@ -1507,9 +1481,6 @@ namespace Opm {
         /// \brief The number of cells of the global grid.
         long int global_nc_;
 
-        // rate converter between the surface volume rates and reservoir voidage rates
-        RateConverterType& rate_converter_;
-
         std::vector<std::vector<double>> residual_norms_history_;
         double current_relaxation_;
         BVector dx_old_;
@@ -1523,15 +1494,6 @@ namespace Opm {
         const BlackoilWellModel<TypeTag>&
         wellModel() const { return well_model_; }
 
-        int numWells() const { return well_model_.numWells(); }
-
-        /// return true if wells are available on this process
-        bool localWellsActive() const { return well_model_.localWellsActive(); }
-
-
-
-
-    public:
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const
         {
             const auto& pu = phaseUsage_;
@@ -1561,15 +1523,6 @@ namespace Opm {
             return phaseIdx;
         }
 
-    private:
-
-        void updateRateConverter()
-        {
-            rate_converter_.defineState<ElementContext>(ebosSimulator_);
-        }
-
-
-    public:
         void beginReportStep()
         {
             isBeginReportStep_ = true;

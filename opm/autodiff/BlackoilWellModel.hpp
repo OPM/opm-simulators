@@ -50,6 +50,7 @@
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/StandardWell.hpp>
 #include <opm/autodiff/MultisegmentWell.hpp>
+#include<opm/autodiff/SimFIBODetails.hpp>
 #include<dune/common/fmatrix.hh>
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/matrixmatrix.hh>
@@ -68,6 +69,10 @@ namespace Opm {
             // ---------      Types      ---------
             typedef WellStateFullyImplicitBlackoil WellState;
             typedef BlackoilModelParameters ModelParameters;
+
+            static const int Water = WellInterface<TypeTag>::Water;
+            static const int Oil = WellInterface<TypeTag>::Oil;
+            static const int Gas = WellInterface<TypeTag>::Gas;
 
             typedef typename GET_PROP_TYPE(TypeTag, Grid)                Grid;
             typedef typename GET_PROP_TYPE(TypeTag, FluidSystem)         FluidSystem;
@@ -88,32 +93,16 @@ namespace Opm {
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
-                SurfaceToReservoirVoidage<BlackoilPropsAdFromDeck::FluidSystem, std::vector<int> >;
+                SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
-            // ---------  Public methods  ---------
-            BlackoilWellModel(const Wells* wells_arg,
-                              WellCollection* well_collection,
-                              const std::vector< const Well* >& wells_ecl,
+            BlackoilWellModel(Simulator& ebosSimulator,
                               const ModelParameters& param,
-                              const RateConverterType& rate_converter,
-                              const bool terminal_output,
-                              const int current_index,
-                              const std::vector<int>& pvt_region_idx);
+                              const bool terminal_output);
 
-            void init(const PhaseUsage phase_usage_arg,
-                      const std::vector<bool>& active_arg,
-                      const double gravity_arg,
-                      const std::vector<double>& depth_arg,
-                      long int global_nc,
-                      const Grid& grid);
-
-            void setVFPProperties(const VFPProperties*  vfp_properties_arg);
-
-
-            SimulatorReport assemble(Simulator& ebosSimulator,
-                                     const int iterationIdx,
-                                     const double dt,
-                                     WellState& well_state);
+            // compute the well fluxes and assemble them in to the reservoir equations as source terms
+            // and in the well equations.
+            void assemble(const int iterationIdx,
+                                     const double dt);
 
             // substract Binv(D)rw from r;
             void apply( BVector& r) const;
@@ -126,44 +115,46 @@ namespace Opm {
 
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
-            void recoverWellSolutionAndUpdateWellState(const BVector& x, WellState& well_state) const;
+            void recoverWellSolutionAndUpdateWellState(const BVector& x);
 
-            int numWells() const;
+            // Check if well equations is converged.
+            bool getWellConvergence(const std::vector<Scalar>& B_avg) const;
 
-            /// return true if wells are available in the reservoir
-            bool wellsActive() const;
+            // return all the wells.
+            const WellCollection& wellCollection() const;
+            // return non const reference to all the wells.
+            WellCollection& wellCollection();
 
-            void setWellsActive(const bool wells_active);
+            // return the internal well state, ignore the passed one.
+            // Used by the legacy code to make it compatible with the legacy well models.
+            const WellState& wellState(const WellState& well_state OPM_UNUSED) const;
 
-            /// return true if wells are available on this process
-            bool localWellsActive() const;
+            // return the internal well state
+            const WellState& wellState() const;
 
-            bool getWellConvergence(const Simulator& ebosSimulator,
-                                    const std::vector<Scalar>& B_avg) const;
+            // only use this for restart.
+            void setRestartWellState(const WellState& well_state);
 
-            /// upate the dynamic lists related to economic limits
-            void updateListEconLimited(const Schedule& schedule,
-                                       const int current_step,
-                                       const Wells* wells_struct,
-                                       const WellState& well_state,
-                                       DynamicListEconLimited& list_econ_limited) const;
+            // called at the beginning of a time step
+            void beginTimeStep();
+            // called at the end of a time step
+            void timeStepSucceeded();
 
-            WellCollection* wellCollection() const;
+            // called at the beginning of a report step
+            void beginReportStep(const int time_step);
 
+            // called at the end of a report step
+            void endReportStep();
+
+            const SimulatorReport& lastReport() const;
 
         protected:
+
+            Simulator& ebosSimulator_;
+            std::unique_ptr<WellsManager> wells_manager_;
+            std::vector< const Well* > wells_ecl_;
+
             bool wells_active_;
-            const Wells*   wells_;
-            const std::vector< const Well* > wells_ecl_;
-
-            // the number of wells in this process
-            // trying not to use things from Wells struct
-            // TODO: maybe a better name to emphasize it is local?
-            const int number_of_wells_;
-
-            const int number_of_phases_;
-
-            const ModelParameters& param_;
 
             using WellInterfacePtr = std::unique_ptr<WellInterface<TypeTag> >;
             // a vector of all the wells.
@@ -175,59 +166,60 @@ namespace Opm {
             using ConvergenceReport = typename WellInterface<TypeTag>::ConvergenceReport;
 
             // create the well container
-            static std::vector<WellInterfacePtr > createWellContainer(const Wells* wells,
-                                                                      const std::vector<const Well*>& wells_ecl,
-                                                                      const bool use_multisegment_well,
-                                                                      const int time_step,
-                                                                      const ModelParameters& param);
+            std::vector<WellInterfacePtr > createWellContainer(const int time_step) const;
 
-            // Well collection is used to enforce the group control
-            WellCollection* well_collection_;
+            WellState well_state_;
+            WellState previous_well_state_;
 
+            const ModelParameters param_;
             bool terminal_output_;
             bool has_solvent_;
             bool has_polymer_;
-            int current_timeIdx_;
-
+            std::vector<int> pvt_region_idx_;
             PhaseUsage phase_usage_;
             std::vector<bool>  active_;
-            const RateConverterType& rate_converter_;
-            const std::vector<int>& pvt_region_idx_;
-
+            size_t global_nc_;
             // the number of the cells in the local grid
-            int number_of_cells_;
+            size_t number_of_cells_;
+            double gravity_;
+            std::vector<double> depth_;
 
-            long int global_nc_;
+            DynamicListEconLimited dynamic_list_econ_limited_;
+            std::unique_ptr<RateConverterType> rateConverter_;
+            std::unique_ptr<VFPProperties> vfp_properties_;
+
+            SimulatorReport last_report_;
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_;
 
-            void updateWellControls(WellState& xw) const;
+            const Wells* wells() const { return wells_manager_->c_wells(); }
 
-            void updateGroupControls(WellState& well_state) const;
+            const Schedule& schedule() const
+            { return ebosSimulator_.gridManager().schedule(); }
+
+            void updateWellControls();
+
+            void updateGroupControls();
 
             // setting the well_solutions_ based on well_state.
-            void updatePrimaryVariables(const WellState& well_state) const;
+            void updatePrimaryVariables();
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
             void computeRepRadiusPerfLength(const Grid& grid);
 
 
-            void computeAverageFormationFactor(const Simulator& ebosSimulator,
-                                               std::vector<double>& B_avg) const;
+            void computeAverageFormationFactor(std::vector<double>& B_avg) const;
 
-            void applyVREPGroupControl(WellState& well_state) const;
+            void applyVREPGroupControl();
 
-            void computeWellVoidageRates(const WellState& well_state,
-                                         std::vector<double>& well_voidage_rates,
+            void computeWellVoidageRates(std::vector<double>& well_voidage_rates,
                                          std::vector<double>& voidage_conversion_coeffs) const;
 
             // Calculating well potentials for each well
             // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
-            void computeWellPotentials(const Simulator& ebosSimulator,
-                                       const WellState& well_state,
-                                       std::vector<double>& well_potentials) const;
+            void computeWellPotentials(std::vector<double>& well_potentials);
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;
 
@@ -238,47 +230,51 @@ namespace Opm {
             // twice at the beginning of the time step
             /// Calculating the explict quantities used in the well calculation. By explicit, we mean they are cacluated
             /// at the beginning of the time step and no derivatives are included in these quantities
-            void calculateExplicitQuantities(const Simulator& ebosSimulator,
-                                            const WellState& xw) const;
+            void calculateExplicitQuantities() const;
 
-            SimulatorReport solveWellEq(Simulator& ebosSimulator,
-                                        const double dt,
-                                        WellState& well_state) const;
+            SimulatorReport solveWellEq(const double dt);
 
             void initPrimaryVariablesEvaluation() const;
 
             // The number of components in the model.
-            int numComponents() const
-            {
-                if (numPhases() == 2) {
-                    return 2;
-                }
-                int numComp = FluidSystem::numComponents;
-                if (has_solvent_) {
-                    numComp ++;
-                }
+            int numComponents() const;
 
-                return numComp;
-            }
+            int numWells() const;
 
             int numPhases() const;
 
+
             int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
 
-            void resetWellControlFromState(const WellState& xw) const;
+            void resetWellControlFromState() const;
 
-            void assembleWellEq(Simulator& ebosSimulator,
-                                const double dt,
-                                WellState& well_state,
-                                bool only_wells) const;
+            void assembleWellEq(const double dt,
+                                bool only_wells);
 
             // some preparation work, mostly related to group control and RESV,
             // at the beginning of each time step (Not report step)
-            void prepareTimeStep(const Simulator& ebos_simulator,
-                                 WellState& well_state) const;
+            void prepareTimeStep();
 
-            void prepareGroupControl(const Simulator& ebos_simulator,
-                                     WellState& well_state) const;
+            void prepareGroupControl();
+
+            void computeRESV(const std::size_t step);
+
+            void extractLegacyCellPvtRegionIndex_();
+
+            void extractLegacyDepth_();
+
+            /// return true if wells are available in the reservoir
+            bool wellsActive() const;
+
+            void setWellsActive(const bool wells_active);
+
+            /// return true if wells are available on this process
+            bool localWellsActive() const;
+
+            /// upate the dynamic lists related to economic limits
+            void updateListEconLimited(DynamicListEconLimited& list_econ_limited) const;
+
+            void updatePerforationIntensiveQuantities();
 
         };
 
