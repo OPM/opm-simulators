@@ -136,7 +136,7 @@ namespace Opm {
             void setRestartWellState(const WellState& well_state);
 
             // called at the beginning of a time step
-            void beginTimeStep();
+            void beginTimeStep(const int timeStepIdx);
             // called at the end of a time step
             void timeStepSucceeded();
 
@@ -207,7 +207,7 @@ namespace Opm {
 
             void setupCompressedToCartesian(const int* global_cell, int number_of_cells, std::map<int,int>& cartesian_to_compressed ) const;
 
-            void computeRepRadiusPerfLength(const Grid& grid);
+            void computeRepRadiusPerfLength();
 
 
             void computeAverageFormationFactor(std::vector<double>& B_avg) const;

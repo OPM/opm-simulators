@@ -185,7 +185,7 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const SimulatorTimerInterface& /*timer*/,
+        void prepareStep(const SimulatorTimerInterface& timer,
                          const ReservoirState& /*reservoir_state*/,
                          const WellState& /* well_state */)
         {
@@ -194,7 +194,7 @@ namespace Opm {
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
-            wellModel().beginTimeStep();
+            wellModel().beginTimeStep(timer.reportStepNum());
         }
 
 

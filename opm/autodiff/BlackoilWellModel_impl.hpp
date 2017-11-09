@@ -107,31 +107,6 @@ namespace Opm {
             }
         }
 
-        // Compute reservoir volumes for RESV controls.
-        rateConverter_.reset(new RateConverterType (phase_usage_,
-                                         std::vector<int>(number_of_cells_, 0)));
-        computeRESV(timeStepIdx);
-
-        // create the well container
-        well_container_ = createWellContainer(timeStepIdx);
-
-        // do the initialization for all the wells
-        // TODO: to see whether we can postpone of the intialization of the well containers to
-        // optimize the usage of the following several member variables
-        for (auto& well : well_container_) {
-            well->init(&phase_usage_, &active_, depth_, gravity_, number_of_cells_);
-        }
-
-        // calculate the efficiency factors for each well
-        calculateEfficiencyFactors();
-
-        if (has_polymer_)
-        {
-            if (PolymerModule::hasPlyshlog()) {
-                computeRepRadiusPerfLength(grid);
-            }
-        }
-
         // compute VFP properties
         vfp_properties_.reset (new VFPProperties (
                                    eclState.getTableManager().getVFPInjTables(),
@@ -148,13 +123,39 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    beginTimeStep() {
+    beginTimeStep(const int timeStepIdx) {
         well_state_ = previous_well_state_;
 
-        if (wellCollection().havingVREPGroups() ) {
-            rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+        // Compute reservoir volumes for RESV controls.
+        rateConverter_.reset(new RateConverterType (phase_usage_,
+                                                    std::vector<int>(number_of_cells_, 0)));
+        computeRESV(timeStepIdx);
 
+        // create the well container
+        // Note:
+        // Re -creating all wells at every time step is not optimal.
+        // We only need to update the RESV control
+        // TODO: Add a method that updates the control directly.
+        // Or even better stop using distr for the RESV control.
+        well_container_ = createWellContainer(timeStepIdx);
+
+        // do the initialization for all the wells
+        // TODO: to see whether we can postpone of the intialization of the well containers to
+        // optimize the usage of the following several member variables
+        for (auto& well : well_container_) {
+            well->init(&phase_usage_, &active_, depth_, gravity_, number_of_cells_);
         }
+
+        // calculate the efficiency factors for each well
+        calculateEfficiencyFactors();
+
+        if (has_polymer_)
+        {
+            if (PolymerModule::hasPlyshlog()) {
+                computeRepRadiusPerfLength();
+            }
+        }
+
     }
 
     // only use this for restart.
@@ -976,10 +977,11 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeRepRadiusPerfLength(const Grid& grid)
+    computeRepRadiusPerfLength()
     {
         // TODO, the function does not work for parallel running
         // to be fixed later.
+        const auto& grid = ebosSimulator_.gridManager().grid();
         const int* global_cell = Opm::UgGridHelpers::globalCell(grid);
 
         std::map<int,int> cartesian_to_compressed;
