@@ -395,11 +395,9 @@ namespace Opm {
 
             try
             {
+                // assembles the well equations and applies the wells to
+                // the reservoir equations as a source term.
                 report = wellModel().assemble(ebosSimulator_, iterationIdx, dt, well_state);
-
-                // apply well residual to the residual.
-                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-                wellModel().apply(ebosResid);
             }
             catch ( const Dune::FMatrixError& e  )
             {
@@ -508,6 +506,18 @@ namespace Opm {
         {
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+
+            // J = [A, B; C, D], where A is the reservoir equations, B and C the interaction of well
+            // with the reservoir and D is the wells itself.
+            // The full system is reduced to a number of cells X number of cells system via Schur complement
+            // A -= B^T D^-1 C
+            // Instead of modifying A, the Ax operator is modified. i.e Ax -= B^T D^-1 C x in the WellModelMatrixAdapter.
+            // The residual is modified similarly.
+            // r = [r, r_well], where r is the residual and r_well the well residual.
+            // r -= B^T * D^-1 r_well
+
+            // apply well residual to the residual.
+            wellModel().apply(ebosResid);
 
             // set initial guess
             x = 0.0;
