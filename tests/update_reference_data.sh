@@ -86,6 +86,12 @@ for test_name in ${tests}; do
       $OPM_DATA_ROOT/polymer_simple2D/opm-simulation-reference/flow_polymer \
       2D_THREEPHASE_POLY_HETER    \
       EGRID INIT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+polymer_simple2D/ \
+      $OPM_DATA_ROOT/polymer_simple2D/opm-simulation-reference/flow \
+      2D_THREEPHASE_POLY_HETER    \
+      EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
   if grep -q "spe3" <<< $test_name
