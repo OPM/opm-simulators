@@ -232,15 +232,16 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel})
+
   add_test_compare_parallel_simulation(CASENAME spe9
                                        FILENAME SPE9_CP_SHORT
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel})
-  # TODO: add flow
+
   add_test_compare_parallel_simulation(CASENAME spe3
                                        FILENAME SPE3CASE1
-                                       SIMULATOR flow_mpi
+                                       SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel})
 endif()
