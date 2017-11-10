@@ -367,10 +367,6 @@ namespace Opm {
                 // assembles the well equations and applies the wells to
                 // the reservoir equations as a source term.
                 wellModel().assemble(iterationIdx, dt);
-
-                // apply well residual to the residual.
-                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-                wellModel().apply(ebosResid);
             }
             catch ( const Dune::FMatrixError& e  )
             {
@@ -480,9 +476,9 @@ namespace Opm {
             // The residual is modified similarly.
             // r = [r, r_well], where r is the residual and r_well the well residual.
             // r -= B^T * D^-1 r_well
-            // Note: Currently the residual is modified in the assembleMassBalanceEq call.
-            // It conceptually belongs here, but moving it changes the solution path for some
-            // unknown reasons.
+
+            // apply well residual to the residual.
+            wellModel().apply(ebosResid);
 
             // set initial guess
             x = 0.0;
