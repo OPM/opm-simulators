@@ -73,8 +73,8 @@ for test_name in ${tests}; do
   if grep -q "msw_2d_h" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_multisegment+msw_2d_h/ \
-      $OPM_DATA_ROOT/msw_2d_h/opm-simulation-reference/flow_multisegment \
+      $configuration/build-opm-simulators/tests/results/flow+msw_2d_h/ \
+      $OPM_DATA_ROOT/msw_2d_h/opm-simulation-reference/flow \
       2D_H__ \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi

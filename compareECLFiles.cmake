@@ -165,12 +165,12 @@ add_test_compareECLFiles(CASENAME spe9group
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
-# TODO: move to flow
 add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
-                         SIMULATOR flow_multisegment
+                         SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${rel_tol}
+                         TEST_ARGS use_multisegment_well=true)
 
 # TODO: add flow
 add_test_compareECLFiles(CASENAME polymer_simple2D
