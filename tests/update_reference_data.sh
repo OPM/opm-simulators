@@ -112,8 +112,8 @@ for test_name in ${tests}; do
   if grep -q "spe5" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_solvent+spe5/ \
-      $OPM_DATA_ROOT/spe5/opm-simulation-reference/flow_solvent \
+      $configuration/build-opm-simulators/tests/results/flow+spe5/ \
+      $OPM_DATA_ROOT/spe5/opm-simulation-reference/flow \
       SPE5CASE1    \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi

@@ -180,10 +180,9 @@ foreach(SIM flow flow_polymer)
                            REL_TOL ${rel_tol})
 endforeach()
 
-# TODO: move to flow
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
-                         SIMULATOR flow_solvent
+                         SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS max_iter=13)
