@@ -12,6 +12,7 @@ copyToReferenceDir () {
   DST_DIR=$2;
   STEM=$3;
   FILETYPES=${@:4};
+  mkdir -p $DST_DIR
 
   for filetype in $FILETYPES; do
     cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
@@ -211,6 +212,13 @@ cd $OPM_DATA_ROOT
 if [ -n "$BRANCH_NAME" ]
 then
   git checkout -b $BRANCH_NAME origin/master
+fi
+
+# Add potential new files
+untracked=`git status | sed '1,/Untracked files/d' | tail -n +3 | head -n -2`
+if [ -n "$untracked" ]
+then
+  git add $untracked
 fi
 
 if [ -z "$REASON" ]
