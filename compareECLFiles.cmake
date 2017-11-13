@@ -169,7 +169,7 @@ add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
+                         REL_TOL ${coarse_rel_tol}
                          TEST_ARGS use_multisegment_well=true)
 
 add_test_compareECLFiles(CASENAME msw_3d_hfa
@@ -184,7 +184,7 @@ foreach(SIM flow flow_polymer)
                            FILENAME 2D_THREEPHASE_POLY_HETER
                            SIMULATOR ${SIM}
                            ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol})
+                           REL_TOL ${coarse_rel_tol})
 endforeach()
 
 add_test_compareECLFiles(CASENAME spe5
@@ -233,6 +233,7 @@ if(MPI_FOUND)
   # Different tolerances for these tests
   set(abs_tol_parallel 0.02)
   set(rel_tol_parallel 1e-5)
+  set(coarse_rel_tol_parallel 1e-2)
 
   add_test_compare_parallel_simulation(CASENAME spe1
                                        FILENAME SPE1CASE2
@@ -250,5 +251,5 @@ if(MPI_FOUND)
                                        FILENAME SPE3CASE1
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${rel_tol_parallel})
+                                       REL_TOL ${coarse_rel_tol_parallel})
 endif()
