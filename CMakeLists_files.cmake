@@ -121,7 +121,6 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow_reorder.cpp
   examples/flow_sequential.cpp
   examples/flow.cpp
-  examples/flow_multisegment.cpp
   examples/flow_solvent.cpp
   examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
@@ -176,8 +175,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilSequentialModel.hpp
   opm/autodiff/BlackoilSolventModel.hpp
   opm/autodiff/BlackoilSolventModel_impl.hpp
-  opm/autodiff/BlackoilMultiSegmentModel.hpp
-  opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
   opm/autodiff/BlackoilReorderingTransportModel.hpp
   opm/autodiff/BlackoilTransportModel.hpp
   opm/autodiff/fastSparseOperations.hpp
@@ -217,8 +214,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilSolvent.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilSolvent_impl.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment_impl.hpp
   opm/autodiff/SimulatorIncompTwophaseAd.hpp
   opm/autodiff/SimulatorSequentialBlackoil.hpp
   opm/autodiff/TransportSolverTwophaseAd.hpp
