@@ -787,9 +787,9 @@ namespace Opm
         perf_length_.clear();
         bore_diameters_.clear();
 
-        perf_rep_radius_.resize(nperf);
-        perf_length_.resize(nperf);
-        bore_diameters_.resize(nperf);
+        perf_rep_radius_.reserve(nperf);
+        perf_length_.reserve(nperf);
+        bore_diameters_.reserve(nperf);
 
         // COMPDAT handling
         const auto& completionSet = well_ecl_->getCompletions(current_step_);
