@@ -12,6 +12,7 @@ copyToReferenceDir () {
   DST_DIR=$2;
   STEM=$3;
   FILETYPES=${@:4};
+  mkdir -p $DST_DIR
 
   for filetype in $FILETYPES; do
     cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
@@ -19,7 +20,7 @@ copyToReferenceDir () {
 }
 
 tests=${@:2}
-test -z "$tests" && tests="spe11 spe12 spe12p spe3 spe5 spe9 norne_init msw_2d_h polymer2d spe9group"
+test -z "$tests" && tests="spe11 spe12 spe12p spe3 spe5 spe9 norne_init msw_2d_h msw_3d_hfa polymer2d spe9group"
 if grep -q -i "norne " <<< $ghprbCommentBody
 then
   if test -d $WORKSPACE/deps/opm-data/norne/flow
@@ -73,9 +74,18 @@ for test_name in ${tests}; do
   if grep -q "msw_2d_h" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_multisegment+msw_2d_h/ \
-      $OPM_DATA_ROOT/msw_2d_h/opm-simulation-reference/flow_multisegment \
+      $configuration/build-opm-simulators/tests/results/flow+msw_2d_h/ \
+      $OPM_DATA_ROOT/msw_2d_h/opm-simulation-reference/flow \
       2D_H__ \
+      EGRID INIT SMSPEC UNRST UNSMRY
+  fi
+
+  if grep -q "msw_3d_hfa" <<< $test_name
+  then
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+msw_3d_hfa/ \
+      $OPM_DATA_ROOT/msw_3d_hfa/opm-simulation-reference/flow \
+      3D_MSW \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
 
@@ -84,6 +94,12 @@ for test_name in ${tests}; do
     copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow_polymer+polymer_simple2D/ \
       $OPM_DATA_ROOT/polymer_simple2D/opm-simulation-reference/flow_polymer \
+      2D_THREEPHASE_POLY_HETER    \
+      EGRID INIT SMSPEC UNRST UNSMRY
+
+    copyToReferenceDir \
+      $configuration/build-opm-simulators/tests/results/flow+polymer_simple2D/ \
+      $OPM_DATA_ROOT/polymer_simple2D/opm-simulation-reference/flow \
       2D_THREEPHASE_POLY_HETER    \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -106,8 +122,8 @@ for test_name in ${tests}; do
   if grep -q "spe5" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_solvent+spe5/ \
-      $OPM_DATA_ROOT/spe5/opm-simulation-reference/flow_solvent \
+      $configuration/build-opm-simulators/tests/results/flow+spe5/ \
+      $OPM_DATA_ROOT/spe5/opm-simulation-reference/flow \
       SPE5CASE1    \
       EGRID INIT SMSPEC UNRST UNSMRY
   fi
@@ -205,6 +221,13 @@ cd $OPM_DATA_ROOT
 if [ -n "$BRANCH_NAME" ]
 then
   git checkout -b $BRANCH_NAME origin/master
+fi
+
+# Add potential new files
+untracked=`git status | sed '1,/Untracked files/d' | tail -n +3 | head -n -2`
+if [ -n "$untracked" ]
+then
+  git add $untracked
 fi
 
 if [ -z "$REASON" ]

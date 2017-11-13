@@ -165,24 +165,31 @@ add_test_compareECLFiles(CASENAME spe9group
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol})
 
-# TODO: move to flow
 add_test_compareECLFiles(CASENAME msw_2d_h
                          FILENAME 2D_H__
-                         SIMULATOR flow_multisegment
+                         SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${coarse_rel_tol}
+                         TEST_ARGS use_multisegment_well=true)
 
-# TODO: add flow
-add_test_compareECLFiles(CASENAME polymer_simple2D
-                         FILENAME 2D_THREEPHASE_POLY_HETER
-                         SIMULATOR flow_polymer
+add_test_compareECLFiles(CASENAME msw_3d_hfa
+                         FILENAME 3D_MSW
+                         SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${rel_tol}
+                         TEST_ARGS use_multisegment_well=true)
 
-# TODO: move to flow
+foreach(SIM flow flow_polymer)
+  add_test_compareECLFiles(CASENAME polymer_simple2D
+                           FILENAME 2D_THREEPHASE_POLY_HETER
+                           SIMULATOR ${SIM}
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${coarse_rel_tol})
+endforeach()
+
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
-                         SIMULATOR flow_solvent
+                         SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          TEST_ARGS max_iter=13)
@@ -226,21 +233,23 @@ if(MPI_FOUND)
   # Different tolerances for these tests
   set(abs_tol_parallel 0.02)
   set(rel_tol_parallel 1e-5)
+  set(coarse_rel_tol_parallel 1e-2)
 
   add_test_compare_parallel_simulation(CASENAME spe1
                                        FILENAME SPE1CASE2
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel})
+
   add_test_compare_parallel_simulation(CASENAME spe9
                                        FILENAME SPE9_CP_SHORT
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel})
-  # TODO: add flow
+
   add_test_compare_parallel_simulation(CASENAME spe3
                                        FILENAME SPE3CASE1
-                                       SIMULATOR flow_mpi
+                                       SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
-                                       REL_TOL ${rel_tol_parallel})
+                                       REL_TOL ${coarse_rel_tol_parallel})
 endif()
