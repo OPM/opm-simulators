@@ -8,6 +8,7 @@
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
+export OMPI_MCA_plm_rsh_agent=/bin/false
 
 %:
 	dh $@ 
