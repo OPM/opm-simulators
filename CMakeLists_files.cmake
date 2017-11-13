@@ -40,7 +40,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/SimulatorIncompTwophaseAd.cpp
   opm/autodiff/TransportSolverTwophaseAd.cpp
   opm/autodiff/BlackoilPropsAdFromDeck.cpp
-  opm/autodiff/SolventPropsAdFromDeck.cpp
   opm/autodiff/BlackoilModelParameters.cpp
   opm/autodiff/WellDensitySegmented.cpp
   opm/autodiff/LinearisedBlackoilResidual.cpp
@@ -93,7 +92,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_welldensitysegmented.cpp
   tests/test_vfpproperties.cpp
   tests/test_singlecellsolves.cpp
-  tests/test_solventprops_ad.cpp
   tests/test_multisegmentwells.cpp
   tests/test_multiphaseupwind.cpp
   tests/test_wellmodel.cpp
@@ -121,12 +119,6 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/flow_reorder.cpp
   examples/flow_sequential.cpp
   examples/flow.cpp
-  examples/flow_ebos.cpp
-  examples/flow_ebos_2p.cpp
-  examples/flow_ebos_solvent.cpp
-  examples/flow_ebos_polymer.cpp
-  examples/flow_multisegment.cpp
-  examples/flow_solvent.cpp
   examples/sim_2p_incomp.cpp
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
@@ -144,14 +136,9 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/sim_2p_incomp_ad.cpp
   examples/sim_2p_comp_reorder.cpp
   examples/flow.cpp
-  examples/flow_ebos.cpp
-  examples/flow_ebos_2p.cpp
-  examples/flow_ebos_solvent.cpp
-  examples/flow_ebos_polymer.cpp
   examples/flow_legacy.cpp
   examples/flow_reorder.cpp
   examples/flow_sequential.cpp
-  examples/flow_solvent.cpp
   examples/opm_init_check.cpp
   examples/sim_poly2p_comp_reorder.cpp
   examples/sim_poly2p_incomp_reorder.cpp
@@ -176,16 +163,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilModelParameters.hpp
   opm/autodiff/BlackoilPressureModel.hpp
   opm/autodiff/BlackoilPropsAdFromDeck.hpp
-  opm/autodiff/SolventPropsAdFromDeck.hpp
   opm/autodiff/Compat.hpp
   opm/autodiff/CPRPreconditioner.hpp
   opm/autodiff/createGlobalCellArray.hpp
   opm/autodiff/DefaultBlackoilSolutionState.hpp
   opm/autodiff/BlackoilSequentialModel.hpp
-  opm/autodiff/BlackoilSolventModel.hpp
-  opm/autodiff/BlackoilSolventModel_impl.hpp
-  opm/autodiff/BlackoilMultiSegmentModel.hpp
-  opm/autodiff/BlackoilMultiSegmentModel_impl.hpp
   opm/autodiff/BlackoilReorderingTransportModel.hpp
   opm/autodiff/BlackoilTransportModel.hpp
   opm/autodiff/fastSparseOperations.hpp
@@ -196,7 +178,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/FlowMainEbos.hpp
   opm/autodiff/FlowMainPolymer.hpp
   opm/autodiff/FlowMainSequential.hpp
-  opm/autodiff/FlowMainSolvent.hpp
   opm/autodiff/GeoProps.hpp
   opm/autodiff/GridHelpers.hpp
   opm/autodiff/GridInit.hpp
@@ -223,16 +204,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/SimulatorBase_impl.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoil.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilSolvent.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilSolvent_impl.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment.hpp
-  opm/autodiff/SimulatorFullyImplicitBlackoilMultiSegment_impl.hpp
   opm/autodiff/SimulatorIncompTwophaseAd.hpp
   opm/autodiff/SimulatorSequentialBlackoil.hpp
   opm/autodiff/TransportSolverTwophaseAd.hpp
   opm/autodiff/WellDensitySegmented.hpp
   opm/autodiff/WellStateFullyImplicitBlackoil.hpp
-  opm/autodiff/WellStateFullyImplicitBlackoilSolvent.hpp
   opm/autodiff/SimulatorFullyImplicitBlackoilOutput.hpp
   opm/autodiff/VFPProperties.hpp
   opm/autodiff/VFPHelpers.hpp
@@ -254,8 +230,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/MSWellHelpers.hpp
   opm/autodiff/BlackoilWellModel.hpp
   opm/autodiff/BlackoilWellModel_impl.hpp
-  opm/autodiff/StandardWellsSolvent.hpp
-  opm/autodiff/StandardWellsSolvent_impl.hpp
   opm/autodiff/MissingFeatures.hpp
   opm/autodiff/ThreadHandle.hpp
   opm/polymer/CompressibleTpfaPolymer.hpp
