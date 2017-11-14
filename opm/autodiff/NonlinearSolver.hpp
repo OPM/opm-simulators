@@ -99,6 +99,10 @@ namespace Opm {
              ReservoirState& reservoir_state,
              WellState& well_state);
 
+        // adjont step method is here since it must correspont to the solve step
+        SimulatorReport
+        stepAdjoint(const SimulatorTimerInterface& timer);
+
         /// return the statistics if the step() method failed
         const SimulatorReport& failureReport() const
         { return failureReport_; }

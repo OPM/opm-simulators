@@ -73,7 +73,7 @@ namespace Opm {
     }
 
     // AdaptiveTimeStepping
-    //---------------------
+    //
     inline AdaptiveTimeStepping::AdaptiveTimeStepping( const Tuning& tuning,
                                                        size_t time_step,
                                                        const ParameterGroup& param,

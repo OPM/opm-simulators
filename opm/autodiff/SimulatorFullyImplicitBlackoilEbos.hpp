@@ -467,6 +467,27 @@ public:
         return report;
     }
 
+    SimulatorReport runAdjoint(SimulatorTimer& timer,
+                        ReservoirState& state)
+    {
+         SimulatorReport adjoint_report;
+        // Main simulation loop
+        while (!timer.initialStep()) {
+            timer.report(std::cout);
+            report = model->adjointIteration(timer);
+             auto solver = createSolver(well_model);
+             adjoint_report = solver->stepAdjoint(timer);// state, well_state);
+            --timer:
+            // std::cout << timer << std::endl;
+            // WellModel well_model;
+            // auto solver = createSolver(well_model);
+            // adjoint_report = solver_>step(timer, state, well_state);
+
+        }
+
+        return adjoint_report;
+    }
+
     /** \brief Returns the simulator report for the failed substeps of the simulation.
      */
     const SimulatorReport& failureReport() const { return failureReport_; };

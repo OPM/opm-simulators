@@ -126,16 +126,15 @@ namespace Opm
         SimulatorReport report;
         failureReport_ = SimulatorReport();
 
-        // Do model-specific once-per-step calculations.
+        // Do model-specific once-per-step calculations
+        // NB tis do anything with initialising  the states
+
         model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
+        if (timer.initialStep()){
+            model_->ebosSerialize();
+        }
 
         int iteration = 0;
-
-        // Let the model do one nonlinear iteration.
-        // Dummysolver/Adjont state output here?
-        model_.ebosSimulator_.problem().serialize(Restarter& res) // this is for well
-        model_.ebosSimulator_.problem().model().serielize()//this is for black oil model
-        model_.ebosSimulator_.problem().beginEpisode();
 
         // Set up for main solver loop.
         bool converged = false;
@@ -172,11 +171,32 @@ namespace Opm
 
         // Do model-specific post-step actions.
         model_->afterStep(timer, reservoir_state, well_state);
+        model_->ebosSerialize();
+
         report.converged = true;
 
         return report;
     }
 
+
+
+    template <class PhysicalModel>
+    SimulatorReport
+    NonlinearSolver<PhysicalModel>::
+    stepAdjoint(const SimulatorTimerInterface& timer)
+    {
+        SimulatorReport iterReport;
+        SimulatorReport report;
+        failureReport_ = SimulatorReport();
+
+        // Do model-specific once-per-step calculations
+        //--timer;// set for previous step this
+        // This is only to fill the previous state
+        //model_->prepareStep(timer, /*initial_reservoir_state*/, /*initial_well_state*/);
+        //model_->ebosDeserialize();
+        report = model->adjointIteration(timer);
+        return report;
+    }
 
 
     template <class PhysicalModel>
