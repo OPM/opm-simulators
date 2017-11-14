@@ -203,20 +203,72 @@ namespace Opm {
         /// \param[in] timer                  simulation timer
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        void prepareStep(const SimulatorTimerInterface& /*timer*/,
-                         const ReservoirState& /*reservoir_state*/,
-                         const WellState& /* well_state */)
+        void prepareStep(const SimulatorTimerInterface& timer)
+                         //const ReservoirState& /*reservoir_state*/,
+                         //const WellState& /* well_state */)
         {
             if ( wellModel().wellCollection()->havingVREPGroups() ) {
                 updateRateConverter();
             }
+            // update simulator form timer
+            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
+            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+
 
             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
         }
+        /// Called once per nonlinear iteration.
+        /// This model will perform a Newton-Raphson update, changing reservoir_state
+        /// and well_state. It will also use the nonlinear_solver to do relaxation of
+        /// updates if necessary.
+        /// \param[in] iteration              should be 0 for the first call of a new timestep
+        /// \param[in] timer                  simulation timer
+        /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        template <class NonlinearSolverType>
+        SimulatorReport adjointIteration(SimulatorTimerInterface& timer)
+        {
+            SimulatorReport report;
+            --timer;
+            this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            this->ebosDeserialize();
+            SolutionVector& solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+            // Store the initial previous.
+            ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            ++timer;// get back to current step
+            this->prepareStep(timer);//*initial_reservoir_state*/, /*initial_well_state*/);
+            this->ebosDeserialize();
+            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            // then all well tings has tto be done
+            // set initial guess
+            /*
+            // Solve system.
+            if( isParallel() )
+            {
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+                Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
+                assert( opA.comm() );
+                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
+            }
+            else
+            {
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
+                Operator opA(ebosJac, well_model_);
+                istlSolver().solve( opA, x, ebosResid );
+            }
+            */
 
+            // Do model-specific post-step actions.
+           // model_->afterStep(timer, reservoir_state, well_state);
+           return report;
 
+         }
         /// Called once per nonlinear iteration.
         /// This model will perform a Newton-Raphson update, changing reservoir_state
         /// and well_state. It will also use the nonlinear_solver to do relaxation of
@@ -353,7 +405,12 @@ namespace Opm {
                        const ReservoirState& reservoir_state,
                        WellState& well_state)
         {
-            DUNE_UNUSED_PARAMETER(timer);
+            //ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            //ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            // ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+            double time = timer.simulationTimeElapsed()  + timer.currentStepLength();
+            ebosSimulator_.setTime( time);
+            //DUNE_UNUSED_PARAMETER(timer);
             DUNE_UNUSED_PARAMETER(reservoir_state);
             DUNE_UNUSED_PARAMETER(well_state);
         }
@@ -1466,9 +1523,18 @@ namespace Opm {
             return fip_;
         }
 
-        const Simulator& ebosSimulator() const
+        const Simulator& ebosSimulator()
         { return ebosSimulator_; }
 
+        void ebosSerialize(){
+
+            ebosSimulator_.serialize();
+        }
+
+        void ebosDeserialize(){
+
+            ebosSimulator_.deserialize();
+        }
         /// return the statistics if the nonlinearIteration() method failed
         const SimulatorReport& failureReport() const
         { return failureReport_; }
@@ -1584,9 +1650,12 @@ namespace Opm {
         void assembleMassBalanceEq(const SimulatorTimerInterface& timer,
                                    const int iterationIdx)
         {
+            /* this should have been set
             ebosSimulator_.startNextEpisode( timer.currentStepLength() );
             ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
             ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
+            */
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
 
             static int prevEpisodeIdx = 10000;
