@@ -50,6 +50,9 @@ namespace Opm
         /// \brief advance time by currentStepLength
         AdaptiveSimulatorTimer& operator++ ();
 
+        // \brief step back ward and retrive timesteps done
+        AdaptiveSimulatorTimer& operator-- ();
+
         /// \brief advance time by currentStepLength
         void advance() { this->operator++ (); }
 

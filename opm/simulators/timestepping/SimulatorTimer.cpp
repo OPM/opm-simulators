@@ -154,6 +154,14 @@ namespace Opm
         ++current_step_;
         return *this;
     }
+     /// Previous step
+    SimulatorTimer& SimulatorTimer::operator--()
+    {
+        assert(! initialStep() );
+        current_time_ -= timesteps_[current_step_];
+        --current_step_;
+        return *this;
+    }
 
     /// Return true if op++() has been called numSteps() times.
     bool SimulatorTimer::done() const
