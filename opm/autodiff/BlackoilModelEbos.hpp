@@ -189,6 +189,12 @@ namespace Opm {
             } else {
                 ebosSimulator_.model().advanceTimeLevel();
             }
+            // update simulator form timer
+            ebosSimulator_.setTime( timer.simulationTimeElapsed() );
+            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+
 
             // set the timestep size and episode index for ebos explicitly. ebos needs to
             // know the report step/episode index because of timing dependend data
@@ -214,8 +220,54 @@ namespace Opm {
                 //updateEquationsScaling();
             }
         }
+        /// Called once per nonlinear iteration.
+        /// This model will perform a Newton-Raphson update, changing reservoir_state
+        /// and well_state. It will also use the nonlinear_solver to do relaxation of
+        /// updates if necessary.
+        /// \param[in] iteration              should be 0 for the first call of a new timestep
+        /// \param[in] timer                  simulation timer
+        /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
+        /// \param[in, out] reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        template <class NonlinearSolverType>
+        SimulatorReport adjointIteration(SimulatorTimerInterface& timer)
+        {
+            SimulatorReport report;
+            --timer;
+            this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            this->ebosDeserialize();
+            SolutionVector& solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+            // Store the initial previous.
+            ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            ++timer;// get back to current step
+            this->prepareStep(timer);//*initial_reservoir_state*/, /*initial_well_state*/);
+            this->ebosDeserialize();
+            const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            // then all well tings has tto be done
+            // set initial guess
+            /*
+            // Solve system.
+            if( isParallel() )
+            {
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, true > Operator;
+                Operator opA(ebosJac, well_model_, istlSolver().parallelInformation() );
+                assert( opA.comm() );
+                istlSolver().solve( opA, x, ebosResid, *(opA.comm()) );
+            }
+            else
+            {
+                typedef WellModelMatrixAdapter< Mat, BVector, BVector, BlackoilWellModel<TypeTag>, false > Operator;
+                Operator opA(ebosJac, well_model_);
+                istlSolver().solve( opA, x, ebosResid );
+            }
+            */
 
+            // Do model-specific post-step actions.
+           // model_->afterStep(timer, reservoir_state, well_state);
+           return report;
 
+         }
         /// Called once per nonlinear iteration.
         /// This model will perform a Newton-Raphson update, changing reservoir_state
         /// and well_state. It will also use the nonlinear_solver to do relaxation of
@@ -339,12 +391,17 @@ namespace Opm {
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
-        void afterStep(const SimulatorTimerInterface& OPM_UNUSED timer)
+        void afterStep(const SimulatorTimerInterface& timer)
         {
             wellModel().timeStepSucceeded(timer.simulationTimeElapsed());
             aquiferModel().timeStepSucceeded(timer);
             ebosSimulator_.problem().endTimeStep();
 
+            //ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            //ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            // ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+            double time = timer.simulationTimeElapsed()  + timer.currentStepLength();
+            ebosSimulator_.setTime( time);
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
@@ -930,6 +987,20 @@ namespace Opm {
         Simulator& ebosSimulator()
         { return ebosSimulator_; }
 
+        const FIPDataType& getFIPData() const {
+            return fip_;
+        }
+
+        void ebosSerialize(){
+
+            ebosSimulator_.serialize();
+        }
+
+        void ebosDeserialize(){
+
+            ebosSimulator_.deserialize();
+        }
+
         /// return the statistics if the nonlinearIteration() method failed
         const SimulatorReport& failureReport() const
         { return failureReport_; }
@@ -995,7 +1066,6 @@ namespace Opm {
         }
 
     private:
-
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
