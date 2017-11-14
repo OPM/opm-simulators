@@ -99,8 +99,7 @@ public:
                                        const bool has_disgas,
                                        const bool has_vapoil,
                                        const EclipseState& /* eclState */,
-                                       OutputWriter& output_writer,
-                                       const std::unordered_set<std::string>& defunct_well_names)
+                                       OutputWriter& output_writer)
         : ebosSimulator_(ebosSimulator),
           param_(param),
           model_param_(param),
@@ -111,8 +110,6 @@ public:
           has_vapoil_(has_vapoil),
           terminal_output_(param.getDefault("output_terminal", true)),
           output_writer_(output_writer),
-          rateConverter_(createRateConverter_()),
-          defunct_well_names_( defunct_well_names ),
           is_parallel_run_( false )
     {
 #if HAVE_MPI
@@ -141,7 +138,6 @@ public:
         ExtraData extra;
 
         failureReport_ = SimulatorReport();
-        extractLegacyDepth_();
 
         // communicate the initial solution to ebos
         if (timer.initialStep()) {
@@ -177,16 +173,14 @@ public:
             tstep_os.open(tstep_filename.c_str());
         }
 
-        const auto& schedule = eclState().getSchedule();
-
         // adaptive time stepping
-        const auto& events = schedule.getEvents();
+        const auto& events = schedule().getEvents();
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
         if( param_.getDefault("timestep.adaptive", true ) )
         {
 
             if (param_.getDefault("use_TUNING", false)) {
-                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule.getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
+                adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule().getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
             }
@@ -216,7 +210,6 @@ public:
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
         }
 
-        DynamicListEconLimited dynamic_list_econ_limited;
         SimulatorReport report;
         SimulatorReport stepReport;
 
@@ -233,6 +226,13 @@ public:
         std::vector<std::vector<double>> originalFluidInPlace;
         std::vector<double> originalFluidInPlaceTotals;
 
+        WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
+        if (output_writer_.isRestart()) {
+            well_model.setRestartWellState(prev_well_state); // Neccessary for perfect restarts
+        }
+
+        WellState wellStateDummy; //not used. Only passed to make the old interfaces happy
+
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
@@ -244,76 +244,10 @@ public:
                 OpmLog::note(ss.str());
             }
 
-            // Create wells and well state.
-            WellsManager wells_manager(eclState(),
-                                       timer.currentStepNum(),
-                                       Opm::UgGridHelpers::numCells(grid()),
-                                       Opm::UgGridHelpers::globalCell(grid()),
-                                       Opm::UgGridHelpers::cartDims(grid()),
-                                       Opm::UgGridHelpers::dimensions(grid()),
-                                       Opm::UgGridHelpers::cell2Faces(grid()),
-                                       Opm::UgGridHelpers::beginFaceCentroids(grid()),
-                                       dynamic_list_econ_limited,
-                                       is_parallel_run_,
-                                       defunct_well_names_ );
-            const Wells* wells = wells_manager.c_wells();
-            WellState well_state;
-
-            // The well state initialize bhp with the cell pressure in the top cell.
-            // We must therefore provide it with updated cell pressures
-            size_t nc = Opm::UgGridHelpers::numCells(grid());
-            std::vector<double> cellPressures(nc, 0.0);
-            const auto& gridView = ebosSimulator_.gridManager().gridView();
-            ElementContext elemCtx(ebosSimulator_);
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (auto elemIt = gridView.template begin</*codim=*/0>();
-                 elemIt != elemEndIt;
-                 ++elemIt)
-            {
-                const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity) {
-                    continue;
-                }
-
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
-
-                const double p = fs.pressure(FluidSystem::oilPhaseIdx).value();
-                cellPressures[cellIdx] = p;
-            }
-            well_state.init(wells, cellPressures, prev_well_state, phaseUsage_);
-
-            // give the polymer and surfactant simulators the chance to do their stuff
-            handleAdditionalWellInflow(timer, wells_manager, well_state, wells);
-
-            // Compute reservoir volumes for RESV controls.
-            computeRESV(timer.currentStepNum(), wells, well_state);
-
             // Run a multiple steps of the solver depending on the time step control.
             solver_timer.start();
 
-            const auto& wells_ecl = eclState().getSchedule().getWells(timer.currentStepNum());
-            extractLegacyCellPvtRegionIndex_();
-            WellModel well_model(wells, &(wells_manager.wellCollection()), wells_ecl, model_param_,
-                                 rateConverter_, terminal_output_, timer.currentStepNum(), legacyCellPvtRegionIdx_);
-
-	    // handling MS well related
-            if (model_param_.use_multisegment_well_) { // if we use MultisegmentWell model
-                for (const auto& well : wells_ecl) {
-		    // TODO: this is acutally not very accurate, because sometimes a deck just claims a MS well
-		    // while keep the well shut. More accurately, we should check if the well exisits in the Wells
-		    // structure here
-                    if (well->isMultiSegment(timer.currentStepNum()) ) { // there is one well is MS well
-                        well_state.initWellStateMSWell(wells, wells_ecl, timer.currentStepNum(), phaseUsage_, prev_well_state);
-                        break;
-                    }
-                }
-            }
-
+            well_model.beginReportStep(timer.currentStepNum());
 
             auto solver = createSolver(well_model);
 
@@ -345,7 +279,7 @@ public:
 
                 // No per cell data is written for initial step, but will be
                 // for subsequent steps, when we have started simulating
-                output_writer_.writeTimeStep( timer, state, well_state, solver->model() );
+                output_writer_.writeTimeStep( timer, state, well_model.wellState(), solver->model() );
 
                 report.output_write_time += perfTimer.stop();
             }
@@ -374,14 +308,14 @@ public:
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
-                stepReport = adaptiveTimeStepping->step( timer, *solver, state, well_state, event, output_writer_,
+                stepReport = adaptiveTimeStepping->step( timer, *solver, state, wellStateDummy, event, output_writer_,
                                                          output_writer_.requireFIPNUM() ? &fipnum : nullptr );
                 report += stepReport;
                 failureReport_ += adaptiveTimeStepping->failureReport();
             }
             else {
                 // solve for complete report step
-                stepReport = solver->step(timer, state, well_state);
+                stepReport = solver->step(timer, state, wellStateDummy);
                 report += stepReport;
                 failureReport_ += solver->failureReport();
 
@@ -401,6 +335,7 @@ public:
             }
 
             solver->model().endReportStep();
+            well_model.endReportStep();
 
             // take time that was used to solve system for this reportStep
             solver_timer.stop();
@@ -451,13 +386,9 @@ public:
             Dune::Timer perfTimer;
             perfTimer.start();
             const double nextstep = adaptiveTimeStepping ? adaptiveTimeStepping->suggestedNextStep() : -1.0;
-            output_writer_.writeTimeStep( timer, state, well_state, solver->model(), false, nextstep, report);
+            output_writer_.writeTimeStep( timer, state, well_model.wellState(), solver->model(), false, nextstep, report);
             report.output_write_time += perfTimer.stop();
 
-            prev_well_state = well_state;
-
-            updateListEconLimited(solver, eclState().getSchedule(), timer.currentStepNum(), wells,
-                                  well_state, dynamic_list_econ_limited);
         }
 
         // Stop timer and create timing report
@@ -496,220 +427,16 @@ public:
     { return ebosSimulator_.gridManager().grid(); }
 
 protected:
-    void handleAdditionalWellInflow(SimulatorTimer& /*timer*/,
-                                    WellsManager& /* wells_manager */,
-                                    WellState& /* well_state */,
-                                    const Wells* /* wells */)
-    {
-    }
 
     std::unique_ptr<Solver> createSolver(WellModel& well_model)
     {
-        const auto& gridView = ebosSimulator_.gridView();
-        const PhaseUsage& phaseUsage = phaseUsage_;
-        const std::vector<bool> activePhases = detail::activePhases(phaseUsage);
-        const double gravity = ebosSimulator_.problem().gravity()[2];
-
-        // calculate the number of elements of the compressed sequential grid. this needs
-        // to be done in two steps because the dune communicator expects a reference as
-        // argument for sum()
-        int globalNumCells = gridView.size(/*codim=*/0);
-        globalNumCells = gridView.comm().sum(globalNumCells);
-
-        well_model.init(phaseUsage,
-                        activePhases,
-                        gravity,
-                        legacyDepth_,
-                        globalNumCells,
-                        grid());
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       model_param_,
                                                       well_model,
-                                                      rateConverter_,
                                                       solver_,
                                                       terminal_output_));
 
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));
-    }
-
-    void computeRESV(const std::size_t step,
-                     const Wells* wells,
-                     WellState& xw)
-    {
-        typedef SimFIBODetails::WellMap WellMap;
-
-        const auto w_ecl = eclState().getSchedule().getWells(step);
-        const WellMap& wmap = SimFIBODetails::mapWells(w_ecl);
-
-        const std::vector<int>& resv_wells = SimFIBODetails::resvWells(wells, step, wmap);
-
-        const std::size_t number_resv_wells        = resv_wells.size();
-        std::size_t       global_number_resv_wells = number_resv_wells;
-#if HAVE_MPI
-        if ( solver_.parallelInformation().type() == typeid(ParallelISTLInformation) )
-        {
-            const auto& info =
-                boost::any_cast<const ParallelISTLInformation&>(solver_.parallelInformation());
-            global_number_resv_wells = info.communicator().sum(global_number_resv_wells);
-            if ( global_number_resv_wells )
-            {
-                // At least one process has resv wells. Therefore rate converter needs
-                // to calculate averages over regions that might cross process
-                // borders. This needs to be done by all processes and therefore
-                // outside of the next if statement.
-                rateConverter_.template defineState<ElementContext>(ebosSimulator_);
-            }
-        }
-        else
-#endif
-        {
-            if ( global_number_resv_wells )
-            {
-                rateConverter_.template defineState<ElementContext>(ebosSimulator_);
-            }
-        }
-
-        if (! resv_wells.empty()) {
-            const PhaseUsage&                    pu = phaseUsage_;
-            const std::vector<double>::size_type np = phaseUsage_.num_phases;
-
-            std::vector<double> distr (np);
-            std::vector<double> hrates(np);
-            std::vector<double> prates(np);
-
-            for (std::vector<int>::const_iterator
-                     rp = resv_wells.begin(), e = resv_wells.end();
-                 rp != e; ++rp)
-            {
-                WellControls* ctrl = wells->ctrls[*rp];
-                const bool is_producer = wells->type[*rp] == PRODUCER;
-                const int well_cell_top = wells->well_cells[wells->well_connpos[*rp]];
-                const auto& eclProblem = ebosSimulator_.problem();
-                const int pvtreg = eclProblem.pvtRegionIndex(well_cell_top);
-
-                // RESV control mode, all wells
-                {
-                    const int rctrl = SimFIBODetails::resv_control(ctrl);
-
-                    if (0 <= rctrl) {
-                        const std::vector<double>::size_type off = (*rp) * np;
-
-                        if (is_producer) {
-                            // Convert to positive rates to avoid issues
-                            // in coefficient calculations.
-                            std::transform(xw.wellRates().begin() + (off + 0*np),
-                                           xw.wellRates().begin() + (off + 1*np),
-                                           prates.begin(), std::negate<double>());
-                        } else {
-                            std::copy(xw.wellRates().begin() + (off + 0*np),
-                                      xw.wellRates().begin() + (off + 1*np),
-                                      prates.begin());
-                        }
-
-                        const int fipreg = 0; // Hack.  Ignore FIP regions.
-                        rateConverter_.calcCoeff(fipreg, pvtreg, distr);
-
-                        well_controls_iset_distr(ctrl, rctrl, & distr[0]);
-                    }
-                }
-
-                // RESV control, WCONHIST wells.  A bit of duplicate
-                // work, regrettably.
-                if (is_producer && wells->name[*rp] != 0) {
-                    WellMap::const_iterator i = wmap.find(wells->name[*rp]);
-
-                    if (i != wmap.end()) {
-                        const auto* wp = i->second;
-
-                        const WellProductionProperties& p =
-                            wp->getProductionProperties(step);
-
-                        if (! p.predictionMode) {
-                            // History matching (WCONHIST/RESV)
-                            SimFIBODetails::historyRates(pu, p, hrates);
-
-                            const int fipreg = 0; // Hack.  Ignore FIP regions.
-                            rateConverter_.calcCoeff(fipreg, pvtreg, distr);
-
-                            // WCONHIST/RESV target is sum of all
-                            // observed phase rates translated to
-                            // reservoir conditions.  Recall sign
-                            // convention: Negative for producers.
-                            const double target =
-                                - std::inner_product(distr.begin(), distr.end(),
-                                                     hrates.begin(), 0.0);
-
-                            well_controls_clear(ctrl);
-                            well_controls_assert_number_of_phases(ctrl, int(np));
-
-                            static const double invalid_alq = -std::numeric_limits<double>::max();
-                            static const int invalid_vfp = -std::numeric_limits<int>::max();
-
-                            const int ok_resv =
-                                well_controls_add_new(RESERVOIR_RATE, target,
-                                                      invalid_alq, invalid_vfp,
-                                                      & distr[0], ctrl);
-
-                            // For WCONHIST the BHP limit is set to 1 atm.
-                            // or a value specified using WELTARG
-                            double bhp_limit = (p.BHPLimit > 0) ? p.BHPLimit : unit::convert::from(1.0, unit::atm);
-                            const int ok_bhp =
-                                well_controls_add_new(BHP, bhp_limit,
-                                                      invalid_alq, invalid_vfp,
-                                                      NULL, ctrl);
-
-                            if (ok_resv != 0 && ok_bhp != 0) {
-                                xw.currentControls()[*rp] = 0;
-                                well_controls_set_current(ctrl, 0);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if( wells )
-        {
-            for (int w = 0, nw = wells->number_of_wells; w < nw; ++w) {
-                WellControls* ctrl = wells->ctrls[w];
-                const bool is_producer = wells->type[w] == PRODUCER;
-                if (!is_producer && wells->name[w] != 0) {
-                    WellMap::const_iterator i = wmap.find(wells->name[w]);
-                    if (i != wmap.end()) {
-                        const auto* wp = i->second;
-                        const WellInjectionProperties& injector = wp->getInjectionProperties(step);
-                        if (!injector.predictionMode) {
-                            //History matching WCONINJEH
-                            static const double invalid_alq = -std::numeric_limits<double>::max();
-                            static const int invalid_vfp = -std::numeric_limits<int>::max();
-                            // For WCONINJEH the BHP limit is set to a large number
-                            // or a value specified using WELTARG
-                            double bhp_limit = (injector.BHPLimit > 0) ? injector.BHPLimit : std::numeric_limits<double>::max();
-                            const int ok_bhp =
-                                well_controls_add_new(BHP, bhp_limit,
-                                                      invalid_alq, invalid_vfp,
-                                                      NULL, ctrl);
-                            if (!ok_bhp) {
-                                OPM_THROW(std::runtime_error, "Failed to add well control.");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-
-    void updateListEconLimited(const std::unique_ptr<Solver>& solver,
-                               const Schedule& schedule,
-                               const int current_step,
-                               const Wells* wells,
-                               const WellState& well_state,
-                               DynamicListEconLimited& list_econ_limited) const
-    {
-        solver->model().wellModel().updateListEconLimited(schedule, current_step, wells,
-                                                          well_state, list_econ_limited);
     }
 
     void FIPUnitConvert(const UnitSystem& units,
@@ -863,18 +590,9 @@ protected:
     const EclipseState& eclState() const
     { return ebosSimulator_.gridManager().eclState(); }
 
-    void extractLegacyCellPvtRegionIndex_()
-    {
-        const auto& grid = ebosSimulator_.gridManager().grid();
-        const auto& eclProblem = ebosSimulator_.problem();
-        const unsigned numCells = grid.size(/*codim=*/0);
 
-        legacyCellPvtRegionIdx_.resize(numCells);
-        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            legacyCellPvtRegionIdx_[cellIdx] =
-                eclProblem.pvtRegionIndex(cellIdx);
-        }
-    }
+    const Schedule& schedule() const
+    { return ebosSimulator_.gridManager().schedule(); }
 
     void initHysteresisParams(ReservoirState& state) {
         const int num_cells = Opm::UgGridHelpers::numCells(grid());
@@ -909,17 +627,6 @@ protected:
         }
     }
 
-    void extractLegacyDepth_()
-    {
-        const auto& grid = ebosSimulator_.gridManager().grid();
-        const unsigned numCells = grid.size(/*codim=*/0);
-
-        legacyDepth_.resize(numCells);
-        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            legacyDepth_[cellIdx] =
-                grid.cellCenterDepth(cellIdx);
-        }
-    }
 
     // Used to convert initial Reservoirstate to primary variables in the SolutionVector
     void convertInput( const int iterationIdx,
@@ -1028,18 +735,10 @@ protected:
         }
     }
 
-    RateConverterType createRateConverter_() {
-        RateConverterType rate_converter(phaseUsage_,
-                                         std::vector<int>(AutoDiffGrid::numCells(grid()), 0)); // FIP = 0
-        return rate_converter;
-    }
-
 
     // Data.
     Simulator& ebosSimulator_;
 
-    std::vector<int> legacyCellPvtRegionIdx_;
-    std::vector<double> legacyDepth_;
     typedef typename Solver::SolverParameters SolverParameters;
 
     SimulatorReport failureReport_;
@@ -1057,11 +756,6 @@ protected:
     bool       terminal_output_;
     // output_writer
     OutputWriter& output_writer_;
-    RateConverterType rateConverter_;
-    // The names of wells that should be defunct
-    // (e.g. in a parallel run when they are handeled by
-    // a different process)
-    std::unordered_set<std::string> defunct_well_names_;
 
     // Whether this a parallel simulation or not
     bool is_parallel_run_;

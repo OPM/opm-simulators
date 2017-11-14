@@ -47,6 +47,9 @@ namespace Opm
 
         using Base::has_solvent;
         using Base::has_polymer;
+        using Base::Water;
+        using Base::Oil;
+        using Base::Gas;
 
         // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
 

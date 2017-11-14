@@ -66,11 +66,13 @@ namespace Opm {
                                const StandardWells&                    std_wells,
                                const NewtonIterationBlackoilInterface& linsolver,
                                std::shared_ptr<const EclipseState>     eclState,
+                               std::shared_ptr<const Schedule>         schedule,
+                               std::shared_ptr<const SummaryConfig>    summary_config,
                                const bool                              has_disgas,
                                const bool                              has_vapoil,
                                const bool                              terminal_output)
             : Base(param, grid, fluid, geo, rock_comp_props, std_wells, linsolver,
-                   eclState, has_disgas, has_vapoil, terminal_output)
+                   eclState, schedule, summary_config, has_disgas, has_vapoil, terminal_output)
         {
         }
 

@@ -298,10 +298,10 @@ namespace Opm
         if (injection.injectorType == WellInjector::GAS) {
             double solvent_fraction = well_ecl_->getSolventFraction(current_step_);
             return solvent_fraction;
+        } else {
+            // Not a gas injection well => no solvent.
+            return 0.0;
         }
-
-        assert(false);
-        return 0.0;
     }
 
 
@@ -323,10 +323,10 @@ namespace Opm
         if (injection.injectorType == WellInjector::WATER) {
             const double polymer_injection_concentration = polymer.m_polymerConcentration;
             return polymer_injection_concentration;
+        } else {
+            // Not a water injection well => no polymer.
+            return 0.0;
         }
-
-        assert(false); // TODO: find a more logical way to handle this situation
-        return 0.0;
     }
 
 
@@ -787,9 +787,9 @@ namespace Opm
         perf_length_.clear();
         bore_diameters_.clear();
 
-        perf_rep_radius_.resize(nperf);
-        perf_length_.resize(nperf);
-        bore_diameters_.resize(nperf);
+        perf_rep_radius_.reserve(nperf);
+        perf_length_.reserve(nperf);
+        bore_diameters_.reserve(nperf);
 
         // COMPDAT handling
         const auto& completionSet = well_ecl_->getCompletions(current_step_);

@@ -237,6 +237,10 @@ namespace Opm {
 
             const Vector& wellPerfEfficiencyFactors() const;
 
+            // just return the passed well state
+            template<class WellState>
+            const WellState& wellState(const WellState& well_state) const { return well_state; }
+
 
     protected:
         // TODO: probably a wells_active_ will be required here.

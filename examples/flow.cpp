@@ -138,25 +138,24 @@ int main(int argc, char** argv)
             Opm::checkDeck(*deck, parser);
             Opm::MissingFeatures::checkKeywords(*deck);
         }
-
-        std::shared_ptr<Opm::EclipseState> eclipseState =
-            std::make_shared< Opm::EclipseState > ( *deck, parseContext );
-
         Opm::Runspec runspec( *deck );
         const auto& phases = runspec.phases();
 
-        // Twophase cases
+        std::shared_ptr<Opm::EclipseState> eclipseState = std::make_shared< Opm::EclipseState > ( *deck, parseContext );
+        std::shared_ptr<Opm::Schedule> schedule = std::make_shared<Opm::Schedule>(*deck, eclipseState->getInputGrid(), eclipseState->get3DProperties(), phases, parseContext);
+        std::shared_ptr<Opm::SummaryConfig> summary_config = std::make_shared<Opm::SummaryConfig>(*deck, *schedule, eclipseState->getTableManager(), parseContext);
+                // Twophase cases
         if( phases.size() == 2 ) {
             // oil-gas
             if (phases.active( Opm::Phase::GAS ))
             {
-                Opm::flowEbosGasOilSetDeck(*deck, *eclipseState);
+                Opm::flowEbosGasOilSetDeck(*deck, *eclipseState, *schedule, *summary_config);
                 return Opm::flowEbosGasOilMain(argc, argv);
             }
             // oil-water
             else if ( phases.active( Opm::Phase::WATER ) )
             {
-                Opm::flowEbosOilWaterSetDeck(*deck, *eclipseState);
+                Opm::flowEbosOilWaterSetDeck(*deck, *eclipseState, *schedule, *summary_config);
                 return Opm::flowEbosOilWaterMain(argc, argv);
             }
             else {
@@ -167,17 +166,17 @@ int main(int argc, char** argv)
         }
         // Polymer case
         else if ( phases.active( Opm::Phase::POLYMER ) ) {
-            Opm::flowEbosPolymerSetDeck(*deck, *eclipseState);
+            Opm::flowEbosPolymerSetDeck(*deck, *eclipseState, *schedule, *summary_config);
             return Opm::flowEbosPolymerMain(argc, argv);
         }
         // Solvent case
         else if ( phases.active( Opm::Phase::SOLVENT ) ) {
-            Opm::flowEbosSolventSetDeck(*deck, *eclipseState);
+            Opm::flowEbosSolventSetDeck(*deck, *eclipseState, *schedule, *summary_config);
             return Opm::flowEbosSolventMain(argc, argv);
         }
         // Blackoil case
         else if( phases.size() == 3 ) {
-            Opm::flowEbosBlackoilSetDeck(*deck, *eclipseState);
+            Opm::flowEbosBlackoilSetDeck(*deck, *eclipseState, *schedule, *summary_config);
             return Opm::flowEbosBlackoilMain(argc, argv);
         }
         else

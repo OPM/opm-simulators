@@ -36,13 +36,14 @@ SET_BOOL_PROP(EclFlowSolventProblem, EnableSolvent, true);
 }}
 
 namespace Opm {
-void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState)
+void flowEbosSolventSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     typedef TTAG(EclFlowSolventProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, GridManager) GridManager;
 
-    GridManager::setExternalDeck(&deck, &eclState);
+    GridManager::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
 }
+
 
 // ----------------- Main program -----------------
 int flowEbosSolventMain(int argc, char** argv)

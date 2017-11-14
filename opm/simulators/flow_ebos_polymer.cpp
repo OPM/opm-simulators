@@ -36,12 +36,12 @@ SET_BOOL_PROP(EclFlowPolymerProblem, EnablePolymer, true);
 }}
 
 namespace Opm {
-void flowEbosPolymerSetDeck(Deck &deck, EclipseState& eclState)
+void flowEbosPolymerSetDeck(Deck &deck, EclipseState& eclState, Schedule& schedule, SummaryConfig& summaryConfig)
 {
     typedef TTAG(EclFlowPolymerProblem) TypeTag;
     typedef GET_PROP_TYPE(TypeTag, GridManager) GridManager;
 
-    GridManager::setExternalDeck(&deck, &eclState);
+    GridManager::setExternalDeck(&deck, &eclState, &schedule, &summaryConfig);
 }
 
 // ----------------- Main program -----------------

@@ -462,6 +462,6 @@ namespace Opm
 
 
     bool BlackoilOutputWriter::requireFIPNUM() const {
-        return eclipseState_.getSummaryConfig().requireFIPNUM();
+        return summaryConfig_.requireFIPNUM();
     }
 }
