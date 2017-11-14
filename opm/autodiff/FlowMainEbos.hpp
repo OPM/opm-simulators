@@ -664,6 +664,7 @@ namespace Opm
 
                 SimulatorReport successReport = simulator_->run(simtimer, *state_);
                 SimulatorReport failureReport = simulator_->failureReport();
+                SimulatorReport successReport_adjoint = simulator_->runAdjoint(simtimer, *state_);
 
                 if (output_cout_) {
                     std::ostringstream ss;
