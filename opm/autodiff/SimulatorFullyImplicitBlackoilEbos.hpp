@@ -240,18 +240,9 @@ public:
 
             auto solver = createSolver(well_model);
 
-            std::vector<std::vector<double>> currentFluidInPlace;
-            std::vector<double> currentFluidInPlaceTotals;
-
             // Compute orignal fluid in place if this has not been done yet
-            if (originalFluidInPlace_.empty()) {
-                originalFluidInPlace_ = solver->computeFluidInPlace(fipnum_);
-                originalFluidInPlaceTotals_ = FIPTotals(originalFluidInPlace_);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlace_);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals_);
-
-                currentFluidInPlace = originalFluidInPlace_;
-                currentFluidInPlaceTotals = originalFluidInPlaceTotals_;
+            if (originalFluidInPlace_.data.empty()) {
+                originalFluidInPlace_ = computeFluidInPlace(*solver);
             }
 
             // write the inital state at the report stage
@@ -260,7 +251,7 @@ public:
                 perfTimer.start();
 
                 if (terminal_output_) {
-                    outputFluidInPlace(timer, originalFluidInPlace_, originalFluidInPlaceTotals_);
+                    outputFluidInPlace(timer, originalFluidInPlace_);
                 }
 
                 // No per cell data is written for initial step, but will be
@@ -345,15 +336,11 @@ public:
             ++timer;
 
             // Compute current fluid in place.
-            currentFluidInPlace = solver->computeFluidInPlace(fipnum_);
-            currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace);
-
-            FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
-            FIPUnitConvert(eclState().getUnits(), currentFluidInPlaceTotals);
+            const auto currentFluidInPlace = computeFluidInPlace(*solver);
 
             if (terminal_output_ )
             {
-                outputFluidInPlace(timer, currentFluidInPlace, currentFluidInPlaceTotals);
+                outputFluidInPlace(timer, currentFluidInPlace);
 
                 std::string msg =
                     "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
@@ -503,22 +490,38 @@ protected:
     }
 
 
+    struct FluidInPlace
+    {
+        std::vector<std::vector<double>> data;
+        std::vector<double> totals;
+    };
+
+
+    FluidInPlace computeFluidInPlace(const Solver& solver)
+    {
+        FluidInPlace fip;
+        fip.data = solver.computeFluidInPlace(fipnum_);
+        fip.totals = FIPTotals(fip.data);
+        FIPUnitConvert(eclState().getUnits(), fip.data);
+        FIPUnitConvert(eclState().getUnits(), fip.totals);
+        return fip;
+    }
+
 
     void outputFluidInPlace(const SimulatorTimer& timer,
-                            const std::vector<std::vector<double>>& currentFluidInPlace,
-                            const std::vector<double>& currentFluidInPlaceTotals)
+                            const FluidInPlace& currentFluidInPlace)
     {
         if (!timer.initialStep()) {
             const std::string version = moduleVersionName();
             outputTimestampFIP(timer, version);
         }
-        outputRegionFluidInPlace(originalFluidInPlaceTotals_,
-                                 currentFluidInPlaceTotals,
+        outputRegionFluidInPlace(originalFluidInPlace_.totals,
+                                 currentFluidInPlace.totals,
                                  eclState().getUnits(),
                                  0);
-        for (size_t reg = 0; reg < originalFluidInPlace_.size(); ++reg) {
-            outputRegionFluidInPlace(originalFluidInPlace_[reg],
-                                     currentFluidInPlace[reg],
+        for (size_t reg = 0; reg < originalFluidInPlace_.data.size(); ++reg) {
+            outputRegionFluidInPlace(originalFluidInPlace_.data[reg],
+                                     currentFluidInPlace.data[reg],
                                      eclState().getUnits(),
                                      reg+1);
         }
@@ -736,8 +739,7 @@ protected:
     Simulator& ebosSimulator_;
 
     std::vector<int> fipnum_;
-    std::vector<std::vector<double>> originalFluidInPlace_;
-    std::vector<double> originalFluidInPlaceTotals_;
+    FluidInPlace originalFluidInPlace_;
 
     typedef typename Solver::SolverParameters SolverParameters;
 
