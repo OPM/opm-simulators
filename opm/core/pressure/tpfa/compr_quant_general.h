@@ -91,43 +91,6 @@ struct compr_quantities_gen {
     double *voldiscr;
 };
 
-
-/**
- * Create management structure capable of storing derived fluid quantities
- * pertaining to a reservoir model of a particular size.
- *
- * The resources acquired using function compr_quantities_gen_allocate() must
- * be released using the destructor function compr_quantities_gen_deallocate().
- *
- * @param[in] nc Number of grid cells
- * @param[in] nf Number of grid interfaces
- * @param[in] np Number of fluid phases (and components)
- *
- * @return Fully formed management structure.  Returns @c NULL in case of
- * allocation failure.
- */
-struct compr_quantities_gen *
-compr_quantities_gen_allocate(size_t nc, size_t nf, int np);
-
-
-/**
- * Release resources acquired in a previous call to constructor function
- * compr_quantities_gen_allocate().
- *
- * Note that
- * <CODE>
- * compr_quantities_gen_deallocate(NULL)
- * </CODE>
- * is supported and benign (i.e., this statement behaves as
- * <CODE>free(NULL)</CODE>).
- *
- * @param[in,out] cq On input - compressible quantity management structure
- * obtained through a previous call to construction function
- * compr_quantities_gen_allocate().  On output - invalid pointer.
- */
-void
-compr_quantities_gen_deallocate(struct compr_quantities_gen *cq);
-
 #ifdef __cplusplus
 }
 #endif
