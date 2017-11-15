@@ -129,7 +129,7 @@ namespace Opm
         // Do model-specific once-per-step calculations
         // NB tis do anything with initialising  the states
 
-        model_->prepareStep(timer, initial_reservoir_state, initial_well_state);
+        model_->prepareStep(timer);//, initial_reservoir_state, initial_well_state);
         if (timer.initialStep()){
             model_->ebosSerialize();
         }
@@ -181,21 +181,18 @@ namespace Opm
 
 
     template <class PhysicalModel>
-    SimulatorReport
-    NonlinearSolver<PhysicalModel>::
-    stepAdjoint(const SimulatorTimerInterface& timer)
+    SimulatorReport NonlinearSolver<PhysicalModel>::stepAdjoint(SimulatorTimerInterface& timer)
     {
-        SimulatorReport iterReport;
-        SimulatorReport report;
-        failureReport_ = SimulatorReport();
+        SimulatorReport itreport;
 
         // Do model-specific once-per-step calculations
         //--timer;// set for previous step this
         // This is only to fill the previous state
         //model_->prepareStep(timer, /*initial_reservoir_state*/, /*initial_well_state*/);
         //model_->ebosDeserialize();
-        report = model->adjointIteration(timer);
-        return report;
+        //SimulatorReport      adjointIteration(SimulatorTimerInterface& timer)
+        itreport = model_->adjointIteration(timer);
+        return itreport;
     }
 
 

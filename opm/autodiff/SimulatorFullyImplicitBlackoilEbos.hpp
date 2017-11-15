@@ -403,17 +403,16 @@ public:
     {
          SimulatorReport adjoint_report;
         // Main simulation loop
+        WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
         while (!timer.initialStep()) {
             timer.report(std::cout);
-            report = model->adjointIteration(timer);
-             auto solver = createSolver(well_model);
-             adjoint_report = solver->stepAdjoint(timer);// state, well_state);
-            --timer:
+            auto solver = createSolver(well_model);
+            adjoint_report = solver->stepAdjoint(timer);// state, well_state);
+            --timer;
             // std::cout << timer << std::endl;
             // WellModel well_model;
             // auto solver = createSolver(well_model);
             // adjoint_report = solver_>step(timer, state, well_state);
-
         }
 
         return adjoint_report;

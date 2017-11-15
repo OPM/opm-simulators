@@ -101,7 +101,7 @@ namespace Opm {
 
         // adjont step method is here since it must correspont to the solve step
         SimulatorReport
-        stepAdjoint(const SimulatorTimerInterface& timer);
+        stepAdjoint(SimulatorTimerInterface& timer);
 
         /// return the statistics if the step() method failed
         const SimulatorReport& failureReport() const
