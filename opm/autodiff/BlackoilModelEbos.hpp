@@ -233,14 +233,24 @@ namespace Opm {
         {
             SimulatorReport report;
             --timer;
+            std::cout << "Start Adjoint iteration" << std::endl;
+            timer.report(std::cout);
             //this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            std::cout << "Current time init " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
-            SolutionVector& solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
+            SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
             ++timer;// get back to current step
+            timer.report(std::cout);
             //this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
+             std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
+            // seralizing may owerwrite prevois step since it was intended for restart ??
+
+            ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+
+            //auto linsys =  ebosSimulator_.model().linearizer();
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             // then all well tings has tto be done
