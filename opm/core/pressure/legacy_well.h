@@ -87,48 +87,6 @@ typedef struct LegacyWellCompletions well_t;
  */
 typedef struct LegacyWellControls    well_control_t;
 
-/**
- * Allocate cell-to-well mapping (as a sparse array).
- *
- * @param[in]  nc      Total number of cells.
- * @param[in]  W       Well topology (well-to-cell mapping).
- * @param[out] cwpos   Indirection array.  Points to array of size
- *                     <CODE>nc + 1</CODE> if successful.
- * @param[out] cwells  Cell-to-well mapping.  Points to array
- *                     of size <CODE>W->well_connpos[
- *                     W->number_of_wells]</CODE> if successful.
- * @return Positive number (size of <CODE>*cwells</CODE>)
- * if successful. Zero in case of allocation failure.
- */
-int
-allocate_cell_wells(int nc, well_t *W, int **cwpos, int **cwells);
-
-/**
- * Dispose of memory resources allocated using function
- * allocate_cell_wells().
- *
- * Following a call to deallocate_cell_wells(), the input pointers
- * are no longer valid.
- *
- * @param[in,out] cvpos  Cell-to-well start pointers.
- * @param[in,out] cwells Cell-to-well mapping.
- */
-void
-deallocate_cell_wells(int *cvpos, int *cwells);
-
-/**
- * Construct cell-to-well mapping (i.e., transpose the
- * well-to-cell mapping represented by <CODE>W->well_cells</CODE>).
- *
- * @param[in]  nc      Total number of cells.
- * @param[in]  W       Well topology (well-to-cell mapping).
- * @param[out] cwpos   Cell-to-well start pointers.
- * @param[out] cwells  Cell-to-well mapping.
- */
-void
-derive_cell_wells(int nc, well_t *W, int *cwpos, int *cwells);
-
-
 #ifdef __cplusplus
 }
 #endif
