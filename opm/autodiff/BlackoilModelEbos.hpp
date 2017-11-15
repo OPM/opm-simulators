@@ -229,19 +229,18 @@ namespace Opm {
         /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        template <class NonlinearSolverType>
         SimulatorReport adjointIteration(SimulatorTimerInterface& timer)
         {
             SimulatorReport report;
             --timer;
-            this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
-            this->ebosDeserialize();
+            //this->prepareStep(timer);//, /*initial_reservoir_state*/, /*initial_well_state*/);
+            this->ebosDeserialize( timer.simulationTimeElapsed() );
             SolutionVector& solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
             ++timer;// get back to current step
-            this->prepareStep(timer);//*initial_reservoir_state*/, /*initial_well_state*/);
-            this->ebosDeserialize();
+            //this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
+            this->ebosDeserialize( timer.simulationTimeElapsed() );
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             // then all well tings has tto be done
@@ -996,9 +995,9 @@ namespace Opm {
             ebosSimulator_.serialize();
         }
 
-        void ebosDeserialize(){
+        void ebosDeserialize(Scalar t){
 
-            ebosSimulator_.deserialize();
+            ebosSimulator_.deserializeAll(t);
         }
 
         /// return the statistics if the nonlinearIteration() method failed
