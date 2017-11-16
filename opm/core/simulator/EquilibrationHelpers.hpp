@@ -20,13 +20,16 @@
 #ifndef OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 #define OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPropertiesInterface.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/RootFinders.hpp>
 
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
+
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/fluidstates/SimpleModularFluidState.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
 #include <memory>
 
@@ -87,71 +90,21 @@ namespace Opm
     namespace EQUIL {
 
 
-        template <class Props>
-        class DensityCalculator;
+    typedef Opm::FluidSystems::BlackOil<double> FluidSystemSimple;
 
-        /**
-         * Facility for calculating phase densities based on the
-         * BlackoilPropertiesInterface.
-         *
-         * Implements the crucial <CODE>operator()(p,svol)</CODE>
-         * function that is expected by class EquilReg.
-         */
-        template <>
-        class DensityCalculator< BlackoilPropertiesInterface > {
-        public:
-            /**
-             * Constructor.
-             *
-             * \param[in] props Implementation of the
-             * BlackoilPropertiesInterface.
-             *
-             * \param[in] c Single cell used as a representative cell
-             * in a PVT region.
-             */
-            DensityCalculator(const BlackoilPropertiesInterface& props,
-                              const int                          c)
-                : props_(props)
-                , c_(1, c)
-            {
-            }
-
-            /**
-             * Compute phase densities of all phases at phase point
-             * given by (pressure, surface volume) tuple.
-             *
-             * \param[in] p Fluid pressure.
-             *
-             * \param[in] T Temperature.
-             *
-             * \param[in] z Surface volumes of all phases.
-             *
-             * \return Phase densities at phase point.
-             */
-            std::vector<double>
-            operator()(const double               p,
-                       const double               T,
-                       const std::vector<double>& z) const
-            {
-                const int np = props_.numPhases();
-                std::vector<double> A(np * np, 0);
-
-                assert (z.size() == std::vector<double>::size_type(np));
-
-                double* dAdp = 0;
-                props_.matrix(1, &p, &T, &z[0], &c_[0], &A[0], dAdp);
-
-                std::vector<double> rho(np, 0.0);
-                props_.density(1, &A[0], &c_[0], &rho[0]);
-
-                return rho;
-            }
-
-        private:
-            const BlackoilPropertiesInterface& props_;
-            const std::vector<int>             c_;
-        };
-
+    // Adjust oil pressure according to gas saturation and cap pressure
+    typedef Opm::SimpleModularFluidState<double,
+    /*numPhases=*/3,
+    /*numComponents=*/3,
+    FluidSystemSimple,
+    /*storePressure=*/false,
+    /*storeTemperature=*/false,
+    /*storeComposition=*/false,
+    /*storeFugacity=*/false,
+    /*storeSaturation=*/true,
+    /*storeDensity=*/false,
+    /*storeViscosity=*/false,
+    /*storeEnthalpy=*/false> SatOnlyFluidState;
 
         /**
          * Types and routines relating to phase mixing in
@@ -224,6 +177,7 @@ namespace Opm
              * tabulated as a function of depth policy.  Data
              * typically taken from keyword 'RSVD'.
              */
+            template <class FluidSystem>
             class RsVD : public RsFunction {
             public:
                 /**
@@ -234,19 +188,14 @@ namespace Opm
                  * \param[in] depth Depth nodes.
                  * \param[in] rs Dissolved gas-oil ratio at @c depth.
                  */
-                RsVD(const BlackoilPropertiesInterface& props,
-                     const int cell,
+                RsVD(const int pvtRegionIdx,
                      const std::vector<double>& depth,
                      const std::vector<double>& rs)
-                    : props_(props) 
-                    , cell_(cell)
+                    : pvtRegionIdx_(pvtRegionIdx)
                     , depth_(depth)
                     , rs_(rs)
                 {
-                    auto pu = props_.phaseUsage();
-                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
-                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1e100;
-                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
+
                 }
 
                 /**
@@ -278,23 +227,13 @@ namespace Opm
                 }
 
             private:
-                const BlackoilPropertiesInterface& props_;
-                const int cell_;
+                const int pvtRegionIdx_;
                 std::vector<double> depth_; /**< Depth nodes */
                 std::vector<double> rs_;    /**< Dissolved gas-oil ratio */
-                double z_[BlackoilPhases::MaxNumPhases];
-                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
                 double satRs(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
-                    // Rs/Bo is in the gas row and oil column of A_.
-                    // 1/Bo is in the oil row and column.
-                    // Recall also that it is stored in column-major order.
-                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
-                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
-                    const int np = props_.numPhases();
-                    return A_[np*opos + gpos] / A_[np*opos + opos];
+                    return FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press);
                 }
             };
 
@@ -304,6 +243,7 @@ namespace Opm
              * tabulated as a function of depth policy.  Data
              * typically taken from keyword 'RVVD'.
              */
+            template <class FluidSystem>
             class RvVD : public RsFunction {
             public:
                 /**
@@ -314,19 +254,14 @@ namespace Opm
                  * \param[in] depth Depth nodes.
                  * \param[in] rv Dissolved gas-oil ratio at @c depth.
                  */
-                RvVD(const BlackoilPropertiesInterface& props,
-                     const int cell,
+                RvVD(const int pvtRegionIdx,
                      const std::vector<double>& depth,
                      const std::vector<double>& rv)
-                    : props_(props) 
-                    , cell_(cell)
+                    : pvtRegionIdx_(pvtRegionIdx)
                     , depth_(depth)
                     , rv_(rv)
                 {
-                    auto pu = props_.phaseUsage();
-                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
-                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1e100;
+
                 }
 
                 /**
@@ -358,23 +293,13 @@ namespace Opm
                 }
 
             private:
-                const BlackoilPropertiesInterface& props_;
-                const int cell_;
+                const int pvtRegionIdx_;
                 std::vector<double> depth_; /**< Depth nodes */
                 std::vector<double> rv_;    /**< Vaporized oil-gas ratio */
-                double z_[BlackoilPhases::MaxNumPhases];
-                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
                 double satRv(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
-                    // Rv/Bg is in the oil row and gas column of A_.
-                    // 1/Bg is in the gas row and column.
-                    // Recall also that it is stored in column-major order.
-                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
-                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
-                    const int np = props_.numPhases();
-                    return A_[np*gpos + opos] / A_[np*gpos + gpos];
+                    return FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press);
                 }
             };
 
@@ -393,6 +318,7 @@ namespace Opm
              * This should yield Rs-values that are constant below the
              * contact, and decreasing above the contact.
              */
+            template <class FluidSystem>
             class RsSatAtContact : public RsFunction {
             public:
                 /**
@@ -403,13 +329,9 @@ namespace Opm
                  * \param[in] p_contact  oil pressure at the contact
                  * \param[in] T_contact  temperature at the contact
                  */
-                RsSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact,  const double T_contact)
-                    : props_(props), cell_(cell)
+                RsSatAtContact(const int pvtRegionIdx, const double p_contact,  const double T_contact)
+                    : pvtRegionIdx_(pvtRegionIdx)
                 {
-                    auto pu = props_.phaseUsage();
-                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
-                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1e100;
-                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1.0;
                     rs_sat_contact_ = satRs(p_contact, T_contact);
                 }
 
@@ -442,22 +364,12 @@ namespace Opm
                 }
 
             private:
-                const BlackoilPropertiesInterface& props_;
-                const int cell_;
-                double z_[BlackoilPhases::MaxNumPhases];
+                const int pvtRegionIdx_;
                 double rs_sat_contact_;
-                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
                 double satRs(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
-                    // Rs/Bo is in the gas row and oil column of A_.
-                    // 1/Bo is in the oil row and column.
-                    // Recall also that it is stored in column-major order.
-                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
-                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
-                    const int np = props_.numPhases();
-                    return A_[np*opos + gpos] / A_[np*opos + opos];
+                    return FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press);
                 }
             };
 
@@ -476,6 +388,7 @@ namespace Opm
              * This should yield Rv-values that are constant below the
              * contact, and decreasing above the contact.
              */
+            template <class FluidSystem>
             class RvSatAtContact : public RsFunction {
             public:
                 /**
@@ -486,13 +399,9 @@ namespace Opm
                  * \param[in] p_contact  oil pressure at the contact
                  * \param[in] T_contact  temperature at the contact
                  */
-                RvSatAtContact(const BlackoilPropertiesInterface& props, const int cell, const double p_contact, const double T_contact)
-                    : props_(props), cell_(cell)
+                RvSatAtContact(const int pvtRegionIdx, const double p_contact, const double T_contact)
+                    :pvtRegionIdx_(pvtRegionIdx)
                 {
-                    auto pu = props_.phaseUsage();
-                    std::fill(z_, z_ + BlackoilPhases::MaxNumPhases, 0.0);
-                    z_[pu.phase_pos[BlackoilPhases::Vapour]] = 1.0;
-                    z_[pu.phase_pos[BlackoilPhases::Liquid]] = 1e100;
                     rv_sat_contact_ = satRv(p_contact, T_contact);
                 }
 
@@ -525,22 +434,12 @@ namespace Opm
                 }
 
             private:
-                const BlackoilPropertiesInterface& props_;
-                const int cell_;
-                double z_[BlackoilPhases::MaxNumPhases];
+                const int pvtRegionIdx_;
                 double rv_sat_contact_;
-                mutable double A_[BlackoilPhases::MaxNumPhases * BlackoilPhases::MaxNumPhases];
 
                 double satRv(const double press, const double temp) const
                 {
-                    props_.matrix(1, &press, &temp, z_, &cell_, A_, 0);
-                    // Rv/Bg is in the oil row and gas column of A_.
-                    // 1/Bg is in the gas row and column.
-                    // Recall also that it is stored in column-major order.
-                    const int opos = props_.phaseUsage().phase_pos[BlackoilPhases::Liquid];
-                    const int gpos = props_.phaseUsage().phase_pos[BlackoilPhases::Vapour];
-                    const int np = props_.numPhases();
-                    return A_[np*gpos + opos] / A_[np*gpos + gpos];
+                    return FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press);;
                 }
             };
 
@@ -565,7 +464,6 @@ namespace Opm
          * that calculates the phase densities of all phases in @c
          * svol at fluid pressure @c press.
          */
-        template <class DensCalc>
         class EquilReg {
         public:
             /**
@@ -578,22 +476,18 @@ namespace Opm
              * \param[in] pu      Summary of current active phases.
              */
             EquilReg(const EquilRecord& rec,
-                     const DensCalc&    density,
                      std::shared_ptr<Miscibility::RsFunction> rs,
                      std::shared_ptr<Miscibility::RsFunction> rv,
+                     const int pvtIdx,
                      const PhaseUsage&  pu)
                 : rec_    (rec)
-                , density_(density)
                 , rs_     (rs)
                 , rv_     (rv)
+                , pvtIdx_ (pvtIdx)
                 , pu_     (pu)
+
             {
             }
-
-            /**
-             * Type of density calculator.
-             */
-            typedef DensCalc CalcDensity;
 
             /**
              * Type of dissolved gas-oil ratio calculator.
@@ -639,11 +533,6 @@ namespace Opm
              */
             double pcgo_goc() const { return this->rec_.gasOilContactCapillaryPressure(); }
 
-            /**
-             * Retrieve phase density calculator of current region.
-             */
-            const CalcDensity&
-            densityCalculator() const { return this->density_; }
 
             /**
              * Retrieve dissolved gas-oil ratio calculator of current
@@ -662,14 +551,20 @@ namespace Opm
             /**
              * Retrieve active fluid phase summary.
              */
+            const int
+            pvtIdx() const { return this->pvtIdx_; }
+
+            /**
+             * Retrieve active fluid phase summary.
+             */
             const PhaseUsage&
             phaseUsage() const { return this->pu_; }
 
         private:
             EquilRecord rec_;     /**< Equilibration data */
-            DensCalc    density_; /**< Density calculator */
             std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
             std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
+            const int pvtIdx_;
             PhaseUsage  pu_;      /**< Active phase summary */
         };
 
@@ -678,54 +573,117 @@ namespace Opm
         /// Functor for inverting capillary pressure function.
         /// Function represented is
         ///   f(s) = pc(s) - target_pc
+        template <class FluidSystem,  class MaterialLaw, class MaterialLawManager>
         struct PcEq
         {
-            PcEq(const BlackoilPropertiesInterface& props,
+            PcEq(std::shared_ptr<MaterialLawManager> materialLawManager,
                  const int phase,
                  const int cell,
                  const double target_pc)
-                : props_(props),
+                : materialLawManager_(materialLawManager),
                   phase_(phase),
                   cell_(cell),
                   target_pc_(target_pc)
             {
-                std::fill(s_, s_ + BlackoilPhases::MaxNumPhases, 0.0);
+                fluidState_.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
+                fluidState_.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
+                fluidState_.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
                 std::fill(pc_, pc_ + BlackoilPhases::MaxNumPhases, 0.0);
+
             }
+
+
             double operator()(double s) const
             {
-                s_[phase_] = s;
-                props_.capPress(1, s_, &cell_, pc_, 0);
-                return pc_[phase_] - target_pc_;
+                const auto& matParams = materialLawManager_->materialLawParams(cell_);
+                fluidState_.setSaturation(phase_, s);
+                MaterialLaw::capillaryPressures(pc_, matParams, fluidState_);
+                double sign = (phase_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
+                double pc = pc_[FluidSystem::oilPhaseIdx] + sign *  pc_[phase_];
+                return pc - target_pc_;
             }
         private:
-            const BlackoilPropertiesInterface& props_;
+
+            std::shared_ptr<MaterialLawManager> materialLawManager_;
             const int phase_;
             const int cell_;
             const double target_pc_;
-            mutable double s_[BlackoilPhases::MaxNumPhases];
+            mutable SatOnlyFluidState fluidState_;
             mutable double pc_[BlackoilPhases::MaxNumPhases];
         };
+
+        template <class FluidSystem, class MaterialLawManager>
+        double minSaturations(std::shared_ptr<MaterialLawManager> materialLawManager, const int phase, const int cell) {
+            const auto& scaledDrainageInfo =
+                materialLawManager->oilWaterScaledEpsInfoDrainage(cell);
+
+            // Find minimum and maximum saturations.
+            switch(phase) {
+            case FluidSystem::waterPhaseIdx :
+            {
+                 return scaledDrainageInfo.Swl;
+                 break;
+            }
+            case FluidSystem::gasPhaseIdx :
+            {
+                 return scaledDrainageInfo.Sgl;
+                 break;
+            }
+            case FluidSystem::oilPhaseIdx :
+            {
+                 OPM_THROW(std::runtime_error, "Min saturation not implemented for oil phase.");
+                 break;
+            }
+            default:  OPM_THROW(std::runtime_error, "Unknown phaseIdx .");
+            }
+            return -1.0;
+        }
+
+        template <class FluidSystem, class MaterialLawManager>
+        double maxSaturations(std::shared_ptr<MaterialLawManager> materialLawManager, const int phase, const int cell) {
+            const auto& scaledDrainageInfo =
+                materialLawManager->oilWaterScaledEpsInfoDrainage(cell);
+
+            // Find minimum and maximum saturations.
+            switch(phase) {
+            case FluidSystem::waterPhaseIdx :
+            {
+                 return scaledDrainageInfo.Swu;
+                 break;
+            }
+            case FluidSystem::gasPhaseIdx :
+            {
+                 return scaledDrainageInfo.Sgu;
+                 break;
+            }
+            case FluidSystem::oilPhaseIdx :
+            {
+                 OPM_THROW(std::runtime_error, "Max saturation not implemented for oil phase.");
+                 break;
+            }
+            default:  OPM_THROW(std::runtime_error, "Unknown phaseIdx .");
+            }
+            return -1.0;
+
+        }
 
 
 
         /// Compute saturation of some phase corresponding to a given
         /// capillary pressure.
-        inline double satFromPc(const BlackoilPropertiesInterface& props,
+        template <class FluidSystem, class MaterialLaw, class MaterialLawManager >
+        inline double satFromPc(std::shared_ptr<MaterialLawManager> materialLawManager,
                                 const int phase,
                                 const int cell,
                                 const double target_pc,
                                 const bool increasing = false)
         {
-            // Find minimum and maximum saturations.
-            double sminarr[BlackoilPhases::MaxNumPhases];
-            double smaxarr[BlackoilPhases::MaxNumPhases];
-            props.satRange(1, &cell, sminarr, smaxarr);
-            const double s0 = increasing ? smaxarr[phase] : sminarr[phase];
-            const double s1 = increasing ? sminarr[phase] : smaxarr[phase];
+            // Find minimum and maximum saturations.           
+            const double s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
+            const double s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
 
             // Create the equation f(s) = pc(s) - target_pc
-            const PcEq f(props, phase, cell, target_pc);
+            const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, target_pc);
             const double f0 = f(s0);
             const double f1 = f(s1);
 
@@ -747,36 +705,46 @@ namespace Opm
         /// Functor for inverting a sum of capillary pressure functions.
         /// Function represented is
         ///   f(s) = pc1(s) + pc2(1 - s) - target_pc
+        template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
         struct PcEqSum
         {
-            PcEqSum(const BlackoilPropertiesInterface& props,
+            PcEqSum(std::shared_ptr<MaterialLawManager> materialLawManager,
                     const int phase1,
                     const int phase2,
                     const int cell,
                     const double target_pc)
-                : props_(props),
+                : materialLawManager_(materialLawManager),
                   phase1_(phase1),
                   phase2_(phase2),
                   cell_(cell),
                   target_pc_(target_pc)
             {
-                std::fill(s_, s_ + BlackoilPhases::MaxNumPhases, 0.0);
+                fluidState_.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
+                fluidState_.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
+                fluidState_.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
                 std::fill(pc_, pc_ + BlackoilPhases::MaxNumPhases, 0.0);
             }
             double operator()(double s) const
             {
-                s_[phase1_] = s;
-                s_[phase2_] = 1.0 - s;
-                props_.capPress(1, s_, &cell_, pc_, 0);
-                return pc_[phase1_] + pc_[phase2_] - target_pc_;
+                const auto& matParams = materialLawManager_->materialLawParams(cell_);
+                fluidState_.setSaturation(phase1_, s);
+                fluidState_.setSaturation(phase2_, 1.0 - s);
+
+                MaterialLaw::capillaryPressures(pc_, matParams, fluidState_);
+                double sign1 = (phase1_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
+                double pc1 = pc_[FluidSystem::oilPhaseIdx] + sign1 *  pc_[phase1_];
+                double sign2 = (phase2_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
+                double pc2 = pc_[FluidSystem::oilPhaseIdx] + sign2 *  pc_[phase2_];
+
+                return pc1 + pc2 - target_pc_;
             }
         private:
-            const BlackoilPropertiesInterface& props_;
+            std::shared_ptr<MaterialLawManager> materialLawManager_;
             const int phase1_;
             const int phase2_;
             const int cell_;
             const double target_pc_;
-            mutable double s_[BlackoilPhases::MaxNumPhases];
+            mutable SatOnlyFluidState fluidState_;
             mutable double pc_[BlackoilPhases::MaxNumPhases];
         };
 
@@ -786,21 +754,20 @@ namespace Opm
         /// Compute saturation of some phase corresponding to a given
         /// capillary pressure, where the capillary pressure function
         /// is given as a sum of two other functions.
-        inline double satFromSumOfPcs(const BlackoilPropertiesInterface& props,
+
+        template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+        inline double satFromSumOfPcs(std::shared_ptr<MaterialLawManager> materialLawManager,
                                       const int phase1,
                                       const int phase2,
                                       const int cell,
                                       const double target_pc)
         {
             // Find minimum and maximum saturations.
-            double sminarr[BlackoilPhases::MaxNumPhases];
-            double smaxarr[BlackoilPhases::MaxNumPhases];
-            props.satRange(1, &cell, sminarr, smaxarr);
-            const double smin = sminarr[phase1];
-            const double smax = smaxarr[phase1];
+            const double smin = minSaturations<FluidSystem>(materialLawManager, phase1, cell);
+            const double smax = maxSaturations<FluidSystem>(materialLawManager, phase1, cell);
 
             // Create the equation f(s) = pc1(s) + pc2(1-s) - target_pc
-            const PcEqSum f(props, phase1, phase2, cell, target_pc);
+            const PcEqSum<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase1, phase2, cell, target_pc);
             const double f0 = f(smin);
             const double f1 = f(smax);
             if (f0 <= 0.0) {
@@ -818,19 +785,16 @@ namespace Opm
         }
 
         /// Compute saturation from depth. Used for constant capillary pressure function
-        inline double satFromDepth(const BlackoilPropertiesInterface& props,
+        template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+        inline double satFromDepth(std::shared_ptr<MaterialLawManager> materialLawManager,
                                    const double cellDepth,
                                    const double contactDepth,
                                    const int phase,
                                    const int cell,
                                    const bool increasing = false)
         {
-            // Find minimum and maximum saturations.
-            double sminarr[BlackoilPhases::MaxNumPhases];
-            double smaxarr[BlackoilPhases::MaxNumPhases];
-            props.satRange(1, &cell, sminarr, smaxarr);
-            const double s0 = increasing ? smaxarr[phase] : sminarr[phase];
-            const double s1 = increasing ? sminarr[phase] : smaxarr[phase];
+            const double s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
+            const double s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
 
             if (cellDepth < contactDepth){
                 return s0;
@@ -841,21 +805,19 @@ namespace Opm
         }
 
         /// Return true if capillary pressure function is constant
-        inline bool isConstPc(const BlackoilPropertiesInterface& props,
+        template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+        inline bool isConstPc(std::shared_ptr<MaterialLawManager> materialLawManager,
                               const int                          phase,
                               const int                          cell)
         {
-            // Find minimum and maximum saturations.
-            double sminarr[BlackoilPhases::MaxNumPhases];
-            double smaxarr[BlackoilPhases::MaxNumPhases];
-            props.satRange(1, &cell, sminarr, smaxarr);
-
             // Create the equation f(s) = pc(s);
-            const PcEq f(props, phase, cell, 0);
-            const double f0 = f(sminarr[phase]);
-            const double f1 = f(smaxarr[phase]);
+            const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, 0);
+            const double f0 = f(minSaturations<FluidSystem>(materialLawManager, phase, cell));
+            const double f1 = f(maxSaturations<FluidSystem>(materialLawManager, phase, cell));
             return std::abs(f0 - f1) < std::numeric_limits<double>::epsilon();
         }
+
+
 
     } // namespace Equil
 } // namespace Opm
