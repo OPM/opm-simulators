@@ -408,7 +408,10 @@ public:
         //if (output_writer_.isRestart()) {
          //   well_model.setRestartWellState(prev_well_state); // Neccessary for perfect restarts
         //}
-
+        //SET_BOOL_PROP(EclBaseProblem, EnableStorageCache, false)
+        //ebosSimulator_.problem().setEnableStorageCache(false);
+        ElementContext elemCtx(ebosSimulator_);
+        elemCtx.setEnableStorageCache(false);// Do not know if this work
         while (!timer.initialStep()) {
             well_model.beginReportStep(timer.currentStepNum());// this should really be clean to make a better initialization for backward simulation
             timer.report(std::cout);
