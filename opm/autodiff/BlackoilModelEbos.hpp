@@ -67,6 +67,9 @@
 #include <algorithm>
 //#include <fstream>
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 
 BEGIN_PROPERTIES
 
@@ -229,7 +232,7 @@ namespace Opm {
         /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
         /// \param[in, out] reservoir_state   reservoir state variables
         /// \param[in, out] well_state        well state variables
-        SimulatorReport adjointIteration(SimulatorTimerInterface& timer)
+        SimulatorReport adjointIteration(SimulatorTimerInterface& timer)// WellState& well_state)
         {
             SimulatorReport report;
             --timer;
@@ -251,8 +254,39 @@ namespace Opm {
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
 
             //auto linsys =  ebosSimulator_.model().linearizer();
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize();
+            ebosSimulator_.problem().endIteration();
             const auto& ebosJac = ebosSimulator_.model().linearizer().matrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            //auto& well_state = wellModel().wellState();
+            wellModel().beginTimeStep();
+            WellState well_state;
+            {
+                std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
+                std::ofstream ofs(filename.c_str());
+                boost::archive::text_oarchive oa(ofs);
+                oa << well_state;
+            }
+            wellModel().setRestartWellState(well_state);
+            /*
+            wellModel().assembleWellEq(ebosSimulator_,
+                                       ebosSimulator_.timeste,
+                                       well_state,
+                                       only_wells);
+            */
+            double dt = timer.stepLengthTaken();
+            int iterationIdx = 0;
+            assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
+            wellModel().assemble(iterationIdx, ebosSimulator_.timeStepSize());
+            wellModel().apply(ebosResid);
+
+            //wellModel().recoverWellSolutionAndUpdateWellState(x);
+            std::cout << "Printing pure residual in backward mode" << std::endl;
+            std::cout << ebosResid << std::endl;
+            // the calculation of right hand side is missing
+
+
             // then all well tings has tto be done
             // set initial guess
             /*

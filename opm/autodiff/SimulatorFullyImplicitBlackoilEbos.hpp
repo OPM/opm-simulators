@@ -333,14 +333,22 @@ public:
         return report;
     }
 
-    SimulatorReport runAdjoint(SimulatorTimer& timer,
-                        ReservoirState& state)
+    SimulatorReport runAdjoint(SimulatorTimer& timer)
+                       // ReservoirState& state)
     {
          SimulatorReport adjoint_report;
         // Main simulation loop
-        WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
+
+         WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
+        //if (output_writer_.isRestart()) {
+         //   well_model.setRestartWellState(prev_well_state); // Neccessary for perfect restarts
+        //}
+
         while (!timer.initialStep()) {
+            well_model.beginReportStep(timer.currentStepNum());// this should really be clean to make a better initialization for backward simulation
             timer.report(std::cout);
+            //WellState prev_well_state// assume we can read all of this inside;
+            //output_writer_.initFromRestartFile(phaseUsage_, grid(), state, prev_well_state, extra);
             auto solver = createSolver(well_model);
             adjoint_report = solver->stepAdjoint(timer);// state, well_state);
             --timer;
