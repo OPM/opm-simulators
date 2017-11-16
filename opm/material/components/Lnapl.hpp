@@ -29,6 +29,8 @@
 
 #include "Component.hpp"
 
+#include <opm/common/Unused.hpp>
+
 namespace Opm {
 /*!
  * \ingroup Components
@@ -42,10 +44,16 @@ class LNAPL : public Component<Scalar, LNAPL<Scalar> >
 {
 public:
     /*!
-     * \brief A human readable name for the LNAPL.
+     * \brief A human readable name for the iso-octane.
      */
     static const char* name()
     { return "LNAPL"; }
+
+    /*!
+     * \brief The molar mass in \f$\mathrm{[kg/mol]}\f$ of iso-octane.
+     */
+    static Scalar molarMass()
+    { return 0.11423; }
 
     /*!
      * \brief Returns true iff the liquid phase is assumed to be compressible
@@ -61,7 +69,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation liquidDensity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
-    { return 890; }
+    { return 692.0; }
 
     /*!
      * \brief Rough estimate of the viscosity of oil in \f$\mathrm{[Pa*s]}\f$.
@@ -71,7 +79,51 @@ public:
      */
     template <class Evaluation>
     static Evaluation liquidViscosity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
-    { return 8e-3; }
+    { return 0.005; }
+
+    /*!
+     * \brief The enthalpy of iso-octane at a given pressure and temperature \f$\mathrm{[J/kg]}\f$.
+     *
+     * We simply use the value of iso-octane here.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    template <class Evaluation>
+    static Evaluation liquidEnthalpy(const Evaluation& temperature,
+                                     const Evaluation& pressure OPM_UNUSED)
+    {
+        return 240.0/molarMass() * temperature; // [J/kg]
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity \f$[J/(kg K)]\f$ of liquid iso-octane.
+     *
+     * We simply use the value of iso-octane here.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature OPM_UNUSED,
+                                         const Evaluation& pressure OPM_UNUSED)
+    {
+        return 240.0/molarMass();
+    }
+
+    /*!
+     * \brief Specific heat conductivity of liquid TCE \f$\mathrm{[W/(m K)]}\f$.
+     *
+     * \todo The value returned here is a guess which does not necessarily correspond to reality in any way!
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    template <class Evaluation>
+    static Evaluation liquidThermalConductivity(const Evaluation& /*temperature*/, const Evaluation& /*pressure*/)
+    {
+        return 0.3; // TODO: guess
+    }
 };
 
 } // namespace Opm

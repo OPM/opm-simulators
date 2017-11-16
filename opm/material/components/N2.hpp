@@ -27,10 +27,12 @@
 #ifndef OPM_N2_HPP
 #define OPM_N2_HPP
 
+#include "Component.hpp"
+
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include "Component.hpp"
+#include <opm/common/Unused.hpp>
 
 #include <cmath>
 
@@ -174,7 +176,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
-                                  const Evaluation& /*pressure*/)
+                                  const Evaluation& pressure OPM_UNUSED)
     {
         // method of Joback
         const Scalar cpVapA = 31.15;
@@ -190,14 +192,6 @@ public:
                          (cpVapB/2 + temperature*
                           (cpVapC/3 + temperature*
                            (cpVapD/4))));
-
-//#warning NIST DATA STUPID INTERPOLATION
-//        Scalar T2 = 300.;
-//        Scalar T1 = 285.;
-//        Scalar h2 = 311200.;
-//        Scalar h1 = 295580.;
-//        Scalar h = h1+ (h2-h1) / (T2-T1) * (T-T1);
-//        return h ;
     }
 
     /*!
@@ -232,7 +226,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasHeatCapacity(const Evaluation& temperature,
-                                      const Evaluation& /*pressure*/)
+                                      const Evaluation& pressure OPM_UNUSED)
     {
         // method of Joback
         const Scalar cpVapA = 31.15;
@@ -244,11 +238,10 @@ public:
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
 
             cpVapA + temperature*
-            (cpVapB + temperature*
-             (cpVapC + temperature*
-              (cpVapD)));
+            (2.0*cpVapB + temperature*
+             (3.0*cpVapC + temperature*
+              (4.0*cpVapD)));
     }
-
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$N_2\f$ at a given pressure and temperature.
      *

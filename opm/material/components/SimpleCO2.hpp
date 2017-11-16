@@ -105,16 +105,32 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
-                                  const Evaluation& /*pressure*/)
-    { return 571.3e3 + (temperature - 298.15)*0.85e3; }
+                                  const Evaluation& pressure OPM_UNUSED)
+    { return 350.0e3 + temperature*0.85e3; }
+
+    /*!
+     * \copydoc Component::gasHeatCapacity
+     */
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature OPM_UNUSED,
+                                      const Evaluation& pressure OPM_UNUSED)
+    { return 0.85e3; }
 
     /*!
      * \copydoc Component::liquidEnthalpy
      */
     template <class Evaluation>
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
-                                     const Evaluation& /*pressure*/)
-    { return (temperature - 298.15)*5e3; }
+                                     const Evaluation& pressure OPM_UNUSED)
+    { return temperature*2e3; }
+
+    /*!
+     * \copydoc Component::liquidHeatCapacity
+     */
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature OPM_UNUSED,
+                                         const Evaluation& pressure OPM_UNUSED)
+    { return 2e3; /* TODO: UNKNOWN! */ }
 
     /*!
      * \copydoc Component::gasInternalEnergy
