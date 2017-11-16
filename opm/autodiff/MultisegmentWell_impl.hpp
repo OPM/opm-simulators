@@ -668,22 +668,22 @@ namespace Opm
             double sum_kr = 0.;
 
             const PhaseUsage& pu = phaseUsage();
-            if (pu.phase_used[BlackoilPhases::Aqua]) {
-                const int water_pos = pu.phase_pos[BlackoilPhases::Aqua];
+            if (pu.phase_used[Water]) {
+                const int water_pos = pu.phase_pos[Water];
                 kr[water_pos] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value();
                 sum_kr += kr[water_pos];
                 density[water_pos] = fs.density(FluidSystem::waterPhaseIdx).value();
             }
 
-            if (pu.phase_used[BlackoilPhases::Liquid]) {
-                const int oil_pos = pu.phase_pos[BlackoilPhases::Liquid];
+            if (pu.phase_used[Oil]) {
+                const int oil_pos = pu.phase_pos[Oil];
                 kr[oil_pos] = intQuants.relativePermeability(FluidSystem::oilPhaseIdx).value();
                 sum_kr += kr[oil_pos];
                 density[oil_pos] = fs.density(FluidSystem::oilPhaseIdx).value();
             }
 
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                const int gas_pos = pu.phase_pos[BlackoilPhases::Vapour];
+            if (pu.phase_used[Gas]) {
+                const int gas_pos = pu.phase_pos[Gas];
                 kr[gas_pos] = intQuants.relativePermeability(FluidSystem::gasPhaseIdx).value();
                 sum_kr += kr[gas_pos];
                 density[gas_pos] = fs.density(FluidSystem::gasPhaseIdx).value();
@@ -1129,9 +1129,8 @@ namespace Opm
             // it is the phase viscosities asked for
             std::vector<EvalWell> visc(number_of_phases_, 0.0);
             const EvalWell seg_pressure = getSegmentPressure(seg);
-            if (pu.phase_used[BlackoilPhases::Aqua]) {
-                // TODO: what is the difference between Water and BlackoilPhases::Aqua?
-                const int water_pos = pu.phase_pos[BlackoilPhases::Aqua];
+            if (pu.phase_used[Water]) {
+                const int water_pos = pu.phase_pos[Water];
                 b[water_pos] =
                     FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure);
                 visc[water_pos] =
@@ -1140,10 +1139,10 @@ namespace Opm
 
             EvalWell rv(0.0);
             // gas phase
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
-                if (pu.phase_used[BlackoilPhases::Liquid]) {
-                    const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
+            if (pu.phase_used[Gas]) {
+                const int gaspos = pu.phase_pos[Gas];
+                if (pu.phase_used[Oil]) {
+                    const int oilpos = pu.phase_pos[Oil];
                     const EvalWell rvmax = FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvt_region_index, temperature, seg_pressure);
                     if (mix_s[oilpos] > 0.0) {
                         if (mix_s[gaspos] > 0.0) {
@@ -1174,10 +1173,10 @@ namespace Opm
 
             EvalWell rs(0.0);
             // oil phase
-            if (pu.phase_used[BlackoilPhases::Liquid]) {
-                const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
-                if (pu.phase_used[BlackoilPhases::Liquid]) {
-                    const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
+            if (pu.phase_used[Oil]) {
+                const int oilpos = pu.phase_pos[Oil];
+                if (pu.phase_used[Oil]) {
+                    const int gaspos = pu.phase_pos[Gas];
                     const EvalWell rsmax = FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvt_region_index, temperature, seg_pressure);
                     if (mix_s[gaspos] > 0.0) {
                         if (mix_s[oilpos] > 0.0) {
@@ -1207,9 +1206,9 @@ namespace Opm
             }
 
             std::vector<EvalWell> mix(mix_s);
-            if (pu.phase_used[BlackoilPhases::Liquid] && pu.phase_used[BlackoilPhases::Vapour]) {
-                const int gaspos = pu.phase_pos[BlackoilPhases::Vapour];
-                const int oilpos = pu.phase_pos[BlackoilPhases::Liquid];
+            if (pu.phase_used[Oil] && pu.phase_used[Gas]) {
+                const int gaspos = pu.phase_pos[Gas];
+                const int oilpos = pu.phase_pos[Oil];
                 if (rs != 0.0) { // rs > 0.0?
                     mix[gaspos] = (mix_s[gaspos] - mix_s[oilpos] * rs) / (1. - rs * rv);
                 }

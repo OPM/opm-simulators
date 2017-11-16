@@ -1133,7 +1133,7 @@ namespace Opm
         const int w = index_of_well_;
 
         //rs and rv are only used if both oil and gas is present
-        if (pu.phase_used[BlackoilPhases::Vapour] && pu.phase_used[BlackoilPhases::Liquid]) {
+        if (pu.phase_used[Gas] && pu.phase_used[Oil]) {
             rsmax_perf.resize(nperf);
             rvmax_perf.resize(nperf);
         }
@@ -1150,17 +1150,17 @@ namespace Opm
             const double p_avg = (xw.perfPress()[first_perf_ + perf] + p_above)/2;
             const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
-            if (pu.phase_used[BlackoilPhases::Aqua]) {
-                b_perf[ pu.phase_pos[BlackoilPhases::Aqua] + perf * numComp] =
+            if (pu.phase_used[Water]) {
+                b_perf[ pu.phase_pos[Water] + perf * numComp] =
                 FluidSystem::waterPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
             }
 
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                const int gaspos = pu.phase_pos[BlackoilPhases::Vapour] + perf * numComp;
-                const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
+            if (pu.phase_used[Gas]) {
+                const int gaspos = pu.phase_pos[Gas] + perf * numComp;
+                const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
 
-                if (pu.phase_used[BlackoilPhases::Liquid]) {
-                    const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
+                if (pu.phase_used[Oil]) {
+                    const int oilpos_well = pu.phase_pos[Oil] + w * pu.num_phases;
                     const double oilrate = std::abs(xw.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
@@ -1182,12 +1182,12 @@ namespace Opm
                 }
             }
 
-            if (pu.phase_used[BlackoilPhases::Liquid]) {
-                const int oilpos = pu.phase_pos[BlackoilPhases::Liquid] + perf * numComp;
-                const int oilpos_well = pu.phase_pos[BlackoilPhases::Liquid] + w * pu.num_phases;
-                if (pu.phase_used[BlackoilPhases::Vapour]) {
+            if (pu.phase_used[Oil]) {
+                const int oilpos = pu.phase_pos[Oil] + perf * numComp;
+                const int oilpos_well = pu.phase_pos[Oil] + w * pu.num_phases;
+                if (pu.phase_used[Gas]) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    const int gaspos_well = pu.phase_pos[BlackoilPhases::Vapour] + w * pu.num_phases;
+                    const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
                     const double gasrate = std::abs(xw.wellRates()[gaspos_well]) - xw.solventWellRate(w);
                     if (gasrate > 0) {
                         const double oilrate = std::abs(xw.wellRates()[oilpos_well]);
@@ -1263,8 +1263,8 @@ namespace Opm
         //    absolute values of the surface rates divided by their sum.
         //    Then compute volume ratios (formation factors) for each perforation.
         //    Finally compute densities for the segments associated with each perforation.
-        const int gaspos = phase_usage.phase_pos[BlackoilPhases::Vapour];
-        const int oilpos = phase_usage.phase_pos[BlackoilPhases::Liquid];
+        const int gaspos = phase_usage.phase_pos[Gas];
+        const int oilpos = phase_usage.phase_pos[Oil];
         std::vector<double> mix(num_comp,0.0);
         std::vector<double> x(num_comp);
         std::vector<double> surf_dens(num_comp);

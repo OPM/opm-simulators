@@ -61,7 +61,7 @@ namespace Opm {
                                                 dynamic_list_econ_limited_,
                                                 grid.comm().size() > 1,
                                                 defunct_well_names) );
-	
+
         // Wells are active if they are active wells on at least
         // one process.
         wells_active_ = localWellsActive() ? 1 : 0;

@@ -40,7 +40,6 @@
 #include <opm/core/simulator/SimulatorReport.hpp>
 #include <opm/autodiff/VFPProperties.hpp>
 #include <opm/autodiff/WellHelpers.hpp>
-#include <opm/autodiff/BlackoilModelEnums.hpp>
 #include <opm/autodiff/WellDensitySegmented.hpp>
 #include <opm/autodiff/BlackoilPropsAdFromDeck.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
