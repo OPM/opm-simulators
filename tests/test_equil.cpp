@@ -22,10 +22,15 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/cart_grid.h>
 #include <opm/core/grid/GridManager.hpp>
+#include <opm/core/utility/compressedToCartesian.hpp>
+
 
 #include <opm/core/props/BlackoilPropertiesBasic.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
@@ -49,12 +54,102 @@
 #include <string>
 #include <vector>
 
+
+// Forward declaring the MaterialLawManager template.
+typedef Opm::ThreePhaseMaterialTraits<double,
+/*wettingPhaseIdx=*/Opm::BlackoilPhases::Aqua,
+/*nonWettingPhaseIdx=*/Opm::BlackoilPhases::Liquid,
+/*gasPhaseIdx=*/Opm::BlackoilPhases::Vapour> MaterialTraits;
+typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
+
+
 #define CHECK(value, expected, reltol) \
 { \
   if (std::fabs((expected)) < 1.e-14) \
     BOOST_CHECK_SMALL((value), (reltol)); \
   else \
     BOOST_CHECK_CLOSE((value), (expected), (reltol)); \
+}
+
+typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+Opm::PhaseUsage initDefaultFluidSystem() {
+    std::vector<std::pair<double, double> > Bo = {
+        { 101353, 1. },
+        { 6.21542e+07, 1 }
+    };
+    std::vector<std::pair<double, double> > muo = {
+        { 101353, 1. },
+        { 6.21542e+07, 1 }
+    };
+
+    std::vector<std::pair<double, double> > Bg = {
+        { 101353, 1. },
+        { 6.21542e+07, 1 }
+    };
+    std::vector<std::pair<double, double> > mug = {
+        { 101353, 1. },
+        { 6.21542e+07, 1 }
+    };
+
+    double rhoRefO = 700; // [kg]
+    double rhoRefG = 1000; // [kg]
+    double rhoRefW = 1000; // [kg]
+
+    FluidSystem::initBegin(/*numPvtRegions=*/1);
+    FluidSystem::setEnableDissolvedGas(false);
+    FluidSystem::setEnableVaporizedOil(false);
+    FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
+
+    Opm::GasPvtMultiplexer<double> *gasPvt = new Opm::GasPvtMultiplexer<double>;
+    gasPvt->setApproach(Opm::GasPvtMultiplexer<double>::DryGasPvt);
+    auto& dryGasPvt = gasPvt->template getRealPvt<Opm::GasPvtMultiplexer<double>::DryGasPvt>();
+    dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
+    dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+    dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
+    dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
+
+    Opm::OilPvtMultiplexer<double> *oilPvt = new Opm::OilPvtMultiplexer<double>;
+    oilPvt->setApproach(Opm::OilPvtMultiplexer<double>::DeadOilPvt);
+    auto& deadOilPvt = oilPvt->template getRealPvt<Opm::OilPvtMultiplexer<double>::DeadOilPvt>();
+    deadOilPvt.setNumRegions(/*numPvtRegion=*/1);
+    deadOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+    deadOilPvt.setInverseOilFormationVolumeFactor(/*regionIdx=*/0, Bo);
+    deadOilPvt.setOilViscosity(/*regionIdx=*/0, muo);
+
+    Opm::WaterPvtMultiplexer<double> *waterPvt = new Opm::WaterPvtMultiplexer<double>;
+    waterPvt->setApproach(Opm::WaterPvtMultiplexer<double>::ConstantCompressibilityWaterPvt);
+    auto& ccWaterPvt = waterPvt->template getRealPvt<Opm::WaterPvtMultiplexer<double>::ConstantCompressibilityWaterPvt>();
+    ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
+    ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+    ccWaterPvt.setViscosity(/*regionIdx=*/0, 1);
+    ccWaterPvt.setCompressibility(/*regionIdx=*/0, 0);
+
+    gasPvt->initEnd();
+    oilPvt->initEnd();
+    waterPvt->initEnd();
+
+    typedef std::shared_ptr<Opm::GasPvtMultiplexer<double> > GasPvtSharedPtr;
+    FluidSystem::setGasPvt(GasPvtSharedPtr(gasPvt));
+
+    typedef std::shared_ptr<Opm::OilPvtMultiplexer<double> > OilPvtSharedPtr;
+    FluidSystem::setOilPvt(OilPvtSharedPtr(oilPvt));
+
+    typedef std::shared_ptr<Opm::WaterPvtMultiplexer<double> > WaterPvtSharedPtr;
+    FluidSystem::setWaterPvt(WaterPvtSharedPtr(waterPvt));
+
+    FluidSystem::initEnd();
+
+    Opm::PhaseUsage pu;
+    pu.num_phases = 2;
+    // Might just as well assume water-oil.
+    pu.phase_used[Opm::BlackoilPhases::Aqua] = true;
+    pu.phase_used[Opm::BlackoilPhases::Liquid] = true;
+    pu.phase_used[Opm::BlackoilPhases::Vapour] = false;
+    pu.phase_pos[Opm::BlackoilPhases::Aqua] = 0;
+    pu.phase_pos[Opm::BlackoilPhases::Liquid] = 1;
+    pu.phase_pos[Opm::BlackoilPhases::Vapour] = 1; // Unused.
+    return pu;
+
 }
 
 BOOST_AUTO_TEST_SUITE ()
@@ -123,35 +218,22 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
     std::shared_ptr<UnstructuredGrid>
         G(create_grid_cart3d(10, 1, 10), destroy_grid);
 
-    Opm::ParameterGroup param;
-    {
-        using Opm::unit::kilogram;
-        using Opm::unit::meter;
-        using Opm::unit::cubic;
-
-        std::stringstream dens; dens << 700*kilogram/cubic(meter);
-        param.insertParameter("rho2", dens.str());
-    }
-
-    typedef Opm::BlackoilPropertiesBasic Props;
-    Props props(param, G->dimensions, G->number_of_cells);
-
-    typedef Opm::EQUIL::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
-    RhoCalc calc(props, 0);
-
     auto record = mkEquilRecord( 0, 1e5, 5, 0, 0, 0 );
 
-    Opm::EQUIL::EquilReg<RhoCalc>
-        region(record, calc,
-               std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-               std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-               props.phaseUsage());
+    Opm::PhaseUsage pu = initDefaultFluidSystem();
+
+    Opm::EQUIL::EquilReg
+            region(record,
+                   std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+                   std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+                   0,
+                   pu);
 
     std::vector<int> cells(G->number_of_cells);
     std::iota(cells.begin(), cells.end(), 0);
 
     const double grav   = 10;
-    const PPress ppress = Opm::EQUIL::phasePressures(*G, region, cells, grav);
+    const PPress ppress = Opm::EQUIL::phasePressures<FluidSystem>(*G, region, cells, grav);
 
     const int first = 0, last = G->number_of_cells - 1;
     const double reltol = 1.0e-8;
@@ -169,47 +251,38 @@ BOOST_AUTO_TEST_CASE (CellSubset)
     std::shared_ptr<UnstructuredGrid>
         G(create_grid_cart3d(10, 1, 10), destroy_grid);
 
-    Opm::ParameterGroup param;
-    {
-        using Opm::unit::kilogram;
-        using Opm::unit::meter;
-        using Opm::unit::cubic;
+    Opm::PhaseUsage pu = initDefaultFluidSystem();
 
-        std::stringstream dens; dens << 700*kilogram/cubic(meter);
-        param.insertParameter("rho2", dens.str());
-    }
-
-    typedef Opm::BlackoilPropertiesBasic Props;
-    Props props(param, G->dimensions, G->number_of_cells);
-
-    typedef Opm::EQUIL::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
-    RhoCalc calc(props, 0);
 
     Opm::EquilRecord record[] = { mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
                                   mkEquilRecord( 5, 1.35e5, 7.5, -0.225e5, 5, 0 ) };
 
-    Opm::EQUIL::EquilReg<RhoCalc> region[] =
-        {
-            Opm::EQUIL::EquilReg<RhoCalc>(record[0], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
-            ,
-            Opm::EQUIL::EquilReg<RhoCalc>(record[0], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
-            ,
-            Opm::EQUIL::EquilReg<RhoCalc>(record[1], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
-            ,
-            Opm::EQUIL::EquilReg<RhoCalc>(record[1], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
-        };
+    Opm::EQUIL::EquilReg region[] =
+    {
+        Opm::EQUIL::EquilReg(record[0],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
+        ,
+        Opm::EQUIL::EquilReg(record[0],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
+        ,
+        Opm::EQUIL::EquilReg(record[1],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
+        ,
+        Opm::EQUIL::EquilReg(record[1],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
+    };
 
     const int cdim[] = { 2, 1, 2 };
     int ncoarse = cdim[0];
@@ -239,7 +312,7 @@ BOOST_AUTO_TEST_CASE (CellSubset)
         const int    rno  = int(r - cells.begin());
         const double grav = 10;
         const PPress p    =
-            Opm::EQUIL::phasePressures(*G, region[rno], *r, grav);
+            Opm::EQUIL::phasePressures<FluidSystem>(*G, region[rno], *r, grav);
 
         PVal::size_type i = 0;
         for (std::vector<int>::const_iterator
@@ -272,46 +345,36 @@ BOOST_AUTO_TEST_CASE (RegMapping)
     std::shared_ptr<UnstructuredGrid>
         G(create_grid_cart3d(10, 1, 10), destroy_grid);
 
-    Opm::ParameterGroup param;
-    {
-        using Opm::unit::kilogram;
-        using Opm::unit::meter;
-        using Opm::unit::cubic;
-
-        std::stringstream dens; dens << 700*kilogram/cubic(meter);
-        param.insertParameter("rho2", dens.str());
-    }
-
-    typedef Opm::BlackoilPropertiesBasic Props;
-    Props props(param, G->dimensions, G->number_of_cells);
-
-    typedef Opm::EQUIL::DensityCalculator<Opm::BlackoilPropertiesInterface> RhoCalc;
-    RhoCalc calc(props, 0);
-
     Opm::EquilRecord record[] = { mkEquilRecord( 0, 1e5, 2.5, -0.075e5, 0, 0 ),
                                   mkEquilRecord( 5, 1.35e5, 7.5, -0.225e5, 5, 0 ) };
 
-    Opm::EQUIL::EquilReg<RhoCalc> region[] =
-        {
-            Opm::EQUIL::EquilReg<RhoCalc>(record[0], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
-            ,
-            Opm::EQUIL::EquilReg<RhoCalc>(record[0], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
-            ,
-            Opm::EQUIL::EquilReg<RhoCalc>(record[1], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
-            ,
-            Opm::EQUIL::EquilReg<RhoCalc>(record[1], calc,
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                                          props.phaseUsage())
+    Opm::PhaseUsage pu = initDefaultFluidSystem();
+
+    Opm::EQUIL::EquilReg region[] =
+    {
+        Opm::EQUIL::EquilReg(record[0],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
+        ,
+        Opm::EQUIL::EquilReg(record[0],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
+        ,
+        Opm::EQUIL::EquilReg(record[1],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
+        ,
+        Opm::EQUIL::EquilReg(record[1],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0,
+        pu)
         };
 
     std::vector<int> eqlnum(G->number_of_cells);
@@ -336,7 +399,7 @@ BOOST_AUTO_TEST_CASE (RegMapping)
         const int    rno  = r;
         const double grav = 10;
         const PPress p    =
-            Opm::EQUIL::phasePressures(*G, region[rno], rng, grav);
+            Opm::EQUIL::phasePressures<FluidSystem>(*G, region[rno], rng, grav);
 
         PVal::size_type i = 0;
         for (const auto& c : rng) {
@@ -366,9 +429,16 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
     Opm::ParseContext parseContext;
     Opm::Parser parser;
     Opm::Deck deck = parser.parseFile("deadfluids.DATA" , parseContext);
-    Opm::EclipseState eclipseState(deck, parseContext);
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, *grid, false);
-    Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, *grid, 10.0);
+    Opm::EclipseState eclipseState(deck, parseContext);    // Create material law manager.
+
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid->number_of_cells, grid->global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
+    Opm::PhaseUsage pu = phaseUsageFromDeck(deck);
+
+    Opm::EQUIL::DeckDependent::InitialStateComputer comp(materialLawManager, pu, deck, eclipseState, *grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid->number_of_cells);
@@ -395,8 +465,20 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
     Opm::ParseContext parseContext;
     Opm::Deck deck = parser.parseFile("capillary.DATA" , parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
+    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    typedef MaterialLawManager::MaterialLaw MaterialLaw;
+
+    if (!FluidSystem::isInitialized()) {
+        // make sure that we don't initialize the fluid system twice
+        FluidSystem::initFromDeck(deck, eclipseState);
+    }
     // Test the capillary inversion for oil-water.
     const int cell = 0;
     const double reltol = 1.0e-7;
@@ -407,7 +489,7 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.2, 0.2, 0.466666666666, 0.733333333333, 1.0, 1.0, 1.0, 1.0 };
         BOOST_REQUIRE(pc.size() == s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromPc(props, phase, cell, pc[i], increasing);
+            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -420,7 +502,7 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
         const std::vector<double> s = { 0.8, 0.8, 0.8, 0.533333333333, 0.266666666666, 0.0, 0.0, 0.0, 0.0 };
         BOOST_REQUIRE(pc.size() == s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromPc(props, phase, cell, pc[i], increasing);
+            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -433,7 +515,7 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.333333333333, 0.6, 0.866666666666, 1.0 };
         BOOST_REQUIRE(pc.size() == s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromSumOfPcs(props, water, gas, cell, pc[i]);
+            const double s_computed = Opm::EQUIL::satFromSumOfPcs<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, water, gas, cell, pc[i]);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -449,9 +531,16 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     Opm::ParseContext parseContext;
     Opm::Deck deck = parser.parseFile("capillary.DATA" , parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 10.0);
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
+    Opm::PhaseUsage pu = phaseUsageFromDeck(deck);
+
+    Opm::EQUIL::DeckDependent::InitialStateComputer comp(materialLawManager, pu, deck, eclipseState, grid, 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -490,9 +579,15 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     Opm::ParseContext parseContext;
     Opm::Deck deck = parser.parseFile("capillary_overlap.DATA" , parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
+    Opm::PhaseUsage pu = phaseUsageFromDeck(deck);
+
+    Opm::EQUIL::DeckDependent::InitialStateComputer comp(materialLawManager, pu, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -553,9 +648,15 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
     Opm::ParseContext parseContext;
     Opm::Deck deck = parser.parseFile("equil_liveoil.DATA" , parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
+    Opm::PhaseUsage pu = phaseUsageFromDeck(deck);
+
+    Opm::EQUIL::DeckDependent::InitialStateComputer comp(materialLawManager, pu, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -633,9 +734,15 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
     Opm::ParseContext parseContext;
     Opm::Deck deck = parser.parseFile("equil_livegas.DATA" , parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
+    Opm::PhaseUsage pu = phaseUsageFromDeck(deck);
+
+    Opm::EQUIL::DeckDependent::InitialStateComputer comp(materialLawManager, pu, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -715,9 +822,15 @@ BOOST_AUTO_TEST_CASE (DeckWithRSVDAndRVVD)
     Opm::Parser parser;
     Opm::Deck deck = parser.parseFile("equil_rsvd_and_rvvd.DATA", parseContext);
     Opm::EclipseState eclipseState(deck , parseContext);
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer comp(props, deck, eclipseState, grid, 9.80665);
+    Opm::PhaseUsage pu = phaseUsageFromDeck(deck);
+
+    Opm::EQUIL::DeckDependent::InitialStateComputer comp(materialLawManager, pu, deck, eclipseState, grid, 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE(pressures.size() == 3);
     BOOST_REQUIRE(int(pressures[0].size()) == grid.number_of_cells);
@@ -817,8 +930,15 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
     Opm::EclipseState eclipseState(deck , parseContext);
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
-    Opm::BlackoilPropertiesFromDeck props(deck, eclipseState, grid, false);
-    Opm::BlackoilPropertiesFromDeck propsScaled(deck, eclipseState, grid, false);
+
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
+    auto materialLawManagerScaled = std::make_shared<MaterialLawManager>();
+    materialLawManagerScaled->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     Opm::BlackoilState state( Opm::UgGridHelpers::numCells( grid ) , Opm::UgGridHelpers::numFaces( grid ) , 3);
 
@@ -848,12 +968,43 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
         }
     }
 
+    // Adjust oil pressure according to gas saturation and cap pressure
+    typedef Opm::SimpleModularFluidState<double,
+    /*numPhases=*/3,
+    /*numComponents=*/3,
+    FluidSystem,
+    /*storePressure=*/false,
+    /*storeTemperature=*/false,
+    /*storeComposition=*/false,
+    /*storeFugacity=*/false,
+    /*storeSaturation=*/true,
+    /*storeDensity=*/false,
+    /*storeViscosity=*/false,
+    /*storeEnthalpy=*/false> SatOnlyFluidState;
+
+    SatOnlyFluidState fluidState;
+    typedef MaterialLawManager::MaterialLaw MaterialLaw;
+
+    // Initialize the fluid system
+    FluidSystem::initFromDeck(deck, eclipseState);
+
     // reference pcs
-    const int numCells = Opm::UgGridHelpers::numCells(grid);
-    std::vector<int> cells(numCells);
-    for (int c = 0; c < numCells; ++c) { cells[c] = c; }
     std::vector<double> pc_original = state.saturation();
-    props.capPress(numCells, sats.data(), cells.data(), pc_original.data(), nullptr);
+    const int numCells = Opm::UgGridHelpers::numCells(grid);
+    for (int c = 0; c < numCells; ++c) {
+        std::vector<double> pc = {0,0,0};
+        double sw = sats[3*c + 0];
+        double so = sats[3*c + 1];
+        double sg = sats[3*c + 2];
+        fluidState.setSaturation(FluidSystem::waterPhaseIdx, sw);
+        fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
+        fluidState.setSaturation(FluidSystem::gasPhaseIdx, sg);
+        const auto& matParams = materialLawManager->materialLawParams(c);
+        MaterialLaw::capillaryPressures(pc, matParams, fluidState);
+        pc_original[3*c + 0] = pc[FluidSystem::oilPhaseIdx] - pc[FluidSystem::waterPhaseIdx];
+        pc_original[3*c + 1] = 0.0;
+        pc_original[3*c + 2] = pc[FluidSystem::oilPhaseIdx] + pc[FluidSystem::gasPhaseIdx];
+    }
 
     std::vector<double> pc_scaled_truth = pc_original;
 
@@ -876,17 +1027,46 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
 
     // apply swatinit
     Opm::BlackoilState state_scaled = state;
-    initStateEquil(grid, propsScaled, deck, eclipseState, 9.81, state_scaled, true);
+    initStateEquil(grid, materialLawManagerScaled, deck, eclipseState, 9.81, state_scaled, true);
 
     // don't apply swatinit
     Opm::BlackoilState state_unscaled = state;
-    initStateEquil(grid, props, deck, eclipseState, 9.81, state_unscaled, false);
+    initStateEquil(grid, materialLawManager, deck, eclipseState, 9.81, state_unscaled, false);
 
     // compute pc
     std::vector<double> pc_scaled= state.saturation();
-    propsScaled.capPress(numCells, state_scaled.saturation().data(), cells.data(), pc_scaled.data(), nullptr);
+    for (int c = 0; c < numCells; ++c) {
+        std::vector<double> pc = {0,0,0};
+        double sw = state_scaled.saturation().data()[3*c + 0];
+        double so = state_scaled.saturation().data()[3*c + 1];
+        double sg = state_scaled.saturation().data()[3*c + 2];
+
+        fluidState.setSaturation(FluidSystem::waterPhaseIdx, sw);
+        fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
+        fluidState.setSaturation(FluidSystem::gasPhaseIdx, sg);
+        const auto& matParams = materialLawManagerScaled->materialLawParams(c);
+        MaterialLaw::capillaryPressures(pc, matParams, fluidState);
+        pc_scaled[3*c + 0] = pc[FluidSystem::oilPhaseIdx] - pc[FluidSystem::waterPhaseIdx];
+        pc_scaled[3*c + 1] = 0.0;
+        pc_scaled[3*c + 2] = pc[FluidSystem::oilPhaseIdx] + pc[FluidSystem::gasPhaseIdx];
+    }
     std::vector<double> pc_unscaled= state.saturation();
-    props.capPress(numCells, state_unscaled.saturation().data(), cells.data(), pc_unscaled.data(), nullptr);
+    for (int c = 0; c < numCells; ++c) {
+        std::vector<double> pc = {0,0,0};
+        double sw = state_unscaled.saturation().data()[3*c + 0];
+        double so = state_unscaled.saturation().data()[3*c + 1];
+        double sg = state_unscaled.saturation().data()[3*c + 2];
+
+        fluidState.setSaturation(FluidSystem::waterPhaseIdx, sw);
+        fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
+        fluidState.setSaturation(FluidSystem::gasPhaseIdx, sg);
+
+        const auto& matParams = materialLawManager->materialLawParams(c);
+        MaterialLaw::capillaryPressures(pc, matParams, fluidState);
+        pc_unscaled[3*c + 0] = pc[FluidSystem::oilPhaseIdx] - pc[FluidSystem::waterPhaseIdx];
+        pc_unscaled[3*c + 1] = 0.0;
+        pc_unscaled[3*c + 2] = pc[FluidSystem::oilPhaseIdx] + pc[FluidSystem::gasPhaseIdx];
+    }
 
     // test
     const double reltol = 1.0e-3;

@@ -29,10 +29,15 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
+#include <opm/core/utility/compressedToCartesian.hpp>
+
 
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
 
 #include <boost/filesystem.hpp>
 
@@ -97,10 +102,24 @@ try
     BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param);
     warnIfUnusedParams(param);
 
+    // Create material law manager.
+    std::vector<int> compressedToCartesianIdx
+        = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
+
+    // Forward declaring the MaterialLawManager template.
+    typedef Opm::ThreePhaseMaterialTraits<double,
+    /*wettingPhaseIdx=*/Opm::BlackoilPhases::Aqua,
+    /*nonWettingPhaseIdx=*/Opm::BlackoilPhases::Liquid,
+    /*gasPhaseIdx=*/Opm::BlackoilPhases::Vapour> MaterialTraits;
+    typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
+
+    auto materialLawManager = std::make_shared<MaterialLawManager>();
+    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+
     // Initialisation.
     //initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
     BlackoilState state( UgGridHelpers::numCells(grid) , UgGridHelpers::numFaces(grid), 3);
-    initStateEquil(grid, props, deck, eclipseState, grav, state);
+    initStateEquil(grid, materialLawManager, deck, eclipseState, grav, state);
 
     // Output.
     const std::string output_dir = param.getDefault<std::string>("output_dir", "output");
