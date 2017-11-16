@@ -213,18 +213,7 @@ public:
         SimulatorReport report;
         SimulatorReport stepReport;
 
-        std::vector<int> fipnum_global = eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
-        //Get compressed cell fipnum.
-        std::vector<int> fipnum(Opm::UgGridHelpers::numCells(grid()));
-        if (fipnum_global.empty()) {
-            std::fill(fipnum.begin(), fipnum.end(), 0);
-        } else {
-            for (size_t c = 0; c < fipnum.size(); ++c) {
-                fipnum[c] = fipnum_global[Opm::UgGridHelpers::globalCell(grid())[c]];
-            }
-        }
-        std::vector<std::vector<double>> originalFluidInPlace;
-        std::vector<double> originalFluidInPlaceTotals;
+        createLocalFipnum();
 
         WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
         if (output_writer_.isRestart()) {
@@ -251,18 +240,9 @@ public:
 
             auto solver = createSolver(well_model);
 
-            std::vector<std::vector<double>> currentFluidInPlace;
-            std::vector<double> currentFluidInPlaceTotals;
-
             // Compute orignal fluid in place if this has not been done yet
-            if (originalFluidInPlace.empty()) {
-                originalFluidInPlace = solver->computeFluidInPlace(fipnum);
-                originalFluidInPlaceTotals = FIPTotals(originalFluidInPlace);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlace);
-                FIPUnitConvert(eclState().getUnits(), originalFluidInPlaceTotals);
-
-                currentFluidInPlace = originalFluidInPlace;
-                currentFluidInPlaceTotals = originalFluidInPlaceTotals;
+            if (originalFluidInPlace_.data.empty()) {
+                originalFluidInPlace_ = computeFluidInPlace(*solver);
             }
 
             // write the inital state at the report stage
@@ -271,10 +251,7 @@ public:
                 perfTimer.start();
 
                 if (terminal_output_) {
-                    outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
-                    for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
-                        outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
-                    }
+                    outputFluidInPlace(timer, originalFluidInPlace_);
                 }
 
                 // No per cell data is written for initial step, but will be
@@ -309,7 +286,7 @@ public:
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE, timer.currentStepNum());
                 stepReport = adaptiveTimeStepping->step( timer, *solver, state, wellStateDummy, event, output_writer_,
-                                                         output_writer_.requireFIPNUM() ? &fipnum : nullptr );
+                                                         output_writer_.requireFIPNUM() ? &fipnum_ : nullptr );
                 report += stepReport;
                 failureReport_ += adaptiveTimeStepping->failureReport();
             }
@@ -359,24 +336,13 @@ public:
             ++timer;
 
             // Compute current fluid in place.
-            currentFluidInPlace = solver->computeFluidInPlace(fipnum);
-            currentFluidInPlaceTotals = FIPTotals(currentFluidInPlace);
-
-            const std::string version = moduleVersionName();
-
-            FIPUnitConvert(eclState().getUnits(), currentFluidInPlace);
-            FIPUnitConvert(eclState().getUnits(), currentFluidInPlaceTotals);
+            const auto currentFluidInPlace = computeFluidInPlace(*solver);
 
             if (terminal_output_ )
             {
-                outputTimestampFIP(timer, version);
-                outputFluidInPlace(originalFluidInPlaceTotals, currentFluidInPlaceTotals,eclState().getUnits(), 0);
-                for (size_t reg = 0; reg < originalFluidInPlace.size(); ++reg) {
-                    outputFluidInPlace(originalFluidInPlace[reg], currentFluidInPlace[reg], eclState().getUnits(), reg+1);
-                }
+                outputFluidInPlace(timer, currentFluidInPlace);
 
-                std::string msg;
-                msg =
+                std::string msg =
                     "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
                     "total solver time " + std::to_string(report.solver_time) + " seconds.";
                 OpmLog::note(msg);
@@ -417,6 +383,22 @@ protected:
 
         return std::unique_ptr<Solver>(new Solver(solver_param_, std::move(model)));
     }
+
+
+    void createLocalFipnum()
+    {
+        const std::vector<int>& fipnum_global = eclState().get3DProperties().getIntGridProperty("FIPNUM").getData();
+        // Get compressed cell fipnum.
+        fipnum_.resize(Opm::UgGridHelpers::numCells(grid()));
+        if (fipnum_global.empty()) {
+            std::fill(fipnum_.begin(), fipnum_.end(), 0);
+        } else {
+            for (size_t c = 0; c < fipnum_.size(); ++c) {
+                fipnum_[c] = fipnum_global[Opm::UgGridHelpers::globalCell(grid())[c]];
+            }
+        }
+    }
+
 
     void FIPUnitConvert(const UnitSystem& units,
                         std::vector<std::vector<double>>& fip)
@@ -508,7 +490,45 @@ protected:
     }
 
 
-    void outputTimestampFIP(SimulatorTimer& timer, const std::string version)
+    struct FluidInPlace
+    {
+        std::vector<std::vector<double>> data;
+        std::vector<double> totals;
+    };
+
+
+    FluidInPlace computeFluidInPlace(const Solver& solver)
+    {
+        FluidInPlace fip;
+        fip.data = solver.computeFluidInPlace(fipnum_);
+        fip.totals = FIPTotals(fip.data);
+        FIPUnitConvert(eclState().getUnits(), fip.data);
+        FIPUnitConvert(eclState().getUnits(), fip.totals);
+        return fip;
+    }
+
+
+    void outputFluidInPlace(const SimulatorTimer& timer,
+                            const FluidInPlace& currentFluidInPlace)
+    {
+        if (!timer.initialStep()) {
+            const std::string version = moduleVersionName();
+            outputTimestampFIP(timer, version);
+        }
+        outputRegionFluidInPlace(originalFluidInPlace_.totals,
+                                 currentFluidInPlace.totals,
+                                 eclState().getUnits(),
+                                 0);
+        for (size_t reg = 0; reg < originalFluidInPlace_.data.size(); ++reg) {
+            outputRegionFluidInPlace(originalFluidInPlace_.data[reg],
+                                     currentFluidInPlace.data[reg],
+                                     eclState().getUnits(),
+                                     reg+1);
+        }
+    }
+
+
+    void outputTimestampFIP(const SimulatorTimer& timer, const std::string version)
     {
         std::ostringstream ss;
         boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
@@ -523,7 +543,7 @@ protected:
     }
 
 
-    void outputFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg)
+    void outputRegionFluidInPlace(const std::vector<double>& oip, const std::vector<double>& cip, const UnitSystem& units, const int reg)
     {
         std::ostringstream ss;
         if (!reg) {
@@ -717,6 +737,9 @@ protected:
 
     // Data.
     Simulator& ebosSimulator_;
+
+    std::vector<int> fipnum_;
+    FluidInPlace originalFluidInPlace_;
 
     typedef typename Solver::SolverParameters SolverParameters;
 
