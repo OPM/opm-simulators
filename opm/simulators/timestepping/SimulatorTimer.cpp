@@ -90,7 +90,7 @@ namespace Opm
     /// Current step length.
     double SimulatorTimer::currentStepLength() const
     {
-        //assert(!done());
+        assert(!done());
         return timesteps_[current_step_];
     }
 
@@ -136,9 +136,13 @@ namespace Opm
     void SimulatorTimer::report(std::ostream& os) const
     {
         os << "\n\n---------------    Simulation step number " << currentStepNum() << "    ---------------"
-           << "\n      Current time (days)     " << Opm::unit::convert::to(simulationTimeElapsed(), Opm::unit::day)
-           << "\n      Current stepsize (days) " << Opm::unit::convert::to(currentStepLength(), Opm::unit::day)
-           << "\n      Total time (days)       " << Opm::unit::convert::to(totalTime(), Opm::unit::day)
+           << "\n      Current time (days)     " << Opm::unit::convert::to(simulationTimeElapsed(), Opm::unit::day);
+        if(done()){
+           os << "\n      Current stepsize (days) " << " LAST STEP ";
+        }else{
+           os << "\n      Current stepsize (days) " << Opm::unit::convert::to(currentStepLength(), Opm::unit::day);
+        }
+        os   << "\n      Total time (days)       " << Opm::unit::convert::to(totalTime(), Opm::unit::day)
            << "\n" << std::endl;
     }
 
