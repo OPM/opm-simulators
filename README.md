@@ -7,13 +7,11 @@ CONTENT
 opm-simulators contains simulator programs for porous media flow. It
 also contains a small library for automatic differentiation
 built on the Eigen linear algebra package which is used by many of the
-simulators to handle the building of Jacobians. The most important parts are:
-
-* flow_ebos.cpp (a fully implicit black-oil simulator built using
-  the local AD class Evaluation)
-* flow_legacy.cpp (a fully implicit black-oil simulator built using
-  the vectorized AD class AutoDiffBlock)
-* AutoDiffBlock.hpp (class for AD on vectorized data with sparse jacobians)
+simulators to handle the building of Jacobians. The most important
+(and tested) part is the Flow reservoir simulator, which is a fully
+implicit black-oil simulator that also supports solvent and polymer
+options. It is built using automatic differentiation, using the local
+AD class Evaluation from opm-material.
 
 LICENSE
 -------
@@ -33,8 +31,8 @@ that the code will compile and run on windows platforms.
 REQUIREMENTS
 ------------
 
-opm-simulators requires opm-output, opm-core, and all their
-requirements (see opm-core/README). In addition, opm-simulators
+opm-simulators requires several other OPM modules, see
+http://opm-project.org/?page_id=274. In addition, opm-simulators
 requires the Dune modue dune-istl and Eigen, version 3.1 (has not been
 tested with later versions).
 
