@@ -253,7 +253,12 @@ namespace Opm {
 
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
 
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
+            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+           // ebosSimulator_.model().update();
             //auto linsys =  ebosSimulator_.model().linearizer();
+            // NB need to avoid storag cache to calculate prevois storage term correctly
+
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
@@ -602,6 +607,9 @@ namespace Opm {
 
             // apply well residual to the residual.
             wellModel().apply(ebosResid);
+
+            std::cout << "Printing pure residual in forward mode" << std::endl;
+            std::cout << ebosResid << std::endl;
 
             // set initial guess
             x = 0.0;

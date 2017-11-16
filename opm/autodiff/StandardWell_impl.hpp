@@ -1251,7 +1251,7 @@ namespace Opm
         // Compute the average pressure in each well block
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));// This code will not run if intensive quantity cache is disabled
             const auto& fs = intQuants.fluidState();
 
             // TODO: this is another place to show why WellState need to be a vector of WellState.
