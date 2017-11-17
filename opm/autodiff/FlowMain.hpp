@@ -637,8 +637,23 @@ namespace Opm
                                                   Opm::UgGridHelpers::numFaces(grid),
                                                   props.numPhases()));
 
-                initStateEquil(grid, props, *deck_, *eclipse_state_, gravity_[2], *state_);
-                //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
+
+                typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+                FluidSystem::initFromDeck(*deck_ , *eclipse_state_);
+                typedef EQUIL::DeckDependent::InitialStateComputer<FluidSystem> ISC;
+
+                ISC isc(material_law_manager_, *eclipse_state_, grid, gravity_[2]);
+
+                const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+                const int oilpos = FluidSystem::oilPhaseIdx;
+                const int waterpos = FluidSystem::waterPhaseIdx;
+                const int ref_phase = oil ? oilpos : waterpos;
+
+                state_->pressure() = isc.press()[ref_phase];
+                convertSats<FluidSystem>(state_->saturation(), isc.saturation(), pu);
+                state_->gasoilratio() = isc.rs();
+                state_->rv() = isc.rv();
+
             } else {
                 state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
                                                   Opm::UgGridHelpers::numFaces(grid),
@@ -672,6 +687,31 @@ namespace Opm
             initHydroCarbonState(*state_, pu, Opm::UgGridHelpers::numCells(grid), deck_->hasKeyword("DISGAS"), deck_->hasKeyword("VAPOIL"));
 
 
+        }
+
+        template <class FluidSystem>
+        void convertSats(std::vector<double>& sat_interleaved, const std::vector< std::vector<double> >& sat, const PhaseUsage& pu)
+        {
+            assert(sat.size() == 3);
+            const auto nc = sat[0].size();
+            const auto np = sat_interleaved.size() / nc;
+            for (size_t c = 0; c < nc; ++c) {
+                if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::oilPhaseIdx];
+                    sat_interleaved[np*c + opos] = sat_p[c];
+                }
+                if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::waterPhaseIdx];
+                    sat_interleaved[np*c + wpos] = sat_p[c];
+                }
+                if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::gasPhaseIdx];
+                    sat_interleaved[np*c + gpos] = sat_p[c];
+                }
+            }
         }
 
 
@@ -925,6 +965,7 @@ namespace Opm
                                                  Base::threshold_pressures_,
                                                  Base::defunct_well_names_));
         }
+
     };
 
 

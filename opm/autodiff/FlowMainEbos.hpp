@@ -42,6 +42,10 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
+#include <opm/core/simulator/initStateEquil.hpp>
+#include <opm/core/simulator/initState.hpp>
+#include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/LogUtil.hpp>
@@ -533,7 +537,21 @@ namespace Opm
                                                   Opm::UgGridHelpers::numFaces(grid),
                                                   props.numPhases()));
 
-                initStateEquil(grid, props, deck(), eclState(), gravity(), *state_);
+                typedef EQUIL::DeckDependent::InitialStateComputer<FluidSystem> ISC;
+
+                ISC isc(materialLawManager(), eclState(), grid, gravity());
+
+                const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+                const int oilpos = FluidSystem::oilPhaseIdx;
+                const int waterpos = FluidSystem::waterPhaseIdx;
+                const int ref_phase = oil ? oilpos : waterpos;
+
+                state_->pressure() = isc.press()[ref_phase];
+                convertSats<FluidSystem>(state_->saturation(), isc.saturation(), pu);
+                state_->gasoilratio() = isc.rs();
+                state_->rv() = isc.rv();
+
+                //initStateEquil<FluidSystem>(grid, materialLawManager(), eclState(), gravity(), pu, *state_);
                 //state_.faceflux().resize(Opm::UgGridHelpers::numFaces(grid), 0.0);
             } else {
                 state_.reset( new ReservoirState( Opm::UgGridHelpers::numCells(grid),
@@ -945,6 +963,35 @@ namespace Opm
                 }
             }
         }
+
+        /// Convert saturations from a vector of individual phase saturation vectors
+        /// to an interleaved format where all values for a given cell come before all
+        /// values for the next cell, all in a single vector.
+        template <class FluidSystem>
+        void convertSats(std::vector<double>& sat_interleaved, const std::vector< std::vector<double> >& sat, const PhaseUsage& pu)
+        {
+            assert(sat.size() == 3);
+            const auto nc = sat[0].size();
+            const auto np = sat_interleaved.size() / nc;
+            for (size_t c = 0; c < nc; ++c) {
+                if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const int opos = pu.phase_pos[BlackoilPhases::Liquid];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::oilPhaseIdx];
+                    sat_interleaved[np*c + opos] = sat_p[c];
+                }
+                if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const int wpos = pu.phase_pos[BlackoilPhases::Aqua];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::waterPhaseIdx];
+                    sat_interleaved[np*c + wpos] = sat_p[c];
+                }
+                if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const int gpos = pu.phase_pos[BlackoilPhases::Vapour];
+                    const std::vector<double>& sat_p = sat[ FluidSystem::gasPhaseIdx];
+                    sat_interleaved[np*c + gpos] = sat_p[c];
+                }
+            }
+        }
+
 
         std::unique_ptr<EbosSimulator> ebosSimulator_;
         int  mpi_rank_ = 0;
