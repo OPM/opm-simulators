@@ -31,6 +31,7 @@
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/IdealGas.hpp>
 
+#include <opm/common/Unused.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
@@ -181,7 +182,7 @@ public:
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
-        return 1005*(temperature - 273.15);
+        return 1005.0*temperature;
     }
 
     /*!
@@ -201,7 +202,7 @@ public:
     {
         return
             gasEnthalpy(temperature, pressure)
-            - (IdealGas::R*temperature/molarMass()); // <- specific volume of an ideal gas
+            - (IdealGas::R*temperature/molarMass()); // <- pressure times specific volume of an ideal gas
     }
 
     /*!
@@ -246,29 +247,9 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasHeatCapacity(const Evaluation& temperature,
-                                      const Evaluation& /*pressure*/)
+                                      const Evaluation& pressure OPM_UNUSED)
     {
-        // scale temperature by reference temp of 100K
-        Evaluation phi = temperature/100;
-
-        Evaluation c_p =
-            0.661738E+01
-            -0.105885E+01 * phi
-            +0.201650E+00 * Opm::pow(phi,2.)
-            -0.196930E-01 * Opm::pow(phi,3.)
-            +0.106460E-02 * Opm::pow(phi,4.)
-            -0.303284E-04 * Opm::pow(phi,5.)
-            +0.355861E-06 * Opm::pow(phi,6.);
-        c_p +=
-            -0.549169E+01 * Opm::pow(phi,-1.)
-            +0.585171E+01* Opm::pow(phi,-2.)
-            -0.372865E+01* Opm::pow(phi,-3.)
-            +0.133981E+01* Opm::pow(phi,-4.)
-            -0.233758E+00* Opm::pow(phi,-5.)
-            +0.125718E-01* Opm::pow(phi,-6.);
-        c_p *= IdealGas::R / (molarMass() * 1000); // in J/mol/K * mol / kg / 1000 = kJ/kg/K
-
-        return  c_p;
+        return 1005.0;
     }
 };
 

@@ -27,10 +27,12 @@
 #ifndef OPM_SIMPLE_H2O_HPP
 #define OPM_SIMPLE_H2O_HPP
 
+#include "Component.hpp"
+
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
-#include "Component.hpp"
+#include <opm/common/Unused.hpp>
 
 #include <cmath>
 
@@ -161,7 +163,16 @@ public:
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
                                   const Evaluation& /*pressure*/)
-    { return 1976*(temperature - 293.15) + 2.45e6; }
+    { return 1.976e3*temperature + 40.65e3/molarMass(); }
+
+
+    /*!
+     * \copydoc Component::gasHeatCapacity
+     */
+    template <class Evaluation>
+    static Evaluation gasHeatCapacity(const Evaluation& temperature OPM_UNUSED,
+                                      const Evaluation& pressure OPM_UNUSED)
+    { return 1.976e3; }
 
     /*!
      * \brief Specific enthalpy of liquid water \f$\mathrm{[J/kg]}\f$.
@@ -172,7 +183,15 @@ public:
     template <class Evaluation>
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
                                      const Evaluation& /*pressure*/)
-    { return 4180*(temperature - 293.15); }
+    { return 4180*temperature; }
+
+    /*!
+     * \copydoc Component::liquidHeatCapacity
+     */
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature,
+                                         const Evaluation& pressure OPM_UNUSED)
+    { return 4.184e3; }
 
     /*!
      * \brief Specific internal energy of steam \f$\mathrm{[J/kg]}\f$.

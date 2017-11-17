@@ -32,6 +32,8 @@
 #include <opm/material/IdealGas.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
+#include <opm/common/Unused.hpp>
+
 namespace Opm {
 /*!
  * \ingroup Components
@@ -139,6 +141,20 @@ public:
     static Evaluation liquidEnthalpy(const Evaluation& temperature, const Evaluation& /*pressure*/)
     {
         return 120.0/molarMass() * temperature; // [J/kg]
+    }
+
+    /*!
+     * \brief Specific isobaric heat capacity \f$[J/(kg K)]\f$ of pure
+     *        liquid TCE.
+     *
+     * \param temperature temperature of component in \f$\mathrm{[K]}\f$
+     * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     */
+    template <class Evaluation>
+    static Evaluation liquidHeatCapacity(const Evaluation& temperature OPM_UNUSED,
+                                         const Evaluation& pressure OPM_UNUSED)
+    {
+        return 120.0/molarMass();
     }
 
     /*!
