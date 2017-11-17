@@ -690,11 +690,6 @@ namespace Opm
                     }
                 }
 
-                if (output_to_files_) {
-                    std::string filename = output_dir_ + "/walltime.txt";
-                    std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
-                    successReport.reportParam(tot_os);
-                }
             } else {
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;

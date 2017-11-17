@@ -162,16 +162,8 @@ public:
 
         // Create timers and file for writing timing info.
         Opm::time::StopWatch solver_timer;
-        Opm::time::StopWatch step_timer;
         Opm::time::StopWatch total_timer;
         total_timer.start();
-        std::string tstep_filename = output_writer_.outputDirectory() + "/step_timing.txt";
-        std::ofstream tstep_os;
-
-        if ( output_writer_.output() && output_writer_.isIORank() )
-        {
-            tstep_os.open(tstep_filename.c_str());
-        }
 
         // adaptive time stepping
         const auto& events = schedule().getEvents();
@@ -225,7 +217,6 @@ public:
         // Main simulation loop.
         while (!timer.done()) {
             // Report timestep.
-            step_timer.start();
             if ( terminal_output_ )
             {
                 std::ostringstream ss;
@@ -320,11 +311,6 @@ public:
 
             // update timing.
             report.solver_time += solver_timer.secsSinceStart();
-
-            if ( output_writer_.output() && output_writer_.isIORank() )
-            {
-                stepReport.reportParam(tstep_os);
-            }
 
             // We don't need the reservoir state anymore. It is just passed around to avoid
             // code duplication. Pass empty state instead.
