@@ -722,7 +722,6 @@ namespace Opm
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
-                                           eclState(),
                                            *output_writer_));
         }
 

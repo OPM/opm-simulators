@@ -98,7 +98,6 @@ public:
                                        NewtonIterationBlackoilInterface& linsolver,
                                        const bool has_disgas,
                                        const bool has_vapoil,
-                                       const EclipseState& /* eclState */,
                                        OutputWriter& output_writer)
         : ebosSimulator_(ebosSimulator),
           param_(param),
