@@ -121,6 +121,7 @@ public:
             is_parallel_run_ = ( info.communicator().size() > 1 );
         }
 #endif
+        createLocalFipnum();
     }
 
     /// Run the simulation.
@@ -203,8 +204,6 @@ public:
 
         SimulatorReport report;
         SimulatorReport stepReport;
-
-        createLocalFipnum();
 
         WellModel well_model(ebosSimulator_, model_param_, terminal_output_);
         if (output_writer_.isRestart()) {
