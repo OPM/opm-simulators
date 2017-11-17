@@ -360,7 +360,8 @@ namespace Opm
               strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
               const double mem_size = getTotalSystemMemory() / megabyte;
               std::ostringstream ss;
-              ss << "\n\n\n ########  #          ######   #           #\n";
+              ss << "\n\n\n";
+              ss << " ########  #          ######   #           #\n";
               ss << " #         #         #      #   #         # \n";
               ss << " #####     #         #      #    #   #   #  \n";
               ss << " #         #         #      #     # # # #   \n";
