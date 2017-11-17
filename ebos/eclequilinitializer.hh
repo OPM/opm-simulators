@@ -36,9 +36,8 @@
 // the ordering of these includes matters. do not touch it if you're not prepared to deal
 // with some trouble!
 #include <dune/grid/cpgrid/GridHelpers.hpp>
-#include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/simulator/initStateEquil.hpp>
-#include <opm/core/simulator/BlackoilState.hpp>
+
 
 #include <vector>
 
@@ -122,31 +121,13 @@ public:
             std::make_shared<Opm::EclMaterialLawManager<EquilTraits> >();
         equilMaterialLawManager->initFromDeck(deck, eclState, compressedToCartesianEquilElemIdx);
 
-        // create the data structures which are used by initStateEquil()
-        Opm::ParameterGroup tmpParam;
-        Opm::BlackoilPropertiesFromDeck opmBlackoilProps(
-            gridManager.deck(),
-            gridManager.eclState(),
-            equilMaterialLawManager,
-            Opm::UgGridHelpers::numCells(equilGrid),
-            Opm::UgGridHelpers::globalCell(equilGrid),
-            Opm::UgGridHelpers::cartDims(equilGrid),
-            tmpParam);
 
-        // initialize the boiler plate of opm-core the state structure.
-        const auto opmPhaseUsage = opmBlackoilProps.phaseUsage();
-        Opm::BlackoilState opmBlackoilState(numEquilElems,
-                                            /*numFaces=*/0, // we don't care here
-                                            opmPhaseUsage.num_phases);
+        Opm::EQUIL::DeckDependent::InitialStateComputer<FluidSystem> initialState(equilMaterialLawManager,
+                                                                                  gridManager.eclState(),
+                                                                                  equilGrid,
+                                                                                  simulator.problem().gravity()[dimWorld - 1],
+                enableSwatinit);
 
-        // do the actual computation.
-        Opm::initStateEquil(equilGrid,
-                            opmBlackoilProps,
-                            gridManager.deck(),
-                            gridManager.eclState(),
-                            simulator.problem().gravity()[dimWorld - 1],
-                            opmBlackoilState,
-                            enableSwatinit);
 
         std::vector<int> localToEquilIndex( numElems, -1 );
         for( unsigned int elemIdx = 0; elemIdx < numElems; ++elemIdx )
@@ -173,42 +154,18 @@ public:
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     S = 0.0;
                 else {
-                    unsigned opmPhasePos = 10000;
-                    switch (phaseIdx) {
-                    case oilPhaseIdx:
-                        opmPhasePos = opmPhaseUsage.phase_pos[Opm::BlackoilPhases::Liquid];
-                        break;
-
-                    case gasPhaseIdx:
-                        opmPhasePos = opmPhaseUsage.phase_pos[Opm::BlackoilPhases::Vapour];
-                        break;
-
-                    case waterPhaseIdx:
-                        opmPhasePos = opmPhaseUsage.phase_pos[Opm::BlackoilPhases::Aqua];
-                        break;
-                    }
-                    S = opmBlackoilState.saturation()[equilElemIdx*opmPhaseUsage.num_phases
-                                                      + opmPhasePos];
+                    S = initialState.saturation()[phaseIdx][equilElemIdx];
                 }
                 fluidState.setSaturation(phaseIdx, S);
             }
 
             // set the temperature
-            const auto& temperatureVector = opmBlackoilState.temperature();
             Scalar T = FluidSystem::surfaceTemperature;
-            if (!temperatureVector.empty())
-                T = temperatureVector[equilElemIdx];
             fluidState.setTemperature(T);
 
-            // set the phase pressures. the Opm::BlackoilState only provides the oil
-            // phase pressure, so we need to calculate the other phases' pressures
-            // ourselfs.
-            Dune::FieldVector< Scalar, numPhases >  pC( 0 );
-            const auto& matParams = simulator.problem().materialLawParams(elemIdx);
-            MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-            Scalar po = opmBlackoilState.pressure()[equilElemIdx];
+            // set the phase pressures.
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-                fluidState.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
+                fluidState.setPressure(phaseIdx, initialState.press()[phaseIdx][equilElemIdx]);
 
             // reset the phase compositions
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -222,7 +179,7 @@ public:
             if (FluidSystem::enableDissolvedGas()) {
                 // for gas and oil we have to translate surface volumes to mole fractions
                 // before we can set the composition in the fluid state
-                Scalar Rs = opmBlackoilState.gasoilratio()[equilElemIdx];
+                Scalar Rs = initialState.rs()[equilElemIdx];
                 Scalar RsSat = FluidSystem::saturatedDissolutionFactor(fluidState, oilPhaseIdx, regionIdx);
 
                 if (Rs > RsSat)
@@ -238,7 +195,7 @@ public:
 
             // retrieve the surface volume of vaporized gas
             if (FluidSystem::enableVaporizedOil()) {
-                Scalar Rv = opmBlackoilState.rv()[equilElemIdx];
+                Scalar Rv = initialState.rv()[equilElemIdx];
                 Scalar RvSat = FluidSystem::saturatedDissolutionFactor(fluidState, gasPhaseIdx, regionIdx);
 
                 if (Rv > RvSat)
