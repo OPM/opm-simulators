@@ -238,9 +238,9 @@ public:
             1/molarMass()* // conversion from [J/(mol K)] to [J/(kg K)]
 
             cpVapA + temperature*
-            (2.0*cpVapB + temperature*
-             (3.0*cpVapC + temperature*
-              (4.0*cpVapD)));
+            (cpVapB + temperature*
+             (cpVapC + temperature*
+              (cpVapD)));
     }
     /*!
      * \brief The dynamic viscosity \f$\mathrm{[Pa*s]}\f$ of \f$N_2\f$ at a given pressure and temperature.
