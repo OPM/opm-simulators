@@ -230,7 +230,7 @@ public:
             {
                 std::ostringstream ss;
                 timer.report(ss);
-                OpmLog::note(ss.str());
+                OpmLog::debug(ss.str());
             }
 
             // Run a multiple steps of the solver depending on the time step control.
@@ -266,7 +266,8 @@ public:
                 std::ostringstream step_msg;
                 boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
                 step_msg.imbue(std::locale(std::locale::classic(), facet));
-                step_msg << "\nTime step " << std::setw(4) <<timer.currentStepNum()
+                step_msg << "\nReport step " << std::setw(2) <<timer.currentStepNum()
+                         << "/" << timer.numSteps()
                          << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
                          << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
                          << ", date = " << timer.currentDateTime();
@@ -345,7 +346,7 @@ public:
                 std::string msg =
                     "Time step took " + std::to_string(solver_timer.secsSinceStart()) + " seconds; "
                     "total solver time " + std::to_string(report.solver_time) + " seconds.";
-                OpmLog::note(msg);
+                OpmLog::debug(msg);
             }
 
             // write simulation state at the report stage

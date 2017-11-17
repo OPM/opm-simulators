@@ -925,7 +925,7 @@ namespace Opm {
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    CNV(" + key[ compIdx ] + ") ";
                     }
-                    OpmLog::note(msg);
+                    OpmLog::debug(msg);
                 }
                 std::ostringstream ss;
                 const std::streamsize oprec = ss.precision(3);
@@ -939,7 +939,7 @@ namespace Opm {
                 }
                 ss.precision(oprec);
                 ss.flags(oflags);
-                OpmLog::note(ss.str());
+                OpmLog::debug(ss.str());
             }
 
             for (int phaseIdx = 0; phaseIdx < numPhases(); ++phaseIdx) {
