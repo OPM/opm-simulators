@@ -2,7 +2,7 @@
 # spec file for package opm-autodiff
 #
 
-%define tag final
+%define tag update1
 
 Name:           opm-simulators
 Version:        2017.10
