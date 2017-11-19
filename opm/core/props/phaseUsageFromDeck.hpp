@@ -50,9 +50,16 @@ namespace Opm
             pu.phase_used[BlackoilPhases::Vapour] = 1;
         }
         pu.num_phases = 0;
-        for (int i = 0; i < BlackoilPhases::MaxNumPhases; ++i) {
-            pu.phase_pos[i] = pu.num_phases;
-            pu.num_phases += pu.phase_used[i];
+        int numActivePhases = 0;
+        for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
+            if (!pu.phase_used[numActivePhases]) {
+                pu.phase_pos[phaseIdx] = -1;
+            }
+            else {
+                pu.phase_pos[phaseIdx] = numActivePhases;
+                ++ numActivePhases;
+                pu.num_phases = numActivePhases;
+            }
         }
 
         // Only 2 or 3 phase systems handled.
@@ -78,6 +85,17 @@ namespace Opm
             pu.has_polymer = true;
         }
 
+        // Add energy info
+        pu.has_energy = phase.active(Phase::ENERGY);
+        if (pu.has_energy) {
+            // this is quite a hack: even though energy is not considered as in
+            // MaxNumPhases and pu.num_phases because this would break a lot of
+            // assumptions in old code, it is nevertheless an index to be translated
+            // to. polymer and solvent are even larger hacks because not even this can be
+            // done for them.
+            pu.phase_pos[BlackoilPhases::Energy] = numActivePhases;
+            ++ numActivePhases;
+        }
         return pu;
     }
 
@@ -135,6 +153,9 @@ namespace Opm
         if (phase.active(Phase::POLYMER)) {
             pu.has_polymer = true;
         }
+
+        // Add energy info
+        pu.has_energy = phase.active(Phase::ENERGY);
 
         return pu;
     }
