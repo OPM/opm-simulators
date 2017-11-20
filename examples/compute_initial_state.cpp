@@ -28,6 +28,8 @@
 #include <opm/core/simulator/initStateEquil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
 
@@ -75,9 +77,42 @@ namespace
         std::copy(data.begin(), data.end(), std::ostream_iterator<double>(file, "\n"));
     }
 
+    /// Convert saturations from a vector of individual phase saturation vectors
+    /// to an interleaved format where all values for a given cell come before all
+    /// values for the next cell, all in a single vector.
+    template <class FluidSystem>
+    void convertSats(std::vector<double>& sat_interleaved, const std::vector< std::vector<double> >& sat, const Opm::PhaseUsage& pu)
+    {
+        assert(sat.size() == 3);
+        const auto nc = sat[0].size();
+        const auto np = sat_interleaved.size() / nc;
+        for (size_t c = 0; c < nc; ++c) {
+            if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                const int opos = pu.phase_pos[Opm::BlackoilPhases::Liquid];
+                const std::vector<double>& sat_p = sat[ FluidSystem::oilPhaseIdx];
+                sat_interleaved[np*c + opos] = sat_p[c];
+            }
+            if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const int wpos = pu.phase_pos[Opm::BlackoilPhases::Aqua];
+                const std::vector<double>& sat_p = sat[ FluidSystem::waterPhaseIdx];
+                sat_interleaved[np*c + wpos] = sat_p[c];
+            }
+            if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const int gpos = pu.phase_pos[Opm::BlackoilPhases::Vapour];
+                const std::vector<double>& sat_p = sat[ FluidSystem::gasPhaseIdx];
+                sat_interleaved[np*c + gpos] = sat_p[c];
+            }
+        }
+    }
+
 
 
 } // anon namespace
+
+
+
+
+
 
 
 
@@ -119,7 +154,32 @@ try
     // Initialisation.
     //initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
     BlackoilState state( UgGridHelpers::numCells(grid) , UgGridHelpers::numFaces(grid), 3);
-    initStateEquil(grid, materialLawManager, deck, eclipseState, grav, state);
+    typedef FluidSystems::BlackOil<double> FluidSystem;
+    FluidSystem::initFromDeck(deck, eclipseState);
+    PhaseUsage pu = phaseUsageFromDeck(deck);
+
+    typedef EQUIL::DeckDependent::InitialStateComputer<FluidSystem> ISC;
+
+    ISC isc(materialLawManager, eclipseState, grid, grav);
+
+    const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+    const int oilpos = FluidSystem::oilPhaseIdx;
+    const int waterpos = FluidSystem::waterPhaseIdx;
+    const int ref_phase = oil ? oilpos : waterpos;
+
+    state.pressure() = isc.press()[ref_phase];
+    convertSats<FluidSystem>(state.saturation(), isc.saturation(), pu);
+
+    if (state.hasCellData(std::string("GASOILRATIO"))) {
+        std::vector<double>& rs = state.getCellData(std::string("GASOILRATIO"));
+        rs = isc.rs();
+    }
+    if (state.hasCellData(std::string("RV"))){
+        std::vector<double>& rv = state.getCellData(std::string("RV"));
+        rv = isc.rv();
+    }
+
+
 
     // Output.
     const std::string output_dir = param.getDefault<std::string>("output_dir", "output");
@@ -132,3 +192,5 @@ catch (const std::exception& e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
     throw;
 }
+
+

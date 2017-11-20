@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -20,7 +21,6 @@
 #ifndef OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 #define OPM_EQUILIBRATIONHELPERS_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/utility/linearInterpolation.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/RootFinders.hpp>
@@ -478,13 +478,11 @@ namespace Opm
             EquilReg(const EquilRecord& rec,
                      std::shared_ptr<Miscibility::RsFunction> rs,
                      std::shared_ptr<Miscibility::RsFunction> rv,
-                     const int pvtIdx,
-                     const PhaseUsage&  pu)
+                     const int pvtIdx)
                 : rec_    (rec)
                 , rs_     (rs)
                 , rv_     (rv)
                 , pvtIdx_ (pvtIdx)
-                , pu_     (pu)
 
             {
             }
@@ -554,18 +552,12 @@ namespace Opm
             const int
             pvtIdx() const { return this->pvtIdx_; }
 
-            /**
-             * Retrieve active fluid phase summary.
-             */
-            const PhaseUsage&
-            phaseUsage() const { return this->pu_; }
 
         private:
             EquilRecord rec_;     /**< Equilibration data */
             std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
             std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
             const int pvtIdx_;
-            PhaseUsage  pu_;      /**< Active phase summary */
         };
 
 
@@ -588,7 +580,7 @@ namespace Opm
                 fluidState_.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
                 fluidState_.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
                 fluidState_.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-                std::fill(pc_, pc_ + BlackoilPhases::MaxNumPhases, 0.0);
+                std::fill(pc_, pc_ + FluidSystem::numPhases, 0.0);
 
             }
 
@@ -609,7 +601,7 @@ namespace Opm
             const int cell_;
             const double target_pc_;
             mutable SatOnlyFluidState fluidState_;
-            mutable double pc_[BlackoilPhases::MaxNumPhases];
+            mutable double pc_[FluidSystem::numPhases];
         };
 
         template <class FluidSystem, class MaterialLawManager>
@@ -722,7 +714,7 @@ namespace Opm
                 fluidState_.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
                 fluidState_.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
                 fluidState_.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-                std::fill(pc_, pc_ + BlackoilPhases::MaxNumPhases, 0.0);
+                std::fill(pc_, pc_ + FluidSystem::numPhases, 0.0);
             }
             double operator()(double s) const
             {
@@ -745,7 +737,7 @@ namespace Opm
             const int cell_;
             const double target_pc_;
             mutable SatOnlyFluidState fluidState_;
-            mutable double pc_[BlackoilPhases::MaxNumPhases];
+            mutable double pc_[FluidSystem::numPhases];
         };
 
 
