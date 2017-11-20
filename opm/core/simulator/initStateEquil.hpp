@@ -24,9 +24,6 @@
 
 #include <opm/core/grid/GridHelpers.hpp>
 #include <opm/core/simulator/EquilibrationHelpers.hpp>
-#include <opm/core/simulator/BlackoilState.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/utility/RegionMapping.hpp>
 #include <opm/core/utility/extractPvtTableIndex.hpp>
 
@@ -40,6 +37,8 @@
 #include <opm/parser/eclipse/EclipseState/Tables/RsvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/data/SimulationDataContainer.hpp>
+
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
@@ -198,12 +197,12 @@ namespace Opm
             template<class Grid>
             inline
             std::vector<int>
-            equilnum(const Opm::Deck& deck,
-                     const Opm::EclipseState& eclipseState,
+            equilnum(const Opm::EclipseState& eclipseState,
                      const Grid&  G   )
             {
                 std::vector<int> eqlnum;
-                if (deck.hasKeyword("EQLNUM")) {
+
+                if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
                     const int nc = UgGridHelpers::numCells(G);
                     eqlnum.resize(nc);
                     const std::vector<int>& e = 
@@ -223,45 +222,48 @@ namespace Opm
                 return eqlnum;
             }
 
-
+            template<class FluidSystem>
             class InitialStateComputer {
             public:
                 template<class MaterialLawManager, class Grid>
                 InitialStateComputer(std::shared_ptr<MaterialLawManager> materialLawManager,
-                                     const PhaseUsage& phaseUsage,
-                                     const Opm::Deck&             deck,
                                      const Opm::EclipseState& eclipseState,
                                      const Grid&                        G    ,
                                      const double grav = unit::gravity,
-                                     const std::vector<double>&  swat_init = {}
+                                     const bool applySwatInit = true
                                      )
-                    : pp_(phaseUsage.num_phases,
+                    : pp_(FluidSystem::numPhases,
                           std::vector<double>(UgGridHelpers::numCells(G))),
-                      sat_(phaseUsage.num_phases,
+                      sat_(FluidSystem::numPhases,
                           std::vector<double>(UgGridHelpers::numCells(G))),
                       rs_(UgGridHelpers::numCells(G)),
-                      rv_(UgGridHelpers::numCells(G)),
-                      swat_init_(swat_init),
-                      phaseUsage_(phaseUsage)
-
+                      rv_(UgGridHelpers::numCells(G))
                 {
 
-                    typedef FluidSystems::BlackOil<double> FluidSystem;
-
-                    // Initialize the fluid system
-                    FluidSystem::initFromDeck(deck, eclipseState);
+                    //Check for presence of kw SWATINIT
+                    if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatInit) {
+                        const std::vector<double>& swat_init_ecl = eclipseState.
+                                get3DProperties().getDoubleGridProperty("SWATINIT").getData();
+                        const int nc = UgGridHelpers::numCells(G);
+                        swat_init_.resize(nc);
+                        const int* gc = UgGridHelpers::globalCell(G);
+                        for (int c = 0; c < nc; ++c) {
+                            const int deck_pos = (gc == NULL) ? c : gc[c];
+                            swat_init_[c] = swat_init_ecl[deck_pos];
+                        }
+                    }
 
                     // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(eclipseState);
                     const auto& tables = eclipseState.getTableManager();
                     // Create (inverse) region mapping.
-                    const RegionMapping<> eqlmap(equilnum(deck, eclipseState, G)); 
+                    const RegionMapping<> eqlmap(equilnum(eclipseState, G));
 
                     setRegionPvtIdx(G, eclipseState, eqlmap);
 
                     // Create Rs functions.
                     rs_func_.reserve(rec.size());
-                    if (deck.hasKeyword("DISGAS")) {
+                    if (FluidSystem::enableDissolvedGas()) {
                         const TableContainer& rsvdTables = tables.getRsvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             if (eqlmap.cells(i).empty())
@@ -299,7 +301,7 @@ namespace Opm
                     }                    
 
                     rv_func_.reserve(rec.size());
-                    if (deck.hasKeyword("VAPOIL")) {
+                    if (FluidSystem::enableVaporizedOil()) {
                         const TableContainer& rvvdTables = tables.getRvvdTables();
                         for (size_t i = 0; i < rec.size(); ++i) {
                             if (eqlmap.cells(i).empty())
@@ -338,7 +340,7 @@ namespace Opm
                     }
                     
                     // Compute pressures, saturations, rs and rv factors.
-                    calcPressSatRsRv<FluidSystem>(eqlmap, rec, materialLawManager, G, grav);
+                    calcPressSatRsRv(eqlmap, rec, materialLawManager, G, grav);
 
                     // Modify oil pressure in no-oil regions so that the pressures of present phases can
                     // be recovered from the oil pressure and capillary relations.
@@ -366,7 +368,6 @@ namespace Opm
                 Vec rs_;
                 Vec rv_;
                 Vec swat_init_;
-                PhaseUsage phaseUsage_;
 
                 template<class Grid, class RMap>
                 void setRegionPvtIdx(const Grid& G, const Opm::EclipseState& eclipseState, const RMap& reg) {
@@ -381,7 +382,7 @@ namespace Opm
                     }
                 }
 
-                template <class FluidSystem, class RMap, class MaterialLawManager, class Grid>
+                template <class RMap, class MaterialLawManager, class Grid>
                 void
                 calcPressSatRsRv(const RMap&                       reg  ,
                                  const std::vector< EquilRecord >& rec  ,
@@ -398,23 +399,24 @@ namespace Opm
                             continue;
                         }
 
-                        const EqReg eqreg(rec[r],
-                                          rs_func_[r], rv_func_[r], regionPvtIdx_[r],
-                                          phaseUsage_);
+                        const EqReg eqreg(rec[r], rs_func_[r], rv_func_[r], regionPvtIdx_[r]);
                    
                         PVec pressures = phasePressures<FluidSystem>(G, eqreg, cells, grav);
                         const std::vector<double>& temp = temperature(G, eqreg, cells);
                         const PVec sat = phaseSaturations<FluidSystem>(G, eqreg, cells, materialLawManager, swat_init_, pressures);
 
-                        const int np = phaseUsage_.num_phases;
+                        const int np = FluidSystem::numPhases;
                         for (int p = 0; p < np; ++p) {
                             copyFromRegion(pressures[p], cells, pp_[p]);
                             copyFromRegion(sat[p], cells, sat_[p]);
                         }
-                        if (phaseUsage_.phase_used[BlackoilPhases::Liquid]
-                            && phaseUsage_.phase_used[BlackoilPhases::Vapour]) {
-                            const int oilpos = phaseUsage_.phase_pos[BlackoilPhases::Liquid];
-                            const int gaspos = phaseUsage_.phase_pos[BlackoilPhases::Vapour];
+
+                        const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+                        const bool gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+
+                        if (oil && gas) {
+                            const int oilpos = FluidSystem::oilPhaseIdx;
+                            const int gaspos = FluidSystem::gasPhaseIdx;
                             const Vec rs_vals = computeRs(G, cells, pressures[oilpos], temp, *(rs_func_[r]), sat[gaspos]);
                             const Vec rv_vals = computeRs(G, cells, pressures[gaspos], temp, *(rv_func_[r]), sat[oilpos]);
                             copyFromRegion(rs_vals, cells, rs_);

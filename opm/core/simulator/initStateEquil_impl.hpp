@@ -25,7 +25,7 @@
 #include <opm/core/grid.h>
 #include <opm/core/grid/GridHelpers.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -237,60 +237,6 @@ namespace Opm
             };
         } // namespace PhasePressODE
 
-        namespace PhaseUsed {
-            inline bool
-            water(const PhaseUsage& pu)
-            {
-                return bool(pu.phase_used[ Opm::BlackoilPhases::Aqua ]);
-            }
-
-            inline bool
-            oil(const PhaseUsage& pu)
-            {
-                return bool(pu.phase_used[ Opm::BlackoilPhases::Liquid ]);
-            }
-
-            inline bool
-            gas(const PhaseUsage& pu)
-            {
-                return bool(pu.phase_used[ Opm::BlackoilPhases::Vapour ]);
-            }
-        } // namespace PhaseUsed
-
-        namespace PhaseIndex {
-            inline int
-            water(const PhaseUsage& pu)
-            {
-                int i = -1;
-                if (PhaseUsed::water(pu)) {
-                    i = pu.phase_pos[ Opm::BlackoilPhases::Aqua ];
-                }
-
-                return i;
-            }
-
-            inline int
-            oil(const PhaseUsage& pu)
-            {
-                int i = -1;
-                if (PhaseUsed::oil(pu)) {
-                    i = pu.phase_pos[ Opm::BlackoilPhases::Liquid ];
-                }
-
-                return i;
-            }
-
-            inline int
-            gas(const PhaseUsage& pu)
-            {
-                int i = -1;
-                if (PhaseUsed::gas(pu)) {
-                    i = pu.phase_pos[ Opm::BlackoilPhases::Vapour ];
-                }
-
-                return i;
-            }
-        } // namespace PhaseIndex
 
         namespace PhasePressure {
             template <class Grid,
@@ -491,70 +437,66 @@ namespace Opm
                        const CellRange&                    cells,
                        std::vector< std::vector<double> >& press)
         {
-            const PhaseUsage& pu = reg.phaseUsage();
+            const bool water = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+            const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+            const bool gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+            const int oilpos = FluidSystem::oilPhaseIdx;
+            const int waterpos = FluidSystem::waterPhaseIdx;
+            const int gaspos = FluidSystem::gasPhaseIdx;
 
             if (reg.datum() > reg.zwoc()) { // Datum in water zone
                 double po_woc = -1;
                 double po_goc = -1;
 
-                if (PhaseUsed::water(pu)) {
-                    const int wix = PhaseIndex::water(pu);
+                if (water) {
                     PhasePressure::water<FluidSystem>(G, reg, span, grav, po_woc,
-                                         cells, press[ wix ]);
+                                         cells, press[ waterpos ]);
                 }
 
-                if (PhaseUsed::oil(pu)) {
-                    const int oix = PhaseIndex::oil(pu);
+                if (oil) {
                     PhasePressure::oil<FluidSystem>(G, reg, span, grav, cells,
-                                       press[ oix ], po_woc, po_goc);
+                                       press[ oilpos ], po_woc, po_goc);
                 }
 
-                if (PhaseUsed::gas(pu)) {
-                    const int gix = PhaseIndex::gas(pu);
+                if (gas) {
                     PhasePressure::gas<FluidSystem>(G, reg, span, grav, po_goc,
-                                       cells, press[ gix ]);
+                                       cells, press[ gaspos ]);
                 }
             } else if (reg.datum() < reg.zgoc()) { // Datum in gas zone
                 double po_woc = -1;
                 double po_goc = -1;
 
-                if (PhaseUsed::gas(pu)) {
-                    const int gix = PhaseIndex::gas(pu);
+                if (gas) {
                     PhasePressure::gas<FluidSystem>(G, reg, span, grav, po_goc,
-                                       cells, press[ gix ]);
+                                       cells, press[ gaspos ]);
                 }
 
-                if (PhaseUsed::oil(pu)) {
-                    const int oix = PhaseIndex::oil(pu);
+                if (oil) {
                     PhasePressure::oil<FluidSystem>(G, reg, span, grav, cells,
-                                       press[ oix ], po_woc, po_goc);
+                                       press[ oilpos ], po_woc, po_goc);
                 }
 
-                if (PhaseUsed::water(pu)) {
-                    const int wix = PhaseIndex::water(pu);
+                if (water) {
                     PhasePressure::water<FluidSystem>(G, reg, span, grav, po_woc,
-                                         cells, press[ wix ]);
+                                         cells, press[ waterpos ]);
                 }
             } else { // Datum in oil zone
                 double po_woc = -1;
                 double po_goc = -1;
 
-                if (PhaseUsed::oil(pu)) {
-                    const int oix = PhaseIndex::oil(pu);
+                if (oil) {
                     PhasePressure::oil<FluidSystem>(G, reg, span, grav, cells,
-                                                    press[ oix ], po_woc, po_goc);
+                                                    press[ oilpos ], po_woc, po_goc);
                 }
 
-                if (PhaseUsed::water(pu)) {
-                    const int wix = PhaseIndex::water(pu);
+                if (water) {
                     PhasePressure::water<FluidSystem>(G, reg, span, grav, po_woc,
-                                         cells, press[ wix ]);
+                                         cells, press[ waterpos ]);
                 }
 
-                if (PhaseUsed::gas(pu)) {
-                    const int gix = PhaseIndex::gas(pu);
+                if (gas) {
                     PhasePressure::gas<FluidSystem>(G, reg, span, grav, po_goc,
-                                       cells, press[ gix ]);
+                                       cells, press[ gaspos ]);
                 }
             }
         }
@@ -621,7 +563,7 @@ namespace Opm
                     }
                 }
             }
-            const int np = reg.phaseUsage().num_phases;
+            const int np = FluidSystem::numPhases;  //reg.phaseUsage().num_phases;
 
             typedef std::vector<double> pval;
             std::vector<pval> press(np, pval(ncell, 0.0));
@@ -659,7 +601,7 @@ namespace Opm
                          const std::vector<double> swat_init,
                          std::vector< std::vector<double> >& phase_pressures)
         {
-            if (!reg.phaseUsage().phase_used[BlackoilPhases::Liquid]) {
+            if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                 OPM_THROW(std::runtime_error, "Cannot initialise: not handling water-gas cases.");
             }
 
@@ -682,11 +624,11 @@ namespace Opm
             SatOnlyFluidState fluidState;
             typedef typename MaterialLawManager::MaterialLaw MaterialLaw;
 
-            const bool water = reg.phaseUsage().phase_used[BlackoilPhases::Aqua];
-            const bool gas = reg.phaseUsage().phase_used[BlackoilPhases::Vapour];
-            const int oilpos = reg.phaseUsage().phase_pos[BlackoilPhases::Liquid];
-            const int waterpos = reg.phaseUsage().phase_pos[BlackoilPhases::Aqua];
-            const int gaspos = reg.phaseUsage().phase_pos[BlackoilPhases::Vapour];
+            const bool water = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
+            const bool gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+            const int oilpos = FluidSystem::oilPhaseIdx;
+            const int waterpos = FluidSystem::waterPhaseIdx;
+            const int gaspos = FluidSystem::gasPhaseIdx;
             std::vector<double>::size_type local_index = 0;
             for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
                 const int cell = *ci;
@@ -769,7 +711,7 @@ namespace Opm
                 double threshold_sat = 1.0e-6;
 
                 double so = 1.0;
-                double pC[/*numPhases=*/BlackoilPhases::MaxNumPhases] = { 0.0, 0.0, 0.0 };
+                double pC[FluidSystem::numPhases] = { 0.0, 0.0, 0.0 };
 
                   if (water) {
                       double swu = scaledDrainageInfo.Swu;
@@ -848,94 +790,6 @@ namespace Opm
         }
 
     } // namespace Equil
-
-
-    namespace Details
-    {
-        /// Convert saturations from a vector of individual phase saturation vectors
-        /// to an interleaved format where all values for a given cell come before all
-        /// values for the next cell, all in a single vector.
-        inline std::vector<double>
-        convertSats(const std::vector< std::vector<double> >& sat)
-        {
-            const auto np = sat.size();
-            const auto nc = sat[0].size();
-
-            std::vector<double> s(np * nc);
-
-            for (decltype(sat.size()) p = 0; p < np; ++p) {
-                const auto& sat_p = sat[p];
-                double*     sp    = & s[0*nc + p];
-
-                for (decltype(sat[0].size()) c = 0;
-                     c < nc; ++c, sp += np)
-                {
-                    *sp = sat_p[c];
-                }
-            }
-
-            return s;
-        }
-    } // namespace Details
-
-
-    /**
-     * Compute initial state by an equilibration procedure.
-     *
-     * The following state fields are modified:
-     *   pressure(),
-     *   saturation(),
-     *   surfacevol(),
-     *   gasoilratio(),
-     *   rv().
-     *
-     * \param[in] grid     Grid.
-     * \param[in] props    Property object, pvt and capillary properties are used.
-     * \param[in] deck     Simulation deck, used to obtain EQUIL and related data.
-     * \param[in] gravity  Acceleration of gravity, assumed to be in Z direction.
-     * \param[in] applySwatInit     Make it possible to not apply SWATINIT even if it
-     *                              is present in the deck
-     */
-    template<class MaterialLawManager, class Grid>
-    void initStateEquil(const Grid& grid,
-                        std::shared_ptr<MaterialLawManager> materialLawManager,
-                        const Opm::Deck& deck,
-                        const Opm::EclipseState& eclipseState,
-                        const double gravity,
-                        BlackoilState& state,
-                        bool applySwatinit = true)
-    {
-
-        typedef EQUIL::DeckDependent::InitialStateComputer ISC;
-
-        PhaseUsage pu = phaseUsageFromDeck(deck);
-
-        //Check for presence of kw SWATINIT
-        std::vector<double> swat_init = {};
-        if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatinit) {
-            const std::vector<double>& swat_init_ecl = eclipseState.
-                    get3DProperties().getDoubleGridProperty("SWATINIT").getData();
-            const int nc = UgGridHelpers::numCells(grid);
-            swat_init.resize(nc);
-            const int* gc = UgGridHelpers::globalCell(grid);
-            for (int c = 0; c < nc; ++c) {
-                const int deck_pos = (gc == NULL) ? c : gc[c];
-                swat_init[c] = swat_init_ecl[deck_pos];
-            }
-        }
-
-        ISC isc(materialLawManager, pu, deck, eclipseState, grid, gravity, swat_init);
-        const int ref_phase = pu.phase_used[BlackoilPhases::Liquid]
-            ? pu.phase_pos[BlackoilPhases::Liquid]
-            : pu.phase_pos[BlackoilPhases::Aqua];
-        state.pressure() = isc.press()[ref_phase];
-        state.saturation() = Details::convertSats(isc.saturation());
-        state.gasoilratio() = isc.rs();
-        state.rv() = isc.rv();
-
-        //initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
-    }
-
 
 
 } // namespace Opm
