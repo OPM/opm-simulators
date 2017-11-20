@@ -153,7 +153,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/AutoDiffHelpers.hpp
   opm/autodiff/AutoDiffMatrix.hpp
   opm/autodiff/AutoDiff.hpp
-  opm/autodiff/BackupRestore.hpp
   opm/autodiff/BlackoilDetails.hpp
   opm/autodiff/BlackoilLegacyDetails.hpp
   opm/autodiff/BlackoilModel.hpp

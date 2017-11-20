@@ -132,19 +132,6 @@ namespace Opm
             }
         }
 
-        std::string restorefilename = param_.getDefault("restorefile", std::string("") );
-        if( ! restorefilename.empty() )
-        {
-            // -1 means that we'll take the last report step that was written
-            const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
-
-            output_writer_.restore( timer,
-                                    state,
-                                    prev_well_state,
-                                    restorefilename,
-                                    desiredRestoreStep );
-        }
-
         DynamicListEconLimited dynamic_list_econ_limited;
         SimulatorReport report;
         SimulatorReport stepReport;

@@ -184,24 +184,6 @@ public:
             }
         }
 
-        std::string restorefilename = param_.getDefault("restorefile", std::string("") );
-        if( ! restorefilename.empty() )
-        {
-            // -1 means that we'll take the last report step that was written
-            const int desiredRestoreStep = param_.getDefault("restorestep", int(-1) );
-
-            output_writer_.restore( timer,
-                                    state,
-                                    prev_well_state,
-                                    restorefilename,
-                                    desiredRestoreStep );
-            initHydroCarbonState(state, phaseUsage_, Opm::UgGridHelpers::numCells(grid()), has_disgas_, has_vapoil_);
-            initHysteresisParams(state);
-            // communicate the restart solution to ebos
-            convertInput(0, state, ebosSimulator_);
-            ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
-        }
-
         SimulatorReport report;
         SimulatorReport stepReport;
 
