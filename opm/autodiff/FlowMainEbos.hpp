@@ -481,6 +481,7 @@ namespace Opm
         // Writes to:
         //   state_
         //   threshold_pressures_
+        //   fluidprops_ (if SWATINIT is used)
         void setupState()
         {
             const PhaseUsage pu = Opm::phaseUsageFromDeck(deck());
@@ -623,6 +624,8 @@ namespace Opm
         {
             bool output      = ( output_ > OUTPUT_LOG_ONLY );
             bool output_ecl  = param_.getDefault("output_ecl", true);
+            auto int_vectors  = computeCellRanks(output, output_ecl);
+
             if( output && output_ecl && grid().comm().rank() == 0 )
             {
                 exportNncStructure_();
@@ -632,7 +635,7 @@ namespace Opm
                                            UgGridHelpers::createEclipseGrid( this->globalGrid() , inputGrid ),
                                            schedule(),
                                            summaryConfig()));
-                eclIO_->writeInitial(computeLegacySimProps_(), nnc_);
+                eclIO_->writeInitial(computeLegacySimProps_(), int_vectors, nnc_);
             }
         }
 
@@ -804,6 +807,28 @@ namespace Opm
 
         Scalar gravity() const
         { return ebosProblem().gravity()[2]; }
+
+        std::map<std::string, std::vector<int> > computeCellRanks(bool output, bool output_ecl)
+        {
+            std::map<std::string, std::vector<int> > integerVectors;
+
+            if(  output && output_ecl && grid().comm().size() > 1 )
+            {
+                // Get the owner rank number for each cell
+                using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
+                using Handle = CellOwnerDataHandle<ElementMapper>;
+                ElementMapper globalMapper(this->globalGrid().leafGridView());
+                const auto* dims = UgGridHelpers::cartDims(grid());
+                const auto globalSize = dims[0]*dims[1]*dims[2];
+                std::vector<int> ranks(globalSize, -1);
+                Handle handle(globalMapper, ranks,
+                              this->globalGrid().globalCell());
+                this->grid().gatherData(handle);
+                integerVectors.emplace("MPI_RANKS", ranks);
+            }
+
+            return integerVectors;
+        }
 
         data::Solution computeLegacySimProps_()
         {

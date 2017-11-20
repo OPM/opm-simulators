@@ -120,6 +120,61 @@ private:
 
 
 #if HAVE_OPM_GRID && HAVE_MPI
+/// \brief Data handle for gathering the rank that owns a cell
+template<class Mapper>
+class CellOwnerDataHandle
+{
+public:
+    using DataType = int;
+
+    CellOwnerDataHandle(const Mapper& globalMapper, std::vector<int>& globalData,
+                        const std::vector<int>& globalCell)
+        : globalMapper_(globalMapper), globalData_(globalData), globalCell_(globalCell)
+    {
+        int argc = 0;
+        char** argv = nullptr;
+        my_rank_ =  Dune::MPIHelper::instance(argc,argv).rank();
+    }
+    bool fixedsize(int /*dim*/, int /*codim*/)
+    {
+        return true;
+    }
+    template<class T>
+    std::size_t size(const T& e)
+    {
+        if ( T::codimension == 0)
+        {
+            return 1;
+        }
+        else
+        {
+            OPM_THROW(std::logic_error, "Data handle can only be used for elements");
+        }
+    }
+    template<class B, class T>
+    void gather(B& buffer, const T& e)
+    {
+        buffer.write(my_rank_);
+    }
+    template<class B, class T>
+    void scatter(B& buffer, const T& e, std::size_t /* size */)
+    {
+        const auto& index = globalCell_[globalMapper_.index(e)];
+        buffer.read(globalData_[index]);
+    }
+    bool contains(int dim, int codim)
+    {
+        return codim==0;
+    }
+
+private:
+    int my_rank_;
+    const Mapper& globalMapper_;
+    std::vector<int>& globalData_;
+    const std::vector<int>& globalCell_;
+};
+
+
 /// \brief a data handle to distribute the threshold pressures
 class ThresholdPressureDataHandle
 {
