@@ -1612,8 +1612,8 @@ namespace Opm
                 production_specification.control_mode_ = toProductionControlMode(WellProducer::ControlMode2String(properties.controlMode));
             }
         }
-        // TODO: should be specified with WEFAC, while we do not have this keyword support yet.
-        const double efficiency_factor = 1.0;
+        // Efficiency factor given specified with WEFAC
+        const double efficiency_factor = well->getEfficiencyFactor(timeStep);
         std::shared_ptr<WellsGroupInterface> wells_group(new WellNode(well->name(), efficiency_factor, production_specification, injection_specification, phase_usage));
         return wells_group;
     }

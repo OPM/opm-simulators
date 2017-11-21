@@ -78,3 +78,42 @@ BOOST_AUTO_TEST_CASE(AddWellsAndGroupToCollection) {
     BOOST_CHECK_EQUAL("G2", collection.findNode("PROD2")->getParent()->name());
 }
 
+BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
+    Parser parser;
+    std::string scheduleFile("wells_group.data");
+    ParseContext parseContext;
+    Deck deck = parser.parseFile(scheduleFile, parseContext);
+    EclipseState eclipseState(deck, parseContext);
+    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
+    const auto& grid = eclipseState.getInputGrid();
+    const TableManager table ( deck );
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
+
+    size_t timestep = 2;
+    WellCollection collection;
+    // Add groups to WellCollection
+    const auto& fieldGroup =  sched.getGroup("FIELD");
+    collection.addField(fieldGroup, timestep, pu);
+    collection.addGroup( sched.getGroup( "G1" ), fieldGroup.name(), timestep, pu);
+    collection.addGroup( sched.getGroup( "G2" ), fieldGroup.name(), timestep, pu);
+
+    BOOST_CHECK_EQUAL(1.0, collection.findNode("FIELD")->efficiencyFactor());
+    BOOST_CHECK_EQUAL(1.0, collection.findNode("G1")->getParent()->efficiencyFactor());
+    BOOST_CHECK_EQUAL(1.0, collection.findNode("G2")->getParent()->efficiencyFactor());
+
+    // Add wells to WellCollection
+    auto wells1 = sched.getWells(timestep);
+    for (size_t i=0; i<wells1.size(); i++) {
+        collection.addWell(wells1[i], timestep, pu);
+    }
+
+    // 0.5(inj1) * 0.8(G1)
+    BOOST_CHECK_CLOSE(0.4, collection.findWellNode("INJ1").getAccumulativeEfficiencyFactor(), 1e-10);
+    // 0.8(inj2) * 0.8(G1)
+    BOOST_CHECK_CLOSE(0.64, collection.findWellNode("INJ2").getAccumulativeEfficiencyFactor(), 1e-10);
+    // 0.5 (prod1) * 1.0 (G2)
+    BOOST_CHECK_CLOSE(0.5, collection.findWellNode("PROD1").getAccumulativeEfficiencyFactor(), 1e-10);
+    // 1.0 (prod2) * 1.0 (G2)
+    BOOST_CHECK_CLOSE(1.0, collection.findWellNode("PROD2").getAccumulativeEfficiencyFactor(), 1e-10);
+}

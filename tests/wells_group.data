@@ -39,6 +39,11 @@ COMPDAT
     'PROD1'  10 1 1  1 'OPEN' 0   10.6092   0.5  /
 /
 
+WEFAC
+ 'INJ1' 0.5 /
+ 'PROD1' 0.5 /
+/
+
 TSTEP
   14.0 /
 
@@ -59,6 +64,15 @@ GCONINJE
 
 GCONPROD
 'G2' ORAT 10000 /
+/
+
+WEFAC
+ 'INJ2' 0.8 /
+ 'PROD2' 1.0 /
+/
+
+GEFAC
+ 'G1' 0.8 /
 /
 
 WCONINJE

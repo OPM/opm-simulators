@@ -122,5 +122,30 @@ BOOST_AUTO_TEST_CASE(ConstructGroupFromGroup) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(EfficiencyFactor) {
+    Parser parser;
+    ParseContext parseContext;
+    std::string scheduleFile("wells_group.data");
+    Deck deck =  parser.parseFile(scheduleFile, parseContext);
+    EclipseState eclipseState(deck , parseContext);
+    PhaseUsage pu = phaseUsageFromDeck(eclipseState);
+    const auto& grid = eclipseState.getInputGrid();
+    const TableManager table ( deck );
+    const Eclipse3DProperties eclipseProperties ( deck , table, grid);
+    const Schedule sched(deck, grid, eclipseProperties, Phases(true, true, true), parseContext );
 
+
+    const auto& nodes = sched.getGroupTree(2);
+
+    for( const auto& grp : sched.getGroups() ) {
+        if( !nodes.exists( grp->name() ) ) continue;
+        const auto& group = *grp;
+
+        std::shared_ptr<WellsGroupInterface> wellsGroup = createGroupWellsGroup(group, 2, pu);
+        BOOST_CHECK_EQUAL(group.name(), wellsGroup->name());
+        BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(2), wellsGroup->efficiencyFactor());
+        BOOST_CHECK_EQUAL(group.getGroupEfficiencyFactor(2), wellsGroup->efficiencyFactor());
+
+    }
+}
 
