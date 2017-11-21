@@ -642,7 +642,7 @@ namespace Opm
                 FluidSystem::initFromDeck(*deck_ , *eclipse_state_);
                 typedef EQUIL::DeckDependent::InitialStateComputer<FluidSystem> ISC;
 
-                ISC isc(material_law_manager_, *eclipse_state_, grid, gravity_[2]);
+                ISC isc(*material_law_manager_, *eclipse_state_, grid, gravity_[2]);
 
                 const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
                 const int oilpos = FluidSystem::oilPhaseIdx;
