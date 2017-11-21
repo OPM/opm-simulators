@@ -119,7 +119,6 @@ private:
 };
 
 
-#if HAVE_OPM_GRID && HAVE_MPI
 /// \brief Data handle for gathering the rank that owns a cell
 template<class Mapper>
 class CellOwnerDataHandle
@@ -174,7 +173,7 @@ private:
     const std::vector<int>& globalCell_;
 };
 
-
+#if HAVE_OPM_GRID && HAVE_MPI
 /// \brief a data handle to distribute the threshold pressures
 class ThresholdPressureDataHandle
 {
