@@ -117,16 +117,15 @@ public:
             equilCartesianToCompressed[ equilCartesianIdx ] = equilElemIdx;
         }
 
-        auto equilMaterialLawManager =
-            std::make_shared<Opm::EclMaterialLawManager<EquilTraits> >();
-        equilMaterialLawManager->initFromDeck(deck, eclState, compressedToCartesianEquilElemIdx);
-
+        Opm::EclMaterialLawManager<EquilTraits> equilMaterialLawManager =
+            Opm::EclMaterialLawManager<EquilTraits>();
+        equilMaterialLawManager.initFromDeck(deck, eclState, compressedToCartesianEquilElemIdx);
 
         Opm::EQUIL::DeckDependent::InitialStateComputer<FluidSystem> initialState(equilMaterialLawManager,
                                                                                   gridManager.eclState(),
                                                                                   equilGrid,
                                                                                   simulator.problem().gravity()[dimWorld - 1],
-                enableSwatinit);
+                                                                                  enableSwatinit);
 
 
         std::vector<int> localToEquilIndex( numElems, -1 );
@@ -213,7 +212,7 @@ public:
             // requested to be applied. this is quite hacky but hey it works!
             if (enableSwatinit) {
                 const auto& equilScalingPoints =
-                    equilMaterialLawManager->oilWaterScaledEpsPointsDrainage(equilElemIdx);
+                    equilMaterialLawManager.oilWaterScaledEpsPointsDrainage(equilElemIdx);
                 auto& scalingPoints =
                     materialLawManager.oilWaterScaledEpsPointsDrainage(elemIdx);
                 scalingPoints.setMaxPcnw(equilScalingPoints.maxPcnw());
