@@ -2,6 +2,7 @@
   Copyright 2014 SINTEF ICT, Applied Mathematics.
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 NTNU
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -39,11 +40,9 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/data/SimulationDataContainer.hpp>
 
-
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-
 
 #include <array>
 #include <cassert>
@@ -69,7 +68,6 @@ namespace Opm
      * with other parts of OPM.
      */
     namespace EQUIL {
-
 
         /**
          * Compute initial phase pressures by means of equilibration.
@@ -121,6 +119,11 @@ namespace Opm
         /**
          * Compute initial phase saturations by means of equilibration.
          *
+         * \tparam FluidSystem  The FluidSystem from opm-material
+         *                      Must be initialized before used.
+         *
+         * \tparam Grid   Type of the grid
+         *
          * \tparam Region Type of an equilibration region information
          *                base.  Typically an instance of the EquilReg
          *                class template.
@@ -132,10 +135,15 @@ namespace Opm
          *                as well as provide an inner type,
          *                const_iterator, to traverse the range.
          *
+         * \tparam MaterialLawManager The MaterialLawManager from opm-material
+         *
+         * \param[in] G               Grid.
          * \param[in] reg             Current equilibration region.
          * \param[in] cells           Range that spans the cells of the current
          *                            equilibration region.
-         * \param[in] props           Property object, needed for capillary functions.
+         * \param[in] materialLawManager   The MaterialLawManager from opm-material
+         * \param[in] swat_init       A vector of initial water saturations.
+         *                            The capillary pressure is scaled to fit these values
          * \param[in] phase_pressures Phase pressures, one vector for each active phase,
          *                            of pressure values in each cell in the current
          *                            equilibration region.
@@ -201,7 +209,6 @@ namespace Opm
                      const Grid&  G   )
             {
                 std::vector<int> eqlnum;
-
                 if (eclipseState.get3DProperties().hasDeckIntGridProperty("EQLNUM")) {
                     const int nc = UgGridHelpers::numCells(G);
                     eqlnum.resize(nc);
@@ -239,7 +246,6 @@ namespace Opm
                       rs_(UgGridHelpers::numCells(G)),
                       rv_(UgGridHelpers::numCells(G))
                 {
-
                     //Check for presence of kw SWATINIT
                     if (eclipseState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT") && applySwatInit) {
                         const std::vector<double>& swat_init_ecl = eclipseState.
@@ -252,13 +258,11 @@ namespace Opm
                             swat_init_[c] = swat_init_ecl[deck_pos];
                         }
                     }
-
                     // Get the equilibration records.
                     const std::vector<EquilRecord> rec = getEquil(eclipseState);
                     const auto& tables = eclipseState.getTableManager();
                     // Create (inverse) region mapping.
                     const RegionMapping<> eqlmap(equilnum(eclipseState, G));
-
                     setRegionPvtIdx(G, eclipseState, eqlmap);
 
                     // Create Rs functions.
@@ -272,7 +276,6 @@ namespace Opm
                                 continue;
                             }
                             const int pvtIdx = regionPvtIdx_[i];
-
                             if (!rec[i].liveOilInitConstantRs()) {
                                 if (rsvdTables.size() <= 0 ) {
                                     OPM_THROW(std::runtime_error, "Cannot initialise: RSVD table not available.");
@@ -355,14 +358,10 @@ namespace Opm
                 const Vec& rv() const { return rv_; }
 
             private:
-
                 typedef EquilReg EqReg;
-
                 std::vector< std::shared_ptr<Miscibility::RsFunction> > rs_func_;
                 std::vector< std::shared_ptr<Miscibility::RsFunction> > rv_func_;
-
                 std::vector<int> regionPvtIdx_;
-
                 PVec pp_;
                 PVec sat_;
                 Vec rs_;
@@ -410,10 +409,8 @@ namespace Opm
                             copyFromRegion(pressures[p], cells, pp_[p]);
                             copyFromRegion(sat[p], cells, sat_[p]);
                         }
-
                         const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
                         const bool gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-
                         if (oil && gas) {
                             const int oilpos = FluidSystem::oilPhaseIdx;
                             const int gaspos = FluidSystem::gasPhaseIdx;

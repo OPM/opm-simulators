@@ -210,10 +210,10 @@ BOOST_AUTO_TEST_CASE (PhasePressure)
     initDefaultFluidSystem();
 
     Opm::EQUIL::EquilReg
-            region(record,
-                   std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                   std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
-                   0);
+        region(record,
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        0);
 
     std::vector<int> cells(G->number_of_cells);
     std::iota(cells.begin(), cells.end(), 0);
