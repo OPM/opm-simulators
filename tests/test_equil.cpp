@@ -38,8 +38,6 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/parser/eclipse/Units/Dimension.hpp>
 
-#include <opm/core/pressure/msmfem/partition.h>
-
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <array>
@@ -355,18 +353,26 @@ BOOST_AUTO_TEST_CASE (RegMapping)
         };
 
     std::vector<int> eqlnum(G->number_of_cells);
+    // [ 0 1; 2 3]
     {
-        std::vector<int> cells(G->number_of_cells);
-        std::iota(cells.begin(), cells.end(), 0);
-
-        const int cdim[] = { 2, 1, 2 };
-        int ncoarse = cdim[0];
-        for (std::size_t d = 1; d < 3; ++d) { ncoarse *= cdim[d]; }
-
-        partition_unif_idx(G->dimensions, G->number_of_cells,
-                           G->cartdims, cdim,
-                           &cells[0], &eqlnum[0]);
+        for (int i = 0; i < 5; ++i) {
+            for (int j = 0; j < 5; ++j) {
+                eqlnum[i*10 + j] = 0;
+            }
+            for (int j = 5; j < 10; ++j) {
+                eqlnum[i*10 + j] = 1;
+            }
+        }
+        for (int i = 5; i < 10; ++i) {
+            for (int j = 0; j < 5; ++j) {
+                eqlnum[i*10 + j] = 2;
+            }
+            for (int j = 5; j < 10; ++j) {
+                eqlnum[i*10 + j] = 3;
+            }
+        }
     }
+
     Opm::RegionMapping<> eqlmap(eqlnum);
 
     PPress ppress(2, PVal(G->number_of_cells, 0));
