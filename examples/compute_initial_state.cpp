@@ -1,5 +1,6 @@
 /*
   Copyright 2014 SINTEF ICT, Applied Mathematics.
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -27,19 +28,16 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/core/simulator/initStateEquil.hpp>
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/props/BlackoilPropertiesFromDeck.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/core/simulator/BlackoilState.hpp>
 #include <opm/core/utility/compressedToCartesian.hpp>
-
 
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-
 
 #include <boost/filesystem.hpp>
 
@@ -105,16 +103,7 @@ namespace
         }
     }
 
-
-
 } // anon namespace
-
-
-
-
-
-
-
 
 // ----------------- Main program -----------------
 int
@@ -134,18 +123,19 @@ try
     const double grav = param.getDefault("gravity", unit::gravity);
     GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *gm.c_grid();
-    BlackoilPropertiesFromDeck props(deck, eclipseState, grid, param);
     warnIfUnusedParams(param);
 
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
 
+    typedef FluidSystems::BlackOil<double> FluidSystem;
+
     // Forward declaring the MaterialLawManager template.
     typedef Opm::ThreePhaseMaterialTraits<double,
-    /*wettingPhaseIdx=*/Opm::BlackoilPhases::Aqua,
-    /*nonWettingPhaseIdx=*/Opm::BlackoilPhases::Liquid,
-    /*gasPhaseIdx=*/Opm::BlackoilPhases::Vapour> MaterialTraits;
+    /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+    /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+    /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx> MaterialTraits;
     typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
 
     MaterialLawManager materialLawManager = MaterialLawManager();
@@ -154,7 +144,6 @@ try
     // Initialisation.
     //initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);
     BlackoilState state( UgGridHelpers::numCells(grid) , UgGridHelpers::numFaces(grid), 3);
-    typedef FluidSystems::BlackOil<double> FluidSystem;
     FluidSystem::initFromDeck(deck, eclipseState);
     PhaseUsage pu = phaseUsageFromDeck(deck);
 
@@ -169,17 +158,8 @@ try
 
     state.pressure() = isc.press()[ref_phase];
     convertSats<FluidSystem>(state.saturation(), isc.saturation(), pu);
-
-    if (state.hasCellData(std::string("GASOILRATIO"))) {
-        std::vector<double>& rs = state.getCellData(std::string("GASOILRATIO"));
-        rs = isc.rs();
-    }
-    if (state.hasCellData(std::string("RV"))){
-        std::vector<double>& rv = state.getCellData(std::string("RV"));
-        rv = isc.rv();
-    }
-
-
+    state.gasoilratio() = isc.rs();
+    state.rv() = isc.rv();
 
     // Output.
     const std::string output_dir = param.getDefault<std::string>("output_dir", "output");
@@ -192,5 +172,3 @@ catch (const std::exception& e) {
     std::cerr << "Program threw an exception: " << e.what() << "\n";
     throw;
 }
-
-
