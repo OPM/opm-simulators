@@ -148,8 +148,8 @@ try
     /*gasPhaseIdx=*/Opm::BlackoilPhases::Vapour> MaterialTraits;
     typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
 
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     // Initialisation.
     //initBlackoilSurfvolUsingRSorRV(UgGridHelpers::numCells(grid), props, state);

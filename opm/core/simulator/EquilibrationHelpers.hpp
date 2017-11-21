@@ -568,7 +568,7 @@ namespace Opm
         template <class FluidSystem,  class MaterialLaw, class MaterialLawManager>
         struct PcEq
         {
-            PcEq(std::shared_ptr<MaterialLawManager> materialLawManager,
+            PcEq(const MaterialLawManager& materialLawManager,
                  const int phase,
                  const int cell,
                  const double target_pc)
@@ -587,7 +587,7 @@ namespace Opm
 
             double operator()(double s) const
             {
-                const auto& matParams = materialLawManager_->materialLawParams(cell_);
+                const auto& matParams = materialLawManager_.materialLawParams(cell_);
                 fluidState_.setSaturation(phase_, s);
                 MaterialLaw::capillaryPressures(pc_, matParams, fluidState_);
                 double sign = (phase_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
@@ -596,7 +596,7 @@ namespace Opm
             }
         private:
 
-            std::shared_ptr<MaterialLawManager> materialLawManager_;
+            const MaterialLawManager& materialLawManager_;
             const int phase_;
             const int cell_;
             const double target_pc_;
@@ -605,9 +605,9 @@ namespace Opm
         };
 
         template <class FluidSystem, class MaterialLawManager>
-        double minSaturations(std::shared_ptr<MaterialLawManager> materialLawManager, const int phase, const int cell) {
+        double minSaturations(const MaterialLawManager& materialLawManager, const int phase, const int cell) {
             const auto& scaledDrainageInfo =
-                materialLawManager->oilWaterScaledEpsInfoDrainage(cell);
+                materialLawManager.oilWaterScaledEpsInfoDrainage(cell);
 
             // Find minimum and maximum saturations.
             switch(phase) {
@@ -632,9 +632,9 @@ namespace Opm
         }
 
         template <class FluidSystem, class MaterialLawManager>
-        double maxSaturations(std::shared_ptr<MaterialLawManager> materialLawManager, const int phase, const int cell) {
+        double maxSaturations(const MaterialLawManager& materialLawManager, const int phase, const int cell) {
             const auto& scaledDrainageInfo =
-                materialLawManager->oilWaterScaledEpsInfoDrainage(cell);
+                materialLawManager.oilWaterScaledEpsInfoDrainage(cell);
 
             // Find minimum and maximum saturations.
             switch(phase) {
@@ -664,7 +664,7 @@ namespace Opm
         /// Compute saturation of some phase corresponding to a given
         /// capillary pressure.
         template <class FluidSystem, class MaterialLaw, class MaterialLawManager >
-        inline double satFromPc(std::shared_ptr<MaterialLawManager> materialLawManager,
+        inline double satFromPc(const MaterialLawManager& materialLawManager,
                                 const int phase,
                                 const int cell,
                                 const double target_pc,
@@ -700,7 +700,7 @@ namespace Opm
         template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
         struct PcEqSum
         {
-            PcEqSum(std::shared_ptr<MaterialLawManager> materialLawManager,
+            PcEqSum(const MaterialLawManager& materialLawManager,
                     const int phase1,
                     const int phase2,
                     const int cell,
@@ -718,7 +718,7 @@ namespace Opm
             }
             double operator()(double s) const
             {
-                const auto& matParams = materialLawManager_->materialLawParams(cell_);
+                const auto& matParams = materialLawManager_.materialLawParams(cell_);
                 fluidState_.setSaturation(phase1_, s);
                 fluidState_.setSaturation(phase2_, 1.0 - s);
 
@@ -731,7 +731,7 @@ namespace Opm
                 return pc1 + pc2 - target_pc_;
             }
         private:
-            std::shared_ptr<MaterialLawManager> materialLawManager_;
+            const MaterialLawManager& materialLawManager_;
             const int phase1_;
             const int phase2_;
             const int cell_;
@@ -748,7 +748,7 @@ namespace Opm
         /// is given as a sum of two other functions.
 
         template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
-        inline double satFromSumOfPcs(std::shared_ptr<MaterialLawManager> materialLawManager,
+        inline double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
                                       const int phase1,
                                       const int phase2,
                                       const int cell,
@@ -778,7 +778,7 @@ namespace Opm
 
         /// Compute saturation from depth. Used for constant capillary pressure function
         template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
-        inline double satFromDepth(std::shared_ptr<MaterialLawManager> materialLawManager,
+        inline double satFromDepth(const MaterialLawManager& materialLawManager,
                                    const double cellDepth,
                                    const double contactDepth,
                                    const int phase,
@@ -798,7 +798,7 @@ namespace Opm
 
         /// Return true if capillary pressure function is constant
         template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
-        inline bool isConstPc(std::shared_ptr<MaterialLawManager> materialLawManager,
+        inline bool isConstPc(const MaterialLawManager& materialLawManager,
                               const int                          phase,
                               const int                          cell)
         {

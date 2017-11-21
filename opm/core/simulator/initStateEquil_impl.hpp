@@ -597,7 +597,7 @@ namespace Opm
         phaseSaturations(const Grid&             G,
                          const Region&           reg,
                          const CellRange&        cells,
-                         std::shared_ptr<MaterialLawManager> materialLawManager,
+                         MaterialLawManager& materialLawManager,
                          const std::vector<double> swat_init,
                          std::vector< std::vector<double> >& phase_pressures)
         {
@@ -633,8 +633,8 @@ namespace Opm
             for (typename CellRange::const_iterator ci = cells.begin(); ci != cells.end(); ++ci, ++local_index) {
                 const int cell = *ci;
                 const auto& scaledDrainageInfo =
-                    materialLawManager->oilWaterScaledEpsInfoDrainage(cell);
-                const auto& matParams = materialLawManager->materialLawParams(cell);
+                    materialLawManager.oilWaterScaledEpsInfoDrainage(cell);
+                const auto& matParams = materialLawManager.materialLawParams(cell);
 
                 // Find saturations from pressure differences by
                 // inverting capillary pressure functions.
@@ -653,7 +653,7 @@ namespace Opm
                             phase_saturations[waterpos][local_index] = sw;
                         } else { // Scale Pc to reflect imposed sw
                             sw = swat_init[cell];
-                            sw = materialLawManager->applySwatinit(cell, pcov, sw);
+                            sw = materialLawManager.applySwatinit(cell, pcov, sw);
                             phase_saturations[waterpos][local_index] = sw;
                         }
                     }
@@ -684,7 +684,7 @@ namespace Opm
                         // Re-scale Pc to reflect imposed sw for vanishing oil phase.
                         // This seems consistent with ecl, and fails to honour 
                         // swat_init in case of non-trivial gas-oil cap pressure.
-                        sw = materialLawManager->applySwatinit(cell, pcgw, sw);
+                        sw = materialLawManager.applySwatinit(cell, pcgw, sw);
                     }
                     sw = satFromSumOfPcs<FluidSystem, MaterialLaw, MaterialLawManager>(materialLawManager, waterpos, gaspos, cell, pcgw);
                     sg = 1.0 - sw;

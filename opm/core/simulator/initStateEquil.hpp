@@ -147,7 +147,7 @@ namespace Opm
         phaseSaturations(const Grid&             grid,
                          const Region&           reg,
                          const CellRange&        cells,
-                         std::shared_ptr<MaterialLawManager> materialLawManager,
+                         MaterialLawManager& materialLawManager,
                          const std::vector<double> swat_init,
                          std::vector< std::vector<double> >& phase_pressures);
 
@@ -226,7 +226,7 @@ namespace Opm
             class InitialStateComputer {
             public:
                 template<class MaterialLawManager, class Grid>
-                InitialStateComputer(std::shared_ptr<MaterialLawManager> materialLawManager,
+                InitialStateComputer(MaterialLawManager& materialLawManager,
                                      const Opm::EclipseState& eclipseState,
                                      const Grid&                        G    ,
                                      const double grav = unit::gravity,
@@ -386,7 +386,7 @@ namespace Opm
                 void
                 calcPressSatRsRv(const RMap&                       reg  ,
                                  const std::vector< EquilRecord >& rec  ,
-                                 std::shared_ptr<MaterialLawManager> materialLawManager,
+                                 MaterialLawManager& materialLawManager,
                                  const Grid&                       G    ,
                                  const double grav)
                 {
