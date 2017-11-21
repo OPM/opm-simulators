@@ -1,6 +1,7 @@
 /*
   Copyright 2013, 2015 SINTEF ICT, Applied Mathematics.
   Copyright 2015 Andreas Lauser
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -282,6 +283,10 @@ public:
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
+                if (param_.getDefault("use_TUNING", false)) {
+                    adaptiveTimeStepping->updateTUNING(schedule().getTuning(), timer.currentStepNum());
+                }
+
                 bool event = events.hasEvent(ScheduleEvents::NEW_WELL, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE, timer.currentStepNum()) ||
                         events.hasEvent(ScheduleEvents::INJECTION_UPDATE, timer.currentStepNum()) ||
