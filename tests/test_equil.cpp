@@ -410,8 +410,8 @@ BOOST_AUTO_TEST_CASE (DeckAllDead)
 
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid->number_of_cells, grid->global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
 
@@ -449,8 +449,8 @@ BOOST_AUTO_TEST_CASE (CapillaryInversion)
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
     typedef MaterialLawManager::MaterialLaw MaterialLaw;
@@ -515,8 +515,8 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillary)
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
 
@@ -566,8 +566,8 @@ BOOST_AUTO_TEST_CASE (DeckWithCapillaryOverlap)
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
 
@@ -639,8 +639,8 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveOil)
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
 
@@ -727,8 +727,8 @@ BOOST_AUTO_TEST_CASE (DeckWithLiveGas)
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
 
@@ -818,8 +818,8 @@ BOOST_AUTO_TEST_CASE (DeckWithRSVDAndRVVD)
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
 
@@ -930,11 +930,11 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
     // Create material law manager.
     std::vector<int> compressedToCartesianIdx
         = Opm::compressedToCartesian(grid.number_of_cells, grid.global_cell);
-    auto materialLawManager = std::make_shared<MaterialLawManager>();
-    materialLawManager->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManager = MaterialLawManager();
+    materialLawManager.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
-    auto materialLawManagerScaled = std::make_shared<MaterialLawManager>();
-    materialLawManagerScaled->initFromDeck(deck, eclipseState, compressedToCartesianIdx);
+    MaterialLawManager materialLawManagerScaled = MaterialLawManager();
+    materialLawManagerScaled.initFromDeck(deck, eclipseState, compressedToCartesianIdx);
 
     // reference saturations
     const std::vector<double> s[3]{
@@ -981,7 +981,7 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
         fluidState.setSaturation(FluidSystem::waterPhaseIdx, sw);
         fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
         fluidState.setSaturation(FluidSystem::gasPhaseIdx, sg);
-        const auto& matParams = materialLawManager->materialLawParams(c);
+        const auto& matParams = materialLawManager.materialLawParams(c);
         MaterialLaw::capillaryPressures(pc, matParams, fluidState);
         pc_original[3*c + 0] = pc[FluidSystem::oilPhaseIdx] - pc[FluidSystem::waterPhaseIdx];
         pc_original[3*c + 1] = 0.0;
@@ -1022,7 +1022,7 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
         fluidState.setSaturation(FluidSystem::waterPhaseIdx, sw);
         fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
         fluidState.setSaturation(FluidSystem::gasPhaseIdx, sg);
-        const auto& matParams = materialLawManagerScaled->materialLawParams(c);
+        const auto& matParams = materialLawManagerScaled.materialLawParams(c);
         MaterialLaw::capillaryPressures(pc, matParams, fluidState);
         pc_scaled[3*c + 0] = pc[FluidSystem::oilPhaseIdx] - pc[FluidSystem::waterPhaseIdx];
         pc_scaled[3*c + 1] = 0.0;
@@ -1039,7 +1039,7 @@ BOOST_AUTO_TEST_CASE (DeckWithSwatinit)
         fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
         fluidState.setSaturation(FluidSystem::gasPhaseIdx, sg);
 
-        const auto& matParams = materialLawManager->materialLawParams(c);
+        const auto& matParams = materialLawManager.materialLawParams(c);
         MaterialLaw::capillaryPressures(pc, matParams, fluidState);
         pc_unscaled[3*c + 0] = pc[FluidSystem::oilPhaseIdx] - pc[FluidSystem::waterPhaseIdx];
         pc_unscaled[3*c + 1] = 0.0;
