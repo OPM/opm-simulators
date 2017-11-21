@@ -824,7 +824,7 @@ namespace Opm
                 Handle handle(globalMapper, ranks,
                               this->globalGrid().globalCell());
                 this->grid().gatherData(handle);
-                integerVectors.emplace("MPI_RANKS", ranks);
+                integerVectors.emplace("MPI_RANK", ranks);
             }
 
             return integerVectors;
