@@ -2,6 +2,7 @@
   Copyright 2014 SINTEF ICT, Applied Mathematics.
   Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 NTNU
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -35,9 +36,6 @@
 namespace Opm
 {
     namespace Details {
-
-
-
         template <class RHS>
         class RK4IVP {
         public:
@@ -108,8 +106,8 @@ namespace Opm
             stepsize() const { return (span_[1] - span_[0]) / N_; }
         };
 
-         namespace PhasePressODE {
-          template <class FluidSystem>
+        namespace PhasePressODE {
+            template <class FluidSystem>
             class Water {
             public:
                 Water(const double   temp,
@@ -317,7 +315,6 @@ namespace Opm
                       class Grid,
                       class Region,
                       class CellRange>
-
             void
             oil(const Grid&                 G     ,
                 const Region&               reg   ,
@@ -332,7 +329,6 @@ namespace Opm
                 typedef Oil<FluidSystem, typename Region::CalcDissolution> ODE;
 
                 const double T = 273.15 + 20; // standard temperature for now
-
                 ODE drho(T, reg.dissolutionCalculator(),
                          reg.pvtIdx(), grav);
 
@@ -690,7 +686,6 @@ namespace Opm
                     sg = 1.0 - sw;
                     phase_saturations[waterpos][local_index] = sw;
                     phase_saturations[gaspos][local_index] = sg;
-
                     if ( water ) {
                         fluidState.setSaturation(FluidSystem::waterPhaseIdx, sw);
                     }
@@ -712,42 +707,41 @@ namespace Opm
 
                 double so = 1.0;
                 double pC[FluidSystem::numPhases] = { 0.0, 0.0, 0.0 };
+                if (water) {
+                    double swu = scaledDrainageInfo.Swu;
+                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, swu);
+                    so -= swu;
+                }
+                if (gas) {
+                    double sgu = scaledDrainageInfo.Sgu;
+                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, sgu);
+                    so-= sgu;
+                }
+                fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
 
-                  if (water) {
-                      double swu = scaledDrainageInfo.Swu;
-                      fluidState.setSaturation(FluidSystem::waterPhaseIdx, swu);
-                      so -= swu;
-                  }
-                  if (gas) {
-                      double sgu = scaledDrainageInfo.Sgu;
-                      fluidState.setSaturation(FluidSystem::gasPhaseIdx, sgu);
-                      so-= sgu;
-                  }
-                  fluidState.setSaturation(FluidSystem::oilPhaseIdx, so);
-
-                  if (water && sw > scaledDrainageInfo.Swu-threshold_sat ) {
-                       fluidState.setSaturation(FluidSystem::waterPhaseIdx, scaledDrainageInfo.Swu);
-                       MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-                       double pcWat = pC[FluidSystem::oilPhaseIdx] - pC[FluidSystem::waterPhaseIdx];
-                      phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pcWat;
-                  } else if (gas && sg > scaledDrainageInfo.Sgu-threshold_sat) {
-                      fluidState.setSaturation(FluidSystem::gasPhaseIdx, scaledDrainageInfo.Sgu);
-                      MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-                      double pcGas = pC[FluidSystem::oilPhaseIdx] + pC[FluidSystem::gasPhaseIdx];
-                      phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pcGas;
-                  }
-                  if (gas && sg < scaledDrainageInfo.Sgl+threshold_sat) {
-                      fluidState.setSaturation(FluidSystem::gasPhaseIdx, scaledDrainageInfo.Sgl);
-                      MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-                      double pcGas = pC[FluidSystem::oilPhaseIdx] + pC[FluidSystem::gasPhaseIdx];
-                      phase_pressures[gaspos][local_index] = phase_pressures[oilpos][local_index] + pcGas;
-                  }
-                  if (water && sw < scaledDrainageInfo.Swl+threshold_sat) {
-                      fluidState.setSaturation(FluidSystem::waterPhaseIdx, scaledDrainageInfo.Swl);
-                      MaterialLaw::capillaryPressures(pC, matParams, fluidState);
-                      double pcWat = pC[FluidSystem::oilPhaseIdx] - pC[FluidSystem::waterPhaseIdx];
-                      phase_pressures[waterpos][local_index] = phase_pressures[oilpos][local_index] - pcWat;
-                  }
+                if (water && sw > scaledDrainageInfo.Swu-threshold_sat ) {
+                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, scaledDrainageInfo.Swu);
+                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+                    double pcWat = pC[FluidSystem::oilPhaseIdx] - pC[FluidSystem::waterPhaseIdx];
+                    phase_pressures[oilpos][local_index] = phase_pressures[waterpos][local_index] + pcWat;
+                } else if (gas && sg > scaledDrainageInfo.Sgu-threshold_sat) {
+                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, scaledDrainageInfo.Sgu);
+                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+                    double pcGas = pC[FluidSystem::oilPhaseIdx] + pC[FluidSystem::gasPhaseIdx];
+                    phase_pressures[oilpos][local_index] = phase_pressures[gaspos][local_index] - pcGas;
+                }
+                if (gas && sg < scaledDrainageInfo.Sgl+threshold_sat) {
+                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, scaledDrainageInfo.Sgl);
+                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+                    double pcGas = pC[FluidSystem::oilPhaseIdx] + pC[FluidSystem::gasPhaseIdx];
+                    phase_pressures[gaspos][local_index] = phase_pressures[oilpos][local_index] + pcGas;
+                }
+                if (water && sw < scaledDrainageInfo.Swl+threshold_sat) {
+                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, scaledDrainageInfo.Swl);
+                    MaterialLaw::capillaryPressures(pC, matParams, fluidState);
+                    double pcWat = pC[FluidSystem::oilPhaseIdx] - pC[FluidSystem::waterPhaseIdx];
+                    phase_pressures[waterpos][local_index] = phase_pressures[oilpos][local_index] - pcWat;
+                }
             }
             return phase_saturations;
         }

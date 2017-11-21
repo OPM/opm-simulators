@@ -41,36 +41,33 @@ namespace Opm
 {
     namespace EQUIL {
 
-        template <class Props>
-        class DensityCalculator;
-
-        template <>
-        class DensityCalculator< BlackoilPropertiesInterface >;
-
         namespace Miscibility {
             class RsFunction;
             class NoMixing;
+            template <class FluidSystem>
             class RsVD;
+            template <class FluidSystem>
             class RsSatAtContact;
         }
 
-        template <class DensCalc>
         class EquilReg;
 
 
+        template <class FluidSystem,  class MaterialLaw, class MaterialLawManager>
         struct PcEq;
 
-        inline double satFromPc(const BlackoilPropertiesInterface& props,
+        template <class FluidSystem, class MaterialLaw, class MaterialLawManager >
+        inline double satFromPc(const MaterialLawManager& materialLawManager,
                                 const int phase,
                                 const int cell,
                                 const double target_pc,
-                                const bool increasing = false);
-        struct PcEqSum
-        inline double satFromSumOfPcs(const BlackoilPropertiesInterface& props,
+                                const bool increasing = false)
+        template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+        inline double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
                                       const int phase1,
                                       const int phase2,
                                       const int cell,
-                                      const double target_pc);
+                                      const double target_pc)
     } // namespace Equil
 } // namespace Opm
 
@@ -183,8 +180,7 @@ namespace Opm
                 /**
                  * Constructor.
                  *
-                 * \param[in] props      property object
-                 * \param[in] cell       any cell in the pvt region
+                 * \param[in] pvtRegionIdx The pvt region index
                  * \param[in] depth Depth nodes.
                  * \param[in] rs Dissolved gas-oil ratio at @c depth.
                  */
@@ -195,7 +191,6 @@ namespace Opm
                     , depth_(depth)
                     , rs_(rs)
                 {
-
                 }
 
                 /**
@@ -249,8 +244,7 @@ namespace Opm
                 /**
                  * Constructor.
                  *
-                 * \param[in] props      property object
-                 * \param[in] cell       any cell in the pvt region
+                 * \param[in] pvtRegionIdx The pvt region index
                  * \param[in] depth Depth nodes.
                  * \param[in] rv Dissolved gas-oil ratio at @c depth.
                  */
@@ -261,7 +255,6 @@ namespace Opm
                     , depth_(depth)
                     , rv_(rv)
                 {
-
                 }
 
                 /**
@@ -324,8 +317,7 @@ namespace Opm
                 /**
                  * Constructor.
                  *
-                 * \param[in] props      property object
-                 * \param[in] cell       any cell in the pvt region
+                 * \param[in] pvtRegionIdx The pvt region index
                  * \param[in] p_contact  oil pressure at the contact
                  * \param[in] T_contact  temperature at the contact
                  */
@@ -394,8 +386,7 @@ namespace Opm
                 /**
                  * Constructor.
                  *
-                 * \param[in] props      property object
-                 * \param[in] cell       any cell in the pvt region
+                 * \param[in] pvtRegionIdx The pvt region index
                  * \param[in] p_contact  oil pressure at the contact
                  * \param[in] T_contact  temperature at the contact
                  */
@@ -470,10 +461,9 @@ namespace Opm
              * Constructor.
              *
              * \param[in] rec     Equilibration data of current region.
-             * \param[in] density Density calculator of current region.
              * \param[in] rs      Calculator of dissolved gas-oil ratio.
              * \param[in] rv      Calculator of vapourised oil-gas ratio.
-             * \param[in] pu      Summary of current active phases.
+             * \param[in] pvtRegionIdx The pvt region index
              */
             EquilReg(const EquilRecord& rec,
                      std::shared_ptr<Miscibility::RsFunction> rs,
@@ -483,7 +473,6 @@ namespace Opm
                 , rs_     (rs)
                 , rv_     (rv)
                 , pvtIdx_ (pvtIdx)
-
             {
             }
 
@@ -547,7 +536,7 @@ namespace Opm
             evaporationCalculator() const { return *this->rv_; }
 
             /**
-             * Retrieve active fluid phase summary.
+             * Retrieve pvtIdx of the region.
              */
             const int
             pvtIdx() const { return this->pvtIdx_; }
@@ -581,10 +570,7 @@ namespace Opm
                 fluidState_.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
                 fluidState_.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
                 std::fill(pc_, pc_ + FluidSystem::numPhases, 0.0);
-
             }
-
-
             double operator()(double s) const
             {
                 const auto& matParams = materialLawManager_.materialLawParams(cell_);
@@ -595,7 +581,6 @@ namespace Opm
                 return pc - target_pc_;
             }
         private:
-
             const MaterialLawManager& materialLawManager_;
             const int phase_;
             const int cell_;
@@ -656,9 +641,7 @@ namespace Opm
             default:  OPM_THROW(std::runtime_error, "Unknown phaseIdx .");
             }
             return -1.0;
-
         }
-
 
 
         /// Compute saturation of some phase corresponding to a given
@@ -727,7 +710,6 @@ namespace Opm
                 double pc1 = pc_[FluidSystem::oilPhaseIdx] + sign1 *  pc_[phase1_];
                 double sign2 = (phase2_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
                 double pc2 = pc_[FluidSystem::oilPhaseIdx] + sign2 *  pc_[phase2_];
-
                 return pc1 + pc2 - target_pc_;
             }
         private:
@@ -746,7 +728,6 @@ namespace Opm
         /// Compute saturation of some phase corresponding to a given
         /// capillary pressure, where the capillary pressure function
         /// is given as a sum of two other functions.
-
         template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
         inline double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
                                       const int phase1,
@@ -808,8 +789,6 @@ namespace Opm
             const double f1 = f(maxSaturations<FluidSystem>(materialLawManager, phase, cell));
             return std::abs(f0 - f1) < std::numeric_limits<double>::epsilon();
         }
-
-
 
     } // namespace Equil
 } // namespace Opm
