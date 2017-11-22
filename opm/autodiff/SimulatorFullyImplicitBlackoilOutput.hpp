@@ -289,13 +289,6 @@ namespace Opm
             return parallelOutput_->isIORank();
         }
 
-        void restore(SimulatorTimerInterface& timer,
-                     BlackoilState& state,
-                     WellStateFullyImplicitBlackoil& wellState,
-                     const std::string& filename,
-                     const int desiredReportStep);
-
-
         template <class Grid, class WellState>
         void initFromRestartFile(const PhaseUsage& phaseUsage,
                                  const Grid& grid,
@@ -315,9 +308,6 @@ namespace Opm
         const std::string outputDir_;
         const bool restart_double_si_;
 
-        int lastBackupReportStep_;
-
-        std::ofstream backupfile_;
         Opm::PhaseUsage phaseUsage_;
         std::unique_ptr< BlackoilSubWriter > vtkWriter_;
         std::unique_ptr< BlackoilSubWriter > matlabWriter_;
@@ -354,7 +344,6 @@ namespace Opm
         parallelOutput_( output_ ? new ParallelDebugOutput< Grid >( grid, eclipseState, schedule, phaseUsage.num_phases, phaseUsage ) : 0 ),
         outputDir_( eclipseState.getIOConfig().getOutputDir() ),
         restart_double_si_( output_ ? param.getDefault("restart_double_si", false) : false ),
-        lastBackupReportStep_( -1 ),
         phaseUsage_( phaseUsage ),
         eclipseState_(eclipseState),
         schedule_(schedule),
@@ -390,12 +379,6 @@ namespace Opm
 
                 // Ensure that output dir exists
                 ensureDirectoryExists(outputDir_);
-
-                std::string backupfilename = param.getDefault("backupfile", std::string("") );
-                if( ! backupfilename.empty() )
-                {
-                    backupfile_.open( backupfilename.c_str() );
-                }
             }
 
             // create output thread if enabled and rank is I/O rank

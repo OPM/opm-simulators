@@ -360,7 +360,8 @@ namespace Opm
               strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
               const double mem_size = getTotalSystemMemory() / megabyte;
               std::ostringstream ss;
-              ss << "\n\n\n ########  #          ######   #           #\n";
+              ss << "\n\n\n";
+              ss << " ########  #          ######   #           #\n";
               ss << " #         #         #      #   #         # \n";
               ss << " #####     #         #      #    #   #   #  \n";
               ss << " #         #         #      #     # # # #   \n";
@@ -693,11 +694,6 @@ namespace Opm
                     }
                 }
 
-                if (output_to_files_) {
-                    std::string filename = output_dir_ + "/walltime.txt";
-                    std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
-                    successReport.reportParam(tot_os);
-                }
             } else {
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
@@ -730,7 +726,6 @@ namespace Opm
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
-                                           eclState(),
                                            *output_writer_));
         }
 

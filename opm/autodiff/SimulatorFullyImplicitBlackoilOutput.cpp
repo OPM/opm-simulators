@@ -34,7 +34,6 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <opm/autodiff/GridHelpers.hpp>
-#include <opm/autodiff/BackupRestore.hpp>
 
 #include <sstream>
 #include <iomanip>
@@ -350,107 +349,6 @@ namespace Opm
                                       extraRestartData,
                                       restart_double_si_);
             }
-        }
-
-        // write backup file
-        if( backupfile_.is_open() )
-        {
-            int reportStep      = timer.reportStepNum();
-            int currentTimeStep = timer.currentStepNum();
-            if( (reportStep == currentTimeStep || // true for SimulatorTimer
-                 currentTimeStep == 0 || // true for AdaptiveSimulatorTimer at reportStep
-                 timer.done() ) // true for AdaptiveSimulatorTimer at reportStep
-               && lastBackupReportStep_ != reportStep ) // only backup report step once
-            {
-                // store report step
-                lastBackupReportStep_ = reportStep;
-                // write resport step number
-                backupfile_.write( (const char *) &reportStep, sizeof(int) );
-
-                try {
-                    backupfile_ << state;
-
-                    const WellStateFullyImplicitBlackoil& boWellState = static_cast< const WellStateFullyImplicitBlackoil& > (wellState);
-                    backupfile_ << boWellState;
-                }
-                catch ( const std::bad_cast& e )
-                {
-                }
-
-                backupfile_ << std::flush;
-            }
-        } // end backup
-    }
-
-    void
-    BlackoilOutputWriter::
-    restore(SimulatorTimerInterface& timer,
-            BlackoilState& state,
-            WellStateFullyImplicitBlackoil& wellState,
-            const std::string& filename,
-            const int desiredResportStep )
-    {
-        std::ifstream restorefile( filename.c_str() );
-        if( restorefile )
-        {
-            std::cout << "============================================================================"<<std::endl;
-            std::cout << "Restoring from ";
-            if( desiredResportStep < 0 ) {
-                std::cout << "last";
-            }
-            else {
-                std::cout << desiredResportStep;
-            }
-            std::cout << " report step! filename = " << filename << std::endl << std::endl;
-
-            int reportStep;
-            restorefile.read( (char *) &reportStep, sizeof(int) );
-
-            const int readReportStep = (desiredResportStep < 0) ?
-                std::numeric_limits<int>::max() : desiredResportStep;
-
-            while( reportStep <= readReportStep && ! timer.done() && restorefile )
-            {
-                restorefile >> state;
-                restorefile >> wellState;
-
-                // No per cell data is written for restore steps, but will be
-                // for subsequent steps, when we have started simulating
-                writeTimeStepWithoutCellProperties( timer, state, wellState, {}, {});
-
-                // some output
-                std::cout << "Restored step " << timer.reportStepNum() << " at day "
-                          <<  unit::convert::to(timer.simulationTimeElapsed(),unit::day) << std::endl;
-
-                if( readReportStep == reportStep ) {
-                    break;
-                }
-
-                // if the stream is not valid anymore we just use the last state read
-                if( ! restorefile ) {
-                    std::cerr << "Reached EOF, using last state read!" << std::endl;
-                    break;
-                }
-
-                // try to read next report step
-                restorefile.read( (char *) &reportStep, sizeof(int) );
-
-                // if read failed, exit loop
-                if( ! restorefile ) {
-                    break;
-                }
-
-                // next step
-                timer.advance();
-
-                if( timer.reportStepNum() != reportStep ) {
-                    break;
-                }
-            }
-        }
-        else
-        {
-            std::cerr << "Warning: Couldn't open restore file '" << filename << "'" << std::endl;
         }
     }
 
