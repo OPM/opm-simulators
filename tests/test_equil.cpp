@@ -67,8 +67,9 @@ typedef Opm::EclMaterialLawManager<MaterialTraits> MaterialLawManager;
     BOOST_CHECK_CLOSE((value), (expected), (reltol)); \
 }
 
-
-void initDefaultFluidSystem() {
+namespace
+{
+static void initDefaultFluidSystem() {
     std::vector<std::pair<double, double> > Bo = {
         { 101353, 1. },
         { 6.21542e+07, 1 }
@@ -96,25 +97,25 @@ void initDefaultFluidSystem() {
     FluidSystem::setEnableVaporizedOil(false);
     FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
 
-    Opm::GasPvtMultiplexer<double> *gasPvt = new Opm::GasPvtMultiplexer<double>;
+    auto gasPvt = std::make_shared<Opm::GasPvtMultiplexer<double>>();
     gasPvt->setApproach(Opm::GasPvtMultiplexer<double>::DryGasPvt);
-    auto& dryGasPvt = gasPvt->template getRealPvt<Opm::GasPvtMultiplexer<double>::DryGasPvt>();
+    auto& dryGasPvt = gasPvt->getRealPvt<Opm::GasPvtMultiplexer<double>::DryGasPvt>();
     dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
     dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
     dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
 
-    Opm::OilPvtMultiplexer<double> *oilPvt = new Opm::OilPvtMultiplexer<double>;
+    auto oilPvt = std::make_shared<Opm::OilPvtMultiplexer<double>>();
     oilPvt->setApproach(Opm::OilPvtMultiplexer<double>::DeadOilPvt);
-    auto& deadOilPvt = oilPvt->template getRealPvt<Opm::OilPvtMultiplexer<double>::DeadOilPvt>();
+    auto& deadOilPvt = oilPvt->getRealPvt<Opm::OilPvtMultiplexer<double>::DeadOilPvt>();
     deadOilPvt.setNumRegions(/*numPvtRegion=*/1);
     deadOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     deadOilPvt.setInverseOilFormationVolumeFactor(/*regionIdx=*/0, Bo);
     deadOilPvt.setOilViscosity(/*regionIdx=*/0, muo);
 
-    Opm::WaterPvtMultiplexer<double> *waterPvt = new Opm::WaterPvtMultiplexer<double>;
+    auto waterPvt = std::make_shared<Opm::WaterPvtMultiplexer<double>>();
     waterPvt->setApproach(Opm::WaterPvtMultiplexer<double>::ConstantCompressibilityWaterPvt);
-    auto& ccWaterPvt = waterPvt->template getRealPvt<Opm::WaterPvtMultiplexer<double>::ConstantCompressibilityWaterPvt>();
+    auto& ccWaterPvt = waterPvt->getRealPvt<Opm::WaterPvtMultiplexer<double>::ConstantCompressibilityWaterPvt>();
     ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
     ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     ccWaterPvt.setViscosity(/*regionIdx=*/0, 1);
@@ -135,6 +136,7 @@ void initDefaultFluidSystem() {
 
     FluidSystem::initEnd();
 
+}
 }
 
 BOOST_AUTO_TEST_SUITE ()
