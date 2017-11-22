@@ -767,7 +767,7 @@ namespace Opm
                                                     UgGridHelpers::createEclipseGrid( grid , inputGrid ),
                                                     *schedule_,
                                                     *summary_config_ ));
-                eclipse_writer_->writeInitial(geoprops_->simProps(grid),
+                eclipse_writer_->writeInitial(geoprops_->simProps(grid), {},
                                               geoprops_->nonCartesianConnections());
             }
         }
