@@ -538,8 +538,7 @@ namespace Opm
             /**
              * Retrieve pvtIdx of the region.
              */
-            const int
-            pvtIdx() const { return this->pvtIdx_; }
+            int pvtIdx() const { return this->pvtIdx_; }
 
 
         private:
@@ -566,27 +565,29 @@ namespace Opm
                   cell_(cell),
                   target_pc_(target_pc)
             {
-                fluidState_.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
-                fluidState_.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
-                fluidState_.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-                std::fill(pc_, pc_ + FluidSystem::numPhases, 0.0);
+
             }
             double operator()(double s) const
             {
                 const auto& matParams = materialLawManager_.materialLawParams(cell_);
-                fluidState_.setSaturation(phase_, s);
-                MaterialLaw::capillaryPressures(pc_, matParams, fluidState_);
+                SatOnlyFluidState fluidState;
+                fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
+                fluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
+                fluidState.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
+                fluidState.setSaturation(phase_, s);
+
+                double pc[FluidSystem::numPhases];
+                std::fill(pc, pc + FluidSystem::numPhases, 0.0);
+                MaterialLaw::capillaryPressures(pc, matParams, fluidState);
                 double sign = (phase_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
-                double pc = pc_[FluidSystem::oilPhaseIdx] + sign *  pc_[phase_];
-                return pc - target_pc_;
+                double pcPhase = pc[FluidSystem::oilPhaseIdx] + sign *  pc[phase_];
+                return pcPhase - target_pc_;
             }
         private:
             const MaterialLawManager& materialLawManager_;
             const int phase_;
             const int cell_;
             const double target_pc_;
-            mutable SatOnlyFluidState fluidState_;
-            mutable double pc_[FluidSystem::numPhases];
         };
 
         template <class FluidSystem, class MaterialLawManager>
@@ -694,22 +695,25 @@ namespace Opm
                   cell_(cell),
                   target_pc_(target_pc)
             {
-                fluidState_.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
-                fluidState_.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
-                fluidState_.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-                std::fill(pc_, pc_ + FluidSystem::numPhases, 0.0);
             }
             double operator()(double s) const
             {
                 const auto& matParams = materialLawManager_.materialLawParams(cell_);
-                fluidState_.setSaturation(phase1_, s);
-                fluidState_.setSaturation(phase2_, 1.0 - s);
+                SatOnlyFluidState fluidState;
+                fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
+                fluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
+                fluidState.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
+                fluidState.setSaturation(phase1_, s);
+                fluidState.setSaturation(phase2_, 1.0 - s);
 
-                MaterialLaw::capillaryPressures(pc_, matParams, fluidState_);
+                double pc[FluidSystem::numPhases];
+                std::fill(pc, pc + FluidSystem::numPhases, 0.0);
+
+                MaterialLaw::capillaryPressures(pc, matParams, fluidState);
                 double sign1 = (phase1_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
-                double pc1 = pc_[FluidSystem::oilPhaseIdx] + sign1 *  pc_[phase1_];
+                double pc1 = pc[FluidSystem::oilPhaseIdx] + sign1 *  pc[phase1_];
                 double sign2 = (phase2_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
-                double pc2 = pc_[FluidSystem::oilPhaseIdx] + sign2 *  pc_[phase2_];
+                double pc2 = pc[FluidSystem::oilPhaseIdx] + sign2 *  pc[phase2_];
                 return pc1 + pc2 - target_pc_;
             }
         private:
@@ -718,8 +722,6 @@ namespace Opm
             const int phase2_;
             const int cell_;
             const double target_pc_;
-            mutable SatOnlyFluidState fluidState_;
-            mutable double pc_[FluidSystem::numPhases];
         };
 
 
