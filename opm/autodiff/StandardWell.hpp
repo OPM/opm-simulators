@@ -26,6 +26,7 @@
 
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 
 namespace Opm
 {
@@ -104,6 +105,10 @@ namespace Opm
 
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
+        // For the conversion between the surface volume rate and resrevoir voidage rate
+        using RateConverterType = RateConverter::
+            SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
+
         // TODO: should these go to WellInterface?
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
         static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
@@ -111,7 +116,10 @@ namespace Opm
         static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
+        StandardWell(const Well* well, const int time_step, const Wells* wells,
+                     const ModelParameters& param,
+                     const RateConverterType& rate_converter,
+                     const int pvtRegionIdx);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -219,6 +227,9 @@ namespace Opm
 
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
+
+        const RateConverterType& rateConverter_;
+        int pvtRegionIdx_;
 
         // TODO: this function should be moved to the base class.
         // while it faces chanllenges for MSWell later, since the calculation of bhp

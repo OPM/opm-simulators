@@ -24,13 +24,18 @@ namespace Opm
 {
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
+    StandardWell(const Well* well, const int time_step, const Wells* wells,
+                 const ModelParameters& param,
+                 const RateConverterType& rate_converter,
+                 const int pvtRegionIdx)
     : Base(well, time_step, wells, param)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
     , primary_variables_(numWellEq, 0.0)
     , primary_variables_evaluation_(numWellEq) // the number of the primary variables
     , F0_(numWellEq)
+    , rateConverter_(rate_converter)
+    , pvtRegionIdx_(pvtRegionIdx)
     {
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
@@ -861,13 +866,7 @@ namespace Opm
             primary_variables_[SFrac] = F_solvent;
         }
 
-        // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
-        // More testing is needed to make sure this is correct for well groups and THP.
-        if (has_solvent){
-            F[pu.phase_pos[Gas]] += F_solvent;
-        }
-
-            // The interpretation of the first well variable depends on the well control
+        // The interpretation of the first well variable depends on the well control
         const WellControls* wc = well_controls_;
 
         // TODO: we should only maintain one current control either from the well_state or from well_controls struct.
@@ -882,6 +881,18 @@ namespace Opm
             } else {
                 F[p] = 0.;
             }
+        }
+
+        // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
+        // More testing is needed to make sure this is correct for well groups and THP.
+        if (has_solvent){
+            const double scal = scalingFactor(contiSolventEqIdx);
+            if (scal > 0) {
+                F_solvent /= scal ;
+            } else {
+                F_solvent = 0.;
+            }
+            F[pu.phase_pos[Gas]] += F_solvent;
         }
 
         switch (well_controls_iget_type(wc, current)) {
@@ -1981,9 +1992,13 @@ namespace Opm
         const double* distr = well_controls_get_current_distr(wc);
 
         if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
-            if (has_solvent && phaseIdx == contiSolventEqIdx )
-                   OPM_THROW(std::runtime_error, "RESERVOIR_RATE control in combination with solvent is not implemented");
-
+            if (has_solvent && phaseIdx == contiSolventEqIdx ) {
+                typedef Ewoms::BlackOilSolventModule<TypeTag> SolventModule;
+                double coeff = 0;
+                rateConverter_.template calcCoeffSolvent<SolventModule>(0, pvtRegionIdx_, coeff);
+                return coeff;
+            }
+            // TODO: use the rateConverter here as well.
             return distr[phaseIdx];
         }
         const auto& pu = phaseUsage();

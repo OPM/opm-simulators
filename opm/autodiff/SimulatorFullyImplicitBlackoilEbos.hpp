@@ -67,7 +67,6 @@ public:
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
     typedef BlackoilWellModel<TypeTag> WellModel;
-    typedef RateConverter::SurfaceToReservoirVoidage<FluidSystem, std::vector<int> > RateConverterType;
 
 
     /// Initialise from parameters and objects to observe.
