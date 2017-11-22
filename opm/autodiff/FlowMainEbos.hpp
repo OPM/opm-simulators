@@ -818,11 +818,9 @@ namespace Opm
                 using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
                 using Handle = CellOwnerDataHandle<ElementMapper>;
                 ElementMapper globalMapper(this->globalGrid().leafGridView());
-                const auto* dims = UgGridHelpers::cartDims(grid());
-                const auto globalSize = dims[0]*dims[1]*dims[2];
+                const auto globalSize = this->globalGrid().size(0);
                 std::vector<int> ranks(globalSize, -1);
-                Handle handle(globalMapper, ranks,
-                              this->globalGrid().globalCell());
+                Handle handle(globalMapper, ranks);
                 this->grid().gatherData(handle);
                 integerVectors.emplace("MPI_RANK", ranks);
             }
