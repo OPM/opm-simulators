@@ -433,7 +433,7 @@ namespace Opm
                        const CellRange&                    cells,
                        std::vector< std::vector<double> >& press)
         {
-            const bool water = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+            const bool water = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
             const bool oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
             const bool gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
             const int oilpos = FluidSystem::oilPhaseIdx;
