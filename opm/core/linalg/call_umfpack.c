@@ -34,6 +34,8 @@
 */
 
 #include "config.h"
+
+#if HAVE_UMFPACK
 #include <assert.h>
 #include <stdlib.h>
 
@@ -183,3 +185,15 @@ call_UMFPACK(struct CSRMatrix *A, const double *b, double *x)
     csc_deallocate(csc);
 }
 
+#else
+#include <stdlib.h>
+#include <opm/core/linalg/call_umfpack.h>
+
+void
+call_UMFPACK(struct CSRMatrix *A, const double *b, double *x)
+{
+    /* UMFPACK is not available */
+    abort();
+}
+
+#endif
