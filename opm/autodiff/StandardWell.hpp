@@ -48,6 +48,7 @@ namespace Opm
         using typename Base::ModelParameters;
         using typename Base::BlackoilIndices;
         using typename Base::PolymerModule;
+        using typename Base::RateConverterType;
 
         using Base::numEq;
 
@@ -104,10 +105,6 @@ namespace Opm
         typedef Dune::BCRSMatrix<OffDiagMatrixBlockWellType> OffDiagMatWell;
 
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
-
-        // For the conversion between the surface volume rate and resrevoir voidage rate
-        using RateConverterType = RateConverter::
-            SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
         // TODO: should these go to WellInterface?
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
@@ -177,6 +174,7 @@ namespace Opm
         using Base::wpolymer;
         using Base::wellHasTHPConstraints;
         using Base::mostStrictBhpFromBhpLimits;
+        using Base::scalingFactor;
 
         // protected member variables from the Base class
         using Base::vfp_properties_;
@@ -227,9 +225,6 @@ namespace Opm
 
         // the saturations in the well bore under surface conditions at the beginning of the time step
         std::vector<double> F0_;
-
-        const RateConverterType& rateConverter_;
-        int pvtRegionIdx_;
 
         // TODO: this function should be moved to the base class.
         // while it faces chanllenges for MSWell later, since the calculation of bhp
@@ -313,7 +308,6 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
-        double scalingFactor(const int comp_idx) const;
     };
 
 }

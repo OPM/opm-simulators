@@ -28,14 +28,12 @@ namespace Opm
                  const ModelParameters& param,
                  const RateConverterType& rate_converter,
                  const int pvtRegionIdx)
-    : Base(well, time_step, wells, param)
+    : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
     , primary_variables_(numWellEq, 0.0)
     , primary_variables_evaluation_(numWellEq) // the number of the primary variables
     , F0_(numWellEq)
-    , rateConverter_(rate_converter)
-    , pvtRegionIdx_(pvtRegionIdx)
     {
         duneB_.setBuildMode( OffDiagMatWell::row_wise );
         duneC_.setBuildMode( OffDiagMatWell::row_wise );
@@ -1984,37 +1982,7 @@ namespace Opm
          return thp;
     }
 
-    template<typename TypeTag>
-    double
-    StandardWell<TypeTag>::scalingFactor(const int phaseIdx) const
-    {
-        const WellControls* wc = well_controls_;
-        const double* distr = well_controls_get_current_distr(wc);
 
-        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
-            if (has_solvent && phaseIdx == contiSolventEqIdx ) {
-                typedef Ewoms::BlackOilSolventModule<TypeTag> SolventModule;
-                double coeff = 0;
-                rateConverter_.template calcCoeffSolvent<SolventModule>(0, pvtRegionIdx_, coeff);
-                return coeff;
-            }
-            // TODO: use the rateConverter here as well.
-            return distr[phaseIdx];
-        }
-        const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
-            return 1.0;
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
-            return 1.0;
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
-            return 0.01;
-        if (has_solvent && phaseIdx == contiSolventEqIdx )
-            return 0.01;
-
-        // we should not come this far
-        assert(false);
-        return 1.0;
-    }
 
 
 }

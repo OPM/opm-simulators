@@ -25,10 +25,15 @@ namespace Opm
 
     template<typename TypeTag>
     WellInterface<TypeTag>::
-    WellInterface(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
+    WellInterface(const Well* well, const int time_step, const Wells* wells,
+                  const ModelParameters& param,
+                  const RateConverterType& rate_converter,
+                  const int pvtRegionIdx)
     : well_ecl_(well)
     , current_step_(time_step)
     , param_(param)
+    , rateConverter_(rate_converter)
+    , pvtRegionIdx_(pvtRegionIdx)
     {
         if (!well) {
             OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");
@@ -848,6 +853,38 @@ namespace Opm
                 }
             }
         }
+    }
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::scalingFactor(const int phaseIdx) const
+    {
+        const WellControls* wc = well_controls_;
+        const double* distr = well_controls_get_current_distr(wc);
+
+        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
+            if (has_solvent && phaseIdx == contiSolventEqIdx ) {
+                typedef Ewoms::BlackOilSolventModule<TypeTag> SolventModule;
+                double coeff = 0;
+                rateConverter_.template calcCoeffSolvent<SolventModule>(0, pvtRegionIdx_, coeff);
+                return coeff;
+            }
+            // TODO: use the rateConverter here as well.
+            return distr[phaseIdx];
+        }
+        const auto& pu = phaseUsage();
+        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
+            return 1.0;
+        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
+            return 1.0;
+        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
+            return 0.01;
+        if (has_solvent && phaseIdx == contiSolventEqIdx )
+            return 0.01;
+
+        // we should not come this far
+        assert(false);
+        return 1.0;
     }
 
 }

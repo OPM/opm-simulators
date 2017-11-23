@@ -1,6 +1,7 @@
 /*
   Copyright 2017 SINTEF Digital, Mathematics and Cybernetics.
   Copyright 2017 Statoil ASA.
+  Copyright 2017 IRIS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -37,6 +38,7 @@
 #include <opm/autodiff/WellHelpers.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilModelParameters.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 
 #include <opm/simulators/WellSwitchingLogger.hpp>
 
@@ -89,9 +91,18 @@ namespace Opm
 
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
+        static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
+
+
+        // For the conversion between the surface volume rate and resrevoir voidage rate
+        using RateConverterType = RateConverter::
+        SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
         /// Constructor
-        WellInterface(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
+        WellInterface(const Well* well, const int time_step, const Wells* wells,
+                      const ModelParameters& param,
+                      const RateConverterType& rate_converter,
+                      const int pvtRegionIdx);
 
         /// Virutal destructor
         virtual ~WellInterface() {}
@@ -264,6 +275,13 @@ namespace Opm
 
         double gravity_;
 
+        // For the conversion between the surface volume rate and resrevoir voidage rate
+        const RateConverterType& rateConverter_;
+
+        // The pvt region of the well. We assume
+        // We assume a well to not penetrate more than one pvt region.
+        int pvtRegionIdx_;
+
         const std::vector<bool>& active() const;
 
         const PhaseUsage& phaseUsage() const;
@@ -303,6 +321,9 @@ namespace Opm
 
         RatioCheckTuple checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                                              const WellState& well_state) const;
+
+        double scalingFactor(const int comp_idx) const;
+
 
     };
 

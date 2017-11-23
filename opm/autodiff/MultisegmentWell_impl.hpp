@@ -27,8 +27,11 @@ namespace Opm
 
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::
-    MultisegmentWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
-    : Base(well, time_step, wells, param)
+    MultisegmentWell(const Well* well, const int time_step, const Wells* wells,
+                     const ModelParameters& param,
+                     const RateConverterType& rate_converter,
+                     const int pvtRegionIdx)
+    : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
@@ -1662,40 +1665,6 @@ namespace Opm
             }
         }
     }
-
-
-
-
-
-    template <typename TypeTag>
-    double
-    MultisegmentWell<TypeTag>::
-    scalingFactor(const int comp_idx) const
-    {
-        const double* distr = well_controls_get_current_distr(well_controls_);
-
-        if (well_controls_get_current_type(well_controls_) == RESERVOIR_RATE) {
-            // if (has_solvent && phaseIdx == contiSolventEqIdx )
-            //        OPM_THROW(std::runtime_error, "RESERVOIR_RATE control in combination with solvent is not implemented");
-            return distr[comp_idx];
-        }
-
-        const PhaseUsage& pu = phaseUsage();
-
-        if (active()[Water] && pu.phase_pos[Water] == comp_idx)
-            return 1.0;
-        if (active()[Oil] && pu.phase_pos[Oil] == comp_idx)
-            return 1.0;
-        if (active()[Gas] && pu.phase_pos[Gas] == comp_idx)
-            return 0.01;
-        // if (has_solvent && phaseIdx == contiSolventEqIdx )
-        //     return 0.01;
-
-        // we should not come this far
-        assert(false);
-        return 1.0;
-    }
-
 
 
 

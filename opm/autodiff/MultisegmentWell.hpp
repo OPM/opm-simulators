@@ -41,6 +41,8 @@ namespace Opm
         using typename Base::ModelParameters;
         using typename Base::MaterialLaw;
         using typename Base::BlackoilIndices;
+        using typename Base::RateConverterType;
+
 
         /// the number of reservior equations
         using Base::numEq;
@@ -97,7 +99,10 @@ namespace Opm
         // TODO: for now, we only use one type to save some implementation efforts, while improve later.
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
-        MultisegmentWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
+        MultisegmentWell(const Well* well, const int time_step, const Wells* wells,
+                         const ModelParameters& param,
+                         const RateConverterType& rate_converter,
+                         const int pvtRegionIdx);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -188,6 +193,7 @@ namespace Opm
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
         using Base::getAllowCrossFlow;
+        using Base::scalingFactor;
 
         // TODO: trying to use the information from the Well opm-parser as much
         // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -328,8 +334,6 @@ namespace Opm
         void processFractions(const int seg) const;
 
         void updateWellStateFromPrimaryVariables(WellState& well_state) const;
-
-        double scalingFactor(const int comp_idx) const;
 
         bool frictionalPressureLossConsidered() const;
 
