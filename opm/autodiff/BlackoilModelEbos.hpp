@@ -205,7 +205,7 @@ namespace Opm {
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
-            wellModel().beginTimeStep();
+            wellModel().beginTimeStep(timer.reportStepNum());
         }
 
 
