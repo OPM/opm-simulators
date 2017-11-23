@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/SgfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SgofTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SlgofTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
@@ -221,7 +222,6 @@ struct EclEpsScalingPointsInfo
                          const Opm::EclipseState& eclState,
                          unsigned satRegionIdx)
     {
-        // TODO: support for the SOF2/SOF3 keyword family
         const auto& tables = eclState.getTableManager();
         const TableContainer&  swofTables = tables.getSwofTables();
         const TableContainer&  sgofTables = tables.getSgofTables();
@@ -229,6 +229,8 @@ struct EclEpsScalingPointsInfo
         const TableContainer&  swfnTables = tables.getSwfnTables();
         const TableContainer&  sgfnTables = tables.getSgfnTables();
         const TableContainer&  sof3Tables = tables.getSof3Tables();
+        const TableContainer&  sof2Tables = tables.getSof2Tables();
+
 
         bool hasWater = deck.hasKeyword("WATER");
         bool hasGas = deck.hasKeyword("GAS");
@@ -238,30 +240,49 @@ struct EclEpsScalingPointsInfo
             Swl = 0.0;
             Swu = 0.0;
             Swcr = 0.0;
-            if (!sgofTables.empty())
-                extractUnscaledSgof_(sgofTables.getTable<SgofTable>(satRegionIdx));
+            bool family1 = (!sgofTables.empty() || !slgofTables.empty());
+            bool family2 = !sgfnTables.empty() && !sof2Tables.empty();
+            if (family1) {
+                if (!sgofTables.empty())
+                    extractUnscaledSgof_(sgofTables.getTable<SgofTable>(satRegionIdx));
+                else {
+                    assert(!slgofTables.empty());
+                    extractUnscaledSlgof_(slgofTables.getTable<SlgofTable>(satRegionIdx));
+                }
+            } else if (family2) {
+                extractUnscaledSgfn_(sgfnTables.getTable<SgfnTable>(satRegionIdx));
+                extractUnscaledSof2_(sof2Tables.getTable<Sof2Table>(satRegionIdx));
+            }
             else {
-                assert(!slgofTables.empty());
-                extractUnscaledSlgof_(slgofTables.getTable<SlgofTable>(satRegionIdx));
+                throw std::domain_error("No valid saturation keyword family specified");
             }
             return;
         }
         else if (!hasGas) {
-            assert(!swofTables.empty());
             Sgl = 0.0;
             Sgu = 0.0;
             Sgcr = 0.0;
-            extractUnscaledSwof_(swofTables.getTable<SwofTable>(satRegionIdx));
+            bool family1 = !swofTables.empty();
+            bool family2 = !swfnTables.empty() && !sof2Tables.empty();
+            if (family1) {
+                extractUnscaledSwof_(swofTables.getTable<SwofTable>(satRegionIdx));
+            } else if (family2) {
+                extractUnscaledSwfn_(swfnTables.getTable<SwfnTable>(satRegionIdx));
+                extractUnscaledSof2_(sof2Tables.getTable<Sof2Table>(satRegionIdx));
+            }
+            else {
+                throw std::domain_error("No valid saturation keyword family specified");
+            }
             return;
         }
+
+        bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
+        bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
 
         // so far, only water-oil and oil-gas simulations are supported, i.e.,
         // there's no gas-water yet.
         if (!hasWater || !hasGas || !hasOil)
             throw std::domain_error("The specified phase configuration is not suppored");
-
-        bool family1 = (!sgofTables.empty() || !slgofTables.empty()) && !swofTables.empty();
-        bool family2 = !swfnTables.empty() && !sgfnTables.empty() && !sof3Tables.empty();
 
         if (family1) {
             extractUnscaledSwof_(swofTables.getTable<SwofTable>(satRegionIdx));
@@ -586,6 +607,32 @@ private:
         // maximum relative oil permeabilities
         maxKrow = sof3Table.getKrowColumn().back();
         maxKrog = sof3Table.getKrogColumn().back();
+    }
+
+    void extractUnscaledSof2_(const Opm::Sof2Table& sof2Table)
+    {
+        // connate oil saturations
+        Sowl = sof2Table.getSoColumn().front() + Sgl;
+        Sogl = sof2Table.getSoColumn().front() + Swl;
+
+        // maximum oil saturations
+        Sowu = sof2Table.getSoColumn().back();
+
+        // critical oil saturation of oil-water system or
+        // critical oil saturation of gas-oil system
+        Sowcr = 0.0;
+        for (size_t rowIdx = 0 ; rowIdx < sof2Table.numRows(); ++ rowIdx) {
+            if (sof2Table.getKroColumn()[rowIdx] > 0) {
+                break;
+            };
+
+            Sowcr = sof2Table.getSoColumn()[rowIdx];
+        }
+        Sogcr = Sowcr;
+
+        // maximum relative oil permeabilities
+        maxKrow = sof2Table.getKroColumn().back();
+        maxKrog = maxKrow;
     }
 #endif // HAVE_OPM_PARSER
 

@@ -287,7 +287,122 @@ static const char* hysterDeckString =
     "0.85   0.98    0.000   0\n"
     "0.88   0.984   0.000   0 /\n";
 
+static const char* fam1DeckStringGasOil =
+    "RUNSPEC\n"
+    "\n"
+    "DIMENS\n"
+    "   10 10 3 /\n"
+    "\n"
+    "TABDIMS\n"
+    "/\n"
+    "\n"
+    "OIL\n"
+    "GAS\n"
+    "\n"
+    "DISGAS\n"
+    "\n"
+    "FIELD\n"
+    "\n"
+    "GRID\n"
+    "\n"
+    "DX\n"
+    "       300*1000 /\n"
+    "DY\n"
+    "   300*1000 /\n"
+    "DZ\n"
+    "   100*20 100*30 100*50 /\n"
+    "\n"
+    "TOPS\n"
+    "   100*8325 /\n"
+    "\n"
+    "\n"
+    "PROPS\n"
+    "\n"
+    "\n"
+    "SGOF\n"
+    "0  0   1   0\n"
+    "0.001  0   1   0\n"
+    "0.02   0   0.997   0\n"
+    "0.05   0.005   0.980   0\n"
+    "0.12   0.025   0.700   0\n"
+    "0.2    0.075   0.350   0\n"
+    "0.25   0.125   0.200   0\n"
+    "0.3    0.190   0.090   0\n"
+    "0.4    0.410   0.021   0\n"
+    "0.45   0.60    0.010   0\n"
+    "0.5    0.72    0.001   0\n"
+    "0.6    0.87    0.0001  0\n"
+    "0.7    0.94    0.000   0\n"
+    "0.85   0.98    0.000   0\n"
+    "0.88   0.984   0.000   0 /\n";
 
+static const char* fam2DeckStringGasOil =
+    "RUNSPEC\n"
+    "\n"
+    "DIMENS\n"
+    "   10 10 3 /\n"
+    "\n"
+    "TABDIMS\n"
+    "/\n"
+    "\n"
+    "OIL\n"
+    "GAS\n"
+    "\n"
+    "DISGAS\n"
+    "\n"
+    "FIELD\n"
+    "\n"
+    "GRID\n"
+    "\n"
+    "DX\n"
+    "       300*1000 /\n"
+    "DY\n"
+    "   300*1000 /\n"
+    "DZ\n"
+    "   100*20 100*30 100*50 /\n"
+    "\n"
+    "TOPS\n"
+    "   100*8325 /\n"
+    "\n"
+    "\n"
+    "PROPS\n"
+    "\n"
+    "PVTW\n"
+    "       4017.55 1.038 3.22E-6 0.318 0.0 /\n"
+    "\n"
+    "\n"
+    "SGFN\n"
+    "0      0   0\n"
+    "0.001  0   0\n"
+    "0.02   0   0\n"
+    "0.05   0.005   0\n"
+    "0.12   0.025   0\n"
+    "0.2    0.075   0\n"
+    "0.25   0.125   0\n"
+    "0.3    0.190   0\n"
+    "0.4    0.410   0\n"
+    "0.45   0.60    0\n"
+    "0.5    0.72    0\n"
+    "0.6    0.87    0\n"
+    "0.7    0.94    0\n"
+    "0.85   0.98    0\n"
+    "0.88   0.984   0 /\n"
+    "\n"
+    "SOF2\n"
+    "0.12   0.000   \n"
+    "0.15   0.000   \n"
+    "0.3    0.000   \n"
+    "0.4    0.0001  \n"
+    "0.5    0.001   \n"
+    "0.55   0.010   \n"
+    "0.6    0.021   \n"
+    "0.7    0.090   \n"
+    "0.8    0.350   \n"
+    "0.88   0.700   \n"
+    "0.95   0.980   \n"
+    "0.98   0.997   \n"
+    "0.999  1       \n"
+    "1.0    1       \n /\n";
 
 template <class Scalar>
 inline void testAll()
@@ -446,6 +561,61 @@ inline void testAll()
                             OPM_THROW(std::logic_error,
                                       "Hysteresis parameters did not propagate correctly");
 
+                    }
+                }
+            }
+        }
+
+        // Gas oil
+        {
+            const auto fam1Deck = parser.parseString(fam1DeckStringGasOil, parseContext);
+            const Opm::EclipseState fam1EclState(fam1Deck, parseContext);
+
+            MaterialLawManager fam1materialLawManager;
+            fam1materialLawManager.initFromDeck(fam1Deck, fam1EclState, compressedToCartesianIdx);
+
+            const auto fam2Deck = parser.parseString(fam2DeckStringGasOil, parseContext);
+            const Opm::EclipseState fam2EclState(fam2Deck, parseContext);
+
+            Opm::EclMaterialLawManager<MaterialTraits> fam2MaterialLawManager;
+            fam2MaterialLawManager.initFromDeck(fam2Deck, fam2EclState, compressedToCartesianIdx);
+
+            for (unsigned elemIdx = 0; elemIdx < n; ++ elemIdx) {
+                for (int i = 0; i < 100; ++ i) {
+                    Scalar Sw = 0;
+                    Scalar So = Scalar(i)/100;
+                    Scalar Sg = 1 - Sw - So;
+                    FluidState fs;
+                    fs.setSaturation(waterPhaseIdx, Sw);
+                    fs.setSaturation(oilPhaseIdx, So);
+                    fs.setSaturation(gasPhaseIdx, Sg);
+
+                    Scalar pcFam1[numPhases]  = { 0.0, 0.0 };
+                    Scalar pcFam2[numPhases]  = { 0.0, 0.0 };
+                    MaterialLaw::capillaryPressures(pcFam1,
+                                                    fam1materialLawManager.materialLawParams(elemIdx),
+                                                    fs);
+                    MaterialLaw::capillaryPressures(pcFam2,
+                                                    fam2MaterialLawManager.materialLawParams(elemIdx),
+                                                    fs);
+
+                    Scalar krFam1[numPhases] = { 0.0, 0.0 };
+                    Scalar krFam2[numPhases] = { 0.0, 0.0 };
+                    MaterialLaw::relativePermeabilities(krFam1,
+                                                        fam1materialLawManager.materialLawParams(elemIdx),
+                                                        fs);
+                    MaterialLaw::relativePermeabilities(krFam2,
+                                                        fam2MaterialLawManager.materialLawParams(elemIdx),
+                                                        fs);
+
+                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+
+                        if (std::abs(pcFam1[phaseIdx] - pcFam2[phaseIdx]) > 1e-5)
+                            OPM_THROW(std::logic_error,
+                                      "Discrepancy between capillary pressure of family 1 and family 2 keywords");
+                        if (std::abs(krFam1[phaseIdx] - krFam2[phaseIdx]) > 1e-1)
+                            OPM_THROW(std::logic_error,
+                                      "Discrepancy between relative permeabilities of family 1 and family 2 keywords");
                     }
                 }
             }

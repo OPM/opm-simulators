@@ -673,6 +673,8 @@ private:
         const TableContainer& swfnTables = tableManager.getSwfnTables();
         const TableContainer& sgfnTables = tableManager.getSgfnTables();
         const TableContainer& sof3Tables = tableManager.getSof3Tables();
+        const TableContainer& sof2Tables = tableManager.getSof2Tables();
+
 
         bool hasGas = deck.hasKeyword("GAS");
         bool hasOil = deck.hasKeyword("OIL");
@@ -683,16 +685,12 @@ private:
         if (!hasGas) {
             // oil-water case
             family1 = !swofTables.empty();
-            if (!family1)
-                throw std::runtime_error("only SWOF is supporeted for oil-water two-phase simulations");
-            //family2 = !swfnTables.empty() && !sof2Tables.empty();
+            family2 = !swfnTables.empty() && !sof2Tables.empty();
         }
         else if (!hasWater) {
             // oil-gas case
             family1 = !sgofTables.empty();
-            if (!family1)
-                throw std::runtime_error("only SGOF is supporeted for oil-gas two-phase simulations");
-            //family2 = !sgfnTables.empty() && !sof2Tables.empty();
+            family2 = !sgfnTables.empty() && !sof2Tables.empty();
         }
         else if (!hasOil) {
             // water-gas case
@@ -762,12 +760,22 @@ private:
 
         case FamilyII:
         {
-            const Sof3Table& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>( satRegionIdx );
             const SgfnTable& sgfnTable = tableManager.getSgfnTables().getTable<SgfnTable>( satRegionIdx );
-            readGasOilEffectiveParametersFamily2_(effParams,
-                                                  Swco,
-                                                  sof3Table,
-                                                  sgfnTable);
+            bool hasWater = deck.hasKeyword("WATER");
+            if (!hasWater) {
+                // oil and gas case
+                const Sof2Table& sof2Table = tableManager.getSof2Tables().getTable<Sof2Table>( satRegionIdx );
+                readGasOilEffectiveParametersFamily2_(effParams,
+                                                      Swco,
+                                                      sof2Table,
+                                                      sgfnTable);
+            } else {
+                const Sof3Table& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>( satRegionIdx );
+                readGasOilEffectiveParametersFamily2_(effParams,
+                                                      Swco,
+                                                      sof3Table,
+                                                      sgfnTable);
+            }
             break;
         }
 
@@ -827,6 +835,24 @@ private:
         }
 
         effParams.setKrwSamples(SoColumn, sof3Table.getColumn("KROG").vectorCopy());
+        effParams.setKrnSamples(SoSamples, sgfnTable.getColumn("KRG").vectorCopy());
+        effParams.setPcnwSamples(SoSamples, sgfnTable.getColumn("PCOG").vectorCopy());
+        effParams.finalize();
+    }
+
+    void readGasOilEffectiveParametersFamily2_(GasOilEffectiveTwoPhaseParams& effParams,
+                                               Scalar /* Swco */,
+                                               const Opm::Sof2Table& sof2Table,
+                                               const Opm::SgfnTable& sgfnTable)
+    {
+        // convert the saturations of the SGFN keyword from gas to oil saturations
+        std::vector<double> SoSamples(sgfnTable.numRows());
+        std::vector<double> SoColumn = sof2Table.getColumn("SO").vectorCopy();
+        for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx) {
+            SoSamples[sampleIdx] = 1 - sgfnTable.get("SG", sampleIdx);
+        }
+
+        effParams.setKrwSamples(SoColumn, sof2Table.getColumn("KRO").vectorCopy());
         effParams.setKrnSamples(SoSamples, sgfnTable.getColumn("KRG").vectorCopy());
         effParams.setPcnwSamples(SoSamples, sgfnTable.getColumn("PCOG").vectorCopy());
         effParams.finalize();
