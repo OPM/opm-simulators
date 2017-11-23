@@ -280,7 +280,7 @@ namespace Opm
 
         // The pvt region of the well. We assume
         // We assume a well to not penetrate more than one pvt region.
-        int pvtRegionIdx_;
+        const int pvtRegionIdx_;
 
         const std::vector<bool>& active() const;
 

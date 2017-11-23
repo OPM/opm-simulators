@@ -884,12 +884,7 @@ namespace Opm
         // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
         // More testing is needed to make sure this is correct for well groups and THP.
         if (has_solvent){
-            const double scal = scalingFactor(contiSolventEqIdx);
-            if (scal > 0) {
-                F_solvent /= scal ;
-            } else {
-                F_solvent = 0.;
-            }
+            F_solvent /= scalingFactor(contiSolventEqIdx);
             F[pu.phase_pos[Gas]] += F_solvent;
         }
 
