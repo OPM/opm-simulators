@@ -60,8 +60,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/polymer/SimulatorPolymer.cpp
   opm/polymer/TransportSolverTwophaseCompressiblePolymer.cpp
   opm/polymer/TransportSolverTwophasePolymer.cpp
-  opm/polymer/fullyimplicit/PolymerPropsAd.cpp
-	opm/simulators/flow_ebos_blackoil.cpp
+  opm/simulators/flow_ebos_blackoil.cpp
   opm/simulators/flow_ebos_gasoil.cpp
   opm/simulators/flow_ebos_oilwater.cpp
   opm/simulators/flow_ebos_polymer.cpp
@@ -125,7 +124,6 @@ list (APPEND EXAMPLE_SOURCE_FILES
   examples/sim_simple.cpp
   examples/sim_poly2p_comp_reorder.cpp
   examples/sim_poly2p_incomp_reorder.cpp
-  examples/flow_polymer.cpp
   examples/wells_example.cpp
   )
 
@@ -142,7 +140,6 @@ list (APPEND PROGRAM_SOURCE_FILES
   examples/opm_init_check.cpp
   examples/sim_poly2p_comp_reorder.cpp
   examples/sim_poly2p_incomp_reorder.cpp
-  examples/flow_polymer.cpp
   )
 
 # originally generated with the command:
@@ -247,13 +244,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/polymer/TransportSolverTwophaseCompressiblePolymer.hpp
   opm/polymer/Point2D.hpp
   opm/polymer/TransportSolverTwophasePolymer.hpp
-  opm/polymer/fullyimplicit/PolymerPropsAd.hpp
-  opm/polymer/fullyimplicit/BlackoilPolymerModel.hpp
-  opm/polymer/fullyimplicit/BlackoilPolymerModel_impl.hpp
-  opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer.hpp
-  opm/polymer/fullyimplicit/SimulatorFullyImplicitBlackoilPolymer_impl.hpp
-  opm/polymer/fullyimplicit/WellStateFullyImplicitBlackoilPolymer.hpp
-	opm/simulators/flow_ebos_blackoil.hpp
+  opm/simulators/flow_ebos_blackoil.hpp
   opm/simulators/flow_ebos_gasoil.hpp
   opm/simulators/flow_ebos_oilwater.hpp
   opm/simulators/flow_ebos_polymer.hpp
