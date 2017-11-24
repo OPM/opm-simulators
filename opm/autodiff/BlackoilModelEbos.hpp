@@ -244,21 +244,26 @@ namespace Opm {
             SolutionVector solution = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             // Store the initial previous.
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
+            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
             ++timer;// get back to current step
             timer.report(std::cout);
             //this->prepareStep(timer);//NB this should not be nesseary  *initial_reservoir_state*/, /*initial_well_state*/);
              std::cout << "Current time end " <<  timer.simulationTimeElapsed()  << std::endl;
             this->ebosDeserialize( timer.simulationTimeElapsed() );
+            double t = ebosSimulator_.time();
+            ebosSimulator_.setTime(-t);
+            this->ebosSerialize();
+            ebosSimulator_.setTime(t);
             // seralizing may owerwrite prevois step since it was intended for restart ??
-
             ebosSimulator_.model().solution( 1 /* timeIdx */ ) = solution;
-
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/1);
             ebosSimulator_.model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
            // ebosSimulator_.model().update();
             //auto linsys =  ebosSimulator_.model().linearizer();
             // NB need to avoid storag cache to calculate prevois storage term correctly
+            int iterationIdx = 10;
 
+            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
             ebosSimulator_.model().linearizer().linearize();
             ebosSimulator_.problem().endIteration();
@@ -266,12 +271,12 @@ namespace Opm {
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             //auto& well_state = wellModel().wellState();
             wellModel().beginTimeStep();
-            WellState well_state;
+            WellState well_state;// =  this->wellModel().wellState();
             {
                 std::string filename =  well_state.getWellFile(ebosSimulator_, ebosSimulator_.time());
-                std::ofstream ofs(filename.c_str());
-                boost::archive::text_oarchive oa(ofs);
-                oa << well_state;
+                std::ifstream ifs(filename.c_str());
+                boost::archive::text_iarchive oa(ifs);
+                oa >> well_state;
             }
             wellModel().setRestartWellState(well_state);
             /*
@@ -280,8 +285,10 @@ namespace Opm {
                                        well_state,
                                        only_wells);
             */
+            std::cout << "Printing pure residual with out well contribution backward mode" << std::endl;
+            std::cout << ebosResid << std::endl;
             double dt = timer.stepLengthTaken();
-            int iterationIdx = 0;
+            //int iterationIdx = 0;
             assert( abs(dt- ebosSimulator_.timeStepSize()) < 1e-2);
             wellModel().assemble(iterationIdx, ebosSimulator_.timeStepSize());
             wellModel().apply(ebosResid);
@@ -610,6 +617,10 @@ namespace Opm {
 
             std::cout << "Printing pure residual in forward mode" << std::endl;
             std::cout << ebosResid << std::endl;
+            std::cout << "solution 1" << std::endl;
+            std::cout << ebosSimulator_.model().solution( 1 /* timeIdx */ ) << std::endl;
+            std::cout << "solution 0" << std::endl;
+            std::cout << ebosSimulator_.model().solution( 0 /* timeIdx */ ) << std::endl;
 
             // set initial guess
             x = 0.0;
