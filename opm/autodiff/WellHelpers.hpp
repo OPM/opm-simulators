@@ -163,7 +163,9 @@ namespace Opm {
             const int nw = wells.number_of_wells;
             Vector retval = Vector::Zero(nw);
 
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(static)
+#endif // HAVE_OPENMP
             for (int i=0; i<nw; ++i) {
                 const int perf = wells.well_connpos[i];
                 retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities[perf], gravity);
@@ -178,7 +180,9 @@ namespace Opm {
             const int nw = wells.number_of_wells;
             std::vector<double> retval(nw,0.0);
 
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(static)
+#endif // HAVE_OPENMP
             for (int i=0; i<nw; ++i) {
                 const int perf = wells.well_connpos[i];
                 retval[i] = computeHydrostaticCorrection(wells, i, vfp_ref_depth[i], well_perforation_densities[perf], gravity);

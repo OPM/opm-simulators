@@ -84,13 +84,15 @@ namespace Opm {
                                 const WellModel                 well_model,
                                 const NewtonIterationBlackoilInterface& linsolver,
                                 std::shared_ptr< const EclipseState > eclState,
+                                std::shared_ptr< const Schedule> schedule,
+                                std::shared_ptr< const SummaryConfig> summary_config,
                                 const bool has_disgas,
                                 const bool has_vapoil,
                                 const bool terminal_output)
         : pressure_model_(new PressureModel(param, grid, fluid, geo, rock_comp_props, well_model,
-                                            linsolver, eclState, has_disgas, has_vapoil, terminal_output)),
+                                            linsolver, eclState, schedule, summary_config, has_disgas, has_vapoil, terminal_output)),
           transport_model_(new TransportModel(param, grid, fluid, geo, rock_comp_props, well_model,
-                                              linsolver, eclState, has_disgas, has_vapoil, terminal_output)),
+                                              linsolver, eclState, schedule, summary_config, has_disgas, has_vapoil, terminal_output)),
           // TODO: fix solver parameters for pressure and transport solver.
           pressure_solver_(typename PressureSolver::SolverParameters(), std::move(pressure_model_)),
           transport_solver_(typename TransportSolver::SolverParameters(), std::move(transport_model_)),

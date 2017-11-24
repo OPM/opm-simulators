@@ -97,6 +97,16 @@ namespace Opm {
 
         void setSuggestedNextStep(const double x) { suggested_next_timestep_ = x; }
 
+        void updateTUNING(const Tuning& tuning, size_t time_step) {
+            restart_factor_ = tuning.getTSFCNV(time_step);
+            growth_factor_ = tuning.getTFDIFF(time_step);
+            max_growth_ = tuning.getTSFMAX(time_step);
+            max_time_step_ = tuning.getTSMAXZ(time_step);
+            suggested_next_timestep_ = tuning.getTSINIT(time_step);
+            timestep_after_event_ = tuning.getTMAXWC(time_step);
+        }
+
+
     protected:
         template <class Solver, class State, class WellState, class Output>
         SimulatorReport stepImpl( const SimulatorTimer& timer,
@@ -111,16 +121,16 @@ namespace Opm {
 
         SimulatorReport failureReport_;       //!< statistics for the failed substeps of the last timestep
         TimeStepControlType timeStepControl_; //!< time step control object
-        const double restart_factor_;         //!< factor to multiply time step with when solver fails to converge
-        const double growth_factor_;          //!< factor to multiply time step when solver recovered from failed convergence
-        const double max_growth_;             //!< factor that limits the maximum growth of a time step
-        const double max_time_step_;          //!< maximal allowed time step size
+        double restart_factor_;               //!< factor to multiply time step with when solver fails to converge
+        double growth_factor_;                //!< factor to multiply time step when solver recovered from failed convergence
+        double max_growth_;                   //!< factor that limits the maximum growth of a time step
+        double max_time_step_;                //!< maximal allowed time step size
         const int solver_restart_max_;        //!< how many restart of solver are allowed
         const bool solver_verbose_;           //!< solver verbosity
         const bool timestep_verbose_;         //!< timestep verbosity
         double suggested_next_timestep_;      //!< suggested size of next timestep
         bool full_timestep_initially_;        //!< beginning with the size of the time step from data file
-        const double timestep_after_event_;   //!< suggested size of timestep after an event
+        double timestep_after_event_;         //!< suggested size of timestep after an event
         bool use_newton_iteration_;           //!< use newton iteration count for adaptive time step control
     };
 }

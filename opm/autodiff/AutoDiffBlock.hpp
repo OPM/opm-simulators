@@ -224,7 +224,9 @@ namespace Opm
                 assert (value().size() == rhs.value().size());
 
                 const int num_blocks = numBlocks();
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(static)
+#endif // HAVE_OPENMP
                 for (int block = 0; block < num_blocks; ++block) {
                     assert(jac_[block].rows() == rhs.jac_[block].rows());
                     assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -243,7 +245,9 @@ namespace Opm
             if (jac_.empty()) {
                 const int num_blocks = rhs.numBlocks();
                 jac_.resize(num_blocks);
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(static)
+#endif // HAVE_OPENMP
                 for (int block = 0; block < num_blocks; ++block) {
                     jac_[block] = rhs.jac_[block] * (-1.0);
                 }
@@ -252,7 +256,9 @@ namespace Opm
                 assert (value().size() == rhs.value().size());
 
                 const int num_blocks = numBlocks();
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(static)
+#endif // HAVE_OPENMP
                 for (int block = 0; block < num_blocks; ++block) {
                     assert(jac_[block].rows() == rhs.jac_[block].rows());
                     assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -280,7 +286,9 @@ namespace Opm
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
             int num_blocks = numBlocks();
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(static)
+#endif // HAVE_OPENMP
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac[block].rows() == rhs.jac_[block].rows());
                 assert(jac[block].cols() == rhs.jac_[block].cols());
@@ -304,7 +312,9 @@ namespace Opm
             std::vector<M> jac = jac_;
             assert(numBlocks() == rhs.numBlocks());
             int num_blocks = numBlocks();
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(static)
+#endif // HAVE_OPENMP
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac[block].rows() == rhs.jac_[block].rows());
                 assert(jac[block].cols() == rhs.jac_[block].cols());
@@ -330,7 +340,9 @@ namespace Opm
             assert(numBlocks() == rhs.numBlocks());
             M D1(val_.matrix().asDiagonal());
             M D2(rhs.val_.matrix().asDiagonal());
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(dynamic)
+#endif // HAVE_OPENMP
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -368,7 +380,9 @@ namespace Opm
             M D1(val_.matrix().asDiagonal());
             M D2(rhs.val_.matrix().asDiagonal());
             M D3((1.0/(rhs.val_*rhs.val_)).matrix().asDiagonal());
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(dynamic)
+#endif // HAVE_OPENMP
             for (int block = 0; block < num_blocks; ++block) {
                 assert(jac_[block].rows() == rhs.jac_[block].rows());
                 assert(jac_[block].cols() == rhs.jac_[block].cols());
@@ -493,7 +507,9 @@ namespace Opm
         int num_blocks = rhs.numBlocks();
         std::vector<typename AutoDiffBlock<Scalar>::M> jac(num_blocks);
         assert(lhs.cols() == rhs.value().rows());
+#if HAVE_OPENMP
 #pragma omp parallel for schedule(dynamic)
+#endif // HAVE_OPENMP
         for (int block = 0; block < num_blocks; ++block) {
             fastSparseProduct(lhs, rhs.derivative()[block], jac[block]);
         }

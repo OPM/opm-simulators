@@ -60,7 +60,7 @@ namespace Opm
         // we change the ID to location now for easier use later.
         for (int i = 0; i < m_number_of_segments_; ++i) {
             // The segment number for top segment is 0, the segment number of its outlet segment will be -1
-            m_outlet_segment_[i] = segment_set.numberToLocation(segment_set[i].outletSegment());
+            m_outlet_segment_[i] = segment_set.segmentNumberToIndex(segment_set[i].outletSegment());
             m_segment_length_[i] = segment_set[i].totalLength();
             m_segment_depth_[i] = segment_set[i].depth();
             m_segment_internal_diameter_[i] = segment_set[i].internalDiameter();
@@ -111,7 +111,7 @@ namespace Opm
             int i_segment = completion_set.get(i).getSegmentNumber();
             // using the location of the segment in the array as the segment number/id.
             // TODO: it can be helpful for output or postprocessing if we can keep the original number.
-            i_segment = segment_set.numberToLocation(i_segment);
+            i_segment = segment_set.segmentNumberToIndex(i_segment);
             m_segment_perforations_[i_segment].push_back(i);
             temp_perf_depth[i] = completion_set.get(i).getCenterDepth();
         }

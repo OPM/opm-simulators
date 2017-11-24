@@ -68,10 +68,9 @@ namespace Opm
 
 
     void
-    PolymerInflowFromDeck::setInflowValues(const Opm::EclipseState& eclipseState,
+    PolymerInflowFromDeck::setInflowValues(const Opm::Schedule& schedule,
                                            size_t currentStep)
     {
-        const auto& schedule = eclipseState.getSchedule();
         for (const auto& well : schedule.getWells(currentStep)) {
             WellInjectionProperties injection = well->getInjectionProperties(currentStep);
             WellPolymerProperties polymer = well->getPolymerProperties(currentStep);
@@ -99,13 +98,13 @@ namespace Opm
 
     /// Constructor.
     /// @param[in]  deck     Input deck expected to contain WPOLYMER.
-    PolymerInflowFromDeck::PolymerInflowFromDeck(const Opm::EclipseState& eclipseState,
+    PolymerInflowFromDeck::PolymerInflowFromDeck(const Opm::Schedule& schedule,
                                                  const Wells& wells,
                                                  const int num_cells,
                                                  size_t currentStep)
         : sparse_inflow_(num_cells)
     {
-        setInflowValues(eclipseState, currentStep);
+        setInflowValues(schedule, currentStep);
         
         std::unordered_map<std::string, double>::const_iterator map_it;
         // Extract concentrations and put into cell->concentration map.

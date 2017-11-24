@@ -85,15 +85,6 @@ macro (prereqs_hook)
 endmacro (prereqs_hook)
 
 macro (sources_hook)
-	if(OPM_GRID_FOUND OR opm-grid_FOUND)
-		list (APPEND examples_SOURCES
-			${PROJECT_SOURCE_DIR}/examples/flow_mpi.cpp
-			${PROJECT_SOURCE_DIR}/examples/flow_multisegment_mpi.cpp
-			)
-		list (APPEND examples_SOURCES_DIST
-			${PROJECT_SOURCE_DIR}/examples/flow_mpi.cpp
-			)
-	endif()
 endmacro (sources_hook)
 
 macro (fortran_hook)

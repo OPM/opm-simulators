@@ -106,6 +106,8 @@ typedef Eigen::Array<double,
                   const WellModel&                well_model,
                   const NewtonIterationBlackoilInterface&    linsolver,
                   std::shared_ptr< const Opm::EclipseState > eclState,
+                  std::shared_ptr<const Opm::Schedule> schedule,
+                  std::shared_ptr<const SummaryConfig> summary_config,
                   const bool has_disgas,
                   const bool has_vapoil,
                   const bool terminal_output)
@@ -1801,7 +1803,7 @@ typedef Eigen::Array<double,
                 }
                 msg += "  WELL-CONT";
                 // std::cout << "  WELL-CONT ";
-                OpmLog::note(msg);
+                OpmLog::debug(msg);
             }
             std::ostringstream ss;
             const std::streamsize oprec = ss.precision(3);
@@ -1820,7 +1822,7 @@ typedef Eigen::Array<double,
             // std::cout << std::setw(11) << residualWell;
             ss.precision(oprec);
             ss.flags(oflags);
-            OpmLog::note(ss.str());
+            OpmLog::debug(ss.str());
         }
 
         for (int idx = 0; idx < nm; ++idx) {
@@ -1931,7 +1933,7 @@ typedef Eigen::Array<double,
                     msg += "  W-FLUX(" + materialName(idx).substr(0, 1) + ")";
                 }
                 msg += "  WELL-CONT";
-                OpmLog::note(msg);
+                OpmLog::debug(msg);
             }
             std::ostringstream ss;
             const std::streamsize oprec = ss.precision(3);
@@ -1943,7 +1945,7 @@ typedef Eigen::Array<double,
             ss << std::setw(11) << residualWell;
             ss.precision(oprec);
             ss.flags(oflags);
-            OpmLog::note(ss.str());
+            OpmLog::debug(ss.str());
         }
         return converged;
     }

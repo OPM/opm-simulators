@@ -26,6 +26,8 @@
 #include <dune/istl/paamg/smoother.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
+#include <type_traits>
+
 namespace Opm
 {
 

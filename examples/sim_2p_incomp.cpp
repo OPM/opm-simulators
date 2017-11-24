@@ -18,7 +18,7 @@
 */
 
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
@@ -101,7 +101,7 @@ try
     // If we have a "deck_filename", grid and props will be read from that.
     bool use_deck = param.has("deck_filename");
     std::shared_ptr< EclipseState > eclipseState;
-
+    std::shared_ptr< Schedule > schedule;
     std::unique_ptr<GridManager> grid;
     std::unique_ptr<IncompPropertiesInterface> props;
     std::unique_ptr<RockCompressibility> rock_comp;
@@ -117,6 +117,11 @@ try
         std::string deck_filename = param.get<std::string>("deck_filename");
         auto deck = parser.parseFile(deck_filename , parseContext);
         eclipseState.reset( new EclipseState(deck, parseContext));
+        schedule.reset( new Schedule(deck,
+                                     eclipseState->getInputGrid(),
+                                     eclipseState->get3DProperties(),
+                                     eclipseState->runspec().phases(),
+                                     parseContext));
         // Grid init
         grid.reset(new GridManager(eclipseState->getInputGrid()));
         {
@@ -244,7 +249,7 @@ try
         rep = simulator.run(simtimer, *state, well_state);
     } else {
         // With a deck, we may have more epochs etc.
-        const auto& timeMap = eclipseState->getSchedule().getTimeMap();
+        const auto& timeMap = schedule->getTimeMap();
 
         std::cout << "\n\n================    Starting main simulation loop     ===============\n"
                   << "                        (number of report steps: "
@@ -268,7 +273,7 @@ try
             //           << simtimer.numSteps() - step << ")\n\n" << std::flush;
 
             // Create new wells, well_state
-            WellsManager wells(*eclipseState , reportStepIdx , *grid->c_grid());
+            WellsManager wells(*eclipseState, *schedule, reportStepIdx , *grid->c_grid());
             // @@@ HACK: we should really make a new well state and
             // properly transfer old well state to it every report step,
             // since number of wells may change etc.

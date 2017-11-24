@@ -25,9 +25,10 @@ namespace Opm
 
     template<typename TypeTag>
     WellInterface<TypeTag>::
-    WellInterface(const Well* well, const int time_step, const Wells* wells)
+    WellInterface(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
     : well_ecl_(well)
     , current_step_(time_step)
+    , param_(param)
     {
         if (!well) {
             OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");
@@ -297,10 +298,10 @@ namespace Opm
         if (injection.injectorType == WellInjector::GAS) {
             double solvent_fraction = well_ecl_->getSolventFraction(current_step_);
             return solvent_fraction;
+        } else {
+            // Not a gas injection well => no solvent.
+            return 0.0;
         }
-
-        assert(false);
-        return 0.0;
     }
 
 
@@ -322,10 +323,10 @@ namespace Opm
         if (injection.injectorType == WellInjector::WATER) {
             const double polymer_injection_concentration = polymer.m_polymerConcentration;
             return polymer_injection_concentration;
+        } else {
+            // Not a water injection well => no polymer.
+            return 0.0;
         }
-
-        assert(false); // TODO: find a more logical way to handle this situation
-        return 0.0;
     }
 
 
@@ -402,12 +403,75 @@ namespace Opm
 
 
     template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateWellControl(WellState& well_state,
+                      wellhelpers::WellSwitchingLogger& logger) const
+    {
+        const int np = number_of_phases_;
+        const int w = index_of_well_;
+
+        const int old_control_index = well_state.currentControls()[w];
+
+        // Find, for each well, if any constraints are broken. If so,
+        // switch control to first broken constraint.
+        WellControls* wc = well_controls_;
+
+        // Loop over all controls except the current one, and also
+        // skip any RESERVOIR_RATE controls, since we cannot
+        // handle those.
+        const int nwc = well_controls_get_num(wc);
+        // the current control index
+        int current = well_state.currentControls()[w];
+        int ctrl_index = 0;
+        for (; ctrl_index < nwc; ++ctrl_index) {
+            if (ctrl_index == current) {
+                // This is the currently used control, so it is
+                // used as an equation. So this is not used as an
+                // inequality constraint, and therefore skipped.
+                continue;
+            }
+            if (wellhelpers::constraintBroken(
+                    well_state.bhp(), well_state.thp(), well_state.wellRates(),
+                    w, np, well_type_, wc, ctrl_index)) {
+                // ctrl_index will be the index of the broken constraint after the loop.
+                break;
+            }
+        }
+
+        if (ctrl_index != nwc) {
+            // Constraint number ctrl_index was broken, switch to it.
+            well_state.currentControls()[w] = ctrl_index;
+            current = well_state.currentControls()[w];
+            well_controls_set_current( wc, current);
+        }
+
+        // the new well control indices after all the related updates,
+        const int updated_control_index = well_state.currentControls()[w];
+
+        // checking whether control changed
+        if (updated_control_index != old_control_index) {
+            logger.wellSwitched(name(),
+                                well_controls_iget_type(wc, old_control_index),
+                                well_controls_iget_type(wc, updated_control_index));
+        }
+
+        if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
+            updateWellStateWithTarget(updated_control_index, well_state);
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
     checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
                         const WellState& well_state) const
     {
-        const Opm::PhaseUsage& pu = *phase_usage_;
+        const Opm::PhaseUsage& pu = phaseUsage();
         const int np = number_of_phases_;
 
         if (econ_production_limits.onMinOilRate()) {
@@ -464,7 +528,7 @@ namespace Opm
         double violation_extent = -1.0;
 
         const int np = number_of_phases_;
-        const Opm::PhaseUsage& pu = *phase_usage_;
+        const Opm::PhaseUsage& pu = phaseUsage();
         const int well_number = index_of_well_;
 
         assert(active()[Oil]);
@@ -723,9 +787,9 @@ namespace Opm
         perf_length_.clear();
         bore_diameters_.clear();
 
-        perf_rep_radius_.resize(nperf);
-        perf_length_.resize(nperf);
-        bore_diameters_.resize(nperf);
+        perf_rep_radius_.reserve(nperf);
+        perf_length_.reserve(nperf);
+        bore_diameters_.reserve(nperf);
 
         // COMPDAT handling
         const auto& completionSet = well_ecl_->getCompletions(current_step_);

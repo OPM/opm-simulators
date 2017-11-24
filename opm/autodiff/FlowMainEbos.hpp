@@ -78,6 +78,7 @@ namespace Opm
     public:
         typedef typename GET_PROP(TypeTag, MaterialLaw)::EclMaterialLawManager MaterialLawManager;
         typedef typename GET_PROP_TYPE(TypeTag, Simulator) EbosSimulator;
+        typedef typename GET_PROP_TYPE(TypeTag, ThreadManager) EbosThreadManager;
         typedef typename GET_PROP_TYPE(TypeTag, Grid) Grid;
         typedef typename GET_PROP_TYPE(TypeTag, GridView) GridView;
         typedef typename GET_PROP_TYPE(TypeTag, Problem) Problem;
@@ -167,15 +168,12 @@ namespace Opm
                 int num_threads = std::min(4, num_cores);
                 omp_set_num_threads(num_threads);
             }
-#pragma omp parallel
-            if (omp_get_thread_num() == 0) {
-                // omp_get_num_threads() only works as expected within a parallel region.
-                const int num_omp_threads = omp_get_num_threads();
-                if (mpi_size == 1) {
-                    std::cout << "OpenMP using " << num_omp_threads << " threads." << std::endl;
-                } else {
-                    std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank_ << "." << std::endl;
-                }
+            // omp_get_num_threads() only works as expected within a parallel region.
+            const int num_omp_threads = omp_get_max_threads();
+            if (mpi_size == 1) {
+                std::cout << "OpenMP using " << num_omp_threads << " threads." << std::endl;
+            } else {
+                std::cout << "OpenMP using " << num_omp_threads << " threads on MPI rank " << mpi_rank_ << "." << std::endl;
             }
 #endif
         }
@@ -329,7 +327,7 @@ namespace Opm
 
             std::shared_ptr<StreamLog> streamLog = std::make_shared<StreamLog>(std::cout, Log::StdoutMessageTypes);
             OpmLog::addBackend( "STREAMLOG", streamLog);
-            const auto& msgLimits = eclState().getSchedule().getMessageLimits();
+            const auto& msgLimits = schedule().getMessageLimits();
             const std::map<int64_t, int> limits = {{Log::MessageType::Note, msgLimits.getCommentPrintLimit(0)},
                                                    {Log::MessageType::Info, msgLimits.getMessagePrintLimit(0)},
                                                    {Log::MessageType::Warning, msgLimits.getWarningPrintLimit(0)},
@@ -362,7 +360,8 @@ namespace Opm
               strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
               const double mem_size = getTotalSystemMemory() / megabyte;
               std::ostringstream ss;
-              ss << "\n\n\n ########  #          ######   #           #\n";
+              ss << "\n\n\n";
+              ss << " ########  #          ######   #           #\n";
               ss << " #         #         #      #   #         # \n";
               ss << " #####     #         #      #    #   #   #  \n";
               ss << " #         #         #      #     # # # #   \n";
@@ -410,14 +409,25 @@ namespace Opm
 
         void setupEbosSimulator()
         {
-            std::string progName("flow_ebos");
-            std::string deckFile("--ecl-deck-file-name=");
-            deckFile += param_.get<std::string>("deck_filename");
-            char* ptr[2];
-            ptr[ 0 ] = const_cast< char * > (progName.c_str());
-            ptr[ 1 ] = const_cast< char * > (deckFile.c_str());
+            std::vector<const char*> argv;
+
+            argv.push_back("flow_ebos");
+
+            std::string deckFileParam("--ecl-deck-file-name=");
+            deckFileParam += param_.get<std::string>("deck_filename");
+            argv.push_back(deckFileParam.c_str());
+
+#if defined(_OPENMP)
+            std::string numThreadsParam("--threads-per-process=");
+            int numThreads = omp_get_max_threads();
+
+            numThreadsParam += std::to_string(numThreads);
+            argv.push_back(numThreadsParam.c_str());
+#endif // defined(_OPENMP)
+
             EbosSimulator::registerParameters();
-            Ewoms::setupParameters_< TypeTag > ( 2, ptr );
+            Ewoms::setupParameters_<TypeTag>(argv.size(), &argv[0]);
+            EbosThreadManager::init();
             ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
             ebosSimulator_->model().applyInitialSolution();
 
@@ -462,10 +472,17 @@ namespace Opm
         EclipseState& eclState()
         { return ebosSimulator_->gridManager().eclState(); }
 
+        const Schedule& schedule() const
+        { return ebosSimulator_->gridManager().schedule(); }
+
+        const SummaryConfig& summaryConfig() const
+        { return ebosSimulator_->gridManager().summaryConfig(); }
+  
         // Initialise the reservoir state. Updated fluid props for SWATINIT.
         // Writes to:
         //   state_
         //   threshold_pressures_
+        //   fluidprops_ (if SWATINIT is used)
         void setupState()
         {
             const PhaseUsage pu = Opm::phaseUsageFromDeck(deck());
@@ -608,13 +625,18 @@ namespace Opm
         {
             bool output      = ( output_ > OUTPUT_LOG_ONLY );
             bool output_ecl  = param_.getDefault("output_ecl", true);
+            auto int_vectors  = computeCellRanks(output, output_ecl);
+
             if( output && output_ecl && grid().comm().rank() == 0 )
             {
                 exportNncStructure_();
 
                 const EclipseGrid& inputGrid = eclState().getInputGrid();
-                eclIO_.reset(new EclipseIO(eclState(), UgGridHelpers::createEclipseGrid( this->globalGrid() , inputGrid )));
-                eclIO_->writeInitial(computeLegacySimProps_(), nnc_);
+                eclIO_.reset(new EclipseIO(eclState(),
+                                           UgGridHelpers::createEclipseGrid( this->globalGrid() , inputGrid ),
+                                           schedule(),
+                                           summaryConfig()));
+                eclIO_->writeInitial(computeLegacySimProps_(), int_vectors, nnc_);
             }
         }
 
@@ -629,6 +651,8 @@ namespace Opm
             output_writer_.reset(new OutputWriter(grid(),
                                                   param_,
                                                   eclState(),
+                                                  schedule(),
+                                                  summaryConfig(),
                                                   std::move(eclIO_),
                                                   Opm::phaseUsageFromDeck(deck())) );
         }
@@ -637,7 +661,7 @@ namespace Opm
         // Returns EXIT_SUCCESS if it does not throw.
         int runSimulator()
         {
-            const auto& schedule = eclState().getSchedule();
+            const auto& schedule = this->schedule();
             const auto& timeMap = schedule.getTimeMap();
             auto& ioConfig = eclState().getIOConfig();
             SimulatorTimer simtimer;
@@ -670,11 +694,6 @@ namespace Opm
                     }
                 }
 
-                if (output_to_files_) {
-                    std::string filename = output_dir_ + "/walltime.txt";
-                    std::fstream tot_os(filename.c_str(), std::fstream::trunc | std::fstream::out);
-                    successReport.reportParam(tot_os);
-                }
             } else {
                 if (output_cout_) {
                     std::cout << "\n\n================ Simulation turned off ===============\n" << std::flush;
@@ -707,9 +726,7 @@ namespace Opm
                                            *fis_solver_,
                                            FluidSystem::enableDissolvedGas(),
                                            FluidSystem::enableVaporizedOil(),
-                                           eclState(),
-                                           *output_writer_,
-                                           defunctWellNames()));
+                                           *output_writer_));
         }
 
     private:
@@ -786,8 +803,27 @@ namespace Opm
         Scalar gravity() const
         { return ebosProblem().gravity()[2]; }
 
-        std::unordered_set<std::string> defunctWellNames() const
-        { return ebosSimulator_->gridManager().defunctWellNames(); }
+        std::map<std::string, std::vector<int> > computeCellRanks(bool output, bool output_ecl)
+        {
+            std::map<std::string, std::vector<int> > integerVectors;
+
+            if(  output && output_ecl && grid().comm().size() > 1 )
+            {
+                // Get the owner rank number for each cell
+                using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
+                using Handle = CellOwnerDataHandle<ElementMapper>;
+                ElementMapper globalMapper(this->globalGrid().leafGridView());
+                const auto* dims = UgGridHelpers::cartDims(grid());
+                const auto globalSize = dims[0]*dims[1]*dims[2];
+                std::vector<int> ranks(globalSize, -1);
+                Handle handle(globalMapper, ranks,
+                              this->globalGrid().globalCell());
+                this->grid().gatherData(handle);
+                integerVectors.emplace("MPI_RANK", ranks);
+            }
+
+            return integerVectors;
+        }
 
         data::Solution computeLegacySimProps_()
         {
