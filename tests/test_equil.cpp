@@ -88,9 +88,9 @@ static void initDefaultFluidSystem() {
         { 6.21542e+07, 1 }
     };
 
-    double rhoRefO = 700; // [kg]
-    double rhoRefG = 1000; // [kg]
-    double rhoRefW = 1000; // [kg]
+    double rhoRefO = 700; // [kg/m3]
+    double rhoRefG = 1000; // [kg/m3]
+    double rhoRefW = 1000; // [kg/m3]
 
     FluidSystem::initBegin(/*numPvtRegions=*/1);
     FluidSystem::setEnableDissolvedGas(false);
@@ -125,17 +125,10 @@ static void initDefaultFluidSystem() {
     oilPvt->initEnd();
     waterPvt->initEnd();
 
-    typedef std::shared_ptr<Opm::GasPvtMultiplexer<double> > GasPvtSharedPtr;
-    FluidSystem::setGasPvt(GasPvtSharedPtr(gasPvt));
-
-    typedef std::shared_ptr<Opm::OilPvtMultiplexer<double> > OilPvtSharedPtr;
-    FluidSystem::setOilPvt(OilPvtSharedPtr(oilPvt));
-
-    typedef std::shared_ptr<Opm::WaterPvtMultiplexer<double> > WaterPvtSharedPtr;
-    FluidSystem::setWaterPvt(WaterPvtSharedPtr(waterPvt));
-
+    FluidSystem::setGasPvt(std::move(gasPvt));
+    FluidSystem::setOilPvt(std::move(oilPvt));
+    FluidSystem::setWaterPvt(std::move(waterPvt));
     FluidSystem::initEnd();
-
 }
 }
 
