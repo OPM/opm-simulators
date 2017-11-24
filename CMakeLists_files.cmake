@@ -46,8 +46,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/VFPProperties.cpp
   opm/autodiff/VFPProdProperties.cpp
   opm/autodiff/VFPInjProperties.cpp
-  opm/autodiff/WellMultiSegment.cpp
-  opm/autodiff/MultisegmentWells.cpp
   opm/autodiff/MissingFeatures.cpp
   opm/polymer/PolymerState.cpp
   opm/polymer/PolymerBlackoilState.cpp
@@ -92,7 +90,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_welldensitysegmented.cpp
   tests/test_vfpproperties.cpp
   tests/test_singlecellsolves.cpp
-  tests/test_multisegmentwells.cpp
   tests/test_multiphaseupwind.cpp
   tests/test_wellmodel.cpp
   # tests/test_thresholdpressure.cpp
@@ -213,10 +210,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/VFPHelpers.hpp
   opm/autodiff/VFPProdProperties.hpp
   opm/autodiff/VFPInjProperties.hpp
-  opm/autodiff/WellStateMultiSegment.hpp
-  opm/autodiff/WellMultiSegment.hpp
-  opm/autodiff/MultisegmentWells.hpp
-  opm/autodiff/MultisegmentWells_impl.hpp
   opm/autodiff/WellHelpers.hpp
   opm/autodiff/StandardWells.hpp
   opm/autodiff/StandardWells_impl.hpp
