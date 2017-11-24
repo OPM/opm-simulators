@@ -255,7 +255,9 @@ public:
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
                 if (param_.getDefault("use_TUNING", false)) {
-                    adaptiveTimeStepping->updateTUNING(schedule().getTuning(), timer.currentStepNum());
+                    if(events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
+                        adaptiveTimeStepping->updateTUNING(schedule().getTuning(), timer.currentStepNum());
+                    }
                 }
 
                 bool event = events.hasEvent(ScheduleEvents::NEW_WELL, timer.currentStepNum()) ||
