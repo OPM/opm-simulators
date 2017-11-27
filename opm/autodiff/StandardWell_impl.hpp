@@ -24,8 +24,11 @@ namespace Opm
 {
     template<typename TypeTag>
     StandardWell<TypeTag>::
-    StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param)
-    : Base(well, time_step, wells, param)
+    StandardWell(const Well* well, const int time_step, const Wells* wells,
+                 const ModelParameters& param,
+                 const RateConverterType& rate_converter,
+                 const int pvtRegionIdx)
+    : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx)
     , perf_densities_(number_of_perforations_)
     , perf_pressure_diffs_(number_of_perforations_)
     , primary_variables_(numWellEq, 0.0)
@@ -861,13 +864,7 @@ namespace Opm
             primary_variables_[SFrac] = F_solvent;
         }
 
-        // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
-        // More testing is needed to make sure this is correct for well groups and THP.
-        if (has_solvent){
-            F[pu.phase_pos[Gas]] += F_solvent;
-        }
-
-            // The interpretation of the first well variable depends on the well control
+        // The interpretation of the first well variable depends on the well control
         const WellControls* wc = well_controls_;
 
         // TODO: we should only maintain one current control either from the well_state or from well_controls struct.
@@ -882,6 +879,13 @@ namespace Opm
             } else {
                 F[p] = 0.;
             }
+        }
+
+        // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
+        // More testing is needed to make sure this is correct for well groups and THP.
+        if (has_solvent){
+            F_solvent /= scalingFactor(contiSolventEqIdx);
+            F[pu.phase_pos[Gas]] += F_solvent;
         }
 
         switch (well_controls_iget_type(wc, current)) {
@@ -1973,33 +1977,7 @@ namespace Opm
          return thp;
     }
 
-    template<typename TypeTag>
-    double
-    StandardWell<TypeTag>::scalingFactor(const int phaseIdx) const
-    {
-        const WellControls* wc = well_controls_;
-        const double* distr = well_controls_get_current_distr(wc);
 
-        if (well_controls_get_current_type(wc) == RESERVOIR_RATE) {
-            if (has_solvent && phaseIdx == contiSolventEqIdx )
-                   OPM_THROW(std::runtime_error, "RESERVOIR_RATE control in combination with solvent is not implemented");
-
-            return distr[phaseIdx];
-        }
-        const auto& pu = phaseUsage();
-        if (active()[Water] && pu.phase_pos[Water] == phaseIdx)
-            return 1.0;
-        if (active()[Oil] && pu.phase_pos[Oil] == phaseIdx)
-            return 1.0;
-        if (active()[Gas] && pu.phase_pos[Gas] == phaseIdx)
-            return 0.01;
-        if (has_solvent && phaseIdx == contiSolventEqIdx )
-            return 0.01;
-
-        // we should not come this far
-        assert(false);
-        return 1.0;
-    }
 
 
 }

@@ -1,6 +1,7 @@
 /*
   Copyright 2014, 2015 SINTEF ICT, Applied Mathematics.
   Copyright 2014, 2015 Statoil ASA.
+  Copyright 2017, IRIS
 
   This file is part of the Open Porous Media Project (OPM).
 
@@ -636,6 +637,31 @@ namespace Opm {
                         coeff[io] -= ra.rs / den;
                     }
                 }
+            }
+
+
+            /**
+             * Compute coefficients for surface-to-reservoir voidage
+             * conversion for solvent.
+             *
+             *
+             * \param[in] r Fluid-in-place region of the well
+             * \param[in] pvtRegionIdx PVT region of the well
+             *
+             *
+             * \param[out] double Surface-to-reservoir conversion
+             * coefficients for solvent.
+             */
+            template <class SolventModule>
+            void
+            calcCoeffSolvent(const RegionId r, const int pvtRegionIdx, double& coeff) const
+            {
+                const auto& ra = attr_.attributes(r);
+                const double p = ra.pressure;
+                const double T = ra.temperature;
+                const auto& solventPvt = SolventModule::solventPvt();
+                const double bs = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                coeff = 1.0 / bs;
             }
 
         private:

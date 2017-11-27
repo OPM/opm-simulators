@@ -3,7 +3,7 @@
   Copyright 2014, 2015 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2014, 2015 Statoil ASA.
   Copyright 2015 NTNU
-  Copyright 2015 IRIS AS
+  Copyright 2015, 2016, 2017 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -33,7 +33,6 @@
 #include <opm/autodiff/GeoProps.hpp>
 #include <opm/autodiff/BlackoilDetails.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterface.hpp>
-#include <opm/autodiff/RateConverter.hpp>
 
 #include <opm/core/grid.h>
 #include <opm/core/simulator/SimulatorReport.hpp>
@@ -125,10 +124,6 @@ namespace Opm {
 
         typedef ISTLSolver< MatrixBlockType, VectorBlockType, Indices::pressureSwitchIdx >  ISTLSolverType;
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
-
-        // For the conversion between the surface volume rate and resrevoir voidage rate
-        using RateConverterType = RateConverter::
-            SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
         typedef Opm::FIPData FIPDataType;
 

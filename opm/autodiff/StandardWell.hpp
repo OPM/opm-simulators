@@ -26,6 +26,7 @@
 
 #include <opm/autodiff/WellInterface.hpp>
 #include <opm/autodiff/ISTLSolver.hpp>
+#include <opm/autodiff/RateConverter.hpp>
 
 namespace Opm
 {
@@ -47,6 +48,7 @@ namespace Opm
         using typename Base::ModelParameters;
         using typename Base::BlackoilIndices;
         using typename Base::PolymerModule;
+        using typename Base::RateConverterType;
 
         using Base::numEq;
 
@@ -111,7 +113,10 @@ namespace Opm
         static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
 
 
-        StandardWell(const Well* well, const int time_step, const Wells* wells, const ModelParameters& param);
+        StandardWell(const Well* well, const int time_step, const Wells* wells,
+                     const ModelParameters& param,
+                     const RateConverterType& rate_converter,
+                     const int pvtRegionIdx);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -169,6 +174,7 @@ namespace Opm
         using Base::wpolymer;
         using Base::wellHasTHPConstraints;
         using Base::mostStrictBhpFromBhpLimits;
+        using Base::scalingFactor;
 
         // protected member variables from the Base class
         using Base::vfp_properties_;
@@ -302,7 +308,6 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
-        double scalingFactor(const int comp_idx) const;
     };
 
 }

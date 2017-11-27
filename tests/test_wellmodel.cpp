@@ -132,9 +132,22 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well* well = wells_ecl[1];
     const Opm::BlackoilModelParameters param;
-    BOOST_CHECK_THROW( StandardWell( well, -1, wells, param), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells, param), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr, param), std::invalid_argument);
+
+    // For the conversion between the surface volume rate and resrevoir voidage rate
+    typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+    using RateConverterType = Opm::RateConverter::
+        SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
+    // Compute reservoir volumes for RESV controls.
+    Opm::PhaseUsage phaseUsage;
+    std::unique_ptr<RateConverterType> rateConverter;
+    // Compute reservoir volumes for RESV controls.
+    rateConverter.reset(new RateConverterType (phaseUsage,
+                                     std::vector<int>(10, 0)));
+
+    const int pvtIdx = 0;
+    BOOST_CHECK_THROW( StandardWell( well, -1, wells, param, *rateConverter, pvtIdx), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells, param , *rateConverter, pvtIdx), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr, param , *rateConverter, pvtIdx), std::invalid_argument);
 }
 
 
@@ -160,8 +173,20 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             }
             // we should always be able to find the well in wells_ecl
             BOOST_CHECK(index_well !=  wells_ecl.size());
+            // For the conversion between the surface volume rate and resrevoir voidage rate
+            typedef Opm::FluidSystems::BlackOil<double> FluidSystem;
+            using RateConverterType = Opm::RateConverter::
+                SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
+            // Compute reservoir volumes for RESV controls.
+            Opm::PhaseUsage phaseUsage;
+            std::unique_ptr<RateConverterType> rateConverter;
+            // Compute reservoir volumes for RESV controls.
+            rateConverter.reset(new RateConverterType (phaseUsage,
+                                             std::vector<int>(10, 0)));
 
-            wells.emplace_back(new StandardWell(wells_ecl[index_well], current_timestep, wells_struct, param) );
+            const int pvtIdx = 0;
+
+            wells.emplace_back(new StandardWell(wells_ecl[index_well], current_timestep, wells_struct, param, *rateConverter, pvtIdx) );
         }
     }
 
