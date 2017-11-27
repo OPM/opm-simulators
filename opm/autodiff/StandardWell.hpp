@@ -308,6 +308,9 @@ namespace Opm
                          const int perf,
                          std::vector<EvalWell>& mob) const;
 
+        void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
+                                            const int perf,
+                                            std::vector<EvalWell>& mob_water) const;
     };
 
 }
