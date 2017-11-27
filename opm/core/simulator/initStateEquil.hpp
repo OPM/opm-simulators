@@ -263,6 +263,8 @@ namespace Opm
                     const auto& tables = eclipseState.getTableManager();
                     // Create (inverse) region mapping.
                     const RegionMapping<> eqlmap(equilnum(eclipseState, G));
+                    const int invalidRegion = -1;
+                    regionPvtIdx_.resize(rec.size(), invalidRegion);
                     setRegionPvtIdx(G, eclipseState, eqlmap);
 
                     // Create Rs functions.
@@ -371,7 +373,6 @@ namespace Opm
                 template<class Grid, class RMap>
                 void setRegionPvtIdx(const Grid& G, const Opm::EclipseState& eclipseState, const RMap& reg) {
 
-                    regionPvtIdx_.reserve(reg.activeRegions().size());
                     std::vector<int> cellPvtRegionIdx;
                     extractPvtTableIndex(cellPvtRegionIdx, eclipseState, UgGridHelpers::numCells(G), UgGridHelpers::globalCell(G));
                     for (const auto& r : reg.activeRegions()) {
