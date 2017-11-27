@@ -126,9 +126,8 @@ class CellOwnerDataHandle
 public:
     using DataType = int;
 
-    CellOwnerDataHandle(const Mapper& globalMapper, std::vector<int>& globalData,
-                        const std::vector<int>& globalCell)
-        : globalMapper_(globalMapper), globalData_(globalData), globalCell_(globalCell)
+    CellOwnerDataHandle(const Mapper& globalMapper, std::vector<int>& globalData)
+        : globalMapper_(globalMapper), globalData_(globalData)
     {
         int argc = 0;
         char** argv = nullptr;
@@ -158,7 +157,7 @@ public:
     template<class B, class T>
     void scatter(B& buffer, const T& e, std::size_t /* size */)
     {
-        const auto& index = globalCell_[globalMapper_.index(e)];
+        const auto& index = globalMapper_.index(e);
         buffer.read(globalData_[index]);
     }
     bool contains(int dim, int codim)
@@ -170,7 +169,6 @@ private:
     int my_rank_;
     const Mapper& globalMapper_;
     std::vector<int>& globalData_;
-    const std::vector<int>& globalCell_;
 };
 
 #if HAVE_OPM_GRID && HAVE_MPI
