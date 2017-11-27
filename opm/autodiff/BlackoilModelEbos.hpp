@@ -718,9 +718,10 @@ namespace Opm {
 
                // Add an epsilon to make it harder to switch back immediately after the primary variable was changed.
                 if (wasSwitched_[cell_idx])
-                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx, elemCtx,1e-5);
+                    // maybe this be a parameter defined realted to the nolinear solve strategy?
+                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx, 1e-5);
                 else
-                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx, elemCtx);
+                    wasSwitched_[cell_idx] = priVars.adaptPrimaryVariables(ebosProblem, cell_idx);
 
                 if (wasSwitched_[cell_idx])
                     ++numSwitched;
