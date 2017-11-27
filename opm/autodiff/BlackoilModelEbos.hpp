@@ -102,6 +102,7 @@ namespace Opm {
         typedef BlackoilModelParameters ModelParameters;
 
         typedef typename GET_PROP_TYPE(TypeTag, Simulator)         Simulator;
+        typedef typename GET_PROP_TYPE(TypeTag, Model)      Model;
         typedef typename GET_PROP_TYPE(TypeTag, Grid)              Grid;
         typedef typename GET_PROP_TYPE(TypeTag, ElementContext)    ElementContext;
         typedef typename GET_PROP_TYPE(TypeTag, SolutionVector)    SolutionVector ;
@@ -1258,7 +1259,8 @@ namespace Opm {
 
                 temperature[cellIdx] = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
-                somax[cellIdx] = ebosSimulator().model().maxOilSaturation(cellIdx);
+                //somax[cellIdx] = ebosSimulator().model().maxOilSaturation(cellIdx);
+                somax[cellIdx] = ebosSimulator().model().cellValues(cellIdx, Model::soMax);
 
                 const auto& matLawManager = ebosSimulator().problem().materialLawManager();
                 if (matLawManager->enableHysteresis()) {
