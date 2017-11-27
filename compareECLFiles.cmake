@@ -179,13 +179,11 @@ add_test_compareECLFiles(CASENAME msw_3d_hfa
                          REL_TOL ${rel_tol}
                          TEST_ARGS use_multisegment_well=true)
 
-foreach(SIM flow flow_polymer)
-  add_test_compareECLFiles(CASENAME polymer_simple2D
-                           FILENAME 2D_THREEPHASE_POLY_HETER
-                           SIMULATOR ${SIM}
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${coarse_rel_tol})
-endforeach()
+add_test_compareECLFiles(CASENAME polymer_simple2D
+                         FILENAME 2D_THREEPHASE_POLY_HETER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol})
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1

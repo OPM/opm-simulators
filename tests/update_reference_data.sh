@@ -92,12 +92,6 @@ for test_name in ${tests}; do
   if grep -q "polymer2d" <<< $test_name
   then
     copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/flow_polymer+polymer_simple2D/ \
-      $OPM_DATA_ROOT/polymer_simple2D/opm-simulation-reference/flow_polymer \
-      2D_THREEPHASE_POLY_HETER    \
-      EGRID INIT SMSPEC UNRST UNSMRY
-
-    copyToReferenceDir \
       $configuration/build-opm-simulators/tests/results/flow+polymer_simple2D/ \
       $OPM_DATA_ROOT/polymer_simple2D/opm-simulation-reference/flow \
       2D_THREEPHASE_POLY_HETER    \
