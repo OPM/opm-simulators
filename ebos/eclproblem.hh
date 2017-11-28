@@ -119,9 +119,6 @@ NEW_PROP_TAG(DisableWells);
 // print statements in debug mode.
 NEW_PROP_TAG(EnableDebuggingChecks);
 
-// If this property is set to false, the SWATINIT keyword will not be handled by ebos.
-NEW_PROP_TAG(EnableSwatinit);
-
 // Set the problem property
 SET_TYPE_PROP(EclBaseProblem, Problem, Ewoms::EclProblem<TypeTag>);
 
@@ -238,8 +235,6 @@ SET_BOOL_PROP(EclBaseProblem, DisableWells, false);
 // By default, we enable the debugging checks if we're compiled in debug mode
 SET_BOOL_PROP(EclBaseProblem, EnableDebuggingChecks, true);
 
-// ebos handles the SWATINIT keyword by default
-SET_BOOL_PROP(EclBaseProblem, EnableSwatinit, true);
 } // namespace Properties
 
 /*!
@@ -556,6 +551,10 @@ public:
             // write the summary information after each time step
             summaryWriter_.write(wellManager_);
         }
+
+        // we no longer need the initial soluiton
+        if (this->simulator().episodeIndex() == 0)
+            initialFluidStates_.clear();
     }
 
     /*!
@@ -972,26 +971,8 @@ public:
         // the initial solution.
         thresholdPressures_.finishInit();
 
-        // apply SWATINIT if requested by the programmer. this is only necessary if
-        // SWATINIT has not yet been considered at the first time the EquilInitializer
-        // was used, i.e., only if threshold pressures are enabled in addition to
-        // SWATINIT.
-        const auto& deck = this->simulator().gridManager().deck();
-        const auto& eclState = this->simulator().gridManager().eclState();
-        int numEquilRegions = eclState.getTableManager().getEqldims().getNumEquilRegions();
-        bool useThpres = deck.hasKeyword("THPRES") && numEquilRegions > 1;
-        bool useSwatinit =
-            GET_PROP_VALUE(TypeTag, EnableSwatinit) &&
-            eclState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
-
-        if (useThpres && useSwatinit)
-            applySwatinit();
-
         // release the memory of the EQUIL grid since it's no longer needed after this point
         this->simulator().gridManager().releaseEquilGrid();
-
-        // the fluid states specifying the initial condition are also no longer required.
-        initialFluidStates_.clear();
     }
 
     /*!
@@ -1026,48 +1007,9 @@ public:
     const EclWellManager<TypeTag>& wellManager() const
     { return wellManager_; }
 
-    /*!
-     * \brief Apply the necessary measures mandated by the SWATINIT keyword the the
-     *        material law parameters.
-     *
-     * If SWATINIT is not used or if the method has already been called, this method is a
-     * no-op.
-     */
-    void applySwatinit()
-    {
-        const auto& deck = this->simulator().gridManager().deck();
-        const auto& eclState = this->simulator().gridManager().eclState();
-        const auto& deckProps = eclState.get3DProperties();
-
-        if (!deckProps.hasDeckDoubleGridProperty("SWATINIT"))
-            return; // SWATINIT is not in the deck
-        else if (!deck.hasKeyword("EQUIL"))
-            // SWATINIT only applies if the initial solution is specified using the EQUIL
-            // keyword.
-            return;
-
-        // SWATINIT applies. We have to do a complete re-initialization here. this is a
-        // kludge, but to calculate the threshold pressures the initial solution without
-        // SWATINIT is required!
-
-        typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
-        EquilInitializer equilInitializer(this->simulator(),
-                                          *materialLawManager_,
-                                          /*enableSwatinit=*/true);
-        auto& model = this->model();
-        size_t numElems = model.numGridDof();
-        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            const auto& fs = equilInitializer.initialFluidState(elemIdx);
-            auto& priVars0 = model.solution(/*timeIdx=*/0)[elemIdx];
-            auto& priVars1 = model.solution(/*timeIdx=*/1)[elemIdx];
-
-            priVars1.assignNaive(fs);
-            priVars0 = priVars1;
-        }
-
-        // the solution (most likely) has changed, so we need to invalidate the cache for
-        // intensive quantities
-        this->simulator().model().invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+    // temporary solution to facilitate output of initial state from flow
+    const ScalarFluidState& initialFluidState(unsigned globalDofIdx ) const {
+        return initialFluidStates_[globalDofIdx];
     }
 
 private:
@@ -1275,20 +1217,9 @@ private:
 
     void readEquilInitialCondition_()
     {
-        const auto& deck = this->simulator().gridManager().deck();
-        const auto& eclState = this->simulator().gridManager().eclState();
-        int numEquilRegions = eclState.getTableManager().getEqldims().getNumEquilRegions();
-        bool useThpres = deck.hasKeyword("THPRES") && numEquilRegions > 1;
-        bool useSwatinit =
-            GET_PROP_VALUE(TypeTag, EnableSwatinit) &&
-            eclState.get3DProperties().hasDeckDoubleGridProperty("SWATINIT");
-
-        // initial condition corresponds to hydrostatic conditions. The SWATINIT keyword
-        // can be considered here directly if threshold pressures are disabled.
+        // initial condition corresponds to hydrostatic conditions.
         typedef Ewoms::EclEquilInitializer<TypeTag> EquilInitializer;
-        EquilInitializer equilInitializer(this->simulator(),
-                                          *materialLawManager_,
-                                          /*enableSwatinit=*/useThpres && useSwatinit);
+        EquilInitializer equilInitializer(this->simulator(), *materialLawManager_);
 
         // since the EquilInitializer provides fluid states that are consistent with the
         // black-oil model, we can use naive instead of mass conservative determination
