@@ -168,10 +168,10 @@ public:
         // adaptive time stepping
         const auto& events = schedule().getEvents();
         std::unique_ptr< AdaptiveTimeStepping > adaptiveTimeStepping;
+        const bool useTUNING = param_.getDefault("use_TUNING", false);
         if( param_.getDefault("timestep.adaptive", true ) )
         {
-
-            if (param_.getDefault("use_TUNING", false)) {
+            if (useTUNING) {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( schedule().getTuning(), timer.currentStepNum(), param_, terminal_output_ ) );
             } else {
                 adaptiveTimeStepping.reset( new AdaptiveTimeStepping( param_, terminal_output_ ) );
@@ -253,7 +253,7 @@ public:
             // \Note: The report steps are met in any case
             // \Note: The sub stepping will require a copy of the state variables
             if( adaptiveTimeStepping ) {
-                if (param_.getDefault("use_TUNING", false)) {
+                if (useTUNING) {
                     if(events.hasEvent(ScheduleEvents::TUNING_CHANGE,timer.currentStepNum())) {
                         adaptiveTimeStepping->updateTUNING(schedule().getTuning(), timer.currentStepNum());
                     }
