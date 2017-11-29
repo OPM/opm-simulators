@@ -188,6 +188,7 @@ then
   git status | grep "SPE9_CP" && tests="$tests spe9"
   git status | grep "SPE9_CP_GROUP" && tests="$tests spe9group"
   git status | grep "2D_H__" && tests="$tests msw_2d_h"
+  git status | grep "3D_MSW" && tests="$tests msw_3d_hfa"
   git status | grep "2D_THREEPHASE_POLY_HETER" && tests="$tests simple2d"
   git status | grep "NORNE_ATW2013.INIT" && tests="$tests norne_init"
   git status | grep "NORNE_ATW2013.UNSMRY" && tests="$tests norne_full"
