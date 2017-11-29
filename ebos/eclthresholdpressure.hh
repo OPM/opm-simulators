@@ -226,8 +226,8 @@ private:
 
         // make sure that the threshold pressures is consistent for parallel
         // runs. (i.e. take the maximum of all processes)
-        for (unsigned i = 0; i < thpres_.size(); ++i)
-            thpres_[i] = gridView.comm().max(thpres_[i]);
+        for (unsigned i = 0; i < thpresDefault_.size(); ++i)
+            thpresDefault_[i] = gridView.comm().max(thpresDefault_[i]);
     }
 
     // internalize the threshold pressures which where explicitly specified via the
