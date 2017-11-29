@@ -159,7 +159,6 @@ namespace Opm {
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , dx_old_(AutoDiffGrid::numCells(grid_))
-        , isBeginReportStep_(false)
         {
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
@@ -196,11 +195,25 @@ namespace Opm {
                 ebosSimulator_.model().solution( 1 /* timeIdx */ ) = ebosSimulator_.model().solution( 0 /* timeIdx */ );
             }
 
+            // set the timestep size and index in ebos explicitly
+            // we use our own time stepper.
+            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
+            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
+            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
+            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
+
+            ebosSimulator_.problem().beginTimeStep();
+
             unsigned numDof = ebosSimulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
             wellModel().beginTimeStep();
+
+            if (param_.update_equations_scaling_) {
+                std::cout << "equation scaling not suported yet" << std::endl;
+                //updateEquationsScaling();
+            }
         }
 
 
@@ -340,6 +353,7 @@ namespace Opm {
             DUNE_UNUSED_PARAMETER(well_state);
 
             wellModel().timeStepSucceeded();
+            ebosSimulator_.problem().endTimeStep();
 
         }
 
@@ -351,7 +365,10 @@ namespace Opm {
                                  const int iterationIdx)
         {
             // -------- Mass balance equations --------
-            assembleMassBalanceEq(timer, iterationIdx);
+            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+            ebosSimulator_.problem().beginIteration();
+            ebosSimulator_.model().linearizer().linearize();
+            ebosSimulator_.problem().endIteration();
 
             // -------- Well equations ----------
             double dt = timer.currentStepLength();
@@ -1520,7 +1537,7 @@ namespace Opm {
 
         void beginReportStep()
         {
-            isBeginReportStep_ = true;
+            ebosSimulator_.problem().beginEpisode();
         }
 
         void endReportStep()
@@ -1529,48 +1546,6 @@ namespace Opm {
         }
 
     private:
-        void assembleMassBalanceEq(const SimulatorTimerInterface& timer,
-                                   const int iterationIdx)
-        {
-            ebosSimulator_.startNextEpisode( timer.currentStepLength() );
-            ebosSimulator_.setEpisodeIndex( timer.reportStepNum() );
-            ebosSimulator_.setTimeStepIndex( timer.reportStepNum() );
-            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
-
-            static int prevEpisodeIdx = 10000;
-
-            // notify ebos about the end of the previous episode and time step if applicable
-            if (isBeginReportStep_) {
-                isBeginReportStep_ = false;
-                ebosSimulator_.problem().beginEpisode();
-            }
-
-            // doing the notifactions here is conceptually wrong and also causes the
-            // endTimeStep() and endEpisode() methods to be not called for the
-            // simulation's last time step and episode.
-            if (ebosSimulator_.model().newtonMethod().numIterations() == 0
-                && prevEpisodeIdx < timer.reportStepNum())
-            {
-                ebosSimulator_.problem().endTimeStep();
-            }
-
-            ebosSimulator_.setTimeStepSize( timer.currentStepLength() );
-            if (ebosSimulator_.model().newtonMethod().numIterations() == 0)
-            {
-                ebosSimulator_.problem().beginTimeStep();
-            }
-
-            ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearize();
-            ebosSimulator_.problem().endIteration();
-
-            prevEpisodeIdx = ebosSimulator_.episodeIndex();
-
-            if (param_.update_equations_scaling_) {
-                std::cout << "equation scaling not suported yet" << std::endl;
-                //updateEquationsScaling();
-            }
-        }
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
@@ -1578,7 +1553,6 @@ namespace Opm {
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
 
     public:
-        bool isBeginReportStep_;
         std::vector<bool> wasSwitched_;
     };
 } // namespace Opm
