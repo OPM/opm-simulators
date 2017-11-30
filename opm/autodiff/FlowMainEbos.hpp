@@ -35,7 +35,6 @@
 #include <opm/autodiff/NewtonIterationBlackoilCPR.hpp>
 #include <opm/autodiff/NewtonIterationBlackoilInterleaved.hpp>
 #include <opm/autodiff/MissingFeatures.hpp>
-#include <opm/autodiff/moduleVersion.hpp>
 #include <opm/autodiff/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/autodiff/RedistributeDataHandles.hpp>
 #include <opm/autodiff/SimulatorFullyImplicitBlackoilEbos.hpp>
@@ -188,7 +187,7 @@ namespace Opm
 
             if (output_cout_) {
                 const int lineLen = 70;
-                const std::string version = moduleVersionName();
+                const std::string version = OPM_SIMULATORS_VERSION;
                 const std::string banner = "This is flow "+version;
                 const int bannerPreLen = (lineLen - 2 - banner.size())/2;
                 const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
@@ -352,7 +351,7 @@ namespace Opm
         {
           // Print header for PRT file.
           if ( output_cout_ ) {
-              const std::string version = moduleVersionName();
+              const std::string version = OPM_SIMULATORS_VERSION;
               const double megabyte = 1024 * 1024;
               unsigned num_cpu = std::thread::hardware_concurrency();
               struct utsname arch;

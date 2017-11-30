@@ -47,7 +47,7 @@
 
 struct SetupSimple {
     SetupSimple() :
-        deck( Opm::Parser{}.parseFile("fluid.data") ),
+        deck( Opm::Parser{}.parseFile("tests/fluid.data") ),
         eclState( deck, Opm::ParseContext() )
     {
         param.disableOutput();

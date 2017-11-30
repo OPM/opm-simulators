@@ -390,8 +390,8 @@ namespace Opm
 #endif
             if( param.getDefault("async_output", asyncOutputDefault ) )
             {
-                const bool isIORank = parallelOutput_ ? parallelOutput_->isIORank() : true;
 #if HAVE_PTHREAD
+                const bool isIORank = parallelOutput_ ? parallelOutput_->isIORank() : true;
                 asyncOutput_.reset( new ThreadHandle( isIORank ) );
 #else
                 OPM_THROW(std::runtime_error,"Pthreads were not found, cannot enable async_output");

@@ -50,7 +50,7 @@ namespace Opm
         void printStartupMessage()
         {
             if (Base::output_cout_) {
-                const std::string version = moduleVersionName();
+                const std::string version = OPM_SIMULATORS_VERSION;
                 std::cout << "**********************************************************************\n";
                 std::cout << "*                                                                    *\n";
                 std::cout << "*                 This is Flow-Sequential (version " << version << ")"
