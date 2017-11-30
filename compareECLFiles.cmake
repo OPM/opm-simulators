@@ -183,14 +183,15 @@ add_test_compareECLFiles(CASENAME polymer_simple2D
                          FILENAME 2D_THREEPHASE_POLY_HETER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${coarse_rel_tol})
+                         REL_TOL ${coarse_rel_tol}
+                         TEST_ARGS max_iter=20)
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS max_iter=13)
+                         TEST_ARGS max_iter=20)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
