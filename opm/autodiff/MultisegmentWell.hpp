@@ -102,7 +102,8 @@ namespace Opm
         MultisegmentWell(const Well* well, const int time_step, const Wells* wells,
                          const ModelParameters& param,
                          const RateConverterType& rate_converter,
-                         const int pvtRegionIdx);
+                         const int pvtRegionIdx,
+                         const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -184,12 +185,12 @@ namespace Opm
         using Base::gravity_;
         using Base::well_controls_;
         using Base::perf_depth_;
+        using Base::num_components_;
 
         // protected functions from the Base class
         using Base::active;
         using Base::phaseUsage;
         using Base::name;
-        using Base::numComponents;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
         using Base::getAllowCrossFlow;

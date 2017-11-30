@@ -92,7 +92,7 @@ namespace Opm
         static const bool has_solvent = GET_PROP_VALUE(TypeTag, EnableSolvent);
         static const bool has_polymer = GET_PROP_VALUE(TypeTag, EnablePolymer);
         static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
-
+        static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
 
         // For the conversion between the surface volume rate and resrevoir voidage rate
         using RateConverterType = RateConverter::
@@ -102,7 +102,8 @@ namespace Opm
         WellInterface(const Well* well, const int time_step, const Wells* wells,
                       const ModelParameters& param,
                       const RateConverterType& rate_converter,
-                      const int pvtRegionIdx);
+                      const int pvtRegionIdx,
+                      const int num_components);
 
         /// Virutal destructor
         virtual ~WellInterface() {}
@@ -282,6 +283,8 @@ namespace Opm
         // We assume a well to not penetrate more than one pvt region.
         const int pvtRegionIdx_;
 
+        const int num_components_;
+
         const std::vector<bool>& active() const;
 
         const PhaseUsage& phaseUsage() const;
@@ -289,9 +292,6 @@ namespace Opm
         int flowPhaseToEbosCompIdx( const int phaseIdx ) const;
 
         int flowPhaseToEbosPhaseIdx( const int phaseIdx ) const;
-
-        // TODO: it is dumplicated with BlackoilWellModel
-        int numComponents() const;
 
         double wsolvent() const;
 

@@ -226,9 +226,11 @@ namespace Opm {
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(), param_, *rateConverter_, pvtreg ) );
+                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(), param_, *rateConverter_, pvtreg) );
+                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
                 }
             }
         }
@@ -402,8 +404,11 @@ namespace Opm {
     resetWellControlFromState() const
     {
         const int        nw   = numWells();
+
+        assert(nw == int(well_container_.size()) );
+
         for (int w = 0; w < nw; ++w) {
-            WellControls* wc = wells()->ctrls[w];
+            WellControls* wc = well_container_[w]->wellControls();
             well_controls_set_current( wc, well_state_.currentControls()[w]);
         }
     }

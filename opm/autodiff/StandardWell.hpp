@@ -106,17 +106,15 @@ namespace Opm
 
         typedef DenseAd::Evaluation<double, /*size=*/numEq + numWellEq> EvalWell;
 
-        // TODO: should these go to WellInterface?
-        static const int contiSolventEqIdx = BlackoilIndices::contiSolventEqIdx;
-        static const int contiPolymerEqIdx = BlackoilIndices::contiPolymerEqIdx;
-        static const int solventSaturationIdx = BlackoilIndices::solventSaturationIdx;
-        static const int polymerConcentrationIdx = BlackoilIndices::polymerConcentrationIdx;
+        using Base::contiSolventEqIdx;
+        using Base::contiPolymerEqIdx;
 
 
         StandardWell(const Well* well, const int time_step, const Wells* wells,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
-                     const int pvtRegionIdx);
+                     const int pvtRegionIdx,
+                     const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
                           const std::vector<bool>* active_arg,
@@ -169,7 +167,6 @@ namespace Opm
         using Base::active;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
-        using Base::numComponents;
         using Base::wsolvent;
         using Base::wpolymer;
         using Base::wellHasTHPConstraints;
@@ -193,6 +190,7 @@ namespace Opm
         using Base::index_of_well_;
         using Base::well_controls_;
         using Base::well_type_;
+        using Base::num_components_;
 
         using Base::perf_rep_radius_;
         using Base::perf_length_;
