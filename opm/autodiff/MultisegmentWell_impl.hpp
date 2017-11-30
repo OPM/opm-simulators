@@ -252,11 +252,11 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellStateWithTarget(const int current,
-                              WellState& well_state) const
+    updateWellStateWithTarget(WellState& well_state) const
     {
         // Updating well state bas on well control
         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
+        const int current = well_state.currentControls()[index_of_well_];
         const double target = well_controls_iget_target(well_controls_, current);
         const double* distr = well_controls_iget_distr(well_controls_, current);
         switch (well_controls_iget_type(well_controls_, current)) {

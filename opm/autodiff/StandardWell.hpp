@@ -132,8 +132,7 @@ namespace Opm
 
         /// updating the well state based the control mode specified with current
         // TODO: later will check wheter we need current
-        virtual void updateWellStateWithTarget(const int current,
-                                               WellState& xw) const;
+        virtual void updateWellStateWithTarget(WellState& well_state) const;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const std::vector<double>& B_avg) const;
@@ -252,7 +251,7 @@ namespace Opm
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
         void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
-                                                         const WellState& xw,
+                                                         const WellState& well_state,
                                                          std::vector<double>& b_perf,
                                                          std::vector<double>& rsmax_perf,
                                                          std::vector<double>& rvmax_perf,
@@ -268,7 +267,7 @@ namespace Opm
 
         void computeConnectionPressureDelta();
 
-        void computeWellConnectionDensitesPressures(const WellState& xw,
+        void computeWellConnectionDensitesPressures(const WellState& well_state,
                                                     const std::vector<double>& b_perf,
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
@@ -278,7 +277,7 @@ namespace Opm
         void computeAccumWell();
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                                    const WellState& xw);
+                                                    const WellState& well_state);
 
         // TODO: to check whether all the paramters are required
         void computePerfRate(const IntensiveQuantities& intQuants,

@@ -443,7 +443,7 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(updated_control_index, well_state);
+            updateWellStateWithTarget(well_state);
         }
     }
 

@@ -704,7 +704,7 @@ namespace Opm {
             well_state_.currentControls()[w] = control;
             // TODO: for VFP control, the perf_densities are still zero here, investigate better
             // way to handle it later.
-            well_container_[w]->updateWellStateWithTarget(control, well_state_);
+            well_container_[w]->updateWellStateWithTarget(well_state_);
 
             // The wells are not considered to be newly added
             // for next time step
@@ -950,12 +950,7 @@ namespace Opm {
             wellCollection().updateWellTargets(well_state_.wellRates());
 
             for (int w = 0; w < numWells(); ++w) {
-                // TODO: check whether we need current argument in updateWellStateWithTarget
-                // maybe there is some circumstances that the current is different from the one
-                // in the WellState.
-                // while probalby, the current argument can be removed
-                const int current = well_state_.currentControls()[w];
-                well_container_[w]->updateWellStateWithTarget(current, well_state_);
+                well_container_[w]->updateWellStateWithTarget(well_state_);
             }
         }
     }

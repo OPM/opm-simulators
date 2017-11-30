@@ -217,7 +217,6 @@ namespace Opm {
                                          std::vector<double>& voidage_conversion_coeffs) const;
 
             // Calculating well potentials for each well
-            // TODO: getBhp() will be refactored to reduce the duplication of the code calculating the bhp from THP.
             void computeWellPotentials(std::vector<double>& well_potentials);
 
             const std::vector<double>& wellPerfEfficiencyFactors() const;

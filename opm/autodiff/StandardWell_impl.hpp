@@ -588,14 +588,14 @@ namespace Opm
             }
 
             if (has_polymer) {
-                EvalWell cq_s_poly = cq_s[Water];
+                // TODO: the application of well efficiency factor has not been tested with an example yet
+                EvalWell cq_s_poly = cq_s[Water] * well_efficiency_factor_;
                 if (well_type_ == INJECTOR) {
                     cq_s_poly *= wpolymer();
                 } else {
                     cq_s_poly *= extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
                 }
                 if (!only_wells) {
-                    // TODO: we need to consider the efficiency here.
                     for (int pvIdx = 0; pvIdx < numEq; ++pvIdx) {
                         ebosJac[cell_idx][cell_idx][contiPolymerEqIdx][pvIdx] -= cq_s_poly.derivative(pvIdx);
                     }
@@ -642,12 +642,12 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
-            EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
-            EvalWell bhp = getBhp();
+            const EvalWell pressure = extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+            const EvalWell bhp = getBhp();
 
             // Pressure drawdown (also used to determine direction of flow)
-            EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
-            EvalWell drawdown = pressure - well_pressure;
+            const EvalWell well_pressure = bhp + perf_pressure_diffs_[perf];
+            const EvalWell drawdown = pressure - well_pressure;
 
             if (drawdown.value() < 0 && well_type_ == INJECTOR)  {
                 return false;
@@ -976,40 +976,40 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateWithTarget(const int current,
-                              WellState& xw) const
+    updateWellStateWithTarget(WellState& well_state) const
     {
         // number of phases
         const int np = number_of_phases_;
         const int well_index = index_of_well_;
         const WellControls* wc = well_controls_;
+        const int current = well_state.currentControls()[well_index];
         // Updating well state and primary variables.
         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
         const double target = well_controls_iget_target(wc, current);
         const double* distr = well_controls_iget_distr(wc, current);
         switch (well_controls_iget_type(wc, current)) {
         case BHP:
-            xw.bhp()[well_index] = target;
+            well_state.bhp()[well_index] = target;
             // TODO: similar to the way below to handle THP
             // we should not something related to thp here when there is thp constraint
             break;
 
         case THP: {
-            xw.thp()[well_index] = target;
+            well_state.thp()[well_index] = target;
 
             const Opm::PhaseUsage& pu = phaseUsage();
             std::vector<double> rates(3, 0.0);
             if (active()[ Water ]) {
-                rates[ Water ] = xw.wellRates()[well_index*np + pu.phase_pos[ Water ] ];
+                rates[ Water ] = well_state.wellRates()[well_index*np + pu.phase_pos[ Water ] ];
             }
             if (active()[ Oil ]) {
-                 rates[ Oil ] = xw.wellRates()[well_index*np + pu.phase_pos[ Oil ] ];
+                 rates[ Oil ] = well_state.wellRates()[well_index*np + pu.phase_pos[ Oil ] ];
             }
             if (active()[ Gas ]) {
-                rates[ Gas ] = xw.wellRates()[well_index*np + pu.phase_pos[ Gas ] ];
+                rates[ Gas ] = well_state.wellRates()[well_index*np + pu.phase_pos[ Gas ] ];
             }
 
-            xw.bhp()[well_index] = calculateBhpFromThp(rates, current);
+            well_state.bhp()[well_index] = calculateBhpFromThp(rates, current);
             break;
         }
 
@@ -1032,9 +1032,9 @@ namespace Opm
 
                 for (int phase = 0; phase < np; ++phase) {
                     if (distr[phase] > 0.) {
-                        xw.wellRates()[np*well_index + phase] = target / distr[phase];
+                        well_state.wellRates()[np*well_index + phase] = target / distr[phase];
                     } else {
-                        xw.wellRates()[np * well_index + phase] = 0.;
+                        well_state.wellRates()[np * well_index + phase] = 0.;
                     }
                 }
             } else if (well_type_ == PRODUCER) {
@@ -1044,7 +1044,7 @@ namespace Opm
                 double original_rates_under_phase_control = 0.0;
                 for (int phase = 0; phase < np; ++phase) {
                     if (distr[phase] > 0.0) {
-                        original_rates_under_phase_control += xw.wellRates()[np * well_index + phase] * distr[phase];
+                        original_rates_under_phase_control += well_state.wellRates()[np * well_index + phase] * distr[phase];
                     }
                 }
 
@@ -1052,17 +1052,17 @@ namespace Opm
                     double scaling_factor = target / original_rates_under_phase_control;
 
                     for (int phase = 0; phase < np; ++phase) {
-                        xw.wellRates()[np * well_index + phase] *= scaling_factor;
+                        well_state.wellRates()[np * well_index + phase] *= scaling_factor;
                     }
                 } else { // scaling factor is not well defied when original_rates_under_phase_control is zero
                     // separating targets equally between phases under control
                     const double target_rate_divided = target / numPhasesWithTargetsUnderThisControl;
                     for (int phase = 0; phase < np; ++phase) {
                         if (distr[phase] > 0.0) {
-                            xw.wellRates()[np * well_index + phase] = target_rate_divided / distr[phase];
+                            well_state.wellRates()[np * well_index + phase] = target_rate_divided / distr[phase];
                         } else {
                             // this only happens for SURFACE_RATE control
-                            xw.wellRates()[np * well_index + phase] = target_rate_divided;
+                            well_state.wellRates()[np * well_index + phase] = target_rate_divided;
                         }
                     }
                 }
@@ -1073,7 +1073,7 @@ namespace Opm
             break;
         } // end of switch
 
-        updatePrimaryVariables(xw);
+        updatePrimaryVariables(well_state);
     }
 
 
@@ -1084,7 +1084,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
-                                                const WellState& xw,
+                                                const WellState& well_state,
                                                 std::vector<double>& b_perf,
                                                 std::vector<double>& rsmax_perf,
                                                 std::vector<double>& rvmax_perf,
@@ -1110,8 +1110,8 @@ namespace Opm
 
             // TODO: this is another place to show why WellState need to be a vector of WellState.
             // TODO: to check why should be perf - 1
-            const double p_above = perf == 0 ? xw.bhp()[w] : xw.perfPress()[first_perf_ + perf - 1];
-            const double p_avg = (xw.perfPress()[first_perf_ + perf] + p_above)/2;
+            const double p_above = perf == 0 ? well_state.bhp()[w] : well_state.perfPress()[first_perf_ + perf - 1];
+            const double p_avg = (well_state.perfPress()[first_perf_ + perf] + p_above)/2;
             const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
 
             if (pu.phase_used[Water]) {
@@ -1125,10 +1125,10 @@ namespace Opm
 
                 if (pu.phase_used[Oil]) {
                     const int oilpos_well = pu.phase_pos[Oil] + w * pu.num_phases;
-                    const double oilrate = std::abs(xw.wellRates()[oilpos_well]); //in order to handle negative rates in producers
+                    const double oilrate = std::abs(well_state.wellRates()[oilpos_well]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(xw.wellRates()[gaspos_well]) - xw.solventWellRate(w);
+                        const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -1152,9 +1152,9 @@ namespace Opm
                 if (pu.phase_used[Gas]) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     const int gaspos_well = pu.phase_pos[Gas] + w * pu.num_phases;
-                    const double gasrate = std::abs(xw.wellRates()[gaspos_well]) - xw.solventWellRate(w);
+                    const double gasrate = std::abs(well_state.wellRates()[gaspos_well]) - well_state.solventWellRate(w);
                     if (gasrate > 0) {
-                        const double oilrate = std::abs(xw.wellRates()[oilpos_well]);
+                        const double oilrate = std::abs(well_state.wellRates()[oilpos_well]);
                         double rs = 0.0;
                         if (oilrate > 0) {
                             rs = gasrate / oilrate;
@@ -1329,9 +1329,6 @@ namespace Opm
     StandardWell<TypeTag>::
     getWellConvergence(const std::vector<double>& B_avg) const
     {
-        typedef double Scalar;
-        typedef std::vector< Scalar > Vector;
-
         const int np = number_of_phases_;
 
         // the following implementation assume that the polymer is always after the w-o-g phases
@@ -1343,13 +1340,13 @@ namespace Opm
 
         // TODO: it should be the number of numWellEq
         // using num_components_ here for flow_ebos running 2p case.
-        std::vector<Scalar> res(num_components_);
+        std::vector<double> res(num_components_);
         for (int comp = 0; comp < num_components_; ++comp) {
             // magnitude of the residual matters
             res[comp] = std::abs(resWell_[0][comp]);
         }
 
-        Vector well_flux_residual(num_components_);
+        std::vector<double> well_flux_residual(num_components_);
 
         // Finish computation
         for ( int compIdx = 0; compIdx < num_components_; ++compIdx )
@@ -1396,7 +1393,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    computeWellConnectionDensitesPressures(const WellState& xw,
+    computeWellConnectionDensitesPressures(const WellState& well_state,
                                            const std::vector<double>& b_perf,
                                            const std::vector<double>& rsmax_perf,
                                            const std::vector<double>& rvmax_perf,
@@ -1409,10 +1406,10 @@ namespace Opm
 
         for (int perf = 0; perf < nperf; ++perf) {
             for (int phase = 0; phase < np; ++phase) {
-                perfRates[perf * num_components_ + phase] =  xw.perfPhaseRates()[(first_perf_ + perf) * np + phase];
+                perfRates[perf * num_components_ + phase] =  well_state.perfPhaseRates()[(first_perf_ + perf) * np + phase];
             }
             if(has_solvent) {
-                perfRates[perf * num_components_ + contiSolventEqIdx] =  xw.perfRateSolvent()[first_perf_ + perf];
+                perfRates[perf * num_components_ + contiSolventEqIdx] =  well_state.perfRateSolvent()[first_perf_ + perf];
             }
         }
 
