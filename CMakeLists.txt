@@ -91,6 +91,7 @@ endmacro (tests_hook)
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
 
+opm_add_test(test_blackoilfluidstate)
 opm_add_test(test_eclblackoilpvt CONDITION OPM_PARSER_FOUND)
 opm_add_test(test_eclmateriallawmanager CONDITION OPM_PARSER_FOUND)
 opm_add_test(test_fluidmatrixinteractions)
