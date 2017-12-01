@@ -1388,7 +1388,7 @@ namespace Opm
         // 1. preventing the well from group control with keyword WGRUPCON
         // 2. the well violating some limits and working under limits.
         if ( (!only_group || !individualControl()) && isProducer() ) {
-            return prodSpec().guide_rate_;
+            return prodSpec().guide_rate_ * efficiencyFactor();
         } else {
             return 0.0;
         }
@@ -1400,7 +1400,7 @@ namespace Opm
     double WellNode::injectionGuideRate(bool only_group)
     {
         if ( (!only_group || !individualControl()) && isInjector() ) {
-            return injSpec().guide_rate_;
+            return injSpec().guide_rate_ * efficiencyFactor();
         } else {
             return 0.0;
         }
