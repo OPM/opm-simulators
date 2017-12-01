@@ -47,8 +47,6 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-
 #include <opm/parser/eclipse/Parser/ParseContext.hpp>
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -93,8 +91,8 @@ static const char* deckString1 =
     "PROPS\n"
     "\n"
     "DENSITY\n"
-    "      	100.0 500.0 0.1 /\n"
-    "      	200.0 600.0 0.2 /\n"
+    "      859.5  1033.0    0.854  /\n"
+    "      860.04 1033.0    0.853  /\n"
     "\n"
     "PVTW\n"
     " 	1.0  1.1 1e-6 1.1 2.0e-9 /\n"
@@ -285,10 +283,6 @@ inline void testAll()
     typedef Opm::DenseAd::Evaluation<Scalar, 1> FooEval;
     ensurePvtApi<Scalar>(oilPvt, gasPvt, waterPvt);
     ensurePvtApi<FooEval>(oilPvt, gasPvt, waterPvt);
-
-    // make sure that the BlackOil fluid system's initFromDeck() method compiles.
-    typedef Opm::FluidSystems::BlackOil<Scalar> BlackOilFluidSystem;
-    BlackOilFluidSystem::initFromDeck(deck, eclState);
 }
 
 
