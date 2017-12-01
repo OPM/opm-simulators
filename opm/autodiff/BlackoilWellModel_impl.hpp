@@ -226,9 +226,11 @@ namespace Opm {
                 const int pvtreg = pvt_region_idx_[well_cell_top];
 
                 if ( !well_ecl->isMultiSegment(time_step) || !param_.use_multisegment_well_) {
-                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(), param_, *rateConverter_, pvtreg ) );
+                    well_container.emplace_back(new StandardWell<TypeTag>(well_ecl, time_step, wells(),
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
                 } else {
-                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(), param_, *rateConverter_, pvtreg) );
+                    well_container.emplace_back(new MultisegmentWell<TypeTag>(well_ecl, time_step, wells(),
+                                                param_, *rateConverter_, pvtreg, numComponents() ) );
                 }
             }
         }
@@ -402,8 +404,11 @@ namespace Opm {
     resetWellControlFromState() const
     {
         const int        nw   = numWells();
+
+        assert(nw == int(well_container_.size()) );
+
         for (int w = 0; w < nw; ++w) {
-            WellControls* wc = wells()->ctrls[w];
+            WellControls* wc = well_container_[w]->wellControls();
             well_controls_set_current( wc, well_state_.currentControls()[w]);
         }
     }
@@ -699,7 +704,7 @@ namespace Opm {
             well_state_.currentControls()[w] = control;
             // TODO: for VFP control, the perf_densities are still zero here, investigate better
             // way to handle it later.
-            well_container_[w]->updateWellStateWithTarget(control, well_state_);
+            well_container_[w]->updateWellStateWithTarget(well_state_);
 
             // The wells are not considered to be newly added
             // for next time step
@@ -945,12 +950,7 @@ namespace Opm {
             wellCollection().updateWellTargets(well_state_.wellRates());
 
             for (int w = 0; w < numWells(); ++w) {
-                // TODO: check whether we need current argument in updateWellStateWithTarget
-                // maybe there is some circumstances that the current is different from the one
-                // in the WellState.
-                // while probalby, the current argument can be removed
-                const int current = well_state_.currentControls()[w];
-                well_container_[w]->updateWellStateWithTarget(current, well_state_);
+                well_container_[w]->updateWellStateWithTarget(well_state_);
             }
         }
     }

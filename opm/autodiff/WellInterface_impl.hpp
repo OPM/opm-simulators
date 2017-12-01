@@ -28,12 +28,14 @@ namespace Opm
     WellInterface(const Well* well, const int time_step, const Wells* wells,
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
-                  const int pvtRegionIdx)
+                  const int pvtRegionIdx,
+                  const int num_components)
     : well_ecl_(well)
     , current_step_(time_step)
     , param_(param)
     , rateConverter_(rate_converter)
     , pvtRegionIdx_(pvtRegionIdx)
+    , num_components_(num_components)
     {
         if (!well) {
             OPM_THROW(std::invalid_argument, "Null pointer of Well is used to construct WellInterface");
@@ -270,27 +272,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    int
-    WellInterface<TypeTag>::
-    numComponents() const
-    {
-        // TODO: how about two phase polymer
-        if (number_of_phases_ == 2) {
-          return 2;
-        }
-
-        int numComp = FluidSystem::numComponents;
-
-        if (has_solvent) {
-            numComp++;
-        }
-        return numComp;
-    }
-
-
-
-
-    template<typename TypeTag>
     double
     WellInterface<TypeTag>::
     wsolvent() const
@@ -462,7 +443,7 @@ namespace Opm
         }
 
         if (updated_control_index != old_control_index) { //  || well_collection_->groupControlActive()) {
-            updateWellStateWithTarget(updated_control_index, well_state);
+            updateWellStateWithTarget(well_state);
         }
     }
 

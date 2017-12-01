@@ -126,7 +126,7 @@ struct SetupTest {
 
 
 BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
-    SetupTest setup_test;
+    const SetupTest setup_test;
     const Wells* wells = setup_test.wells_manager->c_wells();
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
@@ -145,14 +145,16 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
                                      std::vector<int>(10, 0)));
 
     const int pvtIdx = 0;
-    BOOST_CHECK_THROW( StandardWell( well, -1, wells, param, *rateConverter, pvtIdx), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells, param , *rateConverter, pvtIdx), std::invalid_argument);
-    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr, param , *rateConverter, pvtIdx), std::invalid_argument);
+    const int num_comp = wells->number_of_phases;
+
+    BOOST_CHECK_THROW( StandardWell( well, -1, wells, param, *rateConverter, pvtIdx, num_comp), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( nullptr, 4, wells, param , *rateConverter, pvtIdx, num_comp), std::invalid_argument);
+    BOOST_CHECK_THROW( StandardWell( well, 4, nullptr, param , *rateConverter, pvtIdx, num_comp), std::invalid_argument);
 }
 
 
 BOOST_AUTO_TEST_CASE(TestBehavoir) {
-    SetupTest setup_test;
+    const SetupTest setup_test;
     const Wells* wells_struct = setup_test.wells_manager->c_wells();
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     const int current_timestep = setup_test.current_timestep;
@@ -178,6 +180,8 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             using RateConverterType = Opm::RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
             // Compute reservoir volumes for RESV controls.
+            // TODO: not sure why for this class the initlizer list does not work
+            // otherwise we should make a meaningful const PhaseUsage here.
             Opm::PhaseUsage phaseUsage;
             std::unique_ptr<RateConverterType> rateConverter;
             // Compute reservoir volumes for RESV controls.
@@ -185,8 +189,9 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
                                              std::vector<int>(10, 0)));
 
             const int pvtIdx = 0;
+            const int num_comp = wells_struct->number_of_phases;
 
-            wells.emplace_back(new StandardWell(wells_ecl[index_well], current_timestep, wells_struct, param, *rateConverter, pvtIdx) );
+            wells.emplace_back(new StandardWell(wells_ecl[index_well], current_timestep, wells_struct, param, *rateConverter, pvtIdx, num_comp) );
         }
     }
 

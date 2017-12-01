@@ -30,14 +30,15 @@ namespace Opm
     MultisegmentWell(const Well* well, const int time_step, const Wells* wells,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
-                     const int pvtRegionIdx)
-    : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx)
+                     const int pvtRegionIdx,
+                     const int num_components)
+    : Base(well, time_step, wells, param, rate_converter, pvtRegionIdx, num_components)
     , segment_perforations_(numberOfSegments())
     , segment_inlets_(numberOfSegments())
     , cell_perforation_depth_diffs_(number_of_perforations_, 0.0)
     , cell_perforation_pressure_diffs_(number_of_perforations_, 0.0)
     , perforation_segment_depth_diffs_(number_of_perforations_, 0.0)
-    , segment_comp_initial_(numberOfSegments(), std::vector<double>(numComponents(), 0.0))
+    , segment_comp_initial_(numberOfSegments(), std::vector<double>(num_components_, 0.0))
     , segment_densities_(numberOfSegments(), 0.0)
     , segment_viscosities_(numberOfSegments(), 0.0)
     , segment_mass_rates_(numberOfSegments(), 0.0)
@@ -251,11 +252,11 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellStateWithTarget(const int current,
-                              WellState& well_state) const
+    updateWellStateWithTarget(WellState& well_state) const
     {
         // Updating well state bas on well control
         // Target values are used as initial conditions for BHP, THP, and SURFACE_RATE
+        const int current = well_state.currentControls()[index_of_well_];
         const double target = well_controls_iget_target(well_controls_, current);
         const double* distr = well_controls_iget_distr(well_controls_, current);
         switch (well_controls_iget_type(well_controls_, current)) {
@@ -411,8 +412,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     getWellConvergence(const std::vector<double>& B_avg) const
     {
-        // assert((int(B_avg.size()) == numComponents()) || has_polymer);
-        assert( (int(B_avg.size()) == numComponents()) );
+        assert(int(B_avg.size()) == num_components_);
 
         // checking if any residual is NaN or too large. The two large one is only handled for the well flux
         std::vector<std::vector<double>> abs_residual(numberOfSegments(), std::vector<double>(numWellEq, 0.0));
@@ -428,7 +428,7 @@ namespace Opm
         // TODO: the following is a little complicated, maybe can be simplified in some way?
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-                if (eq_idx < numComponents()) { // phase or component mass equations
+                if (eq_idx < num_components_) { // phase or component mass equations
                     const double flux_residual = B_avg[eq_idx] * abs_residual[seg][eq_idx];
                     // TODO: the report can not handle the segment number yet.
                     if (std::isnan(flux_residual)) {
@@ -470,7 +470,7 @@ namespace Opm
 
         if ( !(report.nan_residual_found || report.too_large_residual_found) ) { // no abnormal residual value found
             // check convergence for flux residuals
-            for ( int comp_idx = 0; comp_idx < numComponents(); ++comp_idx)
+            for ( int comp_idx = 0; comp_idx < num_components_; ++comp_idx)
             {
                 report.converged = report.converged && (maximum_residual[comp_idx] < param_.tolerance_wells_);
             }
@@ -717,7 +717,7 @@ namespace Opm
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             // TODO: probably it should be numWellEq -1 more accurately,
             // while by meaning it should be num_comp
-            for (int comp_idx = 0; comp_idx < numComponents(); ++comp_idx) {
+            for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 segment_comp_initial_[seg][comp_idx] = surfaceVolumeFraction(seg, comp_idx).value();
             }
         }
@@ -925,8 +925,7 @@ namespace Opm
     surfaceVolumeFraction(const int seg, const int comp_idx) const
     {
         EvalWell sum_volume_fraction_scaled = 0.;
-        const int num_comp = numComponents();
-        for (int idx = 0; idx < num_comp; ++idx) {
+        for (int idx = 0; idx < num_components_; ++idx) {
             sum_volume_fraction_scaled += volumeFractionScaled(seg, idx);
         }
 
@@ -950,11 +949,10 @@ namespace Opm
                     const bool& allow_cf,
                     std::vector<EvalWell>& cq_s) const
     {
-        const int num_comp = numComponents();
-        std::vector<EvalWell> cmix_s(num_comp, 0.0);
+        std::vector<EvalWell> cmix_s(num_components_, 0.0);
 
         // the composition of the components inside wellbore
-        for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+        for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
             cmix_s[comp_idx] = surfaceVolumeFraction(seg, comp_idx);
         }
 
@@ -965,7 +963,7 @@ namespace Opm
         const EvalWell rv = extendEval(fs.Rv());
 
         // not using number_of_phases_ because of solvent
-        std::vector<EvalWell> b_perfcells(num_comp, 0.0);
+        std::vector<EvalWell> b_perfcells(num_components_, 0.0);
 
         for (int phase = 0; phase < number_of_phases_; ++phase) {
             const int phase_idx_ebos = flowPhaseToEbosPhaseIdx(phase);
@@ -991,7 +989,7 @@ namespace Opm
             }
 
             // compute component volumetric rates at standard conditions
-            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 const EvalWell cq_p = - well_index_[perf] * (mob_perfcells[comp_idx] * drawdown);
                 cq_s[comp_idx] = b_perfcells[comp_idx] * cq_p;
             }
@@ -1012,7 +1010,7 @@ namespace Opm
 
             // for injecting perforations, we use total mobility
             EvalWell total_mob = mob_perfcells[0];
-            for (int comp_idx = 1; comp_idx < num_comp; ++comp_idx) {
+            for (int comp_idx = 1; comp_idx < num_components_; ++comp_idx) {
                 total_mob += mob_perfcells[comp_idx];
             }
 
@@ -1057,7 +1055,7 @@ namespace Opm
             }
             // injecting connections total volumerates at standard conditions
             EvalWell cqt_is = cqt_i / volume_ratio;
-            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 cq_s[comp_idx] = cmix_s[comp_idx] * cqt_is;
             }
         } // end for injection perforations
@@ -1119,16 +1117,15 @@ namespace Opm
             surf_dens[phase] = FluidSystem::referenceDensity( flowPhaseToEbosPhaseIdx(phase), pvt_region_index );
         }
 
-        const int num_comp = numComponents();
         const Opm::PhaseUsage& pu = phaseUsage();
         for (int seg = 0; seg < numberOfSegments(); ++seg) {
             // the compostion of the components inside wellbore under surface condition
-            std::vector<EvalWell> mix_s(num_comp, 0.0);
-            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            std::vector<EvalWell> mix_s(num_components_, 0.0);
+            for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 mix_s[comp_idx] = surfaceVolumeFraction(seg, comp_idx);
             }
 
-            std::vector<EvalWell> b(num_comp, 0.0);
+            std::vector<EvalWell> b(num_components_, 0.0);
             // it is the phase viscosities asked for
             std::vector<EvalWell> visc(number_of_phases_, 0.0);
             const EvalWell seg_pressure = getSegmentPressure(seg);
@@ -1221,7 +1218,7 @@ namespace Opm
             }
 
             EvalWell volrat(0.0);
-            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 volrat += mix[comp_idx] / b[comp_idx];
             }
 
@@ -1233,7 +1230,7 @@ namespace Opm
             }
 
             EvalWell density(0.0);
-            for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+            for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                 density += surf_dens[comp_idx] * mix_s[comp_idx];
             }
             segment_densities_[seg] = density / volrat;
@@ -1298,7 +1295,7 @@ namespace Opm
         // TODO: most of this function, if not the whole function, can be moved to the base class
         const int np = number_of_phases_;
         const int cell_idx = well_cells_[perf];
-        assert (int(mob.size()) == numComponents());
+        assert (int(mob.size()) == num_components_);
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
         const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
 
@@ -1769,7 +1766,6 @@ namespace Opm
         const bool allow_cf = getAllowCrossFlow();
 
         const int nseg = numberOfSegments();
-        const int num_comp = numComponents();
 
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term // TODO: without considering the efficiencty factor for now
@@ -1777,7 +1773,7 @@ namespace Opm
             {
                 const double volume = segmentSet()[seg].volume();
                 // for each component
-                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     EvalWell accumulation_term = volume / dt * (surfaceVolumeFraction(seg, comp_idx) - segment_comp_initial_[seg][comp_idx])
                                                + getSegmentRate(seg, comp_idx);
 
@@ -1791,7 +1787,7 @@ namespace Opm
             // considering the contributions from the inlet segments
             {
                 for (const int inlet : segment_inlets_[seg]) {
-                    for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                    for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                         const EvalWell inlet_rate = getSegmentRate(inlet, comp_idx);
                         resWell_[seg][comp_idx] -= inlet_rate.value();
                         for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
@@ -1806,12 +1802,12 @@ namespace Opm
             for (const int perf : segment_perforations_[seg]) {
                 const int cell_idx = well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-                std::vector<EvalWell> mob(num_comp, 0.0);
+                std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);
-                std::vector<EvalWell> cq_s(num_comp, 0.0);
+                std::vector<EvalWell> cq_s(num_components_, 0.0);
                 computePerfRate(int_quants, mob, seg, perf, seg_pressure, allow_cf, cq_s);
 
-                for (int comp_idx = 0; comp_idx < num_comp; ++comp_idx) {
+                for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
                     const EvalWell cq_s_effective = cq_s[comp_idx] * well_efficiency_factor_;
 
