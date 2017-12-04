@@ -47,6 +47,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/autodiff/VFPProdProperties.cpp
   opm/autodiff/VFPInjProperties.cpp
   opm/autodiff/MissingFeatures.cpp
+  opm/core/utility/Event.cpp
+  opm/core/utility/NullStream.cpp
   opm/polymer/PolymerState.cpp
   opm/polymer/PolymerBlackoilState.cpp
   opm/polymer/CompressibleTpfaPolymer.cpp
@@ -95,6 +97,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_wellswitchlogger.cpp
   tests/test_timer.cpp
   tests/test_invert.cpp
+  tests/test_event.cpp
   )
 
 list (APPEND TEST_DATA_FILES
@@ -221,6 +224,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/autodiff/BlackoilWellModel_impl.hpp
   opm/autodiff/MissingFeatures.hpp
   opm/autodiff/ThreadHandle.hpp
+  opm/core/utility/DataMap.hpp
+  opm/core/utility/Event.hpp
+  opm/core/utility/Event_impl.hpp
+  opm/core/utility/NullStream.hpp
+  opm/core/utility/share_obj.hpp
   opm/polymer/CompressibleTpfaPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer.hpp
   opm/polymer/GravityColumnSolverPolymer_impl.hpp
