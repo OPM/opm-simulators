@@ -52,11 +52,11 @@ namespace FluidSystems {
  *
  * \brief A two-phase fluid system with water and nitrogen as components.
  */
-template <class Scalar, bool useComplexRelations = true>
+template <class Scalar>
 class H2ON2
-    : public BaseFluidSystem<Scalar, H2ON2<Scalar, useComplexRelations> >
+    : public BaseFluidSystem<Scalar, H2ON2<Scalar> >
 {
-    typedef H2ON2<Scalar, useComplexRelations> ThisType;
+    typedef H2ON2<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
@@ -260,10 +260,6 @@ public:
 
     /*!
      * \copydoc BaseFluidSystem::density
-     *
-     * If useComplexRelations == true, we apply Formula (2.6) from S.O.Ochs: "Development
-     * of a multiphase multicomponent model for PEMFC - Technical report: IRTG-NUPUS",
-     * University of Stuttgart, 2008
      */
     template <class FluidState, class LhsEval = typename FluidState::Scalar, class ParamCacheEval = LhsEval>
     static LhsEval density(const FluidState& fluidState,
@@ -281,36 +277,20 @@ public:
 
         // liquid phase
         if (phaseIdx == liquidPhaseIdx) {
-            if (!useComplexRelations)
-                // assume pure water
-                return H2O::liquidDensity(T, p);
-            else
-            {
-                // See: Ochs 2008
-                const auto& rholH2O = H2O::liquidDensity(T, p);
-                const auto& clH2O = rholH2O/H2O::molarMass();
+            // assume ideal mixture where each molecule occupies the same volume regardless
+            // of whether it is water or nitrogen.
+            const LhsEval& clH2O = H2O::liquidDensity(T, p)/H2O::molarMass();
 
-                const auto& xlH2O = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
-                const auto& xlN2 = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
+            const auto& xlH2O = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
+            const auto& xlN2 = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
 
-                // this assumes each nitrogen molecule displaces exactly one
-                // water molecule in the liquid
-                return clH2O*(H2O::molarMass()*xlH2O + N2::molarMass()*xlN2)/sumMoleFrac;
-            }
+            return clH2O*(H2O::molarMass()*xlH2O + N2::molarMass()*xlN2)/sumMoleFrac;
         }
 
         // gas phase
         assert(phaseIdx == gasPhaseIdx);
 
-        if (!useComplexRelations)
-            // for the gas phase assume an ideal gas
-            return
-                IdealGas::molarDensity(T, p)
-                * Opm::decay<LhsEval>(fluidState.averageMolarMass(gasPhaseIdx))
-                / Opm::max(1e-5, sumMoleFrac);
-
-        // assume ideal mixture: steam and nitrogen don't "see" each
-        // other
+        // assume ideal mixture: steam and nitrogen don't "distinguish" each other
         const auto& xgH2O = Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, H2OIdx));
         const auto& xgN2 = Opm::decay<LhsEval>(fluidState.moleFraction(gasPhaseIdx, N2Idx));
         const auto& rho_gH2O = H2O::gasDensity(T, p*xgH2O);
@@ -337,43 +317,38 @@ public:
         // gas phase
         assert(phaseIdx == gasPhaseIdx);
 
-        if (!useComplexRelations)
-            // assume pure nitrogen for the gas phase
-            return N2::gasViscosity(T, p);
-        else {
-            /* Wilke method. See:
-             *
-             * See: R. Reid, et al.: The Properties of Gases and Liquids,
-             * 4th edition, McGraw-Hill, 1987, 407-410
-             * 5th edition, McGraw-Hill, 20001, p. 9.21/22
-             */
-            LhsEval muResult = 0;
-            const LhsEval mu[numComponents] = {
-                H2O::gasViscosity(T, H2O::vaporPressure(T)),
-                N2::gasViscosity(T, p)
-            };
+        /* Wilke method. See:
+         *
+         * See: R. Reid, et al.: The Properties of Gases and Liquids,
+         * 4th edition, McGraw-Hill, 1987, 407-410
+         * 5th edition, McGraw-Hill, 20001, p. 9.21/22
+         */
+        LhsEval muResult = 0;
+        const LhsEval mu[numComponents] = {
+            H2O::gasViscosity(T, H2O::vaporPressure(T)),
+            N2::gasViscosity(T, p)
+        };
 
-            LhsEval sumx = 0.0;
-            for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
-                sumx += Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
-            sumx = Opm::max(1e-10, sumx);
+        LhsEval sumx = 0.0;
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx)
+            sumx += Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, compIdx));
+        sumx = Opm::max(1e-10, sumx);
 
-            for (unsigned i = 0; i < numComponents; ++i) {
-                LhsEval divisor = 0;
-                for (unsigned j = 0; j < numComponents; ++j) {
-                    LhsEval phiIJ = 1 + Opm::sqrt(mu[i]/mu[j]) * std::pow(molarMass(j)/molarMass(i), 1/4.0);
-                    phiIJ *= phiIJ;
-                    phiIJ /= std::sqrt(8*(1 + molarMass(i)/molarMass(j)));
-                    divisor +=
-                        Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, j))
-                        /sumx*phiIJ;
-                }
-                muResult +=
-                    Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, i))
-                    /sumx*mu[i]/divisor;
+        for (unsigned i = 0; i < numComponents; ++i) {
+            LhsEval divisor = 0;
+            for (unsigned j = 0; j < numComponents; ++j) {
+                LhsEval phiIJ = 1 + Opm::sqrt(mu[i]/mu[j]) * std::pow(molarMass(j)/molarMass(i), 1/4.0);
+                phiIJ *= phiIJ;
+                phiIJ /= std::sqrt(8*(1 + molarMass(i)/molarMass(j)));
+                divisor +=
+                    Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, j))
+                    /sumx*phiIJ;
             }
-            return muResult;
+            muResult +=
+                Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, i))
+                /sumx*mu[i]/divisor;
         }
+        return muResult;
     }
 
     //! \copydoc BaseFluidSystem::fugacityCoefficient
@@ -443,10 +418,8 @@ public:
         // gas phase
         assert(phaseIdx == gasPhaseIdx);
 
-        // assume ideal mixture: Molecules of one component don't
-        // "see" the molecules of the other component, which means
-        // that the total specific enthalpy is the sum of the
-        // "partial specific enthalpies" of the components.
+        // assume ideal mixture: Molecules of one component don't discriminate between
+        // their own kind and molecules of the other component.
         const auto& XgH2O = Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, H2OIdx));
         const auto& XgN2 = Opm::decay<LhsEval>(fluidState.massFraction(gasPhaseIdx, N2Idx));
 
@@ -471,21 +444,16 @@ public:
         // gas phase
         assert(phaseIdx == gasPhaseIdx);
 
-        if (useComplexRelations){
-            // return the sum of the partial conductivity of Nitrogen and Steam
-            const auto& xH2O = Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
-            const auto& xN2 = Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, N2Idx));
+        // return the sum of the partial conductivity of Nitrogen and Steam
+        const auto& xH2O = Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, H2OIdx));
+        const auto& xN2 = Opm::decay<LhsEval>(fluidState.moleFraction(phaseIdx, N2Idx));
 
-            // Assuming Raoult's, Daltons law and ideal gas in order to obtain the
-            // partial pressures in the gas phase
-            const auto& lambdaN2 = N2::gasThermalConductivity(T, p*xN2);
-            const auto& lambdaH2O = H2O::gasThermalConductivity(T, p*xH2O);
+        // Assuming Raoult's, Daltons law and ideal gas in order to obtain the
+        // partial pressures in the gas phase
+        const auto& lambdaN2 = N2::gasThermalConductivity(T, p*xN2);
+        const auto& lambdaH2O = H2O::gasThermalConductivity(T, p*xH2O);
 
-            return lambdaN2 + lambdaH2O;
-        }
-        else
-            // return the conductivity of dry Nitrogen
-            return N2::gasThermalConductivity(T, p);
+        return lambdaN2 + lambdaH2O;
     }
 
     //! \copydoc BaseFluidSystem::heatCapacity
@@ -506,29 +474,12 @@ public:
 
         assert(phaseIdx == gasPhaseIdx);
 
-        // for the gas phase, assume ideal mixture, i.e. molecules of
-        // one component don't "see" the molecules of the other
-        // component
+        // for the gas phase, assume ideal mixture
         LhsEval c_pN2;
         LhsEval c_pH2O;
-        // let the water and nitrogen components do things their own way
-        if (useComplexRelations) {
-            c_pN2 = N2::gasHeatCapacity(T, p*xAlphaN2);
-            c_pH2O = H2O::gasHeatCapacity(T, p*xAlphaH2O);
-        }
-        else {
-            // assume an ideal gas for both components. See:
-            //
-            // http://en.wikipedia.org/wiki/Heat_capacity
-            Scalar c_vN2molar = Opm::Constants<Scalar>::R*2.39;
-            Scalar c_pN2molar = Opm::Constants<Scalar>::R + c_vN2molar;
 
-            Scalar c_vH2Omolar = Opm::Constants<Scalar>::R*3.37; // <- correct??
-            Scalar c_pH2Omolar = Opm::Constants<Scalar>::R + c_vH2Omolar;
-
-            c_pN2 = c_pN2molar/molarMass(N2Idx);
-            c_pH2O = c_pH2Omolar/molarMass(H2OIdx);
-        }
+        c_pN2 = N2::gasHeatCapacity(T, p*xAlphaN2);
+        c_pH2O = H2O::gasHeatCapacity(T, p*xAlphaH2O);
 
         // mingle both components together. this assumes that there is no "cross
         // interaction" between both flavors of molecules.

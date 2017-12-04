@@ -164,7 +164,7 @@ void ensureBlackoilApi()
 template <class Scalar>
 void testAllFluidStates()
 {
-    typedef Opm::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;
+    typedef Opm::FluidSystems::H2ON2<Scalar> FluidSystem;
 
     // SimpleModularFluidState
     {   Opm::SimpleModularFluidState<Scalar,
@@ -246,38 +246,16 @@ void testAllFluidSystems()
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- N2
-    {   typedef Opm::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/false> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
-
-    {   typedef Opm::FluidSystems::H2ON2<Scalar, /*enableComplexRelations=*/true> FluidSystem;
+    {   typedef Opm::FluidSystems::H2ON2<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- N2 -- liquid phase
-    {   typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/false> FluidSystem;
+    {   typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
-
-    {   typedef Opm::FluidSystems::H2ON2LiquidPhase<Scalar, /*enableComplexRelations=*/true> FluidSystem;
-         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air
     {   typedef Opm::SimpleH2O<Scalar> H2O;
-        const bool enableComplexRelations=false;
-        typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
-
-    {   typedef Opm::SimpleH2O<Scalar> H2O;
-        const bool enableComplexRelations=true;
-        typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
-
-    {   typedef Opm::H2O<Scalar> H2O;
-        const bool enableComplexRelations=false;
-        typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
-        checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
-
-    {   typedef Opm::H2O<Scalar> H2O;
-        const bool enableComplexRelations=true;
-        typedef Opm::FluidSystems::H2OAir<Scalar, H2O, enableComplexRelations> FluidSystem;
+        typedef Opm::FluidSystems::H2OAir<Scalar, H2O> FluidSystem;
         checkFluidSystem<Scalar, FluidSystem, FluidStateEval, LhsEval>(); }
 
     // H2O -- Air -- Mesitylene
