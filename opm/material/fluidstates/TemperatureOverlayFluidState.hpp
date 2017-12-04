@@ -91,12 +91,6 @@ public:
     { return fs_->saturation(phaseIdx); }
 
     /*!
-     * \brief Returns true iff a fluid phase shall be assumed to be present.
-     */
-    bool phaseIsPresent(unsigned phaseIdx) const
-    { return fs_->phaseIsPresent(phaseIdx); }
-
-    /*!
      * \brief The mole fraction of a component in a phase []
      */
     auto moleFraction(unsigned phaseIdx, unsigned compIdx) const

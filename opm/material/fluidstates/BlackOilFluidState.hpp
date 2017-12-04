@@ -132,9 +132,6 @@ public:
     unsigned short pvtRegionIndex() const
     { return pvtRegionIdx_; }
 
-    bool phaseIsPresent(unsigned phaseIdx) const
-    { return saturation_[phaseIdx] > 0.0; }
-
     //////
     // slow methods
     //////
