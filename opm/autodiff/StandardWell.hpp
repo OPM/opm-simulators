@@ -46,7 +46,7 @@ namespace Opm
         using typename Base::FluidSystem;
         using typename Base::MaterialLaw;
         using typename Base::ModelParameters;
-        using typename Base::BlackoilIndices;
+        using typename Base::Indices;
         using typename Base::PolymerModule;
         using typename Base::RateConverterType;
 
@@ -56,7 +56,7 @@ namespace Opm
         // there are three primary variables, the second and the third ones are F_w and F_g
         // the first one can be total rate (G_t) or bhp, based on the control
 
-        static const bool gasoil = numEq == 2 && (BlackoilIndices::compositionSwitchIdx >= 0);
+        static const bool gasoil = numEq == 2 && (Indices::compositionSwitchIdx >= 0);
         static const int XvarWell = 0;
         static const int WFrac = gasoil? -1000: 1;
         static const int GFrac = gasoil? 1: 2;
@@ -117,7 +117,6 @@ namespace Opm
                      const int num_components);
 
         virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<bool>* active_arg,
                           const std::vector<double>& depth_arg,
                           const double gravity_arg,
                           const int num_cells);
@@ -163,9 +162,8 @@ namespace Opm
         // protected functions from the Base class
         using Base::getAllowCrossFlow;
         using Base::phaseUsage;
-        using Base::active;
-        using Base::flowPhaseToEbosPhaseIdx;
         using Base::flowPhaseToEbosCompIdx;
+        using Base::ebosCompIdxToFlowCompIdx;
         using Base::wsolvent;
         using Base::wpolymer;
         using Base::wellHasTHPConstraints;
@@ -233,7 +231,7 @@ namespace Opm
 
         EvalWell wellVolumeFractionScaled(const int phase) const;
 
-        EvalWell wellVolumeFraction(const int phase) const;
+        EvalWell wellVolumeFraction(const unsigned compIdx) const;
 
         EvalWell wellSurfaceVolumeFraction(const int phase) const;
 

@@ -18,11 +18,6 @@ namespace Opm {
         const auto& eclState = ebosSimulator_.gridManager().eclState();
         phase_usage_ = phaseUsageFromDeck(eclState);
 
-        active_.resize(phase_usage_.MaxNumPhases, false);
-        for (int p = 0; p < phase_usage_.MaxNumPhases; ++p) {
-            active_[ p ] = phase_usage_.phase_used[ p ] != 0;
-        }
-
         const auto& gridView = ebosSimulator_.gridView();
 
         // calculate the number of elements of the compressed sequential grid. this needs
@@ -119,7 +114,7 @@ namespace Opm {
         // TODO: to see whether we can postpone of the intialization of the well containers to
         // optimize the usage of the following several member variables
         for (auto& well : well_container_) {
-            well->init(&phase_usage_, &active_, depth_, gravity_, number_of_cells_);
+            well->init(&phase_usage_, depth_, gravity_, number_of_cells_);
         }
 
         // calculate the efficiency factors for each well
@@ -376,26 +371,6 @@ namespace Opm {
     }
 
 
-
-
-
-    template<typename TypeTag>
-    int
-    BlackoilWellModel<TypeTag>::
-    flowPhaseToEbosPhaseIdx( const int phaseIdx ) const
-    {
-        const auto& pu = phase_usage_;
-        if (active_[Water] && pu.phase_pos[Water] == phaseIdx)
-            return FluidSystem::waterPhaseIdx;
-        if (active_[Oil] && pu.phase_pos[Oil] == phaseIdx)
-            return FluidSystem::oilPhaseIdx;
-        if (active_[Gas] && pu.phase_pos[Gas] == phaseIdx)
-            return FluidSystem::gasPhaseIdx;
-
-        assert(phaseIdx < 3);
-        // for other phases return the index
-        return phaseIdx;
-    }
 
 
     template<typename TypeTag>
@@ -1004,8 +979,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeAverageFormationFactor(std::vector<double>& B_avg) const
     {
-        const int np = numPhases();
-
         const auto& grid = ebosSimulator_.gridManager().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
@@ -1020,12 +993,16 @@ namespace Opm {
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            for ( int phaseIdx = 0; phaseIdx < np; ++phaseIdx )
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
             {
-                auto& B  = B_avg[ phaseIdx ];
-                const int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(phaseIdx);
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
 
-                B += 1 / fs.invB(ebosPhaseIdx).value();
+                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                auto& B  = B_avg[ compIdx ];
+
+                B += 1 / fs.invB(phaseIdx).value();
             }
             if (has_solvent_) {
                 auto& B  = B_avg[solventSaturationIdx];
