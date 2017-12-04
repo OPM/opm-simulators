@@ -29,6 +29,9 @@
 #include <opm/autodiff/BlackoilModelParameters.hpp>
 #include <opm/autodiff/WellStateFullyImplicitBlackoil.hpp>
 #include <opm/autodiff/BlackoilWellModel.hpp>
+#include <opm/autodiff/BlackoilAquiferModel.hpp>
+#include <opm/autodiff/RateConverter.hpp>
+#include <opm/autodiff/SimFIBODetails.hpp>
 #include <opm/autodiff/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/grid/utility/StopWatch.hpp>
@@ -65,6 +68,7 @@ public:
     typedef BlackoilModelParameters ModelParameters;
     typedef NonlinearSolver<Model> Solver;
     typedef BlackoilWellModel<TypeTag> WellModel;
+    typedef BlackoilAquiferModel<TypeTag> AquiferModel;
 
 
     /// Initialise from parameters and objects to observe.
@@ -186,6 +190,8 @@ public:
             auto auxMod = std::make_shared<WellConnectionAuxiliaryModule<TypeTag> >(schedule(), grid());
             ebosSimulator_.model().addAuxiliaryModule(auxMod);
         }
+        AquiferModel aquifer_model(ebosSimulator_, model_param_, terminal_output_);
+        // aquifer_model.hack_init(ebosSimulator_);
 
         // Main simulation loop.
         while (!timer.done()) {
@@ -202,7 +208,9 @@ public:
 
             well_model.beginReportStep(timer.currentStepNum());
 
-            auto solver = createSolver(well_model);
+            aquifer_model.beginReportStep(timer.currentStepNum());
+
+            auto solver = createSolver(well_model, aquifer_model);
 
             // write the inital state at the report stage
             if (timer.initialStep()) {
@@ -266,6 +274,7 @@ public:
             }
 
             solver->model().endReportStep();
+            aquifer_model.endReportStep();
             well_model.endReportStep();
 
             // take time that was used to solve system for this reportStep
@@ -308,6 +317,9 @@ public:
         total_timer.stop();
         report.total_time = total_timer.secsSinceStart();
         report.converged = true;
+
+        auto reportaquifer = aquifer_model.lastReport();
+
         return report;
     }
 
@@ -320,11 +332,12 @@ public:
 
 protected:
 
-    std::unique_ptr<Solver> createSolver(WellModel& well_model)
+    std::unique_ptr<Solver> createSolver(WellModel& well_model, AquiferModel& aquifer_model)
     {
         auto model = std::unique_ptr<Model>(new Model(ebosSimulator_,
                                                       model_param_,
                                                       well_model,
+                                                      aquifer_model,
                                                       solver_,
                                                       terminal_output_));
 
