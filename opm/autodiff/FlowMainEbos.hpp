@@ -481,7 +481,7 @@ namespace Opm
 
         const SummaryConfig& summaryConfig() const
         { return ebosSimulator_->gridManager().summaryConfig(); }
-  
+
         // Initialise the reservoir state. Updated fluid props for SWATINIT.
         // Writes to:
         //   state_
@@ -827,11 +827,14 @@ namespace Opm
 
             if(  output && output_ecl && grid().comm().size() > 1 )
             {
+                typedef typename Grid::LeafGridView GridView;
+                using ElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
                 // Get the owner rank number for each cell
-                using ElementMapper =  Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGElementLayout>;
                 using Handle = CellOwnerDataHandle<ElementMapper>;
-                ElementMapper globalMapper(this->globalGrid().leafGridView());
-                const auto globalSize = this->globalGrid().size(0);
+                const Grid& globalGrid = this->globalGrid();
+                const auto& globalGridView = globalGrid.leafGridView();
+                ElementMapper globalMapper(globalGridView);
+                const auto globalSize = globalGrid.size(0);
                 std::vector<int> ranks(globalSize, -1);
                 Handle handle(globalMapper, ranks);
                 this->grid().gatherData(handle);
