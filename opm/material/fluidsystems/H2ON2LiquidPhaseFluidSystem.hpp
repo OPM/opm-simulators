@@ -53,11 +53,11 @@ namespace FluidSystems {
  * \brief A liquid-phase-only fluid system with water and nitrogen as
  *        components.
  */
-template <class Scalar, bool useComplexRelations = true>
+template <class Scalar>
 class H2ON2LiquidPhase
-    : public BaseFluidSystem<Scalar, H2ON2LiquidPhase<Scalar, useComplexRelations> >
+    : public BaseFluidSystem<Scalar, H2ON2LiquidPhase<Scalar> >
 {
-    typedef H2ON2LiquidPhase<Scalar, useComplexRelations> ThisType;
+    typedef H2ON2LiquidPhase<Scalar> ThisType;
     typedef BaseFluidSystem<Scalar, ThisType> Base;
 
     // convenience typedefs
@@ -266,22 +266,14 @@ public:
 
         assert(phaseIdx == liquidPhaseIdx);
 
-        if (!useComplexRelations)
-            // assume pure water
-            return H2O::liquidDensity(T, p);
-        else
-        {
-            // See: Ochs 2008
-            const LhsEval& rholH2O = H2O::liquidDensity(T, p);
-            const LhsEval& clH2O = rholH2O/H2O::molarMass();
+        // assume ideal mixture where each molecule occupies the same volume regardless
+        // of whether it is water or nitrogen.
+        const LhsEval& clH2O = H2O::liquidDensity(T, p)/H2O::molarMass();
 
-            const auto& xlH2O = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
-            const auto& xlN2 = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
+        const auto& xlH2O = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, H2OIdx));
+        const auto& xlN2 = Opm::decay<LhsEval>(fluidState.moleFraction(liquidPhaseIdx, N2Idx));
 
-            // this assumes each nitrogen molecule displaces exactly one
-            // water molecule in the liquid
-            return clH2O*(H2O::molarMass()*xlH2O + N2::molarMass()*xlN2)/sumMoleFrac;
-        }
+        return clH2O*(H2O::molarMass()*xlH2O + N2::molarMass()*xlN2)/sumMoleFrac;
     }
 
     //! \copydoc BaseFluidSystem::viscosity
@@ -358,13 +350,9 @@ public:
     {
         assert(phaseIdx == liquidPhaseIdx);
 
-        if(useComplexRelations){
-            const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
-            const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
-            return H2O::liquidThermalConductivity(T, p);
-        }
-        else
-            return  0.578078;   // conductivity of water[W / (m K ) ] IAPWS evaluated at p=.1 MPa, T=8C
+        const auto& T = Opm::decay<LhsEval>(fluidState.temperature(phaseIdx));
+        const auto& p = Opm::decay<LhsEval>(fluidState.pressure(phaseIdx));
+        return H2O::liquidThermalConductivity(T, p);
     }
 
     //! \copydoc BaseFluidSystem::heatCapacity
