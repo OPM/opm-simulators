@@ -1503,11 +1503,6 @@ namespace Opm {
         }
 
         if (! resv_wells.empty()) {
-            const PhaseUsage&                    pu = phase_usage_;
-            const std::vector<double>::size_type np = pu.num_phases;
-
-            std::vector<double> distr (np);
-            std::vector<double> hrates(np);
 
             for (std::vector<int>::const_iterator
                      rp = resv_wells.begin(), e = resv_wells.end();
@@ -1521,6 +1516,8 @@ namespace Opm {
                 // RESV control mode, all wells
                 {
                     const int rctrl = SimFIBODetails::resv_control(ctrl);
+                    const int np = numPhases();
+                    std::vector<double> distr (np);
 
                     if (0 <= rctrl) {
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
@@ -1538,89 +1535,23 @@ namespace Opm {
                         }
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
-                    }
-                }
 
-                // RESV control, WCONHIST wells.  A bit of duplicate
-                // work, regrettably.
-                if (is_producer && wells()->name[*rp] != 0) {
-                    WellMap::const_iterator i = wmap.find(wells()->name[*rp]);
+                        // for the WCONHIST wells, we need to calculate the rates
+                        const WellMap::const_iterator i = wmap.find(wells()->name[*rp]);
 
-                    if (i != wmap.end()) {
-                        const auto* wp = i->second;
-
-                        const WellProductionProperties& p =
-                            wp->getProductionProperties(step);
-
-                        if (! p.predictionMode) {
-                            // History matching (WCONHIST/RESV)
-                            SimFIBODetails::historyRates(pu, p, hrates);
-
-                            const int fipreg = 0; // Hack.  Ignore FIP regions.
-                            rateConverter_->calcCoeff(fipreg, pvtreg, distr);
-
-                            // WCONHIST/RESV target is sum of all
-                            // observed phase rates translated to
-                            // reservoir conditions.  Recall sign
-                            // convention: Negative for producers.
-                            std::vector<double> hrates_resv(np);
-                            rateConverter_->calcReservoirVoidageRates(fipreg, pvtreg, hrates, hrates_resv);
-                            const double target = -std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
-
-                            well_controls_clear(ctrl);
-                            well_controls_assert_number_of_phases(ctrl, int(np));
-
-                            static const double invalid_alq = -std::numeric_limits<double>::max();
-                            static const int invalid_vfp = -std::numeric_limits<int>::max();
-
-                            const int ok_resv =
-                                well_controls_add_new(RESERVOIR_RATE, target,
-                                                      invalid_alq, invalid_vfp,
-                                                      & distr[0], ctrl);
-
-                            // For WCONHIST the BHP limit is set to 1 atm.
-                            // or a value specified using WELTARG
-                            double bhp_limit = (p.BHPLimit > 0) ? p.BHPLimit : unit::convert::from(1.0, unit::atm);
-                            const int ok_bhp =
-                                well_controls_add_new(BHP, bhp_limit,
-                                                      invalid_alq, invalid_vfp,
-                                                      NULL, ctrl);
-
-                            if (ok_resv != 0 && ok_bhp != 0) {
-                                well_state_.currentControls()[*rp] = 0;
-                                well_controls_set_current(ctrl, 0);
-                            }
+                        if (i == wmap.end()) {
+                            OPM_THROW(std::runtime_error, "Failed to find the well " << wells()->name[*rp] << " in wmap.");
                         }
-                    }
-                }
-            }
-        }
-
-        if( wells() )
-        {
-            for (int w = 0, nw = numWells(); w < nw; ++w) {
-                WellControls* ctrl = wells()->ctrls[w];
-                const bool is_producer = wells()->type[w] == PRODUCER;
-                if (!is_producer && wells()->name[w] != 0) {
-                    WellMap::const_iterator i = wmap.find(wells()->name[w]);
-                    if (i != wmap.end()) {
+                        // not handling injector for now
                         const auto* wp = i->second;
-                        const WellInjectionProperties& injector = wp->getInjectionProperties(step);
-                        if (!injector.predictionMode) {
-                            //History matching WCONINJEH
-                            static const double invalid_alq = -std::numeric_limits<double>::max();
-                            static const int invalid_vfp = -std::numeric_limits<int>::max();
-                            // For WCONINJEH the BHP limit is set to a large number
-                            // or a value specified using WELTARG
-                            double bhp_limit = (injector.BHPLimit > 0) ? injector.BHPLimit : std::numeric_limits<double>::max();
-                            const int ok_bhp =
-                                well_controls_add_new(BHP, bhp_limit,
-                                                      invalid_alq, invalid_vfp,
-                                                      NULL, ctrl);
-                            if (!ok_bhp) {
-                                OPM_THROW(std::runtime_error, "Failed to add well control.");
-                            }
-                        }
+                        const WellProductionProperties& production_properties = wp->getProductionProperties(step);
+                        // historical phase rates
+                        std::vector<double> hrates(np);
+                        SimFIBODetails::historyRates(phase_usage_, production_properties, hrates);
+
+                        const double target = - std::inner_product(distr.begin(), distr.end(),
+                                                                   hrates.begin(), 0.0);
+                        well_controls_iset_target(ctrl, rctrl, target);
                     }
                 }
             }
