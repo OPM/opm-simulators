@@ -1170,8 +1170,6 @@ namespace Opm {
                     const int rctrl = SimFIBODetails::resv_control(ctrl);
 
                     if (0 <= rctrl) {
-                        const std::vector<double>::size_type off = (*rp) * np;
-
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
                         rateConverter_->calcCoeff(fipreg, pvtreg, distr);
 
@@ -1181,7 +1179,7 @@ namespace Opm {
                             // original distr contains 0 and 1 to indicate phases under control
                             const double* old_distr = well_controls_get_current_distr(ctrl);
 
-                            for (int p = 0; p < np; ++p) {
+                            for (size_t p = 0; p < np; ++p) {
                                 distr[p] *= old_distr[p];
                             }
                         }
