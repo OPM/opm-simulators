@@ -1170,8 +1170,6 @@ namespace Opm {
                     const int rctrl = SimFIBODetails::resv_control(ctrl);
 
                     if (0 <= rctrl) {
-                        const std::vector<double>::size_type off = (*rp) * np;
-
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
                         rateConverter_->calcCoeff(fipreg, pvtreg, distr);
 
