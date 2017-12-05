@@ -136,6 +136,13 @@ add_test_compareECLFiles(CASENAME spe1_2p
                          REL_TOL ${coarse_rel_tol}
                          DIR spe1)
 
+add_test_compareECLFiles(CASENAME spe1_oilgas
+                         FILENAME SPE1CASE2_OILGAS
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         DIR spe1)
+
 add_test_compareECLFiles(CASENAME spe1
                          FILENAME SPE1CASE1
                          SIMULATOR flow_sequential
