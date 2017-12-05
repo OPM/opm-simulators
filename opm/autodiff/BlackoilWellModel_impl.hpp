@@ -1155,7 +1155,6 @@ namespace Opm {
 
             std::vector<double> distr (np);
             std::vector<double> hrates(np);
-            std::vector<double> prates(np);
 
             for (std::vector<int>::const_iterator
                      rp = resv_wells.begin(), e = resv_wells.end();
@@ -1173,20 +1172,19 @@ namespace Opm {
                     if (0 <= rctrl) {
                         const std::vector<double>::size_type off = (*rp) * np;
 
-                        if (is_producer) {
-                            // Convert to positive rates to avoid issues
-                            // in coefficient calculations.
-                            std::transform(well_state_.wellRates().begin() + (off + 0*np),
-                                           well_state_.wellRates().begin() + (off + 1*np),
-                                           prates.begin(), std::negate<double>());
-                        } else {
-                            std::copy(well_state_.wellRates().begin() + (off + 0*np),
-                                      well_state_.wellRates().begin() + (off + 1*np),
-                                      prates.begin());
-                        }
-
                         const int fipreg = 0; // Hack.  Ignore FIP regions.
                         rateConverter_->calcCoeff(fipreg, pvtreg, distr);
+
+                        if (!is_producer) { // injectors
+                            well_controls_assert_number_of_phases(ctrl, np);
+
+                            // original distr contains 0 and 1 to indicate phases under control
+                            const double* old_distr = well_controls_get_current_distr(ctrl);
+
+                            for (int p = 0; p < np; ++p) {
+                                distr[p] *= old_distr[p];
+                            }
+                        }
 
                         well_controls_iset_distr(ctrl, rctrl, & distr[0]);
                     }
