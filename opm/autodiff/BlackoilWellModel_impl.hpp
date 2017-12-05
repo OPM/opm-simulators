@@ -1179,7 +1179,7 @@ namespace Opm {
                             // original distr contains 0 and 1 to indicate phases under control
                             const double* old_distr = well_controls_get_current_distr(ctrl);
 
-                            for (int p = 0; p < np; ++p) {
+                            for (size_t p = 0; p < np; ++p) {
                                 distr[p] *= old_distr[p];
                             }
                         }
